@@ -97,7 +97,12 @@ function genererEdlPDF(data: {
   function title(t: string) { doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.text(t, 105, y, { align: "center" }); y += 8 }
   function section(t: string) { check(); doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.text(t, 20, y); y += 7 }
   function text(t: string) { check(); doc.setFontSize(9); doc.setFont("helvetica", "normal"); const l = doc.splitTextToSize(t, W); doc.text(l, 20, y); y += l.length * 4.5 }
-  function field(l: string, v: string) { if (!v) return; check(); doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text(`${l} :`, 20, y); doc.setFont("helvetica", "normal"); doc.text(v, 75, y); y += 5.5 }
+  function field(l: string, v: string, required?: boolean) {
+    check(); doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text(`${l} :`, 20, y)
+    if (v) { doc.setFont("helvetica", "normal"); doc.text(v, 75, y) }
+    else if (required) { doc.setDrawColor(180, 180, 180); doc.setLineDashPattern([1, 1], 0); doc.line(75, y, 180, y); doc.setLineDashPattern([], 0) }
+    y += 5.5
+  }
   function line() { doc.setDrawColor(200, 200, 200); doc.line(20, y, 190, y); y += 6 }
 
   const dateLabel = new Date(data.dateEdl).toLocaleDateString("fr-FR")
@@ -111,14 +116,14 @@ function genererEdlPDF(data: {
   section("PARTIES")
   y += 2
   doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text("LE BAILLEUR", 20, y); y += 5
-  field("Nom", data.nomBailleur || "")
-  field("Prenom", data.prenomBailleur || "")
-  field("Email", data.emailBailleur || "")
+  field("Nom", data.nomBailleur, true)
+  field("Prenom", data.prenomBailleur, true)
+  field("Email", data.emailBailleur, true)
   y += 4
   doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text("LE LOCATAIRE", 20, y); y += 5
-  field("Nom", data.nomLocataire || "")
-  field("Prenom", data.prenomLocataire || "")
-  field("Email", data.emailLocataire || "")
+  field("Nom", data.nomLocataire, true)
+  field("Prenom", data.prenomLocataire, true)
+  field("Email", data.emailLocataire, true)
   y += 3
 
   section("LOGEMENT")
@@ -244,6 +249,8 @@ export default function EdlPage() {
   const [edlExistant, setEdlExistant] = useState<any>(null)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(false)
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth")
@@ -367,10 +374,10 @@ export default function EdlPage() {
     ))
   }
 
-  async function sauvegarderEdl() {
+  async function sauvegarderEdl(statutOverride?: string) {
     if (!bien || !session?.user?.email) return
     setSaving(true)
-    const payload = {
+    const payload: any = {
       annonce_id: Number(bienId),
       proprietaire_email: session.user.email,
       type,
@@ -381,13 +388,16 @@ export default function EdlPage() {
       prenom_locataire: prenomLocataire,
       nom_locataire: nomLocataire,
       email_locataire: emailLocataire,
+      locataire_email: emailLocataire,
       compteurs,
       cles,
       observations,
       pieces_data: pieces,
+      statut: statutOverride || edlExistant?.statut || "brouillon",
     }
     if (edlExistant) {
-      await supabase.from("etats_des_lieux").update(payload).eq("id", edlExistant.id)
+      const { data } = await supabase.from("etats_des_lieux").update(payload).eq("id", edlExistant.id).select().single()
+      if (data) setEdlExistant(data)
     } else {
       const { data } = await supabase.from("etats_des_lieux").insert([payload]).select().single()
       if (data) setEdlExistant(data)
@@ -395,6 +405,33 @@ export default function EdlPage() {
     setSaving(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
+  }
+
+  async function envoyerAuLocataire() {
+    if (!bien || !session?.user?.email || !emailLocataire.trim()) return
+    setSending(true)
+    // Save with statut "envoye"
+    await sauvegarderEdl("envoye")
+    // Send message in chat
+    const edlId = edlExistant?.id
+    if (edlId) {
+      const cardPayload = JSON.stringify({ edlId, bienTitre: bien.titre, type, dateEdl })
+      await supabase.from("messages").insert([{
+        from_email: session.user.email,
+        to_email: emailLocataire.trim(),
+        contenu: "[EDL_CARD]" + cardPayload,
+        lu: false,
+      }])
+    }
+    setSending(false)
+    setSent(true)
+    setTimeout(() => setSent(false), 4000)
+  }
+
+  async function remettreEnBrouillon() {
+    if (!edlExistant) return
+    await supabase.from("etats_des_lieux").update({ statut: "brouillon" }).eq("id", edlExistant.id)
+    setEdlExistant({ ...edlExistant, statut: "brouillon" })
   }
 
   function generer() {
@@ -431,6 +468,10 @@ export default function EdlPage() {
   )
   if (!bien) return null
 
+  const statut = edlExistant?.statut || "brouillon"
+  const isReadOnly = statut === "envoye" || statut === "valide"
+  const isLocked = statut === "valide"
+
   const inp: any = { width: "100%", padding: "10px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }
   const cardS: any = { background: "white", borderRadius: 20, padding: isMobile ? 18 : 28, marginBottom: 20 }
   const lbl: any = { fontSize: 12, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6 }
@@ -448,6 +489,44 @@ export default function EdlPage() {
           <p style={{ color: "#6b7280", marginTop: 4, fontSize: 14 }}>{bien.titre} — {bien.ville} — {bien.surface} m²</p>
         </div>
 
+        {/* ─── Status banners ─── */}
+        {statut === "conteste" && (
+          <div style={{ background: "#fefce8", border: "1.5px solid #fde68a", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: edlExistant?.commentaire_locataire ? 10 : 0 }}>
+              <span style={{ fontSize: 18 }}>⚠</span>
+              <p style={{ fontSize: 14, fontWeight: 700, color: "#92400e", margin: 0 }}>Le locataire a conteste cet etat des lieux</p>
+            </div>
+            {edlExistant?.commentaire_locataire && (
+              <div style={{ background: "white", borderRadius: 10, padding: "10px 14px", border: "1px solid #fde68a" }}>
+                <p style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", margin: "0 0 4px" }}>Commentaire du locataire :</p>
+                <p style={{ fontSize: 13, color: "#111", margin: 0, lineHeight: 1.5 }}>{edlExistant.commentaire_locataire}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {statut === "envoye" && (
+          <div style={{ background: "#dcfce7", border: "1.5px solid #bbf7d0", borderRadius: 14, padding: "14px 20px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 18 }}>📩</span>
+              <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: 0 }}>Etat des lieux envoye au locataire — en attente de validation</p>
+            </div>
+            <button onClick={remettreEnBrouillon}
+              style={{ background: "none", border: "none", color: "#6b7280", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textDecoration: "underline" }}>
+              Remettre en brouillon
+            </button>
+          </div>
+        )}
+
+        {statut === "valide" && (
+          <div style={{ background: "#dcfce7", border: "1.5px solid #bbf7d0", borderRadius: 14, padding: "14px 20px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 18 }}>✓</span>
+            <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: 0 }}>
+              Etat des lieux valide le {edlExistant?.date_validation ? new Date(edlExistant.date_validation).toLocaleDateString("fr-FR") : "—"}
+            </p>
+          </div>
+        )}
+
         {/* Recap barre */}
         <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
           {[
@@ -463,227 +542,334 @@ export default function EdlPage() {
           ))}
         </div>
 
-        {/* Type */}
-        <div style={cardS}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Type d'etat des lieux</h2>
-          <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-            {(["entree", "sortie"] as const).map(t => (
-              <button key={t} onClick={() => setType(t)}
-                style={{
-                  flex: 1, padding: "14px 20px", borderRadius: 14, cursor: "pointer", fontFamily: "inherit", textAlign: "center",
-                  background: type === t ? "#111" : "white", color: type === t ? "white" : "#111",
-                  border: type === t ? "1.5px solid #111" : "1.5px solid #e5e7eb", fontWeight: 700, fontSize: 14,
-                }}>
-                {t === "entree" ? "Entree" : "Sortie"}
-              </button>
+        {/* ─── READ-ONLY display for envoye / valide ─── */}
+        {isReadOnly ? (
+          <>
+            {/* Type + date */}
+            <div style={cardS}>
+              <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>Informations generales</h2>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
+                <div><span style={lbl}>Type</span><p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>{type === "entree" ? "Entree" : "Sortie"}</p></div>
+                <div><span style={lbl}>Date</span><p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>{new Date(dateEdl).toLocaleDateString("fr-FR")}</p></div>
+                <div><span style={lbl}>Cles</span><p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>{cles || "—"}</p></div>
+              </div>
+            </div>
+            {/* Bailleur */}
+            <div style={cardS}>
+              <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>Le bailleur</h2>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
+                <div><span style={lbl}>Prenom</span><p style={{ fontSize: 14, margin: 0 }}>{prenomBailleur || "—"}</p></div>
+                <div><span style={lbl}>Nom</span><p style={{ fontSize: 14, margin: 0 }}>{nomBailleur || "—"}</p></div>
+                <div><span style={lbl}>Email</span><p style={{ fontSize: 14, margin: 0 }}>{emailBailleur || "—"}</p></div>
+              </div>
+            </div>
+            {/* Locataire */}
+            <div style={cardS}>
+              <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>Le locataire</h2>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
+                <div><span style={lbl}>Prenom</span><p style={{ fontSize: 14, margin: 0 }}>{prenomLocataire || "—"}</p></div>
+                <div><span style={lbl}>Nom</span><p style={{ fontSize: 14, margin: 0 }}>{nomLocataire || "—"}</p></div>
+                <div><span style={lbl}>Email</span><p style={{ fontSize: 14, margin: 0 }}>{emailLocataire || "—"}</p></div>
+              </div>
+            </div>
+            {/* Compteurs */}
+            <div style={cardS}>
+              <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>Releves de compteurs</h2>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
+                <div><span style={lbl}>Eau (m3)</span><p style={{ fontSize: 14, margin: 0 }}>{compteurs.eau || "Non releve"}</p></div>
+                <div><span style={lbl}>Electricite (kWh)</span><p style={{ fontSize: 14, margin: 0 }}>{compteurs.elec || "Non releve"}</p></div>
+                <div><span style={lbl}>Gaz (m3)</span><p style={{ fontSize: 14, margin: 0 }}>{compteurs.gaz || "Non releve"}</p></div>
+              </div>
+            </div>
+            {/* Pieces read-only */}
+            {pieces.map((piece, pieceIdx) => (
+              <div key={pieceIdx} style={cardS}>
+                <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{piece.nom}</h2>
+                <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 14 }}>{Object.keys(piece.elements).length} elements</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                  {Object.entries(piece.elements).map(([elem, val]) => {
+                    const st = ETAT_STYLE[val.etat]
+                    return (
+                      <div key={elem} style={{ padding: "8px 0", borderBottom: "1px solid #f9fafb", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#374151", flex: 1, minWidth: 120 }}>{elem}</span>
+                        <span style={{ background: st.bg, color: st.color, border: `1px solid ${st.color}`, fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 999 }}>
+                          {val.etat}
+                        </span>
+                        {val.observation && (
+                          <span style={{ fontSize: 12, color: "#6b7280", fontStyle: "italic" }}>{val.observation}</span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+                {piece.photos.length > 0 && (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+                    {piece.photos.map((url, photoIdx) => (
+                      <div key={photoIdx} style={{ width: 72, height: 72, borderRadius: 10, overflow: "hidden", border: "1.5px solid #e5e7eb" }}>
+                        <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
-            <div><label style={lbl}>Date de l'etat des lieux</label><input style={inp} type="date" value={dateEdl} onChange={e => setDateEdl(e.target.value)} /></div>
-            <div><label style={lbl}>Cles remises</label><input style={inp} value={cles} onChange={e => setCles(e.target.value)} /></div>
-          </div>
-        </div>
+            {/* Observations */}
+            {observations && (
+              <div style={cardS}>
+                <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>Observations generales</h2>
+                <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, margin: 0 }}>{observations}</p>
+              </div>
+            )}
+            {/* Actions read-only */}
+            <div style={{ display: "flex", gap: 12, flexDirection: isMobile ? "column" : "row" }}>
+              <button onClick={generer}
+                style={{
+                  flex: 1, padding: "16px 32px",
+                  background: "white", color: "#111",
+                  border: "1.5px solid #111", borderRadius: 16, fontWeight: 800, fontSize: 16,
+                  cursor: "pointer", fontFamily: "inherit",
+                }}>
+                Telecharger le PDF
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* ─── EDITABLE MODE (brouillon / conteste) ─── */}
+            {/* Type */}
+            <div style={cardS}>
+              <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Type d'etat des lieux</h2>
+              <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+                {(["entree", "sortie"] as const).map(t => (
+                  <button key={t} onClick={() => setType(t)}
+                    style={{
+                      flex: 1, padding: "14px 20px", borderRadius: 14, cursor: "pointer", fontFamily: "inherit", textAlign: "center",
+                      background: type === t ? "#111" : "white", color: type === t ? "white" : "#111",
+                      border: type === t ? "1.5px solid #111" : "1.5px solid #e5e7eb", fontWeight: 700, fontSize: 14,
+                    }}>
+                    {t === "entree" ? "Entree" : "Sortie"}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
+                <div><label style={lbl}>Date de l'etat des lieux</label><input style={inp} type="date" value={dateEdl} onChange={e => setDateEdl(e.target.value)} /></div>
+                <div><label style={lbl}>Cles remises</label><input style={inp} value={cles} onChange={e => setCles(e.target.value)} /></div>
+              </div>
+            </div>
 
-        {/* Le Bailleur */}
-        <div style={cardS}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Le bailleur</h2>
-          <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16 }}>Pre-rempli depuis votre profil — modifiable</p>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
-            <div><label style={lbl}>Prenom</label><input style={inp} value={prenomBailleur} onChange={e => setPrenomBailleur(e.target.value)} placeholder="Prenom" /></div>
-            <div><label style={lbl}>Nom</label><input style={inp} value={nomBailleur} onChange={e => setNomBailleur(e.target.value)} placeholder="Nom de famille" /></div>
-            <div><label style={lbl}>Email</label><input style={inp} value={emailBailleur} onChange={e => setEmailBailleur(e.target.value)} placeholder="email@exemple.fr" type="email" /></div>
-          </div>
-        </div>
+            {/* Le Bailleur */}
+            <div style={cardS}>
+              <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Le bailleur</h2>
+              <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16 }}>Pre-rempli depuis votre profil — modifiable</p>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
+                <div><label style={lbl}>Prenom</label><input style={inp} value={prenomBailleur} onChange={e => setPrenomBailleur(e.target.value)} placeholder="Prenom" /></div>
+                <div><label style={lbl}>Nom</label><input style={inp} value={nomBailleur} onChange={e => setNomBailleur(e.target.value)} placeholder="Nom de famille" /></div>
+                <div><label style={lbl}>Email</label><input style={inp} value={emailBailleur} onChange={e => setEmailBailleur(e.target.value)} placeholder="email@exemple.fr" type="email" /></div>
+              </div>
+            </div>
 
-        {/* Le Locataire */}
-        <div style={cardS}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Le locataire</h2>
-          <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16 }}>Si non renseigne, les champs seront a completer a la main sur le PDF</p>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
-            <div><label style={lbl}>Prenom</label><input style={inp} value={prenomLocataire} onChange={e => setPrenomLocataire(e.target.value)} placeholder="Prenom" /></div>
-            <div><label style={lbl}>Nom</label><input style={inp} value={nomLocataire} onChange={e => setNomLocataire(e.target.value)} placeholder="Nom de famille" /></div>
-            <div><label style={lbl}>Email</label><input style={inp} value={emailLocataire} onChange={e => setEmailLocataire(e.target.value)} placeholder="email@exemple.fr" type="email" /></div>
-          </div>
-        </div>
+            {/* Le Locataire */}
+            <div style={cardS}>
+              <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Le locataire</h2>
+              <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16 }}>Si non renseigne, les champs seront a completer a la main sur le PDF</p>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
+                <div><label style={lbl}>Prenom</label><input style={inp} value={prenomLocataire} onChange={e => setPrenomLocataire(e.target.value)} placeholder="Prenom" /></div>
+                <div><label style={lbl}>Nom</label><input style={inp} value={nomLocataire} onChange={e => setNomLocataire(e.target.value)} placeholder="Nom de famille" /></div>
+                <div><label style={lbl}>Email</label><input style={inp} value={emailLocataire} onChange={e => setEmailLocataire(e.target.value)} placeholder="email@exemple.fr" type="email" /></div>
+              </div>
+            </div>
 
-        {/* Compteurs */}
-        <div style={cardS}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Releves de compteurs</h2>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
-            <div><label style={lbl}>Eau (m3)</label><input style={inp} value={compteurs.eau} onChange={e => setCompteurs(c => ({ ...c, eau: e.target.value }))} placeholder="1234" /></div>
-            <div><label style={lbl}>Electricite (kWh)</label><input style={inp} value={compteurs.elec} onChange={e => setCompteurs(c => ({ ...c, elec: e.target.value }))} placeholder="5678" /></div>
-            <div><label style={lbl}>Gaz (m3)</label><input style={inp} value={compteurs.gaz} onChange={e => setCompteurs(c => ({ ...c, gaz: e.target.value }))} placeholder="Non concerne" /></div>
-          </div>
-        </div>
+            {/* Compteurs */}
+            <div style={cardS}>
+              <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Releves de compteurs</h2>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
+                <div><label style={lbl}>Eau (m3)</label><input style={inp} value={compteurs.eau} onChange={e => setCompteurs(c => ({ ...c, eau: e.target.value }))} placeholder="1234" /></div>
+                <div><label style={lbl}>Electricite (kWh)</label><input style={inp} value={compteurs.elec} onChange={e => setCompteurs(c => ({ ...c, elec: e.target.value }))} placeholder="5678" /></div>
+                <div><label style={lbl}>Gaz (m3)</label><input style={inp} value={compteurs.gaz} onChange={e => setCompteurs(c => ({ ...c, gaz: e.target.value }))} placeholder="Non concerne" /></div>
+              </div>
+            </div>
 
-        {/* ─── Pieces ─── */}
-        {pieces.map((piece, pieceIdx) => (
-          <div key={pieceIdx} style={cardS}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{piece.nom}</h2>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <span style={{ fontSize: 11, color: "#9ca3af" }}>{Object.keys(piece.elements).length} elements</span>
-                <button onClick={() => removePiece(pieceIdx)}
-                  style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-                  Retirer
+            {/* ─── Pieces ─── */}
+            {pieces.map((piece, pieceIdx) => (
+              <div key={pieceIdx} style={cardS}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{piece.nom}</h2>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: "#9ca3af" }}>{Object.keys(piece.elements).length} elements</span>
+                    <button onClick={() => removePiece(pieceIdx)}
+                      style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                      Retirer
+                    </button>
+                  </div>
+                </div>
+                <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16 }}>Type : {piece.type}</p>
+
+                {/* Elements */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                  {Object.entries(piece.elements).map(([elem, val]) => {
+                    const st = ETAT_STYLE[val.etat]
+                    return (
+                      <div key={elem} style={{ padding: "10px 0", borderBottom: "1px solid #f9fafb" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: "#374151", flex: 1 }}>{elem}</span>
+                          <button onClick={() => removeElement(pieceIdx, elem)}
+                            style={{ background: "none", border: "none", color: "#d1d5db", fontSize: 16, cursor: "pointer", padding: "0 4px", lineHeight: 1 }}
+                            title="Retirer cet element">
+                            ×
+                          </button>
+                        </div>
+                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: val.observation || isMobile ? 8 : 0 }}>
+                          {ETATS.map(etat => {
+                            const s = ETAT_STYLE[etat]
+                            const active = val.etat === etat
+                            return (
+                              <button key={etat} onClick={() => updateElement(pieceIdx, elem, "etat", etat)}
+                                style={{
+                                  padding: isMobile ? "5px 8px" : "4px 10px", borderRadius: 999,
+                                  fontSize: isMobile ? 10 : 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                                  background: active ? s.bg : "#f9fafb",
+                                  color: active ? s.color : "#9ca3af",
+                                  border: active ? `1.5px solid ${s.color}` : "1.5px solid transparent",
+                                }}>
+                                {etat}
+                              </button>
+                            )
+                          })}
+                        </div>
+                        <input
+                          value={val.observation}
+                          onChange={e => updateElement(pieceIdx, elem, "observation", e.target.value)}
+                          placeholder="Observation (tache, rayure, manque...)..."
+                          style={{ width: "100%", padding: "6px 10px", border: "1.5px solid #f3f4f6", borderRadius: 8, fontSize: 12, outline: "none", fontFamily: "inherit", boxSizing: "border-box" as const, marginTop: 4 }}
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Ajouter un element */}
+                <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                  <input
+                    value={newElemName[pieceIdx] || ""}
+                    onChange={e => setNewElemName(prev => ({ ...prev, [pieceIdx]: e.target.value }))}
+                    onKeyDown={e => e.key === "Enter" && addElement(pieceIdx)}
+                    placeholder="Ajouter un element..."
+                    style={{ flex: 1, padding: "7px 10px", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: 12, outline: "none", fontFamily: "inherit" }}
+                  />
+                  <button onClick={() => addElement(pieceIdx)}
+                    style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", color: "#374151" }}>
+                    +
+                  </button>
+                </div>
+
+                {/* Photos */}
+                <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #f3f4f6" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#6b7280" }}>Photos ({piece.photos.length}/5)</span>
+                    <input
+                      ref={el => { photoRefs.current[pieceIdx] = el }}
+                      type="file" accept="image/*" multiple
+                      style={{ display: "none" }}
+                      onChange={e => { if (e.target.files && e.target.files.length > 0) { uploadPhotos(pieceIdx, e.target.files); e.target.value = "" } }}
+                    />
+                    {piece.photos.length < 5 && (
+                      <button onClick={() => photoRefs.current[pieceIdx]?.click()}
+                        disabled={uploadingPiece === pieceIdx}
+                        style={{
+                          background: "#eff6ff", border: "1.5px solid #bfdbfe", color: "#1d4ed8",
+                          borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700,
+                          cursor: uploadingPiece === pieceIdx ? "not-allowed" : "pointer",
+                          fontFamily: "inherit", opacity: uploadingPiece === pieceIdx ? 0.6 : 1,
+                        }}>
+                        {uploadingPiece === pieceIdx ? "Upload..." : `Ajouter des photos (${5 - piece.photos.length} restantes)`}
+                      </button>
+                    )}
+                  </div>
+                  {piece.photos.length > 0 && (
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {piece.photos.map((url, photoIdx) => (
+                        <div key={photoIdx} style={{ position: "relative", width: 80, height: 80, borderRadius: 10, overflow: "hidden", border: "1.5px solid #e5e7eb" }}>
+                          <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          <button onClick={() => removePhoto(pieceIdx, photoIdx)}
+                            style={{ position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,0.6)", color: "white", border: "none", borderRadius: "50%", width: 20, height: 20, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {/* Ajouter une piece */}
+            <div style={cardS}>
+              <h2 style={{ fontSize: 15, fontWeight: 800, marginBottom: 14 }}>Ajouter une piece</h2>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+                {PIECES_PROPOSEES.filter(p => p !== "Autre").map(p => (
+                  <button key={p} onClick={() => addPiece(p)}
+                    style={{ padding: "7px 14px", background: "#f3f4f6", border: "none", borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: "#374151" }}>
+                    + {p}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input value={customPieceName} onChange={e => setCustomPieceName(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && customPieceName.trim() && addPiece("Autre", customPieceName.trim())}
+                  placeholder="Nom personnalise (ex: Dressing, Cellier...)"
+                  style={{ flex: 1, padding: "9px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 13, outline: "none", fontFamily: "inherit" }} />
+                <button onClick={() => customPieceName.trim() && addPiece("Autre", customPieceName.trim())}
+                  style={{ background: "#111", color: "white", border: "none", borderRadius: 10, padding: "9px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
+                  Ajouter
                 </button>
               </div>
             </div>
-            <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16 }}>Type : {piece.type}</p>
 
-            {/* Elements */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-              {Object.entries(piece.elements).map(([elem, val]) => {
-                const st = ETAT_STYLE[val.etat]
-                return (
-                  <div key={elem} style={{ padding: "10px 0", borderBottom: "1px solid #f9fafb" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: "#374151", flex: 1 }}>{elem}</span>
-                      <button onClick={() => removeElement(pieceIdx, elem)}
-                        style={{ background: "none", border: "none", color: "#d1d5db", fontSize: 16, cursor: "pointer", padding: "0 4px", lineHeight: 1 }}
-                        title="Retirer cet element">
-                        ×
-                      </button>
-                    </div>
-                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: val.observation || isMobile ? 8 : 0 }}>
-                      {ETATS.map(etat => {
-                        const s = ETAT_STYLE[etat]
-                        const active = val.etat === etat
-                        return (
-                          <button key={etat} onClick={() => updateElement(pieceIdx, elem, "etat", etat)}
-                            style={{
-                              padding: isMobile ? "5px 8px" : "4px 10px", borderRadius: 999,
-                              fontSize: isMobile ? 10 : 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                              background: active ? s.bg : "#f9fafb",
-                              color: active ? s.color : "#9ca3af",
-                              border: active ? `1.5px solid ${s.color}` : "1.5px solid transparent",
-                            }}>
-                            {etat}
-                          </button>
-                        )
-                      })}
-                    </div>
-                    <input
-                      value={val.observation}
-                      onChange={e => updateElement(pieceIdx, elem, "observation", e.target.value)}
-                      placeholder="Observation (tache, rayure, manque...)..."
-                      style={{ width: "100%", padding: "6px 10px", border: "1.5px solid #f3f4f6", borderRadius: 8, fontSize: 12, outline: "none", fontFamily: "inherit", boxSizing: "border-box" as const, marginTop: 4 }}
-                    />
-                  </div>
-                )
-              })}
+            {/* Observations */}
+            <div style={cardS}>
+              <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>Observations generales</h2>
+              <textarea value={observations} onChange={e => setObservations(e.target.value)}
+                placeholder="Remarques generales, defauts constates, accord entre les parties..."
+                rows={4}
+                style={{ ...inp, resize: "vertical" }} />
             </div>
 
-            {/* Ajouter un element */}
-            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-              <input
-                value={newElemName[pieceIdx] || ""}
-                onChange={e => setNewElemName(prev => ({ ...prev, [pieceIdx]: e.target.value }))}
-                onKeyDown={e => e.key === "Enter" && addElement(pieceIdx)}
-                placeholder="Ajouter un element..."
-                style={{ flex: 1, padding: "7px 10px", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: 12, outline: "none", fontFamily: "inherit" }}
-              />
-              <button onClick={() => addElement(pieceIdx)}
-                style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", color: "#374151" }}>
-                +
+            {/* Actions */}
+            <div style={{ display: "flex", gap: 12, flexDirection: isMobile ? "column" : "row", flexWrap: "wrap" }}>
+              <button onClick={() => sauvegarderEdl()} disabled={saving}
+                style={{
+                  flex: 1, padding: "16px 32px",
+                  background: saved ? "#16a34a" : saving ? "#9ca3af" : "#111", color: "white",
+                  border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16,
+                  cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit",
+                }}>
+                {saving ? "Sauvegarde..." : saved ? "Sauvegarde !" : edlExistant ? "Mettre a jour l'EDL" : "Sauvegarder l'EDL"}
               </button>
-            </div>
-
-            {/* Photos */}
-            <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #f3f4f6" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#6b7280" }}>Photos ({piece.photos.length}/5)</span>
-                <input
-                  ref={el => { photoRefs.current[pieceIdx] = el }}
-                  type="file" accept="image/*" multiple
-                  style={{ display: "none" }}
-                  onChange={e => { if (e.target.files && e.target.files.length > 0) { uploadPhotos(pieceIdx, e.target.files); e.target.value = "" } }}
-                />
-                {piece.photos.length < 5 && (
-                  <button onClick={() => photoRefs.current[pieceIdx]?.click()}
-                    disabled={uploadingPiece === pieceIdx}
-                    style={{
-                      background: "#eff6ff", border: "1.5px solid #bfdbfe", color: "#1d4ed8",
-                      borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700,
-                      cursor: uploadingPiece === pieceIdx ? "not-allowed" : "pointer",
-                      fontFamily: "inherit", opacity: uploadingPiece === pieceIdx ? 0.6 : 1,
-                    }}>
-                    {uploadingPiece === pieceIdx ? "Upload..." : `Ajouter des photos (${5 - piece.photos.length} restantes)`}
-                  </button>
-                )}
-              </div>
-              {piece.photos.length > 0 && (
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  {piece.photos.map((url, photoIdx) => (
-                    <div key={photoIdx} style={{ position: "relative", width: 80, height: 80, borderRadius: 10, overflow: "hidden", border: "1.5px solid #e5e7eb" }}>
-                      <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      <button onClick={() => removePhoto(pieceIdx, photoIdx)}
-                        style={{ position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,0.6)", color: "white", border: "none", borderRadius: "50%", width: 20, height: 20, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
+              <button onClick={generer}
+                style={{
+                  flex: 1, padding: "16px 32px",
+                  background: "white", color: "#111",
+                  border: "1.5px solid #111", borderRadius: 16, fontWeight: 800, fontSize: 16,
+                  cursor: "pointer", fontFamily: "inherit",
+                }}>
+                Telecharger le PDF
+              </button>
+              {emailLocataire.trim() && (
+                <button onClick={envoyerAuLocataire} disabled={sending}
+                  style={{
+                    flex: 1, padding: "16px 32px",
+                    background: sent ? "#16a34a" : sending ? "#9ca3af" : "#1d4ed8", color: "white",
+                    border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16,
+                    cursor: sending ? "not-allowed" : "pointer", fontFamily: "inherit",
+                  }}>
+                  {sending ? "Envoi en cours..." : sent ? "Envoye au locataire !" : "Envoyer au locataire pour validation"}
+                </button>
               )}
             </div>
-          </div>
-        ))}
+          </>
+        )}
 
-        {/* Ajouter une piece */}
-        <div style={cardS}>
-          <h2 style={{ fontSize: 15, fontWeight: 800, marginBottom: 14 }}>Ajouter une piece</h2>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-            {PIECES_PROPOSEES.filter(p => p !== "Autre").map(p => (
-              <button key={p} onClick={() => addPiece(p)}
-                style={{ padding: "7px 14px", background: "#f3f4f6", border: "none", borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: "#374151" }}>
-                + {p}
-              </button>
-            ))}
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <input value={customPieceName} onChange={e => setCustomPieceName(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && customPieceName.trim() && addPiece("Autre", customPieceName.trim())}
-              placeholder="Nom personnalise (ex: Dressing, Cellier...)"
-              style={{ flex: 1, padding: "9px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 13, outline: "none", fontFamily: "inherit" }} />
-            <button onClick={() => customPieceName.trim() && addPiece("Autre", customPieceName.trim())}
-              style={{ background: "#111", color: "white", border: "none", borderRadius: 10, padding: "9px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
-              Ajouter
-            </button>
-          </div>
-        </div>
-
-        {/* Observations */}
-        <div style={cardS}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>Observations generales</h2>
-          <textarea value={observations} onChange={e => setObservations(e.target.value)}
-            placeholder="Remarques generales, defauts constates, accord entre les parties..."
-            rows={4}
-            style={{ ...inp, resize: "vertical" }} />
-        </div>
-
-        {/* Actions */}
-        <div style={{ display: "flex", gap: 12, flexDirection: isMobile ? "column" : "row" }}>
-          <button onClick={sauvegarderEdl} disabled={saving}
-            style={{
-              flex: 1, padding: "16px 32px",
-              background: saved ? "#16a34a" : saving ? "#9ca3af" : "#111", color: "white",
-              border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16,
-              cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit",
-            }}>
-            {saving ? "Sauvegarde..." : saved ? "Sauvegarde !" : edlExistant ? "Mettre a jour l'EDL" : "Sauvegarder l'EDL"}
-          </button>
-          <button onClick={generer}
-            style={{
-              flex: 1, padding: "16px 32px",
-              background: "white", color: "#111",
-              border: "1.5px solid #111", borderRadius: 16, fontWeight: 800, fontSize: 16,
-              cursor: "pointer", fontFamily: "inherit",
-            }}>
-            Telecharger le PDF
-          </button>
-        </div>
-
-        {edlExistant && (
+        {edlExistant && !isReadOnly && (
           <div style={{ background: "#dcfce7", border: "1.5px solid #bbf7d0", borderRadius: 12, padding: "12px 16px", marginTop: 16, display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 16 }}>✓</span>
             <div>

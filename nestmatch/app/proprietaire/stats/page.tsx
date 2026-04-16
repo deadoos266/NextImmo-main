@@ -298,7 +298,7 @@ function StatsInner() {
   const [newLoyerMontant, setNewLoyerMontant] = useState("")
   const [savingLoyer, setSavingLoyer] = useState(false)
   const [travauxCout, setTravauxCout] = useState(0)
-  const [edlExiste, setEdlExiste] = useState(false)
+  const [edlStatut, setEdlStatut] = useState<string | null>(null)
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth")
@@ -306,13 +306,13 @@ function StatsInner() {
   }, [session, status, bienId])
 
   async function loadData() {
-    const [{ data: b }, { data: l }, { data: travaux }, { count: edlCount }] = await Promise.all([
+    const [{ data: b }, { data: l }, { data: travaux }, { data: edlData }] = await Promise.all([
       supabase.from("annonces").select("*").eq("id", bienId).single(),
       supabase.from("loyers").select("*").eq("annonce_id", bienId).order("mois"),
       supabase.from("carnet_entretien").select("cout").eq("annonce_id", bienId),
-      supabase.from("etats_des_lieux").select("id", { count: "exact", head: true }).eq("annonce_id", bienId),
+      supabase.from("etats_des_lieux").select("statut").eq("annonce_id", bienId).order("created_at", { ascending: false }).limit(1).single(),
     ])
-    setEdlExiste((edlCount ?? 0) > 0)
+    setEdlStatut(edlData?.statut || null)
     if (travaux) setTravauxCout(travaux.reduce((s: number, t: any) => s + (Number(t.cout) || 0), 0))
     if (b) {
       setBien(b)
@@ -736,11 +736,24 @@ function StatsInner() {
                 </Link>
                 <Link href={`/proprietaire/edl/${bienId}`}
                   style={{
-                    padding: "9px 18px", border: `1.5px solid ${edlExiste ? "#bbf7d0" : "#bfdbfe"}`, borderRadius: 999,
-                    fontSize: 13, fontWeight: 700, color: edlExiste ? "#16a34a" : "#1d4ed8", textDecoration: "none",
-                    background: edlExiste ? "#dcfce7" : "#eff6ff", display: "inline-flex", alignItems: "center", gap: 6,
+                    padding: "9px 18px", borderRadius: 999,
+                    fontSize: 13, fontWeight: 700, textDecoration: "none",
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    ...(edlStatut === "valide"
+                      ? { background: "#dcfce7", color: "#16a34a", border: "1.5px solid #bbf7d0" }
+                      : edlStatut === "envoye"
+                      ? { background: "#fff7ed", color: "#ea580c", border: "1.5px solid #fed7aa" }
+                      : edlStatut === "conteste"
+                      ? { background: "#fee2e2", color: "#dc2626", border: "1.5px solid #fecaca" }
+                      : edlStatut === "brouillon"
+                      ? { background: "#eff6ff", color: "#1d4ed8", border: "1.5px solid #bfdbfe" }
+                      : { background: "#eff6ff", color: "#1d4ed8", border: "1.5px solid #bfdbfe" }),
                   }}>
-                  {edlExiste ? "✓ Voir l'EDL" : "Creer un EDL"}
+                  {edlStatut === "valide" ? "EDL valide ✓"
+                    : edlStatut === "envoye" ? "EDL envoye"
+                    : edlStatut === "conteste" ? "EDL conteste"
+                    : edlStatut === "brouillon" ? "EDL (brouillon)"
+                    : "Creer un EDL"}
                 </Link>
               </div>
             </div>

@@ -10,6 +10,7 @@ import { useResponsive } from "../hooks/useResponsive"
 
 const DOSSIER_PREFIX = "[DOSSIER_CARD]"
 const DEMANDE_DOSSIER_PREFIX = "[DEMANDE_DOSSIER]"
+const EDL_PREFIX = "[EDL_CARD]"
 
 const STATUT_VISITE: Record<string, { bg: string; color: string; border: string; label: string }> = {
   "proposée":  { bg: "#fff7ed", color: "#c2410c", border: "#fed7aa", label: "En attente" },
@@ -97,6 +98,56 @@ function DemandeDossierCard({ isMine, dossierRecu, onEnvoyer, envoyant }: {
           style={{ width: "100%", background: envoyant ? "#e5e7eb" : "#111", color: envoyant ? "#9ca3af" : "white", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: envoyant ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
           {envoyant ? "Envoi en cours..." : "📁 Envoyer mon dossier"}
         </button>
+      )}
+    </div>
+  )
+}
+
+// ─── EDL Card ───────────────────────────────────────────────────────────────
+
+function EdlCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
+  let data: any = {}
+  try { data = JSON.parse(contenu.slice(EDL_PREFIX.length)) } catch {}
+  const typeLabel = data.type === "entree" ? "entree" : "sortie"
+  const dateLabel = data.dateEdl ? new Date(data.dateEdl).toLocaleDateString("fr-FR") : ""
+
+  if (isMine) {
+    return (
+      <div style={{ background: "#1a1a1a", border: "1.5px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 280 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 20 }}>📋</span>
+          <div>
+            <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0 }}>Etat des lieux envoye</p>
+            <p style={{ fontSize: 11, color: "#9ca3af", margin: "2px 0 0" }}>
+              {data.bienTitre || "Bien"} — {dateLabel}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ background: "#f9fafb", border: "1.5px solid #e5e7eb", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 280 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+        <span style={{ fontSize: 20 }}>📋</span>
+        <div>
+          <p style={{ fontWeight: 700, fontSize: 13, color: "#111", margin: 0 }}>Etat des lieux d'{typeLabel}</p>
+          <p style={{ fontSize: 11, color: "#6b7280", margin: "2px 0 0" }}>
+            {data.bienTitre || "Bien"} — {dateLabel}
+          </p>
+        </div>
+      </div>
+      {data.edlId && (
+        <a href={`/edl/consulter/${data.edlId}`}
+          style={{
+            display: "block", width: "100%", background: "#111", color: "white",
+            border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13,
+            fontWeight: 700, textAlign: "center", textDecoration: "none",
+            fontFamily: "inherit",
+          }}>
+          Consulter l'EDL →
+        </a>
       )}
     </div>
   )
@@ -448,6 +499,7 @@ function MessagesInner() {
                 const preview = conv.lastMsg?.contenu
                   ? conv.lastMsg.contenu.startsWith(DOSSIER_PREFIX) ? "📁 Dossier envoyé"
                   : conv.lastMsg.contenu.startsWith(DEMANDE_DOSSIER_PREFIX) ? "📋 Dossier demandé"
+                  : conv.lastMsg.contenu.startsWith(EDL_PREFIX) ? "📋 Etat des lieux envoyé"
                   : conv.lastMsg.contenu.length > 35 ? conv.lastMsg.contenu.slice(0, 35) + "…"
                   : conv.lastMsg.contenu
                   : "Nouvelle conversation"
@@ -609,6 +661,7 @@ function MessagesInner() {
                     const isMine = m.from_email === myEmail
                     const isDossier = typeof m.contenu === "string" && m.contenu.startsWith(DOSSIER_PREFIX)
                     const isDemande = typeof m.contenu === "string" && m.contenu === DEMANDE_DOSSIER_PREFIX
+                    const isEdl = typeof m.contenu === "string" && m.contenu.startsWith(EDL_PREFIX)
                     return (
                       <div key={m.id} style={{ display: "flex", justifyContent: isMine ? "flex-end" : "flex-start" }}>
                         {isDossier ? (
@@ -626,6 +679,13 @@ function MessagesInner() {
                               onEnvoyer={envoyerDossier}
                               envoyant={envoyantDossier}
                             />
+                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        ) : isEdl ? (
+                          <div>
+                            <EdlCard contenu={m.contenu} isMine={isMine} />
                             <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
