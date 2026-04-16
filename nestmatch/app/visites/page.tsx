@@ -198,19 +198,19 @@ export default function MesVisites() {
                   )}
 
                   {/* Contenu */}
-                  <div style={{ flex: 1, padding: "18px 22px", display: "flex", flexDirection: "column", gap: 0 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                      <div>
-                        <p style={{ fontWeight: 700, fontSize: 15 }}>{ann?.titre || "Bien"}</p>
+                  <div style={{ flex: 1, padding: isMobile ? "14px 16px" : "18px 22px", display: "flex", flexDirection: "column", gap: 0, minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, gap: 8 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontWeight: 700, fontSize: isMobile ? 14 : 15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ann?.titre || "Bien"}</p>
                         <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 1 }}>{ann?.ville}{ann?.prix ? ` · ${ann.prix} €/mois` : ""}</p>
                       </div>
-                      <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`, fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 999, flexShrink: 0 }}>
+                      <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`, fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 999, flexShrink: 0, whiteSpace: "nowrap" }}>
                         {s.icon} {s.label}
                       </span>
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: v.message ? 8 : 0 }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: "#111" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: v.message ? 8 : 0, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: isMobile ? 12 : 14, fontWeight: 700, color: "#111" }}>
                         📅 {formatDate(v.date_visite)} à {v.heure}
                       </span>
                       {future && v.statut !== "annulée" && (
@@ -226,20 +226,20 @@ export default function MesVisites() {
                       </p>
                     )}
 
-                    <div style={{ display: "flex", gap: 8, marginTop: "auto", paddingTop: 8, alignItems: "center" }}>
+                    <div style={{ display: "flex", gap: 8, marginTop: "auto", paddingTop: 8, alignItems: "center", flexWrap: "wrap" }}>
                       <Link href={`/annonces/${v.annonce_id}`}
-                        style={{ fontSize: 13, fontWeight: 600, color: "#111", textDecoration: "none", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "5px 14px" }}>
+                        style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "5px 12px" }}>
                         Voir l'annonce
                       </Link>
                       {ann?.proprietaire_email && (
                         <Link href={`/messages?with=${ann.proprietaire_email}`}
-                          style={{ fontSize: 13, fontWeight: 600, color: "#111", textDecoration: "none", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "5px 14px" }}>
+                          style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "5px 12px" }}>
                           💬 Contacter
                         </Link>
                       )}
                       {v.statut === "proposée" && (
                         <button onClick={() => annuler(v.id)}
-                          style={{ marginLeft: "auto", fontSize: 13, fontWeight: 600, color: "#dc2626", background: "none", border: "1.5px solid #fecaca", borderRadius: 999, padding: "5px 14px", cursor: "pointer", fontFamily: "inherit" }}>
+                          style={{ fontSize: 12, fontWeight: 600, color: "#dc2626", background: "none", border: "1.5px solid #fecaca", borderRadius: 999, padding: "5px 12px", cursor: "pointer", fontFamily: "inherit" }}>
                           Annuler
                         </button>
                       )}

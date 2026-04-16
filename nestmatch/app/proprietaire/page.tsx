@@ -87,10 +87,10 @@ function VisitesProprio({ visites, biens, setVisites }: { visites: any[]; biens:
       </div>
 
       {/* Filtres */}
-      <div style={{ display: "flex", background: "white", borderRadius: 12, padding: 4, gap: 2, marginBottom: 16, width: "fit-content" }}>
+      <div style={{ display: "flex", background: "white", borderRadius: 12, padding: 4, gap: 2, marginBottom: 16, width: isMobile ? "100%" : "fit-content", overflowX: isMobile ? "auto" : undefined }}>
         {["toutes", "proposée", "confirmée", "annulée", "effectuée"].map(f => (
           <button key={f} onClick={() => setFiltre(f)}
-            style={{ padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, background: filtre === f ? "#111" : "transparent", color: filtre === f ? "white" : "#6b7280" }}>
+            style={{ padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, background: filtre === f ? "#111" : "transparent", color: filtre === f ? "white" : "#6b7280", whiteSpace: "nowrap", flexShrink: 0 }}>
             {f === "toutes" ? "Toutes" : STATUT_V[f]?.label}
             {f !== "toutes" && visites.filter(v => v.statut === f).length > 0 && (
               <span style={{ marginLeft: 4, opacity: 0.7 }}>({visites.filter(v => v.statut === f).length})</span>
@@ -114,27 +114,29 @@ function VisitesProprio({ visites, biens, setVisites }: { visites: any[]; biens:
             const photo = Array.isArray(bien?.photos) && bien.photos.length > 0 ? bien.photos[0] : null
             const future = new Date(v.date_visite) >= new Date()
             return (
-              <div key={v.id} style={{ background: "white", borderRadius: 18, border: `1.5px solid ${v.statut === "proposée" ? "#fed7aa" : "#e5e7eb"}`, overflow: "hidden", display: "flex" }}>
+              <div key={v.id} style={{ background: "white", borderRadius: 18, border: `1.5px solid ${v.statut === "proposée" ? "#fed7aa" : "#e5e7eb"}`, overflow: "hidden", display: "flex", flexDirection: isMobile ? "column" : "row" }}>
                 {/* Photo bien */}
-                {photo ? (
-                  <div style={{ width: 100, flexShrink: 0 }}>
-                    <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  </div>
-                ) : (
-                  <div style={{ width: 100, flexShrink: 0, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>🏠</div>
+                {!isMobile && (
+                  photo ? (
+                    <div style={{ width: 100, flexShrink: 0 }}>
+                      <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </div>
+                  ) : (
+                    <div style={{ width: 100, flexShrink: 0, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>🏠</div>
+                  )
                 )}
 
-                <div style={{ flex: 1, padding: "16px 20px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ flex: 1, padding: isMobile ? "14px 16px" : "16px 20px", minWidth: 0 }}>
+                  <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "flex-start", marginBottom: 8, gap: 8 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`, fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 999 }}>
                           {s.icon} {s.label}
                         </span>
                         {bien && <span style={{ fontSize: 12, color: "#9ca3af" }}>{bien.titre} · {bien.ville}</span>}
                       </div>
-                      <p style={{ fontWeight: 700, fontSize: 15, marginTop: 6 }}>
-                        {new Date(v.date_visite).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} à {v.heure}
+                      <p style={{ fontWeight: 700, fontSize: isMobile ? 13 : 15, marginTop: 6 }}>
+                        {new Date(v.date_visite).toLocaleDateString("fr-FR", { weekday: isMobile ? "short" : "long", day: "numeric", month: isMobile ? "short" : "long" })} à {v.heure}
                         {future && v.statut !== "annulée" && (
                           <span style={{ marginLeft: 8, fontSize: 11, background: "#f3f4f6", color: "#6b7280", padding: "1px 8px", borderRadius: 999, fontWeight: 600 }}>
                             {jours(v.date_visite)}
@@ -144,40 +146,40 @@ function VisitesProprio({ visites, biens, setVisites }: { visites: any[]; biens:
                     </div>
 
                     {/* Actions */}
-                    <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       {v.statut === "proposée" && (
                         <>
                           <button onClick={() => changerStatut(v.id, "confirmée")}
-                            style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "7px 16px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+                            style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "7px 14px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
                             ✓ Confirmer
                           </button>
                           <button onClick={() => changerStatut(v.id, "annulée")}
-                            style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "7px 14px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+                            style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "7px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
                             Refuser
                           </button>
                         </>
                       )}
                       {v.statut === "confirmée" && (
                         <button onClick={() => changerStatut(v.id, "effectuée")}
-                          style={{ background: "#f3f4f6", border: "none", color: "#374151", borderRadius: 999, padding: "7px 14px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
-                          Marquer effectuée
+                          style={{ background: "#f3f4f6", border: "none", color: "#374151", borderRadius: 999, padding: "7px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+                          Effectuée
                         </button>
                       )}
                     </div>
                   </div>
 
                   {/* Locataire + message */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                     <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#e5e7eb", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
                       {v.locataire_email[0]?.toUpperCase()}
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>{v.locataire_email}</p>
-                      {v.message && <p style={{ fontSize: 12, color: "#6b7280", fontStyle: "italic", marginTop: 1 }}>"{v.message}"</p>}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v.locataire_email}</p>
+                      {v.message && <p style={{ fontSize: 11, color: "#6b7280", fontStyle: "italic", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>"{v.message}"</p>}
                     </div>
                     <Link href={`/messages?with=${v.locataire_email}`}
                       style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "5px 12px", flexShrink: 0 }}>
-                      💬 Message
+                      💬
                     </Link>
                   </div>
                 </div>
@@ -318,8 +320,8 @@ export default function Proprietaire() {
 
             {/* Alertes */}
             {loyersAttendus > 0 && (
-              <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 14, padding: "14px 20px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <p style={{ fontSize: 14, fontWeight: 600, color: "#ea580c" }}>{loyersAttendus} paiement{loyersAttendus > 1 ? "s" : ""} declare{loyersAttendus > 1 ? "s" : ""} en attente de confirmation</p>
+              <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 14, padding: isMobile ? "12px 16px" : "14px 20px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <p style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#ea580c" }}>{loyersAttendus} paiement{loyersAttendus > 1 ? "s" : ""} en attente</p>
                 <button onClick={() => setOnglet("Loyers")} style={{ background: "#ea580c", color: "white", border: "none", borderRadius: 999, padding: "6px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Voir</button>
               </div>
             )}
@@ -358,17 +360,17 @@ export default function Proprietaire() {
                 <a href="/proprietaire/ajouter" style={{ background: "#111", color: "white", padding: "12px 28px", borderRadius: 999, textDecoration: "none", fontWeight: 700 }}>Ajouter un bien</a>
               </div>
             ) : biens.map(b => (
-              <div key={b.id} style={{ background: "white", borderRadius: 20, padding: 24 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-                      <h3 style={{ fontSize: 17, fontWeight: 800 }}>{b.titre}</h3>
+              <div key={b.id} style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24 }}>
+                <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "stretch" : "flex-start", gap: isMobile ? 14 : 0 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
+                      <h3 style={{ fontSize: isMobile ? 15 : 17, fontWeight: 800 }}>{b.titre}</h3>
                       <span style={{ background: statutColor[b.statut || "disponible"]?.bg || "#f3f4f6", color: statutColor[b.statut || "disponible"]?.color || "#6b7280", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                         {b.statut || "disponible"}
                       </span>
                     </div>
                     <p style={{ color: "#6b7280", fontSize: 13 }}>{b.adresse} · {b.ville}</p>
-                    <div style={{ display: "flex", gap: 16, marginTop: 10, fontSize: 13, color: "#6b7280" }}>
+                    <div style={{ display: "flex", gap: isMobile ? 10 : 16, marginTop: 10, fontSize: 13, color: "#6b7280", flexWrap: "wrap" }}>
                       <span>{b.surface} m²</span>
                       <span>{b.pieces} pieces</span>
                       <span>{b.prix} €/mois</span>
@@ -376,24 +378,24 @@ export default function Proprietaire() {
                       {b.animaux && <span>Animaux OK</span>}
                     </div>
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginLeft: 24 }}>
+                  <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: 8, marginLeft: isMobile ? 0 : 24, flexWrap: "wrap" }}>
                     <select
                       value={b.statut || "disponible"}
                       onChange={e => changerStatut(b.id, e.target.value)}
-                      style={{ padding: "8px 12px", borderRadius: 10, border: "1.5px solid #e5e7eb", fontSize: 13, fontFamily: "inherit", cursor: "pointer", outline: "none" }}>
+                      style={{ padding: "8px 12px", borderRadius: 10, border: "1.5px solid #e5e7eb", fontSize: 12, fontFamily: "inherit", cursor: "pointer", outline: "none", flex: isMobile ? 1 : undefined }}>
                       <option value="disponible">Disponible</option>
                       <option value="en visite">En visite</option>
                       <option value="réservé">Réservé</option>
                       <option value="loué">Loué</option>
                     </select>
-                    <a href={`/proprietaire/modifier/${b.id}`} style={{ textAlign: "center", padding: "8px 12px", border: "none", borderRadius: 10, textDecoration: "none", color: "white", background: "#111", fontSize: 13, fontWeight: 600 }}>
+                    <a href={`/proprietaire/modifier/${b.id}`} style={{ textAlign: "center", padding: "8px 12px", border: "none", borderRadius: 10, textDecoration: "none", color: "white", background: "#111", fontSize: 12, fontWeight: 600, flex: isMobile ? 1 : undefined }}>
                       Modifier
                     </a>
-                    <a href={`/annonces/${b.id}`} style={{ textAlign: "center", padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, textDecoration: "none", color: "#111", fontSize: 13, fontWeight: 600 }}>
-                      Voir l'annonce
+                    <a href={`/annonces/${b.id}`} style={{ textAlign: "center", padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, textDecoration: "none", color: "#111", fontSize: 12, fontWeight: 600, flex: isMobile ? 1 : undefined }}>
+                      Annonce
                     </a>
-                    <a href={`/proprietaire/stats?id=${b.id}`} style={{ textAlign: "center", padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, textDecoration: "none", color: "#6b7280", fontSize: 13, fontWeight: 600 }}>
-                      Statistiques
+                    <a href={`/proprietaire/stats?id=${b.id}`} style={{ textAlign: "center", padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, textDecoration: "none", color: "#6b7280", fontSize: 12, fontWeight: 600, flex: isMobile ? 1 : undefined }}>
+                      Stats
                     </a>
                   </div>
                 </div>
