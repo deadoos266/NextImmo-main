@@ -97,7 +97,7 @@ function genererEdlPDF(data: {
   function title(t: string) { doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.text(t, 105, y, { align: "center" }); y += 8 }
   function section(t: string) { check(); doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.text(t, 20, y); y += 7 }
   function text(t: string) { check(); doc.setFontSize(9); doc.setFont("helvetica", "normal"); const l = doc.splitTextToSize(t, W); doc.text(l, 20, y); y += l.length * 4.5 }
-  function field(l: string, v: string) { check(); doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text(`${l} :`, 20, y); doc.setFont("helvetica", "normal"); doc.text(v, 75, y); y += 5.5 }
+  function field(l: string, v: string) { if (!v) return; check(); doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text(`${l} :`, 20, y); doc.setFont("helvetica", "normal"); doc.text(v, 75, y); y += 5.5 }
   function line() { doc.setDrawColor(200, 200, 200); doc.line(20, y, 190, y); y += 6 }
 
   const dateLabel = new Date(data.dateEdl).toLocaleDateString("fr-FR")
@@ -111,14 +111,14 @@ function genererEdlPDF(data: {
   section("PARTIES")
   y += 2
   doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text("LE BAILLEUR", 20, y); y += 5
-  field("Nom", data.nomBailleur || "A completer")
-  field("Prenom", data.prenomBailleur || "A completer")
-  field("Email", data.emailBailleur || "A completer")
+  field("Nom", data.nomBailleur || "")
+  field("Prenom", data.prenomBailleur || "")
+  field("Email", data.emailBailleur || "")
   y += 4
   doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text("LE LOCATAIRE", 20, y); y += 5
-  field("Nom", data.nomLocataire || "A completer")
-  field("Prenom", data.prenomLocataire || "A completer")
-  field("Email", data.emailLocataire || "A completer")
+  field("Nom", data.nomLocataire || "")
+  field("Prenom", data.prenomLocataire || "")
+  field("Email", data.emailLocataire || "")
   y += 3
 
   section("LOGEMENT")
@@ -238,10 +238,12 @@ export default function EdlPage() {
   const [cles, setCles] = useState("2 cles + 1 badge")
   const [observations, setObservations] = useState("")
   const [uploadingPiece, setUploadingPiece] = useState<number | null>(null)
-  const [pieceToAdd, setPieceToAdd] = useState("")
   const [customPieceName, setCustomPieceName] = useState("")
   const [newElemName, setNewElemName] = useState<Record<number, string>>({})
   const photoRefs = useRef<Record<number, HTMLInputElement | null>>({})
+  const [edlExistant, setEdlExistant] = useState<any>(null)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth")
@@ -249,35 +251,57 @@ export default function EdlPage() {
   }, [session, status, bienId])
 
   async function loadBien() {
-    const { data } = await supabase.from("annonces").select("*").eq("id", bienId).single()
+    const [{ data }, { data: edl }] = await Promise.all([
+      supabase.from("annonces").select("*").eq("id", bienId).single(),
+      supabase.from("etats_des_lieux").select("*").eq("annonce_id", bienId).order("created_at", { ascending: false }).limit(1).single(),
+    ])
+    if (edl) {
+      setEdlExistant(edl)
+      // Restaurer l'EDL sauvegarde
+      setType(edl.type || "entree")
+      setDateEdl(edl.date_edl || new Date().toISOString().split("T")[0])
+      setPrenomBailleur(edl.prenom_bailleur || "")
+      setNomBailleur(edl.nom_bailleur || "")
+      setEmailBailleur(edl.email_bailleur || "")
+      setPrenomLocataire(edl.prenom_locataire || "")
+      setNomLocataire(edl.nom_locataire || "")
+      setEmailLocataire(edl.email_locataire || "")
+      setCompteurs(edl.compteurs || { eau: "", elec: "", gaz: "" })
+      setCles(edl.cles || "")
+      setObservations(edl.observations || "")
+      if (edl.pieces_data) setPieces(edl.pieces_data)
+    }
     if (data) {
       setBien(data)
-      // Pre-remplir bailleur
-      const nameParts = (data.proprietaire || session?.user?.name || "").split(" ")
-      setPrenomBailleur(nameParts[0] || "")
-      setNomBailleur(nameParts.slice(1).join(" ") || "")
-      setEmailBailleur(data.proprietaire_email || session?.user?.email || "")
-      // Pre-remplir locataire email
-      setEmailLocataire(data.locataire_email || "")
-      // Generer les pieces par defaut selon le bien
-      const nbChambres = Math.max(1, Number(data.chambres) || 1)
-      const initialPieces: PieceData[] = [
-        { nom: "Entree", type: "Entree", elements: makeElements("Entree"), photos: [] },
-        { nom: "Sejour / Salon", type: "Sejour / Salon", elements: makeElements("Sejour / Salon"), photos: [] },
-        { nom: "Cuisine", type: "Cuisine", elements: makeElements("Cuisine"), photos: [] },
-      ]
-      for (let i = 1; i <= nbChambres; i++) {
-        initialPieces.push({ nom: `Chambre ${i}`, type: "Chambre", elements: makeElements("Chambre"), photos: [] })
+      if (!edl) {
+        // Pre-remplir bailleur seulement si pas d'EDL existant
+        const nameParts = (data.proprietaire || session?.user?.name || "").split(" ")
+        setPrenomBailleur(nameParts[0] || "")
+        setNomBailleur(nameParts.slice(1).join(" ") || "")
+        setEmailBailleur(data.proprietaire_email || session?.user?.email || "")
+        setEmailLocataire(data.locataire_email || "")
       }
-      initialPieces.push(
-        { nom: "Salle de bain", type: "Salle de bain", elements: makeElements("Salle de bain"), photos: [] },
-        { nom: "WC", type: "WC", elements: makeElements("WC"), photos: [] },
-      )
-      if (data.balcon) initialPieces.push({ nom: "Balcon", type: "Balcon / Terrasse", elements: makeElements("Balcon / Terrasse"), photos: [] })
-      if (data.terrasse) initialPieces.push({ nom: "Terrasse", type: "Balcon / Terrasse", elements: makeElements("Balcon / Terrasse"), photos: [] })
-      if (data.cave) initialPieces.push({ nom: "Cave", type: "Cave", elements: makeElements("Cave"), photos: [] })
-      if (data.parking) initialPieces.push({ nom: "Garage / Parking", type: "Garage", elements: makeElements("Garage"), photos: [] })
-      setPieces(initialPieces)
+      if (!edl) {
+        // Generer les pieces par defaut selon le bien
+        const nbChambres = Math.max(1, Number(data.chambres) || 1)
+        const initialPieces: PieceData[] = [
+          { nom: "Entree", type: "Entree", elements: makeElements("Entree"), photos: [] },
+          { nom: "Sejour / Salon", type: "Sejour / Salon", elements: makeElements("Sejour / Salon"), photos: [] },
+          { nom: "Cuisine", type: "Cuisine", elements: makeElements("Cuisine"), photos: [] },
+        ]
+        for (let i = 1; i <= nbChambres; i++) {
+          initialPieces.push({ nom: `Chambre ${i}`, type: "Chambre", elements: makeElements("Chambre"), photos: [] })
+        }
+        initialPieces.push(
+          { nom: "Salle de bain", type: "Salle de bain", elements: makeElements("Salle de bain"), photos: [] },
+          { nom: "WC", type: "WC", elements: makeElements("WC"), photos: [] },
+        )
+        if (data.balcon) initialPieces.push({ nom: "Balcon", type: "Balcon / Terrasse", elements: makeElements("Balcon / Terrasse"), photos: [] })
+        if (data.terrasse) initialPieces.push({ nom: "Terrasse", type: "Balcon / Terrasse", elements: makeElements("Balcon / Terrasse"), photos: [] })
+        if (data.cave) initialPieces.push({ nom: "Cave", type: "Cave", elements: makeElements("Cave"), photos: [] })
+        if (data.parking) initialPieces.push({ nom: "Garage / Parking", type: "Garage", elements: makeElements("Garage"), photos: [] })
+        setPieces(initialPieces)
+      }
     }
     setLoading(false)
   }
@@ -318,21 +342,23 @@ export default function EdlPage() {
     setPieces(prev => prev.filter((_, i) => i !== idx))
   }
 
-  async function uploadPhoto(pieceIdx: number, file: File) {
+  async function uploadPhotos(pieceIdx: number, files: FileList) {
     if (!session?.user?.email) return
+    const currentCount = pieces[pieceIdx]?.photos.length || 0
+    const maxToAdd = 5 - currentCount
+    if (maxToAdd <= 0) { alert("Maximum 5 photos par piece"); return }
+    const filesToUpload = Array.from(files).slice(0, maxToAdd)
     setUploadingPiece(pieceIdx)
-    const ext = file.name.split(".").pop()
-    const path = `edl/${session.user.email}/${bienId}/${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from("annonces-photos").upload(path, file, { upsert: false })
-    if (error) {
-      alert("Erreur upload: " + error.message)
-      setUploadingPiece(null)
-      return
+    for (const file of filesToUpload) {
+      const ext = file.name.split(".").pop()
+      const path = `edl/${session.user.email}/${bienId}/${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`
+      const { error } = await supabase.storage.from("annonces-photos").upload(path, file, { upsert: false })
+      if (error) { continue }
+      const { data: urlData } = supabase.storage.from("annonces-photos").getPublicUrl(path)
+      setPieces(prev => prev.map((p, i) =>
+        i === pieceIdx ? { ...p, photos: [...p.photos, urlData.publicUrl] } : p
+      ))
     }
-    const { data: urlData } = supabase.storage.from("annonces-photos").getPublicUrl(path)
-    setPieces(prev => prev.map((p, i) =>
-      i === pieceIdx ? { ...p, photos: [...p.photos, urlData.publicUrl] } : p
-    ))
     setUploadingPiece(null)
   }
 
@@ -340,6 +366,36 @@ export default function EdlPage() {
     setPieces(prev => prev.map((p, i) =>
       i === pieceIdx ? { ...p, photos: p.photos.filter((_, j) => j !== photoIdx) } : p
     ))
+  }
+
+  async function sauvegarderEdl() {
+    if (!bien || !session?.user?.email) return
+    setSaving(true)
+    const payload = {
+      annonce_id: Number(bienId),
+      proprietaire_email: session.user.email,
+      type,
+      date_edl: dateEdl,
+      prenom_bailleur: prenomBailleur,
+      nom_bailleur: nomBailleur,
+      email_bailleur: emailBailleur,
+      prenom_locataire: prenomLocataire,
+      nom_locataire: nomLocataire,
+      email_locataire: emailLocataire,
+      compteurs,
+      cles,
+      observations,
+      pieces_data: pieces,
+    }
+    if (edlExistant) {
+      await supabase.from("etats_des_lieux").update(payload).eq("id", edlExistant.id)
+    } else {
+      const { data } = await supabase.from("etats_des_lieux").insert([payload]).select().single()
+      if (data) setEdlExistant(data)
+    }
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 3000)
   }
 
   function generer() {
@@ -537,23 +593,25 @@ export default function EdlPage() {
             {/* Photos */}
             <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #f3f4f6" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#6b7280" }}>Photos ({piece.photos.length})</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#6b7280" }}>Photos ({piece.photos.length}/5)</span>
                 <input
                   ref={el => { photoRefs.current[pieceIdx] = el }}
-                  type="file" accept="image/*" capture="environment"
+                  type="file" accept="image/*" multiple
                   style={{ display: "none" }}
-                  onChange={e => { if (e.target.files?.[0]) uploadPhoto(pieceIdx, e.target.files[0]) }}
+                  onChange={e => { if (e.target.files && e.target.files.length > 0) { uploadPhotos(pieceIdx, e.target.files); e.target.value = "" } }}
                 />
-                <button onClick={() => photoRefs.current[pieceIdx]?.click()}
-                  disabled={uploadingPiece === pieceIdx}
-                  style={{
-                    background: "#eff6ff", border: "1.5px solid #bfdbfe", color: "#1d4ed8",
-                    borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700,
-                    cursor: uploadingPiece === pieceIdx ? "not-allowed" : "pointer",
-                    fontFamily: "inherit", opacity: uploadingPiece === pieceIdx ? 0.6 : 1,
-                  }}>
-                  {uploadingPiece === pieceIdx ? "Upload..." : "Prendre une photo"}
-                </button>
+                {piece.photos.length < 5 && (
+                  <button onClick={() => photoRefs.current[pieceIdx]?.click()}
+                    disabled={uploadingPiece === pieceIdx}
+                    style={{
+                      background: "#eff6ff", border: "1.5px solid #bfdbfe", color: "#1d4ed8",
+                      borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700,
+                      cursor: uploadingPiece === pieceIdx ? "not-allowed" : "pointer",
+                      fontFamily: "inherit", opacity: uploadingPiece === pieceIdx ? 0.6 : 1,
+                    }}>
+                    {uploadingPiece === pieceIdx ? "Upload..." : `Ajouter des photos (${5 - piece.photos.length} restantes)`}
+                  </button>
+                )}
               </div>
               {piece.photos.length > 0 && (
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -604,16 +662,39 @@ export default function EdlPage() {
             style={{ ...inp, resize: "vertical" }} />
         </div>
 
-        {/* Generer */}
-        <button onClick={generer}
-          style={{
-            width: "100%", padding: "16px 32px",
-            background: "#111", color: "white",
-            border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16,
-            cursor: "pointer", fontFamily: "inherit",
-          }}>
-          Generer l'etat des lieux PDF
-        </button>
+        {/* Actions */}
+        <div style={{ display: "flex", gap: 12, flexDirection: isMobile ? "column" : "row" }}>
+          <button onClick={sauvegarderEdl} disabled={saving}
+            style={{
+              flex: 1, padding: "16px 32px",
+              background: saved ? "#16a34a" : saving ? "#9ca3af" : "#111", color: "white",
+              border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16,
+              cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit",
+            }}>
+            {saving ? "Sauvegarde..." : saved ? "Sauvegarde !" : edlExistant ? "Mettre a jour l'EDL" : "Sauvegarder l'EDL"}
+          </button>
+          <button onClick={generer}
+            style={{
+              flex: 1, padding: "16px 32px",
+              background: "white", color: "#111",
+              border: "1.5px solid #111", borderRadius: 16, fontWeight: 800, fontSize: 16,
+              cursor: "pointer", fontFamily: "inherit",
+            }}>
+            Telecharger le PDF
+          </button>
+        </div>
+
+        {edlExistant && (
+          <div style={{ background: "#dcfce7", border: "1.5px solid #bbf7d0", borderRadius: 12, padding: "12px 16px", marginTop: 16, display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 16 }}>✓</span>
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#166534", margin: 0 }}>Etat des lieux sauvegarde</p>
+              <p style={{ fontSize: 12, color: "#16a34a", margin: "2px 0 0" }}>
+                {edlExistant.type === "entree" ? "Entree" : "Sortie"} — {new Date(edlExistant.date_edl || edlExistant.created_at).toLocaleDateString("fr-FR")}
+              </p>
+            </div>
+          </div>
+        )}
 
         <p style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", marginTop: 12, lineHeight: 1.6 }}>
           Document contradictoire — a signer par les deux parties.{totalPhotos > 0 ? ` ${totalPhotos} photo(s) jointes en annexe.` : ""}

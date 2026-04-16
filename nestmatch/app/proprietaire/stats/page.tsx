@@ -298,6 +298,7 @@ function StatsInner() {
   const [newLoyerMontant, setNewLoyerMontant] = useState("")
   const [savingLoyer, setSavingLoyer] = useState(false)
   const [travauxCout, setTravauxCout] = useState(0)
+  const [edlExiste, setEdlExiste] = useState(false)
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth")
@@ -305,11 +306,13 @@ function StatsInner() {
   }, [session, status, bienId])
 
   async function loadData() {
-    const [{ data: b }, { data: l }, { data: travaux }] = await Promise.all([
+    const [{ data: b }, { data: l }, { data: travaux }, { count: edlCount }] = await Promise.all([
       supabase.from("annonces").select("*").eq("id", bienId).single(),
       supabase.from("loyers").select("*").eq("annonce_id", bienId).order("mois"),
       supabase.from("carnet_entretien").select("cout").eq("annonce_id", bienId),
+      supabase.from("etats_des_lieux").select("id", { count: "exact", head: true }).eq("annonce_id", bienId),
     ])
+    setEdlExiste((edlCount ?? 0) > 0)
     if (travaux) setTravauxCout(travaux.reduce((s: number, t: any) => s + (Number(t.cout) || 0), 0))
     if (b) {
       setBien(b)
@@ -733,11 +736,11 @@ function StatsInner() {
                 </Link>
                 <Link href={`/proprietaire/edl/${bienId}`}
                   style={{
-                    padding: "9px 18px", border: "1.5px solid #bfdbfe", borderRadius: 999,
-                    fontSize: 13, fontWeight: 700, color: "#1d4ed8", textDecoration: "none",
-                    background: "#eff6ff", display: "inline-flex", alignItems: "center",
+                    padding: "9px 18px", border: `1.5px solid ${edlExiste ? "#bbf7d0" : "#bfdbfe"}`, borderRadius: 999,
+                    fontSize: 13, fontWeight: 700, color: edlExiste ? "#16a34a" : "#1d4ed8", textDecoration: "none",
+                    background: edlExiste ? "#dcfce7" : "#eff6ff", display: "inline-flex", alignItems: "center", gap: 6,
                   }}>
-                  Etat des lieux
+                  {edlExiste ? "✓ Voir l'EDL" : "Creer un EDL"}
                 </Link>
               </div>
             </div>
