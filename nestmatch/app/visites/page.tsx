@@ -88,16 +88,6 @@ export default function MesVisites() {
           <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.5px" }}>Mes visites</h1>
           <p style={{ color: "#6b7280", marginTop: 4, fontSize: 14 }}>Suivi de vos demandes de visites</p>
         </div>
-        <div style={{ display: "flex", background: "white", borderRadius: 12, padding: 4, gap: 2 }}>
-          <button onClick={() => setVue("liste")}
-            style={{ padding: "7px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, background: vue === "liste" ? "#111" : "transparent", color: vue === "liste" ? "white" : "#6b7280" }}>
-            ☰ Liste
-          </button>
-          <button onClick={() => setVue("agenda")}
-            style={{ padding: "7px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, background: vue === "agenda" ? "#111" : "transparent", color: vue === "agenda" ? "white" : "#6b7280" }}>
-            📅 Agenda
-          </button>
-        </div>
 
         {/* Prochaine visite confirmée */}
         {prochaine && (
@@ -135,6 +125,18 @@ export default function MesVisites() {
               <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{s.label}</div>
             </div>
           ))}
+        </div>
+
+        {/* Toggle Liste / Agenda */}
+        <div style={{ display: "flex", background: "white", borderRadius: 12, padding: 4, gap: 2, marginBottom: 20, width: "fit-content" }}>
+          <button onClick={() => setVue("liste")}
+            style={{ padding: "7px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, background: vue === "liste" ? "#111" : "transparent", color: vue === "liste" ? "white" : "#6b7280" }}>
+            ☰ Liste
+          </button>
+          <button onClick={() => setVue("agenda")}
+            style={{ padding: "7px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, background: vue === "agenda" ? "#111" : "transparent", color: vue === "agenda" ? "white" : "#6b7280" }}>
+            📅 Agenda
+          </button>
         </div>
 
         {/* Vue Agenda */}

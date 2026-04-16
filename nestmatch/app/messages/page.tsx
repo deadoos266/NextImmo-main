@@ -290,10 +290,12 @@ function MessagesInner() {
   async function proposerVisite() {
     if (!convActiveData?.annonceId || !myEmail || !visiteDate || !visiteHeure) return
     setEnvoyantVisite(true)
+    const propEmail = proprietaireActive ? myEmail : convActiveData.other
+    const locEmail  = proprietaireActive ? convActiveData.other : myEmail
     const { data: visite } = await supabase.from("visites").insert([{
       annonce_id: convActiveData.annonceId,
-      proprietaire_email: convActiveData.other,
-      locataire_email: myEmail,
+      proprietaire_email: propEmail,
+      locataire_email: locEmail,
       date_visite: visiteDate,
       heure: visiteHeure,
       message: visiteMessage.trim() || null,
@@ -614,7 +616,7 @@ function MessagesInner() {
                         📁 {envoyantDossier ? "Envoi..." : "Mon dossier"}
                       </button>
                     )}
-                    {!proprietaireActive && convActiveData?.annonceId && (
+                    {convActiveData?.annonceId && (
                       <button onClick={() => setShowVisiteForm(!showVisiteForm)}
                         style={{ background: showVisiteForm ? "#111" : "#eff6ff", border: "1.5px solid " + (showVisiteForm ? "#111" : "#bfdbfe"), color: showVisiteForm ? "white" : "#1d4ed8", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
                         📅 {showVisiteForm ? "Fermer" : "Proposer une visite"}
@@ -628,7 +630,7 @@ function MessagesInner() {
                       </button>
                     ))}
                   </div>
-                  {showVisiteForm && !proprietaireActive && convActiveData?.annonceId && (
+                  {showVisiteForm && convActiveData?.annonceId && (
                     <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
                       <p style={{ fontSize: 12, fontWeight: 800, color: "#1d4ed8", marginBottom: 12 }}>📅 Proposer une visite</p>
                       <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
