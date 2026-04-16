@@ -1,49 +1,74 @@
 "use client"
 import { useSession } from "next-auth/react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "../../../../lib/supabase"
 import { useResponsive } from "../../../hooks/useResponsive"
 import jsPDF from "jspdf"
 
-const ETATS = ["Neuf", "Bon etat", "Etat d'usage", "Mauvais etat", "Hors service"] as const
+// ─── Types & Config ─────────────────────────────────────────────────────────
+
+const ETATS = ["Neuf", "Tres bon", "Bon", "Usage", "Mauvais", "Degrade"] as const
 type Etat = typeof ETATS[number]
 
-const ETAT_COLOR: Record<Etat, string> = {
-  "Neuf": "#16a34a",
-  "Bon etat": "#16a34a",
-  "Etat d'usage": "#ea580c",
-  "Mauvais etat": "#dc2626",
-  "Hors service": "#dc2626",
+const ETAT_STYLE: Record<Etat, { bg: string; color: string; icon: string }> = {
+  "Neuf":    { bg: "#dcfce7", color: "#16a34a", icon: "★" },
+  "Tres bon":{ bg: "#dcfce7", color: "#16a34a", icon: "●" },
+  "Bon":     { bg: "#eff6ff", color: "#1d4ed8", icon: "●" },
+  "Usage":   { bg: "#fff7ed", color: "#ea580c", icon: "●" },
+  "Mauvais": { bg: "#fee2e2", color: "#dc2626", icon: "●" },
+  "Degrade": { bg: "#fee2e2", color: "#991b1b", icon: "✗" },
 }
 
-const PIECES_DEFAULT = [
-  "Entree",
-  "Sejour / Salon",
-  "Cuisine",
-  "Chambre 1",
-  "Salle de bain",
-  "WC",
-]
+// Elements specifiques par type de piece
+const ELEMENTS_PAR_TYPE: Record<string, string[]> = {
+  "Entree": ["Sol", "Murs", "Plafond", "Porte d'entree", "Serrure / Verrous", "Interphone / Digicode", "Eclairage", "Prises electriques", "Placard / Rangement"],
+  "Sejour / Salon": ["Sol", "Murs", "Plafond", "Fenetre(s)", "Volets / Stores", "Porte(s)", "Prises electriques", "Interrupteurs", "Eclairage", "Chauffage / Radiateur"],
+  "Cuisine": ["Sol", "Murs", "Plafond", "Fenetre", "Eclairage", "Prises electriques", "Evier", "Robinetterie", "Plaques de cuisson", "Four", "Hotte aspirante", "Refrigerateur", "Lave-vaisselle", "Placards", "Plan de travail"],
+  "Chambre": ["Sol", "Murs", "Plafond", "Fenetre(s)", "Volets / Stores", "Porte", "Prises electriques", "Interrupteurs", "Eclairage", "Chauffage / Radiateur", "Placard / Dressing"],
+  "Salle de bain": ["Sol", "Murs (carrelage)", "Plafond", "Porte", "Eclairage", "VMC / Aeration", "Baignoire ou Douche", "Paroi / Rideau de douche", "Lavabo", "Robinetterie", "Miroir", "Seche-serviettes", "Rangements"],
+  "WC": ["Sol", "Murs", "Porte", "Eclairage", "Cuvette", "Chasse d'eau", "Abattant", "Lave-mains", "Derouleur"],
+  "Balcon / Terrasse": ["Sol", "Garde-corps", "Eclairage exterieur"],
+  "Cave": ["Sol", "Murs", "Porte / Serrure", "Eclairage"],
+  "Garage": ["Sol", "Murs", "Porte de garage", "Eclairage", "Prise electrique"],
+  "Buanderie": ["Sol", "Murs", "Plafond", "Eclairage", "Arrivee d'eau", "Evacuation"],
+  "Autre": ["Sol", "Murs", "Plafond", "Eclairage"],
+}
 
-const ELEMENTS = [
-  "Sols",
-  "Murs",
-  "Plafond",
-  "Fenetre(s)",
-  "Porte(s)",
-  "Prises electriques",
-  "Interrupteurs",
-  "Eclairage",
-  "Chauffage",
-  "Placards / rangements",
-]
+const PIECES_PROPOSEES = Object.keys(ELEMENTS_PAR_TYPE)
 
+type ElementData = { etat: Etat; observation: string }
 type PieceData = {
   nom: string
-  elements: Record<string, { etat: Etat; observation: string }>
+  type: string
+  elements: Record<string, ElementData>
+  photos: string[]
 }
+
+// ─── Helper: find best matching type ────────────────────────────────────────
+
+function detectType(nom: string): string {
+  const n = nom.toLowerCase()
+  if (n.includes("entree")) return "Entree"
+  if (n.includes("sejour") || n.includes("salon") || n.includes("living")) return "Sejour / Salon"
+  if (n.includes("cuisine")) return "Cuisine"
+  if (n.includes("chambre")) return "Chambre"
+  if (n.includes("salle de bain") || n.includes("sdb")) return "Salle de bain"
+  if (n.includes("wc") || n.includes("toilette")) return "WC"
+  if (n.includes("balcon") || n.includes("terrasse")) return "Balcon / Terrasse"
+  if (n.includes("cave")) return "Cave"
+  if (n.includes("garage")) return "Garage"
+  if (n.includes("buanderie")) return "Buanderie"
+  return "Autre"
+}
+
+function makeElements(type: string): Record<string, ElementData> {
+  const elems = ELEMENTS_PAR_TYPE[type] || ELEMENTS_PAR_TYPE["Autre"]
+  return Object.fromEntries(elems.map(e => [e, { etat: "Bon" as Etat, observation: "" }]))
+}
+
+// ─── PDF Generator ──────────────────────────────────────────────────────────
 
 function genererEdlPDF(data: {
   type: "entree" | "sortie"
@@ -53,121 +78,108 @@ function genererEdlPDF(data: {
   titreBien: string
   adresseBien: string
   villeBien: string
+  surface: number
   pieces: PieceData[]
   compteurs: { eau: string; elec: string; gaz: string }
   cles: string
   observations: string
+  photoCount: number
 }) {
   const doc = new jsPDF()
   const W = 170
   let y = 20
 
-  function addTitle(text: string) {
-    doc.setFontSize(16); doc.setFont("helvetica", "bold")
-    doc.text(text, 105, y, { align: "center" }); y += 8
-  }
-  function addSection(text: string) {
-    if (y > 255) { doc.addPage(); y = 20 }
-    doc.setFontSize(11); doc.setFont("helvetica", "bold")
-    doc.text(text, 20, y); y += 7
-  }
-  function addText(text: string) {
-    if (y > 265) { doc.addPage(); y = 20 }
-    doc.setFontSize(9); doc.setFont("helvetica", "normal")
-    const lines = doc.splitTextToSize(text, W)
-    doc.text(lines, 20, y); y += lines.length * 4.5
-  }
-  function addField(label: string, val: string) {
-    if (y > 265) { doc.addPage(); y = 20 }
-    doc.setFontSize(9); doc.setFont("helvetica", "bold")
-    doc.text(`${label} :`, 20, y)
-    doc.setFont("helvetica", "normal")
-    doc.text(val, 70, y)
-    y += 5.5
-  }
-  function addLine() {
-    doc.setDrawColor(200, 200, 200); doc.line(20, y, 190, y); y += 6
-  }
+  function check() { if (y > 260) { doc.addPage(); y = 20 } }
+  function title(t: string) { doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.text(t, 105, y, { align: "center" }); y += 8 }
+  function section(t: string) { check(); doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.text(t, 20, y); y += 7 }
+  function text(t: string) { check(); doc.setFontSize(9); doc.setFont("helvetica", "normal"); const l = doc.splitTextToSize(t, W); doc.text(l, 20, y); y += l.length * 4.5 }
+  function field(l: string, v: string) { check(); doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text(`${l} :`, 20, y); doc.setFont("helvetica", "normal"); doc.text(v, 75, y); y += 5.5 }
+  function line() { doc.setDrawColor(200, 200, 200); doc.line(20, y, 190, y); y += 6 }
 
   const dateLabel = new Date(data.dateEdl).toLocaleDateString("fr-FR")
-  const typeLabel = data.type === "entree" ? "ENTRÉE" : "SORTIE"
+  const typeLabel = data.type === "entree" ? "ENTREE" : "SORTIE"
 
-  addTitle(`ÉTAT DES LIEUX D'${typeLabel}`)
+  title(`ETAT DES LIEUX D'${typeLabel}`)
   doc.setFontSize(9); doc.setFont("helvetica", "normal")
-  doc.text(`Établi le ${dateLabel}`, 105, y, { align: "center" }); y += 10
-  addLine()
+  doc.text(`Etabli contradictoirement le ${dateLabel}`, 105, y, { align: "center" }); y += 10
+  line()
 
-  // Parties
-  addSection("PARTIES")
-  addField("Bailleur", data.nomBailleur)
-  addField("Locataire", data.nomLocataire)
+  section("PARTIES")
+  field("Bailleur", data.nomBailleur)
+  field("Locataire", data.nomLocataire)
   y += 3
 
-  // Bien
-  addSection("LOGEMENT")
-  addField("Bien", data.titreBien)
-  addField("Adresse", `${data.adresseBien || ""} ${data.villeBien}`.trim())
-  y += 3
-  addLine()
+  section("LOGEMENT")
+  field("Designation", data.titreBien)
+  field("Adresse", `${data.adresseBien || ""} ${data.villeBien}`.trim())
+  if (data.surface) field("Surface", `${data.surface} m2`)
+  y += 3; line()
 
-  // Compteurs
-  addSection("RELEVÉS DE COMPTEURS")
-  addField("Eau", data.compteurs.eau || "Non releve")
-  addField("Electricite", data.compteurs.elec || "Non releve")
-  addField("Gaz", data.compteurs.gaz || "Non releve")
-  y += 3
+  section("RELEVES DE COMPTEURS")
+  field("Eau", data.compteurs.eau ? `${data.compteurs.eau} m3` : "Non releve")
+  field("Electricite", data.compteurs.elec ? `${data.compteurs.elec} kWh` : "Non releve")
+  field("Gaz", data.compteurs.gaz ? `${data.compteurs.gaz} m3` : "Non releve / Pas de gaz")
+  y += 2
+  field("Cles remises", data.cles || "Non precise")
+  y += 3; line()
 
-  // Clés
-  addField("Cles remises", data.cles || "Non precise")
-  y += 3
-  addLine()
-
-  // Pièces
+  // Pieces
   data.pieces.forEach(piece => {
-    if (y > 220) { doc.addPage(); y = 20 }
-    addSection(piece.nom.toUpperCase())
+    if (y > 210) { doc.addPage(); y = 20 }
+    section(piece.nom.toUpperCase())
     y += 2
 
-    // Table header
     doc.setFontSize(8); doc.setFont("helvetica", "bold")
-    doc.text("Element", 20, y)
-    doc.text("Etat", 90, y)
-    doc.text("Observation", 130, y)
-    y += 4
-    doc.setDrawColor(220, 220, 220); doc.line(20, y, 190, y); y += 3
+    doc.text("Element", 20, y); doc.text("Etat", 95, y); doc.text("Observation", 135, y)
+    y += 4; doc.setDrawColor(220, 220, 220); doc.line(20, y, 190, y); y += 3
 
     doc.setFont("helvetica", "normal")
     Object.entries(piece.elements).forEach(([elem, val]) => {
       if (y > 270) { doc.addPage(); y = 20 }
       doc.setFontSize(8)
       doc.text(elem, 20, y)
-      doc.text(val.etat, 90, y)
+      // Color code the state
+      const isGood = val.etat === "Neuf" || val.etat === "Tres bon" || val.etat === "Bon"
+      doc.setTextColor(isGood ? 22 : 220, isGood ? 163 : 38, isGood ? 74 : 38)
+      doc.text(val.etat, 95, y)
+      doc.setTextColor(0, 0, 0)
       if (val.observation) {
-        const obs = doc.splitTextToSize(val.observation, 55)
-        doc.text(obs, 130, y)
+        const obs = doc.splitTextToSize(val.observation, 50)
+        doc.text(obs, 135, y)
         y += Math.max(4.5, obs.length * 4)
       } else {
         y += 4.5
       }
     })
+
+    if (piece.photos.length > 0) {
+      y += 2
+      doc.setFontSize(7); doc.setTextColor(150, 150, 150)
+      doc.text(`${piece.photos.length} photo(s) jointe(s) — voir annexe photographique`, 20, y)
+      doc.setTextColor(0, 0, 0)
+      y += 4
+    }
     y += 4
   })
 
-  addLine()
+  line()
 
-  // Observations
   if (data.observations) {
-    addSection("OBSERVATIONS GÉNÉRALES")
-    addText(data.observations)
+    section("OBSERVATIONS GENERALES")
+    text(data.observations)
+    y += 4; line()
+  }
+
+  if (data.photoCount > 0) {
+    text(`Annexe photographique : ${data.photoCount} photo(s) stockee(s) en ligne sur NestMatch.`)
     y += 4
-    addLine()
   }
 
   // Signatures
-  if (y > 220) { doc.addPage(); y = 20 }
-  addSection("SIGNATURES")
+  if (y > 215) { doc.addPage(); y = 20 }
+  section("SIGNATURES")
   y += 4
-  addText(`Fait contradictoirement le ${dateLabel}.`)
+  text(`Les parties declarent que le present etat des lieux a ete etabli contradictoirement et de bonne foi le ${dateLabel}.`)
   y += 10
   doc.setFontSize(10); doc.setFont("helvetica", "bold")
   doc.text("Le Bailleur", 50, y, { align: "center" })
@@ -176,13 +188,16 @@ function genererEdlPDF(data: {
   doc.setFontSize(9); doc.setFont("helvetica", "normal")
   doc.text(data.nomBailleur, 50, y, { align: "center" })
   doc.text(data.nomLocataire, 155, y, { align: "center" })
+  y += 3
+  doc.setFontSize(7); doc.text("(Lu et approuve)", 50, y, { align: "center" })
+  doc.text("(Lu et approuve)", 155, y, { align: "center" })
   doc.line(20, y + 15, 85, y + 15)
   doc.line(120, y + 15, 185, y + 15)
 
   doc.setFontSize(7); doc.setTextColor(150, 150, 150)
   doc.text("Document genere par NestMatch — nestmatch.fr", 105, 285, { align: "center" })
 
-  doc.save(`edl-${data.type}-${data.villeBien.toLowerCase()}-${data.dateEdl}.pdf`)
+  doc.save(`edl-${data.type}-${data.villeBien.toLowerCase().replace(/\s/g, "-")}-${data.dateEdl}.pdf`)
 }
 
 // ─── Page component ─────────────────────────────────────────────────────────
@@ -203,7 +218,11 @@ export default function EdlPage() {
   const [compteurs, setCompteurs] = useState({ eau: "", elec: "", gaz: "" })
   const [cles, setCles] = useState("2 cles + 1 badge")
   const [observations, setObservations] = useState("")
-  const [newPiece, setNewPiece] = useState("")
+  const [uploadingPiece, setUploadingPiece] = useState<number | null>(null)
+  const [pieceToAdd, setPieceToAdd] = useState("")
+  const [customPieceName, setCustomPieceName] = useState("")
+  const [newElemName, setNewElemName] = useState<Record<number, string>>({})
+  const photoRefs = useRef<Record<number, HTMLInputElement | null>>({})
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth")
@@ -214,40 +233,92 @@ export default function EdlPage() {
     const { data } = await supabase.from("annonces").select("*").eq("id", bienId).single()
     if (data) {
       setBien(data)
-      const nbChambres = Number(data.chambres) || 1
-      const piecesInit = [...PIECES_DEFAULT]
-      for (let i = 2; i <= nbChambres; i++) piecesInit.splice(3 + i - 2, 0, `Chambre ${i}`)
-      setPieces(piecesInit.map(nom => ({
-        nom,
-        elements: Object.fromEntries(ELEMENTS.map(e => [e, { etat: "Bon etat" as Etat, observation: "" }])),
-      })))
+      // Generer les pieces par defaut selon le bien
+      const nbChambres = Math.max(1, Number(data.chambres) || 1)
+      const initialPieces: PieceData[] = [
+        { nom: "Entree", type: "Entree", elements: makeElements("Entree"), photos: [] },
+        { nom: "Sejour / Salon", type: "Sejour / Salon", elements: makeElements("Sejour / Salon"), photos: [] },
+        { nom: "Cuisine", type: "Cuisine", elements: makeElements("Cuisine"), photos: [] },
+      ]
+      for (let i = 1; i <= nbChambres; i++) {
+        initialPieces.push({ nom: `Chambre ${i}`, type: "Chambre", elements: makeElements("Chambre"), photos: [] })
+      }
+      initialPieces.push(
+        { nom: "Salle de bain", type: "Salle de bain", elements: makeElements("Salle de bain"), photos: [] },
+        { nom: "WC", type: "WC", elements: makeElements("WC"), photos: [] },
+      )
+      if (data.balcon) initialPieces.push({ nom: "Balcon", type: "Balcon / Terrasse", elements: makeElements("Balcon / Terrasse"), photos: [] })
+      if (data.terrasse) initialPieces.push({ nom: "Terrasse", type: "Balcon / Terrasse", elements: makeElements("Balcon / Terrasse"), photos: [] })
+      if (data.cave) initialPieces.push({ nom: "Cave", type: "Cave", elements: makeElements("Cave"), photos: [] })
+      if (data.parking) initialPieces.push({ nom: "Garage / Parking", type: "Garage", elements: makeElements("Garage"), photos: [] })
+      setPieces(initialPieces)
     }
     setLoading(false)
   }
 
   function updateElement(pieceIdx: number, element: string, field: "etat" | "observation", value: string) {
     setPieces(prev => prev.map((p, i) =>
-      i === pieceIdx
-        ? { ...p, elements: { ...p.elements, [element]: { ...p.elements[element], [field]: value } } }
-        : p
+      i === pieceIdx ? { ...p, elements: { ...p.elements, [element]: { ...p.elements[element], [field]: value } } } : p
     ))
   }
 
-  function addPiece() {
-    if (!newPiece.trim()) return
-    setPieces(prev => [...prev, {
-      nom: newPiece.trim(),
-      elements: Object.fromEntries(ELEMENTS.map(e => [e, { etat: "Bon etat" as Etat, observation: "" }])),
-    }])
-    setNewPiece("")
+  function removeElement(pieceIdx: number, element: string) {
+    setPieces(prev => prev.map((p, i) => {
+      if (i !== pieceIdx) return p
+      const newElems = { ...p.elements }
+      delete newElems[element]
+      return { ...p, elements: newElems }
+    }))
+  }
+
+  function addElement(pieceIdx: number) {
+    const name = newElemName[pieceIdx]?.trim()
+    if (!name) return
+    setPieces(prev => prev.map((p, i) =>
+      i === pieceIdx ? { ...p, elements: { ...p.elements, [name]: { etat: "Bon" as Etat, observation: "" } } } : p
+    ))
+    setNewElemName(prev => ({ ...prev, [pieceIdx]: "" }))
+  }
+
+  function addPiece(typeName: string, customName?: string) {
+    const nom = customName || typeName
+    const t = detectType(nom)
+    setPieces(prev => [...prev, { nom, type: t, elements: makeElements(t), photos: [] }])
+    setPieceToAdd("")
+    setCustomPieceName("")
   }
 
   function removePiece(idx: number) {
     setPieces(prev => prev.filter((_, i) => i !== idx))
   }
 
+  async function uploadPhoto(pieceIdx: number, file: File) {
+    if (!session?.user?.email) return
+    setUploadingPiece(pieceIdx)
+    const ext = file.name.split(".").pop()
+    const path = `edl/${session.user.email}/${bienId}/${Date.now()}.${ext}`
+    const { error } = await supabase.storage.from("annonces-photos").upload(path, file, { upsert: false })
+    if (error) {
+      alert("Erreur upload: " + error.message)
+      setUploadingPiece(null)
+      return
+    }
+    const { data: urlData } = supabase.storage.from("annonces-photos").getPublicUrl(path)
+    setPieces(prev => prev.map((p, i) =>
+      i === pieceIdx ? { ...p, photos: [...p.photos, urlData.publicUrl] } : p
+    ))
+    setUploadingPiece(null)
+  }
+
+  function removePhoto(pieceIdx: number, photoIdx: number) {
+    setPieces(prev => prev.map((p, i) =>
+      i === pieceIdx ? { ...p, photos: p.photos.filter((_, j) => j !== photoIdx) } : p
+    ))
+  }
+
   function generer() {
     if (!bien) return
+    const totalPhotos = pieces.reduce((s, p) => s + p.photos.length, 0)
     genererEdlPDF({
       type,
       dateEdl,
@@ -256,12 +327,19 @@ export default function EdlPage() {
       titreBien: bien.titre || "",
       adresseBien: bien.adresse || "",
       villeBien: bien.ville || "",
+      surface: Number(bien.surface) || 0,
       pieces,
       compteurs,
       cles,
       observations,
+      photoCount: totalPhotos,
     })
   }
+
+  // Score de completion
+  const totalElements = pieces.reduce((s, p) => s + Object.keys(p.elements).length, 0)
+  const elementsRemplis = pieces.reduce((s, p) => s + Object.values(p.elements).filter(e => e.etat !== "Bon").length, 0)
+  const totalPhotos = pieces.reduce((s, p) => s + p.photos.length, 0)
 
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif", color: "#6b7280" }}>Chargement...</div>
@@ -269,8 +347,8 @@ export default function EdlPage() {
   if (!bien) return null
 
   const inp: any = { width: "100%", padding: "10px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }
-  const sel: any = { ...inp, background: "white" }
-  const cardS: any = { background: "white", borderRadius: 20, padding: isMobile ? 20 : 28, marginBottom: 20 }
+  const cardS: any = { background: "white", borderRadius: 20, padding: isMobile ? 18 : 28, marginBottom: 20 }
+  const lbl: any = { fontSize: 12, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6 }
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
@@ -282,10 +360,25 @@ export default function EdlPage() {
 
         <div style={{ marginTop: 16, marginBottom: 28 }}>
           <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, letterSpacing: "-0.5px" }}>Etat des lieux</h1>
-          <p style={{ color: "#6b7280", marginTop: 4, fontSize: 14 }}>{bien.titre} — {bien.ville}</p>
+          <p style={{ color: "#6b7280", marginTop: 4, fontSize: 14 }}>{bien.titre} — {bien.ville} — {bien.surface} m²</p>
         </div>
 
-        {/* Type + Infos generales */}
+        {/* Recap barre */}
+        <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+          {[
+            { label: "Pieces", val: pieces.length, bg: "#eff6ff", color: "#1d4ed8" },
+            { label: "Elements", val: totalElements, bg: "#f3f4f6", color: "#374151" },
+            { label: "Modifies", val: elementsRemplis, bg: elementsRemplis > 0 ? "#fff7ed" : "#f3f4f6", color: elementsRemplis > 0 ? "#ea580c" : "#9ca3af" },
+            { label: "Photos", val: totalPhotos, bg: totalPhotos > 0 ? "#dcfce7" : "#f3f4f6", color: totalPhotos > 0 ? "#16a34a" : "#9ca3af" },
+          ].map(s => (
+            <div key={s.label} style={{ background: s.bg, borderRadius: 12, padding: "10px 16px", flex: 1, minWidth: 70, textAlign: "center" }}>
+              <div style={{ fontSize: 20, fontWeight: 800, color: s.color }}>{s.val}</div>
+              <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Type + Infos */}
         <div style={cardS}>
           <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Informations generales</h2>
           <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
@@ -301,18 +394,9 @@ export default function EdlPage() {
             ))}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6 }}>Date</label>
-              <input style={inp} type="date" value={dateEdl} onChange={e => setDateEdl(e.target.value)} />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6 }}>Nom du locataire</label>
-              <input style={inp} value={nomLocataire} onChange={e => setNomLocataire(e.target.value)} placeholder={bien.locataire_email || "Nom complet"} />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6 }}>Cles remises</label>
-              <input style={inp} value={cles} onChange={e => setCles(e.target.value)} placeholder="2 cles + 1 badge" />
-            </div>
+            <div><label style={lbl}>Date</label><input style={inp} type="date" value={dateEdl} onChange={e => setDateEdl(e.target.value)} /></div>
+            <div><label style={lbl}>Nom du locataire</label><input style={inp} value={nomLocataire} onChange={e => setNomLocataire(e.target.value)} placeholder={bien.locataire_email || "Nom complet"} /></div>
+            <div><label style={lbl}>Cles remises</label><input style={inp} value={cles} onChange={e => setCles(e.target.value)} /></div>
           </div>
         </div>
 
@@ -320,79 +404,151 @@ export default function EdlPage() {
         <div style={cardS}>
           <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Releves de compteurs</h2>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6 }}>Eau (m3)</label>
-              <input style={inp} value={compteurs.eau} onChange={e => setCompteurs(c => ({ ...c, eau: e.target.value }))} placeholder="1234" />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6 }}>Electricite (kWh)</label>
-              <input style={inp} value={compteurs.elec} onChange={e => setCompteurs(c => ({ ...c, elec: e.target.value }))} placeholder="5678" />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6 }}>Gaz (m3)</label>
-              <input style={inp} value={compteurs.gaz} onChange={e => setCompteurs(c => ({ ...c, gaz: e.target.value }))} placeholder="910" />
-            </div>
+            <div><label style={lbl}>Eau (m3)</label><input style={inp} value={compteurs.eau} onChange={e => setCompteurs(c => ({ ...c, eau: e.target.value }))} placeholder="1234" /></div>
+            <div><label style={lbl}>Electricite (kWh)</label><input style={inp} value={compteurs.elec} onChange={e => setCompteurs(c => ({ ...c, elec: e.target.value }))} placeholder="5678" /></div>
+            <div><label style={lbl}>Gaz (m3)</label><input style={inp} value={compteurs.gaz} onChange={e => setCompteurs(c => ({ ...c, gaz: e.target.value }))} placeholder="Non concerne" /></div>
           </div>
         </div>
 
-        {/* Pièces */}
+        {/* ─── Pieces ─── */}
         {pieces.map((piece, pieceIdx) => (
           <div key={pieceIdx} style={cardS}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{piece.nom}</h2>
-              <button onClick={() => removePiece(pieceIdx)}
-                style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 8, padding: "4px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-                Retirer
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <span style={{ fontSize: 11, color: "#9ca3af" }}>{Object.keys(piece.elements).length} elements</span>
+                <button onClick={() => removePiece(pieceIdx)}
+                  style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                  Retirer
+                </button>
+              </div>
+            </div>
+            <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16 }}>Type : {piece.type}</p>
+
+            {/* Elements */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+              {Object.entries(piece.elements).map(([elem, val]) => {
+                const st = ETAT_STYLE[val.etat]
+                return (
+                  <div key={elem} style={{ padding: "10px 0", borderBottom: "1px solid #f9fafb" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#374151", flex: 1 }}>{elem}</span>
+                      <button onClick={() => removeElement(pieceIdx, elem)}
+                        style={{ background: "none", border: "none", color: "#d1d5db", fontSize: 16, cursor: "pointer", padding: "0 4px", lineHeight: 1 }}
+                        title="Retirer cet element">
+                        ×
+                      </button>
+                    </div>
+                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: val.observation || isMobile ? 8 : 0 }}>
+                      {ETATS.map(etat => {
+                        const s = ETAT_STYLE[etat]
+                        const active = val.etat === etat
+                        return (
+                          <button key={etat} onClick={() => updateElement(pieceIdx, elem, "etat", etat)}
+                            style={{
+                              padding: isMobile ? "5px 8px" : "4px 10px", borderRadius: 999,
+                              fontSize: isMobile ? 10 : 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                              background: active ? s.bg : "#f9fafb",
+                              color: active ? s.color : "#9ca3af",
+                              border: active ? `1.5px solid ${s.color}` : "1.5px solid transparent",
+                            }}>
+                            {etat}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <input
+                      value={val.observation}
+                      onChange={e => updateElement(pieceIdx, elem, "observation", e.target.value)}
+                      placeholder="Observation (tache, rayure, manque...)..."
+                      style={{ width: "100%", padding: "6px 10px", border: "1.5px solid #f3f4f6", borderRadius: 8, fontSize: 12, outline: "none", fontFamily: "inherit", boxSizing: "border-box" as const, marginTop: 4 }}
+                    />
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Ajouter un element */}
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <input
+                value={newElemName[pieceIdx] || ""}
+                onChange={e => setNewElemName(prev => ({ ...prev, [pieceIdx]: e.target.value }))}
+                onKeyDown={e => e.key === "Enter" && addElement(pieceIdx)}
+                placeholder="Ajouter un element..."
+                style={{ flex: 1, padding: "7px 10px", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: 12, outline: "none", fontFamily: "inherit" }}
+              />
+              <button onClick={() => addElement(pieceIdx)}
+                style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", color: "#374151" }}>
+                +
               </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {ELEMENTS.map(elem => (
-                <div key={elem} style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", gap: isMobile ? 8 : 14, flexDirection: isMobile ? "column" : "row", padding: "8px 0", borderBottom: "1px solid #f9fafb" }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, minWidth: 140, color: "#374151" }}>{elem}</span>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {ETATS.map(etat => (
-                      <button key={etat} onClick={() => updateElement(pieceIdx, elem, "etat", etat)}
-                        style={{
-                          padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600,
-                          cursor: "pointer", fontFamily: "inherit",
-                          background: piece.elements[elem]?.etat === etat ? ETAT_COLOR[etat] : "#f3f4f6",
-                          color: piece.elements[elem]?.etat === etat ? "white" : "#6b7280",
-                          border: "none",
-                        }}>
-                        {etat}
+            {/* Photos */}
+            <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #f3f4f6" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#6b7280" }}>Photos ({piece.photos.length})</span>
+                <input
+                  ref={el => { photoRefs.current[pieceIdx] = el }}
+                  type="file" accept="image/*" capture="environment"
+                  style={{ display: "none" }}
+                  onChange={e => { if (e.target.files?.[0]) uploadPhoto(pieceIdx, e.target.files[0]) }}
+                />
+                <button onClick={() => photoRefs.current[pieceIdx]?.click()}
+                  disabled={uploadingPiece === pieceIdx}
+                  style={{
+                    background: "#eff6ff", border: "1.5px solid #bfdbfe", color: "#1d4ed8",
+                    borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700,
+                    cursor: uploadingPiece === pieceIdx ? "not-allowed" : "pointer",
+                    fontFamily: "inherit", opacity: uploadingPiece === pieceIdx ? 0.6 : 1,
+                  }}>
+                  {uploadingPiece === pieceIdx ? "Upload..." : "Prendre une photo"}
+                </button>
+              </div>
+              {piece.photos.length > 0 && (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {piece.photos.map((url, photoIdx) => (
+                    <div key={photoIdx} style={{ position: "relative", width: 80, height: 80, borderRadius: 10, overflow: "hidden", border: "1.5px solid #e5e7eb" }}>
+                      <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <button onClick={() => removePhoto(pieceIdx, photoIdx)}
+                        style={{ position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,0.6)", color: "white", border: "none", borderRadius: "50%", width: 20, height: 20, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
+                        ×
                       </button>
-                    ))}
-                  </div>
-                  <input
-                    value={piece.elements[elem]?.observation || ""}
-                    onChange={e => updateElement(pieceIdx, elem, "observation", e.target.value)}
-                    placeholder="Observation..."
-                    style={{ flex: 1, padding: "6px 10px", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: 12, outline: "none", fontFamily: "inherit", minWidth: isMobile ? "100%" : 120, boxSizing: "border-box" as const }}
-                  />
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           </div>
         ))}
 
         {/* Ajouter une piece */}
-        <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-          <input value={newPiece} onChange={e => setNewPiece(e.target.value)}
-            placeholder="Ajouter une piece (ex: Balcon, Garage...)"
-            onKeyDown={e => e.key === "Enter" && addPiece()}
-            style={{ flex: 1, padding: "10px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, outline: "none", fontFamily: "inherit" }} />
-          <button onClick={addPiece}
-            style={{ padding: "10px 20px", background: "#111", color: "white", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
-            + Ajouter
-          </button>
+        <div style={cardS}>
+          <h2 style={{ fontSize: 15, fontWeight: 800, marginBottom: 14 }}>Ajouter une piece</h2>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+            {PIECES_PROPOSEES.filter(p => p !== "Autre").map(p => (
+              <button key={p} onClick={() => addPiece(p)}
+                style={{ padding: "7px 14px", background: "#f3f4f6", border: "none", borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: "#374151" }}>
+                + {p}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input value={customPieceName} onChange={e => setCustomPieceName(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && customPieceName.trim() && addPiece("Autre", customPieceName.trim())}
+              placeholder="Nom personnalise (ex: Dressing, Cellier...)"
+              style={{ flex: 1, padding: "9px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 13, outline: "none", fontFamily: "inherit" }} />
+            <button onClick={() => customPieceName.trim() && addPiece("Autre", customPieceName.trim())}
+              style={{ background: "#111", color: "white", border: "none", borderRadius: 10, padding: "9px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
+              Ajouter
+            </button>
+          </div>
         </div>
 
-        {/* Observations generales */}
+        {/* Observations */}
         <div style={cardS}>
           <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>Observations generales</h2>
           <textarea value={observations} onChange={e => setObservations(e.target.value)}
-            placeholder="Remarques generales sur l'etat du logement..."
+            placeholder="Remarques generales, defauts constates, accord entre les parties..."
             rows={4}
             style={{ ...inp, resize: "vertical" }} />
         </div>
@@ -409,7 +565,7 @@ export default function EdlPage() {
         </button>
 
         <p style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", marginTop: 12, lineHeight: 1.6 }}>
-          Document contradictoire — a signer par les deux parties lors de la remise des cles.
+          Document contradictoire — a signer par les deux parties.{totalPhotos > 0 ? ` ${totalPhotos} photo(s) jointes en annexe.` : ""}
         </p>
       </div>
     </main>
