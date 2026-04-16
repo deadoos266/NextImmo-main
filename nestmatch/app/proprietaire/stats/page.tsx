@@ -297,6 +297,7 @@ function StatsInner() {
   const [newLoyerMois, setNewLoyerMois] = useState("")
   const [newLoyerMontant, setNewLoyerMontant] = useState("")
   const [savingLoyer, setSavingLoyer] = useState(false)
+  const [travauxCout, setTravauxCout] = useState(0)
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth")
@@ -304,10 +305,12 @@ function StatsInner() {
   }, [session, status, bienId])
 
   async function loadData() {
-    const [{ data: b }, { data: l }] = await Promise.all([
+    const [{ data: b }, { data: l }, { data: travaux }] = await Promise.all([
       supabase.from("annonces").select("*").eq("id", bienId).single(),
       supabase.from("loyers").select("*").eq("annonce_id", bienId).order("mois"),
+      supabase.from("carnet_entretien").select("cout").eq("annonce_id", bienId),
     ])
+    if (travaux) setTravauxCout(travaux.reduce((s: number, t: any) => s + (Number(t.cout) || 0), 0))
     if (b) {
       setBien(b)
       setEditForm({
@@ -320,6 +323,9 @@ function StatsInner() {
         date_debut_bail: b.date_debut_bail || "",
         locataire_email: b.locataire_email || "",
         statut: b.statut || "disponible",
+        taxe_fonciere: b.taxe_fonciere || "",
+        assurance_pno: b.assurance_pno || "",
+        charges_copro_annuelles: b.charges_copro_annuelles || "",
       })
     }
     if (l) setLoyers(l)
@@ -359,6 +365,9 @@ function StatsInner() {
       date_debut_bail: editForm.date_debut_bail || null,
       locataire_email: editForm.locataire_email || null,
       statut: editForm.statut,
+      taxe_fonciere: editForm.taxe_fonciere ? Number(editForm.taxe_fonciere) : null,
+      assurance_pno: editForm.assurance_pno ? Number(editForm.assurance_pno) : null,
+      charges_copro_annuelles: editForm.charges_copro_annuelles ? Number(editForm.charges_copro_annuelles) : null,
     }
     await supabase.from("annonces").update(updates).eq("id", bienId)
     setBien((prev: any) => ({ ...prev, ...updates }))
@@ -382,7 +391,16 @@ function StatsInner() {
   const valeurBien       = Number(bien.valeur_bien) || 0
   const mensualiteCredit = Number(bien.mensualite_credit) || 0
   const dureeCredit      = Number(bien.duree_credit) || 0  // en mois
-  const cashflowMensuel  = revenuMensuel - mensualiteCredit
+
+  // Charges proprietaire annuelles
+  const taxeFonciere           = Number(bien.taxe_fonciere) || 0
+  const assurancePno           = Number(bien.assurance_pno) || 0
+  const chargesCoproAnnuelles  = Number(bien.charges_copro_annuelles) || 0
+  const totalChargesAnnuelles  = taxeFonciere + assurancePno + chargesCoproAnnuelles
+  const chargesMensuelles      = Math.round(totalChargesAnnuelles / 12)
+
+  const cashflowBrut     = revenuMensuel - mensualiteCredit
+  const cashflowMensuel  = revenuMensuel - mensualiteCredit - chargesMensuelles
 
   // Actual revenue this year (from real loyer records — not theoretical)
   const currentYear = new Date().getFullYear()
@@ -400,10 +418,16 @@ function StatsInner() {
     ? (revenuAnnuelTheorique / valeurBien) * 100
     : null
 
-  // Net yield uses cashflow (rent minus credit); if no credit uses full rent
-  const cashflowAnnuel = mensualiteCredit > 0 ? cashflowMensuel * 12 : revenuAnnuelTheorique
+  // Net yield: rent - all annual charges (tax, insurance, copro) / bien value
+  const revenuNetAnnuel = revenuAnnuelTheorique - totalChargesAnnuelles
   const rentabiliteNette = valeurBien > 0
-    ? (cashflowAnnuel / valeurBien) * 100
+    ? (revenuNetAnnuel / valeurBien) * 100
+    : null
+
+  // Net-net yield: after credit too
+  const cashflowAnnuelNetNet = revenuNetAnnuel - (mensualiteCredit * 12)
+  const rentabiliteNetteNette = valeurBien > 0 && mensualiteCredit > 0
+    ? (cashflowAnnuelNetNet / valeurBien) * 100
     : null
 
   // Seuil de rentabilité = PER immobilier : valeur_bien / loyer_annuel_brut (hors charges)
@@ -539,13 +563,13 @@ function StatsInner() {
         : "#9ca3af",
     },
     {
-      label: "ROI net / an",
+      label: "Rentabilite nette",
       val: rentabiliteNette != null
         ? `${rentabiliteNette >= 0 ? "+" : ""}${rentabiliteNette.toFixed(2)} %`
         : "—",
-      sub: mensualiteCredit > 0
-        ? `cashflow: ${cashflowMensuel >= 0 ? "+" : ""}${cashflowMensuel.toLocaleString("fr-FR")} €/mois`
-        : "Renseignez la mensualité crédit",
+      sub: totalChargesAnnuelles > 0
+        ? `apres ${totalChargesAnnuelles.toLocaleString("fr-FR")} euros/an de charges`
+        : "Renseignez taxe fonciere + assurance",
       color: rentabiliteNette != null
         ? rentabiliteNette >= 0 ? "#16a34a" : "#dc2626"
         : "#9ca3af",
@@ -739,6 +763,9 @@ function StatsInner() {
                 { k: "mensualite_credit", l: "Mensualite credit (euros)" },
                 { k: "duree_credit", l: "Duree credit (mois)" },
                 { k: "date_debut_bail", l: "Date debut du bail", type: "date" },
+                { k: "taxe_fonciere", l: "Taxe fonciere (euros/an)" },
+                { k: "assurance_pno", l: "Assurance PNO (euros/an)" },
+                { k: "charges_copro_annuelles", l: "Charges copro non recup. (euros/an)" },
               ].map(f => (
                 <div key={f.k}>
                   <label style={labelStyle}>{f.l}</label>
@@ -1040,13 +1067,17 @@ function StatsInner() {
             <h3 style={{ fontSize: 15, fontWeight: 800, margin: "0 0 16px" }}>Analyse financiere</h3>
             <div style={{ display: "flex", flexDirection: "column" }}>
               {[
-                { label: "Loyer mensuel", val: `${loyerMensuel.toLocaleString("fr-FR")} \u20AC`, color: "#111", bold: false },
+                { label: "Loyer mensuel HC", val: `${loyerMensuel.toLocaleString("fr-FR")} \u20AC`, color: "#111", bold: false },
                 { label: "Charges recuperables", val: `${charges.toLocaleString("fr-FR")} \u20AC`, color: "#111", bold: false },
-                { label: "Revenu mensuel total", val: `${revenuMensuel.toLocaleString("fr-FR")} \u20AC`, color: "#16a34a", bold: true },
+                { label: "Revenu mensuel brut", val: `${revenuMensuel.toLocaleString("fr-FR")} \u20AC`, color: "#16a34a", bold: true },
+                ...(taxeFonciere ? [{ label: "Taxe fonciere", val: `-${Math.round(taxeFonciere / 12).toLocaleString("fr-FR")} \u20AC/mois`, color: "#dc2626", bold: false }] : []),
+                ...(assurancePno ? [{ label: "Assurance PNO", val: `-${Math.round(assurancePno / 12).toLocaleString("fr-FR")} \u20AC/mois`, color: "#dc2626", bold: false }] : []),
+                ...(chargesCoproAnnuelles ? [{ label: "Charges copro non recup.", val: `-${Math.round(chargesCoproAnnuelles / 12).toLocaleString("fr-FR")} \u20AC/mois`, color: "#dc2626", bold: false }] : []),
+                ...(totalChargesAnnuelles > 0 ? [{ label: "Total charges proprio", val: `-${chargesMensuelles.toLocaleString("fr-FR")} \u20AC/mois`, color: "#dc2626", bold: true }] : []),
                 { label: "Mensualite credit", val: mensualiteCredit ? `-${mensualiteCredit.toLocaleString("fr-FR")} \u20AC` : "Non renseigne", color: mensualiteCredit ? "#dc2626" : "#9ca3af", bold: false },
-                { label: "Cashflow mensuel net", val: mensualiteCredit ? `${cashflowMensuel >= 0 ? "+" : ""}${cashflowMensuel.toLocaleString("fr-FR")} \u20AC` : "\u2014", color: cashflowMensuel >= 0 ? "#16a34a" : "#dc2626", bold: true },
+                { label: "Cashflow net mensuel", val: `${cashflowMensuel >= 0 ? "+" : ""}${cashflowMensuel.toLocaleString("fr-FR")} \u20AC`, color: cashflowMensuel >= 0 ? "#16a34a" : "#dc2626", bold: true },
+                ...(travauxCout > 0 ? [{ label: "Total travaux (carnet)", val: `-${travauxCout.toLocaleString("fr-FR")} \u20AC`, color: "#ea580c", bold: false }] : []),
                 { label: `Revenus reels ${currentYear}`, val: `${revenuAnnuelReel.toLocaleString("fr-FR")} \u20AC`, color: "#111", bold: false },
-                { label: "Objectif annuel theorique", val: `${revenuAnnuelTheorique.toLocaleString("fr-FR")} \u20AC`, color: "#6b7280", bold: false },
                 { label: "Total encaisse confirme", val: `${totalEncaisse.toLocaleString("fr-FR")} \u20AC`, color: "#16a34a", bold: true },
               ].map((r, idx, arr) => (
                 <div key={r.label} style={{

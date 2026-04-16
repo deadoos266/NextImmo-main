@@ -46,6 +46,7 @@ export default function AjouterBien() {
     description: "", type_bien: "Appartement",
     locataire_email: "", date_debut_bail: "", mensualite_credit: "", valeur_bien: "",
     duree_credit: "",
+    taxe_fonciere: "", assurance_pno: "", charges_copro_annuelles: "",
   })
   const [toggles, setToggles] = useState({
     meuble: false, animaux: false, parking: false, cave: false,
@@ -103,6 +104,9 @@ export default function AjouterBien() {
       data.mensualite_credit = toInt(form.mensualite_credit)
       data.valeur_bien = toInt(form.valeur_bien)
       data.duree_credit = toInt(form.duree_credit)
+      data.taxe_fonciere = toInt(form.taxe_fonciere)
+      data.assurance_pno = toInt(form.assurance_pno)
+      data.charges_copro_annuelles = toInt(form.charges_copro_annuelles)
     }
 
     Object.keys(data).forEach(k => { if (data[k] === null || data[k] === "") delete data[k] })
@@ -237,6 +241,20 @@ export default function AjouterBien() {
               <F l="Valeur estimée du bien (€)">
                 <input style={inp} value={form.valeur_bien} onChange={set("valeur_bien")} type="number" placeholder="250000" />
               </F>
+            </div>
+            <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 20, marginTop: 20 }}>
+              <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 14, color: "#111" }}>Charges annuelles du proprietaire</p>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
+                <F l="Taxe fonciere (€/an)">
+                  <input style={inp} value={form.taxe_fonciere} onChange={set("taxe_fonciere")} type="number" placeholder="1200" />
+                </F>
+                <F l="Assurance PNO (€/an)">
+                  <input style={inp} value={form.assurance_pno} onChange={set("assurance_pno")} type="number" placeholder="350" />
+                </F>
+                <F l="Charges copro non recup. (€/an)">
+                  <input style={inp} value={form.charges_copro_annuelles} onChange={set("charges_copro_annuelles")} type="number" placeholder="600" />
+                </F>
+              </div>
             </div>
           </Sec>
         )}

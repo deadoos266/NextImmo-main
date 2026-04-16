@@ -51,6 +51,7 @@ export default function ModifierBien() {
     dispo: "Disponible maintenant", statut: "disponible",
     description: "", type_bien: "Appartement",
     locataire_email: "", date_debut_bail: "", mensualite_credit: "", valeur_bien: "", duree_credit: "",
+    taxe_fonciere: "", assurance_pno: "", charges_copro_annuelles: "",
   })
   const [toggles, setToggles] = useState({
     meuble: false, animaux: false, parking: false, cave: false,
@@ -93,6 +94,9 @@ export default function ModifierBien() {
       mensualite_credit: data.mensualite_credit ? String(data.mensualite_credit) : "",
       valeur_bien: data.valeur_bien ? String(data.valeur_bien) : "",
       duree_credit: data.duree_credit ? String(data.duree_credit) : "",
+      taxe_fonciere: data.taxe_fonciere ? String(data.taxe_fonciere) : "",
+      assurance_pno: data.assurance_pno ? String(data.assurance_pno) : "",
+      charges_copro_annuelles: data.charges_copro_annuelles ? String(data.charges_copro_annuelles) : "",
     })
     setToggles({
       meuble: !!data.meuble, animaux: !!data.animaux, parking: !!data.parking,
@@ -150,6 +154,9 @@ export default function ModifierBien() {
       updates.mensualite_credit = toInt(form.mensualite_credit)
       updates.valeur_bien = toInt(form.valeur_bien)
       updates.duree_credit = toInt(form.duree_credit)
+      updates.taxe_fonciere = toInt(form.taxe_fonciere)
+      updates.assurance_pno = toInt(form.assurance_pno)
+      updates.charges_copro_annuelles = toInt(form.charges_copro_annuelles)
     }
 
     const { error } = await supabase.from("annonces").update(updates).eq("id", bienId)
@@ -282,6 +289,20 @@ export default function ModifierBien() {
               <F l="Valeur estimée du bien (€)">
                 <input style={inp} value={form.valeur_bien} onChange={set("valeur_bien")} type="number" placeholder="250000" />
               </F>
+            </div>
+            <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 20, marginTop: 20 }}>
+              <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 14, color: "#111" }}>Charges annuelles du proprietaire</p>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
+                <F l="Taxe fonciere (€/an)">
+                  <input style={inp} value={form.taxe_fonciere} onChange={set("taxe_fonciere")} type="number" placeholder="1200" />
+                </F>
+                <F l="Assurance PNO (€/an)">
+                  <input style={inp} value={form.assurance_pno} onChange={set("assurance_pno")} type="number" placeholder="350" />
+                </F>
+                <F l="Charges copro non recup. (€/an)">
+                  <input style={inp} value={form.charges_copro_annuelles} onChange={set("charges_copro_annuelles")} type="number" placeholder="600" />
+                </F>
+              </div>
             </div>
           </Sec>
         )}
