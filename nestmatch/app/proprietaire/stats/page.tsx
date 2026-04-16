@@ -6,6 +6,7 @@ import Link from "next/link"
 import { supabase } from "../../../lib/supabase"
 import { Suspense } from "react"
 import jsPDF from "jspdf"
+import { useResponsive } from "../../hooks/useResponsive"
 
 // ─── SVG Bar Chart ──────────────────────────────────────────────────────────
 
@@ -282,6 +283,7 @@ function StatsInner() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { isMobile } = useResponsive()
   const bienId = searchParams.get("id")
 
   const [bien, setBien] = useState<any>(null)
@@ -589,7 +591,7 @@ function StatsInner() {
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 48px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "24px 16px" : "32px 48px" }}>
 
         <Link href="/proprietaire" style={{ fontSize: 14, color: "#6b7280", textDecoration: "none" }}>
           ← Retour au dashboard
@@ -612,7 +614,7 @@ function StatsInner() {
         {editOpen && (
           <div style={{ background: "white", borderRadius: 20, padding: 24, marginBottom: 24, border: "1.5px solid #e5e7eb" }}>
             <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 20 }}>Données du bien</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 16, marginBottom: 16 }}>
               {[
                 { k: "titre", l: "Titre" },
                 { k: "prix", l: "Loyer mensuel (€)" },
@@ -633,7 +635,7 @@ function StatsInner() {
                 </div>
               ))}
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 20 }}>
               <div>
                 <label style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.4px" }}>Email locataire</label>
                 <input value={editForm.locataire_email ?? ""} onChange={e => setEditForm((p: any) => ({ ...p, locataire_email: e.target.value }))}
@@ -659,7 +661,7 @@ function StatsInner() {
         )}
 
         {/* ── 6 KPI cards ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 14, marginBottom: 24 }}>
           {kpis.map(k => (
             <div key={k.label} style={card}>
               <p style={{ fontSize: 10, color: "#6b7280", marginBottom: 8, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
@@ -696,7 +698,7 @@ function StatsInner() {
         </div>
 
         {/* ── Break-even chart + Financial analysis ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 20, marginBottom: 24 }}>
 
           <div style={card}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>

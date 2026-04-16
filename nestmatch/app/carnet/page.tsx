@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "../../lib/supabase"
 import { useRole } from "../providers"
+import { useResponsive } from "../hooks/useResponsive"
 
 type Statut = "planifié" | "en cours" | "terminé"
 type TypeEvent = "chaudière" | "plomberie" | "électricité" | "travaux" | "serrurerie" | "nuisibles" | "autre"
@@ -29,6 +30,7 @@ export default function Carnet() {
   const router = useRouter()
 
   // Données communes
+  const { isMobile } = useResponsive()
   const [evenements, setEvenements] = useState<any[]>([])
   const [biens, setBiens] = useState<any[]>([])         // annonces liées (pour proprio: ses biens; pour locataire: biens loués)
   const [locataires, setLocataires] = useState<Record<string, any>>({}) // email → profil pour proprio
@@ -148,7 +150,7 @@ export default function Carnet() {
 
   // Locataire sans logement actif
   if (!proprietaireActive && biens.length === 0) return (
-    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: "40px 48px" }}>
+    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px 48px" }}>
       <div style={{ maxWidth: 600, margin: "0 auto", textAlign: "center", paddingTop: 80 }}>
         <div style={{ fontSize: 56, marginBottom: 16 }}>🔨</div>
         <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Carnet d'entretien</h1>
@@ -166,13 +168,13 @@ export default function Carnet() {
   const inp: any = { width: "100%", padding: "10px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit", background: "white" }
 
   return (
-    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: "40px 48px" }}>
+    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px 48px" }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
 
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: 28, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 14 : 0 }}>
           <div>
-            <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.5px" }}>Carnet d'entretien</h1>
+            <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, letterSpacing: "-0.5px" }}>Carnet d'entretien</h1>
             <p style={{ color: "#6b7280", marginTop: 4, fontSize: 14 }}>
               {proprietaireActive
                 ? "Historique des interventions sur vos biens"
@@ -216,7 +218,7 @@ export default function Carnet() {
         )}
 
         {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(${proprietaireActive ? 4 : 3}, 1fr)`, gap: 12, marginBottom: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : `repeat(${proprietaireActive ? 4 : 3}, 1fr)`, gap: 12, marginBottom: 24 }}>
           {[
             { label: "Total", val: evenements.length, bg: "white" },
             { label: "En cours", val: evenements.filter(e => e.statut === "en cours").length, bg: evenements.filter(e => e.statut === "en cours").length > 0 ? "#eff6ff" : "white", color: evenements.filter(e => e.statut === "en cours").length > 0 ? "#1d4ed8" : undefined },
@@ -236,7 +238,7 @@ export default function Carnet() {
             <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>
               {proprietaireActive ? "Nouvel événement" : "Signaler un problème"}
             </h2>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
               <div style={{ gridColumn: "1 / -1" }}>
                 <label style={{ fontSize: 13, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 6 }}>Bien concerné *</label>
                 <select style={inp} value={form.annonce_id} onChange={set("annonce_id")}>

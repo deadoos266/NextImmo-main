@@ -434,7 +434,7 @@ export default function Proprietaire() {
                       {!d ? (
                         <p style={{ fontSize: 13, color: "#9ca3af" }}>Aucun dossier rempli par ce locataire.</p>
                       ) : (
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+                        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 16 }}>
                           {[
                             { label: "Nom", val: d.nom },
                             { label: "Situation pro", val: d.situation_pro },

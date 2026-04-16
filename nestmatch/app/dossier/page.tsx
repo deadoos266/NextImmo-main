@@ -335,7 +335,7 @@ export default function Dossier() {
 
               <div className="print-section" style={{ background: "white", borderRadius: 20, padding: 24 }}>
                 <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>Informations personnelles</h2>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
                   <F label="Nom complet">
                     <input value={form.nom} onChange={e => setForm(f => ({ ...f, nom: e.target.value }))} placeholder="Jean Dupont" style={inputStyle} />
                   </F>
@@ -363,7 +363,7 @@ export default function Dossier() {
                     ))}
                   </div>
                 </F>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 4 }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginTop: 4 }}>
                   <F label="Revenus mensuels nets (€)">
                     <input type="number" value={form.revenus_mensuels} onChange={e => setForm(f => ({ ...f, revenus_mensuels: e.target.value }))} placeholder="2 500" style={inputStyle} />
                   </F>

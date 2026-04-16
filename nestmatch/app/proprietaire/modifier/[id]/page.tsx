@@ -3,6 +3,7 @@ import { useSession } from "next-auth/react"
 import { useState, useRef, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { supabase } from "../../../../lib/supabase"
+import { useResponsive } from "../../../hooks/useResponsive"
 
 const Toggle = ({ label, k, toggles, setToggles }: any) => (
   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
@@ -31,6 +32,7 @@ const F = ({ l, children }: any) => (
 export default function ModifierBien() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const { isMobile } = useResponsive()
   const params = useParams()
   const bienId = params.id as string
 
@@ -170,7 +172,7 @@ export default function ModifierBien() {
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "40px 48px" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 48px" }}>
         <a href="/proprietaire" style={{ fontSize: 14, color: "#6b7280", textDecoration: "none" }}>← Retour au dashboard</a>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "16px 0 4px" }}>
           <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.5px" }}>Modifier l'annonce</h1>
@@ -181,7 +183,7 @@ export default function ModifierBien() {
         <p style={{ color: "#6b7280", marginBottom: 32, fontSize: 14 }}>Les modifications sont appliquées immédiatement après sauvegarde.</p>
 
         <Sec t="Informations générales">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
             <F l="Type de bien">
               <select style={sel} value={form.type_bien} onChange={set("type_bien")}>
                 {["Appartement","Maison","Studio","Chambre","Colocation","Loft","Villa","Autre"].map(v => <option key={v}>{v}</option>)}
@@ -264,7 +266,7 @@ export default function ModifierBien() {
             <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12, padding: "12px 16px", marginBottom: 20 }}>
               <p style={{ fontSize: 13, color: "#16a34a", fontWeight: 600 }}>Ce bien est géré en mode privé et n'apparaît pas dans les annonces publiques.</p>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
               <F l="Email du locataire">
                 <input style={inp} value={form.locataire_email} onChange={set("locataire_email")} placeholder="locataire@email.fr" type="email" />
               </F>
@@ -285,7 +287,7 @@ export default function ModifierBien() {
         )}
 
         <Sec t="Prix & charges">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: 16 }}>
             <F l="Loyer mensuel (€)"><input style={inp} type="number" value={form.prix} onChange={set("prix")} placeholder="1100" /></F>
             <F l="Charges (€/mois)"><input style={inp} type="number" value={form.charges} onChange={set("charges")} placeholder="80" /></F>
             <F l="Dépôt de garantie (€)"><input style={inp} type="number" value={form.caution} onChange={set("caution")} placeholder="1100" /></F>
@@ -293,7 +295,7 @@ export default function ModifierBien() {
         </Sec>
 
         <Sec t="Caractéristiques">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: 16 }}>
             <F l="Surface (m²)"><input style={inp} type="number" value={form.surface} onChange={set("surface")} placeholder="38" /></F>
             <F l="Pièces">
               <select style={sel} value={form.pieces} onChange={set("pieces")}>{["","1","2","3","4","5","6","7+"].map(v => <option key={v} value={v}>{v || "Sélectionner"}</option>)}</select>

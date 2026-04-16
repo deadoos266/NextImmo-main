@@ -122,7 +122,7 @@ export default async function Annonce({ params }: any) {
 
         <PhotoCarousel photos={photos} />
 
-        <div style={{ display: "flex", gap: 28, alignItems: "flex-start" }}>
+        <div className="r-detail-layout" style={{ display: "flex", gap: 28, alignItems: "flex-start" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
               {[
@@ -175,7 +175,7 @@ export default async function Annonce({ params }: any) {
             )}
           </div>
 
-          <div style={{ width: 320, flexShrink: 0 }}>
+          <div className="r-detail-sidebar" style={{ width: 320, flexShrink: 0 }}>
             <div style={{ background: "white", borderRadius: 20, padding: 28, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", position: "sticky", top: 80 }}>
               <div style={{ marginBottom: 16 }}>
                 <span style={{ fontSize: 32, fontWeight: 800 }}>{annonce.prix} €</span>
