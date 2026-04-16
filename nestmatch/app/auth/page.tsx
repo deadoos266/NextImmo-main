@@ -2,6 +2,7 @@
 import { Suspense, useState } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
+import PasswordInput from "../components/PasswordInput"
 
 type Mode = "connexion" | "inscription"
 type Role = "locataire" | "proprietaire"
@@ -179,14 +180,13 @@ function AuthContent() {
             </div>
             <div>
               <label style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "block", color: "#6b7280" }}>Mot de passe</label>
-              <input
-                type="password"
-                placeholder="••••••••"
+              <PasswordInput
                 value={form.password}
-                onChange={handleChange("password")}
+                onChange={v => setForm(prev => ({ ...prev, password: v }))}
+                placeholder="********"
                 required
                 minLength={8}
-                style={{ width: "100%", padding: "12px 16px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                autoComplete={mode === "inscription" ? "new-password" : "current-password"}
               />
             </div>
 

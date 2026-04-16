@@ -103,7 +103,7 @@ export default function Dossier() {
       const path = `${session.user.email}/${key}_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
       const { error } = await supabase.storage.from("dossiers").upload(path, file, { upsert: false })
       if (error) {
-        setUploadError(`Erreur upload: ${error.message}`)
+        setUploadError("L'envoi du fichier a echoue, veuillez reessayer.")
         break
       }
       const { data: urlData } = supabase.storage.from("dossiers").getPublicUrl(path)
@@ -435,10 +435,6 @@ export default function Dossier() {
                   </>
                 )}
 
-                <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: "12px 14px", marginTop: 16 }}>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: "#92400e", marginBottom: 4 }}>Problème d'upload ?</p>
-                  <p style={{ fontSize: 12, color: "#92400e", lineHeight: 1.5 }}>Vérifiez les politiques RLS du bucket <strong>dossiers</strong> dans Supabase (INSERT + UPDATE pour anon).</p>
-                </div>
               </div>
             </div>
           </div>

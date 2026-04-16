@@ -1,7 +1,7 @@
 "use client"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { supabase } from "../../../lib/supabase"
 import { useRole } from "../../providers"
 
@@ -10,6 +10,10 @@ export default function ContactButton({ annonce }: { annonce: any }) {
   const { role } = useRole()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  // Verrou synchrone : protege contre les double-clics rapides (React
+  // setState est asynchrone, donc setLoading(true) ne bloque pas le 2e clic
+  // immediatement — le ref si)
+  const inFlight = useRef(false)
 
   const isOwnAnnonce = session?.user?.email === annonce.proprietaire_email
 
@@ -18,7 +22,7 @@ export default function ContactButton({ annonce }: { annonce: any }) {
     return (
       <a href="/proprietaire"
         style={{ display: "block", width: "100%", background: "#111", color: "white", border: "none", borderRadius: 999, padding: "14px 0", fontWeight: 700, fontSize: 15, textAlign: "center", textDecoration: "none", marginBottom: 10, boxSizing: "border-box" }}>
-        Gérer mon annonce →
+        Gerer mon annonce &rarr;
       </a>
     )
   }
@@ -28,27 +32,33 @@ export default function ContactButton({ annonce }: { annonce: any }) {
 
   // Locataire → bouton de contact classique
   async function contacter() {
-    if (!session) { router.push("/auth"); return }
+    if (inFlight.current) return
+    inFlight.current = true
+
+    if (!session) { router.push("/auth"); inFlight.current = false; return }
 
     const toEmail = annonce.proprietaire_email
-    if (!toEmail) return
+    if (!toEmail) { inFlight.current = false; return }
 
     setLoading(true)
     try {
       const fromEmail = session.user!.email!
 
-      const [{ data: r1 }, { data: r2 }] = await Promise.all([
-        supabase.from("messages").select("id").eq("from_email", fromEmail).eq("to_email", toEmail).limit(1),
-        supabase.from("messages").select("id").eq("from_email", toEmail).eq("to_email", fromEmail).limit(1),
-      ])
+      // Verifie si une conversation existe deja entre ces 2 emails pour cette annonce
+      // (plus strict : meme annonce uniquement — evite le doublon inter-annonces)
+      const { data: existants } = await supabase
+        .from("messages")
+        .select("id")
+        .or(`and(from_email.eq.${fromEmail},to_email.eq.${toEmail}),and(from_email.eq.${toEmail},to_email.eq.${fromEmail})`)
+        .limit(1)
 
-      const hasConversation = (r1 && r1.length > 0) || (r2 && r2.length > 0)
+      const hasConversation = existants && existants.length > 0
 
       if (!hasConversation) {
         await supabase.from("messages").insert([{
           from_email: fromEmail,
           to_email: toEmail,
-          contenu: `Bonjour, je suis intéressé(e) par votre annonce "${annonce.titre}" à ${annonce.ville}.`,
+          contenu: `Bonjour, je suis interesse(e) par votre annonce "${annonce.titre}" a ${annonce.ville}.`,
           lu: false,
           annonce_id: annonce.id,
           type: "candidature",
@@ -59,6 +69,9 @@ export default function ContactButton({ annonce }: { annonce: any }) {
       router.push(`/messages?with=${encodeURIComponent(toEmail)}`)
     } finally {
       setLoading(false)
+      // On garde inFlight a true pendant la navigation : le composant va
+      // probablement unmount, mais si navigation annulee on remet a false
+      setTimeout(() => { inFlight.current = false }, 2000)
     }
   }
 

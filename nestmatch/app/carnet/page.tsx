@@ -119,7 +119,7 @@ export default function Carnet() {
     if (!proprietaireActive) payload.locataire_email = session!.user!.email!
 
     const { data, error } = await supabase.from("carnet_entretien").insert(payload).select().single()
-    if (error) { setErreur("Erreur : " + error.message) }
+    if (error) { setErreur("L'enregistrement a echoue. Veuillez reessayer.") }
     else if (data) { setEvenements(prev => [data, ...prev]); setForm(EMPTY_FORM); setShowForm(false) }
     setSaving(false)
   }

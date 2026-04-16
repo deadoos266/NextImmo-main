@@ -162,7 +162,7 @@ export default function ModifierBien() {
 
     const { error } = await supabase.from("annonces").update(updates).eq("id", bienId)
     setSaving(false)
-    if (error) { alert("Erreur: " + error.message); return }
+    if (error) { alert("La sauvegarde a echoue. Veuillez reessayer."); return }
     setSaved(true)
     setTimeout(() => { setSaved(false); router.push("/proprietaire") }, 1500)
   }

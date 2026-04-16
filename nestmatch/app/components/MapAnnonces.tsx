@@ -121,11 +121,13 @@ export default function MapAnnonces({
   selectedId,
   onSelect,
   onBoundsChange,
+  centerHint,
 }: {
   annonces: any[]
   selectedId: number | null
   onSelect: (id: number) => void
   onBoundsChange: (bounds: L.LatLngBounds) => void
+  centerHint?: [number, number] | null
 }) {
   useEffect(() => { fixLeafletIcons() }, [])
   const [mapType, setMapType] = useState<MapType>("plan")
@@ -134,13 +136,19 @@ export default function MapAnnonces({
   const initialBoundsSet = useRef(false)
 
   const withCoords = spreadOverlappingMarkers(annonces.filter(a => a._lat && a._lng))
-  if (withCoords.length === 0) return (
+
+  // Centre prioritaire : centerHint (ville URL/profil) > 1ere annonce > Paris
+  const center: [number, number] = centerHint
+    ? centerHint
+    : withCoords.length > 0
+      ? [withCoords[0]._lat, withCoords[0]._lng]
+      : [48.8566, 2.3522]
+
+  if (withCoords.length === 0 && !centerHint) return (
     <div style={{ width: "100%", height: "100%", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <p style={{ color: "#9ca3af", fontSize: 14 }}>Aucune coordonnee disponible pour ces annonces</p>
     </div>
   )
-
-  const center: [number, number] = [withCoords[0]._lat, withCoords[0]._lng]
   const tile = TILES[mapType]
 
   // Quand la carte bouge : on garde les bounds en attente et on affiche le bouton

@@ -67,7 +67,7 @@ export default function BookingVisite({
     }).select().single()
 
     if (error) {
-      setErreur("Erreur : " + error.message)
+      setErreur("L'envoi de la demande de visite a echoue. Veuillez reessayer.")
     } else {
       setExistante(data)
       setOpen(false)

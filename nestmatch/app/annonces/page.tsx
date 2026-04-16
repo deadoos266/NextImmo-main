@@ -197,12 +197,10 @@ function AnnoncesContent() {
       }
     })
 
-  const annoncesTraitees = annoncesEnrichies
+  // Filtres URL/profil + options de filtre (sans le mapBounds) —
+  // ce qui sera passe comme markers a la carte
+  const annoncesForMap = annoncesEnrichies
     .filter(a => {
-      if (mapBounds && a._lat && a._lng) {
-        if (!mapBounds.contains([a._lat, a._lng])) return false
-      }
-      // Filtres pre-remplis (URL ou profil)
       if (activeVille && a.ville) {
         const vA = a.ville.toLowerCase()
         const vF = activeVille.toLowerCase()
@@ -210,7 +208,6 @@ function AnnoncesContent() {
       }
       if (activeBudget && a.prix && a.prix > activeBudget * 1.20) return false
       if (activeType && a.type_bien) {
-        // Match laxiste : "T2" doit matcher "T2", "Studio" -> "Studio", etc.
         if (!a.type_bien.toLowerCase().includes(activeType.toLowerCase())) return false
       }
       if (!isProprietaire && scoreMin > 0 && a.scoreMatching !== null && Math.round(a.scoreMatching / 10) < scoreMin) return false
@@ -219,12 +216,24 @@ function AnnoncesContent() {
       if (filtreExterieur && !a.balcon && !a.terrasse && !a.jardin) return false
       return true
     })
+
+  // Pour la liste : memes filtres + filtre par zone carte
+  const annoncesTraitees = annoncesForMap
+    .filter(a => {
+      if (mapBounds && a._lat && a._lng) {
+        if (!mapBounds.contains([a._lat, a._lng])) return false
+      }
+      return true
+    })
     .sort((a, b) => {
       if (tri === "match") return (b.scoreMatching ?? 0) - (a.scoreMatching ?? 0)
       if (tri === "prix_asc") return (a.prix ?? 0) - (b.prix ?? 0)
       if (tri === "prix_desc") return (b.prix ?? 0) - (a.prix ?? 0)
       return 0
     })
+
+  // Coordonnees de centrage de la carte : ville URL > ville profil > aucune
+  const centerCity = activeVille ? getCityCoords(activeVille) : null
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", overflow: "hidden" }}>
@@ -424,10 +433,12 @@ function AnnoncesContent() {
         {/* Carte — isolation: isolate pour que Leaflet reste sous la navbar */}
         <div style={{ flex: 1, position: "relative", isolation: "isolate", borderRadius: isMobile ? 0 : 18, overflow: "hidden", display: isMobile && !showMap ? "none" : "block" }}>
           <MapAnnonces
-            annonces={annoncesEnrichies}
+            key={activeVille || "all"}
+            annonces={annoncesForMap}
             selectedId={selectedId}
             onSelect={id => setSelectedId(id)}
             onBoundsChange={handleBoundsChange}
+            centerHint={centerCity ? [centerCity[0], centerCity[1]] : null}
           />
         </div>
       </div>

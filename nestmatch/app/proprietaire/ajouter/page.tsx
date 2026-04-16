@@ -70,7 +70,7 @@ export default function AjouterBien() {
     const path = `${session.user.email}/${timestamp}.${ext}`
     const { error } = await supabase.storage.from("annonces-photos").upload(path, file, { upsert: false })
     if (error) {
-      setPhotoError(`Erreur upload: ${error.message}. Vérifiez que le bucket "annonces-photos" existe dans Supabase Storage (public).`)
+      setPhotoError("L'envoi de la photo a echoue, veuillez reessayer.")
       setUploadingPhoto(false)
       return
     }
@@ -121,7 +121,7 @@ export default function AjouterBien() {
       }, { onConflict: "email" })
       router.push("/proprietaire")
     } else {
-      alert("Erreur: " + error.message)
+      alert("La publication a echoue. Veuillez verifier les champs et reessayer.")
     }
     setSaving(false)
   }
@@ -217,7 +217,7 @@ export default function AjouterBien() {
               </>
             )}
           </button>
-          <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 8 }}>La première photo sera la photo principale de l'annonce. Bucket "annonces-photos" requis dans Supabase Storage.</p>
+          <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 8 }}>La premiere photo sera la photo principale de l'annonce.</p>
         </Sec>
 
         {/* Champs supplémentaires si déjà loué */}

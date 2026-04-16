@@ -1,6 +1,7 @@
 "use client"
 import { useState } from "react"
 import { signOut } from "next-auth/react"
+import PasswordInput from "../components/PasswordInput"
 
 const inp = { width: "100%", padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit" }
 
@@ -129,9 +130,9 @@ function ChangePasswordForm({ onDone }: { onDone: () => void }) {
 
   return (
     <form onSubmit={submit} style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10, maxWidth: 420 }}>
-      <input type="password" placeholder="Mot de passe actuel" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} style={inp} required />
-      <input type="password" placeholder="Nouveau mot de passe (8+ caracteres)" value={newPassword} onChange={e => setNewPassword(e.target.value)} style={inp} required minLength={8} />
-      <input type="password" placeholder="Confirmer le nouveau mot de passe" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={inp} required />
+      <PasswordInput value={currentPassword} onChange={setCurrentPassword} placeholder="Mot de passe actuel" required autoComplete="current-password" />
+      <PasswordInput value={newPassword} onChange={setNewPassword} placeholder="Nouveau mot de passe (8+ caracteres)" required minLength={8} autoComplete="new-password" />
+      <PasswordInput value={confirmPassword} onChange={setConfirmPassword} placeholder="Confirmer le nouveau mot de passe" required autoComplete="new-password" />
       {error && <p style={{ color: "#dc2626", fontSize: 13 }}>{error}</p>}
       <button type="submit" disabled={loading}
         style={{ alignSelf: "flex-start", background: "#111", color: "white", border: "none", borderRadius: 999, padding: "10px 24px", fontWeight: 700, fontSize: 14, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, fontFamily: "inherit" }}>
