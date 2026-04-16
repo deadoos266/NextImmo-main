@@ -67,6 +67,9 @@ export default async function Annonce({ params }: any) {
     </main>
   )
 
+  // Incrementer le compteur de vues (fire and forget)
+  supabase.rpc("increment_vues", { annonce_id: annonce.id }).then(() => {})
+
   const dpeColor: any = { A: "#22c55e", B: "#84cc16", C: "#eab308", D: "#f97316", E: "#ef4444", F: "#dc2626", G: "#991b1b" }
   const photos: string[] = Array.isArray(annonce.photos) ? annonce.photos : []
 

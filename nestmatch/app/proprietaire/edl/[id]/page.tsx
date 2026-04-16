@@ -73,9 +73,12 @@ function makeElements(type: string): Record<string, ElementData> {
 function genererEdlPDF(data: {
   type: "entree" | "sortie"
   dateEdl: string
+  prenomBailleur: string
   nomBailleur: string
+  emailBailleur: string
   prenomLocataire: string
   nomLocataire: string
+  emailLocataire: string
   titreBien: string
   adresseBien: string
   villeBien: string
@@ -106,9 +109,16 @@ function genererEdlPDF(data: {
   line()
 
   section("PARTIES")
-  field("Bailleur", data.nomBailleur)
-  field("Nom", data.nomLocataire)
-  field("Prenom", data.prenomLocataire)
+  y += 2
+  doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text("LE BAILLEUR", 20, y); y += 5
+  field("Nom", data.nomBailleur || "A completer")
+  field("Prenom", data.prenomBailleur || "A completer")
+  field("Email", data.emailBailleur || "A completer")
+  y += 4
+  doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text("LE LOCATAIRE", 20, y); y += 5
+  field("Nom", data.nomLocataire || "A completer")
+  field("Prenom", data.prenomLocataire || "A completer")
+  field("Email", data.emailLocataire || "A completer")
   y += 3
 
   section("LOGEMENT")
@@ -188,8 +198,10 @@ function genererEdlPDF(data: {
   doc.text("Le Locataire", 155, y, { align: "center" })
   y += 5
   doc.setFontSize(9); doc.setFont("helvetica", "normal")
-  doc.text(data.nomBailleur, 50, y, { align: "center" })
-  doc.text(`${data.prenomLocataire} ${data.nomLocataire}`.trim(), 155, y, { align: "center" })
+  const fullBailleur = `${data.prenomBailleur} ${data.nomBailleur}`.trim() || "Le Bailleur"
+  const fullLocataire = `${data.prenomLocataire} ${data.nomLocataire}`.trim() || "Le Locataire"
+  doc.text(fullBailleur, 50, y, { align: "center" })
+  doc.text(fullLocataire, 155, y, { align: "center" })
   y += 3
   doc.setFontSize(7); doc.text("(Lu et approuve)", 50, y, { align: "center" })
   doc.text("(Lu et approuve)", 155, y, { align: "center" })
@@ -215,8 +227,12 @@ export default function EdlPage() {
 
   const [type, setType] = useState<"entree" | "sortie">("entree")
   const [dateEdl, setDateEdl] = useState(new Date().toISOString().split("T")[0])
+  const [prenomBailleur, setPrenomBailleur] = useState("")
+  const [nomBailleur, setNomBailleur] = useState("")
+  const [emailBailleur, setEmailBailleur] = useState("")
   const [prenomLocataire, setPrenomLocataire] = useState("")
   const [nomLocataire, setNomLocataire] = useState("")
+  const [emailLocataire, setEmailLocataire] = useState("")
   const [pieces, setPieces] = useState<PieceData[]>([])
   const [compteurs, setCompteurs] = useState({ eau: "", elec: "", gaz: "" })
   const [cles, setCles] = useState("2 cles + 1 badge")
@@ -236,6 +252,13 @@ export default function EdlPage() {
     const { data } = await supabase.from("annonces").select("*").eq("id", bienId).single()
     if (data) {
       setBien(data)
+      // Pre-remplir bailleur
+      const nameParts = (data.proprietaire || session?.user?.name || "").split(" ")
+      setPrenomBailleur(nameParts[0] || "")
+      setNomBailleur(nameParts.slice(1).join(" ") || "")
+      setEmailBailleur(data.proprietaire_email || session?.user?.email || "")
+      // Pre-remplir locataire email
+      setEmailLocataire(data.locataire_email || "")
       // Generer les pieces par defaut selon le bien
       const nbChambres = Math.max(1, Number(data.chambres) || 1)
       const initialPieces: PieceData[] = [
@@ -325,9 +348,12 @@ export default function EdlPage() {
     genererEdlPDF({
       type,
       dateEdl,
-      nomBailleur: bien.proprietaire || session?.user?.name || "",
-      prenomLocataire: prenomLocataire || "",
-      nomLocataire: nomLocataire || bien.locataire_email || "",
+      prenomBailleur,
+      nomBailleur,
+      emailBailleur,
+      prenomLocataire,
+      nomLocataire,
+      emailLocataire,
       titreBien: bien.titre || "",
       adresseBien: bien.adresse || "",
       villeBien: bien.ville || "",
@@ -382,10 +408,10 @@ export default function EdlPage() {
           ))}
         </div>
 
-        {/* Type + Infos */}
+        {/* Type */}
         <div style={cardS}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Informations generales</h2>
-          <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Type d'etat des lieux</h2>
+          <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
             {(["entree", "sortie"] as const).map(t => (
               <button key={t} onClick={() => setType(t)}
                 style={{
@@ -397,11 +423,31 @@ export default function EdlPage() {
               </button>
             ))}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr 1fr", gap: 16 }}>
-            <div><label style={lbl}>Date</label><input style={inp} type="date" value={dateEdl} onChange={e => setDateEdl(e.target.value)} /></div>
-            <div><label style={lbl}>Prenom du locataire</label><input style={inp} value={prenomLocataire} onChange={e => setPrenomLocataire(e.target.value)} placeholder="Prenom" /></div>
-            <div><label style={lbl}>Nom du locataire</label><input style={inp} value={nomLocataire} onChange={e => setNomLocataire(e.target.value)} placeholder="Nom de famille" /></div>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
+            <div><label style={lbl}>Date de l'etat des lieux</label><input style={inp} type="date" value={dateEdl} onChange={e => setDateEdl(e.target.value)} /></div>
             <div><label style={lbl}>Cles remises</label><input style={inp} value={cles} onChange={e => setCles(e.target.value)} /></div>
+          </div>
+        </div>
+
+        {/* Le Bailleur */}
+        <div style={cardS}>
+          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Le bailleur</h2>
+          <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16 }}>Pre-rempli depuis votre profil — modifiable</p>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
+            <div><label style={lbl}>Prenom</label><input style={inp} value={prenomBailleur} onChange={e => setPrenomBailleur(e.target.value)} placeholder="Prenom" /></div>
+            <div><label style={lbl}>Nom</label><input style={inp} value={nomBailleur} onChange={e => setNomBailleur(e.target.value)} placeholder="Nom de famille" /></div>
+            <div><label style={lbl}>Email</label><input style={inp} value={emailBailleur} onChange={e => setEmailBailleur(e.target.value)} placeholder="email@exemple.fr" type="email" /></div>
+          </div>
+        </div>
+
+        {/* Le Locataire */}
+        <div style={cardS}>
+          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Le locataire</h2>
+          <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16 }}>Si non renseigne, les champs seront a completer a la main sur le PDF</p>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
+            <div><label style={lbl}>Prenom</label><input style={inp} value={prenomLocataire} onChange={e => setPrenomLocataire(e.target.value)} placeholder="Prenom" /></div>
+            <div><label style={lbl}>Nom</label><input style={inp} value={nomLocataire} onChange={e => setNomLocataire(e.target.value)} placeholder="Nom de famille" /></div>
+            <div><label style={lbl}>Email</label><input style={inp} value={emailLocataire} onChange={e => setEmailLocataire(e.target.value)} placeholder="email@exemple.fr" type="email" /></div>
           </div>
         </div>
 

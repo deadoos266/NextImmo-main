@@ -7,7 +7,7 @@ import { supabase } from "../../lib/supabase"
 import AgendaVisites from "../components/AgendaVisites"
 import { useResponsive } from "../hooks/useResponsive"
 
-const ONGLETS = ["Vue d'ensemble", "Mes biens", "Candidatures", "Loyers", "Visites"] as const
+const ONGLETS = ["Vue d'ensemble", "Mes biens", "Performance", "Candidatures", "Loyers", "Visites"] as const
 type Onglet = typeof ONGLETS[number]
 
 const STATUT_V: Record<string, { bg: string; color: string; border: string; label: string; icon: string }> = {
@@ -401,6 +401,137 @@ export default function Proprietaire() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* PERFORMANCE */}
+        {onglet === "Performance" && (
+          <div>
+            {biens.length === 0 ? (
+              <div style={{ background: "white", borderRadius: 20, padding: 48, textAlign: "center", color: "#9ca3af" }}>
+                <p style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Aucun bien publie</p>
+              </div>
+            ) : (
+              <>
+                {/* KPIs globaux */}
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: isMobile ? 10 : 16, marginBottom: 24 }}>
+                  {[
+                    { label: "Vues totales", val: biens.reduce((s: number, b: any) => s + (Number(b.vues) || 0), 0), color: "#1d4ed8", bg: "#eff6ff" },
+                    { label: "Messages recus", val: candidatures.length, color: "#16a34a", bg: "#dcfce7" },
+                    { label: "Visites demandees", val: visites.length, color: "#ea580c", bg: "#fff7ed" },
+                    { label: "Biens actifs", val: biens.filter((b: any) => !b.statut || b.statut === "disponible").length, color: "#111", bg: "white" },
+                  ].map(s => (
+                    <div key={s.label} style={{ background: s.bg, borderRadius: 16, padding: "20px 24px" }}>
+                      <div style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.val}</div>
+                      <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Detail par bien */}
+                <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24 }}>
+                  <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>Performance par bien</h2>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                    {/* Header */}
+                    {!isMobile && (
+                      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr", gap: 12, padding: "10px 16px", background: "#f9fafb", borderRadius: "10px 10px 0 0" }}>
+                        {["Bien", "Vues", "Messages", "Visites", "Taux conv."].map(h => (
+                          <span key={h} style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>{h}</span>
+                        ))}
+                      </div>
+                    )}
+                    {biens.map((b: any, i: number) => {
+                      const vues = Number(b.vues) || 0
+                      const msgs = candidatures.filter((c: any) => c.annonce_id === b.id).length
+                      const vis = visites.filter((v: any) => v.annonce_id === b.id).length
+                      const tauxConv = vues > 0 ? Math.round(((msgs + vis) / vues) * 100) : 0
+
+                      if (isMobile) {
+                        return (
+                          <div key={b.id} style={{ padding: "14px 0", borderBottom: i < biens.length - 1 ? "1px solid #f3f4f6" : "none" }}>
+                            <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>{b.titre}</p>
+                            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                              {[
+                                { label: "Vues", val: vues, color: "#1d4ed8" },
+                                { label: "Messages", val: msgs, color: "#16a34a" },
+                                { label: "Visites", val: vis, color: "#ea580c" },
+                                { label: "Conv.", val: `${tauxConv}%`, color: tauxConv >= 5 ? "#16a34a" : "#6b7280" },
+                              ].map(s => (
+                                <div key={s.label} style={{ background: "#f9fafb", borderRadius: 8, padding: "6px 12px", textAlign: "center" }}>
+                                  <div style={{ fontSize: 16, fontWeight: 800, color: s.color }}>{s.val}</div>
+                                  <div style={{ fontSize: 10, color: "#9ca3af" }}>{s.label}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      }
+
+                      return (
+                        <div key={b.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr", gap: 12, padding: "14px 16px", borderBottom: "1px solid #f3f4f6", alignItems: "center" }}>
+                          <div>
+                            <p style={{ fontWeight: 700, fontSize: 14 }}>{b.titre}</p>
+                            <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>{b.ville} · {b.prix} euros/mois</p>
+                          </div>
+                          <span style={{ fontSize: 16, fontWeight: 800, color: "#1d4ed8" }}>{vues}</span>
+                          <span style={{ fontSize: 16, fontWeight: 800, color: "#16a34a" }}>{msgs}</span>
+                          <span style={{ fontSize: 16, fontWeight: 800, color: "#ea580c" }}>{vis}</span>
+                          <div>
+                            <span style={{ fontSize: 16, fontWeight: 800, color: tauxConv >= 5 ? "#16a34a" : tauxConv >= 2 ? "#ea580c" : "#6b7280" }}>{tauxConv}%</span>
+                            <div style={{ background: "#f3f4f6", borderRadius: 4, height: 4, marginTop: 4, overflow: "hidden" }}>
+                              <div style={{ height: "100%", borderRadius: 4, width: `${Math.min(100, tauxConv * 5)}%`, background: tauxConv >= 5 ? "#16a34a" : tauxConv >= 2 ? "#ea580c" : "#d1d5db" }} />
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Conseils */}
+                <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24, marginTop: 20 }}>
+                  <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Conseils pour ameliorer vos performances</h2>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {biens.filter((b: any) => !b.photos || (Array.isArray(b.photos) && b.photos.length < 3)).length > 0 && (
+                      <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#fff7ed", borderRadius: 12, border: "1px solid #fed7aa" }}>
+                        <span style={{ fontSize: 20 }}>📸</span>
+                        <div>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: "#9a3412" }}>Ajoutez plus de photos</p>
+                          <p style={{ fontSize: 12, color: "#ea580c" }}>{biens.filter((b: any) => !b.photos || (Array.isArray(b.photos) && b.photos.length < 3)).length} bien(s) avec moins de 3 photos — les annonces avec 5+ photos recoivent 3x plus de vues</p>
+                        </div>
+                      </div>
+                    )}
+                    {biens.filter((b: any) => !b.description || b.description.length < 100).length > 0 && (
+                      <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#eff6ff", borderRadius: 12, border: "1px solid #bfdbfe" }}>
+                        <span style={{ fontSize: 20 }}>✍️</span>
+                        <div>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: "#1e40af" }}>Enrichissez vos descriptions</p>
+                          <p style={{ fontSize: 12, color: "#1d4ed8" }}>{biens.filter((b: any) => !b.description || b.description.length < 100).length} bien(s) sans description detaillee — une bonne description augmente les contacts de 40%</p>
+                        </div>
+                      </div>
+                    )}
+                    {biens.filter((b: any) => !b.dpe).length > 0 && (
+                      <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#dcfce7", borderRadius: 12, border: "1px solid #bbf7d0" }}>
+                        <span style={{ fontSize: 20 }}>🏷️</span>
+                        <div>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: "#166534" }}>Renseignez le DPE</p>
+                          <p style={{ fontSize: 12, color: "#16a34a" }}>{biens.filter((b: any) => !b.dpe).length} bien(s) sans DPE — le DPE est obligatoire et rassure les locataires</p>
+                        </div>
+                      </div>
+                    )}
+                    {biens.every((b: any) => b.photos && Array.isArray(b.photos) && b.photos.length >= 3 && b.description && b.description.length >= 100 && b.dpe) && (
+                      <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#dcfce7", borderRadius: 12, border: "1px solid #bbf7d0" }}>
+                        <span style={{ fontSize: 20 }}>🎯</span>
+                        <div>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: "#166534" }}>Vos annonces sont optimisees !</p>
+                          <p style={{ fontSize: 12, color: "#16a34a" }}>Tous vos biens ont des photos, descriptions et DPE — continuez comme ca</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 
