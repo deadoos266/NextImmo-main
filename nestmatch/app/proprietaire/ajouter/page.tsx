@@ -4,6 +4,7 @@ import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../../lib/supabase"
 import { useResponsive } from "../../hooks/useResponsive"
+import LocataireEmailField from "../../components/LocataireEmailField"
 
 const Toggle = ({ label, k, toggles, setToggles }: any) => (
   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
@@ -225,10 +226,10 @@ export default function AjouterBien() {
             <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12, padding: "12px 16px", marginBottom: 20 }}>
               <p style={{ fontSize: 13, color: "#16a34a", fontWeight: 600 }}>Ce bien sera géré dans votre dashboard mais n'apparaîtra pas dans les annonces publiques.</p>
             </div>
+            <div style={{ marginBottom: 20 }}>
+              <LocataireEmailField value={form.locataire_email} onChange={v => setForm(f => ({ ...f, locataire_email: v }))} inputStyle={inp} />
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
-              <F l="Email du locataire (optionnel)">
-                <input style={inp} value={form.locataire_email} onChange={set("locataire_email")} placeholder="locataire@email.fr" type="email" />
-              </F>
               <F l="Date de début du bail">
                 <input style={inp} value={form.date_debut_bail} onChange={set("date_debut_bail")} type="date" />
               </F>

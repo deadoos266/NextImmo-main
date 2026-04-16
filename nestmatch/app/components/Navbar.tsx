@@ -166,13 +166,19 @@ export default function Navbar() {
                       <p style={{ fontWeight: 700, fontSize: 14 }}>{session.user?.name}</p>
                       <p style={{ color: "#6b7280", fontSize: 12, marginTop: 2 }}>{session.user?.email}</p>
                     </div>
-                    {[
-                      { href: "/profil",       label: "Mon profil",   desc: "Critères de recherche" },
-                      { href: "/dossier",      label: "Mon dossier",  desc: "Documents" },
+                    {(proprietaireActive ? [
+                      { href: "/profil",               label: "Mon profil",      desc: "Informations personnelles" },
+                      { href: "/proprietaire",         label: "Mes biens",       desc: "Dashboard proprietaire" },
+                      { href: "/proprietaire/ajouter", label: "Publier un bien", desc: "Ajouter une annonce" },
+                      { href: "/carnet",               label: "Carnet d'entretien", desc: "Travaux & maintenance" },
+                      { href: "/messages",             label: "Messages",        desc: "Vos conversations" },
+                    ] : [
+                      { href: "/profil",       label: "Mon profil",   desc: "Criteres de recherche" },
+                      { href: "/dossier",      label: "Mon dossier",  desc: "Documents & candidature" },
                       { href: "/visites",      label: "Mes visites",  desc: "Demandes & confirmations" },
-                      { href: "/proprietaire", label: "Mes biens",    desc: "Gestion propriétaire" },
+                      { href: "/favoris",      label: "Mes favoris",  desc: "Annonces sauvegardees" },
                       { href: "/messages",     label: "Messages",     desc: "Vos conversations" },
-                    ].map(item => (
+                    ]).map(item => (
                       <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)}
                         style={{ display: "block", padding: "12px 16px", textDecoration: "none", color: "#111" }}
                         onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}

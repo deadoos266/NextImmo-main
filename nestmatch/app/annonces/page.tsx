@@ -183,31 +183,30 @@ export default function Annonces() {
     })
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: isMobile ? "auto" : "calc(100vh - 64px)", minHeight: isMobile ? "100vh" : undefined, background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", overflow: isMobile ? "auto" : "hidden" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", overflow: "hidden" }}>
 
       {/* Bandeau compact */}
       <div style={{ flexShrink: 0, padding: isMobile ? "10px 16px" : "10px 32px" }}>
         {isProprietaire ? (
-          <div style={{ background: "white", borderRadius: 12, padding: "10px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid #e5e7eb" }}>
-            <span style={{ fontSize: 13, color: "#6b7280" }}>
-              <strong style={{ color: "#111" }}>Mode proprietaire</strong> — les scores de compatibilite ne s'appliquent pas.
+          <div style={{ background: "white", borderRadius: 12, padding: isMobile ? "8px 14px" : "10px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid #e5e7eb", gap: 10 }}>
+            <span style={{ fontSize: isMobile ? 12 : 13, color: "#6b7280" }}>
+              <strong style={{ color: "#111" }}>Mode proprio</strong>{!isMobile && " — scores non applicables"}
             </span>
-            <a href="/proprietaire" style={{ fontSize: 12, fontWeight: 700, color: "#111", textDecoration: "none", padding: "4px 12px", border: "1.5px solid #e5e7eb", borderRadius: 999 }}>Mes biens</a>
+            <a href="/proprietaire" style={{ fontSize: 12, fontWeight: 700, color: "#111", textDecoration: "none", padding: "4px 12px", border: "1.5px solid #e5e7eb", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0 }}>Mes biens</a>
           </div>
         ) : status === "authenticated" && profil ? (
-          <div style={{ background: "white", borderRadius: 12, padding: "10px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid #e5e7eb" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#16a34a" }}>Resultats personnalises</span>
-              {profil.ville_souhaitee && <span style={{ background: "#f3f4f6", padding: "2px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600 }}>{profil.ville_souhaitee}</span>}
-              {profil.budget_max && <span style={{ background: "#f3f4f6", padding: "2px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600 }}>Max {profil.budget_max} €</span>}
-              {profil.mode_localisation === "strict" && <span style={{ background: "#fee2e2", color: "#dc2626", padding: "2px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>Mode strict</span>}
+          <div style={{ background: "white", borderRadius: 12, padding: isMobile ? "8px 14px" : "10px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid #e5e7eb", gap: 8, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: isMobile ? 11 : 13, fontWeight: 700, color: "#16a34a" }}>Personnalise</span>
+              {profil.ville_souhaitee && <span style={{ background: "#f3f4f6", padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 600 }}>{profil.ville_souhaitee}</span>}
+              {!isMobile && profil.budget_max && <span style={{ background: "#f3f4f6", padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 600 }}>Max {profil.budget_max} €</span>}
             </div>
-            <a href="/profil" style={{ fontSize: 12, fontWeight: 700, color: "#111", textDecoration: "none", padding: "4px 12px", border: "1.5px solid #e5e7eb", borderRadius: 999, whiteSpace: "nowrap" }}>Modifier mon profil</a>
+            <a href="/profil" style={{ fontSize: 11, fontWeight: 700, color: "#111", textDecoration: "none", padding: "4px 10px", border: "1.5px solid #e5e7eb", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0 }}>Profil</a>
           </div>
         ) : status === "unauthenticated" ? (
-          <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: "10px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#92400e" }}>Connectez-vous pour voir votre score de compatibilite personnalise</span>
-            <a href="/auth" style={{ background: "#111", color: "white", padding: "5px 14px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 12 }}>Se connecter</a>
+          <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: isMobile ? "8px 14px" : "10px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+            <span style={{ fontSize: isMobile ? 11 : 13, fontWeight: 600, color: "#92400e" }}>{isMobile ? "Connectez-vous pour le matching" : "Connectez-vous pour le score de compatibilite"}</span>
+            <a href="/auth" style={{ background: "#111", color: "white", padding: "5px 14px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 12, flexShrink: 0 }}>Connexion</a>
           </div>
         ) : null}
       </div>
@@ -227,10 +226,10 @@ export default function Annonces() {
       )}
 
       {/* Corps principal */}
-      <div style={{ flex: 1, display: "flex", overflow: isMobile ? "visible" : "hidden", padding: isMobile ? "0 16px 16px" : "0 12px 12px 24px", gap: 12, flexDirection: isMobile ? "column" : "row" }}>
+      <div style={{ flex: 1, display: "flex", overflow: "hidden", padding: isMobile ? "0 16px 16px" : "0 12px 12px 24px", gap: 12, flexDirection: isMobile ? "column" : "row" }}>
 
         {/* Sidebar filtres */}
-        <div style={{ width: isMobile ? "100%" : 200, flexShrink: 0, overflowY: "auto", display: isMobile && !showFilters ? "none" : "block" }}>
+        <div style={{ width: isMobile ? "100%" : 200, flexShrink: 0, overflowY: "auto", display: isMobile && !showFilters ? "none" : "block", maxHeight: isMobile ? 300 : undefined }}>
           <div style={{ background: "white", borderRadius: 18, padding: 18 }}>
             <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 14, color: "#111" }}>Affiner</p>
 
@@ -282,7 +281,7 @@ export default function Annonces() {
         </div>
 
         {/* Liste */}
-        <div style={{ width: isMobile ? "100%" : 360, flexShrink: 0, overflowY: "auto", display: isMobile && showMap ? "none" : "flex", flexDirection: "column", gap: 0 }}>
+        <div style={{ width: isMobile ? "100%" : 360, flex: isMobile && !showMap ? 1 : undefined, flexShrink: 0, overflowY: "auto", display: isMobile && showMap ? "none" : "flex", flexDirection: "column", gap: 0 }}>
           {/* Compteur */}
           <div style={{ padding: "2px 0 10px", flexShrink: 0 }}>
             <p style={{ fontSize: 13, color: "#6b7280" }}>
@@ -369,7 +368,7 @@ export default function Annonces() {
         </div>
 
         {/* Carte — isolation: isolate pour que Leaflet reste sous la navbar */}
-        <div style={{ flex: 1, position: "relative", isolation: "isolate", borderRadius: 18, overflow: "hidden", display: isMobile && !showMap ? "none" : "block", minHeight: isMobile ? 400 : undefined }}>
+        <div style={{ flex: 1, position: "relative", isolation: "isolate", borderRadius: isMobile ? 0 : 18, overflow: "hidden", display: isMobile && !showMap ? "none" : "block" }}>
           <MapAnnonces
             annonces={annoncesEnrichies}
             selectedId={selectedId}

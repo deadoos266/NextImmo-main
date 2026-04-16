@@ -7,6 +7,7 @@ import { supabase } from "../../../lib/supabase"
 import { Suspense } from "react"
 import jsPDF from "jspdf"
 import { useResponsive } from "../../hooks/useResponsive"
+import LocataireEmailField from "../../components/LocataireEmailField"
 
 // ─── SVG Bar Chart ──────────────────────────────────────────────────────────
 
@@ -811,12 +812,11 @@ function StatsInner() {
               ))}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 20 }}>
-              <div>
-                <label style={labelStyle}>Email locataire</label>
-                <input value={editForm.locataire_email ?? ""} onChange={e => setEditForm((p: any) => ({ ...p, locataire_email: e.target.value }))}
-                  placeholder="locataire@email.com"
-                  style={{ width: "100%", padding: "9px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const }} />
-              </div>
+              <LocataireEmailField
+                value={editForm.locataire_email ?? ""}
+                onChange={v => setEditForm((p: any) => ({ ...p, locataire_email: v }))}
+                inputStyle={{ width: "100%", padding: "9px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const }}
+              />
               <div>
                 <label style={labelStyle}>Statut</label>
                 <select value={editForm.statut ?? "disponible"} onChange={e => setEditForm((p: any) => ({ ...p, statut: e.target.value }))}

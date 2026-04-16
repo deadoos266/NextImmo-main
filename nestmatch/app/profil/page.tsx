@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
 import { useResponsive } from "../hooks/useResponsive"
+import { useRole } from "../providers"
 
 // Composants HORS du composant principal pour éviter le bug de focus
 const Toggle = ({ label, k, toggles, setToggles }: any) => (
@@ -34,6 +35,7 @@ export default function Profil() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const { isMobile } = useResponsive()
+  const { proprietaireActive } = useRole()
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [erreur, setErreur] = useState("")
@@ -184,40 +186,61 @@ export default function Profil() {
               <span style={{ background: "#dcfce7", color: "#16a34a", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700, marginTop: 8, display: "inline-block" }}>✓ Compte vérifié</span>
             </div>
           </div>
-          <a href="/annonces" style={{ background: "#111", color: "white", padding: "12px 24px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14, textAlign: "center" }}>
-            Voir mes annonces →
+          <a href={proprietaireActive ? "/proprietaire" : "/annonces"} style={{ background: "#111", color: "white", padding: "12px 24px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14, textAlign: "center" }}>
+            {proprietaireActive ? "Mes biens →" : "Voir les annonces →"}
           </a>
         </div>
 
-        {/* Score de complétion */}
-        <div style={{ background: "white", borderRadius: 20, padding: 24, marginBottom: 20 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <div>
-              <h2 style={{ fontSize: 16, fontWeight: 800 }}>Complétion du dossier</h2>
-              <p style={{ fontSize: 13, color: "#6b7280", marginTop: 2 }}>
-                {scoreCompletion === 100 ? "Dossier complet — vous maximisez vos chances !" : `Remplissez les champs manquants pour booster votre profil`}
-              </p>
+        {/* Proprio : message d'accueil simple */}
+        {proprietaireActive && (
+          <div style={{ background: "white", borderRadius: 20, padding: 24, marginBottom: 20 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>Espace proprietaire</h2>
+            <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.6, marginBottom: 16 }}>
+              En tant que proprietaire, votre profil contient vos informations personnelles. Les criteres de recherche et le dossier locataire ne vous concernent pas.
+            </p>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <a href="/proprietaire" style={{ padding: "10px 20px", background: "#111", color: "white", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
+                Dashboard proprietaire
+              </a>
+              <a href="/proprietaire/ajouter" style={{ padding: "10px 20px", background: "#f3f4f6", color: "#111", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
+                Publier un bien
+              </a>
             </div>
-            <span style={{ fontSize: 32, fontWeight: 800, color: scoreColor }}>{scoreCompletion}%</span>
           </div>
+        )}
 
-          {/* Barre de progression */}
-          <div style={{ background: "#f3f4f6", borderRadius: 999, height: 10, marginBottom: 16 }}>
-            <div style={{ background: scoreColor, borderRadius: 999, height: 10, width: `${scoreCompletion}%`, transition: "width 0.4s ease" }} />
-          </div>
-
-          {/* Champs manquants */}
-          {manquants.length > 0 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {manquants.map(c => (
-                <span key={c.label} style={{ background: "#fff7ed", color: "#ea580c", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600 }}>
-                  + {c.label}
-                </span>
-              ))}
+        {/* Locataire : Score de complétion */}
+        {!proprietaireActive && (
+          <div style={{ background: "white", borderRadius: 20, padding: 24, marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div>
+                <h2 style={{ fontSize: 16, fontWeight: 800 }}>Completion du dossier</h2>
+                <p style={{ fontSize: 13, color: "#6b7280", marginTop: 2 }}>
+                  {scoreCompletion === 100 ? "Dossier complet — vous maximisez vos chances !" : `Remplissez les champs manquants pour booster votre profil`}
+                </p>
+              </div>
+              <span style={{ fontSize: 32, fontWeight: 800, color: scoreColor }}>{scoreCompletion}%</span>
             </div>
-          )}
-        </div>
 
+            {/* Barre de progression */}
+            <div style={{ background: "#f3f4f6", borderRadius: 999, height: 10, marginBottom: 16 }}>
+              <div style={{ background: scoreColor, borderRadius: 999, height: 10, width: `${scoreCompletion}%`, transition: "width 0.4s ease" }} />
+            </div>
+
+            {/* Champs manquants */}
+            {manquants.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {manquants.map(c => (
+                  <span key={c.label} style={{ background: "#fff7ed", color: "#ea580c", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600 }}>
+                    + {c.label}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {!proprietaireActive && <>
         <Sec t="Mes critères de recherche">
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
             <F l="Ville souhaitée"><input style={inp} value={form.ville_souhaitee} onChange={set("ville_souhaitee")} placeholder="Paris, Lyon..." /></F>
@@ -317,6 +340,7 @@ export default function Profil() {
             {saving ? "Sauvegarde..." : "Sauvegarder mes préférences"}
           </button>
         </div>
+        </>}
       </div>
     </main>
   )

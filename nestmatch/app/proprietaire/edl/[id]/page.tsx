@@ -683,7 +683,7 @@ export default function EdlPage() {
                     <span style={{ background: "#dcfce7", color: "#16a34a", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>✓ Compte verifie : {bien.locataire_email}</span>
                   )}
                   {locataireVerifie === false && (
-                    <span style={{ background: "#fee2e2", color: "#dc2626", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>✗ {bien.locataire_email} — aucun compte trouve</span>
+                    <span style={{ background: "#fff7ed", color: "#ea580c", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>{bien.locataire_email} — pas encore inscrit (l'envoi via messagerie sera possible apres inscription)</span>
                   )}
                   {locataireVerifie === null && (
                     <span style={{ background: "#f3f4f6", color: "#6b7280", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>Verification en cours...</span>
@@ -894,8 +894,9 @@ export default function EdlPage() {
                   {sending ? "Envoi en cours..." : sent ? "Envoye a " + bien.locataire_email + " !" : "Envoyer a " + bien.locataire_email}
                 </button>
               ) : bien.locataire_email && !locataireVerifie ? (
-                <div style={{ flex: 1, padding: "14px 20px", background: "#fee2e2", borderRadius: 16, border: "1.5px solid #fecaca", textAlign: "center" }}>
-                  <p style={{ fontSize: 13, color: "#dc2626", fontWeight: 600, margin: 0 }}>Le locataire ({bien.locataire_email}) n'a pas de compte NestMatch</p>
+                <div style={{ flex: 1, padding: "14px 20px", background: "#fff7ed", borderRadius: 16, border: "1.5px solid #fed7aa", textAlign: "center" }}>
+                  <p style={{ fontSize: 13, color: "#ea580c", fontWeight: 600, margin: 0 }}>Envoi impossible — {bien.locataire_email} pas encore inscrit</p>
+                  <p style={{ fontSize: 11, color: "#9ca3af", margin: "4px 0 0" }}>Invitez-le depuis les parametres du bien. Le PDF reste telechargeable.</p>
                 </div>
               ) : (
                 <div style={{ flex: 1, padding: "14px 20px", background: "#f9fafb", borderRadius: 16, border: "1.5px dashed #d1d5db", textAlign: "center" }}>
