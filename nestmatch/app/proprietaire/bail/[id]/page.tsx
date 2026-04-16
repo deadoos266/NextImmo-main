@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "../../../../lib/supabase"
 import { useResponsive } from "../../../hooks/useResponsive"
-import jsPDF from "jspdf"
+// jsPDF lazy-loaded pour alleger le bundle initial (voir genererBailPDF)
 
 // ─── Bail PDF Generator (conforme loi ALUR) ────────────────────────────────
 
@@ -40,6 +40,7 @@ function genererBailPDF(data: {
   // DPE
   dpe: string
 }) {
+  const { default: jsPDF } = await import("jspdf")
   const doc = new jsPDF()
   const W = 170
   const totalCC = data.loyerHC + data.charges

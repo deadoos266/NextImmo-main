@@ -4,13 +4,7 @@
 Next.js 15 (App Router) · Supabase · NextAuth Google · TypeScript · Tailwind désactivé (inline styles uniquement)
 
 ## Env (.env.local)
-```
-NEXT_PUBLIC_SUPABASE_URL=https://wzzibgdupycysvtwsqxo.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=[jwt]
-GOOGLE_CLIENT_ID=428990672925-p5q0jgttfqn1kb4el3lbdrr4i2d7ae6t.apps.googleusercontent.com
-NEXTAUTH_SECRET=nestmatch_super_secret_2024
-NEXTAUTH_URL=http://localhost:3000
-```
+Voir `.env.example` pour la liste des variables requises. Les valeurs sont stockées dans `.env.local` (gitignored) en dev et dans les variables d'environnement Vercel en prod. **Ne jamais committer de valeurs réelles ici.**
 
 ## Structure fichiers
 ```

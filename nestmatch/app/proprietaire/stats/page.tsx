@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "../../../lib/supabase"
 import { Suspense } from "react"
-import jsPDF from "jspdf"
+// jsPDF lazy-loaded pour alleger le bundle initial (voir genererQuittancePDF)
 import { useResponsive } from "../../hooks/useResponsive"
 import LocataireEmailField from "../../components/LocataireEmailField"
 
@@ -216,7 +216,7 @@ function LineChart({
 
 // ─── Quittance PDF generator ─────────────────────────────────────────────────
 
-function genererQuittancePDF({
+async function genererQuittancePDF({
   nomProprietaire, emailProprietaire, emailLocataire,
   titreBien, villeBien, adresse, loyerHC, charges, moisLabel
 }: {
@@ -224,6 +224,7 @@ function genererQuittancePDF({
   titreBien: string; villeBien: string; adresse: string
   loyerHC: number; charges: number; moisLabel: string
 }) {
+  const { default: jsPDF } = await import("jspdf")
   const doc = new jsPDF()
   const totalCC = loyerHC + charges
   const today = new Date().toLocaleDateString("fr-FR")

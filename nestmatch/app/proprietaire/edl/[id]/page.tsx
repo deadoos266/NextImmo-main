@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "../../../../lib/supabase"
 import { useResponsive } from "../../../hooks/useResponsive"
-import jsPDF from "jspdf"
+// jsPDF lazy-loaded pour alleger le bundle initial (voir genererEdlPDF)
 
 // ─── Types & Config ─────────────────────────────────────────────────────────
 
@@ -89,6 +89,7 @@ function genererEdlPDF(data: {
   observations: string
   photoCount: number
 }) {
+  const { default: jsPDF } = await import("jspdf")
   const doc = new jsPDF()
   const W = 170
   let y = 20

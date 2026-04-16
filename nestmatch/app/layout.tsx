@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { DM_Sans } from 'next/font/google'
 import './globals.css'
 import Providers from './providers'
 import Navbar from './components/Navbar'
@@ -6,6 +7,13 @@ import Footer from './components/Footer'
 import CookieBanner from './components/CookieBanner'
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || 'https://nestmatch.fr'
+
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700', '800'],
+  display: 'swap',
+  variable: '--font-dm-sans',
+})
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
@@ -45,11 +53,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr">
-      <head>
-        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-      </head>
-      <body>
+    <html lang="fr" className={dmSans.variable}>
+      <body style={{ fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif" }}>
         <Providers>
           <Navbar />
           {children}
