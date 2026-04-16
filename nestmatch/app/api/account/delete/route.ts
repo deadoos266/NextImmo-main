@@ -27,15 +27,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: parsed.error.errors[0]?.message ?? "Confirmation invalide" }, { status: 422 })
   }
 
-  // Cascade delete — ordre pour respecter les FK potentielles
-  // On ignore les erreurs individuelles : certaines tables peuvent ne pas avoir de lignes pour ce user
-  const cleanups: Promise<unknown>[] = [
-    supabaseAdmin.from("messages").delete().or(`from_email.eq.${email},to_email.eq.${email}`),
-    supabaseAdmin.from("visites").delete().or(`locataire_email.eq.${email},proprietaire_email.eq.${email}`),
-    supabaseAdmin.from("loyers").delete().or(`locataire_email.eq.${email},proprietaire_email.eq.${email}`),
-    supabaseAdmin.from("carnet_entretien").delete().or(`locataire_email.eq.${email},proprietaire_email.eq.${email}`),
-    supabaseAdmin.from("annonces").delete().eq("proprietaire_email", email),
-    supabaseAdmin.from("profils").delete().eq("email", email),
+  // Cascade delete — ordre pour respecter les FK potentielles.
+  // On ignore les erreurs individuelles : certaines tables peuvent ne pas avoir
+  // de lignes pour ce user, ou ne pas exister. Les builders Supabase sont
+  // thenables, on les convertit en vraies Promises via Promise.resolve().
+  const cleanups = [
+    Promise.resolve(supabaseAdmin.from("messages").delete().or(`from_email.eq.${email},to_email.eq.${email}`)),
+    Promise.resolve(supabaseAdmin.from("visites").delete().or(`locataire_email.eq.${email},proprietaire_email.eq.${email}`)),
+    Promise.resolve(supabaseAdmin.from("loyers").delete().or(`locataire_email.eq.${email},proprietaire_email.eq.${email}`)),
+    Promise.resolve(supabaseAdmin.from("carnet_entretien").delete().or(`locataire_email.eq.${email},proprietaire_email.eq.${email}`)),
+    Promise.resolve(supabaseAdmin.from("annonces").delete().eq("proprietaire_email", email)),
+    Promise.resolve(supabaseAdmin.from("profils").delete().eq("email", email)),
   ]
   await Promise.allSettled(cleanups)
 
