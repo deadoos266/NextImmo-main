@@ -181,15 +181,12 @@ function AnnoncesContent() {
     setFavoris(getFavoris())
   }
 
-  const handleBoundsChange = useCallback((bounds: any) => {
-    // Priorité à la zone : quand l'user clique "Rechercher dans cette zone",
-    // on efface les filtres URL (ville/budget/type) pour éviter qu'ils
-    // éliminent tous les biens de la zone nouvellement sélectionnée
-    if (typeof window !== "undefined") {
-      const hasFilters = new URL(window.location.href).searchParams.has("ville")
-        || new URL(window.location.href).searchParams.has("budget_max")
-        || new URL(window.location.href).searchParams.has("type")
-      if (hasFilters) {
+  const handleBoundsChange = useCallback((bounds: any, userDriven: boolean) => {
+    // Priorité à la zone UNIQUEMENT sur action user ("Rechercher dans cette zone")
+    // Le moveend initial (userDriven=false) ne doit pas toucher l'URL
+    if (userDriven && typeof window !== "undefined") {
+      const sp = new URL(window.location.href).searchParams
+      if (sp.has("ville") || sp.has("budget_max") || sp.has("type")) {
         router.replace("/annonces", { scroll: false })
       }
     }
@@ -444,7 +441,6 @@ function AnnoncesContent() {
         {/* Carte — isolation: isolate pour que Leaflet reste sous la navbar */}
         <div style={{ flex: 1, position: "relative", isolation: "isolate", borderRadius: isMobile ? 0 : 18, overflow: "hidden", display: isMobile && !showMap ? "none" : "block" }}>
           <MapAnnonces
-            key={activeVille || "all"}
             annonces={annoncesForMap}
             selectedId={selectedId}
             onSelect={id => setSelectedId(id)}

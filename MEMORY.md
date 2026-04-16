@@ -1,33 +1,34 @@
-# NestMatch — Memoire du projet
+# NestMatch — Mémoire du projet
 
-## Etat actuel
-- **Phase** : MVP avance, en production sur Vercel
+## État actuel
+- **Phase** : MVP avancé, en production sur Vercel
 - **Stack** : Next.js 15 App Router, React 19, TypeScript, Supabase, NextAuth (Google + Credentials), Leaflet, SDK Anthropic
 - **URL prod** : https://next-immo-main.vercel.app
-- **Repo** : github.com/deadoos266/NextImmo-main (public — a passer en prive)
-- **Derniere mise a jour** : 2026-04-16
+- **Repo** : github.com/deadoos266/NextImmo-main (public — à passer en privé)
+- **Dernière mise à jour** : 2026-04-16
 
 ## Pitch produit
-Plateforme P2P de location immobiliere (marche francais). Locataires et proprietaires en direct, sans agence.
-Differenciation : score de compatibilite propriete/locataire via algo maison (lib/matching.ts, 1000 pts, 7 dimensions).
+Plateforme P2P de location immobilière (marché français). Locataires et propriétaires en direct, sans agence.
+Différenciation : score de compatibilité propriété/locataire via algo maison (`lib/matching.ts`, 1000 pts, 7 dimensions).
 
-## Decisions d'architecture
-- **Styling** : inline styles uniquement (pas de Tailwind a l'execution — installe mais non utilise)
+## Décisions d'architecture
+- **Styling** : inline styles uniquement (pas de Tailwind à l'exécution — installé mais non utilisé)
 - **Palette** : `#F7F4EF` (fond global), `#111` (noir), `white` (cartes), `border-radius: 20px`
 - **Typographie** : DM Sans (via `next/font/google`, font-display swap)
 - **Pas d'emojis dans l'UI**
-- **Roles** : locataire / proprietaire / admin — separation STRICTE (un proprio ne voit jamais les scores de compatibilite)
+- **Écrire avec accents TOUJOURS** (é, è, à, ç, ê, ô, û, î)
+- **Rôles** : locataire / propriétaire / admin — séparation STRICTE (un proprio ne voit jamais les scores de compatibilité)
 - **Auth** : NextAuth JWT, Google OAuth + Credentials
-- **DB** : Supabase PostgreSQL — client browser (anon key) + client serveur (service_role pour api routes)
+- **DB** : Supabase PostgreSQL — client browser (anon key) + client serveur (service_role pour API routes)
 
 ## Conventions code
-- Composants helpers (Toggle, Sec, F, etc.) definis HORS des composants React (evite bug perte de focus sur inputs)
+- Composants helpers (Toggle, Sec, F, etc.) définis HORS des composants React (évite bug perte de focus sur inputs)
 - Jamais de `<nav>` dans une page (uniquement Navbar dans `app/layout.tsx`)
-- Score affiche : `Math.round(score / 10) + "%"`
+- Score affiché : `Math.round(score / 10) + "%"`
 - Imports Supabase depuis `lib/supabase.ts` (browser) ou `lib/supabase-server.ts` (serveur)
-- Detection proprio : via `useRole()` (flag `is_proprietaire` ou presence d'annonces)
+- Détection proprio : via `useRole()` (flag `is_proprietaire` ou présence d'annonces)
 
-## Tables Supabase cles
+## Tables Supabase clés
 | Table | PK | Usage |
 |-------|-----|-------|
 | profils | email | Profil locataire + is_proprietaire |
@@ -37,91 +38,157 @@ Differenciation : score de compatibilite propriete/locataire via algo maison (li
 | carnet_entretien | id | Maintenance |
 | loyers | id | Quittances |
 | users | id | NextAuth (password_hash, role, is_admin) |
-
-## Historique des batchs
-- **2026-04-16 — Batch 1 (securite + perf)** : retrait secrets versionnes, `.env.example`, `.gitignore` renforce, `ROTATION_SECRETS.md`, headers securite `next.config.js`, XSS JSON-LD corrigee, `/api/agent` protege (auth + rate limit), DM Sans via `next/font`, jsPDF lazy-load sur 4 pages (~330 KB gzip economises)
-
-- **2026-04-16 — Batch 2 (UX + bugs)** : ecosysteme de corrections
-  - matching : normalisation defensive des booleens (fix scoring meuble)
-  - profil : deduplique garant, retire filtres etage/trajet, mention RGPD sur profil couple
-  - navbar : Inscription pointe sur `/auth?mode=inscription`, fix bug resize "Mon espace"
-  - cookie banner : floating button z-index < map controls (400 < 1000)
-  - carte : marqueurs couleur (degrade selon score, 5 niveaux), locale FR (OSM.fr),
-    bouton "Rechercher dans cette zone" au deplacement, bbox filter initial
-  - annonce detail : carte GPS sous "Equipements" (cercle 400m, pas d'adresse exacte)
-  - recherche : home search -> /annonces via URL params, fallback profil locataire
-  - EDL : telechargement ZIP des photos (jszip ajoute) sur les 2 pages EDL
-  - profil : nouveau `AccountSettings` (changer mot de passe + supprimer compte)
-  - APIs : `/api/account/change-password` et `/api/account/delete` (auth requise)
-  - home : refonte avec sections 3 etapes / benefices locataire / benefices proprio / FAQ
-    (stats fausses retirees au profit de "value props" 0 frais / P2P / ALUR / 100% en ligne)
-  - messagerie : tri par non-lus en premier, puis par date (amelioration minimaliste —
-    la refonte complete "reply/select/indicators" attend un batch dedie)
-  - Build : fix Suspense wrapping sur `/auth` et `/annonces` (useSearchParams)
-
-## Bugs notes a fixer au prochain batch
-- **Rechercher dans cette zone + ?ville= URL** : quand une ville est dans l'URL,
-  le bouton "Rechercher dans cette zone" ne marche pas bien. Probable conflit
-  entre le filtre activeVille et le filtre mapBounds.
-- **Messagerie scroll intempestif** : la page scroll en bas chaque fois qu'on
-  change de conversation. `useEffect([messages])` avec `bottomRef.scrollIntoView`
-  se declenche sur chaque switch de conv. Faudrait conditionner sur "nouveau
-  message dans conv active" seulement, pas sur "messages array a change".
-- **Accents manquants dans l'UI** : audit global a faire — beaucoup de textes
-  sans accents (notamment `AccountSettings.tsx` "Parametres" au lieu de
-  "Parametres du compte", messages d'erreur generiques recents, etc.).
-  Desormais TOUJOURS ecrire avec accents (e, e, a, c, e, o, u).
-
-## Dette technique / backlog batch 3+
-- Messagerie : repondre a un message specifique (reply-to), selection multiple
-  (supprimer/copier/transferer), indicateurs "envoye/lu" dans les messages eux-memes
-- Logo : l'utilisateur le fournira, reste a l'integrer (header, favicon, footer, PDFs, auth)
-- Change email : actuellement marque "bientot" dans AccountSettings (flow complexe
-  verification + cascade DB a implementer)
-- Notifications email : toggle pas encore branche
-- Routes manquantes (404 actuels) : /connexion /login /parametres /edl /publier
-  /proprietaire/mes-biens /carnet-entretien -> a rediriger
-- Page 404 custom (fond #F7F4EF, logo, liens utiles)
-- Footer : retirer les liens # non fonctionnels (Option A) + creer stubs CGU / Mentions
-  legales / Politique de confidentialite
-- Filtres /annonces : ajouter UI pour surface (min/max) et nombre de pieces
-- Bouton "Personnalise" : clarifier l'action ou supprimer
-- Placeholder barre de recherche home : "Ville, quartier, code postal"
-- Duree_credit dans stats par bien : deja utilise, mais integrer aussi dans
-  la vue agregee Stats (total credit restant tous biens)
-
-## Historique batch 3 (2026-04-16 — UX + debug + funnel)
-- **3-A Bugs bloquants** : messages debug /dossier + /proprietaire/ajouter supprimes,
-  error.message generique partout, ContactButton anti-doublon via useRef,
-  carte centree sur ?ville= (centerHint prop + key={activeVille} pour remount)
-- **3-A Passwords** : nouveau composant PasswordInput avec toggle oeil (ouvert/barre)
-  integre dans /auth et /profil AccountSettings (3 inputs)
-- **3-B Dashboard proprio** : 6 onglets repenses
-  - "Vue d'ensemble" -> "Tableau de bord" (KPIs plus gros + pipeline funnel)
-  - "Performance" -> "Stats" (vue agregee financiere : revenus confirmes, loyers
-    mensuels, cashflow mensuel, patrimoine, + KPIs marketing ex-Performance,
-    + detail par bien, + conseils d'optimisation)
-  - Nouveau composant `PipelineFunnel.tsx` : funnel horizontal 6 etapes
-    (annonces -> interesses clics -> candidatures -> dossiers partages ->
-    visites -> baux signes) avec % conversion entre chaque etape et
-    taux de conversion global (clics -> baux)
-
-## Dette technique connue
-- RLS Supabase partiellement desactivee sur `visites` et `carnet_entretien`
-- `/test/agent` page debug publique en prod (a supprimer ou proteger)
-- 0 test automatise
-- Repo GitHub encore public (historique contient anciens secrets)
-- Uploads photos sans validation MIME serveur
-- Pas de rate-limit sur `/api/auth/register`
-- Admin protege uniquement par code client (`nestmatch2024`) + vérification isAdmin côté client
-- `lib/cityCoords.ts` : fichier statique, a surveiller si grossit
-- Page `/` et `/annonces` en `"use client"` (mauvais pour SEO — a convertir en Server Components)
+| clics_annonces | | Tracking clics par bien |
+| etats_des_lieux | | EDL stockés (statut, pieces_data) |
 
 ## Fichiers critiques
-- `lib/matching.ts` — algo de score, coeur du produit
-- `lib/cityCoords.ts` — referentiel GPS villes FR
+- `lib/matching.ts` — algo de score, cœur du produit
+- `lib/cityCoords.ts` — référentiel GPS villes FR
 - `lib/auth.ts` — config NextAuth
 - `lib/agents/` — agents IA Claude Opus + Sonnet
 - `app/layout.tsx` — shell global
-- `app/components/Navbar.tsx` — navigation globale (pas de `<nav>` ailleurs)
-- `app/components/MapAnnonces.tsx` — carte Leaflet
+- `app/components/Navbar.tsx` — navigation globale
+- `app/components/MapAnnonces.tsx` — carte Leaflet (principale)
+- `app/components/MapBien.tsx` — carte single bien (fiche annonce)
+- `app/components/PasswordInput.tsx` — input mot de passe avec toggle œil
+- `app/proprietaire/PipelineFunnel.tsx` — funnel candidats dashboard
+
+---
+
+## Historique des batchs
+
+### Batch 1 — Sécurité + Perf (2026-04-16)
+- Retrait secrets versionnés, `.env.example`, `.gitignore` renforcé
+- `ROTATION_SECRETS.md`, headers sécurité `next.config.js`
+- XSS JSON-LD corrigée, `/api/agent` protégé (auth + rate limit)
+- DM Sans via `next/font`, jsPDF lazy-load (~330 KB gzip économisés)
+
+### Batch 2 — UX + bugs (2026-04-16)
+- matching : normalisation défensive des booléens (fix scoring meublé)
+- profil : dédupliqué garant, retiré filtres étage/trajet, mention RGPD
+- navbar : Inscription → `/auth?mode=inscription`, fix resize "Mon espace"
+- cookie banner : z-index 400
+- carte : marqueurs couleur score, locale FR, bouton "Rechercher ici", bbox initial
+- annonce détail : carte GPS sous équipements (cercle 400m)
+- recherche : home → /annonces URL params
+- EDL : ZIP photos (jszip)
+- profil : `AccountSettings` (mdp + suppression compte)
+- APIs : `/api/account/change-password` + `/api/account/delete`
+- home : refonte sections (3 étapes, bénéfices, FAQ, CTA)
+- messagerie : tri non-lus en premier
+- Build : Suspense wrapping sur `/auth` et `/annonces`
+
+### Batch 3 — Dashboard + bugs (2026-04-16)
+- **3-A Bugs bloquants** : messages debug /dossier supprimés, error.message générique,
+  ContactButton anti-doublon (useRef), carte centrée sur `?ville=`
+- **3-A Passwords** : `PasswordInput` toggle œil (/auth + AccountSettings)
+- **3-B Dashboard proprio** : 7 onglets repensés
+  - "Vue d'ensemble" → **"Tableau de bord"** (KPIs gros + pipeline funnel)
+  - "Performance" conservé (vue agrégée financière + marketing + tableau par bien cliquable)
+  - Nouveau **"Documents"** (4e onglet) : baux + EDL centralisés par bien
+  - Pipeline funnel 6 étapes : annonces → intéressés → candidatures → dossiers → visites → baux
+  - Bouton "Statistiques" mis en primary dans "Mes biens"
+- **3-C Fixes** :
+  - Retour EDL/Bail contextuel (router.back au lieu de link fixe vers stats)
+  - Vrai fix "Rechercher dans cette zone" avec ?ville= (CenterOnHint via useMap,
+    userDriven flag, retrait key= qui causait remount)
+  - Scroll messagerie : saut instant au switch de conv, smooth uniquement pour nouveau msg
+  - Accents : AccountSettings entièrement ré-accentué
+  - Page `/test/agent` → redirect vers / (debug inutile supprimé de l'UI)
+
+---
+
+## 🔴 Backlog à traiter — Bugs / Privacy
+
+### Sécurité / Privacy (urgent)
+- **#47 Masquer emails proprios côté public** : les emails des proprios apparaissent
+  dans fiche annonce, threads messagerie, etc. Risque scraping/spam/phishing.
+  À remplacer par prénom + "Propriétaire vérifié" ou identifiant anonyme.
+- **RLS Supabase** : partiellement désactivée sur `visites` et `carnet_entretien`
+- **Uploads photos sans validation MIME serveur** (SVG/HTML déguisé possible)
+- **Admin protégé uniquement côté client** (`nestmatch2024`)
+
+### Bugs UX
+- **#44 Accents manquants** : 8 fichiers restants (proprietaire/edl, proprietaire/page,
+  carnet, BookingVisite, proprietaire/ajouter, proprietaire/modifier, dossier, edl/consulter)
+- **#46 Flow visites confirmation inversée** : côté proprio, après refus d'une visite
+  locataire + nouvelle proposition, le système demande au proprio de confirmer
+  sa propre visite. Confusion de rôles dans le cycle "proposée" → "confirmée".
+  À debug dans VisitesProprio / AgendaVisites.
+- **#49 Carte toujours partiellement en anglais** : malgré `FrenchLeafletLocale`
+  et tuiles OSM.fr, certains éléments restent en anglais. Probable tooltips zoom
+  Leaflet ou attribution tiers.
+- **#50 Cookie icon empiète sur la carte (bis)** : malgré z-index 400 et position
+  bottom-right, l'icône cookie se superpose aux contrôles map (bottom-right).
+  À déplacer bottom-left OU masquer sur pages avec carte OU top-right.
+
+---
+
+## 🟡 Backlog à traiter — Features
+
+- **#42 Carte favoris** : sur `/favoris`, ajouter une carte qui n'affiche que
+  les biens favoris du user
+- **#43 Téléphone international** : permettre le choix de l'indicatif pays
+  (actuellement français seulement)
+- **#51 Toggle localisation exacte du bien** : côté proprio, option lors de la
+  publication pour afficher soit l'adresse exacte (marqueur GPS précis) soit
+  une zone approximative (cercle 400m, default). Champ `localisation_exacte`
+  à ajouter en base + UI toggle dans ajouter/modifier. MapBien supporte déjà
+  la prop `exact`.
+- **#45 Refonte filtres ↔ dossier locataire** (gros chantier)
+  - Filtres visibles sur `/annonces` = miroir des critères du dossier
+  - Toutes les dimensions du scoring filtrables (surface, pièces, équipements,
+    DPE, meublé, animaux, type bail, zone)
+  - Bi-directionnel : modifier filtre propose MAJ dossier
+  - Pré-remplissage auto depuis dossier
+  - Feedback visuel : badge "Correspond à votre dossier"
+  - Persistance : filtres sauvegardés entre sessions
+- **Messagerie moderne complète** : reply-to un message spécifique, sélection
+  multiple (supprimer/copier/transférer), indicateurs "envoyé/lu" dans les
+  bulles elles-mêmes (pas juste dans la liste des convs)
+- **Change email** : actuellement "bientôt" dans AccountSettings
+  (flow vérification + cascade DB)
+- **Notifications email** : toggle pas encore branché
+- **Logo** : l'utilisateur le fournira, reste à l'intégrer (header, favicon,
+  footer, PDFs, page /auth)
+
+---
+
+## 🟢 Backlog à traiter — Structure
+
+### Routes manquantes (404 actuels)
+- `/connexion` → redirect `/auth`
+- `/login` → redirect `/auth`
+- `/parametres` → redirect `/profil#parametres`
+- `/edl` → redirect vers page EDL pertinente
+- `/publier` → redirect `/proprietaire/ajouter`
+- `/proprietaire/mes-biens` → redirect `/proprietaire`
+- `/carnet-entretien` → redirect `/carnet`
+
+### Page 404 custom
+- Fond `#F7F4EF`, logo NestMatch, texte FR "Cette page n'existe pas"
+- Liens : Accueil, Annonces, Connexion
+
+### Footer (Option A choisie)
+- Retirer tous les liens `#` non fonctionnels
+- Créer stubs pages légales (obligatoires pour FR) :
+  - `/mentions-legales` — placeholder structuré
+  - `/cgu` — placeholder structuré
+  - `/confidentialite` — placeholder structuré
+
+### Filtres /annonces (UI)
+- Ajouter filtres surface min/max et nombre de pièces
+- Clarifier ou supprimer bouton "Personnalisé" (sans action actuellement)
+- Placeholder barre de recherche : "Ville, quartier, code postal"
+
+### Autres
+- `duree_credit` dans vue agrégée Performance (total crédit restant tous biens)
+- Page `/` et `/annonces` en `"use client"` → convertir en Server Components (SEO)
+
+---
+
+## Dette technique connue
+- 0 test automatisé
+- Repo GitHub encore public (historique contient anciens secrets)
+- Pas de rate-limit sur `/api/auth/register`
+- `lib/cityCoords.ts` : fichier statique, à surveiller si grossit

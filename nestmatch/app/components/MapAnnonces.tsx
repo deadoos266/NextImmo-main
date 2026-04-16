@@ -116,6 +116,21 @@ function BoundsWatcher({ onMoved }: { onMoved: (bounds: L.LatLngBounds) => void 
   return null
 }
 
+// Recentre la carte quand le centerHint change (ville URL/profil qui change
+// sans devoir remount tout le MapContainer)
+function CenterOnHint({ centerHint }: { centerHint?: [number, number] | null }) {
+  const map = useMap()
+  const lastHint = useRef<string | null>(null)
+  useEffect(() => {
+    if (!centerHint) return
+    const key = `${centerHint[0].toFixed(4)},${centerHint[1].toFixed(4)}`
+    if (lastHint.current === key) return
+    lastHint.current = key
+    map.setView(centerHint, 12, { animate: true })
+  }, [centerHint, map])
+  return null
+}
+
 export default function MapAnnonces({
   annonces,
   selectedId,
@@ -126,7 +141,9 @@ export default function MapAnnonces({
   annonces: any[]
   selectedId: number | null
   onSelect: (id: number) => void
-  onBoundsChange: (bounds: L.LatLngBounds) => void
+  // userDriven=true quand l'user clique "Rechercher dans cette zone"
+  // userDriven=false au moveend initial (ne doit pas clear les filtres URL)
+  onBoundsChange: (bounds: L.LatLngBounds, userDriven: boolean) => void
   centerHint?: [number, number] | null
 }) {
   useEffect(() => { fixLeafletIcons() }, [])
@@ -154,9 +171,9 @@ export default function MapAnnonces({
   // Quand la carte bouge : on garde les bounds en attente et on affiche le bouton
   const handleMoved = (bounds: L.LatLngBounds) => {
     if (!initialBoundsSet.current) {
-      // Premier moveend = initialisation : appliquer directement
+      // Premier moveend = initialisation : appliquer silencieusement (pas user-driven)
       initialBoundsSet.current = true
-      onBoundsChange(bounds)
+      onBoundsChange(bounds, false)
       return
     }
     setPendingBounds(bounds)
@@ -165,7 +182,7 @@ export default function MapAnnonces({
 
   const applySearch = () => {
     if (pendingBounds) {
-      onBoundsChange(pendingBounds)
+      onBoundsChange(pendingBounds, true) // user-driven : peut clear les filtres URL
       setSearchHere(false)
     }
   }
@@ -181,6 +198,7 @@ export default function MapAnnonces({
         <TileLayer key={mapType} attribution={tile.attribution} url={tile.url} />
         <BoundsWatcher onMoved={handleMoved} />
         <FrenchLeafletLocale />
+        <CenterOnHint centerHint={centerHint} />
         {withCoords.map(a => {
           const firstPhoto = Array.isArray(a.photos) && a.photos.length > 0 ? a.photos[0] : null
           return (
