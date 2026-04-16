@@ -723,6 +723,22 @@ function StatsInner() {
                   }}>
                   Voir l'annonce
                 </Link>
+                <Link href={`/proprietaire/bail/${bienId}`}
+                  style={{
+                    padding: "9px 18px", border: "1.5px solid #bfdbfe", borderRadius: 999,
+                    fontSize: 13, fontWeight: 700, color: "#1d4ed8", textDecoration: "none",
+                    background: "#eff6ff", display: "inline-flex", alignItems: "center",
+                  }}>
+                  Generer un bail
+                </Link>
+                <Link href={`/proprietaire/edl/${bienId}`}
+                  style={{
+                    padding: "9px 18px", border: "1.5px solid #bfdbfe", borderRadius: 999,
+                    fontSize: 13, fontWeight: 700, color: "#1d4ed8", textDecoration: "none",
+                    background: "#eff6ff", display: "inline-flex", alignItems: "center",
+                  }}>
+                  Etat des lieux
+                </Link>
               </div>
             </div>
 
