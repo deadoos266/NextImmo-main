@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState, useCallback } from "react"
+import { Suspense, useEffect, useState, useCallback } from "react"
 import dynamic from "next/dynamic"
 import { useSearchParams, useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
@@ -106,6 +106,22 @@ const Toggle = ({ val, set }: { val: boolean; set: (v: boolean) => void }) => (
 )
 
 export default function Annonces() {
+  return (
+    <Suspense fallback={<AnnoncesFallback />}>
+      <AnnoncesContent />
+    </Suspense>
+  )
+}
+
+function AnnoncesFallback() {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "calc(100vh - 64px)", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", color: "#6b7280" }}>
+      Chargement des annonces...
+    </div>
+  )
+}
+
+function AnnoncesContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [annonces, setAnnonces] = useState<any[]>([])

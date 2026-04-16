@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 
@@ -13,6 +13,22 @@ interface FormState {
 }
 
 export default function Auth() {
+  return (
+    <Suspense fallback={<AuthFallback />}>
+      <AuthContent />
+    </Suspense>
+  )
+}
+
+function AuthFallback() {
+  return (
+    <main style={{ minHeight: "100vh", background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif", color: "#6b7280" }}>
+      Chargement...
+    </main>
+  )
+}
+
+function AuthContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const initialMode: Mode = searchParams?.get("mode") === "inscription" ? "inscription" : "connexion"
