@@ -182,8 +182,19 @@ function AnnoncesContent() {
   }
 
   const handleBoundsChange = useCallback((bounds: any) => {
+    // Priorité à la zone : quand l'user clique "Rechercher dans cette zone",
+    // on efface les filtres URL (ville/budget/type) pour éviter qu'ils
+    // éliminent tous les biens de la zone nouvellement sélectionnée
+    if (typeof window !== "undefined") {
+      const hasFilters = new URL(window.location.href).searchParams.has("ville")
+        || new URL(window.location.href).searchParams.has("budget_max")
+        || new URL(window.location.href).searchParams.has("type")
+      if (hasFilters) {
+        router.replace("/annonces", { scroll: false })
+      }
+    }
     setMapBounds(bounds)
-  }, [])
+  }, [router])
 
   const annoncesEnrichies = annonces
     .filter(a => !profil || !estExclu(a, profil))

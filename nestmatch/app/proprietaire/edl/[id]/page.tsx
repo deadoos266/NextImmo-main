@@ -526,9 +526,14 @@ export default function EdlPage() {
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 48px" }}>
 
-        <Link href={`/proprietaire/stats?id=${bienId}`} style={{ fontSize: 13, color: "#6b7280", textDecoration: "none" }}>
-          ← Retour aux statistiques
-        </Link>
+        <button
+          onClick={() => {
+            if (typeof window !== "undefined" && window.history.length > 1) router.back()
+            else router.push("/proprietaire")
+          }}
+          style={{ fontSize: 13, color: "#6b7280", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}>
+          ← Retour
+        </button>
 
         <div style={{ marginTop: 16, marginBottom: 28 }}>
           <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, letterSpacing: "-0.5px" }}>Etat des lieux</h1>

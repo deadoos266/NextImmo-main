@@ -214,9 +214,27 @@ function MessagesInner() {
     if (session?.user?.email) loadConversations()
   }, [session, status, withEmail])
 
+  // Scroll automatique :
+  // - au switch de conversation : position au bas INSTANTANEMENT (pas d'animation qui glisse)
+  // - à l'arrivée d'un nouveau message dans la conv active : scroll smooth vers le bas
+  const prevConvKey = useRef<string | null>(null)
+  const prevMsgCount = useRef(0)
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+    if (prevConvKey.current !== convActive) {
+      // Changement de conv : sauter directement en bas, sans animation visible
+      prevConvKey.current = convActive
+      prevMsgCount.current = messages.length
+      requestAnimationFrame(() => {
+        if (bottomRef.current) bottomRef.current.scrollIntoView({ block: "end" })
+      })
+      return
+    }
+    // Même conv : ne scroll que si nouveau message
+    if (messages.length > prevMsgCount.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
+    }
+    prevMsgCount.current = messages.length
+  }, [messages, convActive])
 
   // Temps réel — écoute les nouveaux messages de la conv active
   useEffect(() => {

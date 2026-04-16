@@ -11,15 +11,15 @@ export default function AccountSettings({ userEmail }: { userEmail: string | nul
 
   return (
     <div style={{ background: "white", borderRadius: 20, padding: 28, marginTop: 24, marginBottom: 20 }}>
-      <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}>Parametres du compte</h2>
+      <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}>Paramètres du compte</h2>
       <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 24 }}>
-        Gestion de votre mot de passe, adresse email et donnees personnelles.
+        Gestion de votre mot de passe, adresse email et données personnelles.
       </p>
 
       {/* Mot de passe */}
       <SettingRow
         title="Mot de passe"
-        desc="Mettre a jour le mot de passe que vous utilisez pour vous connecter."
+        desc="Mettre à jour le mot de passe que vous utilisez pour vous connecter."
         action={
           <button onClick={() => setShowPwd(v => !v)}
             style={{ background: "white", border: "1.5px solid #111", color: "#111", borderRadius: 999, padding: "8px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
@@ -34,11 +34,11 @@ export default function AccountSettings({ userEmail }: { userEmail: string | nul
       {/* Email */}
       <SettingRow
         title="Adresse email"
-        desc={userEmail ? `Compte actuellement associe a ${userEmail}. Le changement d'email est bientot disponible.` : "Adresse email non disponible"}
+        desc={userEmail ? `Compte actuellement associé à ${userEmail}. Le changement d'email est bientôt disponible.` : "Adresse email non disponible"}
         action={
           <button disabled
             style={{ background: "#f3f4f6", border: "1.5px solid #e5e7eb", color: "#9ca3af", borderRadius: 999, padding: "8px 18px", fontWeight: 700, fontSize: 13, cursor: "not-allowed", fontFamily: "inherit" }}>
-            Bientot
+            Bientôt
           </button>
         }
       />
@@ -48,11 +48,11 @@ export default function AccountSettings({ userEmail }: { userEmail: string | nul
       {/* Notifications */}
       <SettingRow
         title="Notifications"
-        desc="Recevez un email lors des nouveaux messages et demandes de visite. Reglages avances bientot disponibles."
+        desc="Recevez un email lors des nouveaux messages et demandes de visite. Réglages avancés bientôt disponibles."
         action={
           <button disabled
             style={{ background: "#f3f4f6", border: "1.5px solid #e5e7eb", color: "#9ca3af", borderRadius: 999, padding: "8px 18px", fontWeight: 700, fontSize: 13, cursor: "not-allowed", fontFamily: "inherit" }}>
-            Bientot
+            Bientôt
           </button>
         }
       />
@@ -61,9 +61,9 @@ export default function AccountSettings({ userEmail }: { userEmail: string | nul
 
       {/* Suppression */}
       <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 14, padding: 20 }}>
-        <h3 style={{ fontSize: 14, fontWeight: 800, color: "#991b1b", marginBottom: 4 }}>Zone a risque</h3>
+        <h3 style={{ fontSize: 14, fontWeight: 800, color: "#991b1b", marginBottom: 4 }}>Zone à risque</h3>
         <p style={{ fontSize: 13, color: "#7f1d1d", marginBottom: 14, lineHeight: 1.5 }}>
-          La suppression du compte est definitive. Vos annonces, messages, visites et dossier seront effaces.
+          La suppression du compte est définitive. Vos annonces, messages, visites et dossier seront effacés.
         </p>
         {!showDelete ? (
           <button onClick={() => setShowDelete(true)}
@@ -101,7 +101,7 @@ function ChangePasswordForm({ onDone }: { onDone: () => void }) {
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setError("")
-    if (newPassword.length < 8) { setError("Le nouveau mot de passe doit contenir au moins 8 caracteres"); return }
+    if (newPassword.length < 8) { setError("Le nouveau mot de passe doit contenir au moins 8 caractères"); return }
     if (newPassword !== confirmPassword) { setError("Les deux nouveaux mots de passe ne correspondent pas"); return }
     setLoading(true)
     try {
@@ -119,19 +119,19 @@ function ChangePasswordForm({ onDone }: { onDone: () => void }) {
       setOk(true)
       setTimeout(() => { onDone() }, 1800)
     } catch {
-      setError("Erreur reseau. Veuillez reessayer.")
+      setError("Erreur réseau. Veuillez réessayer.")
       setLoading(false)
     }
   }
 
   if (ok) return (
-    <p style={{ marginTop: 14, color: "#16a34a", fontSize: 13, fontWeight: 600 }}>Mot de passe mis a jour.</p>
+    <p style={{ marginTop: 14, color: "#16a34a", fontSize: 13, fontWeight: 600 }}>Mot de passe mis à jour.</p>
   )
 
   return (
     <form onSubmit={submit} style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10, maxWidth: 420 }}>
       <PasswordInput value={currentPassword} onChange={setCurrentPassword} placeholder="Mot de passe actuel" required autoComplete="current-password" />
-      <PasswordInput value={newPassword} onChange={setNewPassword} placeholder="Nouveau mot de passe (8+ caracteres)" required minLength={8} autoComplete="new-password" />
+      <PasswordInput value={newPassword} onChange={setNewPassword} placeholder="Nouveau mot de passe (8+ caractères)" required minLength={8} autoComplete="new-password" />
       <PasswordInput value={confirmPassword} onChange={setConfirmPassword} placeholder="Confirmer le nouveau mot de passe" required autoComplete="new-password" />
       {error && <p style={{ color: "#dc2626", fontSize: 13 }}>{error}</p>}
       <button type="submit" disabled={loading}
@@ -166,20 +166,20 @@ function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
       }
       await signOut({ callbackUrl: "/" })
     } catch {
-      setError("Erreur reseau. Veuillez reessayer.")
+      setError("Erreur réseau. Veuillez réessayer.")
       setLoading(false)
     }
   }
 
   return (
     <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 420 }}>
-      <p style={{ fontSize: 13, color: "#7f1d1d" }}>Tapez <strong>SUPPRIMER</strong> pour confirmer la suppression definitive.</p>
+      <p style={{ fontSize: 13, color: "#7f1d1d" }}>Tapez <strong>SUPPRIMER</strong> pour confirmer la suppression définitive.</p>
       <input type="text" placeholder="SUPPRIMER" value={confirm} onChange={e => setConfirm(e.target.value)} style={inp} />
       {error && <p style={{ color: "#dc2626", fontSize: 13 }}>{error}</p>}
       <div style={{ display: "flex", gap: 10 }}>
         <button type="submit" disabled={loading || confirm !== "SUPPRIMER"}
           style={{ background: "#dc2626", color: "white", border: "none", borderRadius: 999, padding: "10px 24px", fontWeight: 700, fontSize: 14, cursor: loading ? "not-allowed" : (confirm === "SUPPRIMER" ? "pointer" : "not-allowed"), opacity: confirm === "SUPPRIMER" ? 1 : 0.5, fontFamily: "inherit" }}>
-          {loading ? "Suppression..." : "Supprimer definitivement"}
+          {loading ? "Suppression..." : "Supprimer définitivement"}
         </button>
         <button type="button" onClick={onCancel} disabled={loading}
           style={{ background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "10px 24px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
