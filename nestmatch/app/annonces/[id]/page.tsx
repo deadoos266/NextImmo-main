@@ -6,6 +6,7 @@ import PhotoCarousel from "./PhotoCarousel"
 import FavoriButton from "./FavoriButton"
 import BookingVisite from "./BookingVisite"
 import OwnerActions from "./OwnerActions"
+import ViewTracker from "./ViewTracker"
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || 'https://nestmatch.fr'
 
@@ -67,8 +68,7 @@ export default async function Annonce({ params }: any) {
     </main>
   )
 
-  // Incrementer le compteur de vues (fire and forget)
-  supabase.rpc("increment_vues", { annonce_id: annonce.id }).then(() => {})
+  // Le tracking des clics uniques est gere par le composant ViewTracker (client-side)
 
   const dpeColor: any = { A: "#22c55e", B: "#84cc16", C: "#eab308", D: "#f97316", E: "#ef4444", F: "#dc2626", G: "#991b1b" }
   const photos: string[] = Array.isArray(annonce.photos) ? annonce.photos : []
@@ -204,6 +204,7 @@ export default async function Annonce({ params }: any) {
               <ContactButton annonce={annonce} />
               <BookingVisite annonceId={annonce.id} proprietaireEmail={annonce.proprietaire_email} />
               <OwnerActions proprietaireEmail={annonce.proprietaire_email} annonceId={annonce.id} />
+              <ViewTracker annonceId={annonce.id} />
 
               <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 16, display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ width: 44, height: 44, background: "#e5e7eb", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 18, flexShrink: 0 }}>

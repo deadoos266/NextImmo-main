@@ -205,6 +205,7 @@ export default function Proprietaire() {
   const [loading, setLoading] = useState(true)
   const [dossierOuvert, setDossierOuvert] = useState<string | null>(null)
   const [dossiers, setDossiers] = useState<Record<string, any>>({})
+  const [clicsParBien, setClicsParBien] = useState<Record<number, number>>({})
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth")
@@ -219,7 +220,19 @@ export default function Proprietaire() {
       supabase.from("loyers").select("*").eq("proprietaire_email", email).order("mois", { ascending: false }),
       supabase.from("visites").select("*").eq("proprietaire_email", email).order("date_visite", { ascending: true }),
     ])
-    if (b) setBiens(b)
+    if (b) {
+      setBiens(b)
+      // Charger les clics uniques par bien
+      const ids = b.map((a: any) => a.id)
+      if (ids.length > 0) {
+        const { data: clics } = await supabase.from("clics_annonces").select("annonce_id").in("annonce_id", ids)
+        if (clics) {
+          const map: Record<number, number> = {}
+          clics.forEach((c: any) => { map[c.annonce_id] = (map[c.annonce_id] || 0) + 1 })
+          setClicsParBien(map)
+        }
+      }
+    }
     if (m) setCandidatures(m.filter((msg: any) => msg.type === "candidature"))
     if (l) setLoyers(l)
     setVisites(v || [])
@@ -416,7 +429,7 @@ export default function Proprietaire() {
                 {/* KPIs globaux */}
                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: isMobile ? 10 : 16, marginBottom: 24 }}>
                   {[
-                    { label: "Vues totales", val: biens.reduce((s: number, b: any) => s + (Number(b.vues) || 0), 0), color: "#1d4ed8", bg: "#eff6ff" },
+                    { label: "Personnes ont clique", val: Object.values(clicsParBien).reduce((s: number, v: number) => s + v, 0), color: "#1d4ed8", bg: "#eff6ff" },
                     { label: "Messages recus", val: candidatures.length, color: "#16a34a", bg: "#dcfce7" },
                     { label: "Visites demandees", val: visites.length, color: "#ea580c", bg: "#fff7ed" },
                     { label: "Biens actifs", val: biens.filter((b: any) => !b.statut || b.statut === "disponible").length, color: "#111", bg: "white" },
@@ -435,13 +448,13 @@ export default function Proprietaire() {
                     {/* Header */}
                     {!isMobile && (
                       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr", gap: 12, padding: "10px 16px", background: "#f9fafb", borderRadius: "10px 10px 0 0" }}>
-                        {["Bien", "Vues", "Messages", "Visites", "Taux conv."].map(h => (
+                        {["Bien", "Clics uniques", "Messages", "Visites", "Taux conv."].map(h => (
                           <span key={h} style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>{h}</span>
                         ))}
                       </div>
                     )}
                     {biens.map((b: any, i: number) => {
-                      const vues = Number(b.vues) || 0
+                      const vues = clicsParBien[b.id] || 0
                       const msgs = candidatures.filter((c: any) => c.annonce_id === b.id).length
                       const vis = visites.filter((v: any) => v.annonce_id === b.id).length
                       const tauxConv = vues > 0 ? Math.round((msgs / vues) * 100) : 0
@@ -452,7 +465,7 @@ export default function Proprietaire() {
                             <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>{b.titre}</p>
                             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                               {[
-                                { label: "Vues", val: vues, color: "#1d4ed8" },
+                                { label: "Clics", val: vues, color: "#1d4ed8" },
                                 { label: "Messages", val: msgs, color: "#16a34a" },
                                 { label: "Visites", val: vis, color: "#ea580c" },
                                 { label: "Conv.", val: `${tauxConv}%`, color: tauxConv >= 5 ? "#16a34a" : "#6b7280" },

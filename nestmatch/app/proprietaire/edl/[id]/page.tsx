@@ -249,6 +249,7 @@ export default function EdlPage() {
   const [edlExistant, setEdlExistant] = useState<any>(null)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [locataireVerifie, setLocataireVerifie] = useState<boolean | null>(null)
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
 
@@ -280,6 +281,11 @@ export default function EdlPage() {
     }
     if (data) {
       setBien(data)
+      // Verifier que l'email locataire existe sur la plateforme
+      if (data.locataire_email) {
+        const { count } = await supabase.from("users").select("id", { count: "exact", head: true }).eq("email", data.locataire_email.toLowerCase())
+        setLocataireVerifie((count ?? 0) > 0)
+      }
       if (!edl) {
         // Pre-remplir bailleur seulement si pas d'EDL existant
         const nameParts = (data.proprietaire || session?.user?.name || "").split(" ")
@@ -672,9 +678,16 @@ export default function EdlPage() {
             <div style={cardS}>
               <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Le locataire</h2>
               {bien.locataire_email ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                  <span style={{ background: "#dcfce7", color: "#16a34a", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>Compte lie : {bien.locataire_email}</span>
-                  <span style={{ fontSize: 11, color: "#9ca3af" }}>L'EDL sera envoye a ce compte</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+                  {locataireVerifie === true && (
+                    <span style={{ background: "#dcfce7", color: "#16a34a", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>✓ Compte verifie : {bien.locataire_email}</span>
+                  )}
+                  {locataireVerifie === false && (
+                    <span style={{ background: "#fee2e2", color: "#dc2626", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>✗ {bien.locataire_email} — aucun compte trouve</span>
+                  )}
+                  {locataireVerifie === null && (
+                    <span style={{ background: "#f3f4f6", color: "#6b7280", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>Verification en cours...</span>
+                  )}
                 </div>
               ) : (
                 <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
@@ -870,7 +883,7 @@ export default function EdlPage() {
                 }}>
                 Telecharger le PDF
               </button>
-              {bien.locataire_email ? (
+              {bien.locataire_email && locataireVerifie ? (
                 <button onClick={envoyerAuLocataire} disabled={sending}
                   style={{
                     flex: 1, padding: "16px 32px",
@@ -880,6 +893,10 @@ export default function EdlPage() {
                   }}>
                   {sending ? "Envoi en cours..." : sent ? "Envoye a " + bien.locataire_email + " !" : "Envoyer a " + bien.locataire_email}
                 </button>
+              ) : bien.locataire_email && !locataireVerifie ? (
+                <div style={{ flex: 1, padding: "14px 20px", background: "#fee2e2", borderRadius: 16, border: "1.5px solid #fecaca", textAlign: "center" }}>
+                  <p style={{ fontSize: 13, color: "#dc2626", fontWeight: 600, margin: 0 }}>Le locataire ({bien.locataire_email}) n'a pas de compte NestMatch</p>
+                </div>
               ) : (
                 <div style={{ flex: 1, padding: "14px 20px", background: "#f9fafb", borderRadius: 16, border: "1.5px dashed #d1d5db", textAlign: "center" }}>
                   <p style={{ fontSize: 13, color: "#9ca3af", fontWeight: 600, margin: 0 }}>Rattachez un locataire pour envoyer l'EDL</p>
