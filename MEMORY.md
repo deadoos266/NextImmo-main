@@ -59,16 +59,52 @@ Differenciation : score de compatibilite propriete/locataire via algo maison (li
     la refonte complete "reply/select/indicators" attend un batch dedie)
   - Build : fix Suspense wrapping sur `/auth` et `/annonces` (useSearchParams)
 
+## Bugs notes a fixer au prochain batch
+- **Rechercher dans cette zone + ?ville= URL** : quand une ville est dans l'URL,
+  le bouton "Rechercher dans cette zone" ne marche pas bien. Probable conflit
+  entre le filtre activeVille et le filtre mapBounds.
+- **Messagerie scroll intempestif** : la page scroll en bas chaque fois qu'on
+  change de conversation. `useEffect([messages])` avec `bottomRef.scrollIntoView`
+  se declenche sur chaque switch de conv. Faudrait conditionner sur "nouveau
+  message dans conv active" seulement, pas sur "messages array a change".
+- **Accents manquants dans l'UI** : audit global a faire — beaucoup de textes
+  sans accents (notamment `AccountSettings.tsx` "Parametres" au lieu de
+  "Parametres du compte", messages d'erreur generiques recents, etc.).
+  Desormais TOUJOURS ecrire avec accents (e, e, a, c, e, o, u).
+
 ## Dette technique / backlog batch 3+
 - Messagerie : repondre a un message specifique (reply-to), selection multiple
   (supprimer/copier/transferer), indicateurs "envoye/lu" dans les messages eux-memes
-- Dashboard proprio : refonte stats avec visus agrandies, ajout visualisation pipeline
-  candidats (choix direction en attente : funnel horizontal vs org chart vertical),
-  integrer `duree_credit` dans les calculs d'amortissement
 - Logo : l'utilisateur le fournira, reste a l'integrer (header, favicon, footer, PDFs, auth)
 - Change email : actuellement marque "bientot" dans AccountSettings (flow complexe
   verification + cascade DB a implementer)
 - Notifications email : toggle pas encore branche
+- Routes manquantes (404 actuels) : /connexion /login /parametres /edl /publier
+  /proprietaire/mes-biens /carnet-entretien -> a rediriger
+- Page 404 custom (fond #F7F4EF, logo, liens utiles)
+- Footer : retirer les liens # non fonctionnels (Option A) + creer stubs CGU / Mentions
+  legales / Politique de confidentialite
+- Filtres /annonces : ajouter UI pour surface (min/max) et nombre de pieces
+- Bouton "Personnalise" : clarifier l'action ou supprimer
+- Placeholder barre de recherche home : "Ville, quartier, code postal"
+- Duree_credit dans stats par bien : deja utilise, mais integrer aussi dans
+  la vue agregee Stats (total credit restant tous biens)
+
+## Historique batch 3 (2026-04-16 — UX + debug + funnel)
+- **3-A Bugs bloquants** : messages debug /dossier + /proprietaire/ajouter supprimes,
+  error.message generique partout, ContactButton anti-doublon via useRef,
+  carte centree sur ?ville= (centerHint prop + key={activeVille} pour remount)
+- **3-A Passwords** : nouveau composant PasswordInput avec toggle oeil (ouvert/barre)
+  integre dans /auth et /profil AccountSettings (3 inputs)
+- **3-B Dashboard proprio** : 6 onglets repenses
+  - "Vue d'ensemble" -> "Tableau de bord" (KPIs plus gros + pipeline funnel)
+  - "Performance" -> "Stats" (vue agregee financiere : revenus confirmes, loyers
+    mensuels, cashflow mensuel, patrimoine, + KPIs marketing ex-Performance,
+    + detail par bien, + conseils d'optimisation)
+  - Nouveau composant `PipelineFunnel.tsx` : funnel horizontal 6 etapes
+    (annonces -> interesses clics -> candidatures -> dossiers partages ->
+    visites -> baux signes) avec % conversion entre chaque etape et
+    taux de conversion global (clics -> baux)
 
 ## Dette technique connue
 - RLS Supabase partiellement desactivee sur `visites` et `carnet_entretien`

@@ -6,8 +6,9 @@ import Link from "next/link"
 import { supabase } from "../../lib/supabase"
 import AgendaVisites from "../components/AgendaVisites"
 import { useResponsive } from "../hooks/useResponsive"
+import PipelineFunnel from "./PipelineFunnel"
 
-const ONGLETS = ["Vue d'ensemble", "Mes biens", "Performance", "Candidatures", "Loyers", "Visites"] as const
+const ONGLETS = ["Tableau de bord", "Mes biens", "Stats", "Candidatures", "Loyers", "Visites"] as const
 type Onglet = typeof ONGLETS[number]
 
 const STATUT_V: Record<string, { bg: string; color: string; border: string; label: string; icon: string }> = {
@@ -197,7 +198,7 @@ export default function Proprietaire() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const { isMobile } = useResponsive()
-  const [onglet, setOnglet] = useState<Onglet>("Vue d'ensemble")
+  const [onglet, setOnglet] = useState<Onglet>("Tableau de bord")
   const [biens, setBiens] = useState<any[]>([])
   const [candidatures, setCandidatures] = useState<any[]>([])
   const [loyers, setLoyers] = useState<any[]>([])
@@ -314,22 +315,25 @@ export default function Proprietaire() {
           ))}
         </div>
 
-        {/* VUE D'ENSEMBLE */}
-        {onglet === "Vue d'ensemble" && (
+        {/* TABLEAU DE BORD */}
+        {onglet === "Tableau de bord" && (
           <>
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 10 : 16, marginBottom: 24 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 12 : 18, marginBottom: 24 }}>
               {[
-                { label: "Biens disponibles", val: biensDispos, color: "#16a34a" },
-                { label: "Biens loues", val: biensLoues, color: "#6b7280" },
-                { label: "Loyers a confirmer", val: loyersAttendus, color: "#ea580c" },
-                { label: "Loyers confirmes", val: loyersConfirmes, color: "#16a34a" },
+                { label: "Biens disponibles", val: biensDispos, color: "#16a34a", bg: "#f0fdf4" },
+                { label: "Biens loués",       val: biensLoues, color: "#6b7280", bg: "#f9fafb" },
+                { label: "Loyers à confirmer", val: loyersAttendus, color: "#ea580c", bg: loyersAttendus > 0 ? "#fff7ed" : "white" },
+                { label: "Loyers confirmés",  val: loyersConfirmes, color: "#16a34a", bg: "white" },
               ].map(s => (
-                <div key={s.label} style={{ background: "white", borderRadius: 16, padding: "20px 24px" }}>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.val}</div>
-                  <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>{s.label}</div>
+                <div key={s.label} style={{ background: s.bg, borderRadius: 20, padding: isMobile ? "18px 20px" : "24px 28px", border: "1px solid #f3f4f6" }}>
+                  <div style={{ fontSize: isMobile ? 32 : 40, fontWeight: 800, color: s.color, letterSpacing: "-1px", lineHeight: 1 }}>{s.val}</div>
+                  <div style={{ fontSize: 12, color: "#6b7280", marginTop: 8, fontWeight: 600 }}>{s.label}</div>
                 </div>
               ))}
             </div>
+
+            {/* Pipeline candidats */}
+            <PipelineFunnel biens={biens} candidatures={candidatures} visites={visites} clicsParBien={clicsParBien} />
 
             {/* Alertes */}
             {loyersAttendus > 0 && (
@@ -417,21 +421,52 @@ export default function Proprietaire() {
           </div>
         )}
 
-        {/* PERFORMANCE */}
-        {onglet === "Performance" && (
+        {/* STATS — vue agrégée + pipeline + détail par bien */}
+        {onglet === "Stats" && (
           <div>
             {biens.length === 0 ? (
               <div style={{ background: "white", borderRadius: 20, padding: 48, textAlign: "center", color: "#9ca3af" }}>
-                <p style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Aucun bien publie</p>
+                <p style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Aucun bien publié</p>
+                <p style={{ fontSize: 13 }}>Ajoutez un bien pour voir vos statistiques.</p>
               </div>
             ) : (
               <>
-                {/* KPIs globaux */}
+                {/* Vue financière globale */}
+                {(() => {
+                  const revenusConfirmes = loyers.filter((l: any) => l.statut === "confirmé").reduce((s: number, l: any) => s + (Number(l.montant) || 0), 0)
+                  const loyerTheoriqueTotal = biens.filter((b: any) => b.statut === "loué").reduce((s: number, b: any) => s + (Number(b.prix) || 0) + (Number(b.charges) || 0), 0)
+                  const patrimoineTotal = biens.reduce((s: number, b: any) => s + (Number(b.valeur_bien) || 0), 0)
+                  const creditMensuelTotal = biens.reduce((s: number, b: any) => s + (Number(b.mensualite_credit) || 0), 0)
+                  const cashflowMensuelTotal = loyerTheoriqueTotal - creditMensuelTotal
+
+                  return (
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: isMobile ? 12 : 18, marginBottom: 24 }}>
+                      {[
+                        { label: "Revenus confirmés", val: `${revenusConfirmes.toLocaleString("fr-FR")} €`, sub: "cumul toutes périodes", color: "#16a34a", bg: "#f0fdf4" },
+                        { label: "Loyers mensuels", val: `${loyerTheoriqueTotal.toLocaleString("fr-FR")} €`, sub: `${biens.filter((b: any) => b.statut === "loué").length} bien(s) loué(s)`, color: "#111", bg: "white" },
+                        { label: "Cashflow mensuel", val: `${cashflowMensuelTotal >= 0 ? "+" : ""}${cashflowMensuelTotal.toLocaleString("fr-FR")} €`, sub: "après crédit", color: cashflowMensuelTotal >= 0 ? "#16a34a" : "#dc2626", bg: cashflowMensuelTotal >= 0 ? "#f0fdf4" : "#fef2f2" },
+                        { label: "Valeur patrimoine", val: patrimoineTotal > 0 ? `${Math.round(patrimoineTotal / 1000)} k€` : "—", sub: "somme des biens", color: "#111", bg: "white" },
+                      ].map(s => (
+                        <div key={s.label} style={{ background: s.bg, borderRadius: 20, padding: isMobile ? "18px 20px" : "22px 26px", border: "1px solid #f3f4f6" }}>
+                          <div style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, color: s.color, letterSpacing: "-0.5px", lineHeight: 1.1 }}>{s.val}</div>
+                          <div style={{ fontSize: 12, color: "#6b7280", marginTop: 8, fontWeight: 600 }}>{s.label}</div>
+                          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{s.sub}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+
+                {/* Pipeline candidats (aussi visible ici) */}
+                <PipelineFunnel biens={biens} candidatures={candidatures} visites={visites} clicsParBien={clicsParBien} />
+
+                {/* KPIs marketing (ex-Performance) */}
+                <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 14, marginTop: 8 }}>Activité sur les annonces</h2>
                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: isMobile ? 10 : 16, marginBottom: 24 }}>
                   {[
-                    { label: "Personnes ont clique", val: Object.values(clicsParBien).reduce((s: number, v: number) => s + v, 0), color: "#1d4ed8", bg: "#eff6ff" },
-                    { label: "Messages recus", val: candidatures.length, color: "#16a34a", bg: "#dcfce7" },
-                    { label: "Visites demandees", val: visites.length, color: "#ea580c", bg: "#fff7ed" },
+                    { label: "Clics uniques", val: Object.values(clicsParBien).reduce((s: number, v: number) => s + v, 0), color: "#1d4ed8", bg: "#eff6ff" },
+                    { label: "Messages reçus", val: candidatures.length, color: "#16a34a", bg: "#dcfce7" },
+                    { label: "Visites demandées", val: visites.length, color: "#ea580c", bg: "#fff7ed" },
                     { label: "Biens actifs", val: biens.filter((b: any) => !b.statut || b.statut === "disponible").length, color: "#111", bg: "white" },
                   ].map(s => (
                     <div key={s.label} style={{ background: s.bg, borderRadius: 16, padding: "20px 24px" }}>
