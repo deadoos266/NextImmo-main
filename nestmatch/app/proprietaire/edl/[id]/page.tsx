@@ -70,7 +70,7 @@ function makeElements(type: string): Record<string, ElementData> {
 
 // ─── PDF Generator ──────────────────────────────────────────────────────────
 
-function genererEdlPDF(data: {
+async function genererEdlPDF(data: {
   type: "entree" | "sortie"
   dateEdl: string
   prenomBailleur: string

@@ -9,7 +9,7 @@ import { useResponsive } from "../../../hooks/useResponsive"
 
 // ─── Bail PDF Generator (conforme loi ALUR) ────────────────────────────────
 
-function genererBailPDF(data: {
+async function genererBailPDF(data: {
   type: "vide" | "meuble"
   // Bailleur
   nomBailleur: string
