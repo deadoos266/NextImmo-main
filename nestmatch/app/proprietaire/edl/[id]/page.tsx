@@ -671,11 +671,27 @@ export default function EdlPage() {
             {/* Le Locataire */}
             <div style={cardS}>
               <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Le locataire</h2>
-              <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16 }}>Si non renseigne, les champs seront a completer a la main sur le PDF</p>
+              {bien.locataire_email ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                  <span style={{ background: "#dcfce7", color: "#16a34a", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>Compte lie : {bien.locataire_email}</span>
+                  <span style={{ fontSize: 11, color: "#9ca3af" }}>L'EDL sera envoye a ce compte</span>
+                </div>
+              ) : (
+                <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: "#9a3412", margin: 0 }}>Aucun locataire rattache a ce bien</p>
+                  <p style={{ fontSize: 12, color: "#ea580c", margin: "4px 0 0" }}>
+                    Renseignez l'email du locataire dans les parametres du bien (bouton "Modifier les donnees") pour pouvoir envoyer l'EDL via la plateforme.
+                  </p>
+                </div>
+              )}
+              <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16 }}>Completez nom et prenom pour le document officiel (ou laissez vide pour remplir a la main)</p>
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
                 <div><label style={lbl}>Prenom</label><input style={inp} value={prenomLocataire} onChange={e => setPrenomLocataire(e.target.value)} placeholder="Prenom" /></div>
                 <div><label style={lbl}>Nom</label><input style={inp} value={nomLocataire} onChange={e => setNomLocataire(e.target.value)} placeholder="Nom de famille" /></div>
-                <div><label style={lbl}>Email</label><input style={inp} value={emailLocataire} onChange={e => setEmailLocataire(e.target.value)} placeholder="email@exemple.fr" type="email" /></div>
+                <div>
+                  <label style={lbl}>Email (compte plateforme)</label>
+                  <input value={emailLocataire} disabled style={{ ...inp, background: "#f9fafb", color: bien.locataire_email ? "#111" : "#9ca3af" }} />
+                </div>
               </div>
             </div>
 
@@ -854,7 +870,7 @@ export default function EdlPage() {
                 }}>
                 Telecharger le PDF
               </button>
-              {emailLocataire.trim() && (
+              {bien.locataire_email ? (
                 <button onClick={envoyerAuLocataire} disabled={sending}
                   style={{
                     flex: 1, padding: "16px 32px",
@@ -862,8 +878,12 @@ export default function EdlPage() {
                     border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16,
                     cursor: sending ? "not-allowed" : "pointer", fontFamily: "inherit",
                   }}>
-                  {sending ? "Envoi en cours..." : sent ? "Envoye au locataire !" : "Envoyer au locataire pour validation"}
+                  {sending ? "Envoi en cours..." : sent ? "Envoye a " + bien.locataire_email + " !" : "Envoyer a " + bien.locataire_email}
                 </button>
+              ) : (
+                <div style={{ flex: 1, padding: "14px 20px", background: "#f9fafb", borderRadius: 16, border: "1.5px dashed #d1d5db", textAlign: "center" }}>
+                  <p style={{ fontSize: 13, color: "#9ca3af", fontWeight: 600, margin: 0 }}>Rattachez un locataire pour envoyer l'EDL</p>
+                </div>
               )}
             </div>
           </>

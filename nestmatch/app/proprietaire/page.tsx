@@ -444,7 +444,7 @@ export default function Proprietaire() {
                       const vues = Number(b.vues) || 0
                       const msgs = candidatures.filter((c: any) => c.annonce_id === b.id).length
                       const vis = visites.filter((v: any) => v.annonce_id === b.id).length
-                      const tauxConv = vues > 0 ? Math.round(((msgs + vis) / vues) * 100) : 0
+                      const tauxConv = vues > 0 ? Math.round((msgs / vues) * 100) : 0
 
                       if (isMobile) {
                         return (
