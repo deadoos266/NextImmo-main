@@ -465,6 +465,45 @@ export default function EdlPage() {
     })
   }
 
+  async function telechargerPhotosZip() {
+    const allPhotos: { url: string; piece: string; idx: number }[] = []
+    pieces.forEach(p => {
+      p.photos.forEach((url, idx) => {
+        if (url) allPhotos.push({ url, piece: p.nom || "piece", idx: idx + 1 })
+      })
+    })
+    if (allPhotos.length === 0) { alert("Aucune photo a telecharger."); return }
+
+    const { default: JSZip } = await import("jszip")
+    const zip = new JSZip()
+    const results = await Promise.allSettled(
+      allPhotos.map(async ({ url, piece, idx }) => {
+        const res = await fetch(url)
+        if (!res.ok) throw new Error(String(res.status))
+        const blob = await res.blob()
+        const ext = (url.split(".").pop() || "jpg").split("?")[0].slice(0, 4)
+        const safe = piece.replace(/[^a-zA-Z0-9\-_]/g, "_").slice(0, 40)
+        zip.file(`${safe}/photo-${String(idx).padStart(2, "0")}.${ext}`, blob)
+      })
+    )
+    const failed = results.filter(r => r.status === "rejected").length
+    if (failed === allPhotos.length) { alert("Impossible de telecharger les photos."); return }
+
+    const zipBlob = await zip.generateAsync({ type: "blob" })
+    const typeLabel = type === "entree" ? "entree" : "sortie"
+    const dateLabel = dateEdl ? new Date(dateEdl).toISOString().split("T")[0] : "edl"
+    const link = document.createElement("a")
+    const href = URL.createObjectURL(zipBlob)
+    link.href = href
+    link.download = `edl-${typeLabel}-${dateLabel}-photos.zip`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(href)
+
+    if (failed > 0) alert(`${failed} photo(s) n'ont pas pu etre telechargees.`)
+  }
+
   // Score de completion
   const totalElements = pieces.reduce((s, p) => s + Object.keys(p.elements).length, 0)
   const elementsRemplis = pieces.reduce((s, p) => s + Object.values(p.elements).filter(e => e.etat !== "Bon").length, 0)
@@ -628,15 +667,24 @@ export default function EdlPage() {
               </div>
             )}
             {/* Actions read-only */}
-            <div style={{ display: "flex", gap: 12, flexDirection: isMobile ? "column" : "row" }}>
+            <div style={{ display: "flex", gap: 12, flexDirection: isMobile ? "column" : "row", flexWrap: "wrap" }}>
               <button onClick={generer}
                 style={{
-                  flex: 1, padding: "16px 32px",
-                  background: "white", color: "#111",
-                  border: "1.5px solid #111", borderRadius: 16, fontWeight: 800, fontSize: 16,
+                  flex: "1 1 200px", padding: "16px 24px",
+                  background: "#111", color: "white",
+                  border: "1.5px solid #111", borderRadius: 16, fontWeight: 800, fontSize: 15,
                   cursor: "pointer", fontFamily: "inherit",
                 }}>
                 Telecharger le PDF
+              </button>
+              <button onClick={telechargerPhotosZip}
+                style={{
+                  flex: "1 1 200px", padding: "16px 24px",
+                  background: "white", color: "#111",
+                  border: "1.5px solid #111", borderRadius: 16, fontWeight: 700, fontSize: 15,
+                  cursor: "pointer", fontFamily: "inherit",
+                }}>
+                Telecharger les photos (.zip)
               </button>
             </div>
           </>
@@ -883,6 +931,15 @@ export default function EdlPage() {
                   cursor: "pointer", fontFamily: "inherit",
                 }}>
                 Telecharger le PDF
+              </button>
+              <button onClick={telechargerPhotosZip}
+                style={{
+                  flex: 1, padding: "16px 32px",
+                  background: "white", color: "#111",
+                  border: "1.5px solid #111", borderRadius: 16, fontWeight: 700, fontSize: 15,
+                  cursor: "pointer", fontFamily: "inherit",
+                }}>
+                Photos (.zip)
               </button>
               {bien.locataire_email && locataireVerifie ? (
                 <button onClick={envoyerAuLocataire} disabled={sending}

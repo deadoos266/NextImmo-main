@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
 import { useResponsive } from "../hooks/useResponsive"
 import { useRole } from "../providers"
+import AccountSettings from "./AccountSettings"
 
 // Composants HORS du composant principal pour éviter le bug de focus
 const Toggle = ({ label, k, toggles, setToggles }: any) => (
@@ -325,6 +326,8 @@ export default function Profil() {
           </button>
         </div>
         </>}
+
+        <AccountSettings userEmail={session.user?.email ?? null} />
       </div>
     </main>
   )

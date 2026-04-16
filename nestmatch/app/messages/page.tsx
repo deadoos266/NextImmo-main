@@ -437,10 +437,19 @@ function MessagesInner() {
   const convActiveData = conversations.find(c => c.key === convActive)
   const annonceActive = convActiveData?.annonceId ? annonces[convActiveData.annonceId] : null
 
-  const convsFiltrees = conversations.filter(c =>
-    !recherche || c.other.toLowerCase().includes(recherche.toLowerCase()) ||
-    (annonces[c.annonceId]?.titre || "").toLowerCase().includes(recherche.toLowerCase())
-  )
+  const convsFiltrees = conversations
+    .filter(c =>
+      !recherche || c.other.toLowerCase().includes(recherche.toLowerCase()) ||
+      (annonces[c.annonceId]?.titre || "").toLowerCase().includes(recherche.toLowerCase())
+    )
+    // Tri : conversations non lues en premier, puis par date du dernier message (recent d'abord)
+    .slice()
+    .sort((a, b) => {
+      if ((a.unread > 0) !== (b.unread > 0)) return a.unread > 0 ? -1 : 1
+      const da = a.lastMsg?.created_at ? new Date(a.lastMsg.created_at).getTime() : 0
+      const db = b.lastMsg?.created_at ? new Date(b.lastMsg.created_at).getTime() : 0
+      return db - da
+    })
 
   const dossierDejaEnvoye = messages.some(m =>
     typeof m.contenu === "string" && m.contenu.startsWith(DOSSIER_PREFIX)

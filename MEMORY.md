@@ -40,7 +40,35 @@ Differenciation : score de compatibilite propriete/locataire via algo maison (li
 
 ## Historique des batchs
 - **2026-04-16 — Batch 1 (securite + perf)** : retrait secrets versionnes, `.env.example`, `.gitignore` renforce, `ROTATION_SECRETS.md`, headers securite `next.config.js`, XSS JSON-LD corrigee, `/api/agent` protege (auth + rate limit), DM Sans via `next/font`, jsPDF lazy-load sur 4 pages (~330 KB gzip economises)
-- **2026-04-16 — Batch 2 (UX + bugs + refonte)** : en cours
+
+- **2026-04-16 — Batch 2 (UX + bugs)** : ecosysteme de corrections
+  - matching : normalisation defensive des booleens (fix scoring meuble)
+  - profil : deduplique garant, retire filtres etage/trajet, mention RGPD sur profil couple
+  - navbar : Inscription pointe sur `/auth?mode=inscription`, fix bug resize "Mon espace"
+  - cookie banner : floating button z-index < map controls (400 < 1000)
+  - carte : marqueurs couleur (degrade selon score, 5 niveaux), locale FR (OSM.fr),
+    bouton "Rechercher dans cette zone" au deplacement, bbox filter initial
+  - annonce detail : carte GPS sous "Equipements" (cercle 400m, pas d'adresse exacte)
+  - recherche : home search -> /annonces via URL params, fallback profil locataire
+  - EDL : telechargement ZIP des photos (jszip ajoute) sur les 2 pages EDL
+  - profil : nouveau `AccountSettings` (changer mot de passe + supprimer compte)
+  - APIs : `/api/account/change-password` et `/api/account/delete` (auth requise)
+  - home : refonte avec sections 3 etapes / benefices locataire / benefices proprio / FAQ
+    (stats fausses retirees au profit de "value props" 0 frais / P2P / ALUR / 100% en ligne)
+  - messagerie : tri par non-lus en premier, puis par date (amelioration minimaliste —
+    la refonte complete "reply/select/indicators" attend un batch dedie)
+  - Build : fix Suspense wrapping sur `/auth` et `/annonces` (useSearchParams)
+
+## Dette technique / backlog batch 3+
+- Messagerie : repondre a un message specifique (reply-to), selection multiple
+  (supprimer/copier/transferer), indicateurs "envoye/lu" dans les messages eux-memes
+- Dashboard proprio : refonte stats avec visus agrandies, ajout visualisation pipeline
+  candidats (choix direction en attente : funnel horizontal vs org chart vertical),
+  integrer `duree_credit` dans les calculs d'amortissement
+- Logo : l'utilisateur le fournira, reste a l'integrer (header, favicon, footer, PDFs, auth)
+- Change email : actuellement marque "bientot" dans AccountSettings (flow complexe
+  verification + cascade DB a implementer)
+- Notifications email : toggle pas encore branche
 
 ## Dette technique connue
 - RLS Supabase partiellement desactivee sur `visites` et `carnet_entretien`

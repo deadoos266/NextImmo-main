@@ -103,13 +103,13 @@ export default function Home() {
         )}
       </section>
 
-      {/* Stats */}
+      {/* Bandeau valeurs (sans stats inventees) */}
       <section style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: isMobile ? "24px 16px" : 0, justifyItems: "center", padding: isMobile ? "32px 24px" : "40px 48px", borderTop: "1px solid #e5e7eb", borderBottom: "1px solid #e5e7eb", background: "white" }}>
         {[
-          { val: "2 400+", label: "Annonces actives" },
-          { val: "0 €",    label: "De frais d'agence" },
-          { val: "87%",    label: "Taux de matching moyen" },
-          { val: "48h",    label: "Délai moyen de réponse" },
+          { val: "0 €", label: "De frais d'agence" },
+          { val: "P2P", label: "Proprietaire direct" },
+          { val: "ALUR", label: "Dossier conforme" },
+          { val: "100%", label: "En ligne" },
         ].map((s) => (
           <div key={s.label} style={{ textAlign: "center" }}>
             <p style={{ fontSize: isMobile ? 28 : 36, fontWeight: 800, letterSpacing: "-1px" }}>{s.val}</p>
@@ -118,7 +118,116 @@ export default function Home() {
         ))}
       </section>
 
-      {/* Features */}
+      {/* Comment ca marche — 3 etapes */}
+      <section style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "56px 20px 24px" : isTablet ? "72px 32px 32px" : "96px 48px 40px" }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "1.5px", textAlign: "center", marginBottom: 14 }}>Comment ca marche</p>
+        <h2 style={{ fontSize: isMobile ? 28 : isTablet ? 34 : 42, fontWeight: 800, textAlign: "center", marginBottom: isMobile ? 36 : 56, letterSpacing: "-1px" }}>
+          Trois etapes,<br /><span style={{ color: "#6b7280" }}>et vous signez.</span>
+        </h2>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: isMobile ? 16 : 24 }}>
+          {[
+            { n: "01", titre: "Creez votre profil", desc: "Budget, criteres, situation pro, garant. Une fois rempli, votre dossier est pret pour toutes vos candidatures." },
+            { n: "02", titre: "Explorez avec un score personnalise", desc: "Chaque annonce est notee selon votre compatibilite : budget, surface, equipements, localisation. Filtres carte inclus." },
+            { n: "03", titre: "Contactez, visitez, signez", desc: "Messagerie integree, demande de visite en un clic, bail et etat des lieux generes automatiquement." },
+          ].map((f) => (
+            <div key={f.n} style={{ background: "white", borderRadius: 20, padding: isMobile ? 24 : 32, position: "relative" }}>
+              <p style={{ fontSize: 52, fontWeight: 800, color: "#f3f4f6", letterSpacing: "-2px", lineHeight: 1, marginBottom: 12 }}>{f.n}</p>
+              <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>{f.titre}</h3>
+              <p style={{ color: "#6b7280", lineHeight: 1.6, fontSize: 14 }}>{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Benefices locataire */}
+      <section style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "48px 20px" : "72px 48px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1.2fr", gap: isMobile ? 24 : 48, alignItems: "center" }}>
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 700, color: "#16a34a", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 14 }}>Pour les locataires</p>
+            <h2 style={{ fontSize: isMobile ? 26 : 36, fontWeight: 800, marginBottom: 16, letterSpacing: "-1px", lineHeight: 1.15 }}>
+              Un dossier. Toutes vos candidatures.
+            </h2>
+            <p style={{ color: "#6b7280", fontSize: 15, lineHeight: 1.7, marginBottom: 24 }}>
+              Plus besoin d&apos;envoyer 30 fois les memes documents. Votre dossier NestMatch est pret, conforme ALUR, et partageable d&apos;un clic avec chaque proprietaire.
+            </p>
+            <a href="/auth?mode=inscription" style={{ background: "#111", color: "white", padding: "14px 28px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14, display: "inline-block" }}>
+              Creer mon dossier
+            </a>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {[
+              { titre: "Score de compatibilite", desc: "Les bonnes annonces, triees pour vous." },
+              { titre: "Messagerie directe", desc: "Discutez sans intermediaire avec le proprietaire." },
+              { titre: "Visites organisees", desc: "Creneaux proposes, confirmation en un clic." },
+              { titre: "Dossier certifie", desc: "Justificatifs prets, partages en securite." },
+            ].map(b => (
+              <div key={b.titre} style={{ background: "white", borderRadius: 14, padding: "18px 20px", borderLeft: "4px solid #16a34a" }}>
+                <p style={{ fontSize: 14, fontWeight: 800, marginBottom: 3 }}>{b.titre}</p>
+                <p style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>{b.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Benefices proprietaire */}
+      <section style={{ background: "white", padding: isMobile ? "48px 20px" : "72px 48px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.2fr 1fr", gap: isMobile ? 24 : 48, alignItems: "center" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, order: isMobile ? 2 : 1 }}>
+            {[
+              { titre: "Candidats qualifies", desc: "Score de qualite dossier, revenus, situation pro visibles d'emblee." },
+              { titre: "Publier en 5 min", desc: "Photos, description, DPE. Annonce en ligne immediatement." },
+              { titre: "Baux & EDL generes", desc: "Documents conformes, prets a signer, PDF telechargeables." },
+              { titre: "Suivi des loyers", desc: "Quittances automatiques, tableau de bord clair." },
+            ].map(b => (
+              <div key={b.titre} style={{ background: "#F7F4EF", borderRadius: 14, padding: "18px 20px", borderLeft: "4px solid #111" }}>
+                <p style={{ fontSize: 14, fontWeight: 800, marginBottom: 3 }}>{b.titre}</p>
+                <p style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>{b.desc}</p>
+              </div>
+            ))}
+          </div>
+          <div style={{ order: isMobile ? 1 : 2 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 14 }}>Pour les proprietaires</p>
+            <h2 style={{ fontSize: isMobile ? 26 : 36, fontWeight: 800, marginBottom: 16, letterSpacing: "-1px", lineHeight: 1.15 }}>
+              Louez plus vite. Gerez plus simplement.
+            </h2>
+            <p style={{ color: "#6b7280", fontSize: 15, lineHeight: 1.7, marginBottom: 24 }}>
+              Recevez des candidatures deja preparees, avec dossier complet. Signez, encaissez, gerez — tout depuis un seul tableau de bord.
+            </p>
+            <a href="/auth?mode=inscription" style={{ background: "#111", color: "white", padding: "14px 28px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14, display: "inline-block" }}>
+              Publier un bien
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section style={{ maxWidth: 800, margin: "0 auto", padding: isMobile ? "48px 20px" : "72px 48px" }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "1.5px", textAlign: "center", marginBottom: 14 }}>Questions frequentes</p>
+        <h2 style={{ fontSize: isMobile ? 26 : 36, fontWeight: 800, textAlign: "center", marginBottom: isMobile ? 28 : 40, letterSpacing: "-1px" }}>
+          Tout ce que vous vous demandez.
+        </h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {[
+            { q: "NestMatch est-il vraiment gratuit ?", r: "Oui, l'inscription et l'utilisation sont 100% gratuites pour les locataires et les proprietaires. Aucune commission n'est prelevee sur les loyers." },
+            { q: "Comment fonctionne le score de compatibilite ?", r: "Notre algorithme compare vos criteres (budget, surface, localisation, equipements, DPE) aux caracteristiques de chaque annonce. Le score va de 0 a 100% et prend en compte 7 dimensions." },
+            { q: "Mon dossier est-il securise ?", r: "Vos documents sont stockes de maniere chiffree. Ils ne sont partages qu'avec les proprietaires que vous contactez, et uniquement apres votre accord explicite." },
+            { q: "Les annonces sont-elles verifiees ?", r: "Chaque bien est publie par un proprietaire verifie par email. Les annonces frauduleuses sont signalables en un clic et reviewees manuellement." },
+            { q: "Puis-je generer un bail depuis NestMatch ?", r: "Oui, une fois la candidature acceptee, le bail est genere automatiquement au format PDF, conforme a la loi ALUR. L'etat des lieux peut egalement etre realise en ligne." },
+            { q: "Que se passe-t-il si j'ai un probleme avec mon logement ?", r: "Le carnet d'entretien integre permet au locataire et au proprietaire de documenter les incidents et travaux. En cas de litige serieux, nous recommandons la commission departementale de conciliation." },
+          ].map((f) => (
+            <details key={f.q} style={{ background: "white", borderRadius: 14, padding: "18px 20px", border: "1px solid #f3f4f6" }}>
+              <summary style={{ fontSize: 15, fontWeight: 700, cursor: "pointer", listStyle: "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                {f.q}
+                <span style={{ color: "#6b7280", fontSize: 18, fontWeight: 400 }}>+</span>
+              </summary>
+              <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.7, marginTop: 12 }}>{f.r}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      {/* Features (conserve la section existante) */}
       <section style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "48px 20px" : isTablet ? "60px 32px" : "80px 48px" }}>
         <h2 style={{ fontSize: isMobile ? 28 : isTablet ? 34 : 40, fontWeight: 800, textAlign: "center", marginBottom: isMobile ? 28 : 48, letterSpacing: "-1px" }}>Pourquoi NestMatch ?</h2>
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr 1fr" : "1fr 1fr 1fr", gap: 20 }}>
@@ -136,12 +245,19 @@ export default function Home() {
       </section>
 
       {/* CTA */}
-      <section style={{ background: "#111", color: "white", padding: isMobile ? "48px 24px" : "80px 48px", textAlign: "center" }}>
-        <h2 style={{ fontSize: isMobile ? 28 : isTablet ? 36 : 44, fontWeight: 800, marginBottom: 14, letterSpacing: "-1px" }}>Prêt à trouver votre logement ?</h2>
-        <p style={{ color: "#9ca3af", fontSize: isMobile ? 15 : 18, marginBottom: 32 }}>Rejoignez des milliers de locataires et propriétaires qui nous font confiance.</p>
-        <a href="/auth" style={{ background: "white", color: "#111", padding: isMobile ? "14px 32px" : "16px 40px", borderRadius: 999, fontWeight: 700, fontSize: 15, textDecoration: "none", display: "inline-block" }}>
-          Commencer gratuitement
-        </a>
+      <section style={{ background: "#111", color: "white", padding: isMobile ? "56px 24px" : "96px 48px", textAlign: "center" }}>
+        <h2 style={{ fontSize: isMobile ? 28 : isTablet ? 36 : 46, fontWeight: 800, marginBottom: 14, letterSpacing: "-1px" }}>Pret a trouver votre logement ?</h2>
+        <p style={{ color: "#9ca3af", fontSize: isMobile ? 15 : 18, marginBottom: 32, maxWidth: 560, margin: isMobile ? "0 auto 24px" : "0 auto 36px" }}>
+          Creez votre profil en 2 minutes. Gratuit, sans engagement, conforme ALUR.
+        </p>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+          <a href="/auth?mode=inscription" style={{ background: "white", color: "#111", padding: isMobile ? "14px 28px" : "16px 36px", borderRadius: 999, fontWeight: 700, fontSize: 15, textDecoration: "none", display: "inline-block" }}>
+            Commencer gratuitement
+          </a>
+          <a href="/annonces" style={{ background: "transparent", color: "white", padding: isMobile ? "14px 28px" : "16px 36px", borderRadius: 999, fontWeight: 700, fontSize: 15, textDecoration: "none", display: "inline-block", border: "1.5px solid rgba(255,255,255,0.3)" }}>
+            Voir les annonces
+          </a>
+        </div>
       </section>
 
     </main>

@@ -42,6 +42,64 @@ function EtatBadge({ etat }: { etat: Etat }) {
   )
 }
 
+// ─── ZIP photos — telechargement de toutes les photos de l'EDL ────────────────
+
+async function telechargerPhotosZip(edl: any) {
+  const pieces: PieceData[] = Array.isArray(edl?.pieces) ? edl.pieces : []
+  const allPhotos: { url: string; piece: string; idx: number }[] = []
+  pieces.forEach(p => {
+    if (Array.isArray(p.photos)) {
+      p.photos.forEach((url: string, idx: number) => {
+        if (url) allPhotos.push({ url, piece: p.nom || "piece", idx: idx + 1 })
+      })
+    }
+  })
+
+  if (allPhotos.length === 0) {
+    alert("Aucune photo dans cet etat des lieux.")
+    return
+  }
+
+  const { default: JSZip } = await import("jszip")
+  const zip = new JSZip()
+
+  // Fetch toutes les photos en parallele, les ajouter au zip
+  const results = await Promise.allSettled(
+    allPhotos.map(async ({ url, piece, idx }) => {
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(`Photo ${idx} (${piece}) : ${res.status}`)
+      const blob = await res.blob()
+      const ext = (url.split(".").pop() || "jpg").split("?")[0].slice(0, 4)
+      const safePiece = piece.replace(/[^a-zA-Z0-9\-_]/g, "_").slice(0, 40)
+      zip.file(`${safePiece}/photo-${String(idx).padStart(2, "0")}.${ext}`, blob)
+    })
+  )
+
+  const failed = results.filter(r => r.status === "rejected").length
+  if (failed > 0 && failed === allPhotos.length) {
+    alert("Impossible de telecharger les photos. Verifiez votre connexion.")
+    return
+  }
+
+  const zipBlob = await zip.generateAsync({ type: "blob" })
+  const typeLabel = edl?.type === "entree" ? "entree" : "sortie"
+  const dateLabel = edl?.date_edl ? new Date(edl.date_edl).toISOString().split("T")[0] : "edl"
+  const filename = `edl-${typeLabel}-${dateLabel}-photos.zip`
+
+  const link = document.createElement("a")
+  const href = URL.createObjectURL(zipBlob)
+  link.href = href
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(href)
+
+  if (failed > 0) {
+    alert(`${failed} photo(s) n'ont pas pu etre telechargees. L'archive contient ${allPhotos.length - failed} photo(s).`)
+  }
+}
+
 // ─── PDF Generator (simplified from proprietaire page) ──────────────────────
 
 async function genererEdlPDF(edl: any, bien: any) {
@@ -484,17 +542,26 @@ export default function ConsulterEdlPage() {
           </div>
         )}
 
-        {/* PDF download */}
+        {/* Telechargements */}
         {(statut === "valide" || statut === "envoye") && (
-          <div style={{ display: "flex", gap: 12, marginTop: statut === "envoye" ? 0 : 0 }}>
+          <div style={{ display: "flex", gap: 12, marginTop: statut === "envoye" ? 0 : 0, flexWrap: "wrap" }}>
             <button onClick={() => genererEdlPDF(edl, bien)}
               style={{
-                flex: 1, padding: "14px 32px",
-                background: "white", color: "#111",
-                border: "1.5px solid #111", borderRadius: 16, fontWeight: 800, fontSize: 15,
+                flex: "1 1 200px", padding: "14px 24px",
+                background: "#111", color: "white",
+                border: "1.5px solid #111", borderRadius: 16, fontWeight: 800, fontSize: 14,
                 cursor: "pointer", fontFamily: "inherit",
               }}>
               Telecharger le PDF
+            </button>
+            <button onClick={() => telechargerPhotosZip(edl)}
+              style={{
+                flex: "1 1 200px", padding: "14px 24px",
+                background: "white", color: "#111",
+                border: "1.5px solid #111", borderRadius: 16, fontWeight: 700, fontSize: 14,
+                cursor: "pointer", fontFamily: "inherit",
+              }}>
+              Telecharger les photos (.zip)
             </button>
           </div>
         )}
