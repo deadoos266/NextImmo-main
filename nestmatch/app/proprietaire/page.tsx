@@ -8,7 +8,7 @@ import AgendaVisites from "../components/AgendaVisites"
 import { useResponsive } from "../hooks/useResponsive"
 import PipelineFunnel from "./PipelineFunnel"
 
-const ONGLETS = ["Tableau de bord", "Mes biens", "Stats", "Candidatures", "Loyers", "Visites"] as const
+const ONGLETS = ["Tableau de bord", "Mes biens", "Performance", "Documents", "Candidatures", "Loyers", "Visites"] as const
 type Onglet = typeof ONGLETS[number]
 
 const STATUT_V: Record<string, { bg: string; color: string; border: string; label: string; icon: string }> = {
@@ -396,6 +396,12 @@ export default function Proprietaire() {
                     </div>
                   </div>
                   <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: 8, marginLeft: isMobile ? 0 : 24, flexWrap: "wrap" }}>
+                    {/* Bouton Statistiques mis en avant — action principale sur le bien */}
+                    <a href={`/proprietaire/stats?id=${b.id}`}
+                      style={{ textAlign: "center", padding: "10px 16px", border: "none", borderRadius: 10, textDecoration: "none", color: "white", background: "#111", fontSize: 13, fontWeight: 700, flex: isMobile ? 1 : undefined, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                      Statistiques
+                    </a>
                     <select
                       value={b.statut || "disponible"}
                       onChange={e => changerStatut(b.id, e.target.value)}
@@ -405,14 +411,11 @@ export default function Proprietaire() {
                       <option value="réservé">Réservé</option>
                       <option value="loué">Loué</option>
                     </select>
-                    <a href={`/proprietaire/modifier/${b.id}`} style={{ textAlign: "center", padding: "8px 12px", border: "none", borderRadius: 10, textDecoration: "none", color: "white", background: "#111", fontSize: 12, fontWeight: 600, flex: isMobile ? 1 : undefined }}>
+                    <a href={`/proprietaire/modifier/${b.id}`} style={{ textAlign: "center", padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, textDecoration: "none", color: "#111", fontSize: 12, fontWeight: 600, flex: isMobile ? 1 : undefined }}>
                       Modifier
                     </a>
-                    <a href={`/annonces/${b.id}`} style={{ textAlign: "center", padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, textDecoration: "none", color: "#111", fontSize: 12, fontWeight: 600, flex: isMobile ? 1 : undefined }}>
-                      Annonce
-                    </a>
-                    <a href={`/proprietaire/stats?id=${b.id}`} style={{ textAlign: "center", padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, textDecoration: "none", color: "#6b7280", fontSize: 12, fontWeight: 600, flex: isMobile ? 1 : undefined }}>
-                      Statistiques
+                    <a href={`/annonces/${b.id}`} style={{ textAlign: "center", padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, textDecoration: "none", color: "#6b7280", fontSize: 12, fontWeight: 600, flex: isMobile ? 1 : undefined }}>
+                      Voir l&apos;annonce
                     </a>
                   </div>
                 </div>
@@ -421,8 +424,8 @@ export default function Proprietaire() {
           </div>
         )}
 
-        {/* STATS — vue agrégée + pipeline + détail par bien */}
-        {onglet === "Stats" && (
+        {/* PERFORMANCE — vue agrégée + pipeline + détail par bien */}
+        {onglet === "Performance" && (
           <div>
             {biens.length === 0 ? (
               <div style={{ background: "white", borderRadius: 20, padding: 48, textAlign: "center", color: "#9ca3af" }}>
@@ -476,15 +479,18 @@ export default function Proprietaire() {
                   ))}
                 </div>
 
-                {/* Detail par bien */}
+                {/* Detail par bien — cliquable, mène aux stats détaillées */}
                 <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24 }}>
-                  <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>Performance par bien</h2>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 8 }}>
+                    <h2 style={{ fontSize: 16, fontWeight: 800 }}>Performance par bien</h2>
+                    <p style={{ fontSize: 12, color: "#6b7280" }}>Cliquez sur un bien pour voir ses statistiques détaillées</p>
+                  </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
                     {/* Header */}
                     {!isMobile && (
-                      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr", gap: 12, padding: "10px 16px", background: "#f9fafb", borderRadius: "10px 10px 0 0" }}>
-                        {["Bien", "Clics uniques", "Messages", "Visites", "Taux conv."].map(h => (
-                          <span key={h} style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>{h}</span>
+                      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 40px", gap: 12, padding: "10px 16px", background: "#f9fafb", borderRadius: "10px 10px 0 0" }}>
+                        {["Bien", "Clics uniques", "Messages", "Visites", "Taux conv.", ""].map((h, i) => (
+                          <span key={i} style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>{h}</span>
                         ))}
                       </div>
                     )}
@@ -496,8 +502,12 @@ export default function Proprietaire() {
 
                       if (isMobile) {
                         return (
-                          <div key={b.id} style={{ padding: "14px 0", borderBottom: i < biens.length - 1 ? "1px solid #f3f4f6" : "none" }}>
-                            <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>{b.titre}</p>
+                          <a key={b.id} href={`/proprietaire/stats?id=${b.id}`}
+                            style={{ display: "block", padding: "14px 0", borderBottom: i < biens.length - 1 ? "1px solid #f3f4f6" : "none", textDecoration: "none", color: "#111" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                              <p style={{ fontWeight: 700, fontSize: 14 }}>{b.titre}</p>
+                              <span style={{ fontSize: 18, color: "#9ca3af" }}>&rsaquo;</span>
+                            </div>
                             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                               {[
                                 { label: "Clics", val: vues, color: "#1d4ed8" },
@@ -511,15 +521,18 @@ export default function Proprietaire() {
                                 </div>
                               ))}
                             </div>
-                          </div>
+                          </a>
                         )
                       }
 
                       return (
-                        <div key={b.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr", gap: 12, padding: "14px 16px", borderBottom: "1px solid #f3f4f6", alignItems: "center" }}>
+                        <a key={b.id} href={`/proprietaire/stats?id=${b.id}`}
+                          style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 40px", gap: 12, padding: "14px 16px", borderBottom: "1px solid #f3f4f6", alignItems: "center", textDecoration: "none", color: "#111", cursor: "pointer", transition: "background 0.15s" }}
+                          onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
+                          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                           <div>
                             <p style={{ fontWeight: 700, fontSize: 14 }}>{b.titre}</p>
-                            <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>{b.ville} · {b.prix} euros/mois</p>
+                            <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>{b.ville} &middot; {b.prix} €/mois</p>
                           </div>
                           <span style={{ fontSize: 16, fontWeight: 800, color: "#1d4ed8" }}>{vues}</span>
                           <span style={{ fontSize: 16, fontWeight: 800, color: "#16a34a" }}>{msgs}</span>
@@ -530,7 +543,8 @@ export default function Proprietaire() {
                               <div style={{ height: "100%", borderRadius: 4, width: `${Math.min(100, tauxConv * 5)}%`, background: tauxConv >= 5 ? "#16a34a" : tauxConv >= 2 ? "#ea580c" : "#d1d5db" }} />
                             </div>
                           </div>
-                        </div>
+                          <span style={{ fontSize: 22, color: "#9ca3af", textAlign: "right" }}>&rsaquo;</span>
+                        </a>
                       )
                     })}
                   </div>
@@ -538,7 +552,7 @@ export default function Proprietaire() {
 
                 {/* Conseils */}
                 <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24, marginTop: 20 }}>
-                  <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Conseils pour ameliorer vos performances</h2>
+                  <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Conseils pour améliorer vos performances</h2>
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {biens.filter((b: any) => !b.photos || (Array.isArray(b.photos) && b.photos.length < 3)).length > 0 && (
                       <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#fff7ed", borderRadius: 12, border: "1px solid #fed7aa" }}>
@@ -577,6 +591,102 @@ export default function Proprietaire() {
                       </div>
                     )}
                   </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* DOCUMENTS — baux et EDL centralisés par bien */}
+        {onglet === "Documents" && (
+          <div>
+            {biens.length === 0 ? (
+              <div style={{ background: "white", borderRadius: 20, padding: 48, textAlign: "center", color: "#9ca3af" }}>
+                <p style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Aucun bien publié</p>
+                <p style={{ fontSize: 13 }}>Ajoutez un bien pour pouvoir générer ses documents.</p>
+              </div>
+            ) : (
+              <>
+                <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24, marginBottom: 16 }}>
+                  <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 6, letterSpacing: "-0.3px" }}>Documents de location</h2>
+                  <p style={{ fontSize: 13, color: "#6b7280" }}>
+                    Générez baux et états des lieux directement depuis vos biens. Tous les documents sont conformes à la loi ALUR.
+                  </p>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {biens.map((b: any) => {
+                    const hasLocataire = !!b.locataire_email
+                    return (
+                      <div key={b.id} style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
+                          <div>
+                            <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 2 }}>{b.titre}</h3>
+                            <p style={{ fontSize: 13, color: "#6b7280" }}>
+                              {b.ville}{b.adresse ? ` · ${b.adresse}` : ""}
+                              {hasLocataire && <span style={{ marginLeft: 8, color: "#16a34a", fontWeight: 600 }}>· Locataire : {b.locataire_email}</span>}
+                            </p>
+                          </div>
+                          <span style={{ background: statutColor[b.statut || "disponible"]?.bg || "#f3f4f6", color: statutColor[b.statut || "disponible"]?.color || "#6b7280", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+                            {b.statut || "disponible"}
+                          </span>
+                        </div>
+
+                        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 12 }}>
+                          {/* Bail */}
+                          <a href={`/proprietaire/bail/${b.id}`}
+                            style={{ background: "#f9fafb", borderRadius: 14, padding: "16px 18px", textDecoration: "none", color: "#111", border: "1px solid #f3f4f6", transition: "all 0.15s", display: "block" }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#111"; (e.currentTarget as HTMLAnchorElement).style.color = "white" }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#f9fafb"; (e.currentTarget as HTMLAnchorElement).style.color = "#111" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                              <p style={{ fontSize: 14, fontWeight: 800 }}>Bail de location</p>
+                            </div>
+                            <p style={{ fontSize: 12, opacity: 0.75, lineHeight: 1.4 }}>Générer ou mettre à jour le contrat de bail ALUR</p>
+                            <p style={{ fontSize: 11, fontWeight: 700, marginTop: 10, display: "flex", alignItems: "center", gap: 4 }}>
+                              {hasLocataire ? "Gérer le bail" : "Créer un bail"} <span style={{ fontSize: 14 }}>&rarr;</span>
+                            </p>
+                          </a>
+
+                          {/* EDL entrée */}
+                          <a href={`/proprietaire/edl/${b.id}?type=entree`}
+                            style={{ background: "#f9fafb", borderRadius: 14, padding: "16px 18px", textDecoration: "none", color: "#111", border: "1px solid #f3f4f6", transition: "all 0.15s", display: "block" }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#111"; (e.currentTarget as HTMLAnchorElement).style.color = "white" }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#f9fafb"; (e.currentTarget as HTMLAnchorElement).style.color = "#111" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                              <p style={{ fontSize: 14, fontWeight: 800 }}>État des lieux d&apos;entrée</p>
+                            </div>
+                            <p style={{ fontSize: 12, opacity: 0.75, lineHeight: 1.4 }}>Documenter l&apos;état du bien avant la location</p>
+                            <p style={{ fontSize: 11, fontWeight: 700, marginTop: 10, display: "flex", alignItems: "center", gap: 4 }}>
+                              Créer l&apos;EDL d&apos;entrée <span style={{ fontSize: 14 }}>&rarr;</span>
+                            </p>
+                          </a>
+
+                          {/* EDL sortie */}
+                          <a href={`/proprietaire/edl/${b.id}?type=sortie`}
+                            style={{ background: "#f9fafb", borderRadius: 14, padding: "16px 18px", textDecoration: "none", color: "#111", border: "1px solid #f3f4f6", transition: "all 0.15s", display: "block" }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#111"; (e.currentTarget as HTMLAnchorElement).style.color = "white" }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#f9fafb"; (e.currentTarget as HTMLAnchorElement).style.color = "#111" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l-3 3 3 3"/><path d="M22 12H6"/><path d="M22 4v16"/></svg>
+                              <p style={{ fontSize: 14, fontWeight: 800 }}>État des lieux de sortie</p>
+                            </div>
+                            <p style={{ fontSize: 12, opacity: 0.75, lineHeight: 1.4 }}>Documenter l&apos;état du bien à la restitution</p>
+                            <p style={{ fontSize: 11, fontWeight: 700, marginTop: 10, display: "flex", alignItems: "center", gap: 4 }}>
+                              Créer l&apos;EDL de sortie <span style={{ fontSize: 14 }}>&rarr;</span>
+                            </p>
+                          </a>
+                        </div>
+
+                        {!hasLocataire && (
+                          <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 12, fontStyle: "italic" }}>
+                            Associez un locataire à ce bien (onglet Mes biens → Modifier) pour pouvoir envoyer les documents.
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               </>
             )}
