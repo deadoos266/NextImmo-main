@@ -3,6 +3,15 @@
 // Score sur 1000 — Production Premium
 // =====================
 
+// Normalisation defensive des valeurs booleennes venant de la DB.
+// Supabase peut renvoyer boolean, null, ou (legacy) string "true"/"false".
+// undefined = info absente (ni oui, ni non) — score neutre.
+function toBool(v: unknown): boolean | undefined {
+  if (v === true || v === 1 || v === "true" || v === "t" || v === "1") return true
+  if (v === false || v === 0 || v === "false" || v === "f" || v === "0") return false
+  return undefined
+}
+
 export interface Profil {
   ville_souhaitee?: string
   mode_localisation?: "strict" | "souple"
@@ -56,7 +65,7 @@ export function estExclu(annonce: Annonce, profil: Profil): boolean {
   }
 
   // Animaux refusés
-  if (profil.animaux === true && annonce.animaux === false) return true
+  if (toBool(profil.animaux) === true && toBool(annonce.animaux) === false) return true
 
   return false
 }
@@ -141,29 +150,28 @@ export function calculerScore(annonce: Annonce, profil: Profil): number {
   }
 
   // ── MEUBLÉ (100 pts) ──────────────────────────
-  if (
-    profil.meuble !== undefined && profil.meuble !== null &&
-    annonce.meuble !== undefined && annonce.meuble !== null
-  ) {
-    score += profil.meuble === annonce.meuble ? 100 : 40
+  const profilMeuble = toBool(profil.meuble)
+  const annonceMeuble = toBool(annonce.meuble)
+  if (profilMeuble !== undefined && annonceMeuble !== undefined) {
+    score += profilMeuble === annonceMeuble ? 100 : 40
   } else {
     score += 70 // neutre
   }
 
   // ── ÉQUIPEMENTS (100 pts, plancher 40) ────────
   const equips = [
-    { want: profil.parking,   has: annonce.parking },
-    { want: profil.balcon,    has: annonce.balcon },
-    { want: profil.terrasse,  has: annonce.terrasse },
-    { want: profil.cave,      has: annonce.cave },
-    { want: profil.fibre,     has: annonce.fibre },
-    { want: profil.ascenseur, has: annonce.ascenseur },
+    { want: toBool(profil.parking),   has: toBool(annonce.parking) },
+    { want: toBool(profil.balcon),    has: toBool(annonce.balcon) },
+    { want: toBool(profil.terrasse),  has: toBool(annonce.terrasse) },
+    { want: toBool(profil.cave),      has: toBool(annonce.cave) },
+    { want: toBool(profil.fibre),     has: toBool(annonce.fibre) },
+    { want: toBool(profil.ascenseur), has: toBool(annonce.ascenseur) },
   ]
   const wanted = equips.filter(e => e.want === true)
   if (wanted.length === 0) {
     score += 70 // neutre — rien souhaité
   } else {
-    const hasInfo = wanted.some(e => e.has !== undefined && e.has !== null)
+    const hasInfo = wanted.some(e => e.has !== undefined)
     if (!hasInfo) {
       score += 50 // annonce ne renseigne rien → léger doute
     } else {
@@ -196,9 +204,9 @@ export function calculerScore(annonce: Annonce, profil: Profil): number {
           : profil.preferences_implicites
 
       let bonus = 0
-      if (prefs.prefere_meuble    && annonce.meuble)                         bonus += 0.03
-      if (prefs.prefere_exterieur && (annonce.balcon || annonce.terrasse))   bonus += 0.03
-      if (prefs.prefere_parking   && annonce.parking)                        bonus += 0.02
+      if (toBool(prefs.prefere_meuble)    && toBool(annonce.meuble))                               bonus += 0.03
+      if (toBool(prefs.prefere_exterieur) && (toBool(annonce.balcon) || toBool(annonce.terrasse))) bonus += 0.03
+      if (toBool(prefs.prefere_parking)   && toBool(annonce.parking))                              bonus += 0.02
 
       score = score * (1 + bonus)
     } catch {
@@ -251,17 +259,19 @@ export function expliquerScore(annonce: Annonce, profil: Profil): string[] {
       raisons.push(`✗ ${Math.abs(diff)} pièce${Math.abs(diff) > 1 ? "s" : ""} en moins par rapport à votre souhait`)
   }
 
-  if (profil.animaux === true) {
-    raisons.push(annonce.animaux
+  if (toBool(profil.animaux) === true) {
+    raisons.push(toBool(annonce.animaux)
       ? "✓ Animaux acceptés"
       : "✗ Animaux refusés par le propriétaire")
   }
 
-  if (profil.meuble !== undefined && annonce.meuble !== undefined) {
-    if (profil.meuble === annonce.meuble)
-      raisons.push(`✓ ${profil.meuble ? "Meublé" : "Non meublé"} — comme souhaité`)
+  const pMeuble = toBool(profil.meuble)
+  const aMeuble = toBool(annonce.meuble)
+  if (pMeuble !== undefined && aMeuble !== undefined) {
+    if (pMeuble === aMeuble)
+      raisons.push(`✓ ${pMeuble ? "Meublé" : "Non meublé"} — comme souhaité`)
     else
-      raisons.push(`✗ ${annonce.meuble ? "Meublé" : "Non meublé"} — vous préférez l'inverse`)
+      raisons.push(`✗ ${aMeuble ? "Meublé" : "Non meublé"} — vous préférez l'inverse`)
   }
 
   return raisons

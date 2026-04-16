@@ -1,9 +1,26 @@
 "use client"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { useResponsive } from "./hooks/useResponsive"
 
 export default function Home() {
   const { isMobile, isTablet } = useResponsive()
   const isSmall = isMobile || isTablet
+  const router = useRouter()
+  const [searchVille, setSearchVille] = useState("")
+  const [searchBudget, setSearchBudget] = useState("")
+  const [searchType, setSearchType] = useState("")
+
+  function handleSearch(e?: React.FormEvent) {
+    e?.preventDefault()
+    const params = new URLSearchParams()
+    if (searchVille.trim()) params.set("ville", searchVille.trim())
+    const budget = searchBudget.replace(/[^0-9]/g, "")
+    if (budget) params.set("budget_max", budget)
+    if (searchType && searchType !== "Tous") params.set("type", searchType)
+    const qs = params.toString()
+    router.push(qs ? `/annonces?${qs}` : "/annonces")
+  }
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
@@ -23,41 +40,66 @@ export default function Home() {
 
         {/* Barre de recherche */}
         {isMobile ? (
-          <div style={{ display: "flex", flexDirection: "column", background: "white", borderRadius: 20, boxShadow: "0 4px 24px rgba(0,0,0,0.10)", width: "100%", overflow: "hidden" }}>
+          <form onSubmit={handleSearch} style={{ display: "flex", flexDirection: "column", background: "white", borderRadius: 20, boxShadow: "0 4px 24px rgba(0,0,0,0.10)", width: "100%", overflow: "hidden" }}>
             <div style={{ padding: "14px 18px", borderBottom: "1px solid #f3f4f6" }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px" }}>Ville</span>
-              <input type="text" placeholder="Paris, Lyon, Bordeaux..." style={{ display: "block", width: "100%", outline: "none", fontSize: 15, background: "transparent", marginTop: 4, border: "none", color: "#111", boxSizing: "border-box" }} />
+              <input
+                type="text"
+                placeholder="Paris, Lyon, Bordeaux..."
+                value={searchVille}
+                onChange={e => setSearchVille(e.target.value)}
+                style={{ display: "block", width: "100%", outline: "none", fontSize: 15, background: "transparent", marginTop: 4, border: "none", color: "#111", boxSizing: "border-box" }} />
             </div>
             <div style={{ padding: "14px 18px", borderBottom: "1px solid #f3f4f6" }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px" }}>Budget max</span>
-              <input type="text" placeholder="1 200 €/mois" style={{ display: "block", width: "100%", outline: "none", fontSize: 15, background: "transparent", marginTop: 4, border: "none", color: "#111", boxSizing: "border-box" }} />
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="1200"
+                value={searchBudget}
+                onChange={e => setSearchBudget(e.target.value)}
+                style={{ display: "block", width: "100%", outline: "none", fontSize: 15, background: "transparent", marginTop: 4, border: "none", color: "#111", boxSizing: "border-box" }} />
             </div>
-            <a href="/annonces" style={{ background: "#111", color: "white", padding: "16px 24px", fontWeight: 700, fontSize: 15, display: "block", textDecoration: "none", textAlign: "center" }}>
+            <button type="submit" style={{ background: "#111", color: "white", padding: "16px 24px", fontWeight: 700, fontSize: 15, display: "block", border: "none", textAlign: "center", cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
               Rechercher
-            </a>
-          </div>
+            </button>
+          </form>
         ) : (
-          <div style={{ display: "flex", alignItems: "stretch", background: "white", borderRadius: 999, boxShadow: "0 4px 32px rgba(0,0,0,0.10)", width: "100%", maxWidth: 720, overflow: "hidden" }}>
+          <form onSubmit={handleSearch} style={{ display: "flex", alignItems: "stretch", background: "white", borderRadius: 999, boxShadow: "0 4px 32px rgba(0,0,0,0.10)", width: "100%", maxWidth: 720, overflow: "hidden" }}>
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", flex: 1, textAlign: "left", padding: "16px 24px" }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px" }}>Ville</span>
-              <input type="text" placeholder="Paris, Lyon, Bordeaux..." style={{ outline: "none", fontSize: 15, background: "transparent", marginTop: 4, border: "none", color: "#111" }} />
+              <input
+                type="text"
+                placeholder="Paris, Lyon, Bordeaux..."
+                value={searchVille}
+                onChange={e => setSearchVille(e.target.value)}
+                style={{ outline: "none", fontSize: 15, background: "transparent", marginTop: 4, border: "none", color: "#111" }} />
             </div>
             <div style={{ width: 1, background: "#e5e7eb", margin: "12px 0" }} />
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", flex: 1, textAlign: "left", padding: "16px 24px" }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px" }}>Budget max</span>
-              <input type="text" placeholder="1 200 €/mois" style={{ outline: "none", fontSize: 15, background: "transparent", marginTop: 4, border: "none", color: "#111" }} />
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="1200 &euro;/mois"
+                value={searchBudget}
+                onChange={e => setSearchBudget(e.target.value)}
+                style={{ outline: "none", fontSize: 15, background: "transparent", marginTop: 4, border: "none", color: "#111" }} />
             </div>
             <div style={{ width: 1, background: "#e5e7eb", margin: "12px 0" }} />
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", flex: 1, textAlign: "left", padding: "16px 24px" }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px" }}>Type</span>
-              <select style={{ outline: "none", fontSize: 15, background: "transparent", marginTop: 4, border: "none", color: "#111" }}>
-                <option>Tous</option><option>Studio</option><option>T2</option><option>T3</option><option>T4+</option>
+              <select
+                value={searchType}
+                onChange={e => setSearchType(e.target.value)}
+                style={{ outline: "none", fontSize: 15, background: "transparent", marginTop: 4, border: "none", color: "#111" }}>
+                <option value="">Tous</option><option value="Studio">Studio</option><option value="T2">T2</option><option value="T3">T3</option><option value="T4+">T4+</option>
               </select>
             </div>
-            <a href="/annonces" style={{ background: "#111", color: "white", padding: "0 32px", fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", textDecoration: "none", flexShrink: 0 }}>
+            <button type="submit" style={{ background: "#111", color: "white", padding: "0 32px", fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", border: "none", cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
               Rechercher
-            </a>
-          </div>
+            </button>
+          </form>
         )}
       </section>
 

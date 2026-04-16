@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { supabase } from "../../../lib/supabase"
+import { getCityCoords } from "../../../lib/cityCoords"
 import ScoreBlock from "./ScoreBlock"
 import ContactButton from "./ContactButton"
 import PhotoCarousel from "./PhotoCarousel"
@@ -7,6 +8,7 @@ import FavoriButton from "./FavoriButton"
 import BookingVisite from "./BookingVisite"
 import OwnerActions from "./OwnerActions"
 import ViewTracker from "./ViewTracker"
+import MapBienWrapper from "./MapBienWrapper"
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || 'https://nestmatch.fr'
 
@@ -72,6 +74,7 @@ export default async function Annonce({ params }: any) {
 
   const dpeColor: any = { A: "#22c55e", B: "#84cc16", C: "#eab308", D: "#f97316", E: "#ef4444", F: "#dc2626", G: "#991b1b" }
   const photos: string[] = Array.isArray(annonce.photos) ? annonce.photos : []
+  const coords = getCityCoords(annonce.ville || "")
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -174,9 +177,19 @@ export default async function Annonce({ params }: any) {
             </div>
 
             {annonce.description && (
-              <div style={{ background: "white", borderRadius: 20, padding: 24 }}>
+              <div style={{ background: "white", borderRadius: 20, padding: 24, marginBottom: 20 }}>
                 <h2 style={{ fontSize: 17, fontWeight: 800, marginBottom: 12 }}>Description</h2>
                 <p style={{ color: "#4b5563", lineHeight: 1.7 }}>{annonce.description}</p>
+              </div>
+            )}
+
+            {coords && (
+              <div style={{ background: "white", borderRadius: 20, padding: 24 }}>
+                <h2 style={{ fontSize: 17, fontWeight: 800, marginBottom: 6 }}>Localisation</h2>
+                <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 14 }}>
+                  {annonce.ville}{annonce.adresse ? ` — ${annonce.adresse}` : ""}. L&apos;adresse exacte est partagee apres contact avec le proprietaire.
+                </p>
+                <MapBienWrapper lat={coords[0]} lng={coords[1]} ville={annonce.ville || ""} />
               </div>
             )}
           </div>

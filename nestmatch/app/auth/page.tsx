@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 
 type Mode = "connexion" | "inscription"
 type Role = "locataire" | "proprietaire"
@@ -14,7 +14,9 @@ interface FormState {
 
 export default function Auth() {
   const router = useRouter()
-  const [mode, setMode] = useState<Mode>("connexion")
+  const searchParams = useSearchParams()
+  const initialMode: Mode = searchParams?.get("mode") === "inscription" ? "inscription" : "connexion"
+  const [mode, setMode] = useState<Mode>(initialMode)
   const [role, setRole] = useState<Role>("locataire")
   const [form, setForm] = useState<FormState>({ name: "", email: "", password: "" })
   const [error, setError] = useState("")

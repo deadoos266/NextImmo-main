@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useState, useCallback } from "react"
 import dynamic from "next/dynamic"
+import { useSearchParams, useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
 import { calculerScore, estExclu, labelScore } from "../../lib/matching"
 import { useSession } from "next-auth/react"
@@ -105,6 +106,8 @@ const Toggle = ({ val, set }: { val: boolean; set: (v: boolean) => void }) => (
 )
 
 export default function Annonces() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const [annonces, setAnnonces] = useState<any[]>([])
   const [profil, setProfil] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -123,6 +126,20 @@ export default function Annonces() {
   const isProprietaire = role === "proprietaire"
   const { isMobile, isTablet } = useResponsive()
   const isSmall = isMobile || isTablet
+
+  // Filtres pre-remplis depuis l'URL (barre de recherche home) ou depuis le profil locataire
+  const urlVille = searchParams?.get("ville") || ""
+  const urlBudget = parseInt(searchParams?.get("budget_max") || "0") || 0
+  const urlType = searchParams?.get("type") || ""
+
+  // Si l'URL ne specifie rien, on retombe sur les valeurs du profil locataire
+  const activeVille = urlVille || (!isProprietaire && profil?.ville_souhaitee) || ""
+  const activeBudget = urlBudget || (!isProprietaire && profil?.budget_max) || 0
+  const activeType = urlType
+
+  function clearUrlFilters() {
+    router.replace("/annonces")
+  }
 
   useEffect(() => {
     setFavoris(getFavoris())
@@ -169,6 +186,17 @@ export default function Annonces() {
       if (mapBounds && a._lat && a._lng) {
         if (!mapBounds.contains([a._lat, a._lng])) return false
       }
+      // Filtres pre-remplis (URL ou profil)
+      if (activeVille && a.ville) {
+        const vA = a.ville.toLowerCase()
+        const vF = activeVille.toLowerCase()
+        if (!vA.includes(vF) && !vF.includes(vA)) return false
+      }
+      if (activeBudget && a.prix && a.prix > activeBudget * 1.20) return false
+      if (activeType && a.type_bien) {
+        // Match laxiste : "T2" doit matcher "T2", "Studio" -> "Studio", etc.
+        if (!a.type_bien.toLowerCase().includes(activeType.toLowerCase())) return false
+      }
       if (!isProprietaire && scoreMin > 0 && a.scoreMatching !== null && Math.round(a.scoreMatching / 10) < scoreMin) return false
       if (dispoImmediate && a.dispo !== "Disponible maintenant") return false
       if (filtreParking && !a.parking) return false
@@ -197,15 +225,25 @@ export default function Annonces() {
         ) : status === "authenticated" && profil ? (
           <div style={{ background: "white", borderRadius: 12, padding: isMobile ? "8px 14px" : "10px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid #e5e7eb", gap: 8, flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ fontSize: isMobile ? 11 : 13, fontWeight: 700, color: "#16a34a" }}>Personnalise</span>
-              {profil.ville_souhaitee && <span style={{ background: "#f3f4f6", padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 600 }}>{profil.ville_souhaitee}</span>}
-              {!isMobile && profil.budget_max && <span style={{ background: "#f3f4f6", padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 600 }}>Max {profil.budget_max} €</span>}
+              <span style={{ fontSize: isMobile ? 11 : 13, fontWeight: 700, color: "#16a34a" }}>
+                {urlVille || urlBudget || urlType ? "Recherche" : "Personnalise"}
+              </span>
+              {activeVille && <span style={{ background: "#f3f4f6", padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 600 }}>{activeVille}</span>}
+              {!isMobile && activeBudget > 0 && <span style={{ background: "#f3f4f6", padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 600 }}>Max {activeBudget} &euro;</span>}
+              {!isMobile && activeType && <span style={{ background: "#f3f4f6", padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 600 }}>{activeType}</span>}
+              {(urlVille || urlBudget || urlType) && (
+                <button onClick={clearUrlFilters} style={{ background: "none", border: "none", fontSize: 11, fontWeight: 600, color: "#6b7280", cursor: "pointer", textDecoration: "underline", padding: 0, fontFamily: "inherit" }}>Effacer</button>
+              )}
             </div>
             <a href="/profil" style={{ fontSize: 11, fontWeight: 700, color: "#111", textDecoration: "none", padding: "4px 10px", border: "1.5px solid #e5e7eb", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0 }}>Profil</a>
           </div>
         ) : status === "unauthenticated" ? (
-          <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: isMobile ? "8px 14px" : "10px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-            <span style={{ fontSize: isMobile ? 11 : 13, fontWeight: 600, color: "#92400e" }}>{isMobile ? "Connectez-vous pour le matching" : "Connectez-vous pour le score de compatibilite"}</span>
+          <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: isMobile ? "8px 14px" : "10px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: isMobile ? 11 : 13, fontWeight: 600, color: "#92400e" }}>{isMobile ? "Connectez-vous pour le matching" : "Connectez-vous pour le score de compatibilite"}</span>
+              {activeVille && <span style={{ background: "white", padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 600, color: "#92400e", border: "1px solid #fde68a" }}>{activeVille}</span>}
+              {!isMobile && activeBudget > 0 && <span style={{ background: "white", padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 600, color: "#92400e", border: "1px solid #fde68a" }}>Max {activeBudget} &euro;</span>}
+            </div>
             <a href="/auth" style={{ background: "#111", color: "white", padding: "5px 14px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 12, flexShrink: 0 }}>Connexion</a>
           </div>
         ) : null}

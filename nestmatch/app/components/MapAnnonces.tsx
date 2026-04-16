@@ -1,6 +1,6 @@
 "use client"
-import { useEffect, useState } from "react"
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet"
+import { useEffect, useState, useRef } from "react"
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
 
@@ -9,7 +9,7 @@ type MapType = "plan" | "satellite" | "standard"
 const TILES: Record<MapType, { url: string; attribution: string; label: string }> = {
   plan: {
     url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-    attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+    attribution: '&copy; <a href="https://carto.com/">CARTO</a> &middot; &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     label: "Plan",
   },
   satellite: {
@@ -18,13 +18,13 @@ const TILES: Record<MapType, { url: string; attribution: string; label: string }
     label: "Satellite",
   },
   standard: {
-    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    url: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
+    attribution: '&copy; <a href="https://www.openstreetmap.fr/">OpenStreetMap France</a>',
     label: "Detaille",
   },
 }
 
-// Fix des icônes par défaut de Leaflet (problème courant avec webpack)
+// Fix des icones par defaut de Leaflet (probleme courant avec webpack)
 function fixLeafletIcons() {
   delete (L.Icon.Default.prototype as any)._getIconUrl
   L.Icon.Default.mergeOptions({
@@ -34,43 +34,61 @@ function fixLeafletIcons() {
   })
 }
 
-function scoreToColor(score: number | null): { bg: string; border: string; text: string } {
-  if (score === null) return { bg: "white", border: "#111", text: "#111" }
+// Locale FR pour Leaflet (prefixe d'attribution + zoom titles)
+function useFrenchLeaflet() {
+  const map = useMap()
+  useEffect(() => {
+    // Remplace "Leaflet" par un lien discret en francais
+    map.attributionControl.setPrefix('<a href="https://leafletjs.com/">Leaflet</a>')
+    // Titres des controles de zoom
+    const zoom = (map as any).zoomControl
+    if (zoom && zoom._zoomInButton && zoom._zoomOutButton) {
+      zoom._zoomInButton.title = "Zoomer"
+      zoom._zoomOutButton.title = "Dezoomer"
+      zoom._zoomInButton.setAttribute("aria-label", "Zoomer")
+      zoom._zoomOutButton.setAttribute("aria-label", "Dezoomer")
+    }
+  }, [map])
+  return null
+}
+
+// Couleur du marqueur = degrade selon score (vert -> orange -> rouge)
+function scoreToMarkerColor(score: number | null): { bg: string; border: string; text: string } {
+  if (score === null) return { bg: "#111", border: "#111", text: "white" }
   const pct = Math.round(score / 10)
-  if (pct >= 70) return { bg: "#dcfce7", border: "#16a34a", text: "#15803d" }
-  if (pct >= 40) return { bg: "#fff7ed", border: "#f97316", text: "#c2410c" }
-  return { bg: "#fee2e2", border: "#ef4444", text: "#b91c1c" }
+  if (pct >= 80) return { bg: "#16a34a", border: "#15803d", text: "white" }
+  if (pct >= 65) return { bg: "#65a30d", border: "#4d7c0f", text: "white" }
+  if (pct >= 50) return { bg: "#ca8a04", border: "#a16207", text: "white" }
+  if (pct >= 30) return { bg: "#ea580c", border: "#c2410c", text: "white" }
+  return { bg: "#dc2626", border: "#b91c1c", text: "white" }
 }
 
 function priceMarker(prix: number, selected: boolean, score: number | null) {
   const c = selected
     ? { bg: "#111", border: "#111", text: "white" }
-    : scoreToColor(score)
-  const pct = score !== null ? Math.round(score / 10) : null
+    : scoreToMarkerColor(score)
+  const price = prix ? prix.toLocaleString("fr-FR") + " \u20ac" : "\u2014"
   return L.divIcon({
     html: `<div style="
       background:${c.bg};
       color:${c.text};
       border:2px solid ${c.border};
-      padding:4px 8px;
-      border-radius:6px;
+      padding:4px 10px;
+      border-radius:999px;
       font-weight:700;
       font-size:12px;
       font-family:'DM Sans',sans-serif;
       white-space:nowrap;
-      box-shadow:0 2px 8px rgba(0,0,0,0.15);
+      box-shadow:0 2px 8px rgba(0,0,0,0.25);
       cursor:pointer;
-      display:flex;
-      align-items:center;
-      gap:4px;
-    ">${pct !== null ? `<span style="font-size:10px;opacity:0.8">${pct}%</span>` : ""}${prix ? prix.toLocaleString("fr-FR") + " €" : "—"}</div>`,
+    ">${price}</div>`,
     className: "",
-    iconSize: [85, 28],
-    iconAnchor: [42, 28],
+    iconSize: [72, 26],
+    iconAnchor: [36, 26],
   })
 }
 
-// Écarte les marqueurs qui se superposent en les disposant en cercle
+// Ecarte les marqueurs qui se superposent en les disposant en cercle
 function spreadOverlappingMarkers(annonces: any[]): any[] {
   const groups = new Map<string, any[]>()
   annonces.forEach(a => {
@@ -89,10 +107,11 @@ function spreadOverlappingMarkers(annonces: any[]): any[] {
   })
 }
 
-function BoundsWatcher({ onBoundsChange }: { onBoundsChange: (bounds: L.LatLngBounds) => void }) {
+// Surveille les bounds : notifie le parent que la carte a bouge (bouton "Rechercher ici")
+function BoundsWatcher({ onMoved }: { onMoved: (bounds: L.LatLngBounds) => void }) {
   const map = useMapEvents({
-    moveend: () => onBoundsChange(map.getBounds()),
-    zoomend: () => onBoundsChange(map.getBounds()),
+    moveend: () => onMoved(map.getBounds()),
+    zoomend: () => onMoved(map.getBounds()),
   })
   return null
 }
@@ -110,6 +129,9 @@ export default function MapAnnonces({
 }) {
   useEffect(() => { fixLeafletIcons() }, [])
   const [mapType, setMapType] = useState<MapType>("plan")
+  const [pendingBounds, setPendingBounds] = useState<L.LatLngBounds | null>(null)
+  const [searchHere, setSearchHere] = useState(false)
+  const initialBoundsSet = useRef(false)
 
   const withCoords = spreadOverlappingMarkers(annonces.filter(a => a._lat && a._lng))
   if (withCoords.length === 0) return (
@@ -121,6 +143,25 @@ export default function MapAnnonces({
   const center: [number, number] = [withCoords[0]._lat, withCoords[0]._lng]
   const tile = TILES[mapType]
 
+  // Quand la carte bouge : on garde les bounds en attente et on affiche le bouton
+  const handleMoved = (bounds: L.LatLngBounds) => {
+    if (!initialBoundsSet.current) {
+      // Premier moveend = initialisation : appliquer directement
+      initialBoundsSet.current = true
+      onBoundsChange(bounds)
+      return
+    }
+    setPendingBounds(bounds)
+    setSearchHere(true)
+  }
+
+  const applySearch = () => {
+    if (pendingBounds) {
+      onBoundsChange(pendingBounds)
+      setSearchHere(false)
+    }
+  }
+
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
       <MapContainer
@@ -130,7 +171,8 @@ export default function MapAnnonces({
         scrollWheelZoom={true}
       >
         <TileLayer key={mapType} attribution={tile.attribution} url={tile.url} />
-        <BoundsWatcher onBoundsChange={onBoundsChange} />
+        <BoundsWatcher onMoved={handleMoved} />
+        <FrenchLeafletLocale />
         {withCoords.map(a => {
           const firstPhoto = Array.isArray(a.photos) && a.photos.length > 0 ? a.photos[0] : null
           return (
@@ -148,9 +190,9 @@ export default function MapAnnonces({
                     </div>
                   )}
                   <p style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{a.titre}</p>
-                  <p style={{ color: "#6b7280", fontSize: 12 }}>{a.surface} m² · {a.pieces} p. · {a.ville}</p>
-                  <p style={{ fontWeight: 800, fontSize: 14, margin: "6px 0" }}>{a.prix} €/mois</p>
-                  <a href={`/annonces/${a.id}`} style={{ fontSize: 12, fontWeight: 600, color: "#111" }}>Voir l'annonce →</a>
+                  <p style={{ color: "#6b7280", fontSize: 12 }}>{a.surface} m&sup2; &middot; {a.pieces} p. &middot; {a.ville}</p>
+                  <p style={{ fontWeight: 800, fontSize: 14, margin: "6px 0" }}>{a.prix} &euro;/mois</p>
+                  <a href={`/annonces/${a.id}`} style={{ fontSize: 12, fontWeight: 600, color: "#111" }}>Voir l'annonce &rarr;</a>
                 </div>
               </Popup>
             </Marker>
@@ -158,21 +200,54 @@ export default function MapAnnonces({
         })}
       </MapContainer>
 
-      {/* Légende compatibilité */}
+      {/* Bouton "Rechercher dans cette zone" — apparait apres deplacement */}
+      {searchHere && (
+        <button
+          onClick={applySearch}
+          style={{
+            position: "absolute",
+            top: 16,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 1000,
+            background: "#111",
+            color: "white",
+            border: "none",
+            borderRadius: 999,
+            padding: "10px 22px",
+            fontWeight: 700,
+            fontSize: 13,
+            fontFamily: "'DM Sans',sans-serif",
+            cursor: "pointer",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <span style={{ fontSize: 14 }}>&#x1F50D;</span>
+          Rechercher dans cette zone
+        </button>
+      )}
+
+      {/* Legende compatibilite */}
       <div style={{ position: "absolute", bottom: 24, left: 12, zIndex: 1000, background: "white", borderRadius: 10, boxShadow: "0 2px 12px rgba(0,0,0,0.15)", padding: "8px 12px", border: "1px solid #e5e7eb", display: "flex", flexDirection: "column", gap: 4 }}>
+        <p style={{ fontSize: 10, fontWeight: 700, color: "#111", marginBottom: 2, textTransform: "uppercase", letterSpacing: "0.5px" }}>Compatibilit&eacute;</p>
         {[
-          { color: "#16a34a", bg: "#dcfce7", label: "≥ 70% compatible" },
-          { color: "#f97316", bg: "#fff7ed", label: "40–69%" },
-          { color: "#ef4444", bg: "#fee2e2", label: "< 40%" },
+          { color: "#16a34a", label: "80% +" },
+          { color: "#65a30d", label: "65\u201379%" },
+          { color: "#ca8a04", label: "50\u201364%" },
+          { color: "#ea580c", label: "30\u201349%" },
+          { color: "#dc2626", label: "< 30%" },
         ].map(l => (
           <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{ width: 12, height: 12, borderRadius: 3, background: l.bg, border: `2px solid ${l.color}` }} />
+            <div style={{ width: 12, height: 12, borderRadius: 999, background: l.color, border: `2px solid ${l.color}` }} />
             <span style={{ fontSize: 11, color: "#6b7280", fontFamily: "'DM Sans',sans-serif" }}>{l.label}</span>
           </div>
         ))}
       </div>
 
-      {/* Selecteur de type de carte — bas droite style SeLoger */}
+      {/* Selecteur de type de carte */}
       <div style={{
         position: "absolute", bottom: 24, right: 12, zIndex: 1000,
         background: "white", borderRadius: 10, boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
@@ -194,4 +269,9 @@ export default function MapAnnonces({
       </div>
     </div>
   )
+}
+
+// Composant interne : doit etre enfant de MapContainer pour utiliser useMap
+function FrenchLeafletLocale() {
+  return useFrenchLeaflet()
 }

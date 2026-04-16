@@ -43,15 +43,14 @@ export default function Profil() {
   const [form, setForm] = useState({
     ville_souhaitee: "", mode_localisation: "souple", type_quartier: "", budget_min: "", budget_max: "",
     surface_min: "", surface_max: "", pieces_min: "1", chambres_min: "0",
-    dpe_min: "D", type_bail: "longue durée", etage_min: "", etage_max: "",
-    temps_trajet_max: "", mode_transport: "transports en commun",
+    dpe_min: "D", type_bail: "longue durée",
     situation_pro: "CDI", revenus_mensuels: "", type_garant: "",
     nb_occupants: "1", profil_locataire: "jeune actif",
   })
   const [toggles, setToggles] = useState({
     animaux: false, meuble: false, parking: false, cave: false,
     fibre: false, balcon: false, terrasse: false, jardin: false,
-    ascenseur: false, rez_de_chaussee_ok: true, garant: false,
+    ascenseur: false, rez_de_chaussee_ok: true,
     fumeur: false, proximite_metro: false, proximite_ecole: false,
     proximite_commerces: false, proximite_parcs: false,
   })
@@ -74,10 +73,6 @@ export default function Profil() {
               chambres_min: data.chambres_min?.toString() || "0",
               dpe_min: data.dpe_min || "D",
               type_bail: data.type_bail || "longue durée",
-              etage_min: data.etage_min?.toString() || "",
-              etage_max: data.etage_max?.toString() || "",
-              temps_trajet_max: data.temps_trajet_max?.toString() || "",
-              mode_transport: data.mode_transport || "transports en commun",
               situation_pro: data.situation_pro || "CDI",
               revenus_mensuels: data.revenus_mensuels?.toString() || "",
               type_garant: data.type_garant || "",
@@ -89,7 +84,7 @@ export default function Profil() {
               parking: !!data.parking, cave: !!data.cave,
               fibre: !!data.fibre, balcon: !!data.balcon,
               terrasse: !!data.terrasse, jardin: !!data.jardin,
-              ascenseur: !!data.ascenseur, garant: !!data.garant,
+              ascenseur: !!data.ascenseur,
               fumeur: !!data.fumeur,
               rez_de_chaussee_ok: data.rez_de_chaussee_ok !== false,
               proximite_metro: !!data.proximite_metro,
@@ -110,9 +105,8 @@ export default function Profil() {
     { label: "Budget maximum", ok: !!form.budget_max, poids: 20 },
     { label: "Revenus mensuels", ok: !!form.revenus_mensuels, poids: 20 },
     { label: "Surface minimum", ok: !!form.surface_min, poids: 15 },
-    { label: "Type de garant", ok: !!form.type_garant, poids: 10 },
-    { label: "Temps de trajet max", ok: !!form.temps_trajet_max, poids: 10 },
-    { label: "Type de quartier", ok: !!form.type_quartier, poids: 5 },
+    { label: "Type de garant", ok: !!form.type_garant, poids: 15 },
+    { label: "Type de quartier", ok: !!form.type_quartier, poids: 10 },
   ]
   const scoreCompletion = criteres.reduce((acc, c) => acc + (c.ok ? c.poids : 0), 0)
   const scoreColor = scoreCompletion >= 80 ? "#16a34a" : scoreCompletion >= 50 ? "#f59e0b" : "#ef4444"
@@ -136,10 +130,6 @@ export default function Profil() {
       chambres_min: toInt(form.chambres_min),
       dpe_min: form.dpe_min,
       type_bail: form.type_bail,
-      etage_min: toInt(form.etage_min),
-      etage_max: toInt(form.etage_max),
-      temps_trajet_max: toInt(form.temps_trajet_max),
-      mode_transport: form.mode_transport,
       situation_pro: form.situation_pro,
       revenus_mensuels: toInt(form.revenus_mensuels),
       type_garant: form.type_garant,
@@ -267,8 +257,6 @@ export default function Profil() {
             <F l="Type de bail">
               <select style={sel} value={form.type_bail} onChange={set("type_bail")}>{["longue durée","courte durée","bail mobilité","colocation"].map(v=><option key={v}>{v}</option>)}</select>
             </F>
-            <F l="Étage minimum"><input style={inp} type="number" value={form.etage_min} onChange={set("etage_min")} placeholder="0" /></F>
-            <F l="Étage maximum"><input style={inp} type="number" value={form.etage_max} onChange={set("etage_max")} placeholder="10" /></F>
           </div>
           <Toggle label="Rez-de-chaussée accepté" k="rez_de_chaussee_ok" toggles={toggles} setToggles={setToggles} />
         </Sec>
@@ -287,13 +275,7 @@ export default function Profil() {
           </div>
         </Sec>
 
-        <Sec t="Transports & proximité">
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
-            <F l="Temps de trajet max (min)"><input style={inp} type="number" value={form.temps_trajet_max} onChange={set("temps_trajet_max")} placeholder="30" /></F>
-            <F l="Mode de transport">
-              <select style={sel} value={form.mode_transport} onChange={set("mode_transport")}>{["transports en commun","voiture","vélo","à pied"].map(v=><option key={v}>{v}</option>)}</select>
-            </F>
-          </div>
+        <Sec t="Proximités souhaitées">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
             <Toggle label="Proche métro/bus" k="proximite_metro" toggles={toggles} setToggles={setToggles} />
             <Toggle label="Proche écoles" k="proximite_ecole" toggles={toggles} setToggles={setToggles} />
@@ -319,9 +301,11 @@ export default function Profil() {
             </F>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginTop: 8 }}>
-            <Toggle label="J'ai un garant" k="garant" toggles={toggles} setToggles={setToggles} />
             <Toggle label="Fumeur" k="fumeur" toggles={toggles} setToggles={setToggles} />
           </div>
+          <p style={{ fontSize: 12, color: "#6b7280", marginTop: 16, lineHeight: 1.6 }}>
+            Le champ <strong>Profil</strong> (notamment l'option &quot;couple&quot;) est utilisé uniquement pour améliorer la pertinence du matching et l&apos;évaluation de votre dossier. Il n&apos;est jamais partagé sans votre accord, conformément au RGPD.
+          </p>
         </Sec>
 
         {erreur && <div style={{ background: "#fee2e2", color: "#dc2626", padding: "12px 20px", borderRadius: 12, marginBottom: 16, fontSize: 14 }}>{erreur}</div>}

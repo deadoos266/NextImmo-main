@@ -55,6 +55,14 @@ export default function Navbar() {
   // Fermer le menu mobile au changement de route
   useEffect(() => { setMobileOpen(false) }, [pathname])
 
+  // Fermer tous les menus lors d'un changement de taille d'ecran
+  // (fix bug : apres resize mobile -> desktop, les dropdowns pouvaient rester bloques)
+  useEffect(() => {
+    setMobileOpen(false)
+    setEspaceOpen(false)
+    setMenuOpen(false)
+  }, [isSmall])
+
   const espaceLinks = proprietaireActive ? [
     { href: "/profil",               icon: "👤", label: "Mon profil",         desc: "Informations personnelles" },
     { href: "/proprietaire",         icon: "🏠", label: "Mes biens",          desc: "Gestion de mes annonces" },
@@ -202,7 +210,7 @@ export default function Navbar() {
           ) : (
             <>
               <Link href="/auth" style={{ padding: "8px 16px", textDecoration: "none", color: "#111", fontWeight: 500, fontSize: 14 }}>Connexion</Link>
-              <Link href="/auth" style={{ padding: "10px 22px", background: "#111", color: "white", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>S'inscrire</Link>
+              <Link href="/auth?mode=inscription" style={{ padding: "10px 22px", background: "#111", color: "white", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>S'inscrire</Link>
             </>
           )}
         </div>
@@ -308,7 +316,7 @@ export default function Navbar() {
                   <Link href="/auth" style={{ display: "block", padding: "12px", background: "#111", color: "white", borderRadius: 12, textDecoration: "none", fontWeight: 700, fontSize: 15, textAlign: "center" }}>
                     Se connecter
                   </Link>
-                  <Link href="/auth" style={{ display: "block", padding: "12px", background: "#f3f4f6", color: "#111", borderRadius: 12, textDecoration: "none", fontWeight: 600, fontSize: 15, textAlign: "center" }}>
+                  <Link href="/auth?mode=inscription" style={{ display: "block", padding: "12px", background: "#f3f4f6", color: "#111", borderRadius: 12, textDecoration: "none", fontWeight: 600, fontSize: 15, textAlign: "center" }}>
                     S'inscrire
                   </Link>
                 </div>
