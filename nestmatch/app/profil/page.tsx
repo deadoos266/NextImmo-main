@@ -3,6 +3,7 @@ import { useSession, signOut } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
+import { useResponsive } from "../hooks/useResponsive"
 
 // Composants HORS du composant principal pour éviter le bug de focus
 const Toggle = ({ label, k, toggles, setToggles }: any) => (
@@ -162,27 +163,28 @@ export default function Profil() {
   )
   if (!session) return null
 
+  const { isMobile } = useResponsive()
   const inp: any = { width: "100%", padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }
   const sel: any = { ...inp, background: "white" }
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
 
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "48px" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 16px" : "48px" }}>
 
-        <div style={{ background: "white", borderRadius: 24, padding: 32, marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+        <div style={{ background: "white", borderRadius: 24, padding: isMobile ? "20px 18px" : 32, marginBottom: 20, display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "space-between", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 16 : 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 14 : 24 }}>
             {session.user?.image
-              ? <img src={session.user.image} alt="p" style={{ width: 72, height: 72, borderRadius: "50%" }} />
-              : <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, color: "white", fontWeight: 800 }}>{session.user?.name?.[0]}</div>
+              ? <img src={session.user.image} alt="p" style={{ width: isMobile ? 52 : 72, height: isMobile ? 52 : 72, borderRadius: "50%" }} />
+              : <div style={{ width: isMobile ? 52 : 72, height: isMobile ? 52 : 72, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? 20 : 28, color: "white", fontWeight: 800 }}>{session.user?.name?.[0]}</div>
             }
             <div>
-              <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.5px" }}>{session.user?.name}</h1>
-              <p style={{ color: "#6b7280", marginTop: 2 }}>{session.user?.email}</p>
+              <h1 style={{ fontSize: isMobile ? 20 : 26, fontWeight: 800, letterSpacing: "-0.5px" }}>{session.user?.name}</h1>
+              <p style={{ color: "#6b7280", marginTop: 2, fontSize: isMobile ? 13 : 14 }}>{session.user?.email}</p>
               <span style={{ background: "#dcfce7", color: "#16a34a", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700, marginTop: 8, display: "inline-block" }}>✓ Compte vérifié</span>
             </div>
           </div>
-          <a href="/annonces" style={{ background: "#111", color: "white", padding: "12px 24px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>
+          <a href="/annonces" style={{ background: "#111", color: "white", padding: "12px 24px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14, textAlign: "center" }}>
             Voir mes annonces →
           </a>
         </div>
@@ -217,7 +219,7 @@ export default function Profil() {
         </div>
 
         <Sec t="Mes critères de recherche">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
             <F l="Ville souhaitée"><input style={inp} value={form.ville_souhaitee} onChange={set("ville_souhaitee")} placeholder="Paris, Lyon..." /></F>
             <F l="Mode de localisation">
               <select style={sel} value={form.mode_localisation} onChange={set("mode_localisation")}>
@@ -263,7 +265,7 @@ export default function Profil() {
         </Sec>
 
         <Sec t="Transports & proximité">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
             <F l="Temps de trajet max (min)"><input style={inp} type="number" value={form.temps_trajet_max} onChange={set("temps_trajet_max")} placeholder="30" /></F>
             <F l="Mode de transport">
               <select style={sel} value={form.mode_transport} onChange={set("mode_transport")}>{["transports en commun","voiture","vélo","à pied"].map(v=><option key={v}>{v}</option>)}</select>
@@ -278,7 +280,7 @@ export default function Profil() {
         </Sec>
 
         <Sec t="Mon profil locataire">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
             <F l="Situation professionnelle">
               <select style={sel} value={form.situation_pro} onChange={set("situation_pro")}>{["CDI","CDD","indépendant","étudiant","retraité","fonctionnaire","autre"].map(v=><option key={v}>{v}</option>)}</select>
             </F>

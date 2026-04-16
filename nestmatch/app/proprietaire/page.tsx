@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "../../lib/supabase"
 import AgendaVisites from "../components/AgendaVisites"
+import { useResponsive } from "../hooks/useResponsive"
 
 const ONGLETS = ["Vue d'ensemble", "Mes biens", "Candidatures", "Loyers", "Visites"] as const
 type Onglet = typeof ONGLETS[number]
@@ -27,6 +28,7 @@ function jours(d: string) {
 function VisitesProprio({ visites, biens, setVisites }: { visites: any[]; biens: any[]; setVisites: any }) {
   const [filtre, setFiltre] = useState<string>("toutes")
   const [vue, setVue] = useState<"liste" | "agenda">("liste")
+  const { isMobile } = useResponsive()
 
   async function changerStatut(id: string, statut: string) {
     await supabase.from("visites").update({ statut }).eq("id", id)
@@ -70,7 +72,7 @@ function VisitesProprio({ visites, biens, setVisites }: { visites: any[]; biens:
 
       {vue === "liste" && <>
       {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
         {[
           { label: "Total demandes", val: visites.length, bg: "white", color: "#111" },
           { label: "En attente",     val: nbAttente,      bg: nbAttente > 0 ? "#fff7ed" : "white", color: nbAttente > 0 ? "#c2410c" : "#111" },
@@ -253,6 +255,7 @@ export default function Proprietaire() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif", color: "#6b7280" }}>Chargement...</div>
   )
 
+  const { isMobile } = useResponsive()
   const biensDispos = biens.filter(b => !b.statut || b.statut === "disponible").length
   const biensLoues = biens.filter(b => b.statut === "loué").length
   const loyersAttendus = loyers.filter(l => l.statut === "déclaré").length
@@ -267,12 +270,12 @@ export default function Proprietaire() {
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 48px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "24px 16px" : "32px 48px" }}>
 
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: 28, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 14 : 0 }}>
           <div>
-            <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.5px" }}>Espace propriétaire</h1>
+            <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, letterSpacing: "-0.5px" }}>Espace propriétaire</h1>
             <p style={{ color: "#6b7280", marginTop: 4, fontSize: 14 }}>{session?.user?.name} · {biens.length} bien{biens.length > 1 ? "s" : ""} en gestion</p>
           </div>
           <a href="/proprietaire/ajouter" style={{ background: "#111", color: "white", padding: "11px 22px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>
@@ -281,10 +284,10 @@ export default function Proprietaire() {
         </div>
 
         {/* Onglets */}
-        <div style={{ display: "flex", gap: 6, marginBottom: 24, background: "white", borderRadius: 14, padding: 6, width: "fit-content" }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 24, background: "white", borderRadius: 14, padding: 6, width: isMobile ? "100%" : "fit-content", overflowX: isMobile ? "auto" : undefined }}>
           {ONGLETS.map(o => (
             <button key={o} onClick={() => { setOnglet(o); if (o === "Visites") reloadVisites() }}
-              style={{ padding: "8px 18px", borderRadius: 10, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13, fontFamily: "inherit", background: onglet === o ? "#111" : "transparent", color: onglet === o ? "white" : "#6b7280", transition: "all 0.15s" }}>
+              style={{ padding: "8px 18px", borderRadius: 10, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13, fontFamily: "inherit", background: onglet === o ? "#111" : "transparent", color: onglet === o ? "white" : "#6b7280", transition: "all 0.15s", whiteSpace: "nowrap", flexShrink: 0 }}>
               {o}
               {o === "Loyers" && loyersAttendus > 0 && (
                 <span style={{ marginLeft: 6, background: "#ef4444", color: "white", borderRadius: 999, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{loyersAttendus}</span>
@@ -299,7 +302,7 @@ export default function Proprietaire() {
         {/* VUE D'ENSEMBLE */}
         {onglet === "Vue d'ensemble" && (
           <>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 16, marginBottom: 24 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 10 : 16, marginBottom: 24 }}>
               {[
                 { label: "Biens disponibles", val: biensDispos, color: "#16a34a" },
                 { label: "Biens loues", val: biensLoues, color: "#6b7280" },

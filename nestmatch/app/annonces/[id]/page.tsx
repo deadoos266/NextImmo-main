@@ -104,10 +104,10 @@ export default async function Annonce({ params }: any) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 48px" }}>
+      <div className="r-container" style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 48px" }}>
         <a href="/annonces" style={{ fontSize: 14, color: "#6b7280", textDecoration: "none" }}>← Retour aux annonces</a>
 
-        <div style={{ margin: "16px 0 20px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div className="r-detail-header" style={{ margin: "16px 0 20px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
             <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.5px" }}>{annonce.titre}</h1>
             <p style={{ color: "#6b7280", marginTop: 4 }}>{annonce.adresse}{annonce.adresse && " · "}{annonce.ville}</p>
@@ -146,7 +146,7 @@ export default async function Annonce({ params }: any) {
 
             <div style={{ background: "white", borderRadius: 20, padding: 24, marginBottom: 20 }}>
               <h2 style={{ fontSize: 17, fontWeight: 800, marginBottom: 16 }}>Équipements & conditions</h2>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div className="r-detail-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 {[
                   { label: "Meublé", val: annonce.meuble },
                   { label: "Animaux acceptés", val: annonce.animaux },

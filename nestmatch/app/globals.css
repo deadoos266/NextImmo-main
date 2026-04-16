@@ -9,3 +9,11 @@ body {
   font-family: 'DM Sans', system-ui, sans-serif;
   color: #111111;
 }
+
+/* Responsive utilities for server components */
+@media (max-width: 640px) {
+  .r-container { padding-left: 16px !important; padding-right: 16px !important; }
+  .r-detail-header { flex-direction: column !important; gap: 10px !important; }
+  .r-detail-header h1 { font-size: 22px !important; }
+  .r-detail-grid { grid-template-columns: 1fr !important; }
+}

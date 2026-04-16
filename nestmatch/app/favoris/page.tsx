@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react"
 import { supabase } from "../../lib/supabase"
 import { getFavoris, toggleFavori } from "../../lib/favoris"
+import { useResponsive } from "../hooks/useResponsive"
 import Link from "next/link"
 
 const GRADIENTS = [
@@ -17,6 +18,7 @@ export default function Favoris() {
   const [annonces, setAnnonces] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [favoris, setFavoris] = useState<number[]>([])
+  const { isMobile } = useResponsive()
 
   useEffect(() => {
     const ids = getFavoris()
@@ -40,7 +42,7 @@ export default function Favoris() {
   }
 
   return (
-    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: "40px 48px" }}>
+    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px 48px" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
 
         <div style={{ marginBottom: 32 }}>

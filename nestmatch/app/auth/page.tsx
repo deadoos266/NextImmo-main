@@ -75,8 +75,8 @@ export default function Auth() {
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", display: "flex", flexDirection: "column", fontFamily: "'DM Sans', sans-serif" }}>
 
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 40 }}>
-        <div style={{ background: "white", borderRadius: 24, padding: 44, width: "100%", maxWidth: 460, boxShadow: "0 4px 32px rgba(0,0,0,0.08)" }}>
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 16px" }}>
+        <div style={{ background: "white", borderRadius: 24, padding: "32px 24px", width: "100%", maxWidth: 460, boxShadow: "0 4px 32px rgba(0,0,0,0.08)" }}>
 
           {/* Toggle connexion / inscription */}
           <div style={{ display: "flex", background: "#f3f4f6", borderRadius: 14, padding: 4, marginBottom: 32 }}>

@@ -6,6 +6,7 @@ import Link from "next/link"
 import { supabase } from "../../lib/supabase"
 import { useRole } from "../providers"
 import { Suspense } from "react"
+import { useResponsive } from "../hooks/useResponsive"
 
 const DOSSIER_PREFIX = "[DOSSIER_CARD]"
 const DEMANDE_DOSSIER_PREFIX = "[DEMANDE_DOSSIER]"
@@ -381,6 +382,7 @@ function MessagesInner() {
     setEnvoyantVisite(false)
   }
 
+  const { isMobile } = useResponsive()
   const convActiveData = conversations.find(c => c.key === convActive)
   const annonceActive = convActiveData?.annonceId ? annonces[convActiveData.annonceId] : null
 
@@ -408,13 +410,15 @@ function MessagesInner() {
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ maxWidth: 1140, margin: "0 auto", padding: "32px 48px" }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 24, letterSpacing: "-0.5px" }}>Messages</h1>
+      <div style={{ maxWidth: 1140, margin: "0 auto", padding: isMobile ? "20px 16px" : "32px 48px" }}>
+        {(!isMobile || !convActiveData) && (
+          <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 800, marginBottom: isMobile ? 16 : 24, letterSpacing: "-0.5px" }}>Messages</h1>
+        )}
 
-        <div style={{ display: "flex", gap: 16, height: "76vh" }}>
+        <div style={{ display: "flex", gap: 16, height: isMobile ? "calc(100vh - 120px)" : "76vh" }}>
 
           {/* ── Colonne gauche : conversations ── */}
-          <div style={{ width: 300, flexShrink: 0, background: "white", borderRadius: 20, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+          <div style={{ width: isMobile ? "100%" : 300, flexShrink: 0, background: "white", borderRadius: 20, display: isMobile && convActiveData ? "none" : "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
             {/* Recherche */}
             <div style={{ padding: "14px 16px", borderBottom: "1px solid #f3f4f6" }}>
               <input
@@ -534,7 +538,7 @@ function MessagesInner() {
           </div>
 
           {/* ── Colonne droite : chat ── */}
-          <div style={{ flex: 1, background: "white", borderRadius: 20, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+          <div style={{ flex: 1, background: "white", borderRadius: 20, display: isMobile && !convActiveData ? "none" : "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
             {!convActiveData ? (
               <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", color: "#9ca3af", gap: 12 }}>
                 <div style={{ fontSize: 48 }}>💬</div>
@@ -553,7 +557,13 @@ function MessagesInner() {
             ) : (
               <>
                 {/* Header chat */}
-                <div style={{ padding: "14px 20px", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ padding: isMobile ? "10px 14px" : "14px 20px", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: isMobile ? 8 : 12 }}>
+                  {isMobile && (
+                    <button onClick={() => setConvActive(null)}
+                      style={{ background: "#f3f4f6", border: "none", borderRadius: 10, width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 18, flexShrink: 0 }}>
+                      ←
+                    </button>
+                  )}
                   {annonceActive ? (
                     <>
                       {Array.isArray(annonceActive.photos) && annonceActive.photos[0] ? (

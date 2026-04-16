@@ -5,7 +5,8 @@
       "Bash(dir *)",
       "Bash(curl -s \"https://registry.npmjs.org/next\")",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); versions=[v for v in d['versions'].keys\\(\\) if v.startswith\\('15.'\\)]; print\\(sorted\\(versions\\)[-10:]\\)\")",
-      "WebSearch"
+      "WebSearch",
+      "Bash(npx next *)"
     ]
   }
 }

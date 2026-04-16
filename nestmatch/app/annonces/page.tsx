@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react"
 import { useRole } from "../providers"
 import { getCityCoords } from "../../lib/cityCoords"
 import { getFavoris, toggleFavori } from "../../lib/favoris"
+import { useResponsive } from "../hooks/useResponsive"
 
 const MapAnnonces = dynamic(() => import("../components/MapAnnonces"), { ssr: false })
 
@@ -115,9 +116,13 @@ export default function Annonces() {
   const [mapBounds, setMapBounds] = useState<any>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [favoris, setFavoris] = useState<number[]>([])
+  const [showFilters, setShowFilters] = useState(false)
+  const [showMap, setShowMap] = useState(false)
   const { data: session, status } = useSession()
   const { role } = useRole()
   const isProprietaire = role === "proprietaire"
+  const { isMobile, isTablet } = useResponsive()
+  const isSmall = isMobile || isTablet
 
   useEffect(() => {
     setFavoris(getFavoris())
@@ -178,10 +183,10 @@ export default function Annonces() {
     })
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", overflow: "hidden" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: isMobile ? "auto" : "calc(100vh - 64px)", minHeight: isMobile ? "100vh" : undefined, background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", overflow: isMobile ? "auto" : "hidden" }}>
 
       {/* Bandeau compact */}
-      <div style={{ flexShrink: 0, padding: "10px 32px" }}>
+      <div style={{ flexShrink: 0, padding: isMobile ? "10px 16px" : "10px 32px" }}>
         {isProprietaire ? (
           <div style={{ background: "white", borderRadius: 12, padding: "10px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid #e5e7eb" }}>
             <span style={{ fontSize: 13, color: "#6b7280" }}>
@@ -207,11 +212,25 @@ export default function Annonces() {
         ) : null}
       </div>
 
+      {/* Barre mobile filtres + carte */}
+      {isMobile && (
+        <div style={{ display: "flex", gap: 8, padding: "0 16px 10px", flexShrink: 0 }}>
+          <button onClick={() => setShowFilters(!showFilters)}
+            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 14px", background: showFilters ? "#111" : "white", color: showFilters ? "white" : "#374151", border: "1.5px solid #e5e7eb", borderRadius: 10, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+            ⚙ Filtres
+          </button>
+          <button onClick={() => setShowMap(!showMap)}
+            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 14px", background: showMap ? "#111" : "white", color: showMap ? "white" : "#374151", border: "1.5px solid #e5e7eb", borderRadius: 10, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+            📍 Carte
+          </button>
+        </div>
+      )}
+
       {/* Corps principal */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden", padding: "0 12px 12px 24px", gap: 12 }}>
+      <div style={{ flex: 1, display: "flex", overflow: isMobile ? "visible" : "hidden", padding: isMobile ? "0 16px 16px" : "0 12px 12px 24px", gap: 12, flexDirection: isMobile ? "column" : "row" }}>
 
         {/* Sidebar filtres */}
-        <div style={{ width: 200, flexShrink: 0, overflowY: "auto" }}>
+        <div style={{ width: isMobile ? "100%" : 200, flexShrink: 0, overflowY: "auto", display: isMobile && !showFilters ? "none" : "block" }}>
           <div style={{ background: "white", borderRadius: 18, padding: 18 }}>
             <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 14, color: "#111" }}>Affiner</p>
 
@@ -263,7 +282,7 @@ export default function Annonces() {
         </div>
 
         {/* Liste */}
-        <div style={{ width: 360, flexShrink: 0, overflowY: "auto", display: "flex", flexDirection: "column", gap: 0 }}>
+        <div style={{ width: isMobile ? "100%" : 360, flexShrink: 0, overflowY: "auto", display: isMobile && showMap ? "none" : "flex", flexDirection: "column", gap: 0 }}>
           {/* Compteur */}
           <div style={{ padding: "2px 0 10px", flexShrink: 0 }}>
             <p style={{ fontSize: 13, color: "#6b7280" }}>
@@ -350,7 +369,7 @@ export default function Annonces() {
         </div>
 
         {/* Carte — isolation: isolate pour que Leaflet reste sous la navbar */}
-        <div style={{ flex: 1, position: "relative", isolation: "isolate", borderRadius: 18, overflow: "hidden" }}>
+        <div style={{ flex: 1, position: "relative", isolation: "isolate", borderRadius: 18, overflow: "hidden", display: isMobile && !showMap ? "none" : "block", minHeight: isMobile ? 400 : undefined }}>
           <MapAnnonces
             annonces={annoncesEnrichies}
             selectedId={selectedId}

@@ -3,6 +3,7 @@ import { useSession } from "next-auth/react"
 import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
+import { useResponsive } from "../hooks/useResponsive"
 
 const SITUATIONS = ["CDI", "CDD", "Indépendant / Freelance", "Fonctionnaire", "Étudiant", "Retraité", "Sans emploi"]
 const TYPES_GARANT = ["Personne physique", "Organisme (Visale, Action Logement)", "Aucun garant"]
@@ -48,6 +49,7 @@ export default function Dossier() {
   const [uploading, setUploading] = useState<DocKey | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [docs, setDocs] = useState<Record<string, string[]>>({})
+  const { isMobile } = useResponsive()
   const [generatingPDF, setGeneratingPDF] = useState(false)
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
@@ -250,9 +252,9 @@ export default function Dossier() {
       <style>{`@media print { nav, .no-print { display: none !important; } body { background: white !important; } .print-section { page-break-inside: avoid; } }`}</style>
 
       <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
-        <div style={{ maxWidth: 960, margin: "0 auto", padding: "32px 48px" }}>
+        <div style={{ maxWidth: 960, margin: "0 auto", padding: isMobile ? "24px 16px" : "32px 48px" }}>
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 16 : 0 }}>
             <div>
               <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.5px" }}>Mon dossier locataire</h1>
               <p style={{ color: "#6b7280", fontSize: 14, marginTop: 4 }}>Complétez vos informations et déposez vos documents pour maximiser vos chances.</p>

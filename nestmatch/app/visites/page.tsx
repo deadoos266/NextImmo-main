@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "../../lib/supabase"
 import AgendaVisites from "../components/AgendaVisites"
+import { useResponsive } from "../hooks/useResponsive"
 
 type Statut = "proposée" | "confirmée" | "annulée" | "effectuée"
 
@@ -35,6 +36,7 @@ export default function MesVisites() {
   const [loading, setLoading] = useState(true)
   const [filtre, setFiltre] = useState<Statut | "toutes">("toutes")
   const [vue, setVue] = useState<"liste" | "agenda">("liste")
+  const { isMobile } = useResponsive()
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth")
@@ -80,7 +82,7 @@ export default function MesVisites() {
   )
 
   return (
-    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: "40px 48px" }}>
+    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px 48px" }}>
       <div style={{ maxWidth: 860, margin: "0 auto" }}>
 
         {/* Header */}
@@ -91,7 +93,7 @@ export default function MesVisites() {
 
         {/* Prochaine visite confirmée */}
         {prochaine && (
-          <div style={{ background: "#dcfce7", border: "1.5px solid #bbf7d0", borderRadius: 20, padding: "20px 24px", marginBottom: 24, display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ background: "#dcfce7", border: "1.5px solid #bbf7d0", borderRadius: 20, padding: isMobile ? "16px 18px" : "20px 24px", marginBottom: 24, display: "flex", alignItems: isMobile ? "flex-start" : "center", gap: isMobile ? 12 : 16, flexDirection: isMobile ? "column" : "row" }}>
             <span style={{ fontSize: 32 }}>✅</span>
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: 12, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "0.5px" }}>Prochaine visite confirmée</p>
@@ -113,7 +115,7 @@ export default function MesVisites() {
         )}
 
         {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
           {[
             { label: "Total",        val: visites.length,                                             bg: "white" },
             { label: "En attente",   val: nbAttente,      color: nbAttente > 0 ? "#c2410c" : undefined, bg: nbAttente > 0 ? "#fff7ed" : "white" },
@@ -147,10 +149,10 @@ export default function MesVisites() {
         {/* Vue Liste */}
         {vue === "liste" && <>
         {/* Filtres */}
-        <div style={{ display: "flex", background: "white", borderRadius: 12, padding: 4, gap: 2, marginBottom: 20, width: "fit-content" }}>
+        <div style={{ display: "flex", background: "white", borderRadius: 12, padding: 4, gap: 2, marginBottom: 20, width: isMobile ? "100%" : "fit-content", overflowX: isMobile ? "auto" : undefined }}>
           {(["toutes", "proposée", "confirmée", "annulée", "effectuée"] as const).map(f => (
             <button key={f} onClick={() => setFiltre(f)}
-              style={{ padding: "6px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, background: filtre === f ? "#111" : "transparent", color: filtre === f ? "white" : "#6b7280", transition: "all 0.15s" }}>
+              style={{ padding: "6px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, background: filtre === f ? "#111" : "transparent", color: filtre === f ? "white" : "#6b7280", transition: "all 0.15s", whiteSpace: "nowrap", flexShrink: 0 }}>
               {f === "toutes" ? "Toutes" : STATUT[f as Statut]?.label}
               {f !== "toutes" && visites.filter(v => v.statut === f).length > 0 && (
                 <span style={{ marginLeft: 5, opacity: 0.7 }}>({visites.filter(v => v.statut === f).length})</span>
@@ -185,14 +187,14 @@ export default function MesVisites() {
               const photo = Array.isArray(ann?.photos) && ann.photos.length > 0 ? ann.photos[0] : null
               const future = new Date(v.date_visite) >= new Date()
               return (
-                <div key={v.id} style={{ background: "white", borderRadius: 20, overflow: "hidden", display: "flex", border: `1.5px solid ${v.statut === "confirmée" && future ? "#bbf7d0" : "#e5e7eb"}` }}>
+                <div key={v.id} style={{ background: "white", borderRadius: 20, overflow: "hidden", display: "flex", flexDirection: isMobile ? "column" : "row", border: `1.5px solid ${v.statut === "confirmée" && future ? "#bbf7d0" : "#e5e7eb"}` }}>
                   {/* Photo */}
                   {photo ? (
-                    <div style={{ width: 120, flexShrink: 0, background: "#f3f4f6" }}>
-                      <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <div style={{ width: isMobile ? "100%" : 120, height: isMobile ? 140 : undefined, flexShrink: 0, background: "#f3f4f6" }}>
+                      <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                     </div>
                   ) : (
-                    <div style={{ width: 120, flexShrink: 0, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🏠</div>
+                    <div style={{ width: isMobile ? "100%" : 120, height: isMobile ? 80 : undefined, flexShrink: 0, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🏠</div>
                   )}
 
                   {/* Contenu */}
