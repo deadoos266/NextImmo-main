@@ -194,6 +194,7 @@ function VisitesProprio({ visites, biens, setVisites }: { visites: any[]; biens:
 export default function Proprietaire() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const { isMobile } = useResponsive()
   const [onglet, setOnglet] = useState<Onglet>("Vue d'ensemble")
   const [biens, setBiens] = useState<any[]>([])
   const [candidatures, setCandidatures] = useState<any[]>([])
@@ -255,7 +256,6 @@ export default function Proprietaire() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif", color: "#6b7280" }}>Chargement...</div>
   )
 
-  const { isMobile } = useResponsive()
   const biensDispos = biens.filter(b => !b.statut || b.statut === "disponible").length
   const biensLoues = biens.filter(b => b.statut === "loué").length
   const loyersAttendus = loyers.filter(l => l.statut === "déclaré").length

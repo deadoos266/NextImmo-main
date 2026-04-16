@@ -33,6 +33,7 @@ const F = ({ l, children }: any) => (
 export default function Profil() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const { isMobile } = useResponsive()
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [erreur, setErreur] = useState("")
@@ -163,7 +164,6 @@ export default function Profil() {
   )
   if (!session) return null
 
-  const { isMobile } = useResponsive()
   const inp: any = { width: "100%", padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }
   const sel: any = { ...inp, background: "white" }
 
