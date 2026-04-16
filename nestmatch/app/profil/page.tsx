@@ -1,0 +1,321 @@
+"use client"
+import { useSession, signOut } from "next-auth/react"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { supabase } from "../../lib/supabase"
+
+// Composants HORS du composant principal pour éviter le bug de focus
+const Toggle = ({ label, k, toggles, setToggles }: any) => (
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+    <span style={{ fontSize: 14, fontWeight: 500 }}>{label}</span>
+    <div onClick={() => setToggles((t: any) => ({ ...t, [k]: !t[k] }))}
+      style={{ width: 44, height: 24, borderRadius: 999, background: toggles[k] ? "#111" : "#e5e7eb", cursor: "pointer", position: "relative", transition: "background 0.2s" }}>
+      <div style={{ width: 18, height: 18, borderRadius: "50%", background: "white", position: "absolute", top: 3, left: toggles[k] ? 23 : 3, transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }} />
+    </div>
+  </div>
+)
+
+const Sec = ({ t, children }: any) => (
+  <div style={{ background: "white", borderRadius: 20, padding: 28, marginBottom: 20 }}>
+    <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20 }}>{t}</h2>
+    {children}
+  </div>
+)
+
+const F = ({ l, children }: any) => (
+  <div style={{ marginBottom: 16 }}>
+    <label style={{ fontSize: 13, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 6 }}>{l}</label>
+    {children}
+  </div>
+)
+
+export default function Profil() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [erreur, setErreur] = useState("")
+  const [dataLoaded, setDataLoaded] = useState(false)
+  const [form, setForm] = useState({
+    ville_souhaitee: "", mode_localisation: "souple", type_quartier: "", budget_min: "", budget_max: "",
+    surface_min: "", surface_max: "", pieces_min: "1", chambres_min: "0",
+    dpe_min: "D", type_bail: "longue durée", etage_min: "", etage_max: "",
+    temps_trajet_max: "", mode_transport: "transports en commun",
+    situation_pro: "CDI", revenus_mensuels: "", type_garant: "",
+    nb_occupants: "1", profil_locataire: "jeune actif",
+  })
+  const [toggles, setToggles] = useState({
+    animaux: false, meuble: false, parking: false, cave: false,
+    fibre: false, balcon: false, terrasse: false, jardin: false,
+    ascenseur: false, rez_de_chaussee_ok: true, garant: false,
+    fumeur: false, proximite_metro: false, proximite_ecole: false,
+    proximite_commerces: false, proximite_parcs: false,
+  })
+
+  useEffect(() => {
+    if (status === "unauthenticated") router.push("/auth")
+    if (session?.user?.email) {
+      supabase.from("profils").select("*").eq("email", session.user.email).single()
+        .then(({ data }) => {
+          if (data) {
+            setForm({
+              ville_souhaitee: data.ville_souhaitee || "",
+              mode_localisation: data.mode_localisation || "souple",
+              type_quartier: data.type_quartier || "",
+              budget_min: data.budget_min?.toString() || "",
+              budget_max: data.budget_max?.toString() || "",
+              surface_min: data.surface_min?.toString() || "",
+              surface_max: data.surface_max?.toString() || "",
+              pieces_min: data.pieces_min?.toString() || "1",
+              chambres_min: data.chambres_min?.toString() || "0",
+              dpe_min: data.dpe_min || "D",
+              type_bail: data.type_bail || "longue durée",
+              etage_min: data.etage_min?.toString() || "",
+              etage_max: data.etage_max?.toString() || "",
+              temps_trajet_max: data.temps_trajet_max?.toString() || "",
+              mode_transport: data.mode_transport || "transports en commun",
+              situation_pro: data.situation_pro || "CDI",
+              revenus_mensuels: data.revenus_mensuels?.toString() || "",
+              type_garant: data.type_garant || "",
+              nb_occupants: data.nb_occupants?.toString() || "1",
+              profil_locataire: data.profil_locataire || "jeune actif",
+            })
+            setToggles({
+              animaux: !!data.animaux, meuble: !!data.meuble,
+              parking: !!data.parking, cave: !!data.cave,
+              fibre: !!data.fibre, balcon: !!data.balcon,
+              terrasse: !!data.terrasse, jardin: !!data.jardin,
+              ascenseur: !!data.ascenseur, garant: !!data.garant,
+              fumeur: !!data.fumeur,
+              rez_de_chaussee_ok: data.rez_de_chaussee_ok !== false,
+              proximite_metro: !!data.proximite_metro,
+              proximite_ecole: !!data.proximite_ecole,
+              proximite_commerces: !!data.proximite_commerces,
+              proximite_parcs: !!data.proximite_parcs,
+            })
+          }
+          setDataLoaded(true)
+        })
+    }
+  }, [session, status, router])
+
+  const set = (key: string) => (e: any) => setForm(f => ({ ...f, [key]: e.target.value }))
+
+  const criteres = [
+    { label: "Ville souhaitée", ok: !!form.ville_souhaitee, poids: 20 },
+    { label: "Budget maximum", ok: !!form.budget_max, poids: 20 },
+    { label: "Revenus mensuels", ok: !!form.revenus_mensuels, poids: 20 },
+    { label: "Surface minimum", ok: !!form.surface_min, poids: 15 },
+    { label: "Type de garant", ok: !!form.type_garant, poids: 10 },
+    { label: "Temps de trajet max", ok: !!form.temps_trajet_max, poids: 10 },
+    { label: "Type de quartier", ok: !!form.type_quartier, poids: 5 },
+  ]
+  const scoreCompletion = criteres.reduce((acc, c) => acc + (c.ok ? c.poids : 0), 0)
+  const scoreColor = scoreCompletion >= 80 ? "#16a34a" : scoreCompletion >= 50 ? "#f59e0b" : "#ef4444"
+  const manquants = criteres.filter(c => !c.ok)
+
+  async function sauvegarder() {
+    setSaving(true)
+    setErreur("")
+    const toInt = (v: string) => v ? parseInt(v) : null
+    const data: any = {
+      email: session?.user?.email,
+      nom: session?.user?.name,
+      ville_souhaitee: form.ville_souhaitee,
+      mode_localisation: form.mode_localisation,
+      type_quartier: form.type_quartier,
+      budget_min: toInt(form.budget_min),
+      budget_max: toInt(form.budget_max),
+      surface_min: toInt(form.surface_min),
+      surface_max: toInt(form.surface_max),
+      pieces_min: toInt(form.pieces_min),
+      chambres_min: toInt(form.chambres_min),
+      dpe_min: form.dpe_min,
+      type_bail: form.type_bail,
+      etage_min: toInt(form.etage_min),
+      etage_max: toInt(form.etage_max),
+      temps_trajet_max: toInt(form.temps_trajet_max),
+      mode_transport: form.mode_transport,
+      situation_pro: form.situation_pro,
+      revenus_mensuels: toInt(form.revenus_mensuels),
+      type_garant: form.type_garant,
+      nb_occupants: toInt(form.nb_occupants),
+      profil_locataire: form.profil_locataire,
+      ...toggles,
+    }
+    const { error } = await supabase.from("profils").upsert(data, { onConflict: "email" })
+    if (error) {
+      const { error: insertErr } = await supabase.from("profils").insert(data)
+      if (insertErr) {
+        const { email, nom, ...updateData } = data
+        const { error: updateErr } = await supabase.from("profils").update(updateData).eq("email", session?.user?.email!)
+        if (updateErr) { setErreur("Erreur: " + updateErr.message); setSaving(false); return }
+      }
+    }
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 3000)
+  }
+
+  if (status === "loading" || !dataLoaded) return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif", color: "#6b7280" }}>Chargement...</div>
+  )
+  if (!session) return null
+
+  const inp: any = { width: "100%", padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }
+  const sel: any = { ...inp, background: "white" }
+
+  return (
+    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
+
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "48px" }}>
+
+        <div style={{ background: "white", borderRadius: 24, padding: 32, marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+            {session.user?.image
+              ? <img src={session.user.image} alt="p" style={{ width: 72, height: 72, borderRadius: "50%" }} />
+              : <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, color: "white", fontWeight: 800 }}>{session.user?.name?.[0]}</div>
+            }
+            <div>
+              <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.5px" }}>{session.user?.name}</h1>
+              <p style={{ color: "#6b7280", marginTop: 2 }}>{session.user?.email}</p>
+              <span style={{ background: "#dcfce7", color: "#16a34a", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700, marginTop: 8, display: "inline-block" }}>✓ Compte vérifié</span>
+            </div>
+          </div>
+          <a href="/annonces" style={{ background: "#111", color: "white", padding: "12px 24px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>
+            Voir mes annonces →
+          </a>
+        </div>
+
+        {/* Score de complétion */}
+        <div style={{ background: "white", borderRadius: 20, padding: 24, marginBottom: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div>
+              <h2 style={{ fontSize: 16, fontWeight: 800 }}>Complétion du dossier</h2>
+              <p style={{ fontSize: 13, color: "#6b7280", marginTop: 2 }}>
+                {scoreCompletion === 100 ? "Dossier complet — vous maximisez vos chances !" : `Remplissez les champs manquants pour booster votre profil`}
+              </p>
+            </div>
+            <span style={{ fontSize: 32, fontWeight: 800, color: scoreColor }}>{scoreCompletion}%</span>
+          </div>
+
+          {/* Barre de progression */}
+          <div style={{ background: "#f3f4f6", borderRadius: 999, height: 10, marginBottom: 16 }}>
+            <div style={{ background: scoreColor, borderRadius: 999, height: 10, width: `${scoreCompletion}%`, transition: "width 0.4s ease" }} />
+          </div>
+
+          {/* Champs manquants */}
+          {manquants.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {manquants.map(c => (
+                <span key={c.label} style={{ background: "#fff7ed", color: "#ea580c", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600 }}>
+                  + {c.label}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <Sec t="Mes critères de recherche">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <F l="Ville souhaitée"><input style={inp} value={form.ville_souhaitee} onChange={set("ville_souhaitee")} placeholder="Paris, Lyon..." /></F>
+            <F l="Mode de localisation">
+              <select style={sel} value={form.mode_localisation} onChange={set("mode_localisation")}>
+                <option value="souple">Souple — autres villes visibles</option>
+                <option value="strict">Strict — uniquement ma ville</option>
+              </select>
+            </F>
+            <F l="Type de quartier"><input style={inp} value={form.type_quartier} onChange={set("type_quartier")} placeholder="Centre-ville, calme..." /></F>
+            <F l="Budget min (€/mois)"><input style={inp} type="number" value={form.budget_min} onChange={set("budget_min")} placeholder="600" /></F>
+            <F l="Budget max (€/mois)"><input style={inp} type="number" value={form.budget_max} onChange={set("budget_max")} placeholder="1200" /></F>
+            <F l="Surface min (m²)"><input style={inp} type="number" value={form.surface_min} onChange={set("surface_min")} placeholder="30" /></F>
+            <F l="Surface max (m²)"><input style={inp} type="number" value={form.surface_max} onChange={set("surface_max")} placeholder="80" /></F>
+            <F l="Pièces minimum">
+              <select style={sel} value={form.pieces_min} onChange={set("pieces_min")}>{["1","2","3","4","5+"].map(v=><option key={v}>{v}</option>)}</select>
+            </F>
+            <F l="Chambres minimum">
+              <select style={sel} value={form.chambres_min} onChange={set("chambres_min")}>{["0","1","2","3","4+"].map(v=><option key={v}>{v}</option>)}</select>
+            </F>
+            <F l="DPE minimum accepté">
+              <select style={sel} value={form.dpe_min} onChange={set("dpe_min")}>{["A","B","C","D","E","F","G"].map(v=><option key={v}>{v}</option>)}</select>
+            </F>
+            <F l="Type de bail">
+              <select style={sel} value={form.type_bail} onChange={set("type_bail")}>{["longue durée","courte durée","bail mobilité","colocation"].map(v=><option key={v}>{v}</option>)}</select>
+            </F>
+            <F l="Étage minimum"><input style={inp} type="number" value={form.etage_min} onChange={set("etage_min")} placeholder="0" /></F>
+            <F l="Étage maximum"><input style={inp} type="number" value={form.etage_max} onChange={set("etage_max")} placeholder="10" /></F>
+          </div>
+          <Toggle label="Rez-de-chaussée accepté" k="rez_de_chaussee_ok" toggles={toggles} setToggles={setToggles} />
+        </Sec>
+
+        <Sec t="Équipements souhaités">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
+            <Toggle label="Meublé" k="meuble" toggles={toggles} setToggles={setToggles} />
+            <Toggle label="Animaux acceptés" k="animaux" toggles={toggles} setToggles={setToggles} />
+            <Toggle label="Parking" k="parking" toggles={toggles} setToggles={setToggles} />
+            <Toggle label="Cave" k="cave" toggles={toggles} setToggles={setToggles} />
+            <Toggle label="Fibre optique" k="fibre" toggles={toggles} setToggles={setToggles} />
+            <Toggle label="Balcon" k="balcon" toggles={toggles} setToggles={setToggles} />
+            <Toggle label="Terrasse" k="terrasse" toggles={toggles} setToggles={setToggles} />
+            <Toggle label="Jardin" k="jardin" toggles={toggles} setToggles={setToggles} />
+            <Toggle label="Ascenseur" k="ascenseur" toggles={toggles} setToggles={setToggles} />
+          </div>
+        </Sec>
+
+        <Sec t="Transports & proximité">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+            <F l="Temps de trajet max (min)"><input style={inp} type="number" value={form.temps_trajet_max} onChange={set("temps_trajet_max")} placeholder="30" /></F>
+            <F l="Mode de transport">
+              <select style={sel} value={form.mode_transport} onChange={set("mode_transport")}>{["transports en commun","voiture","vélo","à pied"].map(v=><option key={v}>{v}</option>)}</select>
+            </F>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
+            <Toggle label="Proche métro/bus" k="proximite_metro" toggles={toggles} setToggles={setToggles} />
+            <Toggle label="Proche écoles" k="proximite_ecole" toggles={toggles} setToggles={setToggles} />
+            <Toggle label="Proche commerces" k="proximite_commerces" toggles={toggles} setToggles={setToggles} />
+            <Toggle label="Proche parcs" k="proximite_parcs" toggles={toggles} setToggles={setToggles} />
+          </div>
+        </Sec>
+
+        <Sec t="Mon profil locataire">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <F l="Situation professionnelle">
+              <select style={sel} value={form.situation_pro} onChange={set("situation_pro")}>{["CDI","CDD","indépendant","étudiant","retraité","fonctionnaire","autre"].map(v=><option key={v}>{v}</option>)}</select>
+            </F>
+            <F l="Revenus mensuels nets (€)"><input style={inp} type="number" value={form.revenus_mensuels} onChange={set("revenus_mensuels")} placeholder="2500" /></F>
+            <F l="Profil">
+              <select style={sel} value={form.profil_locataire} onChange={set("profil_locataire")}>{["étudiant","jeune actif","couple","famille","senior","colocation"].map(v=><option key={v}>{v}</option>)}</select>
+            </F>
+            <F l="Nombre d'occupants">
+              <select style={sel} value={form.nb_occupants} onChange={set("nb_occupants")}>{["1","2","3","4","5+"].map(v=><option key={v}>{v}</option>)}</select>
+            </F>
+            <F l="Type de garant">
+              <select style={sel} value={form.type_garant} onChange={set("type_garant")}>{["","personnel","organisme (Visale)","caution bancaire","aucun"].map(v=><option key={v} value={v}>{v||"Non renseigné"}</option>)}</select>
+            </F>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginTop: 8 }}>
+            <Toggle label="J'ai un garant" k="garant" toggles={toggles} setToggles={setToggles} />
+            <Toggle label="Fumeur" k="fumeur" toggles={toggles} setToggles={setToggles} />
+          </div>
+        </Sec>
+
+        {erreur && <div style={{ background: "#fee2e2", color: "#dc2626", padding: "12px 20px", borderRadius: 12, marginBottom: 16, fontSize: 14 }}>{erreur}</div>}
+
+        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 16 }}>
+          {saved && (
+            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+              <span style={{ color: "#16a34a", fontWeight: 600, fontSize: 14 }}>✓ Sauvegardé !</span>
+              <a href="/annonces" style={{ background: "#16a34a", color: "white", padding: "10px 20px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>
+                Voir les annonces →
+              </a>
+            </div>
+          )}
+          <button onClick={sauvegarder} disabled={saving}
+            style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}>
+            {saving ? "Sauvegarde..." : "Sauvegarder mes préférences"}
+          </button>
+        </div>
+      </div>
+    </main>
+  )
+}

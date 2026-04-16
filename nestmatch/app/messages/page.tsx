@@ -1,0 +1,617 @@
+"use client"
+import { useSession } from "next-auth/react"
+import { useEffect, useState, useRef, useCallback } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import Link from "next/link"
+import { supabase } from "../../lib/supabase"
+import { useRole } from "../providers"
+import { Suspense } from "react"
+
+const DOSSIER_PREFIX = "[DOSSIER_CARD]"
+
+const STATUT_VISITE: Record<string, { bg: string; color: string; border: string; label: string }> = {
+  "proposée":  { bg: "#fff7ed", color: "#c2410c", border: "#fed7aa", label: "En attente" },
+  "confirmée": { bg: "#dcfce7", color: "#15803d", border: "#bbf7d0", label: "Confirmée" },
+  "annulée":   { bg: "#fee2e2", color: "#dc2626", border: "#fecaca", label: "Annulée" },
+  "effectuée": { bg: "#f3f4f6", color: "#374151", border: "#e5e7eb", label: "Effectuée" },
+}
+
+// ─── Dossier Card ────────────────────────────────────────────────────────────
+
+function DossierCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
+  let data: any = {}
+  try { data = JSON.parse(contenu.slice(DOSSIER_PREFIX.length)) } catch {}
+  const scoreColor = data.score >= 80 ? "#15803d" : data.score >= 50 ? "#c2410c" : "#b91c1c"
+  const scoreBg   = data.score >= 80 ? "#dcfce7" : data.score >= 50 ? "#fff7ed" : "#fee2e2"
+  return (
+    <div style={{ background: isMine ? "#1a1a1a" : "#f9fafb", border: `1.5px solid ${isMine ? "#333" : "#e5e7eb"}`, borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 280 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <span style={{ fontSize: 18 }}>📁</span>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontWeight: 700, fontSize: 13, color: isMine ? "white" : "#111", margin: 0 }}>Dossier locataire</p>
+          <p style={{ fontSize: 11, color: isMine ? "#9ca3af" : "#6b7280", margin: 0 }}>{data.email}</p>
+        </div>
+        {data.score != null && (
+          <span style={{ background: scoreBg, color: scoreColor, fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999 }}>{data.score}%</span>
+        )}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        {data.nom           && <Row label="Nom"       val={data.nom}                                                   isMine={isMine} />}
+        {data.situation_pro && <Row label="Situation" val={data.situation_pro}                                         isMine={isMine} />}
+        {data.revenus_mensuels && <Row label="Revenus" val={`${Number(data.revenus_mensuels).toLocaleString("fr-FR")} €/mois`} isMine={isMine} />}
+        {data.garant        && <Row label="Garant"    val={data.type_garant || "Oui"}                                  isMine={isMine} />}
+      </div>
+    </div>
+  )
+}
+function Row({ label, val, isMine }: { label: string; val: string; isMine: boolean }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+      <span style={{ fontSize: 11, color: isMine ? "#9ca3af" : "#6b7280" }}>{label}</span>
+      <span style={{ fontSize: 11, fontWeight: 600, color: isMine ? "white" : "#111" }}>{val}</span>
+    </div>
+  )
+}
+
+// ─── Date separator ──────────────────────────────────────────────────────────
+
+function dateSep(dateStr: string) {
+  const d = new Date(dateStr)
+  const today = new Date()
+  const yesterday = new Date(); yesterday.setDate(today.getDate() - 1)
+  if (d.toDateString() === today.toDateString()) return "Aujourd'hui"
+  if (d.toDateString() === yesterday.toDateString()) return "Hier"
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+}
+
+// ─── Main component ──────────────────────────────────────────────────────────
+
+function MessagesInner() {
+  const { data: session, status } = useSession()
+  const { proprietaireActive } = useRole()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const withEmail = searchParams.get("with")
+
+  const MESSAGES_RAPIDES = proprietaireActive ? [
+    "Bien toujours disponible, n'hésitez pas à proposer une visite.",
+    "Pourriez-vous m'envoyer votre dossier locataire ?",
+    "Votre candidature a retenu notre attention, pouvons-nous convenir d'une visite ?",
+    "Suite donnée à une autre candidature. Bonne recherche !",
+    "Quelles sont vos disponibilités pour visiter le bien ?",
+  ] : [
+    "Je suis toujours intéressé(e) par votre bien.",
+    "Mon dossier est complet, je peux vous l'envoyer.",
+    "Quelles sont vos disponibilités pour une visite ?",
+    "Avez-vous d'autres biens disponibles ?",
+    "Pouvez-vous me confirmer que le bien est encore disponible ?",
+  ]
+
+  const [conversations, setConversations] = useState<any[]>([])
+  const [annonces, setAnnonces] = useState<Record<number, any>>({})
+  const [convActive, setConvActive] = useState<string | null>(null)
+  const [messages, setMessages] = useState<any[]>([])
+  const [nouveau, setNouveau] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [envoi, setEnvoi] = useState(false)
+  const [envoyantDossier, setEnvoyantDossier] = useState(false)
+  const [recherche, setRecherche] = useState("")
+  const [supprimant, setSupprimant] = useState<string | null>(null)
+  const [menuConv, setMenuConv] = useState<string | null>(null)
+  const [visitesConv, setVisitesConv] = useState<any[]>([])
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const myEmail = session?.user?.email
+
+  useEffect(() => {
+    if (status === "unauthenticated") router.push("/auth")
+    if (session?.user?.email) loadConversations()
+  }, [session, status, withEmail])
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
+
+  // Temps réel — écoute les nouveaux messages de la conv active
+  useEffect(() => {
+    if (!convActive || !myEmail) return
+    const conv = conversations.find(c => c.key === convActive)
+    if (!conv) return
+
+    const channel = supabase.channel(`messages-${convActive}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
+        const m = payload.new as any
+        const isRelevant =
+          (m.from_email === myEmail && m.to_email === conv.other) ||
+          (m.from_email === conv.other && m.to_email === myEmail)
+        if (isRelevant) {
+          setMessages(prev => {
+            if (prev.find(x => x.id === m.id)) return prev
+            return [...prev, m]
+          })
+          if (m.to_email === myEmail) {
+            supabase.from("messages").update({ lu: true }).eq("id", m.id)
+            setConversations(prev => prev.map(c => c.key === convActive ? { ...c, unread: 0, lastMsg: m } : c))
+          }
+        }
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [convActive, myEmail])
+
+  async function loadConversations() {
+    const email = session!.user!.email!
+    const { data } = await supabase.from("messages")
+      .select("*")
+      .or(`from_email.eq.${email},to_email.eq.${email}`)
+      .order("created_at", { ascending: false })
+
+    const convMap = new Map<string, any>()
+    if (data) {
+      data.forEach((m: any) => {
+        const other = m.from_email === email ? m.to_email : m.from_email
+        const key = [email, other].sort().join("|")
+        if (!convMap.has(key)) convMap.set(key, { key, other, lastMsg: m, unread: 0, annonceId: m.annonce_id || null })
+        if (m.to_email === email && !m.lu) convMap.get(key)!.unread++
+        // garder l'annonce_id de la conv (premier message qui en a un)
+        if (m.annonce_id && !convMap.get(key)!.annonceId) convMap.get(key)!.annonceId = m.annonce_id
+      })
+    }
+
+    if (withEmail && withEmail !== email) {
+      const key = [email, withEmail].sort().join("|")
+      if (!convMap.has(key)) convMap.set(key, { key, other: withEmail, lastMsg: null, unread: 0, annonceId: null })
+    }
+
+    const convList = Array.from(convMap.values())
+    setConversations(convList)
+
+    // Fetch les annonces liées
+    const ids = [...new Set(convList.map(c => c.annonceId).filter(Boolean))]
+    if (ids.length > 0) {
+      const { data: ann } = await supabase.from("annonces").select("id, titre, ville, photos").in("id", ids)
+      if (ann) {
+        const map: Record<number, any> = {}
+        ann.forEach((a: any) => { map[a.id] = a })
+        setAnnonces(map)
+      }
+    }
+
+    const target = withEmail ? convList.find(c => c.other === withEmail) : convList[0]
+    if (target) {
+      setConvActive(target.key)
+      loadMessages(email, target.other)
+      loadVisitesConv(target.other)
+    }
+    setLoading(false)
+  }
+
+  async function loadMessages(email: string, other: string) {
+    const [{ data: sent }, { data: received }] = await Promise.all([
+      supabase.from("messages").select("*").eq("from_email", email).eq("to_email", other),
+      supabase.from("messages").select("*").eq("from_email", other).eq("to_email", email),
+    ])
+    const data = [...(sent || []), ...(received || [])].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    )
+    setMessages(data)
+    await supabase.from("messages").update({ lu: true }).eq("to_email", email).eq("from_email", other)
+    setConversations(prev => prev.map(c => c.other === other ? { ...c, unread: 0 } : c))
+  }
+
+  async function envoyer() {
+    if (!nouveau.trim() || !convActive || !myEmail) return
+    setEnvoi(true)
+    const conv = conversations.find(c => c.key === convActive)
+    if (!conv) return
+    const msg = { from_email: myEmail, to_email: conv.other, contenu: nouveau.trim(), lu: false, created_at: new Date().toISOString() }
+    const { data } = await supabase.from("messages").insert([msg]).select().single()
+    if (data) {
+      setMessages(prev => [...prev, data])
+      setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: data } : c))
+    }
+    setNouveau("")
+    setEnvoi(false)
+    inputRef.current?.focus()
+  }
+
+  async function envoyerDossier() {
+    if (!convActive || !myEmail) return
+    setEnvoyantDossier(true)
+    const conv = conversations.find(c => c.key === convActive)
+    if (!conv) { setEnvoyantDossier(false); return }
+
+    const { data: profil } = await supabase.from("profils")
+      .select("nom,situation_pro,revenus_mensuels,garant,type_garant,nb_occupants,dossier_docs")
+      .eq("email", myEmail).single()
+
+    let score = 0
+    if (profil) {
+      if (profil.nom) score += 15
+      if (profil.situation_pro) score += 15
+      if (profil.revenus_mensuels) score += 20
+      if (profil.dossier_docs) {
+        const keys = ["identite", "bulletins", "avis_imposition", "contrat", "rib"]
+        const filled = keys.filter(k => { const v = (profil.dossier_docs as any)[k]; return Array.isArray(v) ? v.length > 0 : !!v })
+        score += Math.round((filled.length / keys.length) * 50)
+      }
+    }
+
+    const payload = { email: myEmail, nom: profil?.nom || session?.user?.name || "", situation_pro: profil?.situation_pro || "", revenus_mensuels: profil?.revenus_mensuels || "", garant: profil?.garant || false, type_garant: profil?.type_garant || "", nb_occupants: profil?.nb_occupants || 1, score: Math.min(score, 100) }
+    const msg = { from_email: myEmail, to_email: conv.other, contenu: DOSSIER_PREFIX + JSON.stringify(payload), lu: false, created_at: new Date().toISOString() }
+    const { data } = await supabase.from("messages").insert([msg]).select().single()
+    if (data) {
+      setMessages(prev => [...prev, data])
+      setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: data } : c))
+    }
+    setEnvoyantDossier(false)
+  }
+
+  async function supprimerConversation(key: string) {
+    setSupprimant(key)
+    const conv = conversations.find(c => c.key === key)
+    if (!conv || !myEmail) { setSupprimant(null); return }
+    await supabase.from("messages")
+      .delete()
+      .or(`and(from_email.eq.${myEmail},to_email.eq.${conv.other}),and(from_email.eq.${conv.other},to_email.eq.${myEmail})`)
+    setConversations(prev => prev.filter(c => c.key !== key))
+    if (convActive === key) { setConvActive(null); setMessages([]) }
+    setSupprimant(null)
+  }
+
+  async function marquerLu(conv: any) {
+    await supabase.from("messages").update({ lu: true }).eq("to_email", myEmail!).eq("from_email", conv.other)
+    setConversations(prev => prev.map(c => c.key === conv.key ? { ...c, unread: 0 } : c))
+  }
+
+  async function loadVisitesConv(otherEmail: string) {
+    if (!myEmail) return
+    let query = supabase.from("visites").select("*")
+    if (proprietaireActive) {
+      query = query.eq("proprietaire_email", myEmail).eq("locataire_email", otherEmail)
+    } else {
+      query = query.eq("locataire_email", myEmail).eq("proprietaire_email", otherEmail)
+    }
+    const { data } = await query.in("statut", ["proposée", "confirmée"]).order("date_visite", { ascending: true })
+    setVisitesConv(data || [])
+  }
+
+  async function changerStatutVisite(id: string, statut: string) {
+    await supabase.from("visites").update({ statut }).eq("id", id)
+    setVisitesConv(prev => prev.map(v => v.id === id ? { ...v, statut } : v))
+  }
+
+  const convActiveData = conversations.find(c => c.key === convActive)
+  const annonceActive = convActiveData?.annonceId ? annonces[convActiveData.annonceId] : null
+
+  const convsFiltrees = conversations.filter(c =>
+    !recherche || c.other.toLowerCase().includes(recherche.toLowerCase()) ||
+    (annonces[c.annonceId]?.titre || "").toLowerCase().includes(recherche.toLowerCase())
+  )
+
+  // Grouper les messages par date
+  const messagesAvecSep: Array<{ type: "sep"; label: string } | { type: "msg"; msg: any }> = []
+  let lastDate = ""
+  messages.forEach(m => {
+    const d = new Date(m.created_at).toDateString()
+    if (d !== lastDate) { messagesAvecSep.push({ type: "sep", label: dateSep(m.created_at) }); lastDate = d }
+    messagesAvecSep.push({ type: "msg", msg: m })
+  })
+
+  if (loading) return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif", color: "#6b7280" }}>Chargement...</div>
+  )
+
+  return (
+    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ maxWidth: 1140, margin: "0 auto", padding: "32px 48px" }}>
+        <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 24, letterSpacing: "-0.5px" }}>Messages</h1>
+
+        <div style={{ display: "flex", gap: 16, height: "76vh" }}>
+
+          {/* ── Colonne gauche : conversations ── */}
+          <div style={{ width: 300, flexShrink: 0, background: "white", borderRadius: 20, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+            {/* Recherche */}
+            <div style={{ padding: "14px 16px", borderBottom: "1px solid #f3f4f6" }}>
+              <input
+                value={recherche} onChange={e => setRecherche(e.target.value)}
+                placeholder="Rechercher..."
+                style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 13, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
+              />
+            </div>
+
+            <div style={{ flex: 1, overflowY: "auto" }}>
+              {convsFiltrees.length === 0 ? (
+                <div style={{ padding: "32px 20px", textAlign: "center", color: "#9ca3af" }}>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>💬</div>
+                  <p style={{ fontSize: 13, fontWeight: 600 }}>{recherche ? "Aucun résultat" : "Aucun message"}</p>
+                  {!recherche && (
+                    <p style={{ fontSize: 12, marginTop: 4, textAlign: "center", lineHeight: 1.5 }}>
+                      {proprietaireActive
+                        ? "Les locataires vous contacteront depuis vos annonces"
+                        : "Contactez un propriétaire depuis une annonce"}
+                    </p>
+                  )}
+                </div>
+              ) : convsFiltrees.map(conv => {
+                const ann = annonces[conv.annonceId]
+                const photo = Array.isArray(ann?.photos) && ann.photos.length > 0 ? ann.photos[0] : null
+                const isActive = convActive === conv.key
+                const preview = conv.lastMsg?.contenu
+                  ? conv.lastMsg.contenu.startsWith(DOSSIER_PREFIX) ? "📁 Dossier envoyé"
+                  : conv.lastMsg.contenu.length > 35 ? conv.lastMsg.contenu.slice(0, 35) + "…"
+                  : conv.lastMsg.contenu
+                  : "Nouvelle conversation"
+                const time = conv.lastMsg?.created_at
+                  ? new Date(conv.lastMsg.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+                  : ""
+
+                return (
+                  <div key={conv.key}
+                    onClick={() => { setConvActive(conv.key); setMenuConv(null); setVisitesConv([]); loadMessages(myEmail!, conv.other); loadVisitesConv(conv.other) }}
+                    style={{ padding: "12px 16px", cursor: "pointer", background: isActive ? "#f9fafb" : "white", borderBottom: "1px solid #f3f4f6", borderLeft: isActive ? "3px solid #111" : conv.unread > 0 ? "3px solid #ef4444" : "3px solid transparent", position: "relative" }}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "#fafafa"; const btn = e.currentTarget.querySelector(".menu-btn") as HTMLElement; if (btn) btn.style.opacity = "1" }}
+                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "white"; if (menuConv !== conv.key) { const btn = e.currentTarget.querySelector(".menu-btn") as HTMLElement; if (btn) btn.style.opacity = "0" } }}
+                  >
+                    <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                      {/* Avatar annonce ou initiale */}
+                      <div style={{ position: "relative", flexShrink: 0 }}>
+                        {photo ? (
+                          <img src={photo} alt="" style={{ width: 40, height: 40, borderRadius: 10, objectFit: "cover", display: "block" }} />
+                        ) : (
+                          <div style={{ width: 40, height: 40, borderRadius: 10, background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 15 }}>
+                            {conv.other[0]?.toUpperCase()}
+                          </div>
+                        )}
+                        {conv.unread > 0 && (
+                          <span style={{ position: "absolute", top: -4, right: -4, background: "#ef4444", color: "white", borderRadius: 999, fontSize: 9, fontWeight: 800, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: "2px solid white" }}>
+                            {conv.unread}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
+                          <p style={{ fontWeight: conv.unread > 0 ? 800 : 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 130, color: "#111" }}>
+                            {ann?.titre || conv.other}
+                          </p>
+                          <span style={{ fontSize: 10, color: "#9ca3af", whiteSpace: "nowrap" }}>{time}</span>
+                        </div>
+                        {ann?.titre && (
+                          <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{conv.other}</p>
+                        )}
+                        <p style={{ fontSize: 12, color: conv.unread > 0 ? "#374151" : "#9ca3af", fontWeight: conv.unread > 0 ? 600 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{preview}</p>
+                      </div>
+                    </div>
+
+                    {/* Bouton 3 points */}
+                    <button
+                      className="menu-btn"
+                      onClick={e => { e.stopPropagation(); setMenuConv(menuConv === conv.key ? null : conv.key) }}
+                      style={{ position: "absolute", top: 10, right: 10, opacity: menuConv === conv.key ? 1 : 0, background: "#f3f4f6", border: "none", borderRadius: 6, padding: "2px 8px", cursor: "pointer", fontSize: 16, color: "#6b7280", transition: "opacity 0.15s", lineHeight: 1, letterSpacing: 1 }}>
+                      ···
+                    </button>
+
+                    {/* Dropdown menu */}
+                    {menuConv === conv.key && (
+                      <>
+                        <div onClick={e => { e.stopPropagation(); setMenuConv(null) }} style={{ position: "fixed", inset: 0, zIndex: 100 }} />
+                        <div style={{ position: "absolute", top: 36, right: 10, background: "white", borderRadius: 12, border: "1.5px solid #e5e7eb", boxShadow: "0 6px 20px rgba(0,0,0,0.12)", zIndex: 200, minWidth: 170, overflow: "hidden" }}>
+                          {conv.unread > 0 && (
+                            <button onClick={e => { e.stopPropagation(); marquerLu(conv); setMenuConv(null) }}
+                              style={{ width: "100%", padding: "10px 14px", background: "none", border: "none", borderBottom: "1px solid #f3f4f6", textAlign: "left", fontSize: 13, cursor: "pointer", fontFamily: "inherit", color: "#374151", display: "flex", alignItems: "center", gap: 8 }}
+                              onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
+                              onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+                              ✓ Marquer comme lu
+                            </button>
+                          )}
+                          {ann && (
+                            <button onClick={e => { e.stopPropagation(); window.location.href = `/annonces/${conv.annonceId}`; setMenuConv(null) }}
+                              style={{ width: "100%", padding: "10px 14px", background: "none", border: "none", borderBottom: "1px solid #f3f4f6", textAlign: "left", fontSize: 13, cursor: "pointer", fontFamily: "inherit", color: "#374151", display: "flex", alignItems: "center", gap: 8 }}
+                              onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
+                              onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+                              🏠 Voir l'annonce
+                            </button>
+                          )}
+                          <button onClick={e => { e.stopPropagation(); supprimerConversation(conv.key); setMenuConv(null) }}
+                            disabled={supprimant === conv.key}
+                            style={{ width: "100%", padding: "10px 14px", background: "none", border: "none", textAlign: "left", fontSize: 13, cursor: supprimant === conv.key ? "not-allowed" : "pointer", fontFamily: "inherit", color: "#dc2626", display: "flex", alignItems: "center", gap: 8, opacity: supprimant === conv.key ? 0.5 : 1 }}
+                            onMouseEnter={e => (e.currentTarget.style.background = "#fee2e2")}
+                            onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+                            🗑 {supprimant === conv.key ? "Suppression…" : "Supprimer"}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* ── Colonne droite : chat ── */}
+          <div style={{ flex: 1, background: "white", borderRadius: 20, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+            {!convActiveData ? (
+              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", color: "#9ca3af", gap: 12 }}>
+                <div style={{ fontSize: 48 }}>💬</div>
+                <p style={{ fontSize: 16, fontWeight: 600, color: "#374151" }}>Sélectionnez une conversation</p>
+                {!proprietaireActive ? (
+                  <>
+                    <p style={{ fontSize: 13 }}>Contactez un propriétaire depuis une annonce</p>
+                    <Link href="/annonces" style={{ marginTop: 8, padding: "10px 24px", background: "#111", color: "white", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>
+                      Voir les annonces
+                    </Link>
+                  </>
+                ) : (
+                  <p style={{ fontSize: 13 }}>Les locataires intéressés vous contacteront ici</p>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Header chat */}
+                <div style={{ padding: "14px 20px", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: 12 }}>
+                  {annonceActive ? (
+                    <>
+                      {Array.isArray(annonceActive.photos) && annonceActive.photos[0] ? (
+                        <img src={annonceActive.photos[0]} alt="" style={{ width: 42, height: 42, borderRadius: 10, objectFit: "cover" }} />
+                      ) : (
+                        <div style={{ width: 42, height: 42, borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🏠</div>
+                      )}
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontWeight: 700, fontSize: 14 }}>{annonceActive.titre}</p>
+                        <p style={{ fontSize: 12, color: "#9ca3af" }}>{annonceActive.ville} · {convActiveData.other}</p>
+                      </div>
+                      <Link href={`/annonces/${convActiveData.annonceId}`}
+                        style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "6px 14px", whiteSpace: "nowrap" }}>
+                        Voir l'annonce
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 16 }}>
+                        {convActiveData.other[0]?.toUpperCase()}
+                      </div>
+                      <p style={{ fontWeight: 700, fontSize: 14 }}>{convActiveData.other}</p>
+                    </>
+                  )}
+                </div>
+
+                {/* Messages */}
+                <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 8 }}>
+                  {messages.length === 0 && (
+                    <div style={{ textAlign: "center", color: "#9ca3af", marginTop: 40 }}>
+                      <p style={{ fontSize: 14 }}>Démarrez la conversation</p>
+                    </div>
+                  )}
+                  {messagesAvecSep.map((item, idx) => {
+                    if (item.type === "sep") return (
+                      <div key={`sep-${idx}`} style={{ display: "flex", alignItems: "center", gap: 12, margin: "8px 0" }}>
+                        <div style={{ flex: 1, height: 1, background: "#f3f4f6" }} />
+                        <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, whiteSpace: "nowrap" }}>{item.label}</span>
+                        <div style={{ flex: 1, height: 1, background: "#f3f4f6" }} />
+                      </div>
+                    )
+                    const m = item.msg
+                    const isMine = m.from_email === myEmail
+                    const isDossier = typeof m.contenu === "string" && m.contenu.startsWith(DOSSIER_PREFIX)
+                    return (
+                      <div key={m.id} style={{ display: "flex", justifyContent: isMine ? "flex-end" : "flex-start" }}>
+                        {isDossier ? (
+                          <div>
+                            <DossierCard contenu={m.contenu} isMine={isMine} />
+                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        ) : (
+                          <div style={{ maxWidth: "68%", padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: isMine ? "#111" : "#f3f4f6", color: isMine ? "white" : "#111" }}>
+                            <p style={{ fontSize: 14, lineHeight: 1.5, margin: 0 }}>{m.contenu}</p>
+                            <p style={{ fontSize: 10, opacity: 0.5, marginTop: 4, textAlign: "right", margin: "4px 0 0" }}>
+                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                              {isMine && <span style={{ marginLeft: 4 }}>{m.lu ? "✓✓" : "✓"}</span>}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                  <div ref={bottomRef} />
+                </div>
+
+                {/* Visites liées à cette conversation */}
+                {visitesConv.length > 0 && (
+                  <div style={{ borderTop: "1px solid #f3f4f6", padding: "12px 20px", background: "#fafafa" }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
+                      📅 Demandes de visite
+                    </p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {visitesConv.map(v => {
+                        const s = STATUT_VISITE[v.statut] ?? STATUT_VISITE["proposée"]
+                        const isPending = v.statut === "proposée"
+                        return (
+                          <div key={v.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "white", borderRadius: 12, padding: "10px 14px", border: `1.5px solid ${s.border}` }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>
+                                  {new Date(v.date_visite + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short", year: "numeric" })} à {v.heure}
+                                </span>
+                                <span style={{ background: s.bg, color: s.color, fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 999, border: `1px solid ${s.border}`, flexShrink: 0 }}>
+                                  {s.label}
+                                </span>
+                              </div>
+                              {v.message && (
+                                <p style={{ fontSize: 11, color: "#6b7280", fontStyle: "italic", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  "{v.message}"
+                                </p>
+                              )}
+                            </div>
+                            {proprietaireActive && isPending && (
+                              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                                <button onClick={() => changerStatutVisite(v.id, "confirmée")}
+                                  style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "5px 12px", fontWeight: 700, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
+                                  ✓ Confirmer
+                                </button>
+                                <button onClick={() => changerStatutVisite(v.id, "annulée")}
+                                  style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "5px 10px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
+                                  Refuser
+                                </button>
+                              </div>
+                            )}
+                            {!proprietaireActive && isPending && (
+                              <button onClick={() => changerStatutVisite(v.id, "annulée")}
+                                style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "5px 10px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
+                                Annuler
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Zone saisie */}
+                <div style={{ borderTop: "1px solid #f3f4f6", padding: "10px 20px 14px" }}>
+                  {/* Bouton dossier + réponses rapides */}
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+                    {!proprietaireActive && (
+                      <button onClick={envoyerDossier} disabled={envoyantDossier}
+                        style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", color: "#15803d", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: envoyantDossier ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, opacity: envoyantDossier ? 0.6 : 1 }}>
+                        📁 {envoyantDossier ? "Envoi..." : "Mon dossier"}
+                      </button>
+                    )}
+                    <div style={{ width: 1, height: 16, background: "#e5e7eb" }} />
+                    {MESSAGES_RAPIDES.map((msg, i) => (
+                      <button key={i} onClick={() => setNouveau(msg)}
+                        style={{ background: "#f3f4f6", border: "none", borderRadius: 999, padding: "5px 11px", fontSize: 11, fontWeight: 500, cursor: "pointer", color: "#374151", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                        {msg.slice(0, 30)}{msg.length > 30 ? "…" : ""}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <input ref={inputRef} value={nouveau} onChange={e => setNouveau(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && !e.shiftKey && envoyer()}
+                      placeholder="Votre message…"
+                      style={{ flex: 1, padding: "11px 16px", border: "1.5px solid #e5e7eb", borderRadius: 999, fontSize: 14, outline: "none", fontFamily: "inherit" }} />
+                    <button onClick={envoyer} disabled={envoi || !nouveau.trim()}
+                      style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "0 22px", fontWeight: 700, fontSize: 14, cursor: envoi || !nouveau.trim() ? "not-allowed" : "pointer", opacity: envoi || !nouveau.trim() ? 0.4 : 1, fontFamily: "inherit" }}>
+                      Envoyer
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </main>
+  )
+}
+
+export default function Messages() {
+  return (
+    <Suspense fallback={<div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>Chargement...</div>}>
+      <MessagesInner />
+    </Suspense>
+  )
+}

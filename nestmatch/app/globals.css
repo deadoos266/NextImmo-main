@@ -1,0 +1,11 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #F7F4EF;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  color: #111111;
+}
