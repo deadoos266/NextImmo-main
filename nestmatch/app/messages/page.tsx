@@ -8,6 +8,7 @@ import { useRole } from "../providers"
 import { Suspense } from "react"
 
 const DOSSIER_PREFIX = "[DOSSIER_CARD]"
+const DEMANDE_DOSSIER_PREFIX = "[DEMANDE_DOSSIER]"
 
 const STATUT_VISITE: Record<string, { bg: string; color: string; border: string; label: string }> = {
   "proposée":  { bg: "#fff7ed", color: "#c2410c", border: "#fed7aa", label: "En attente" },
@@ -49,6 +50,53 @@ function Row({ label, val, isMine }: { label: string; val: string; isMine: boole
     <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
       <span style={{ fontSize: 11, color: isMine ? "#9ca3af" : "#6b7280" }}>{label}</span>
       <span style={{ fontSize: 11, fontWeight: 600, color: isMine ? "white" : "#111" }}>{val}</span>
+    </div>
+  )
+}
+
+// ─── Demande Dossier Card ────────────────────────────────────────────────────
+
+function DemandeDossierCard({ isMine, dossierRecu, onEnvoyer, envoyant }: {
+  isMine: boolean
+  dossierRecu: boolean
+  onEnvoyer: () => void
+  envoyant: boolean
+}) {
+  if (isMine) {
+    return (
+      <div style={{ background: "#1a1a1a", border: "1.5px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 280 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 20 }}>📋</span>
+          <div>
+            <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0 }}>Dossier demandé</p>
+            <p style={{ fontSize: 11, color: dossierRecu ? "#86efac" : "#9ca3af", margin: "2px 0 0" }}>
+              {dossierRecu ? "✓ Dossier reçu" : "En attente de réponse..."}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div style={{ background: "#f9fafb", border: "1.5px solid #e5e7eb", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 280 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+        <span style={{ fontSize: 20 }}>📋</span>
+        <div>
+          <p style={{ fontWeight: 700, fontSize: 13, color: "#111", margin: 0 }}>Demande de dossier</p>
+          <p style={{ fontSize: 11, color: "#6b7280", margin: "2px 0 0" }}>Le propriétaire souhaite voir votre dossier</p>
+        </div>
+      </div>
+      {dossierRecu ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#dcfce7", borderRadius: 8, padding: "7px 12px" }}>
+          <span style={{ fontSize: 12 }}>✓</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "#15803d" }}>Dossier envoyé</span>
+        </div>
+      ) : (
+        <button onClick={onEnvoyer} disabled={envoyant}
+          style={{ width: "100%", background: envoyant ? "#e5e7eb" : "#111", color: envoyant ? "#9ca3af" : "white", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: envoyant ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+          {envoyant ? "Envoi en cours..." : "📁 Envoyer mon dossier"}
+        </button>
+      )}
     </div>
   )
 }
@@ -104,6 +152,7 @@ function MessagesInner() {
   const [visiteHeure, setVisiteHeure] = useState("10:00")
   const [visiteMessage, setVisiteMessage] = useState("")
   const [envoyantVisite, setEnvoyantVisite] = useState(false)
+  const [demandantDossier, setDemandantDossier] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const myEmail = session?.user?.email
@@ -282,6 +331,20 @@ function MessagesInner() {
     setVisitesConv(data || [])
   }
 
+  async function demanderDossier() {
+    if (!convActive || !myEmail) return
+    setDemandantDossier(true)
+    const conv = conversations.find(c => c.key === convActive)
+    if (!conv) { setDemandantDossier(false); return }
+    const msg = { from_email: myEmail, to_email: conv.other, contenu: DEMANDE_DOSSIER_PREFIX, lu: false, created_at: new Date().toISOString() }
+    const { data } = await supabase.from("messages").insert([msg]).select().single()
+    if (data) {
+      setMessages(prev => [...prev, data])
+      setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: data } : c))
+    }
+    setDemandantDossier(false)
+  }
+
   async function changerStatutVisite(id: string, statut: string) {
     await supabase.from("visites").update({ statut }).eq("id", id)
     setVisitesConv(prev => prev.map(v => v.id === id ? { ...v, statut } : v))
@@ -324,6 +387,10 @@ function MessagesInner() {
   const convsFiltrees = conversations.filter(c =>
     !recherche || c.other.toLowerCase().includes(recherche.toLowerCase()) ||
     (annonces[c.annonceId]?.titre || "").toLowerCase().includes(recherche.toLowerCase())
+  )
+
+  const dossierDejaEnvoye = messages.some(m =>
+    typeof m.contenu === "string" && m.contenu.startsWith(DOSSIER_PREFIX)
   )
 
   // Grouper les messages par date
@@ -376,6 +443,7 @@ function MessagesInner() {
                 const isActive = convActive === conv.key
                 const preview = conv.lastMsg?.contenu
                   ? conv.lastMsg.contenu.startsWith(DOSSIER_PREFIX) ? "📁 Dossier envoyé"
+                  : conv.lastMsg.contenu.startsWith(DEMANDE_DOSSIER_PREFIX) ? "📋 Dossier demandé"
                   : conv.lastMsg.contenu.length > 35 ? conv.lastMsg.contenu.slice(0, 35) + "…"
                   : conv.lastMsg.contenu
                   : "Nouvelle conversation"
@@ -530,11 +598,24 @@ function MessagesInner() {
                     const m = item.msg
                     const isMine = m.from_email === myEmail
                     const isDossier = typeof m.contenu === "string" && m.contenu.startsWith(DOSSIER_PREFIX)
+                    const isDemande = typeof m.contenu === "string" && m.contenu === DEMANDE_DOSSIER_PREFIX
                     return (
                       <div key={m.id} style={{ display: "flex", justifyContent: isMine ? "flex-end" : "flex-start" }}>
                         {isDossier ? (
                           <div>
                             <DossierCard contenu={m.contenu} isMine={isMine} />
+                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        ) : isDemande ? (
+                          <div>
+                            <DemandeDossierCard
+                              isMine={isMine}
+                              dossierRecu={dossierDejaEnvoye}
+                              onEnvoyer={envoyerDossier}
+                              envoyant={envoyantDossier}
+                            />
                             <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
@@ -614,6 +695,12 @@ function MessagesInner() {
                       <button onClick={envoyerDossier} disabled={envoyantDossier}
                         style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", color: "#15803d", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: envoyantDossier ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, opacity: envoyantDossier ? 0.6 : 1 }}>
                         📁 {envoyantDossier ? "Envoi..." : "Mon dossier"}
+                      </button>
+                    )}
+                    {proprietaireActive && (
+                      <button onClick={demanderDossier} disabled={demandantDossier}
+                        style={{ background: "#fef3c7", border: "1.5px solid #fde68a", color: "#d97706", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: demandantDossier ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, opacity: demandantDossier ? 0.6 : 1 }}>
+                        📋 {demandantDossier ? "Envoi..." : "Demander le dossier"}
                       </button>
                     )}
                     {convActiveData?.annonceId && (
