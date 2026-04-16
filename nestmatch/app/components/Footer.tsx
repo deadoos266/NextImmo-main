@@ -104,8 +104,13 @@ export default function Footer() {
           <span style={{ fontSize: 12, color: "#9ca3af" }}>© {new Date().getFullYear()}</span>
         </div>
         <div style={{ display: "flex", gap: isMobile ? 12 : 20, flexWrap: "wrap" }}>
-          {["Confidentialité", "Cookies", "CGU", "Mentions légales"].map(l => (
-            <a key={l} href="#" style={{ fontSize: 12, color: "#9ca3af", textDecoration: "none" }}>{l}</a>
+          {[
+            { label: "Confidentialité", href: "#" },
+            { label: "Cookies", href: "/cookies" },
+            { label: "CGU", href: "#" },
+            { label: "Mentions légales", href: "#" },
+          ].map(l => (
+            <a key={l.label} href={l.href} style={{ fontSize: 12, color: "#9ca3af", textDecoration: "none" }}>{l.label}</a>
           ))}
         </div>
       </div>
