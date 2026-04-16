@@ -395,7 +395,7 @@ export default function Proprietaire() {
                       Annonce
                     </a>
                     <a href={`/proprietaire/stats?id=${b.id}`} style={{ textAlign: "center", padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, textDecoration: "none", color: "#6b7280", fontSize: 12, fontWeight: 600, flex: isMobile ? 1 : undefined }}>
-                      Stats
+                      Statistiques
                     </a>
                   </div>
                 </div>

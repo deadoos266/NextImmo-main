@@ -79,7 +79,7 @@ export default function Navbar() {
 
       {/* Logo */}
       <Link href="/" style={{ fontSize: isSmall ? 18 : 22, fontWeight: 800, textDecoration: "none", color: "#111", letterSpacing: "-0.5px" }}>
-        NestMatch {isAdmin && <span style={{ fontSize: 11, background: "#111", color: "white", padding: "2px 6px", borderRadius: 999, marginLeft: 6 }}>ADMIN</span>}
+        NestMatch {isAdmin && <Link href="/admin" style={{ fontSize: 11, background: "#111", color: "white", padding: "2px 6px", borderRadius: 999, marginLeft: 6, textDecoration: "none" }}>ADMIN</Link>}
       </Link>
 
       {/* Desktop : liens centraux */}

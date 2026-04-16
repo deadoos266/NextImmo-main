@@ -5,6 +5,7 @@ import ContactButton from "./ContactButton"
 import PhotoCarousel from "./PhotoCarousel"
 import FavoriButton from "./FavoriButton"
 import BookingVisite from "./BookingVisite"
+import OwnerActions from "./OwnerActions"
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || 'https://nestmatch.fr'
 
@@ -199,6 +200,7 @@ export default async function Annonce({ params }: any) {
               <ScoreBlock annonce={annonce} />
               <ContactButton annonce={annonce} />
               <BookingVisite annonceId={annonce.id} proprietaireEmail={annonce.proprietaire_email} />
+              <OwnerActions proprietaireEmail={annonce.proprietaire_email} annonceId={annonce.id} />
 
               <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 16, display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ width: 44, height: 44, background: "#e5e7eb", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 18, flexShrink: 0 }}>

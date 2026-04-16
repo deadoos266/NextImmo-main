@@ -703,7 +703,7 @@ function StatsInner() {
                     cursor: "pointer", fontFamily: "inherit", border: "none",
                     background: editOpen ? "#111" : "#111", color: "white",
                   }}>
-                  {editOpen ? "Fermer l'edition" : "Modifier les donnees"}
+                  {editOpen ? "Fermer l'edition" : "\u270E Modifier les donnees"}
                 </button>
                 {bien.locataire_email && (
                   <Link href={`/messages?to=${bien.locataire_email}`}

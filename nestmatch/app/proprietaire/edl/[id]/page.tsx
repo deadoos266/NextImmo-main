@@ -74,6 +74,7 @@ function genererEdlPDF(data: {
   type: "entree" | "sortie"
   dateEdl: string
   nomBailleur: string
+  prenomLocataire: string
   nomLocataire: string
   titreBien: string
   adresseBien: string
@@ -106,7 +107,8 @@ function genererEdlPDF(data: {
 
   section("PARTIES")
   field("Bailleur", data.nomBailleur)
-  field("Locataire", data.nomLocataire)
+  field("Nom", data.nomLocataire)
+  field("Prenom", data.prenomLocataire)
   y += 3
 
   section("LOGEMENT")
@@ -187,7 +189,7 @@ function genererEdlPDF(data: {
   y += 5
   doc.setFontSize(9); doc.setFont("helvetica", "normal")
   doc.text(data.nomBailleur, 50, y, { align: "center" })
-  doc.text(data.nomLocataire, 155, y, { align: "center" })
+  doc.text(`${data.prenomLocataire} ${data.nomLocataire}`.trim(), 155, y, { align: "center" })
   y += 3
   doc.setFontSize(7); doc.text("(Lu et approuve)", 50, y, { align: "center" })
   doc.text("(Lu et approuve)", 155, y, { align: "center" })
@@ -213,6 +215,7 @@ export default function EdlPage() {
 
   const [type, setType] = useState<"entree" | "sortie">("entree")
   const [dateEdl, setDateEdl] = useState(new Date().toISOString().split("T")[0])
+  const [prenomLocataire, setPrenomLocataire] = useState("")
   const [nomLocataire, setNomLocataire] = useState("")
   const [pieces, setPieces] = useState<PieceData[]>([])
   const [compteurs, setCompteurs] = useState({ eau: "", elec: "", gaz: "" })
@@ -323,6 +326,7 @@ export default function EdlPage() {
       type,
       dateEdl,
       nomBailleur: bien.proprietaire || session?.user?.name || "",
+      prenomLocataire: prenomLocataire || "",
       nomLocataire: nomLocataire || bien.locataire_email || "",
       titreBien: bien.titre || "",
       adresseBien: bien.adresse || "",
@@ -393,9 +397,10 @@ export default function EdlPage() {
               </button>
             ))}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr 1fr", gap: 16 }}>
             <div><label style={lbl}>Date</label><input style={inp} type="date" value={dateEdl} onChange={e => setDateEdl(e.target.value)} /></div>
-            <div><label style={lbl}>Nom du locataire</label><input style={inp} value={nomLocataire} onChange={e => setNomLocataire(e.target.value)} placeholder={bien.locataire_email || "Nom complet"} /></div>
+            <div><label style={lbl}>Prenom du locataire</label><input style={inp} value={prenomLocataire} onChange={e => setPrenomLocataire(e.target.value)} placeholder="Prenom" /></div>
+            <div><label style={lbl}>Nom du locataire</label><input style={inp} value={nomLocataire} onChange={e => setNomLocataire(e.target.value)} placeholder="Nom de famille" /></div>
             <div><label style={lbl}>Cles remises</label><input style={inp} value={cles} onChange={e => setCles(e.target.value)} /></div>
           </div>
         </div>
