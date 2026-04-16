@@ -334,7 +334,6 @@ export default function EdlPage() {
     const nom = customName || typeName
     const t = detectType(nom)
     setPieces(prev => [...prev, { nom, type: t, elements: makeElements(t), photos: [] }])
-    setPieceToAdd("")
     setCustomPieceName("")
   }
 
