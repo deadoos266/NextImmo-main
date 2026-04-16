@@ -589,63 +589,179 @@ function StatsInner() {
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
+  const pendingLoyers = loyers.filter(l => l.statut === "déclaré")
+  const confirmedLoyers = loyers.filter(l => l.statut === "confirmé")
+  const totalConfirmeAnnee = loyersCetteAnnee.filter(l => l.statut === "confirmé").reduce((s, l) => s + (l.montant || 0), 0)
+  const pctObjectif = revenuAnnuelTheorique > 0 ? Math.round((revenuAnnuelReel / revenuAnnuelTheorique) * 100) : 0
+  const cashflowRatio = revenuMensuel > 0 ? Math.min(100, Math.round((Math.abs(cashflowMensuel) / revenuMensuel) * 100)) : 0
+
+  const statutMap: Record<string, { label: string; bg: string; color: string; border: string }> = {
+    disponible: { label: "Disponible", bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" },
+    "en visite": { label: "En visite", bg: "#fff7ed", color: "#ea580c", border: "#fed7aa" },
+    "réservé": { label: "Réservé", bg: "#fefce8", color: "#a16207", border: "#fde68a" },
+    "loué": { label: "Loué", bg: "#dcfce7", color: "#16a34a", border: "#bbf7d0" },
+  }
+  const statutBadge = statutMap[bien.statut] || statutMap.disponible
+
+  // Payment calendar: last 12 months data
+  const calendarMonths: { key: string; label: string; amount: number; status: "confirmé" | "déclaré" | "none" }[] = []
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    const l = loyers.find(lr => lr.mois === key || lr.mois?.startsWith(key))
+    calendarMonths.push({
+      key,
+      label: d.toLocaleDateString("fr-FR", { month: "short" }).slice(0, 3),
+      amount: l?.montant || 0,
+      status: l ? l.statut : "none",
+    })
+  }
+
+  const cardStyle = {
+    background: "white",
+    borderRadius: 20,
+    padding: isMobile ? "18px 16px" : "24px 28px",
+    boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+  }
+
+  const labelStyle = {
+    fontSize: 10,
+    fontWeight: 700,
+    color: "#6b7280",
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.5px",
+    marginBottom: 6,
+    display: "block",
+  }
+
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "24px 16px" : "32px 48px" }}>
 
-        <Link href="/proprietaire" style={{ fontSize: 14, color: "#6b7280", textDecoration: "none" }}>
-          ← Retour au dashboard
+        <Link href="/proprietaire" style={{ fontSize: 13, color: "#6b7280", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 16 }}>&larr;</span> Retour au dashboard
         </Link>
 
-        <div style={{ margin: "16px 0 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.5px" }}>Statistiques</h1>
-            <p style={{ color: "#6b7280", marginTop: 4, fontSize: 14 }}>
-              {bien.titre} · {bien.ville} · {bien.surface} m²
-            </p>
+        {/* ══════════════════════════════════════════════════════════════════════
+            1. PROPERTY HERO CARD
+           ══════════════════════════════════════════════════════════════════════ */}
+        <div style={{ ...cardStyle, marginTop: 16, marginBottom: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 20 : 0 }}>
+            {/* Left: property info */}
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
+                <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 800, letterSpacing: "-0.5px", margin: 0 }}>
+                  {bien.titre || "Mon bien"}
+                </h1>
+                <span style={{
+                  background: statutBadge.bg, color: statutBadge.color,
+                  border: `1px solid ${statutBadge.border}`,
+                  fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 999,
+                }}>
+                  {statutBadge.label}
+                </span>
+              </div>
+              <p style={{ fontSize: 14, color: "#6b7280", margin: 0, lineHeight: 1.6 }}>
+                {bien.ville}{bien.surface ? ` \u00B7 ${bien.surface} m\u00B2` : ""}
+                {bien.date_debut_bail && moisDepuisDebut > 0 ? ` \u00B7 Bail : ${moisDepuisDebut} mois` : ""}
+              </p>
+              {bien.locataire_email && (
+                <p style={{ fontSize: 13, color: "#111", margin: "6px 0 0", fontWeight: 600 }}>
+                  Locataire : {bien.locataire_email}
+                </p>
+              )}
+
+              {/* Quick actions */}
+              <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
+                <button onClick={() => setEditOpen(!editOpen)}
+                  style={{
+                    padding: "9px 18px", borderRadius: 999, fontWeight: 700, fontSize: 13,
+                    cursor: "pointer", fontFamily: "inherit", border: "none",
+                    background: editOpen ? "#111" : "#111", color: "white",
+                  }}>
+                  {editOpen ? "Fermer l'edition" : "Modifier les donnees"}
+                </button>
+                {bien.locataire_email && (
+                  <Link href={`/messages?to=${bien.locataire_email}`}
+                    style={{
+                      padding: "9px 18px", border: "1.5px solid #e5e7eb", borderRadius: 999,
+                      fontSize: 13, fontWeight: 700, color: "#111", textDecoration: "none",
+                      background: "none", display: "inline-flex", alignItems: "center", gap: 6,
+                    }}>
+                    Contacter locataire
+                  </Link>
+                )}
+                <Link href={`/annonces/${bienId}`}
+                  style={{
+                    padding: "9px 18px", border: "1.5px solid #e5e7eb", borderRadius: 999,
+                    fontSize: 13, fontWeight: 700, color: "#6b7280", textDecoration: "none",
+                    background: "none", display: "inline-flex", alignItems: "center",
+                  }}>
+                  Voir l'annonce
+                </Link>
+              </div>
+            </div>
+
+            {/* Right: small occupation donut */}
+            {tauxOccupation !== null && (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                <svg viewBox="0 0 36 36" width={72} height={72}>
+                  <circle cx={18} cy={18} r={15.9} fill="none" stroke="#f3f4f6" strokeWidth={3.8} />
+                  <circle cx={18} cy={18} r={15.9} fill="none"
+                    stroke={tauxOccupation >= 90 ? "#16a34a" : tauxOccupation >= 70 ? "#ea580c" : "#dc2626"}
+                    strokeWidth={3.8}
+                    strokeDasharray={`${tauxOccupation} ${100 - tauxOccupation}`}
+                    strokeDashoffset={25} strokeLinecap="round"
+                  />
+                  <text x={18} y={20} textAnchor="middle" fontSize={8} fontWeight="bold" fill="#111">
+                    {tauxOccupation}%
+                  </text>
+                </svg>
+                <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 600 }}>Occupation</span>
+                <span style={{ fontSize: 10, color: "#9ca3af" }}>{loyers.length}/{moisDepuisDebut} mois</span>
+              </div>
+            )}
           </div>
-          <button onClick={() => setEditOpen(!editOpen)}
-            style={{ padding: "9px 18px", border: "1.5px solid #e5e7eb", borderRadius: 999, background: editOpen ? "#111" : "white", color: editOpen ? "white" : "#111", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
-            {editOpen ? "Fermer" : "Modifier les donnees"}
-          </button>
         </div>
 
-        {/* ── Panneau edition ── */}
+        {/* ══════════════════════════════════════════════════════════════════════
+            EDIT PANEL (collapsible)
+           ══════════════════════════════════════════════════════════════════════ */}
         {editOpen && (
-          <div style={{ background: "white", borderRadius: 20, padding: 24, marginBottom: 24, border: "1.5px solid #e5e7eb" }}>
-            <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 20 }}>Données du bien</h3>
+          <div style={{ ...cardStyle, marginBottom: 20, border: "1.5px solid #e5e7eb" }}>
+            <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 20 }}>Donnees du bien</h3>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 16, marginBottom: 16 }}>
               {[
                 { k: "titre", l: "Titre" },
-                { k: "prix", l: "Loyer mensuel (€)" },
-                { k: "charges", l: "Charges (€)" },
-                { k: "valeur_bien", l: "Valeur du bien (€)" },
-                { k: "mensualite_credit", l: "Mensualite credit (€)" },
-                { k: "duree_credit", l: "Durée crédit (mois)" },
+                { k: "prix", l: "Loyer mensuel (euros)" },
+                { k: "charges", l: "Charges (euros)" },
+                { k: "valeur_bien", l: "Valeur du bien (euros)" },
+                { k: "mensualite_credit", l: "Mensualite credit (euros)" },
+                { k: "duree_credit", l: "Duree credit (mois)" },
                 { k: "date_debut_bail", l: "Date debut du bail", type: "date" },
               ].map(f => (
                 <div key={f.k}>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.4px" }}>{f.l}</label>
+                  <label style={labelStyle}>{f.l}</label>
                   <input
                     type={f.type || "text"}
                     value={editForm[f.k] ?? ""}
                     onChange={e => setEditForm((p: any) => ({ ...p, [f.k]: e.target.value }))}
-                    style={{ width: "100%", padding: "9px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                    style={{ width: "100%", padding: "9px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const }}
                   />
                 </div>
               ))}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 20 }}>
               <div>
-                <label style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.4px" }}>Email locataire</label>
+                <label style={labelStyle}>Email locataire</label>
                 <input value={editForm.locataire_email ?? ""} onChange={e => setEditForm((p: any) => ({ ...p, locataire_email: e.target.value }))}
                   placeholder="locataire@email.com"
-                  style={{ width: "100%", padding: "9px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+                  style={{ width: "100%", padding: "9px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const }} />
               </div>
               <div>
-                <label style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.4px" }}>Statut</label>
+                <label style={labelStyle}>Statut</label>
                 <select value={editForm.statut ?? "disponible"} onChange={e => setEditForm((p: any) => ({ ...p, statut: e.target.value }))}
-                  style={{ width: "100%", padding: "9px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, fontFamily: "inherit", outline: "none", background: "white", boxSizing: "border-box" }}>
+                  style={{ width: "100%", padding: "9px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, fontFamily: "inherit", outline: "none", background: "white", boxSizing: "border-box" as const }}>
                   <option value="disponible">Disponible</option>
                   <option value="en visite">En visite</option>
                   <option value="réservé">Réservé</option>
@@ -660,119 +776,284 @@ function StatsInner() {
           </div>
         )}
 
-        {/* ── 6 KPI cards ── */}
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 14, marginBottom: 24 }}>
-          {kpis.map(k => (
-            <div key={k.label} style={card}>
-              <p style={{ fontSize: 10, color: "#6b7280", marginBottom: 8, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                {k.label}
-              </p>
-              <p style={{ fontSize: 20, fontWeight: 800, color: k.color, letterSpacing: "-0.5px", lineHeight: 1.2 }}>
-                {k.val}
-              </p>
-              <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 6 }}>{k.sub}</p>
+        {/* ══════════════════════════════════════════════════════════════════════
+            2. ALERT BANNER — pending loyers
+           ══════════════════════════════════════════════════════════════════════ */}
+        {pendingLoyers.length > 0 && (
+          <div style={{
+            background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 14,
+            padding: "12px 20px", marginBottom: 20,
+            display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+            flexWrap: "wrap",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#f97316", display: "inline-block", flexShrink: 0 }} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#9a3412" }}>
+                {pendingLoyers.length} loyer{pendingLoyers.length > 1 ? "s" : ""} en attente de confirmation
+              </span>
             </div>
-          ))}
+            <button onClick={() => {
+              const el = document.getElementById("gestion-loyers")
+              if (el) el.scrollIntoView({ behavior: "smooth" })
+            }}
+              style={{
+                padding: "6px 16px", borderRadius: 999, border: "1.5px solid #ea580c",
+                background: "none", color: "#ea580c", fontWeight: 700, fontSize: 12,
+                cursor: "pointer", fontFamily: "inherit",
+              }}>
+              Voir
+            </button>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════════
+            3. THREE HERO KPI CARDS
+           ══════════════════════════════════════════════════════════════════════ */}
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 16, marginBottom: 16 }}>
+
+          {/* Cashflow mensuel */}
+          <div style={cardStyle}>
+            <p style={labelStyle}>Cashflow mensuel</p>
+            <p style={{
+              fontSize: isMobile ? 26 : 30, fontWeight: 800, letterSpacing: "-1px", lineHeight: 1.1, margin: "4px 0 10px",
+              color: cashflowMensuel >= 0 ? "#16a34a" : "#dc2626",
+            }}>
+              {cashflowMensuel >= 0 ? "+" : ""}{cashflowMensuel.toLocaleString("fr-FR")} &euro;
+            </p>
+            {/* Mini progress bar */}
+            <div style={{ background: "#f3f4f6", borderRadius: 6, height: 6, overflow: "hidden", marginBottom: 6 }}>
+              <div style={{
+                height: "100%", borderRadius: 6,
+                width: `${cashflowRatio}%`,
+                background: cashflowMensuel >= 0 ? "#16a34a" : "#dc2626",
+                transition: "width 0.3s",
+              }} />
+            </div>
+            <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>
+              {mensualiteCredit > 0
+                ? `${revenuMensuel.toLocaleString("fr-FR")} revenus - ${mensualiteCredit.toLocaleString("fr-FR")} credit`
+                : "Pas de credit renseigne"}
+            </p>
+          </div>
+
+          {/* Rentabilité brute */}
+          <div style={cardStyle}>
+            <p style={labelStyle}>Rentabilite brute</p>
+            <p style={{
+              fontSize: isMobile ? 26 : 30, fontWeight: 800, letterSpacing: "-1px", lineHeight: 1.1, margin: "4px 0 10px",
+              color: rentabiliteBrute
+                ? rentabiliteBrute >= 7 ? "#16a34a" : rentabiliteBrute >= 5 ? "#ea580c" : "#dc2626"
+                : "#9ca3af",
+            }}>
+              {rentabiliteBrute ? `${rentabiliteBrute.toFixed(2)}%` : "\u2014"}
+            </p>
+            <p style={{ fontSize: 12, color: "#6b7280", margin: 0, fontWeight: 600 }}>
+              {breakEvenAns ? `PER : ${breakEvenAns.toFixed(1)} ans` : "PER : \u2014"}
+            </p>
+            <p style={{ fontSize: 11, color: "#9ca3af", margin: "4px 0 0" }}>
+              {rentabiliteBrute
+                ? rentabiliteBrute >= 7 ? "Excellent rendement" : rentabiliteBrute >= 5 ? "Rendement correct" : "Rendement faible"
+                : "Renseignez la valeur du bien"}
+            </p>
+          </div>
+
+          {/* Revenus réels année */}
+          <div style={cardStyle}>
+            <p style={labelStyle}>Revenus reels {currentYear}</p>
+            <p style={{
+              fontSize: isMobile ? 26 : 30, fontWeight: 800, letterSpacing: "-1px", lineHeight: 1.1, margin: "4px 0 10px",
+              color: "#111",
+            }}>
+              {revenuAnnuelReel.toLocaleString("fr-FR")} &euro;
+            </p>
+            {/* Progress toward annual target */}
+            <div style={{ background: "#f3f4f6", borderRadius: 6, height: 6, overflow: "hidden", marginBottom: 6 }}>
+              <div style={{
+                height: "100%", borderRadius: 6,
+                width: `${Math.min(100, pctObjectif)}%`,
+                background: pctObjectif >= 90 ? "#16a34a" : pctObjectif >= 60 ? "#ea580c" : "#dc2626",
+                transition: "width 0.3s",
+              }} />
+            </div>
+            <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>
+              {pctObjectif}% de l'objectif ({revenuAnnuelTheorique.toLocaleString("fr-FR")} &euro;)
+            </p>
+          </div>
         </div>
 
-        {/* ── Monthly revenue bar chart (full width) ── */}
-        <div style={{ ...card, marginBottom: 24 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-            <h3 style={{ fontSize: 15, fontWeight: 800 }}>Revenus mensuels — 12 derniers mois</h3>
-            <div style={{ display: "flex", gap: 16, fontSize: 11, color: "#6b7280" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 2, background: "#16a34a", display: "inline-block" }} />
-                Confirmé
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 2, background: "#f97316", display: "inline-block" }} />
-                Déclaré
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width: 18, height: 1, background: "#d1d5db", display: "inline-block", borderTop: "1px dashed #d1d5db" }} />
-                Loyer théorique
-              </span>
-            </div>
+        {/* ══════════════════════════════════════════════════════════════════════
+            4. THREE SECONDARY KPIs (compact row)
+           ══════════════════════════════════════════════════════════════════════ */}
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
+          {/* Loyer mensuel */}
+          <div style={{ ...cardStyle, padding: isMobile ? "14px 16px" : "16px 22px" }}>
+            <p style={{ ...labelStyle, marginBottom: 4 }}>Loyer mensuel</p>
+            <p style={{ fontSize: 20, fontWeight: 800, color: "#111", margin: "2px 0", letterSpacing: "-0.5px" }}>
+              {loyerMensuel.toLocaleString("fr-FR")} &euro;
+            </p>
+            <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>
+              {charges > 0 ? `+ ${charges} charges = ${revenuMensuel} CC` : "charges non incluses"}
+            </p>
+          </div>
+
+          {/* ROI net / an */}
+          <div style={{ ...cardStyle, padding: isMobile ? "14px 16px" : "16px 22px" }}>
+            <p style={{ ...labelStyle, marginBottom: 4 }}>ROI net / an</p>
+            <p style={{
+              fontSize: 20, fontWeight: 800, margin: "2px 0", letterSpacing: "-0.5px",
+              color: rentabiliteNette != null ? (rentabiliteNette >= 0 ? "#16a34a" : "#dc2626") : "#9ca3af",
+            }}>
+              {rentabiliteNette != null
+                ? `${rentabiliteNette >= 0 ? "+" : ""}${rentabiliteNette.toFixed(2)}%`
+                : "\u2014"}
+            </p>
+            <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>
+              {mensualiteCredit > 0 ? `cashflow: ${cashflowMensuel >= 0 ? "+" : ""}${cashflowMensuel.toLocaleString("fr-FR")} /mois` : "Renseignez le credit"}
+            </p>
+          </div>
+
+          {/* Crédit restant */}
+          <div style={{ ...cardStyle, padding: isMobile ? "14px 16px" : "16px 22px" }}>
+            <p style={{ ...labelStyle, marginBottom: 4 }}>Credit restant</p>
+            <p style={{
+              fontSize: 20, fontWeight: 800, margin: "2px 0", letterSpacing: "-0.5px",
+              color: creditTermine ? "#16a34a" : anneesRestantesCredit !== null ? (anneesRestantesCredit <= 5 ? "#ea580c" : "#111") : "#9ca3af",
+            }}>
+              {creditTermine
+                ? "Termine"
+                : anneesRestantesCredit !== null
+                ? `${anneesRestantesCredit.toFixed(1)} ans`
+                : "\u2014"}
+            </p>
+            <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>
+              {dateFinCredit
+                ? creditTermine
+                  ? `Solde depuis ${dateFinCredit.toLocaleDateString("fr-FR", { month: "short", year: "numeric" })}`
+                  : `Fin : ${dateFinCredit.toLocaleDateString("fr-FR", { month: "short", year: "numeric" })} (${moisRestantsCredit} mois)`
+                : dureeCredit > 0 ? "Renseignez la date de debut" : "Renseignez la duree du credit"}
+            </p>
+          </div>
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════════════════
+            5. REVENUE BAR CHART (full width)
+           ══════════════════════════════════════════════════════════════════════ */}
+        <div style={{ ...cardStyle, marginBottom: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
+            <h3 style={{ fontSize: isMobile ? 14 : 15, fontWeight: 800, margin: 0 }}>Revenus mensuels — 12 derniers mois</h3>
+            {!isMobile && (
+              <div style={{ display: "flex", gap: 16, fontSize: 11, color: "#6b7280" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: "#16a34a", display: "inline-block" }} />
+                  Confirme
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: "#f97316", display: "inline-block" }} />
+                  Declare
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ width: 18, height: 1, background: "#d1d5db", display: "inline-block", borderTop: "1px dashed #d1d5db" }} />
+                  Loyer theorique
+                </span>
+              </div>
+            )}
           </div>
           <BarChart items={last12Months} refVal={loyerMensuel} />
+
+          {/* Summary row below chart */}
+          <div style={{
+            display: "flex", gap: isMobile ? 12 : 32, marginTop: 18, paddingTop: 14,
+            borderTop: "1px solid #f3f4f6", flexWrap: "wrap",
+          }}>
+            <div>
+              <p style={{ fontSize: 10, color: "#6b7280", fontWeight: 700, textTransform: "uppercase" as const, margin: "0 0 2px" }}>Total encaisse</p>
+              <p style={{ fontSize: 16, fontWeight: 800, color: "#111", margin: 0 }}>{totalEncaisse.toLocaleString("fr-FR")} &euro;</p>
+            </div>
+            <div>
+              <p style={{ fontSize: 10, color: "#6b7280", fontWeight: 700, textTransform: "uppercase" as const, margin: "0 0 2px" }}>Confirme {currentYear}</p>
+              <p style={{ fontSize: 16, fontWeight: 800, color: "#16a34a", margin: 0 }}>{totalConfirmeAnnee.toLocaleString("fr-FR")} &euro;</p>
+            </div>
+            <div>
+              <p style={{ fontSize: 10, color: "#6b7280", fontWeight: 700, textTransform: "uppercase" as const, margin: "0 0 2px" }}>vs Objectif</p>
+              <p style={{ fontSize: 16, fontWeight: 800, color: pctObjectif >= 90 ? "#16a34a" : "#ea580c", margin: 0 }}>{pctObjectif}%</p>
+            </div>
+          </div>
         </div>
 
-        {/* ── Break-even chart + Financial analysis ── */}
+        {/* ══════════════════════════════════════════════════════════════════════
+            6. TWO-COLUMN: Payment Calendar + Financial Analysis
+           ══════════════════════════════════════════════════════════════════════ */}
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 20, marginBottom: 24 }}>
 
-          <div style={card}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 800 }}>
-                Progression vers la rentabilite
-              </h3>
-              <div style={{ display: "flex", gap: 4 }}>
-                {([{ label: "5 ans", val: 60 }, { label: "10 ans", val: 120 }, { label: "15 ans", val: 180 }, { label: "Tout", val: 0 }] as const).map(z => (
-                  <button key={z.val} onClick={() => setZoomMois(z.val)}
-                    style={{ padding: "4px 10px", border: "1.5px solid #e5e7eb", borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", background: zoomMois === z.val ? "#111" : "white", color: zoomMois === z.val ? "white" : "#6b7280", transition: "all 0.15s" }}>
-                    {z.label}
-                  </button>
-                ))}
-              </div>
+          {/* LEFT: Payment calendar grid */}
+          <div style={cardStyle}>
+            <h3 style={{ fontSize: 15, fontWeight: 800, margin: "0 0 16px" }}>Suivi des paiements</h3>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : "repeat(4, 1fr)",
+              gap: 10,
+            }}>
+              {calendarMonths.map(m => {
+                const dotColor = m.status === "confirmé" ? "#16a34a" : m.status === "déclaré" ? "#f97316" : "#e5e7eb"
+                const dotBg = m.status === "confirmé" ? "#dcfce7" : m.status === "déclaré" ? "#fff7ed" : "#f9fafb"
+                return (
+                  <div key={m.key} style={{
+                    display: "flex", flexDirection: "column", alignItems: "center",
+                    padding: "10px 6px", borderRadius: 12, background: dotBg,
+                    border: `1px solid ${m.status === "none" ? "#f3f4f6" : dotColor}20`,
+                  }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" as const, marginBottom: 6 }}>
+                      {m.label}
+                    </span>
+                    <span style={{
+                      width: 18, height: 18, borderRadius: "50%",
+                      background: dotColor, display: "inline-block", marginBottom: 4,
+                    }} />
+                    {m.amount > 0 && (
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "#111" }}>
+                        {m.amount >= 1000 ? `${(m.amount / 1000).toFixed(1)}k` : m.amount}
+                      </span>
+                    )}
+                    {m.amount === 0 && (
+                      <span style={{ fontSize: 10, color: "#9ca3af" }}>&mdash;</span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
-            <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16 }}>
-              % de l'investissement récupéré via les loyers ({valeurBien > 0 ? `${(valeurBien / 1000).toFixed(0)}k €` : "valeur non renseignée"}).
-              Projection à {loyerMensuel > 0 ? `${loyerMensuel.toLocaleString("fr-FR")} €/mois` : "loyer non renseigné"}.
-            </p>
-
-            <LineChart
-              points={zoomMois > 0 ? perPoints.slice(0, zoomMois) : perPoints}
-              target={100}
-              unit="%"
-              labels={zoomMois > 0 ? perLabels.slice(0, zoomMois) : perLabels}
-            />
-
-            {perPoints.length >= 2 && (
-              <div style={{ display: "flex", gap: 16, marginTop: 12, fontSize: 11, color: "#6b7280", flexWrap: "wrap" }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ width: 20, height: 2, background: "#111", display: "inline-block" }} />
-                  Réel (loyers encaissés)
-                </span>
-                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ width: 20, height: 1, borderTop: "2px dashed #d1d5db", display: "inline-block" }} />
-                  Projection théorique
-                </span>
-                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ width: 20, height: 1, borderTop: "2px dashed #dc2626", display: "inline-block", opacity: 0.7 }} />
-                  100 % — rentabilisé
-                </span>
-              </div>
-            )}
-
-            {perPoints.length < 2 && (
-              <div style={{ marginTop: 8, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, padding: "10px 14px" }}>
-                <p style={{ fontSize: 12, color: "#92400e", fontWeight: 600 }}>
-                  Renseignez la date de début du bail et la valeur du bien pour voir ce graphique
-                </p>
-              </div>
-            )}
+            {/* Legend */}
+            <div style={{ display: "flex", gap: 14, marginTop: 14, fontSize: 10, color: "#6b7280", flexWrap: "wrap" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16a34a", display: "inline-block" }} /> Confirme
+              </span>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#f97316", display: "inline-block" }} /> Declare
+              </span>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#e5e7eb", display: "inline-block" }} /> Manquant
+              </span>
+            </div>
           </div>
 
-          <div style={card}>
-            <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 20 }}>Analyse financiere</h3>
+          {/* RIGHT: Financial analysis table */}
+          <div style={cardStyle}>
+            <h3 style={{ fontSize: 15, fontWeight: 800, margin: "0 0 16px" }}>Analyse financiere</h3>
             <div style={{ display: "flex", flexDirection: "column" }}>
               {[
-                { label: "Loyer mensuel",             val: `${loyerMensuel.toLocaleString("fr-FR")} €`,                                          color: "#111",      bold: false },
-                { label: "Charges récupérables",      val: `${charges.toLocaleString("fr-FR")} €`,                                               color: "#111",      bold: false },
-                { label: "Revenu mensuel total",      val: `${revenuMensuel.toLocaleString("fr-FR")} €`,                                         color: "#16a34a",   bold: true  },
-                { label: "Mensualité crédit",         val: mensualiteCredit ? `-${mensualiteCredit.toLocaleString("fr-FR")} €` : "Non renseigné", color: mensualiteCredit ? "#dc2626" : "#9ca3af", bold: false },
-                { label: "Cashflow mensuel net",      val: mensualiteCredit ? `${cashflowMensuel >= 0 ? "+" : ""}${cashflowMensuel.toLocaleString("fr-FR")} €` : "—", color: cashflowMensuel >= 0 ? "#16a34a" : "#dc2626", bold: true },
-                { label: `Revenus réels ${currentYear}`, val: `${revenuAnnuelReel.toLocaleString("fr-FR")} €`,                                   color: "#111",      bold: false },
-                { label: "Objectif annuel théorique", val: `${revenuAnnuelTheorique.toLocaleString("fr-FR")} €`,                                 color: "#6b7280",   bold: false },
-                { label: "Total encaissé confirmé",   val: `${totalEncaisse.toLocaleString("fr-FR")} €`,                                         color: "#16a34a",   bold: true  },
+                { label: "Loyer mensuel", val: `${loyerMensuel.toLocaleString("fr-FR")} \u20AC`, color: "#111", bold: false },
+                { label: "Charges recuperables", val: `${charges.toLocaleString("fr-FR")} \u20AC`, color: "#111", bold: false },
+                { label: "Revenu mensuel total", val: `${revenuMensuel.toLocaleString("fr-FR")} \u20AC`, color: "#16a34a", bold: true },
+                { label: "Mensualite credit", val: mensualiteCredit ? `-${mensualiteCredit.toLocaleString("fr-FR")} \u20AC` : "Non renseigne", color: mensualiteCredit ? "#dc2626" : "#9ca3af", bold: false },
+                { label: "Cashflow mensuel net", val: mensualiteCredit ? `${cashflowMensuel >= 0 ? "+" : ""}${cashflowMensuel.toLocaleString("fr-FR")} \u20AC` : "\u2014", color: cashflowMensuel >= 0 ? "#16a34a" : "#dc2626", bold: true },
+                { label: `Revenus reels ${currentYear}`, val: `${revenuAnnuelReel.toLocaleString("fr-FR")} \u20AC`, color: "#111", bold: false },
+                { label: "Objectif annuel theorique", val: `${revenuAnnuelTheorique.toLocaleString("fr-FR")} \u20AC`, color: "#6b7280", bold: false },
+                { label: "Total encaisse confirme", val: `${totalEncaisse.toLocaleString("fr-FR")} \u20AC`, color: "#16a34a", bold: true },
               ].map((r, idx, arr) => (
-                <div
-                  key={r.label}
-                  style={{
-                    display: "flex", justifyContent: "space-between", alignItems: "center",
-                    padding: "9px 0",
-                    borderBottom: idx < arr.length - 1 ? "1px solid #f3f4f6" : "none",
-                  }}
-                >
+                <div key={r.label} style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  padding: "9px 0",
+                  borderBottom: idx < arr.length - 1 ? "1px solid #f3f4f6" : "none",
+                }}>
                   <span style={{ fontSize: 13, color: "#6b7280" }}>{r.label}</span>
                   <span style={{ fontSize: 14, fontWeight: r.bold ? 800 : 600, color: r.color }}>{r.val}</span>
                 </div>
@@ -781,7 +1062,7 @@ function StatsInner() {
 
             {!valeurBien && (
               <div style={{ marginTop: 14, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, padding: "10px 14px" }}>
-                <p style={{ fontSize: 12, color: "#92400e", fontWeight: 600 }}>
+                <p style={{ fontSize: 12, color: "#92400e", fontWeight: 600, margin: 0 }}>
                   Ajoutez la valeur du bien et la mensualite credit pour voir le ROI et le seuil de rentabilite
                 </p>
               </div>
@@ -789,188 +1070,168 @@ function StatsInner() {
           </div>
         </div>
 
-        {/* ── Annual comparison (only when 2+ years of data) ── */}
-        {annualData.length >= 2 && (
-          <div style={{ ...card, marginBottom: 24 }}>
-            <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 20 }}>Comparaison annuelle</h3>
-            <div style={{ display: "flex", gap: 20, alignItems: "flex-end" }}>
-              {(() => {
-                const maxYr = Math.max(...annualData.map(y => y.total), revenuAnnuelTheorique, 1)
-                const BAR_H = 120
-                return (
-                  <>
-                    {annualData.map(yr => {
-                      const hTotal = Math.round((yr.total / maxYr) * BAR_H)
-                      const hConf  = Math.round((yr.confirmed / maxYr) * BAR_H)
-                      const pct    = revenuAnnuelTheorique > 0
-                        ? Math.round((yr.total / revenuAnnuelTheorique) * 100)
-                        : null
-                      return (
-                        <div key={yr.year} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                          <p style={{ fontSize: 12, fontWeight: 800 }}>{yr.total.toLocaleString("fr-FR")} €</p>
-                          {pct !== null && (
-                            <p style={{ fontSize: 10, color: pct >= 90 ? "#16a34a" : "#ea580c" }}>{pct}% objectif</p>
-                          )}
-                          <div style={{ width: "100%", display: "flex", alignItems: "flex-end", height: BAR_H, gap: 4, justifyContent: "center" }}>
-                            <div style={{ width: 28, height: hTotal, background: "#e5e7eb", borderRadius: "4px 4px 0 0" }} title="Total déclaré" />
-                            <div style={{ width: 28, height: hConf,  background: "#16a34a", borderRadius: "4px 4px 0 0" }} title="Confirmé" />
-                          </div>
-                          <p style={{ fontSize: 12, color: "#6b7280", fontWeight: 700 }}>{yr.year}</p>
-                          <p style={{ fontSize: 10, color: "#16a34a" }}>✓ {yr.confirmed.toLocaleString("fr-FR")} €</p>
-                        </div>
-                      )
-                    })}
-                    {/* Theoretical target column */}
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                      <p style={{ fontSize: 12, fontWeight: 800, color: "#9ca3af" }}>
-                        {revenuAnnuelTheorique.toLocaleString("fr-FR")} €
-                      </p>
-                      <p style={{ fontSize: 10, color: "#9ca3af" }}>100% objectif</p>
-                      <div style={{ width: "100%", display: "flex", alignItems: "flex-end", height: BAR_H, justifyContent: "center" }}>
-                        <div style={{ width: 28, height: BAR_H, background: "transparent", borderRadius: "4px 4px 0 0", border: "2px dashed #e5e7eb" }} />
-                      </div>
-                      <p style={{ fontSize: 12, color: "#9ca3af", fontWeight: 700 }}>Objectif</p>
-                      <p style={{ fontSize: 10, color: "#9ca3af" }}>théorique</p>
-                    </div>
-                  </>
-                )
-              })()}
-            </div>
-            <div style={{ display: "flex", gap: 16, marginTop: 16, fontSize: 11, color: "#6b7280" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 2, background: "#e5e7eb", display: "inline-block" }} />
-                Total déclaré
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 2, background: "#16a34a", display: "inline-block" }} />
-                Confirmé
-              </span>
+        {/* ══════════════════════════════════════════════════════════════════════
+            7. BREAK-EVEN CHART (full width)
+           ══════════════════════════════════════════════════════════════════════ */}
+        <div style={{ ...cardStyle, marginBottom: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4, flexWrap: "wrap", gap: 10 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>
+              Progression vers la rentabilite
+            </h3>
+            <div style={{ display: "flex", gap: 4 }}>
+              {([{ label: "5 ans", val: 60 }, { label: "10 ans", val: 120 }, { label: "15 ans", val: 180 }, { label: "Tout", val: 0 }] as const).map(z => (
+                <button key={z.val} onClick={() => setZoomMois(z.val)}
+                  style={{
+                    padding: "4px 10px", border: "1.5px solid #e5e7eb", borderRadius: 999,
+                    fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                    background: zoomMois === z.val ? "#111" : "white",
+                    color: zoomMois === z.val ? "white" : "#6b7280",
+                    transition: "all 0.15s",
+                  }}>
+                  {z.label}
+                </button>
+              ))}
             </div>
           </div>
-        )}
+          <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16, marginTop: 8 }}>
+            % de l'investissement recupere via les loyers ({valeurBien > 0 ? `${(valeurBien / 1000).toFixed(0)}k \u20AC` : "valeur non renseignee"}).
+            Projection a {loyerMensuel > 0 ? `${loyerMensuel.toLocaleString("fr-FR")} \u20AC/mois` : "loyer non renseigne"}.
+          </p>
 
-        {/* ── Occupancy + Bail info ── */}
-        <div style={{ display: "grid", gridTemplateColumns: tauxOccupation !== null ? "200px 1fr" : "1fr", gap: 20 }}>
+          <LineChart
+            points={zoomMois > 0 ? perPoints.slice(0, zoomMois) : perPoints}
+            target={100}
+            unit="%"
+            labels={zoomMois > 0 ? perLabels.slice(0, zoomMois) : perLabels}
+          />
 
-          {tauxOccupation !== null && (
-            <div style={card}>
-              <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 16 }}>Occupation</h3>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-                <svg viewBox="0 0 36 36" width={90} height={90}>
-                  <circle
-                    cx={18} cy={18} r={15.9}
-                    fill="none" stroke="#f3f4f6" strokeWidth={3.8}
-                  />
-                  <circle
-                    cx={18} cy={18} r={15.9}
-                    fill="none"
-                    stroke={tauxOccupation >= 90 ? "#16a34a" : tauxOccupation >= 70 ? "#ea580c" : "#dc2626"}
-                    strokeWidth={3.8}
-                    strokeDasharray={`${tauxOccupation} ${100 - tauxOccupation}`}
-                    strokeDashoffset={25}
-                    strokeLinecap="round"
-                  />
-                  <text x={18} y={20} textAnchor="middle" fontSize={8} fontWeight="bold" fill="#111">
-                    {tauxOccupation}%
-                  </text>
-                </svg>
-                <div style={{ textAlign: "center" }}>
-                  <p style={{ fontSize: 22, fontWeight: 800, color: tauxOccupation >= 90 ? "#16a34a" : "#ea580c" }}>
-                    {tauxOccupation}%
-                  </p>
-                  <p style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
-                    {loyers.length} / {moisDepuisDebut} mois
-                  </p>
-                  <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>
-                    depuis début du bail
-                  </p>
-                </div>
-              </div>
+          {perPoints.length >= 2 && (
+            <div style={{ display: "flex", gap: 16, marginTop: 12, fontSize: 11, color: "#6b7280", flexWrap: "wrap" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ width: 20, height: 2, background: "#111", display: "inline-block" }} />
+                Reel (loyers encaisses)
+              </span>
+              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ width: 20, height: 1, borderTop: "2px dashed #d1d5db", display: "inline-block" }} />
+                Projection theorique
+              </span>
+              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ width: 20, height: 1, borderTop: "2px dashed #dc2626", display: "inline-block", opacity: 0.7 }} />
+                100% — rentabilise
+              </span>
             </div>
           )}
 
-          {(bien.date_debut_bail || bien.locataire_email || breakEvenDate) && (
-            <div style={card}>
-              <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 16 }}>Informations du bail</h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 20 }}>
-                {bien.date_debut_bail && (
-                  <div>
-                    <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Date de début</p>
-                    <p style={{ fontWeight: 700 }}>
-                      {new Date(bien.date_debut_bail).toLocaleDateString("fr-FR")}
-                    </p>
-                  </div>
-                )}
-                {bien.locataire_email && (
-                  <div>
-                    <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Locataire</p>
-                    <p style={{ fontWeight: 700, fontSize: 13 }}>{bien.locataire_email}</p>
-                  </div>
-                )}
-                {bien.date_debut_bail && (
-                  <div>
-                    <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Durée en cours</p>
-                    <p style={{ fontWeight: 700 }}>{moisDepuisDebut} mois</p>
-                  </div>
-                )}
-                {breakEvenDate && (
-                  <div>
-                    <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Seuil de rentabilité</p>
-                    <p style={{ fontWeight: 700, color: "#16a34a" }}>
-                      {breakEvenDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}
-                    </p>
-                    <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>
-                      dans {breakEvenAns?.toFixed(1)} ans
-                    </p>
-                  </div>
-                )}
-                {rentabiliteBrute && (
-                  <div>
-                    <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Rentabilité brute</p>
-                    <p style={{ fontWeight: 700, color: rentabiliteBrute >= 7 ? "#16a34a" : "#ea580c" }}>
-                      {rentabiliteBrute.toFixed(2)} %
-                    </p>
-                    <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>
-                      {rentabiliteBrute >= 7 ? "Excellent" : rentabiliteBrute >= 5 ? "Correct" : "Faible"}
-                    </p>
-                  </div>
-                )}
-              </div>
+          {perPoints.length < 2 && (
+            <div style={{ marginTop: 8, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, padding: "10px 14px" }}>
+              <p style={{ fontSize: 12, color: "#92400e", fontWeight: 600, margin: 0 }}>
+                Renseignez la date de debut du bail et la valeur du bien pour voir ce graphique
+              </p>
             </div>
           )}
         </div>
 
-        {/* ── Gestion des loyers ── */}
-        <div style={{ ...card, marginTop: 24 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 20 }}>Gestion des loyers &amp; Quittances</h3>
+        {/* ══════════════════════════════════════════════════════════════════════
+            8. GESTION DES LOYERS
+           ══════════════════════════════════════════════════════════════════════ */}
+        <div id="gestion-loyers" style={{ ...cardStyle, marginBottom: 24 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 20, margin: "0 0 20px" }}>Gestion des loyers &amp; Quittances</h3>
 
-          {/* Ajouter un loyer */}
+          {/* Add loyer form */}
           <div style={{ display: "flex", gap: 12, alignItems: "flex-end", marginBottom: 24, flexWrap: "wrap" }}>
             <div>
-              <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6, textTransform: "uppercase" as const }}>Mois</label>
+              <label style={labelStyle}>Mois</label>
               <input type="month" value={newLoyerMois} onChange={e => setNewLoyerMois(e.target.value)}
                 style={{ padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
             </div>
             <div>
-              <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6, textTransform: "uppercase" as const }}>Montant (€)</label>
+              <label style={labelStyle}>Montant (euros)</label>
               <input type="number" value={newLoyerMontant} onChange={e => setNewLoyerMontant(e.target.value)}
                 placeholder={String(loyerMensuel)}
                 style={{ padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 13, fontFamily: "inherit", outline: "none", width: 120 }} />
             </div>
             <button onClick={ajouterOuMettreAJourLoyer} disabled={!newLoyerMois || !newLoyerMontant || savingLoyer}
-              style={{ background: newLoyerMois && newLoyerMontant ? "#111" : "#e5e7eb", color: newLoyerMois && newLoyerMontant ? "white" : "#9ca3af", border: "none", borderRadius: 999, padding: "9px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+              style={{
+                background: newLoyerMois && newLoyerMontant ? "#111" : "#e5e7eb",
+                color: newLoyerMois && newLoyerMontant ? "white" : "#9ca3af",
+                border: "none", borderRadius: 999, padding: "9px 20px",
+                fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit",
+              }}>
               {savingLoyer ? "Sauvegarde..." : "Enregistrer le loyer"}
             </button>
           </div>
 
-          {/* Liste des loyers */}
+          {/* Loyer list */}
           {loyers.length === 0 ? (
-            <p style={{ fontSize: 13, color: "#9ca3af", textAlign: "center", padding: "20px 0" }}>Aucun loyer enregistré. Ajoutez le premier loyer ci-dessus.</p>
+            <p style={{ fontSize: 13, color: "#9ca3af", textAlign: "center", padding: "20px 0" }}>
+              Aucun loyer enregistre. Ajoutez le premier loyer ci-dessus.
+            </p>
+          ) : isMobile ? (
+            /* ── MOBILE: Card layout ── */
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {[...loyers].sort((a, b) => b.mois.localeCompare(a.mois)).map(l => {
+                const moisDate = new Date(l.mois + "-01")
+                const moisLabel = moisDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
+                const estConfirme = l.statut === "confirmé"
+                return (
+                  <div key={l.id} style={{
+                    background: "#f9fafb", borderRadius: 14, padding: "14px 16px",
+                    border: "1px solid #f3f4f6",
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, textTransform: "capitalize" as const }}>{moisLabel}</span>
+                      <span style={{
+                        background: estConfirme ? "#dcfce7" : "#fff7ed",
+                        color: estConfirme ? "#16a34a" : "#c2410c",
+                        border: `1px solid ${estConfirme ? "#bbf7d0" : "#fed7aa"}`,
+                        padding: "2px 9px", borderRadius: 999, fontSize: 11, fontWeight: 700,
+                      }}>
+                        {estConfirme ? "Confirme" : "En attente"}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 20, fontWeight: 800, color: "#111", margin: "0 0 10px" }}>
+                      {l.montant.toLocaleString("fr-FR")} &euro;
+                    </p>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {!estConfirme && (
+                        <button onClick={() => confirmerLoyer(l.id)}
+                          style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                          Confirmer
+                        </button>
+                      )}
+                      {estConfirme && bien.locataire_email && (
+                        <button onClick={() => genererQuittancePDF({
+                          nomProprietaire: session?.user?.name || bien.proprietaire || "Proprietaire",
+                          emailProprietaire: bien.proprietaire_email || session?.user?.email || "",
+                          emailLocataire: bien.locataire_email,
+                          titreBien: bien.titre || "",
+                          villeBien: bien.ville || "",
+                          adresse: bien.adresse || bien.ville || "",
+                          loyerHC: Number(bien.prix) || 0,
+                          charges: Number(bien.charges) || 0,
+                          moisLabel,
+                        })}
+                          style={{ background: "#eff6ff", color: "#1d4ed8", border: "1.5px solid #bfdbfe", borderRadius: 999, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                          Quittance PDF
+                        </button>
+                      )}
+                      {estConfirme && !bien.locataire_email && (
+                        <span style={{ fontSize: 11, color: "#9ca3af", alignSelf: "center" }}>Email locataire manquant</span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           ) : (
+            /* ── DESKTOP: Grid table ── */
             <div style={{ display: "flex", flexDirection: "column" as const, gap: 0 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 0, background: "#f9fafb", borderRadius: "10px 10px 0 0", padding: "8px 16px" }}>
+              <div style={{
+                display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 0,
+                background: "#111", borderRadius: "12px 12px 0 0", padding: "10px 16px",
+              }}>
                 {["Mois", "Montant", "Statut", "Confirmer", "Quittance"].map(h => (
-                  <span key={h} style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>{h}</span>
+                  <span key={h} style={{ fontSize: 10, fontWeight: 700, color: "white", textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>{h}</span>
                 ))}
               </div>
               {[...loyers].sort((a, b) => b.mois.localeCompare(a.mois)).map((l, i) => {
@@ -978,12 +1239,21 @@ function StatsInner() {
                 const moisLabel = moisDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
                 const estConfirme = l.statut === "confirmé"
                 return (
-                  <div key={l.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 0, padding: "12px 16px", borderTop: "1px solid #f3f4f6", background: i % 2 === 0 ? "white" : "#fafafa", alignItems: "center" }}>
+                  <div key={l.id} style={{
+                    display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 0,
+                    padding: "12px 16px", borderBottom: "1px solid #f3f4f6",
+                    background: i % 2 === 0 ? "white" : "#fafafa", alignItems: "center",
+                  }}>
                     <span style={{ fontSize: 13, fontWeight: 600, textTransform: "capitalize" as const }}>{moisLabel}</span>
-                    <span style={{ fontSize: 14, fontWeight: 700 }}>{l.montant.toLocaleString("fr-FR")} €</span>
+                    <span style={{ fontSize: 14, fontWeight: 700 }}>{l.montant.toLocaleString("fr-FR")} &euro;</span>
                     <span style={{ display: "inline-flex" }}>
-                      <span style={{ background: estConfirme ? "#dcfce7" : "#fff7ed", color: estConfirme ? "#16a34a" : "#c2410c", padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
-                        {estConfirme ? "✓ Confirmé" : "En attente"}
+                      <span style={{
+                        background: estConfirme ? "#dcfce7" : "#fff7ed",
+                        color: estConfirme ? "#16a34a" : "#c2410c",
+                        border: `1px solid ${estConfirme ? "#bbf7d0" : "#fed7aa"}`,
+                        padding: "2px 9px", borderRadius: 999, fontSize: 11, fontWeight: 700,
+                      }}>
+                        {estConfirme ? "Confirme" : "En attente"}
                       </span>
                     </span>
                     <span>
@@ -997,7 +1267,7 @@ function StatsInner() {
                     <span>
                       {estConfirme && bien.locataire_email && (
                         <button onClick={() => genererQuittancePDF({
-                          nomProprietaire: session?.user?.name || bien.proprietaire || "Propriétaire",
+                          nomProprietaire: session?.user?.name || bien.proprietaire || "Proprietaire",
                           emailProprietaire: bien.proprietaire_email || session?.user?.email || "",
                           emailLocataire: bien.locataire_email,
                           titreBien: bien.titre || "",
@@ -1005,7 +1275,7 @@ function StatsInner() {
                           adresse: bien.adresse || bien.ville || "",
                           loyerHC: Number(bien.prix) || 0,
                           charges: Number(bien.charges) || 0,
-                          moisLabel
+                          moisLabel,
                         })}
                           style={{ background: "#eff6ff", color: "#1d4ed8", border: "1.5px solid #bfdbfe", borderRadius: 999, padding: "4px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                           PDF
@@ -1021,6 +1291,67 @@ function StatsInner() {
             </div>
           )}
         </div>
+
+        {/* ══════════════════════════════════════════════════════════════════════
+            9. COMPARAISON ANNUELLE (only with 2+ years)
+           ══════════════════════════════════════════════════════════════════════ */}
+        {annualData.length >= 2 && (
+          <div style={{ ...cardStyle, marginBottom: 24 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 20, margin: "0 0 20px" }}>Comparaison annuelle</h3>
+            <div style={{ display: "flex", gap: 20, alignItems: "flex-end" }}>
+              {(() => {
+                const maxYr = Math.max(...annualData.map(y => y.total), revenuAnnuelTheorique, 1)
+                const BAR_H = 120
+                return (
+                  <>
+                    {annualData.map(yr => {
+                      const hTotal = Math.round((yr.total / maxYr) * BAR_H)
+                      const hConf  = Math.round((yr.confirmed / maxYr) * BAR_H)
+                      const pct    = revenuAnnuelTheorique > 0
+                        ? Math.round((yr.total / revenuAnnuelTheorique) * 100)
+                        : null
+                      return (
+                        <div key={yr.year} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                          <p style={{ fontSize: 12, fontWeight: 800, margin: 0 }}>{yr.total.toLocaleString("fr-FR")} &euro;</p>
+                          {pct !== null && (
+                            <p style={{ fontSize: 10, color: pct >= 90 ? "#16a34a" : "#ea580c", margin: 0 }}>{pct}% objectif</p>
+                          )}
+                          <div style={{ width: "100%", display: "flex", alignItems: "flex-end", height: BAR_H, gap: 4, justifyContent: "center" }}>
+                            <div style={{ width: 28, height: hTotal, background: "#e5e7eb", borderRadius: "4px 4px 0 0" }} title="Total declare" />
+                            <div style={{ width: 28, height: hConf, background: "#16a34a", borderRadius: "4px 4px 0 0" }} title="Confirme" />
+                          </div>
+                          <p style={{ fontSize: 12, color: "#6b7280", fontWeight: 700, margin: 0 }}>{yr.year}</p>
+                          <p style={{ fontSize: 10, color: "#16a34a", margin: 0 }}>{yr.confirmed.toLocaleString("fr-FR")} &euro;</p>
+                        </div>
+                      )
+                    })}
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                      <p style={{ fontSize: 12, fontWeight: 800, color: "#9ca3af", margin: 0 }}>
+                        {revenuAnnuelTheorique.toLocaleString("fr-FR")} &euro;
+                      </p>
+                      <p style={{ fontSize: 10, color: "#9ca3af", margin: 0 }}>100% objectif</p>
+                      <div style={{ width: "100%", display: "flex", alignItems: "flex-end", height: BAR_H, justifyContent: "center" }}>
+                        <div style={{ width: 28, height: BAR_H, background: "transparent", borderRadius: "4px 4px 0 0", border: "2px dashed #e5e7eb" }} />
+                      </div>
+                      <p style={{ fontSize: 12, color: "#9ca3af", fontWeight: 700, margin: 0 }}>Objectif</p>
+                      <p style={{ fontSize: 10, color: "#9ca3af", margin: 0 }}>theorique</p>
+                    </div>
+                  </>
+                )
+              })()}
+            </div>
+            <div style={{ display: "flex", gap: 16, marginTop: 16, fontSize: 11, color: "#6b7280" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ width: 10, height: 10, borderRadius: 2, background: "#e5e7eb", display: "inline-block" }} />
+                Total declare
+              </span>
+              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ width: 10, height: 10, borderRadius: 2, background: "#16a34a", display: "inline-block" }} />
+                Confirme
+              </span>
+            </div>
+          </div>
+        )}
 
       </div>
     </main>
