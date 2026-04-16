@@ -99,6 +99,11 @@ function MessagesInner() {
   const [supprimant, setSupprimant] = useState<string | null>(null)
   const [menuConv, setMenuConv] = useState<string | null>(null)
   const [visitesConv, setVisitesConv] = useState<any[]>([])
+  const [showVisiteForm, setShowVisiteForm] = useState(false)
+  const [visiteDate, setVisiteDate] = useState("")
+  const [visiteHeure, setVisiteHeure] = useState("10:00")
+  const [visiteMessage, setVisiteMessage] = useState("")
+  const [envoyantVisite, setEnvoyantVisite] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const myEmail = session?.user?.email
@@ -280,6 +285,35 @@ function MessagesInner() {
   async function changerStatutVisite(id: string, statut: string) {
     await supabase.from("visites").update({ statut }).eq("id", id)
     setVisitesConv(prev => prev.map(v => v.id === id ? { ...v, statut } : v))
+  }
+
+  async function proposerVisite() {
+    if (!convActiveData?.annonceId || !myEmail || !visiteDate || !visiteHeure) return
+    setEnvoyantVisite(true)
+    const { data: visite } = await supabase.from("visites").insert([{
+      annonce_id: convActiveData.annonceId,
+      proprietaire_email: convActiveData.other,
+      locataire_email: myEmail,
+      date_visite: visiteDate,
+      heure: visiteHeure,
+      message: visiteMessage.trim() || null,
+      statut: "proposée"
+    }]).select().single()
+    if (visite) {
+      setVisitesConv(prev => [...prev, visite])
+      const dateFormatee = new Date(visiteDate + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+      const contenu = `📅 Demande de visite le ${dateFormatee} à ${visiteHeure}${visiteMessage.trim() ? ` — "${visiteMessage.trim()}"` : ""}`
+      const { data: msg } = await supabase.from("messages").insert([{ from_email: myEmail, to_email: convActiveData.other, contenu, lu: false, created_at: new Date().toISOString() }]).select().single()
+      if (msg) {
+        setMessages(prev => [...prev, msg])
+        setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: msg } : c))
+      }
+    }
+    setShowVisiteForm(false)
+    setVisiteDate("")
+    setVisiteHeure("10:00")
+    setVisiteMessage("")
+    setEnvoyantVisite(false)
   }
 
   const convActiveData = conversations.find(c => c.key === convActive)
@@ -580,6 +614,12 @@ function MessagesInner() {
                         📁 {envoyantDossier ? "Envoi..." : "Mon dossier"}
                       </button>
                     )}
+                    {!proprietaireActive && convActiveData?.annonceId && (
+                      <button onClick={() => setShowVisiteForm(!showVisiteForm)}
+                        style={{ background: showVisiteForm ? "#111" : "#eff6ff", border: "1.5px solid " + (showVisiteForm ? "#111" : "#bfdbfe"), color: showVisiteForm ? "white" : "#1d4ed8", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+                        📅 {showVisiteForm ? "Fermer" : "Proposer une visite"}
+                      </button>
+                    )}
                     <div style={{ width: 1, height: 16, background: "#e5e7eb" }} />
                     {MESSAGES_RAPIDES.map((msg, i) => (
                       <button key={i} onClick={() => setNouveau(msg)}
@@ -588,6 +628,32 @@ function MessagesInner() {
                       </button>
                     ))}
                   </div>
+                  {showVisiteForm && !proprietaireActive && convActiveData?.annonceId && (
+                    <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
+                      <p style={{ fontSize: 12, fontWeight: 800, color: "#1d4ed8", marginBottom: 12 }}>📅 Proposer une visite</p>
+                      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 4, textTransform: "uppercase" as const }}>Date</label>
+                          <input type="date" min={new Date().toISOString().split("T")[0]} value={visiteDate} onChange={e => setVisiteDate(e.target.value)}
+                            style={{ width: "100%", padding: "7px 10px", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 4, textTransform: "uppercase" as const }}>Heure</label>
+                          <select value={visiteHeure} onChange={e => setVisiteHeure(e.target.value)}
+                            style={{ padding: "7px 10px", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none", background: "white" }}>
+                            {["08:00","09:00","10:00","11:00","12:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"].map(h => <option key={h} value={h}>{h}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <input value={visiteMessage} onChange={e => setVisiteMessage(e.target.value)}
+                        placeholder="Message pour le propriétaire (optionnel)..."
+                        style={{ width: "100%", padding: "7px 10px", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none", marginBottom: 10, boxSizing: "border-box" as const }} />
+                      <button onClick={proposerVisite} disabled={!visiteDate || !visiteHeure || envoyantVisite}
+                        style={{ background: visiteDate && visiteHeure && !envoyantVisite ? "#111" : "#e5e7eb", color: visiteDate && visiteHeure && !envoyantVisite ? "white" : "#9ca3af", border: "none", borderRadius: 999, padding: "8px 20px", fontSize: 13, fontWeight: 700, cursor: visiteDate && visiteHeure ? "pointer" : "not-allowed", fontFamily: "inherit" }}>
+                        {envoyantVisite ? "Envoi..." : "Envoyer la demande"}
+                      </button>
+                    </div>
+                  )}
                   <div style={{ display: "flex", gap: 10 }}>
                     <input ref={inputRef} value={nouveau} onChange={e => setNouveau(e.target.value)}
                       onKeyDown={e => e.key === "Enter" && !e.shiftKey && envoyer()}

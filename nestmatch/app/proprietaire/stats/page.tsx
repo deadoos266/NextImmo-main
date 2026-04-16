@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "../../../lib/supabase"
 import { Suspense } from "react"
+import jsPDF from "jspdf"
 
 // ─── SVG Bar Chart ──────────────────────────────────────────────────────────
 
@@ -211,6 +212,70 @@ function LineChart({
   )
 }
 
+// ─── Quittance PDF generator ─────────────────────────────────────────────────
+
+function genererQuittancePDF({
+  nomProprietaire, emailProprietaire, emailLocataire,
+  titreBien, villeBien, adresse, loyerHC, charges, moisLabel
+}: {
+  nomProprietaire: string; emailProprietaire: string; emailLocataire: string
+  titreBien: string; villeBien: string; adresse: string
+  loyerHC: number; charges: number; moisLabel: string
+}) {
+  const doc = new jsPDF()
+  const totalCC = loyerHC + charges
+  const today = new Date().toLocaleDateString("fr-FR")
+
+  doc.setFontSize(20); doc.setFont("helvetica", "bold")
+  doc.text("QUITTANCE DE LOYER", 105, 25, { align: "center" })
+  doc.setFontSize(11); doc.setFont("helvetica", "normal")
+  doc.text(`Période : ${moisLabel}`, 105, 33, { align: "center" })
+  doc.setDrawColor(200, 200, 200); doc.line(20, 40, 190, 40)
+
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("BAILLEUR", 20, 50)
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9)
+  doc.text(`Nom : ${nomProprietaire}`, 20, 57)
+  doc.text(`Email : ${emailProprietaire}`, 20, 63)
+
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("LOCATAIRE", 110, 50)
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9)
+  doc.text(`Email : ${emailLocataire}`, 110, 57)
+
+  doc.line(20, 70, 190, 70)
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("BIEN LOUÉ", 20, 78)
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9)
+  doc.text(titreBien, 20, 85)
+  doc.text(adresse || villeBien, 20, 91)
+
+  doc.line(20, 98, 190, 98)
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("DÉTAIL DU RÈGLEMENT", 20, 106)
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9)
+  doc.text("Loyer hors charges :", 20, 114)
+  doc.text(`${loyerHC.toLocaleString("fr-FR")} €`, 170, 114, { align: "right" })
+  doc.text("Charges locatives :", 20, 121)
+  doc.text(`${charges.toLocaleString("fr-FR")} €`, 170, 121, { align: "right" })
+  doc.line(100, 126, 190, 126)
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10)
+  doc.text("TOTAL CHARGES COMPRISES :", 20, 134)
+  doc.text(`${totalCC.toLocaleString("fr-FR")} €`, 170, 134, { align: "right" })
+
+  doc.line(20, 141, 190, 141)
+  doc.setFont("helvetica", "normal"); doc.setFontSize(8)
+  const attestation = `Je soussigné(e), ${nomProprietaire}, bailleur du logement désigné ci-dessus, déclare avoir reçu de ${emailLocataire} la somme de ${totalCC.toLocaleString("fr-FR")} € correspondant au loyer et charges du mois de ${moisLabel}.`
+  const lines = doc.splitTextToSize(attestation, 170)
+  doc.text(lines, 20, 149)
+
+  doc.setFontSize(9)
+  doc.text(`Fait le ${today}`, 20, 175)
+  doc.text("Signature du bailleur :", 110, 175)
+  doc.line(110, 190, 185, 190)
+
+  doc.setFontSize(7); doc.setTextColor(150, 150, 150)
+  doc.text("Document généré par NestMatch — nestmatch.fr", 105, 285, { align: "center" })
+
+  doc.save(`quittance-${moisLabel.toLowerCase().replace(" ", "-")}.pdf`)
+}
+
 // ─── Main component ─────────────────────────────────────────────────────────
 
 function StatsInner() {
@@ -227,6 +292,9 @@ function StatsInner() {
   const [saving, setSaving] = useState(false)
   const [savedOk, setSavedOk] = useState(false)
   const [zoomMois, setZoomMois] = useState<number>(0) // 0 = tout
+  const [newLoyerMois, setNewLoyerMois] = useState("")
+  const [newLoyerMontant, setNewLoyerMontant] = useState("")
+  const [savingLoyer, setSavingLoyer] = useState(false)
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth")
@@ -254,6 +322,27 @@ function StatsInner() {
     }
     if (l) setLoyers(l)
     setLoading(false)
+  }
+
+  async function ajouterOuMettreAJourLoyer() {
+    if (!newLoyerMois || !newLoyerMontant || !bienId) return
+    setSavingLoyer(true)
+    const montant = Number(newLoyerMontant)
+    const { data } = await supabase.from("loyers").upsert({
+      annonce_id: Number(bienId),
+      mois: newLoyerMois,
+      montant,
+      statut: "déclaré"
+    }, { onConflict: "annonce_id,mois" }).select().single()
+    if (data) setLoyers(prev => [...prev.filter(l => l.mois !== newLoyerMois), data])
+    setNewLoyerMois("")
+    setNewLoyerMontant("")
+    setSavingLoyer(false)
+  }
+
+  async function confirmerLoyer(id: string) {
+    await supabase.from("loyers").update({ statut: "confirmé" }).eq("id", id)
+    setLoyers(prev => prev.map(l => l.id === id ? { ...l, statut: "confirmé" } : l))
   }
 
   async function sauvegarderBien() {
@@ -845,6 +934,88 @@ function StatsInner() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Gestion des loyers ── */}
+        <div style={{ ...card, marginTop: 24 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 20 }}>Gestion des loyers &amp; Quittances</h3>
+
+          {/* Ajouter un loyer */}
+          <div style={{ display: "flex", gap: 12, alignItems: "flex-end", marginBottom: 24, flexWrap: "wrap" }}>
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6, textTransform: "uppercase" as const }}>Mois</label>
+              <input type="month" value={newLoyerMois} onChange={e => setNewLoyerMois(e.target.value)}
+                style={{ padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6, textTransform: "uppercase" as const }}>Montant (€)</label>
+              <input type="number" value={newLoyerMontant} onChange={e => setNewLoyerMontant(e.target.value)}
+                placeholder={String(loyerMensuel)}
+                style={{ padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 13, fontFamily: "inherit", outline: "none", width: 120 }} />
+            </div>
+            <button onClick={ajouterOuMettreAJourLoyer} disabled={!newLoyerMois || !newLoyerMontant || savingLoyer}
+              style={{ background: newLoyerMois && newLoyerMontant ? "#111" : "#e5e7eb", color: newLoyerMois && newLoyerMontant ? "white" : "#9ca3af", border: "none", borderRadius: 999, padding: "9px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+              {savingLoyer ? "Sauvegarde..." : "Enregistrer le loyer"}
+            </button>
+          </div>
+
+          {/* Liste des loyers */}
+          {loyers.length === 0 ? (
+            <p style={{ fontSize: 13, color: "#9ca3af", textAlign: "center", padding: "20px 0" }}>Aucun loyer enregistré. Ajoutez le premier loyer ci-dessus.</p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column" as const, gap: 0 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 0, background: "#f9fafb", borderRadius: "10px 10px 0 0", padding: "8px 16px" }}>
+                {["Mois", "Montant", "Statut", "Confirmer", "Quittance"].map(h => (
+                  <span key={h} style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>{h}</span>
+                ))}
+              </div>
+              {[...loyers].sort((a, b) => b.mois.localeCompare(a.mois)).map((l, i) => {
+                const moisDate = new Date(l.mois + "-01")
+                const moisLabel = moisDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
+                const estConfirme = l.statut === "confirmé"
+                return (
+                  <div key={l.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 0, padding: "12px 16px", borderTop: "1px solid #f3f4f6", background: i % 2 === 0 ? "white" : "#fafafa", alignItems: "center" }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, textTransform: "capitalize" as const }}>{moisLabel}</span>
+                    <span style={{ fontSize: 14, fontWeight: 700 }}>{l.montant.toLocaleString("fr-FR")} €</span>
+                    <span style={{ display: "inline-flex" }}>
+                      <span style={{ background: estConfirme ? "#dcfce7" : "#fff7ed", color: estConfirme ? "#16a34a" : "#c2410c", padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
+                        {estConfirme ? "✓ Confirmé" : "En attente"}
+                      </span>
+                    </span>
+                    <span>
+                      {!estConfirme && (
+                        <button onClick={() => confirmerLoyer(l.id)}
+                          style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "4px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                          Confirmer
+                        </button>
+                      )}
+                    </span>
+                    <span>
+                      {estConfirme && bien.locataire_email && (
+                        <button onClick={() => genererQuittancePDF({
+                          nomProprietaire: session?.user?.name || bien.proprietaire || "Propriétaire",
+                          emailProprietaire: bien.proprietaire_email || session?.user?.email || "",
+                          emailLocataire: bien.locataire_email,
+                          titreBien: bien.titre || "",
+                          villeBien: bien.ville || "",
+                          adresse: bien.adresse || bien.ville || "",
+                          loyerHC: Number(bien.prix) || 0,
+                          charges: Number(bien.charges) || 0,
+                          moisLabel
+                        })}
+                          style={{ background: "#eff6ff", color: "#1d4ed8", border: "1.5px solid #bfdbfe", borderRadius: 999, padding: "4px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                          PDF
+                        </button>
+                      )}
+                      {estConfirme && !bien.locataire_email && (
+                        <span style={{ fontSize: 10, color: "#9ca3af" }}>Email locataire manquant</span>
+                      )}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
