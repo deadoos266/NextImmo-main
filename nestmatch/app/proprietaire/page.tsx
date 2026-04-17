@@ -58,7 +58,10 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
   }
 
   const filtrées = filtre === "toutes" ? visites : visites.filter(v => v.statut === filtre)
-  const nbAttente = visites.filter(v => v.statut === "proposée").length
+  // "En attente" = demandes qui attendent MA réponse (proposées par le locataire).
+  // Les visites que J'AI proposées et pour lesquelles j'attends le locataire
+  // ne comptent pas comme une notif (rien à faire de mon côté).
+  const nbAttente = visites.filter(v => v.statut === "proposée" && v.propose_par !== myEmail).length
   const nbConfirmées = visites.filter(v => v.statut === "confirmée").length
   const nbEffectuées = visites.filter(v => v.statut === "effectuée").length
 
@@ -353,8 +356,8 @@ export default function Proprietaire() {
               {o === "Loyers" && loyersAttendus > 0 && (
                 <span style={{ marginLeft: 6, background: "#ef4444", color: "white", borderRadius: 999, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{loyersAttendus}</span>
               )}
-              {o === "Visites" && visites.filter(v => v.statut === "proposée").length > 0 && (
-                <span style={{ marginLeft: 6, background: "#f97316", color: "white", borderRadius: 999, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{visites.filter(v => v.statut === "proposée").length}</span>
+              {o === "Visites" && visites.filter(v => v.statut === "proposée" && v.propose_par !== myEmail).length > 0 && (
+                <span style={{ marginLeft: 6, background: "#f97316", color: "white", borderRadius: 999, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{visites.filter(v => v.statut === "proposée" && v.propose_par !== myEmail).length}</span>
               )}
             </button>
           ))}

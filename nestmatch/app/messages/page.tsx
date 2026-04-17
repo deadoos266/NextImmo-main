@@ -372,11 +372,16 @@ function MessagesInner() {
       }
     }
 
-    const target = withEmail ? convList.find(c => c.other === withEmail) : convList[0]
-    if (target) {
-      setConvActive(target.key)
-      loadMessages(email, target.other)
-      loadVisitesConv(target.other)
+    // On n'auto-sélectionne une conversation QUE si l'URL contient ?with=X
+    // (arrivée depuis une annonce / un lien direct). Sinon, au reload normal,
+    // l'utilisateur arrive sur la liste sans conv ouverte — il choisit.
+    if (withEmail) {
+      const target = convList.find(c => c.other === withEmail)
+      if (target) {
+        setConvActive(target.key)
+        loadMessages(email, target.other)
+        loadVisitesConv(target.other)
+      }
     }
     setLoading(false)
   }

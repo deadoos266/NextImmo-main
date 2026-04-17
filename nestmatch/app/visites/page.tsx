@@ -91,7 +91,9 @@ export default function MesVisites() {
   }
 
   const filtrées = filtre === "toutes" ? visites : visites.filter(v => v.statut === filtre)
-  const nbAttente = visites.filter(v => v.statut === "proposée").length
+  // "En attente" compte uniquement les demandes qui attendent MA réponse
+  // (proposées par le proprio), pas celles que j'ai moi-même proposées.
+  const nbAttente = visites.filter(v => v.statut === "proposée" && v.propose_par !== myEmail).length
   const nbConfirmées = visites.filter(v => v.statut === "confirmée").length
   const prochaine = visites.find(v => v.statut === "confirmée" && new Date(v.date_visite) >= new Date())
 

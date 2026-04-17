@@ -72,6 +72,33 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 
 ## Historique des batchs
 
+### Batch 24 — Hotfix dark mode + messages + audit notifs visites (2026-04-18)
+- **Audit complet des notifs visites** : plusieurs endroits comptaient
+  encore les visites `proposée` incluant celles proposées par
+  l'utilisateur lui-même (notif fantôme « j'ai rien à faire »). Fixés :
+  - `/proprietaire` stat card « En attente » + badge onglet Visites :
+    désormais filtre sur `v.propose_par !== myEmail`
+  - `/visites` stat card « En attente » : même filtre
+  - La Navbar (fait au batch 17) était déjà correcte
+  Règle générale : un badge visite doit n'apparaître QUE quand MON
+  action est attendue (= l'autre partie a proposé, le statut est
+  `proposée`, et `propose_par !== moi`).
+- **Dark mode refait via inversion chromatique** : l'approche
+  overrides-CSS-par-sélecteurs-d'attribut du batch 23 cassait la
+  lisibilité (texte noir sur fond noir par endroits). Remplacement par
+  `filter: invert(0.92) hue-rotate(180deg)` sur `body`, combiné à
+  une ré-inversion ciblée sur `img`, `video`, `iframe`, `canvas`,
+  `.leaflet-tile` et les background-images. Résultat : tous les styles
+  inline existants deviennent lisibles en dark sans migration, les
+  photos et cartes gardent leurs vraies couleurs. `invert(0.92)` au
+  lieu de `1` pour un dark légèrement atténué (plus reposant).
+- **Fix /messages : pas de conv auto-sélectionnée au reload**
+  (ligne `loadConversations`) : avant, au reload, la 1re conv de la
+  liste s'ouvrait automatiquement, ce qui était désagréable. Désormais
+  une conv n'est auto-ouverte QUE si l'URL contient `?with=X` (arrivée
+  depuis une annonce ou un lien direct). Reload normal → l'utilisateur
+  voit la liste sans conv ouverte, il choisit.
+
 ### Batch 23 — Dark mode + scroll sticky-bottom + fix boutons visite (2026-04-18)
 - **Fix boutons visite dans /messages** : avant, quand on recevait une
   demande de visite, les boutons **Refuser** ET **Annuler** s'affichaient

@@ -4,135 +4,56 @@
   padding: 0;
 }
 
-/* ───────── Palette via variables CSS (base = clair) ───────── */
 :root {
-  --bg: #F7F4EF;
-  --card: #ffffff;
-  --card-alt: #f9fafb;
-  --text: #111111;
-  --text-muted: #6b7280;
-  --text-dim: #9ca3af;
-  --border: #e5e7eb;
-  --border-strong: #d1d5db;
-  --hover: #f3f4f6;
   color-scheme: light;
 }
 
-/* Les styles inline de NestMatch utilisent des couleurs hardcodées
-   (#F7F4EF, white, #111, #6b7280, #9ca3af, #e5e7eb, #f3f4f6, #f9fafb).
-   On les bascule en mode sombre via des overrides ciblés sur les
-   *backgrounds* et *couleurs de texte*. Les accents de statut (rouge,
-   vert, orange, bleu pour confirmé/annulé/etc) sont conservés pour
-   la lisibilité sémantique. */
-[data-theme="dark"] {
-  --bg: #0d0d10;
-  --card: #17171b;
-  --card-alt: #1f1f23;
-  --text: #f5f5f7;
-  --text-muted: #a1a1aa;
-  --text-dim: #71717a;
-  --border: #27272a;
-  --border-strong: #3f3f46;
-  --hover: #1f1f23;
-  color-scheme: dark;
-}
-
 body {
-  background: var(--bg);
+  background: #F7F4EF;
   font-family: 'DM Sans', system-ui, sans-serif;
-  color: var(--text);
+  color: #111111;
 }
 
-/* ───────── Overrides dark mode sur les styles inline legacy ─────────
-   NestMatch utilise des backgrounds hardcodés partout en inline style.
-   Plutôt que de migrer chaque fichier (des centaines d'endroits), on
-   redéfinit ces couleurs au niveau global quand data-theme="dark". */
-[data-theme="dark"] main,
-[data-theme="dark"] [style*="background: #F7F4EF"],
-[data-theme="dark"] [style*="background:#F7F4EF"],
-[data-theme="dark"] [style*="background: rgb(247"],
-[data-theme="dark"] [style*="background-color: #F7F4EF"] {
-  background: var(--bg) !important;
+/* ───────── Dark mode via inversion chromatique ─────────
+   Technique : on inverse l'ensemble de la page (background, texte,
+   bordures, SVG) puis on ré-inverse les éléments multimédia pour
+   qu'ils gardent leurs vraies couleurs (photos, vidéos, tuiles
+   de carte). Méthode robuste qui couvre 100% des styles inline
+   sans avoir à migrer des centaines d'endroits.
+   Le `hue-rotate(180deg)` combiné à `invert(1)` conserve les
+   hues (rouge reste rouge, vert reste vert) — seule la luminosité
+   est inversée. */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  background: #fff;
 }
 
-[data-theme="dark"] [style*="background: white"],
-[data-theme="dark"] [style*="background:white"],
-[data-theme="dark"] [style*="background: #ffffff"],
-[data-theme="dark"] [style*="background:#ffffff"],
-[data-theme="dark"] [style*="background: #fff"],
-[data-theme="dark"] [style*="background:#fff"] {
-  background: var(--card) !important;
+html[data-theme="dark"] body {
+  filter: invert(0.92) hue-rotate(180deg);
+  background: #fff;
 }
 
-[data-theme="dark"] [style*="background: #f9fafb"],
-[data-theme="dark"] [style*="background:#f9fafb"],
-[data-theme="dark"] [style*="background: #f3f4f6"],
-[data-theme="dark"] [style*="background:#f3f4f6"],
-[data-theme="dark"] [style*="background: #fafafa"],
-[data-theme="dark"] [style*="background:#fafafa"] {
-  background: var(--card-alt) !important;
+/* Ré-inverser tous les médias et surfaces qui doivent garder leur
+   apparence d'origine : photos, avatars, logos, cartes Leaflet,
+   vidéos, iframes. */
+html[data-theme="dark"] img,
+html[data-theme="dark"] video,
+html[data-theme="dark"] iframe,
+html[data-theme="dark"] canvas,
+html[data-theme="dark"] .leaflet-tile,
+html[data-theme="dark"] .leaflet-tile-container,
+html[data-theme="dark"] .leaflet-marker-icon,
+html[data-theme="dark"] .leaflet-marker-shadow,
+html[data-theme="dark"] .leaflet-image-layer,
+html[data-theme="dark"] [style*="background-image"],
+html[data-theme="dark"] [style*="backgroundImage"] {
+  filter: invert(1) hue-rotate(180deg);
 }
 
-/* Couleurs de texte : on remap les gris clairs courants */
-[data-theme="dark"] [style*="color: #111"],
-[data-theme="dark"] [style*="color:#111"] {
-  color: var(--text) !important;
-}
-
-[data-theme="dark"] [style*="color: #374151"],
-[data-theme="dark"] [style*="color:#374151"] {
-  color: #d4d4d8 !important;
-}
-
-[data-theme="dark"] [style*="color: #6b7280"],
-[data-theme="dark"] [style*="color:#6b7280"] {
-  color: var(--text-muted) !important;
-}
-
-[data-theme="dark"] [style*="color: #9ca3af"],
-[data-theme="dark"] [style*="color:#9ca3af"] {
-  color: var(--text-dim) !important;
-}
-
-/* Bordures grises legacy */
-[data-theme="dark"] [style*="border: 1px solid #e5e7eb"],
-[data-theme="dark"] [style*="border:1px solid #e5e7eb"],
-[data-theme="dark"] [style*="border: 1.5px solid #e5e7eb"],
-[data-theme="dark"] [style*="border:1.5px solid #e5e7eb"],
-[data-theme="dark"] [style*="border: 2px solid #e5e7eb"],
-[data-theme="dark"] [style*="border:2px solid #e5e7eb"],
-[data-theme="dark"] [style*="borderBottom: 1px solid #e5e7eb"],
-[data-theme="dark"] [style*="border-bottom: 1px solid #e5e7eb"],
-[data-theme="dark"] [style*="borderTop: 1px solid #e5e7eb"],
-[data-theme="dark"] [style*="border-top: 1px solid #e5e7eb"] {
-  border-color: var(--border) !important;
-}
-
-[data-theme="dark"] [style*="border: 1px solid #f3f4f6"],
-[data-theme="dark"] [style*="border:1px solid #f3f4f6"],
-[data-theme="dark"] [style*="borderBottom: 1px solid #f3f4f6"],
-[data-theme="dark"] [style*="border-bottom: 1px solid #f3f4f6"] {
-  border-color: var(--border) !important;
-}
-
-/* Inputs / textarea / select en mode sombre */
-[data-theme="dark"] input,
-[data-theme="dark"] textarea,
-[data-theme="dark"] select {
-  background: var(--card) !important;
-  color: var(--text) !important;
-  border-color: var(--border) !important;
-}
-
-[data-theme="dark"] input::placeholder,
-[data-theme="dark"] textarea::placeholder {
-  color: var(--text-dim) !important;
-}
-
-/* Scrollbar plus discret en dark */
-[data-theme="dark"] ::-webkit-scrollbar { width: 8px; height: 8px; }
-[data-theme="dark"] ::-webkit-scrollbar-track { background: var(--bg); }
-[data-theme="dark"] ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+/* Scrollbar plus discrète en dark */
+html[data-theme="dark"] ::-webkit-scrollbar { width: 8px; height: 8px; }
+html[data-theme="dark"] ::-webkit-scrollbar-track { background: #eee; }
+html[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #bbb; border-radius: 4px; }
 
 /* Responsive utilities for server components */
 @media (max-width: 640px) {
