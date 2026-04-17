@@ -48,6 +48,7 @@ export default function MapBien({
   // pour proteger la vie privee du proprietaire.
   return (
     <div style={{ width: "100%", height: 320, borderRadius: 16, overflow: "hidden", border: "1px solid #e5e7eb" }}>
+      <style>{`.leaflet-tile-soft { filter: saturate(0.72) brightness(1.04) contrast(0.94); }`}</style>
       <MapContainer
         center={[lat, lng]}
         zoom={14}
@@ -55,9 +56,10 @@ export default function MapBien({
         scrollWheelZoom={false}
       >
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-          attribution='&copy; <a href="https://carto.com/">CARTO</a> &middot; &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.fr/">OpenStreetMap France</a>'
           maxZoom={20}
+          className="leaflet-tile-soft"
         />
         <FrenchLocale />
         {exact ? (

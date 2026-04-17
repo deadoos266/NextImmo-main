@@ -6,21 +6,20 @@ import "leaflet/dist/leaflet.css"
 
 type MapType = "plan" | "satellite" | "standard"
 
-const TILES: Record<MapType, { url: string; attribution: string; label: string }> = {
-  // Vue par défaut : cartes CartoDB Positron — style soft, minimal, clair
-  // (même esprit que SeLoger / Leboncoin : focus sur les marqueurs, pas sur la carte)
-  // Les labels OSM restent en français sur le territoire FR.
+// Tuiles OSM France = labels 100% FR. On adoucit le rendu via un filtre CSS
+// appliqué sur le TileLayer (voir prop `className`). Style SeLoger = soft mais FR.
+const TILES: Record<MapType, { url: string; attribution: string; label: string; soft?: boolean }> = {
   plan: {
-    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-    attribution: '&copy; <a href="https://carto.com/">CARTO</a> &middot; &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    url: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
+    attribution: '&copy; <a href="https://www.openstreetmap.fr/">OpenStreetMap France</a>',
     label: "Plan",
+    soft: true,
   },
   satellite: {
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     attribution: "&copy; Esri",
     label: "Satellite",
   },
-  // Mode détaillé : OSM France (plus de rues, POI, etc.)
   standard: {
     url: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
     attribution: '&copy; <a href="https://www.openstreetmap.fr/">OpenStreetMap France</a>',
@@ -211,13 +210,22 @@ export default function MapAnnonces({
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
+      {/* Filtre CSS doux appliqué à la couche de tuiles OSM France pour un rendu
+          moins chargé visuellement (style SeLoger). Le filtre s'applique via
+          une classe CSS injectée ci-dessous. */}
+      <style>{`.leaflet-tile-soft { filter: saturate(0.72) brightness(1.04) contrast(0.94); }`}</style>
       <MapContainer
         center={center}
         zoom={initialZoom}
         style={{ height: "100%", width: "100%" }}
         scrollWheelZoom={true}
       >
-        <TileLayer key={mapType} attribution={tile.attribution} url={tile.url} />
+        <TileLayer
+          key={mapType}
+          attribution={tile.attribution}
+          url={tile.url}
+          className={tile.soft ? "leaflet-tile-soft" : undefined}
+        />
         <BoundsWatcher onMoved={handleMoved} />
         <FrenchLeafletLocale />
         <CenterOnHint centerHint={centerHint} />

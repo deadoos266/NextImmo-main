@@ -72,6 +72,20 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 
 ## Historique des batchs
 
+### Batch 20 — Carte FR garantie + contre-proposition visite (2026-04-18)
+- **Carte 100% française + soft** : retour à OSM France (osmfr) pour garantir
+  que tous les labels sont en français, avec un filtre CSS
+  `saturate(0.72) brightness(1.04) contrast(0.94)` appliqué via la classe
+  `leaflet-tile-soft` pour adoucir le rendu. Appliqué sur MapAnnonces (plan)
+  et MapBien. Compromise trouvé : labels FR garantis + visuel style SeLoger.
+- **Contre-proposition de visite** : nouveau bouton « Contre-proposer » dans
+  la liste visites inline de `/messages`, visible pour la partie qui DOIT
+  répondre (celle qui n'a pas proposé la visite). Au clic, ouvre le form
+  visite pré-rempli avec la date/heure de la proposition initiale.
+  À la soumission : annule la visite initiale, en crée une nouvelle avec
+  `propose_par = moi`, poste un message auto « Contre-proposition : …».
+  Le cycle propose ↔ contre-propose peut se répéter jusqu'à confirmation.
+
 ### Batch 19 — Carte soft style SeLoger (2026-04-18)
 - **Style carte doux/épuré** par défaut : retour à CartoDB Voyager
   (plus soft, minimal, esprit SeLoger/Leboncoin) pour MapBien et le mode

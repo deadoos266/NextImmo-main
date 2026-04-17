@@ -220,6 +220,9 @@ function MessagesInner() {
   const [visiteHeure, setVisiteHeure] = useState("10:00")
   const [visiteMessage, setVisiteMessage] = useState("")
   const [envoyantVisite, setEnvoyantVisite] = useState(false)
+  // Contre-proposition : si défini, le form de visite annule la visite
+  // ciblée et poste une nouvelle proposition à sa place.
+  const [counterTarget, setCounterTarget] = useState<any | null>(null)
   const [demandantDossier, setDemandantDossier] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -512,8 +515,16 @@ function MessagesInner() {
   async function proposerVisite() {
     if (!convActiveData?.annonceId || !myEmail || !visiteDate || !visiteHeure) return
     setEnvoyantVisite(true)
+    const isCounter = !!counterTarget
     const propEmail = proprietaireActive ? myEmail : convActiveData.other
     const locEmail  = proprietaireActive ? convActiveData.other : myEmail
+
+    // Si contre-proposition : annuler l'ancienne visite (en base + local)
+    if (isCounter && counterTarget?.id) {
+      await supabase.from("visites").update({ statut: "annulée" }).eq("id", counterTarget.id)
+      setVisitesConv(prev => prev.map(v => v.id === counterTarget.id ? { ...v, statut: "annulée" } : v))
+    }
+
     const { data: visite } = await supabase.from("visites").insert([{
       annonce_id: convActiveData.annonceId,
       proprietaire_email: propEmail,
@@ -527,7 +538,8 @@ function MessagesInner() {
     if (visite) {
       setVisitesConv(prev => [...prev, visite])
       const dateFormatee = new Date(visiteDate + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
-      const contenu = `Demande de visite le ${dateFormatee} à ${visiteHeure}${visiteMessage.trim() ? ` — "${visiteMessage.trim()}"` : ""}`
+      const prefix = isCounter ? "Contre-proposition" : "Demande de visite"
+      const contenu = `${prefix} : ${dateFormatee} à ${visiteHeure}${visiteMessage.trim() ? ` — "${visiteMessage.trim()}"` : ""}`
       const { data: msg } = await supabase.from("messages").insert([{ from_email: myEmail, to_email: convActiveData.other, contenu, lu: false, created_at: new Date().toISOString() }]).select().single()
       if (msg) {
         setMessages(prev => [...prev, msg])
@@ -535,6 +547,7 @@ function MessagesInner() {
       }
     }
     setShowVisiteForm(false)
+    setCounterTarget(null)
     setVisiteDate("")
     setVisiteHeure("10:00")
     setVisiteMessage("")
@@ -954,10 +967,20 @@ function MessagesInner() {
                               )}
                             </div>
                             {isPending && v.propose_par !== myEmail && (
-                              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                              <div style={{ display: "flex", gap: 6, flexShrink: 0, flexWrap: "wrap" }}>
                                 <button onClick={() => changerStatutVisite(v.id, "confirmée")}
                                   style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "5px 12px", fontWeight: 700, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
                                   ✓ Confirmer
+                                </button>
+                                <button onClick={() => {
+                                  setCounterTarget(v)
+                                  setVisiteDate(v.date_visite || "")
+                                  setVisiteHeure(v.heure || "10:00")
+                                  setVisiteMessage("")
+                                  setShowVisiteForm(true)
+                                }}
+                                  style={{ background: "white", border: "1.5px solid #111", color: "#111", borderRadius: 999, padding: "5px 10px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
+                                  Contre-proposer
                                 </button>
                                 <button onClick={() => setVisiteCancelTarget({ v, mode: "refus" })}
                                   style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "5px 10px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
@@ -995,7 +1018,14 @@ function MessagesInner() {
                       </button>
                     )}
                     {convActiveData?.annonceId && (
-                      <button onClick={() => setShowVisiteForm(!showVisiteForm)}
+                      <button onClick={() => {
+                        if (showVisiteForm) {
+                          setShowVisiteForm(false)
+                          setCounterTarget(null)
+                        } else {
+                          setShowVisiteForm(true)
+                        }
+                      }}
                         style={{ background: showVisiteForm ? "#111" : "#eff6ff", border: "1.5px solid " + (showVisiteForm ? "#111" : "#bfdbfe"), color: showVisiteForm ? "white" : "#1d4ed8", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
                         {showVisiteForm ? "Fermer" : "Proposer une visite"}
                       </button>
@@ -1010,7 +1040,14 @@ function MessagesInner() {
                   </div>
                   {showVisiteForm && convActiveData?.annonceId && (
                     <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
-                      <p style={{ fontSize: 12, fontWeight: 800, color: "#1d4ed8", marginBottom: 12 }}>Proposer une visite</p>
+                      <p style={{ fontSize: 12, fontWeight: 800, color: "#1d4ed8", marginBottom: 12 }}>
+                        {counterTarget ? "Contre-proposer un autre créneau" : "Proposer une visite"}
+                      </p>
+                      {counterTarget && (
+                        <p style={{ fontSize: 11, color: "#6b7280", marginBottom: 10, lineHeight: 1.5 }}>
+                          La proposition initiale (<strong>{new Date(counterTarget.date_visite + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} à {counterTarget.heure}</strong>) sera annulée et remplacée par votre nouveau créneau.
+                        </p>
+                      )}
                       <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
                         <div style={{ flex: 1 }}>
                           <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 4, textTransform: "uppercase" as const }}>Date</label>
