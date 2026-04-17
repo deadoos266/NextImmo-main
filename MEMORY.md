@@ -72,6 +72,18 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 
 ## Historique des batchs
 
+### Batch 19 — Carte soft style SeLoger (2026-04-18)
+- **Style carte doux/épuré** par défaut : retour à CartoDB Voyager
+  (plus soft, minimal, esprit SeLoger/Leboncoin) pour MapBien et le mode
+  Plan de MapAnnonces. Les labels OSM restent en français sur le
+  territoire FR. OSM France (osmfr) conservé en mode « Détaillé » pour
+  zoomer sur les rues/POI quand besoin.
+- **Zoom initial abaissé** : vue France 6, vue nationale avec annonces
+  9 (au lieu de 10), vue ville précise 11 (au lieu de 12). Ouverture
+  plus douce, marqueurs plus lisibles, pas de street-level imposé.
+- **CenterOnHint** : zoom 11 quand on change de ville (au lieu de 12)
+  pour rester sur une vue agglomération.
+
 ### Batch 18 — Carte FR + ville sur /annonces + Paris-default (2026-04-18)
 - **Tuiles carte 100% françaises** : bascule complète vers OSM France
   (`tile.openstreetmap.fr/osmfr`) pour MapBien et MapAnnonces (mode Plan

@@ -7,9 +7,12 @@ import "leaflet/dist/leaflet.css"
 type MapType = "plan" | "satellite" | "standard"
 
 const TILES: Record<MapType, { url: string; attribution: string; label: string }> = {
+  // Vue par défaut : cartes CartoDB Positron — style soft, minimal, clair
+  // (même esprit que SeLoger / Leboncoin : focus sur les marqueurs, pas sur la carte)
+  // Les labels OSM restent en français sur le territoire FR.
   plan: {
-    url: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
-    attribution: '&copy; <a href="https://www.openstreetmap.fr/">OpenStreetMap France</a>',
+    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    attribution: '&copy; <a href="https://carto.com/">CARTO</a> &middot; &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     label: "Plan",
   },
   satellite: {
@@ -17,6 +20,7 @@ const TILES: Record<MapType, { url: string; attribution: string; label: string }
     attribution: "&copy; Esri",
     label: "Satellite",
   },
+  // Mode détaillé : OSM France (plus de rues, POI, etc.)
   standard: {
     url: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
     attribution: '&copy; <a href="https://www.openstreetmap.fr/">OpenStreetMap France</a>',
@@ -138,7 +142,8 @@ function CenterOnHint({ centerHint }: { centerHint?: [number, number] | null }) 
     const key = `${centerHint[0].toFixed(4)},${centerHint[1].toFixed(4)}`
     if (lastHint.current === key) return
     lastHint.current = key
-    map.setView(centerHint, 12, { animate: true })
+    // Zoom 11 : vue agglomération douce (pas street-level direct)
+    map.setView(centerHint, 11, { animate: true })
   }, [centerHint, map])
   return null
 }
@@ -172,8 +177,11 @@ export default function MapAnnonces({
     : withCoords.length > 0
       ? [withCoords[0]._lat, withCoords[0]._lng]
       : [46.603354, 1.888334] // Centre géographique de la France métropolitaine
-  // Zoom : 12 si ville précise, 6 si vue France entière
-  const initialZoom = centerHint ? 12 : (withCoords.length > 0 ? 10 : 6)
+  // Zoom soft par défaut — style SeLoger :
+  // - vue France : 6
+  // - annonces sans ville précise : 9 (vue régionale)
+  // - ville précise : 11 (vue agglomération, pas rue par rue)
+  const initialZoom = centerHint ? 11 : (withCoords.length > 0 ? 9 : 6)
 
   if (withCoords.length === 0 && !centerHint) return (
     <div style={{ width: "100%", height: "100%", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
