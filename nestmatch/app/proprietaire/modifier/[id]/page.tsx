@@ -6,6 +6,7 @@ import { supabase } from "../../../../lib/supabase"
 import { useResponsive } from "../../../hooks/useResponsive"
 import LocataireEmailField from "../../../components/LocataireEmailField"
 import CityAutocomplete from "../../../components/CityAutocomplete"
+import AddressAutocomplete from "../../../components/AddressAutocomplete"
 import Tooltip from "../../../components/Tooltip"
 
 const Toggle = ({ label, k, toggles, setToggles }: any) => (
@@ -215,8 +216,20 @@ export default function ModifierBien() {
             <F l="Ville">
               <CityAutocomplete value={form.ville} onChange={v => setForm(f => ({ ...f, ville: v }))} placeholder="Commencez à taper..." />
             </F>
-            <F l="Adresse / Quartier">
-              <input style={inp} value={form.adresse} onChange={set("adresse")} placeholder="Ex: Rue de la Roquette" />
+            <F l="Adresse">
+              <AddressAutocomplete
+                value={form.adresse}
+                onChange={v => setForm(f => ({ ...f, adresse: v }))}
+                onSelect={a => {
+                  setForm(f => ({
+                    ...f,
+                    adresse: a.street || a.label,
+                    ville: f.ville || a.city,
+                  }))
+                }}
+                city={form.ville || undefined}
+                placeholder="Ex : 6 rue de Rivoli"
+              />
             </F>
             <F l="Disponibilité">
               <select style={sel} value={form.dispo} onChange={set("dispo")}>

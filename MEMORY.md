@@ -78,6 +78,16 @@ Différenciation : score de compatibilité propriété/locataire via algo maison
 - messagerie : tri non-lus en premier
 - Build : Suspense wrapping sur `/auth` et `/annonces`
 
+### Batch 10 — Adresse autocomplete BAN (2026-04-17)
+- **#94 AddressAutocomplete via BAN** (api-adresse.data.gouv.fr, gratuit
+  sans clé) : nouveau composant `components/AddressAutocomplete.tsx` avec
+  debounce 300ms, navigation clavier (flèches + Entrée), fallback si API
+  down. Au onSelect, renseigne automatiquement la ville du form si vide.
+  Intégré dans /proprietaire/ajouter + /modifier (remplace l'input texte
+  libre "Adresse / Quartier")
+- Noté pour plus tard : #95 intégration DossierFacile (État),
+  #96 autocomplete quartier spécifique (Bastille, Marais…)
+
 ### Batch 9 — Quick wins roadmap (2026-04-17)
 - **#64 Onboarding 3 étapes** : page `/onboarding` avec wizard (ville+budget →
   taille → critères), auth/page redirige les nouveaux locataires dessus
@@ -313,6 +323,12 @@ Différenciation : score de compatibilité propriété/locataire via algo maison
 ## 🗺️ Roadmap fonctionnalités — par ordre de facilité
 
 ### 🟢 Quick wins (1-3h chacun, no-brainers)
+- **#94 Adresse autocomplete via API BAN** : utiliser api-adresse.data.gouv.fr
+  (gratuit, pas de clé) pour suggérer les adresses complètes dans les forms
+  d'ajout/modification de bien. Récupère rue + code postal + ville + coords GPS.
+- **#96 Autocomplete quartier spécifique** : en complément du select
+  type_quartier (centre-ville/intra muros...), proposer un champ "quartier"
+  (Bastille, Marais...) avec autocomplete BAN filtré par type=locality.
 - **#64 Onboarding guidé 3 étapes** après inscription : wizard ville+budget →
   type de bien → critères essentiels → direction `/annonces` avec filtres
   pré-remplis. Juste une page wizard ou modale
@@ -349,6 +365,12 @@ Différenciation : score de compatibilité propriété/locataire via algo maison
   Google Calendar / Apple / Outlook
 
 ### 🟠 Plus complexes (plusieurs jours)
+- **#95 Intégration API DossierFacile (service État)** : gros différenciant
+  confiance. DossierFacile.fr certifie les dossiers locataires. Permettre
+  d'importer un dossier DossierFacile validé pour afficher badge "Dossier
+  vérifié par l'État". Nécessite étude de l'API publique + probable
+  partenariat officiel.
+
 - **#77 Notifications email transactionnelles** (gros impact rétention) :
   setup Resend/Sendgrid + 5-6 templates email (nouveau message, nouvelle
   candidature, visite proposée/confirmée/annulée, dossier partagé, mot de
