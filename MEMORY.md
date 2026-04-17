@@ -78,6 +78,18 @@ Différenciation : score de compatibilité propriété/locataire via algo maison
 - messagerie : tri non-lus en premier
 - Build : Suspense wrapping sur `/auth` et `/annonces`
 
+### Batch 7 — Messagerie moderne (2026-04-17)
+- **#62 Messagerie complète** :
+  - Reply-to : bouton "Répondre" dans le menu actions, preview du message
+    cité au-dessus de l'input, quote au-dessus de chaque réponse dans le
+    fil, clic sur la quote scrolle vers le message original + highlight
+  - Menu d'actions sur chaque message (bouton ⋯ au hover) : Répondre /
+    Copier le texte / Supprimer (propriétaire du message uniquement)
+  - Indicateurs ✓/✓✓ (envoyé/lu) déjà présents — conservés
+  - Encodage reply-to sans migration DB : préfixe `[REPLY:<id>]\n` dans
+    contenu, helpers `parseReply()` + `encodeReply()`, preview liste conv
+    filtre le préfixe pour afficher juste le texte
+
 ### Batch 6 — Privacy + routes + bugs (2026-04-17)
 - **#47 Privacy emails proprios** : nouveau `lib/privacy.ts` avec `displayName()`,
   remplace les emails bruts par des noms lisibles dans /messages

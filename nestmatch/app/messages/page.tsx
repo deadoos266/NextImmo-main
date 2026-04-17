@@ -12,6 +12,19 @@ import { displayName } from "../../lib/privacy"
 const DOSSIER_PREFIX = "[DOSSIER_CARD]"
 const DEMANDE_DOSSIER_PREFIX = "[DEMANDE_DOSSIER]"
 const EDL_PREFIX = "[EDL_CARD]"
+// Prefix encodé dans contenu pour un message en réponse à un autre.
+// Format : "[REPLY:<id>]\n<texte>". Permet d'implémenter le reply-to sans migration DB.
+const REPLY_REGEX = /^\[REPLY:(\d+)\]\n([\s\S]*)$/
+
+function parseReply(contenu: string): { replyToId: number | null; text: string } {
+  const m = contenu.match(REPLY_REGEX)
+  if (m) return { replyToId: parseInt(m[1], 10), text: m[2] }
+  return { replyToId: null, text: contenu }
+}
+
+function encodeReply(replyToId: number | null, text: string): string {
+  return replyToId ? `[REPLY:${replyToId}]\n${text}` : text
+}
 
 const STATUT_VISITE: Record<string, { bg: string; color: string; border: string; label: string }> = {
   "proposée":  { bg: "#fff7ed", color: "#c2410c", border: "#fed7aa", label: "En attente" },
@@ -199,6 +212,10 @@ function MessagesInner() {
   const [recherche, setRecherche] = useState("")
   const [supprimant, setSupprimant] = useState<string | null>(null)
   const [menuConv, setMenuConv] = useState<string | null>(null)
+  // Reply-to : infos du message auquel on répond (null = pas de reply)
+  const [replyTo, setReplyTo] = useState<{ id: number; contenu: string; from: string } | null>(null)
+  // Menu d'actions sur un message (id du msg ouvert, null = fermé)
+  const [menuMsgId, setMenuMsgId] = useState<number | null>(null)
   const [visitesConv, setVisitesConv] = useState<any[]>([])
   const [showVisiteForm, setShowVisiteForm] = useState(false)
   const [visiteDate, setVisiteDate] = useState("")
@@ -330,15 +347,43 @@ function MessagesInner() {
     setEnvoi(true)
     const conv = conversations.find(c => c.key === convActive)
     if (!conv) return
-    const msg = { from_email: myEmail, to_email: conv.other, contenu: nouveau.trim(), lu: false, created_at: new Date().toISOString() }
+    const contenuFinal = encodeReply(replyTo?.id ?? null, nouveau.trim())
+    const msg = { from_email: myEmail, to_email: conv.other, contenu: contenuFinal, lu: false, created_at: new Date().toISOString() }
     const { data } = await supabase.from("messages").insert([msg]).select().single()
     if (data) {
       setMessages(prev => [...prev, data])
       setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: data } : c))
     }
     setNouveau("")
+    setReplyTo(null)
     setEnvoi(false)
     inputRef.current?.focus()
+  }
+
+  async function supprimerMessage(id: number) {
+    if (!confirm("Supprimer ce message ?")) return
+    const { error } = await supabase.from("messages").delete().eq("id", id)
+    if (!error) {
+      setMessages(prev => prev.filter(m => m.id !== id))
+    }
+    setMenuMsgId(null)
+  }
+
+  async function copierMessage(contenu: string) {
+    const { text } = parseReply(contenu)
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch {
+      // Fallback silencieux si clipboard API indisponible
+    }
+    setMenuMsgId(null)
+  }
+
+  function repondreMessage(m: any) {
+    const { text } = parseReply(m.contenu)
+    setReplyTo({ id: m.id, contenu: text, from: m.from_email })
+    setMenuMsgId(null)
+    setTimeout(() => inputRef.current?.focus(), 50)
   }
 
   async function envoyerDossier() {
@@ -525,12 +570,13 @@ function MessagesInner() {
                 const ann = annonces[conv.annonceId]
                 const photo = Array.isArray(ann?.photos) && ann.photos.length > 0 ? ann.photos[0] : null
                 const isActive = convActive === conv.key
-                const preview = conv.lastMsg?.contenu
-                  ? conv.lastMsg.contenu.startsWith(DOSSIER_PREFIX) ? "📁 Dossier envoyé"
-                  : conv.lastMsg.contenu.startsWith(DEMANDE_DOSSIER_PREFIX) ? "📋 Dossier demandé"
-                  : conv.lastMsg.contenu.startsWith(EDL_PREFIX) ? "📋 État des lieux envoyé"
-                  : conv.lastMsg.contenu.length > 35 ? conv.lastMsg.contenu.slice(0, 35) + "…"
-                  : conv.lastMsg.contenu
+                const rawPreview = conv.lastMsg?.contenu || ""
+                const previewText = rawPreview.startsWith(DOSSIER_PREFIX) ? "Dossier envoyé"
+                  : rawPreview.startsWith(DEMANDE_DOSSIER_PREFIX) ? "Dossier demandé"
+                  : rawPreview.startsWith(EDL_PREFIX) ? "État des lieux envoyé"
+                  : parseReply(rawPreview).text // ignore le préfixe [REPLY:id]
+                const preview = rawPreview
+                  ? (previewText.length > 35 ? previewText.slice(0, 35) + "…" : previewText)
                   : "Nouvelle conversation"
                 const time = conv.lastMsg?.created_at
                   ? new Date(conv.lastMsg.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
@@ -719,15 +765,114 @@ function MessagesInner() {
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
-                        ) : (
-                          <div style={{ maxWidth: "68%", padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: isMine ? "#111" : "#f3f4f6", color: isMine ? "white" : "#111" }}>
-                            <p style={{ fontSize: 14, lineHeight: 1.5, margin: 0 }}>{m.contenu}</p>
-                            <p style={{ fontSize: 10, opacity: 0.5, marginTop: 4, textAlign: "right", margin: "4px 0 0" }}>
-                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-                              {isMine && <span style={{ marginLeft: 4 }}>{m.lu ? "✓✓" : "✓"}</span>}
-                            </p>
-                          </div>
-                        )}
+                        ) : (() => {
+                          // Parse reply-to : si le message est une réponse, afficher la quote au-dessus
+                          const { replyToId, text } = parseReply(m.contenu || "")
+                          const quoted = replyToId ? messages.find(x => x.id === replyToId) : null
+                          const quotedText = quoted ? parseReply(quoted.contenu || "").text : null
+                          const quotedLabel = quoted ? (quoted.from_email === myEmail ? "Vous" : displayName(quoted.from_email)) : null
+
+                          return (
+                            <div
+                              style={{ position: "relative", maxWidth: "68%" }}
+                              onMouseEnter={() => {
+                                const el = document.getElementById(`msg-actions-${m.id}`)
+                                if (el) el.style.opacity = "1"
+                              }}
+                              onMouseLeave={() => {
+                                if (menuMsgId !== m.id) {
+                                  const el = document.getElementById(`msg-actions-${m.id}`)
+                                  if (el) el.style.opacity = "0"
+                                }
+                              }}
+                            >
+                              <div style={{ padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: isMine ? "#111" : "#f3f4f6", color: isMine ? "white" : "#111" }}>
+                                {/* Quote du message auquel on répond */}
+                                {quoted && quotedText && (
+                                  <div
+                                    onClick={() => {
+                                      const el = document.getElementById(`msg-${quoted.id}`)
+                                      if (el) {
+                                        el.scrollIntoView({ behavior: "smooth", block: "center" })
+                                        el.style.transition = "background 0.3s"
+                                        el.style.background = "rgba(255,200,0,0.2)"
+                                        setTimeout(() => { el.style.background = "" }, 1000)
+                                      }
+                                    }}
+                                    style={{
+                                      borderLeft: `3px solid ${isMine ? "rgba(255,255,255,0.5)" : "#9ca3af"}`,
+                                      padding: "4px 10px",
+                                      marginBottom: 6,
+                                      opacity: 0.75,
+                                      fontSize: 12,
+                                      lineHeight: 1.4,
+                                      cursor: "pointer",
+                                      background: isMine ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.04)",
+                                      borderRadius: 6,
+                                    }}
+                                  >
+                                    <p style={{ fontSize: 10, fontWeight: 700, margin: 0, marginBottom: 2, opacity: 0.9 }}>{quotedLabel}</p>
+                                    <p style={{ margin: 0, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
+                                      {quotedText.length > 120 ? quotedText.slice(0, 120) + "…" : quotedText}
+                                    </p>
+                                  </div>
+                                )}
+                                <p id={`msg-${m.id}`} style={{ fontSize: 14, lineHeight: 1.5, margin: 0 }}>{text}</p>
+                                <p style={{ fontSize: 10, opacity: 0.5, marginTop: 4, textAlign: "right", margin: "4px 0 0" }}>
+                                  {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                                  {isMine && <span style={{ marginLeft: 4 }}>{m.lu ? "✓✓" : "✓"}</span>}
+                                </p>
+                              </div>
+
+                              {/* Bouton actions (...) + menu */}
+                              <div
+                                id={`msg-actions-${m.id}`}
+                                style={{
+                                  position: "absolute",
+                                  top: 4,
+                                  [isMine ? "left" : "right"]: -30,
+                                  opacity: menuMsgId === m.id ? 1 : 0,
+                                  transition: "opacity 0.15s",
+                                } as React.CSSProperties}
+                              >
+                                <button
+                                  onClick={e => { e.stopPropagation(); setMenuMsgId(menuMsgId === m.id ? null : m.id) }}
+                                  aria-label="Actions sur le message"
+                                  style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "50%", width: 26, height: 26, cursor: "pointer", fontSize: 14, color: "#6b7280", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, fontFamily: "inherit", lineHeight: 1, boxShadow: "0 2px 6px rgba(0,0,0,0.1)" }}
+                                >
+                                  ⋯
+                                </button>
+                                {menuMsgId === m.id && (
+                                  <>
+                                    <div onClick={() => setMenuMsgId(null)} style={{ position: "fixed", inset: 0, zIndex: 50 }} />
+                                    <div style={{ position: "absolute", top: 30, [isMine ? "left" : "right"]: 0, background: "white", border: "1px solid #e5e7eb", borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.12)", zIndex: 60, minWidth: 160, overflow: "hidden" } as React.CSSProperties}>
+                                      <button onClick={() => repondreMessage(m)}
+                                        style={{ display: "block", width: "100%", padding: "10px 14px", background: "white", border: "none", textAlign: "left", fontSize: 13, color: "#111", cursor: "pointer", fontFamily: "inherit" }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
+                                        onMouseLeave={e => (e.currentTarget.style.background = "white")}>
+                                        Répondre
+                                      </button>
+                                      <button onClick={() => copierMessage(m.contenu)}
+                                        style={{ display: "block", width: "100%", padding: "10px 14px", background: "white", border: "none", textAlign: "left", fontSize: 13, color: "#111", cursor: "pointer", fontFamily: "inherit" }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
+                                        onMouseLeave={e => (e.currentTarget.style.background = "white")}>
+                                        Copier le texte
+                                      </button>
+                                      {isMine && (
+                                        <button onClick={() => supprimerMessage(m.id)}
+                                          style={{ display: "block", width: "100%", padding: "10px 14px", background: "white", border: "none", textAlign: "left", fontSize: 13, color: "#dc2626", cursor: "pointer", fontFamily: "inherit", borderTop: "1px solid #f3f4f6" }}
+                                          onMouseEnter={e => (e.currentTarget.style.background = "#fef2f2")}
+                                          onMouseLeave={e => (e.currentTarget.style.background = "white")}>
+                                          Supprimer
+                                        </button>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })()}
                       </div>
                     )
                   })}
@@ -842,10 +987,28 @@ function MessagesInner() {
                       </button>
                     </div>
                   )}
+                  {/* Preview du message auquel on répond */}
+                  {replyTo && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#f9fafb", borderLeft: "3px solid #111", borderRadius: 8, padding: "8px 12px", marginBottom: 8 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: "#111", margin: 0, marginBottom: 2 }}>
+                          Répondre à {replyTo.from === myEmail ? "vous-même" : displayName(replyTo.from)}
+                        </p>
+                        <p style={{ fontSize: 12, color: "#6b7280", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {replyTo.contenu.slice(0, 100)}{replyTo.contenu.length > 100 ? "…" : ""}
+                        </p>
+                      </div>
+                      <button onClick={() => setReplyTo(null)}
+                        aria-label="Annuler la réponse"
+                        style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "#9ca3af", padding: 4, fontFamily: "inherit", lineHeight: 1 }}>
+                        ×
+                      </button>
+                    </div>
+                  )}
                   <div style={{ display: "flex", gap: 10 }}>
                     <input ref={inputRef} value={nouveau} onChange={e => setNouveau(e.target.value)}
                       onKeyDown={e => e.key === "Enter" && !e.shiftKey && envoyer()}
-                      placeholder="Votre message…"
+                      placeholder={replyTo ? "Votre réponse…" : "Votre message…"}
                       style={{ flex: 1, padding: "11px 16px", border: "1.5px solid #e5e7eb", borderRadius: 999, fontSize: 14, outline: "none", fontFamily: "inherit" }} />
                     <button onClick={envoyer} disabled={envoi || !nouveau.trim()}
                       style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "0 22px", fontWeight: 700, fontSize: 14, cursor: envoi || !nouveau.trim() ? "not-allowed" : "pointer", opacity: envoi || !nouveau.trim() ? 0.4 : 1, fontFamily: "inherit" }}>
