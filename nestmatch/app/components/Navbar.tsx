@@ -33,16 +33,13 @@ export default function Navbar() {
   useEffect(() => {
     if (!session?.user?.email) return
     const email = session.user.email
-    if (proprietaireActive) {
-      supabase.from("visites").select("id", { count: "exact", head: true })
-        .eq("proprietaire_email", email).eq("statut", "proposée")
-        .then(({ count }) => setBadgeVisites(count ?? 0))
-    } else {
-      supabase.from("visites").select("id", { count: "exact", head: true })
-        .eq("locataire_email", email).eq("statut", "confirmée")
-        .gte("date_visite", new Date().toISOString().split("T")[0])
-        .then(({ count }) => setBadgeVisites(count ?? 0))
-    }
+    // Notification uniquement pour les visites CONFIRMÉES à venir
+    // (pas les demandes en attente — visibles dans la page mais sans badge)
+    const col = proprietaireActive ? "proprietaire_email" : "locataire_email"
+    supabase.from("visites").select("id", { count: "exact", head: true })
+      .eq(col, email).eq("statut", "confirmée")
+      .gte("date_visite", new Date().toISOString().split("T")[0])
+      .then(({ count }) => setBadgeVisites(count ?? 0))
   }, [session, proprietaireActive, pathname])
 
   useEffect(() => {
@@ -274,11 +271,30 @@ export default function Navbar() {
         </button>
       )}
 
-      {/* Mobile : drawer overlay */}
-      {isSmall && mobileOpen && (
+      {/* Mobile : drawer overlay — toujours monté quand isSmall pour animer l'ouverture/fermeture */}
+      {isSmall && (
         <>
-          <div onClick={() => setMobileOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 8000, background: "rgba(0,0,0,0.3)" }} />
-          <div style={{ position: "fixed", top: 64, left: 0, bottom: 0, width: "min(320px, 100vw)", background: "white", zIndex: 8001, overflowY: "auto", boxShadow: "8px 0 32px rgba(0,0,0,0.12)" }}>
+          <div
+            onClick={() => setMobileOpen(false)}
+            style={{
+              position: "fixed", inset: 0, zIndex: 8000,
+              background: "rgba(0,0,0,0.45)",
+              opacity: mobileOpen ? 1 : 0,
+              pointerEvents: mobileOpen ? "auto" : "none",
+              transition: "opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1)",
+            }}
+          />
+          <div
+            aria-hidden={!mobileOpen}
+            style={{
+              position: "fixed", top: 64, left: 0, bottom: 0,
+              width: "100vw",
+              background: "white", zIndex: 8001, overflowY: "auto",
+              boxShadow: mobileOpen ? "0 0 40px rgba(0,0,0,0.15)" : "none",
+              transform: mobileOpen ? "translateX(0)" : "translateX(-100%)",
+              transition: "transform 0.32s cubic-bezier(0.4, 0, 0.2, 1)",
+            }}
+          >
 
             {/* User info */}
             {session && (
@@ -312,7 +328,6 @@ export default function Navbar() {
                   <Link href="/messages"
                     style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: isActive("/messages") ? "#111" : "#374151", background: isActive("/messages") ? "#f3f4f6" : "transparent", fontWeight: isActive("/messages") ? 700 : 500, fontSize: 15, borderBottom: "1px solid #f9fafb", justifyContent: "space-between" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                      <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>💬</span>
                       Messages
                     </div>
                     {badgeMessages > 0 && (
