@@ -6,7 +6,8 @@
       "Bash(findstr /I \"env CLAUDE\")",
       "Bash(git *)",
       "Read(//d C:/Users/fab-d/OneDrive/Bureau/NextImmo-main/NextImmo-main/**)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(findstr /C:\"Vue d'ensemble\" /C:\"togglerAdmin\")"
     ]
   }
 }

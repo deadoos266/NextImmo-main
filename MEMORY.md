@@ -78,6 +78,26 @@ Différenciation : score de compatibilité propriété/locataire via algo maison
 - messagerie : tri non-lus en premier
 - Build : Suspense wrapping sur `/auth` et `/annonces`
 
+### Batch 12 — Refonte admin (2026-04-17)
+- **#52 Refonte espace admin** :
+  - Protection serveur : nouveau `app/admin/layout.tsx` avec `getServerSession`
+    + redirect si non admin. Remplace la vérif client facilement contournable.
+  - 6 onglets : Vue d'ensemble / Annonces / Utilisateurs / Messages / SEO /
+    Activité
+  - KPI globaux : users, annonces, annonces actives, biens loués, messages
+  - Vue d'ensemble : 3 mini-graphs 30 jours (inscriptions, annonces,
+    messages) + annonces par statut + top villes (profils)
+  - Annonces : recherche live, export CSV, suppression avec confirmation,
+    lien vers fiche publique
+  - Utilisateurs : chargement depuis table `users`, recherche,
+    promotion/retrait admin (bouton toggle `is_admin`), suppression cascade
+    profils + users, protection : impossible de se supprimer/retrograder
+    soi-même
+  - Messages : recherche + export CSV
+  - SEO : conservé tel quel (score + audit par annonce)
+  - Activité : flux chronologique des 60 derniers événements (inscriptions,
+    annonces, messages) avec emails masqués via displayName()
+
 ### Batch 11 — Features moyennes (2026-04-17)
 - **#74 Estimateur de budget locataire** : page `/estimateur` avec règle 3×
   revenus (loyer idéal + max raisonnable + bonus garant), CTA direct vers
