@@ -43,6 +43,7 @@ export default function Footer() {
           {/* Légal & aide */}
           <div style={col}>
             <p style={head}>Informations</p>
+            <a href="/contact" style={link}>Nous contacter</a>
             <a href="/cgu" style={link}>CGU</a>
             <a href="/mentions-legales" style={link}>Mentions légales</a>
             <a href="/confidentialite" style={link}>Politique de confidentialité</a>

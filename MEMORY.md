@@ -5,7 +5,7 @@
 - **Stack** : Next.js 15 App Router, React 19, TypeScript, Supabase, NextAuth (Google + Credentials), Leaflet, SDK Anthropic
 - **URL prod** : https://next-immo-main.vercel.app
 - **Repo** : github.com/deadoos266/NextImmo-main (public — à passer en privé)
-- **Dernière mise à jour** : 2026-04-17
+- **Dernière mise à jour** : 2026-04-18
 
 ## Pitch produit
 Plateforme P2P de location immobilière (marché français). Locataires et propriétaires en direct, sans agence.
@@ -71,6 +71,46 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 ---
 
 ## Historique des batchs
+
+### Batch 15 — Page contact + admin assignation (2026-04-18)
+- **Nouvelle page publique `/contact`** : formulaire nom/email/sujet/message,
+  rate-limit 5/h par email, 8 sujets prédéfinis (`lib/contacts.ts`), design
+  cohérent avec le reste de l'app, message de confirmation + RGPD mention
+- **Nouvelle API** `/api/contact` (POST public, GET admin) et `/api/contact/[id]`
+  (PATCH admin : statut, réponse interne, prise en charge)
+- **Onglet Admin "Contact"** : filtres Ouverts/En cours/Résolus/Tous, bouton
+  "Prendre en charge" (assigne à l'admin courant + passe en_cours), boutons
+  rapides pour changer le statut, champ note interne, lien mailto pour répondre
+  directement par email avec le bon sujet
+- **Footer** : ajout lien "Nous contacter" dans la colonne Informations
+- **2 nouveaux sous-agents Claude Code** : `architect` (plan features avant
+  implémentation, refuse les violations d'invariants) et `verifier`
+  (vérifie que chaque claim correspond à la réalité code, détecte silent
+  failures, lance le build)
+- **Fix batch précédent** : badge visites dans la Navbar désormais basé
+  uniquement sur les visites confirmées à venir (plus de pastille rouge sur
+  les demandes en attente — visibles dans la page dédiée sans notification)
+- **Menu burger mobile** : slide-in fluide (transform + transition 320ms),
+  plein écran `100vw`, backdrop animé, retrait des derniers emojis résiduels
+  (`💬` Messages, icônes `item.icon` de l'ancienne implémentation)
+
+  **Requiert migration DB :**
+  ```sql
+  CREATE TABLE IF NOT EXISTS contacts (
+    id bigserial PRIMARY KEY,
+    nom text NOT NULL,
+    email text NOT NULL,
+    sujet text NOT NULL,
+    message text NOT NULL,
+    statut text NOT NULL DEFAULT 'ouvert',
+    assigne_a text NULL,
+    reponse text NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+  );
+  CREATE INDEX IF NOT EXISTS idx_contacts_statut ON contacts(statut);
+  CREATE INDEX IF NOT EXISTS idx_contacts_assigne_a ON contacts(assigne_a);
+  ```
 
 ### Batch 14 — Setup agents Claude Code (2026-04-17)
 - Création de `.claude/agents/` avec 12 sous-agents spécialisés

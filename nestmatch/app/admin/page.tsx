@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
 import { displayName } from "../../lib/privacy"
 import { RAISONS, getRaisonLabel } from "../../lib/signalements"
+import { STATUT_STYLE as CONTACT_STATUTS, getSujetLabel, type ContactStatut } from "../../lib/contacts"
 
 /**
  * Dashboard admin refondu.
  * Le layout parent vérifie is_admin côté serveur — ici on se concentre sur l'UX.
  */
 
-const ONGLETS = ["Vue d'ensemble", "Signalements", "Annonces", "Utilisateurs", "Messages", "SEO", "Activité"] as const
+const ONGLETS = ["Vue d'ensemble", "Signalements", "Contact", "Annonces", "Utilisateurs", "Messages", "SEO", "Activité"] as const
 type Onglet = typeof ONGLETS[number]
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://nestmatch.fr"
@@ -100,6 +101,10 @@ export default function Admin() {
   const [search, setSearch] = useState("")
   const [signalements, setSignalements] = useState<any[]>([])
   const [signalStatutFilter, setSignalStatutFilter] = useState<"ouvert" | "traite" | "rejete" | "all">("ouvert")
+  const [contacts, setContacts] = useState<any[]>([])
+  const [contactFilter, setContactFilter] = useState<ContactStatut | "all">("ouvert")
+  const [contactExpanded, setContactExpanded] = useState<number | null>(null)
+  const [contactReponse, setContactReponse] = useState<Record<number, string>>({})
 
   useEffect(() => {
     if (status === "authenticated" && !session?.user?.isAdmin) router.replace("/")
@@ -120,6 +125,26 @@ export default function Admin() {
     if (m) setMessages(m)
     setLoading(false)
     loadSignalements(signalStatutFilter)
+    loadContacts(contactFilter)
+  }
+
+  async function loadContacts(statut: ContactStatut | "all") {
+    try {
+      const res = await fetch(`/api/contact?statut=${statut}`)
+      const json = await res.json()
+      if (res.ok && json.success) setContacts(json.contacts || [])
+    } catch { /* silencieux */ }
+  }
+
+  async function patchContact(id: number, patch: { statut?: ContactStatut; reponse?: string | null; prendre_en_charge?: boolean }) {
+    try {
+      const res = await fetch(`/api/contact/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      })
+      if (res.ok) loadContacts(contactFilter)
+    } catch { /* noop */ }
   }
 
   async function loadSignalements(statut: "ouvert" | "traite" | "rejete" | "all") {
@@ -619,6 +644,121 @@ export default function Admin() {
                             Rouvrir
                           </button>
                         )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {onglet === "Contact" && (
+          <div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 16, background: "white", borderRadius: 12, padding: 4, width: "fit-content" }}>
+              {(["ouvert", "en_cours", "resolu", "all"] as const).map(f => (
+                <button key={f} onClick={() => { setContactFilter(f); loadContacts(f) }}
+                  style={{ padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 12, fontFamily: "inherit", background: contactFilter === f ? "#111" : "transparent", color: contactFilter === f ? "white" : "#6b7280" }}>
+                  {f === "ouvert" ? "Ouverts" : f === "en_cours" ? "En cours" : f === "resolu" ? "Résolus" : "Tous"}
+                </button>
+              ))}
+            </div>
+
+            {contacts.length === 0 ? (
+              <div style={{ background: "white", borderRadius: 20, padding: 48, textAlign: "center" }}>
+                <p style={{ fontSize: 16, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Aucun message</p>
+                <p style={{ fontSize: 13, color: "#9ca3af" }}>Les messages reçus via /contact apparaîtront ici.</p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {contacts.map(c => {
+                  const s = CONTACT_STATUTS[c.statut as ContactStatut] ?? CONTACT_STATUTS.ouvert
+                  const expanded = contactExpanded === c.id
+                  const mine = c.assigne_a && c.assigne_a === session.user.email
+                  return (
+                    <div key={c.id} style={{ background: "white", borderRadius: 16, padding: 20, borderLeft: `4px solid ${s.color}` }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+                        <div style={{ flex: 1, minWidth: 240 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
+                            <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`, padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                              {s.label}
+                            </span>
+                            <span style={{ background: "#f3f4f6", color: "#374151", padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
+                              {getSujetLabel(c.sujet)}
+                            </span>
+                            <span style={{ fontSize: 11, color: "#9ca3af" }}>
+                              {new Date(c.created_at).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                            {c.assigne_a && (
+                              <span style={{ background: mine ? "#dcfce7" : "#eff6ff", color: mine ? "#15803d" : "#1d4ed8", padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
+                                {mine ? "Pris par vous" : `Pris par ${c.assigne_a}`}
+                              </span>
+                            )}
+                          </div>
+                          <p style={{ fontSize: 15, fontWeight: 800, marginBottom: 2 }}>{c.nom}</p>
+                          <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 10 }}>
+                            <a href={`mailto:${c.email}`} style={{ color: "#1d4ed8", textDecoration: "none" }}>{c.email}</a>
+                          </p>
+                          <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, whiteSpace: "pre-wrap", background: "#f9fafb", padding: "12px 14px", borderRadius: 10 }}>
+                            {expanded || c.message.length <= 280 ? c.message : c.message.slice(0, 280) + "…"}
+                          </p>
+                          {c.message.length > 280 && (
+                            <button onClick={() => setContactExpanded(expanded ? null : c.id)}
+                              style={{ marginTop: 6, background: "none", border: "none", color: "#1d4ed8", fontSize: 12, fontWeight: 600, cursor: "pointer", padding: 0, fontFamily: "inherit" }}>
+                              {expanded ? "Réduire" : "Voir tout"}
+                            </button>
+                          )}
+                          {c.reponse && (
+                            <p style={{ fontSize: 13, color: "#6b7280", marginTop: 10, fontStyle: "italic", borderLeft: "3px solid #e5e7eb", paddingLeft: 10 }}>
+                              <strong>Note interne :</strong> {c.reponse}
+                            </p>
+                          )}
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0, minWidth: 160 }}>
+                          {!c.assigne_a && c.statut !== "resolu" && (
+                            <button onClick={() => patchContact(c.id, { prendre_en_charge: true })}
+                              style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                              Prendre en charge
+                            </button>
+                          )}
+                          {c.statut === "ouvert" && (
+                            <button onClick={() => patchContact(c.id, { statut: "en_cours" })}
+                              style={{ background: "white", color: "#1d4ed8", border: "1.5px solid #bfdbfe", borderRadius: 999, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                              Marquer en cours
+                            </button>
+                          )}
+                          {c.statut !== "resolu" && (
+                            <button onClick={() => patchContact(c.id, { statut: "resolu" })}
+                              style={{ background: "#dcfce7", color: "#15803d", border: "none", borderRadius: 999, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                              Marquer résolu
+                            </button>
+                          )}
+                          {c.statut === "resolu" && (
+                            <button onClick={() => patchContact(c.id, { statut: "ouvert" })}
+                              style={{ background: "white", color: "#c2410c", border: "1.5px solid #fed7aa", borderRadius: 999, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                              Rouvrir
+                            </button>
+                          )}
+                          <a href={`mailto:${c.email}?subject=Re: ${getSujetLabel(c.sujet)}`}
+                            style={{ background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "7px 14px", fontSize: 12, fontWeight: 700, textDecoration: "none", textAlign: "center", fontFamily: "inherit" }}>
+                            Répondre par email
+                          </a>
+                        </div>
+                      </div>
+                      <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center" }}>
+                        <input
+                          type="text"
+                          placeholder="Ajouter une note interne…"
+                          value={contactReponse[c.id] ?? c.reponse ?? ""}
+                          onChange={e => setContactReponse({ ...contactReponse, [c.id]: e.target.value })}
+                          style={{ flex: 1, padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 13, outline: "none", fontFamily: "inherit" }}
+                        />
+                        <button
+                          onClick={() => patchContact(c.id, { reponse: (contactReponse[c.id] ?? "").trim() || null })}
+                          style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                        >
+                          Sauver
+                        </button>
                       </div>
                     </div>
                   )
