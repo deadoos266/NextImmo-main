@@ -108,7 +108,7 @@ export default function Admin() {
     const [{ data: a }, { data: p }, { data: u }, { data: m }] = await Promise.all([
       supabase.from("annonces").select("*").order("id", { ascending: false }),
       supabase.from("profils").select("*"),
-      supabase.from("users").select("id, email, name, role, is_admin, email_verified, created_at").order("created_at", { ascending: false }),
+      supabase.from("users").select("id, email, name, role, is_admin, is_banned, ban_reason, email_verified, created_at").order("created_at", { ascending: false }),
       supabase.from("messages").select("*").order("created_at", { ascending: false }).limit(100),
     ])
     if (a) setAnnonces(a)
@@ -134,6 +134,25 @@ export default function Admin() {
   async function togglerAdmin(email: string, current: boolean) {
     const { error } = await supabase.from("users").update({ is_admin: !current }).eq("email", email)
     if (!error) setUsers(users.map(u => u.email === email ? { ...u, is_admin: !current } : u))
+  }
+
+  async function bannirUser(email: string) {
+    const raison = prompt("Motif du bannissement (obligatoire) :")
+    if (!raison || !raison.trim()) return
+    const { error } = await supabase.from("users").update({
+      is_banned: true,
+      ban_reason: raison.trim(),
+    }).eq("email", email)
+    if (!error) setUsers(users.map(u => u.email === email ? { ...u, is_banned: true, ban_reason: raison.trim() } : u))
+  }
+
+  async function debannirUser(email: string) {
+    if (!confirm("Débannir cet utilisateur ? Il pourra à nouveau se connecter.")) return
+    const { error } = await supabase.from("users").update({
+      is_banned: false,
+      ban_reason: null,
+    }).eq("email", email)
+    if (!error) setUsers(users.map(u => u.email === email ? { ...u, is_banned: false, ban_reason: null } : u))
   }
 
   const trendAnnonces = useMemo(() => trendLast30Days(annonces, "created_at"), [annonces])
@@ -351,7 +370,10 @@ export default function Admin() {
                         </span>
                       </td>
                       <td style={{ padding: "12px 16px" }}>
-                        {u.is_admin && <span style={{ background: "#111", color: "white", padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>Admin</span>}
+                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                          {u.is_admin && <span style={{ background: "#111", color: "white", padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>Admin</span>}
+                          {u.is_banned && <span style={{ background: "#fee2e2", color: "#b91c1c", padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }} title={u.ban_reason || ""}>Banni</span>}
+                        </div>
                       </td>
                       <td style={{ padding: "12px 16px", fontSize: 12, color: "#9ca3af" }}>
                         {u.created_at ? new Date(u.created_at).toLocaleDateString("fr-FR") : "—"}
@@ -359,10 +381,23 @@ export default function Admin() {
                       <td style={{ padding: "12px 16px" }}>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                           {u.email !== session.user.email && (
-                            <button onClick={() => togglerAdmin(u.email, !!u.is_admin)}
-                              style={{ background: u.is_admin ? "#fef3c7" : "#dcfce7", color: u.is_admin ? "#92400e" : "#15803d", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-                              {u.is_admin ? "Retirer admin" : "Promouvoir admin"}
-                            </button>
+                            <>
+                              <button onClick={() => togglerAdmin(u.email, !!u.is_admin)}
+                                style={{ background: u.is_admin ? "#fef3c7" : "#dcfce7", color: u.is_admin ? "#92400e" : "#15803d", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                                {u.is_admin ? "Retirer admin" : "Promouvoir admin"}
+                              </button>
+                              {u.is_banned ? (
+                                <button onClick={() => debannirUser(u.email)}
+                                  style={{ background: "#dcfce7", color: "#15803d", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                                  Débannir
+                                </button>
+                              ) : (
+                                <button onClick={() => bannirUser(u.email)}
+                                  style={{ background: "#fff7ed", color: "#c2410c", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                                  Bannir
+                                </button>
+                              )}
+                            </>
                           )}
                           {confirmId === `user-${u.email}` ? (
                             <>

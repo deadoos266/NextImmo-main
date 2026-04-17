@@ -69,12 +69,13 @@ export default function ModifierBien() {
   }, [session, status, bienId])
 
   async function loadBien() {
-    const { data, error } = await supabase
-      .from("annonces")
-      .select("*")
-      .eq("id", bienId)
-      .eq("proprietaire_email", session!.user!.email!)
-      .single()
+    // Admin peut éditer n'importe quelle annonce ; proprio ne peut éditer que les siennes
+    const isAdmin = session?.user?.isAdmin === true
+    let query = supabase.from("annonces").select("*").eq("id", bienId)
+    if (!isAdmin) {
+      query = query.eq("proprietaire_email", session!.user!.email!)
+    }
+    const { data, error } = await query.single()
 
     if (error || !data) { setNotFound(true); setLoading(false); return }
 
@@ -167,7 +168,7 @@ export default function ModifierBien() {
 
     const { error } = await supabase.from("annonces").update(updates).eq("id", bienId)
     setSaving(false)
-    if (error) { alert("La sauvegarde a echoue. Veuillez reessayer."); return }
+    if (error) { alert("La sauvegarde a échoué. Veuillez réessayer."); return }
     setSaved(true)
     setTimeout(() => { setSaved(false); router.push("/proprietaire") }, 1500)
   }

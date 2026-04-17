@@ -78,6 +78,20 @@ Différenciation : score de compatibilité propriété/locataire via algo maison
 - messagerie : tri non-lus en premier
 - Build : Suspense wrapping sur `/auth` et `/annonces`
 
+### Batch 12-bis — Pouvoirs admin (2026-04-17)
+- **#97 AdminBar globale** : `components/AdminBar.tsx` visible sur toutes
+  les pages si `isAdmin`. Bandeau noir sticky top avec badge ADMIN +
+  switcher Locataire/Propriétaire + lien dashboard. Ajouté dans layout.tsx
+- **#98 Édition annonce par admin** : `/proprietaire/modifier/[id]` bypass
+  la vérification `proprietaire_email` si `session.user.isAdmin === true`.
+  L'admin peut donc éditer n'importe quelle annonce.
+- **#99 Soft-ban utilisateur** : colonnes DB `is_banned boolean` et
+  `ban_reason text` sur `users`. `lib/auth.ts` refuse le login (Credentials
+  + Google) si `is_banned=true`. UI admin : boutons Bannir/Débannir avec
+  prompt pour motif, badge "Banni" dans la liste users.
+  **Requiert migration DB** : ALTER TABLE users ADD COLUMN is_banned
+  boolean DEFAULT false, ADD COLUMN ban_reason text NULL.
+
 ### Batch 12 — Refonte admin (2026-04-17)
 - **#52 Refonte espace admin** :
   - Protection serveur : nouveau `app/admin/layout.tsx` avec `getServerSession`

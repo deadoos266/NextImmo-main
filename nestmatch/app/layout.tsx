@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { DM_Sans } from 'next/font/google'
 import './globals.css'
 import Providers from './providers'
+import AdminBar from './components/AdminBar'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import CookieBanner from './components/CookieBanner'
@@ -56,6 +57,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr" className={dmSans.variable}>
       <body style={{ fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif" }}>
         <Providers>
+          <AdminBar />
           <Navbar />
           {children}
           <Footer />

@@ -21,11 +21,18 @@ export const authOptions: NextAuthOptions = {
 
         const { data: user } = await supabaseAdmin
           .from("users")
-          .select("id, email, name, image, password_hash, role, is_admin")
+          .select("id, email, name, image, password_hash, role, is_admin, is_banned")
           .eq("email", credentials.email.toLowerCase())
           .single()
 
         if (!user || !user.password_hash) return null
+
+        // Compte banni : refuser la connexion
+        if (user.is_banned === true) {
+          // Renvoyer null refuse le login. NextAuth affiche "CredentialsSignin" côté client.
+          // L'UI de /auth peut afficher un message plus précis si besoin via une route dédiée.
+          return null
+        }
 
         const passwordValid = await bcrypt.compare(credentials.password, user.password_hash)
         if (!passwordValid) return null
@@ -55,7 +62,7 @@ export const authOptions: NextAuthOptions = {
       if (account?.provider === "google" && user.email) {
         const { data: existing } = await supabaseAdmin
           .from("users")
-          .select("id, role, is_admin")
+          .select("id, role, is_admin, is_banned")
           .eq("email", user.email.toLowerCase())
           .single()
 
@@ -69,6 +76,8 @@ export const authOptions: NextAuthOptions = {
             is_admin: false,
           })
         } else {
+          // Compte banni : refuser le login Google
+          if (existing.is_banned === true) return false
           user.id = existing.id
           user.role = existing.role as "locataire" | "proprietaire"
           user.isAdmin = existing.is_admin
