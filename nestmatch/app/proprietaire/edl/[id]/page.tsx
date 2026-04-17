@@ -536,7 +536,7 @@ export default function EdlPage() {
         </button>
 
         <div style={{ marginTop: 16, marginBottom: 28 }}>
-          <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, letterSpacing: "-0.5px" }}>Etat des lieux</h1>
+          <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, letterSpacing: "-0.5px" }}>État des lieux</h1>
           <p style={{ color: "#6b7280", marginTop: 4, fontSize: 14 }}>{bien.titre} — {bien.ville} — {bien.surface} m²</p>
         </div>
 
@@ -545,7 +545,7 @@ export default function EdlPage() {
           <div style={{ background: "#fefce8", border: "1.5px solid #fde68a", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: edlExistant?.commentaire_locataire ? 10 : 0 }}>
               <span style={{ fontSize: 18 }}>⚠</span>
-              <p style={{ fontSize: 14, fontWeight: 700, color: "#92400e", margin: 0 }}>Le locataire a conteste cet etat des lieux</p>
+              <p style={{ fontSize: 14, fontWeight: 700, color: "#92400e", margin: 0 }}>Le locataire a contesté cet état des lieux</p>
             </div>
             {edlExistant?.commentaire_locataire && (
               <div style={{ background: "white", borderRadius: 10, padding: "10px 14px", border: "1px solid #fde68a" }}>
@@ -560,7 +560,7 @@ export default function EdlPage() {
           <div style={{ background: "#dcfce7", border: "1.5px solid #bbf7d0", borderRadius: 14, padding: "14px 20px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 18 }}>📩</span>
-              <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: 0 }}>Etat des lieux envoye au locataire — en attente de validation</p>
+              <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: 0 }}>État des lieux envoyé au locataire — en attente de validation</p>
             </div>
             <button onClick={remettreEnBrouillon}
               style={{ background: "none", border: "none", color: "#6b7280", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textDecoration: "underline" }}>
@@ -573,7 +573,7 @@ export default function EdlPage() {
           <div style={{ background: "#dcfce7", border: "1.5px solid #bbf7d0", borderRadius: 14, padding: "14px 20px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 18 }}>✓</span>
             <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: 0 }}>
-              Etat des lieux valide le {edlExistant?.date_validation ? new Date(edlExistant.date_validation).toLocaleDateString("fr-FR") : "—"}
+              État des lieux valide le {edlExistant?.date_validation ? new Date(edlExistant.date_validation).toLocaleDateString("fr-FR") : "—"}
             </p>
           </div>
         )}
@@ -963,7 +963,7 @@ export default function EdlPage() {
                 </div>
               ) : (
                 <div style={{ flex: 1, padding: "14px 20px", background: "#f9fafb", borderRadius: 16, border: "1.5px dashed #d1d5db", textAlign: "center" }}>
-                  <p style={{ fontSize: 13, color: "#9ca3af", fontWeight: 600, margin: 0 }}>Rattachez un locataire pour envoyer l'EDL</p>
+                  <p style={{ fontSize: 13, color: "#9ca3af", fontWeight: 600, margin: 0 }}>Rattachez un locataire pour envoyer l&apos;EDL</p>
                 </div>
               )}
             </div>
@@ -974,7 +974,7 @@ export default function EdlPage() {
           <div style={{ background: "#dcfce7", border: "1.5px solid #bbf7d0", borderRadius: 12, padding: "12px 16px", marginTop: 16, display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 16 }}>✓</span>
             <div>
-              <p style={{ fontSize: 13, fontWeight: 700, color: "#166534", margin: 0 }}>Etat des lieux sauvegarde</p>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#166534", margin: 0 }}>État des lieux sauvegardé</p>
               <p style={{ fontSize: 12, color: "#16a34a", margin: "2px 0 0" }}>
                 {edlExistant.type === "entree" ? "Entree" : "Sortie"} — {new Date(edlExistant.date_edl || edlExistant.created_at).toLocaleDateString("fr-FR")}
               </p>

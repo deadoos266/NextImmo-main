@@ -228,7 +228,7 @@ export default function ConsulterEdlPage() {
       .single()
 
     if (err || !data) {
-      setError("Etat des lieux introuvable")
+      setError("État des lieux introuvable")
       setLoading(false)
       return
     }
@@ -338,10 +338,10 @@ export default function ConsulterEdlPage() {
         {/* ─── Header ─── */}
         <div style={{ marginBottom: 28 }}>
           <p style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
-            Etat des lieux
+            État des lieux
           </p>
           <h1 style={{ fontSize: isMobile ? 22 : 30, fontWeight: 800, letterSpacing: "-0.5px", margin: "0 0 6px" }}>
-            Etat des lieux d'{typeLabel}
+            État des lieux d'{typeLabel}
           </h1>
           <p style={{ color: "#6b7280", fontSize: 14, margin: 0 }}>
             {bien?.titre || "Bien"} — {bien?.ville || ""} — {dateLabel}
@@ -359,7 +359,7 @@ export default function ConsulterEdlPage() {
         {statut === "envoye" && (
           <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 14, padding: "14px 20px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 18 }}>📋</span>
-            <p style={{ fontSize: 14, fontWeight: 700, color: "#1d4ed8", margin: 0 }}>Veuillez verifier les informations puis valider ou contester cet etat des lieux</p>
+            <p style={{ fontSize: 14, fontWeight: 700, color: "#1d4ed8", margin: 0 }}>Veuillez vérifier les informations puis valider ou contester cet état des lieux</p>
           </div>
         )}
 
@@ -367,7 +367,7 @@ export default function ConsulterEdlPage() {
           <div style={{ background: "#dcfce7", border: "1.5px solid #bbf7d0", borderRadius: 14, padding: "14px 20px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 18 }}>✓</span>
             <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: 0 }}>
-              Etat des lieux valide {edl.date_validation ? `le ${new Date(edl.date_validation).toLocaleDateString("fr-FR")}` : ""}
+              État des lieux valide {edl.date_validation ? `le ${new Date(edl.date_validation).toLocaleDateString("fr-FR")}` : ""}
             </p>
           </div>
         )}
@@ -376,7 +376,7 @@ export default function ConsulterEdlPage() {
           <div style={{ background: "#fefce8", border: "1.5px solid #fde68a", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: edl.commentaire_locataire ? 8 : 0 }}>
               <span style={{ fontSize: 18 }}>⚠</span>
-              <p style={{ fontSize: 14, fontWeight: 700, color: "#92400e", margin: 0 }}>Etat des lieux conteste — en attente de revision par le proprietaire</p>
+              <p style={{ fontSize: 14, fontWeight: 700, color: "#92400e", margin: 0 }}>État des lieux contesté — en attente de révision par le propriétaire</p>
             </div>
             {edl.commentaire_locataire && (
               <p style={{ fontSize: 13, color: "#92400e", margin: "4px 0 0", fontStyle: "italic" }}>
@@ -504,7 +504,7 @@ export default function ConsulterEdlPage() {
               </div>
             ) : (
               <div>
-                <p style={{ fontSize: 13, fontWeight: 600, color: "#92400e", marginBottom: 10 }}>Decrivez les points que vous contestez :</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: "#92400e", marginBottom: 10 }}>Décrivez les points que vous contestez :</p>
                 <textarea
                   value={commentaire}
                   onChange={e => setCommentaire(e.target.value)}

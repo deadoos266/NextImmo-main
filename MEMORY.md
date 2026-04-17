@@ -78,6 +78,21 @@ Différenciation : score de compatibilité propriété/locataire via algo maison
 - messagerie : tri non-lus en premier
 - Build : Suspense wrapping sur `/auth` et `/annonces`
 
+### Batch 5 — Favoris + tel intl + accents (2026-04-17)
+- **#42 Carte favoris** : toggle Liste/Carte sur `/favoris`, MapAnnonces réutilisé
+  avec uniquement les biens favoris (scoreMatching=null pour ne pas afficher),
+  fallback si aucune coord, bouton cœur remplacé par SVG pour éviter les emojis
+- **#43 Téléphone international** : nouveau composant `PhoneInput.tsx` avec
+  sélecteur d'indicatif (25 pays courants : FR, BE, CH, LU, UK, DE, ES, IT, PT,
+  NL, US, MA, DZ, TN, SN, CI, CM, AE, IL, HK, JP, CN, IN, AU, BR). Parse auto
+  la valeur stockée format "+XX numéro". Intégré dans `/dossier`
+- **#44 Accents (phase 2)** : fichiers traités — CookieBanner, /cookies (RGPD),
+  /edl/consulter, /proprietaire/edl, /proprietaire/bail, /proprietaire/page,
+  /messages (État des lieux), /dossier. Strings visibles ré-accentuées
+  (État des lieux, envoyé, sauvegardé, vérifier, contesté, révision,
+  propriétaire, renseigné, expérience, améliorer, préférences, sécurité,
+  nécessaires, utilisé, collectées, légitimes, etc.)
+
 ### Batch 4 — UX formulaires (2026-04-17)
 - **CityAutocomplete** : nouveau composant combobox avec filtre clavier,
   sélection stricte depuis `lib/cityCoords.ts` (52 villes FR).

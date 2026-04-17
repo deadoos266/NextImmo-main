@@ -419,7 +419,7 @@ export default function BailPage() {
               <label style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6 }}>Mode de reglement</label>
               <select style={sel} value={form.modeReglement} onChange={set("modeReglement")}>
                 <option>Virement bancaire</option>
-                <option>Prelevement automatique</option>
+                <option>Prélèvement automatique</option>
                 <option>Cheque</option>
                 <option>Especes</option>
               </select>
@@ -454,7 +454,7 @@ export default function BailPage() {
           <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 12, color: "#6b7280" }}>DPE :</span>
-              <span style={{ fontWeight: 700, fontSize: 16, background: "#f3f4f6", padding: "4px 12px", borderRadius: 8 }}>{bien.dpe || "Non renseigne"}</span>
+              <span style={{ fontWeight: 700, fontSize: 16, background: "#f3f4f6", padding: "4px 12px", borderRadius: 8 }}>{bien.dpe || "Non renseigné"}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 12, color: "#6b7280" }}>Surface loi Boutin :</span>

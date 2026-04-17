@@ -9,14 +9,18 @@ import { useState, useRef, useEffect } from "react"
 export default function Tooltip({ text, size = 14 }: { text: string; size?: number }) {
   const [open, setOpen] = useState(false)
   const btnRef = useRef<HTMLButtonElement>(null)
-  const [pos, setPos] = useState<"top" | "bottom">("top")
+  // "above" = tooltip affiché au-dessus du ? (default si assez d'espace en haut)
+  // "below" = tooltip affiché en-dessous (si proche du haut de la fenêtre)
+  const [placement, setPlacement] = useState<"above" | "below">("above")
 
   useEffect(() => {
     if (!open || !btnRef.current) return
     const rect = btnRef.current.getBoundingClientRect()
-    // Si proche du haut de la fenêtre, afficher en bas
-    setPos(rect.top < 120 ? "bottom" : "top")
+    // Si proche du haut (moins de 140px), afficher en-dessous
+    setPlacement(rect.top < 140 ? "below" : "above")
   }, [open])
+
+  const offset = size + 10
 
   return (
     <span style={{ position: "relative", display: "inline-flex", alignItems: "center", verticalAlign: "middle", marginLeft: 6 }}>
@@ -46,6 +50,7 @@ export default function Tooltip({ text, size = 14 }: { text: string; size?: numb
           padding: 0,
           transition: "background 0.15s, color 0.15s",
           lineHeight: 1,
+          flexShrink: 0,
         }}
       >
         ?
@@ -55,9 +60,13 @@ export default function Tooltip({ text, size = 14 }: { text: string; size?: numb
           role="tooltip"
           style={{
             position: "absolute",
-            left: size / 2,
+            left: "50%",
             transform: "translateX(-50%)",
-            [pos]: size + 8,
+            // Si "above" : tooltip positionné via bottom (décale le tooltip VERS LE HAUT depuis le button)
+            // Si "below" : tooltip positionné via top (décale VERS LE BAS)
+            ...(placement === "above"
+              ? { bottom: offset }
+              : { top: offset }),
             background: "#111",
             color: "white",
             padding: "10px 14px",
@@ -73,20 +82,25 @@ export default function Tooltip({ text, size = 14 }: { text: string; size?: numb
             whiteSpace: "normal",
             textAlign: "left",
             fontFamily: "'DM Sans', sans-serif",
-          } as React.CSSProperties}
+          }}
         >
           {text}
-          {/* Petite flèche */}
+          {/* Flèche pointant vers le ? :
+              - si tooltip au-dessus : flèche en bas du tooltip (pointe vers le bas)
+              - si tooltip en-dessous : flèche en haut du tooltip (pointe vers le haut) */}
           <span
             style={{
               position: "absolute",
-              [pos === "top" ? "bottom" : "top"]: -5,
               left: "50%",
-              transform: "translateX(-50%) rotate(45deg)",
+              marginLeft: -5,
               width: 10,
               height: 10,
               background: "#111",
-            } as React.CSSProperties}
+              transform: "rotate(45deg)",
+              ...(placement === "above"
+                ? { bottom: -4 }
+                : { top: -4 }),
+            }}
           />
         </span>
       )}

@@ -389,7 +389,7 @@ export default function Proprietaire() {
                     <p style={{ color: "#6b7280", fontSize: 13 }}>{b.adresse} · {b.ville}</p>
                     <div style={{ display: "flex", gap: isMobile ? 10 : 16, marginTop: 10, fontSize: 13, color: "#6b7280", flexWrap: "wrap" }}>
                       <span>{b.surface} m²</span>
-                      <span>{b.pieces} pieces</span>
+                      <span>{b.pieces} pièces</span>
                       <span>{b.prix} €/mois</span>
                       {b.meuble && <span>Meuble</span>}
                       {b.animaux && <span>Animaux OK</span>}

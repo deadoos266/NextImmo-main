@@ -114,34 +114,34 @@ export default function CookiesPage() {
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
                 <thead>
                   <tr>
-                    <th style={headCell}>Categorie</th>
-                    <th style={headCell}>Finalite</th>
-                    <th style={headCell}>Duree</th>
-                    <th style={headCell}>Base legale</th>
+                    <th style={headCell}>Catégorie</th>
+                    <th style={headCell}>Finalité</th>
+                    <th style={headCell}>Durée</th>
+                    <th style={headCell}>Base légale</th>
                   </tr>
                 </thead>
                 <tbody>
                   <CookieTableRow
-                    category="Necessaires"
-                    purpose="Jeton de session NextAuth (next-auth.session-token), protection CSRF (next-auth.csrf-token). Indispensables a l'authentification et a la securite."
+                    category="Nécessaires"
+                    purpose="Jeton de session NextAuth (next-auth.session-token), protection CSRF (next-auth.csrf-token). Indispensables à l'authentification et à la sécurité."
                     duration="Session"
-                    legal="Interet legitime"
+                    legal="Intérêt légitime"
                   />
                   <CookieTableRow
                     category="Fonctionnels"
-                    purpose="Preferences utilisateur (cookie_consent, favoris, role selectionne). Permettent de personnaliser l'interface."
+                    purpose="Préférences utilisateur (cookie_consent, favoris, rôle sélectionné). Permettent de personnaliser l'interface."
                     duration="1 an"
                     legal="Consentement"
                   />
                   <CookieTableRow
                     category="Analytiques"
-                    purpose="Comptage des pages vues (colonne 'vues' en base). Aucun outil d'analyse tiers n'est utilise. Donnees anonymisees."
+                    purpose="Comptage des pages vues. Aucun outil d'analyse tiers n'est utilisé. Données anonymisées."
                     duration="Session"
                     legal="Consentement"
                   />
                   <CookieTableRow
                     category="Marketing"
-                    purpose="Aucun cookie marketing n'est utilise actuellement. Cette categorie est affichee par transparence."
+                    purpose="Aucun cookie marketing n'est utilisé actuellement. Cette catégorie est affichée par transparence."
                     duration="—"
                     legal="—"
                   />
@@ -150,22 +150,22 @@ export default function CookiesPage() {
             </div>
           </Section>
 
-          {/* 3. Comment gerer vos cookies */}
-          <Section title="3. Comment gerer vos cookies ?">
+          {/* 3. Comment gérer vos cookies */}
+          <Section title="3. Comment gérer vos cookies ?">
             <P>
-              Lors de votre premiere visite, un bandeau de consentement vous permet d'accepter ou de refuser
-              les cookies non essentiels. Vous pouvez modifier vos choix a tout moment en cliquant sur le
-              bouton 🍪 situe en bas a droite de chaque page, ou en utilisant le bouton "Modifier mes preferences"
+              Lors de votre première visite, un bandeau de consentement vous permet d&apos;accepter ou de refuser
+              les cookies non essentiels. Vous pouvez modifier vos choix à tout moment en cliquant sur le
+              bouton situé en bas à droite de chaque page, ou en utilisant le bouton &quot;Modifier mes préférences&quot;
               en bas de cette page.
             </P>
             <P>
-              Vous pouvez egalement configurer votre navigateur pour bloquer ou supprimer les cookies :
+              Vous pouvez également configurer votre navigateur pour bloquer ou supprimer les cookies :
             </P>
             <ul style={{ paddingLeft: 20, margin: "8px 0 16px" }}>
               {[
                 { name: "Google Chrome", url: "chrome://settings/cookies" },
                 { name: "Mozilla Firefox", url: "about:preferences#privacy" },
-                { name: "Safari", url: "Preferences > Confidentialite" },
+                { name: "Safari", url: "Préférences > Confidentialité" },
                 { name: "Microsoft Edge", url: "edge://settings/privacy" },
               ].map(b => (
                 <li key={b.name} style={{ fontSize: 14, color: "#374151", lineHeight: 2 }}>
@@ -174,29 +174,29 @@ export default function CookiesPage() {
               ))}
             </ul>
             <P>
-              Attention : la desactivation de certains cookies peut affecter le fonctionnement du site,
-              notamment la connexion a votre compte.
+              Attention : la désactivation de certains cookies peut affecter le fonctionnement du site,
+              notamment la connexion à votre compte.
             </P>
           </Section>
 
           {/* 4. Cookies tiers */}
           <Section title="4. Cookies tiers">
             <P>
-              Certains services tiers integres a NestMatch peuvent deposer leurs propres cookies :
+              Certains services tiers intégrés à NestMatch peuvent déposer leurs propres cookies :
             </P>
             <ul style={{ paddingLeft: 20, margin: "8px 0 16px" }}>
               <li style={{ fontSize: 14, color: "#374151", lineHeight: 2 }}>
-                <strong>Google OAuth</strong> — L'authentification via Google (NextAuth) implique le depot de cookies
-                par Google pour gerer la session d'authentification. Ces cookies sont strictement necessaires
-                a la connexion avec votre compte Google.
+                <strong>Google OAuth</strong> — L&apos;authentification via Google implique le dépôt de cookies
+                par Google pour gérer la session d&apos;authentification. Ces cookies sont strictement nécessaires
+                à la connexion avec votre compte Google.
               </li>
               <li style={{ fontSize: 14, color: "#374151", lineHeight: 2 }}>
-                <strong>Supabase</strong> — Notre base de donnees utilise des mecanismes techniques de gestion
-                de session. Aucun cookie de suivi n'est depose.
+                <strong>Base de données</strong> — Notre base de données utilise des mécanismes techniques de gestion
+                de session. Aucun cookie de suivi n&apos;est déposé.
               </li>
               <li style={{ fontSize: 14, color: "#374151", lineHeight: 2 }}>
-                <strong>Leaflet / OpenStreetMap</strong> — L'affichage des cartes peut impliquer le chargement
-                de tuiles depuis les serveurs OpenStreetMap, susceptibles de deposer des cookies techniques.
+                <strong>OpenStreetMap</strong> — L&apos;affichage des cartes peut impliquer le chargement
+                de tuiles depuis les serveurs OpenStreetMap, susceptibles de déposer des cookies techniques.
               </li>
             </ul>
           </Section>
@@ -204,17 +204,17 @@ export default function CookiesPage() {
           {/* 5. Vos droits */}
           <Section title="5. Vos droits (RGPD)">
             <P>
-              Conformement au Reglement General sur la Protection des Donnees (RGPD) et a la loi
-              Informatique et Libertes, vous disposez des droits suivants :
+              Conformément au Règlement Général sur la Protection des Données (RGPD) et à la loi
+              Informatique et Libertés, vous disposez des droits suivants :
             </P>
             <ul style={{ paddingLeft: 20, margin: "8px 0 16px" }}>
               {[
-                "Droit d'acces : obtenir une copie des donnees collectees via les cookies.",
-                "Droit de rectification : corriger des donnees inexactes.",
-                "Droit de suppression : demander l'effacement de vos donnees.",
-                "Droit de retrait du consentement : vous pouvez retirer votre consentement a tout moment via le bandeau cookies, sans que cela affecte la licite du traitement effectue avant le retrait.",
-                "Droit d'opposition : vous opposer au traitement de vos donnees pour des motifs legitimes.",
-                "Droit a la portabilite : recevoir vos donnees dans un format structure et lisible.",
+                "Droit d'accès : obtenir une copie des données collectées via les cookies.",
+                "Droit de rectification : corriger des données inexactes.",
+                "Droit de suppression : demander l'effacement de vos données.",
+                "Droit de retrait du consentement : vous pouvez retirer votre consentement à tout moment via le bandeau cookies, sans que cela affecte la licéité du traitement effectué avant le retrait.",
+                "Droit d'opposition : vous opposer au traitement de vos données pour des motifs légitimes.",
+                "Droit à la portabilité : recevoir vos données dans un format structuré et lisible.",
               ].map(d => (
                 <li key={d} style={{ fontSize: 14, color: "#374151", lineHeight: 2 }}>{d}</li>
               ))}

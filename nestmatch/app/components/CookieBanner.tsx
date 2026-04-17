@@ -91,7 +91,7 @@ function FloatingCookieButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      aria-label="Modifier les preferences cookies"
+      aria-label="Modifier les préférences cookies"
       style={{
         position: "fixed",
         bottom: 20,
@@ -218,14 +218,14 @@ export default function CookieBanner() {
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
             <span style={{ fontSize: 20 }}>🍪</span>
             <p style={{ fontSize: 16, fontWeight: 800, color: "#111", margin: 0 }}>
-              Nous respectons votre vie privee
+              Nous respectons votre vie privée
             </p>
           </div>
 
           {/* Description */}
           <p style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.6, margin: "0 0 16px" }}>
-            NestMatch utilise des cookies pour assurer le bon fonctionnement du site et ameliorer votre experience.
-            Vous pouvez personnaliser vos choix a tout moment.{" "}
+            NestMatch utilise des cookies pour assurer le bon fonctionnement du site et améliorer votre expérience.
+            Vous pouvez personnaliser vos choix à tout moment.{" "}
             <Link href="/cookies" style={{ color: "#111", fontWeight: 600, textDecoration: "underline", textUnderlineOffset: 2 }}>
               En savoir plus
             </Link>
@@ -235,14 +235,14 @@ export default function CookieBanner() {
           {showDetails && (
             <div style={{ marginBottom: 16, borderTop: "1px solid rgba(0,0,0,0.06)", paddingTop: 4 }}>
               <CategoryRow
-                label="Necessaires"
-                description="Session, authentification, securite. Indispensables au fonctionnement du site."
+                label="Nécessaires"
+                description="Session, authentification, sécurité. Indispensables au fonctionnement du site."
                 checked={true}
                 disabled={true}
               />
               <CategoryRow
                 label="Fonctionnels"
-                description="Preferences, favoris, personnalisation de l'interface."
+                description="Préférences, favoris, personnalisation de l'interface."
                 checked={functional}
                 onChange={setFunctional}
               />
@@ -254,7 +254,7 @@ export default function CookieBanner() {
               />
               <CategoryRow
                 label="Marketing"
-                description="Aucun cookie marketing n'est utilise actuellement."
+                description="Aucun cookie marketing n'est utilisé actuellement."
                 checked={false}
                 disabled={true}
               />

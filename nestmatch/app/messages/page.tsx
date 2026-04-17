@@ -117,7 +117,7 @@ function EdlCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 20 }}>📋</span>
           <div>
-            <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0 }}>Etat des lieux envoye</p>
+            <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0 }}>État des lieux envoye</p>
             <p style={{ fontSize: 11, color: "#9ca3af", margin: "2px 0 0" }}>
               {data.bienTitre || "Bien"} — {dateLabel}
             </p>
@@ -132,7 +132,7 @@ function EdlCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
         <span style={{ fontSize: 20 }}>📋</span>
         <div>
-          <p style={{ fontWeight: 700, fontSize: 13, color: "#111", margin: 0 }}>Etat des lieux d'{typeLabel}</p>
+          <p style={{ fontWeight: 700, fontSize: 13, color: "#111", margin: 0 }}>État des lieux d'{typeLabel}</p>
           <p style={{ fontSize: 11, color: "#6b7280", margin: "2px 0 0" }}>
             {data.bienTitre || "Bien"} — {dateLabel}
           </p>
@@ -526,7 +526,7 @@ function MessagesInner() {
                 const preview = conv.lastMsg?.contenu
                   ? conv.lastMsg.contenu.startsWith(DOSSIER_PREFIX) ? "📁 Dossier envoyé"
                   : conv.lastMsg.contenu.startsWith(DEMANDE_DOSSIER_PREFIX) ? "📋 Dossier demandé"
-                  : conv.lastMsg.contenu.startsWith(EDL_PREFIX) ? "📋 Etat des lieux envoyé"
+                  : conv.lastMsg.contenu.startsWith(EDL_PREFIX) ? "📋 État des lieux envoyé"
                   : conv.lastMsg.contenu.length > 35 ? conv.lastMsg.contenu.slice(0, 35) + "…"
                   : conv.lastMsg.contenu
                   : "Nouvelle conversation"

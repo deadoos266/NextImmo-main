@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
 import { useResponsive } from "../hooks/useResponsive"
 import Tooltip from "../components/Tooltip"
+import PhoneInput from "../components/PhoneInput"
 
 const SITUATIONS = ["CDI", "CDD", "Indépendant / Freelance", "Fonctionnaire", "Étudiant", "Retraité", "Sans emploi"]
 const TYPES_GARANT = ["Personne physique", "Organisme (Visale, Action Logement)", "Aucun garant"]
@@ -179,7 +180,7 @@ export default function Dossier() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif", color: "#6b7280" }}>Chargement...</div>
   )
 
-  const F = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  const F = ({ label, children }: { label: React.ReactNode; children: React.ReactNode }) => (
     <div style={{ marginBottom: 18 }}>
       <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6b7280", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</label>
       {children}
@@ -344,7 +345,7 @@ export default function Dossier() {
                     <input value={form.nom} onChange={e => setForm(f => ({ ...f, nom: e.target.value }))} placeholder="Jean Dupont" style={inputStyle} />
                   </F>
                   <F label="Téléphone">
-                    <input value={form.telephone} onChange={e => setForm(f => ({ ...f, telephone: e.target.value }))} placeholder="06 00 00 00 00" style={inputStyle} />
+                    <PhoneInput value={form.telephone} onChange={v => setForm(f => ({ ...f, telephone: v }))} placeholder="6 12 34 56 78" />
                   </F>
                 </div>
                 <F label="Email">
@@ -368,7 +369,7 @@ export default function Dossier() {
                   </div>
                 </F>
                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginTop: 4 }}>
-                  <F label="Revenus mensuels nets (€)">
+                  <F label={<>Revenus mensuels nets (€) <Tooltip text="Vos revenus nets après impôts et cotisations. La règle courante : les propriétaires attendent un revenu d'environ 3 fois le loyer. Ex : pour un loyer de 800 €, visez au moins 2400 € de revenus nets mensuels." /></>}>
                     <input type="number" value={form.revenus_mensuels} onChange={e => setForm(f => ({ ...f, revenus_mensuels: e.target.value }))} placeholder="2 500" style={inputStyle} />
                   </F>
                   <F label="Nombre d'occupants">
@@ -378,7 +379,10 @@ export default function Dossier() {
               </div>
 
               <div className="print-section" style={{ background: "white", borderRadius: 20, padding: 24 }}>
-                <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>Garant</h2>
+                <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20, display: "flex", alignItems: "center" }}>
+                  Garant
+                  <Tooltip text="Un garant est une personne ou un organisme qui s'engage à payer votre loyer si vous ne pouvez plus le faire. Avoir un garant rassure le propriétaire et multiplie vos chances d'obtenir un logement." />
+                </h2>
                 <F label="Avez-vous un garant ?">
                   <div style={{ display: "flex", gap: 10 }}>
                     {[{ val: true, label: "Oui" }, { val: false, label: "Non" }].map(opt => (
@@ -393,7 +397,7 @@ export default function Dossier() {
                   </div>
                 </F>
                 {form.garant && (
-                  <F label="Type de garant">
+                  <F label={<>Type de garant <Tooltip text="Personnel : un proche (parent, etc.) se porte caution sur ses revenus. Organisme Visale : garantie gratuite d'Action Logement (si éligible), très appréciée des proprios. Caution bancaire : somme bloquée en banque équivalente à plusieurs loyers." /></>}>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       {TYPES_GARANT.map(t => (
                         <button key={t} onClick={() => setForm(f => ({ ...f, type_garant: t }))}

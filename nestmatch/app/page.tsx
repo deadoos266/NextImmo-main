@@ -41,7 +41,7 @@ export default function Home() {
 
         {/* Barre de recherche */}
         {isMobile ? (
-          <form onSubmit={handleSearch} style={{ display: "flex", flexDirection: "column", background: "white", borderRadius: 20, boxShadow: "0 4px 24px rgba(0,0,0,0.10)", width: "100%", overflow: "hidden" }}>
+          <form onSubmit={handleSearch} style={{ display: "flex", flexDirection: "column", background: "white", borderRadius: 20, boxShadow: "0 4px 24px rgba(0,0,0,0.10)", width: "100%", position: "relative" }}>
             <div style={{ padding: "14px 18px", borderBottom: "1px solid #f3f4f6" }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: 4 }}>Ville</span>
               <CityAutocomplete
@@ -61,12 +61,12 @@ export default function Home() {
                 onChange={e => setSearchBudget(e.target.value)}
                 style={{ display: "block", width: "100%", outline: "none", fontSize: 15, background: "transparent", marginTop: 4, border: "none", color: "#111", boxSizing: "border-box" }} />
             </div>
-            <button type="submit" style={{ background: "#111", color: "white", padding: "16px 24px", fontWeight: 700, fontSize: 15, display: "block", border: "none", textAlign: "center", cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+            <button type="submit" style={{ background: "#111", color: "white", padding: "16px 24px", fontWeight: 700, fontSize: 15, display: "block", border: "none", textAlign: "center", cursor: "pointer", fontFamily: "inherit", width: "100%", borderRadius: "0 0 20px 20px" }}>
               Rechercher
             </button>
           </form>
         ) : (
-          <form onSubmit={handleSearch} style={{ display: "flex", alignItems: "stretch", background: "white", borderRadius: 999, boxShadow: "0 4px 32px rgba(0,0,0,0.10)", width: "100%", maxWidth: 720, overflow: "hidden" }}>
+          <form onSubmit={handleSearch} style={{ display: "flex", alignItems: "stretch", background: "white", borderRadius: 999, boxShadow: "0 4px 32px rgba(0,0,0,0.10)", width: "100%", maxWidth: 720, position: "relative" }}>
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", flex: 1, textAlign: "left", padding: "16px 24px" }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>Ville</span>
               <CityAutocomplete
@@ -97,7 +97,7 @@ export default function Home() {
                 <option value="">Tous</option><option value="Studio">Studio</option><option value="T2">T2</option><option value="T3">T3</option><option value="T4+">T4+</option>
               </select>
             </div>
-            <button type="submit" style={{ background: "#111", color: "white", padding: "0 32px", fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", border: "none", cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
+            <button type="submit" style={{ background: "#111", color: "white", padding: "0 32px", fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", border: "none", cursor: "pointer", fontFamily: "inherit", flexShrink: 0, borderRadius: "0 999px 999px 0" }}>
               Rechercher
             </button>
           </form>

@@ -1,9 +1,13 @@
 "use client"
 import { useEffect, useState } from "react"
+import dynamic from "next/dynamic"
 import { supabase } from "../../lib/supabase"
 import { getFavoris, toggleFavori } from "../../lib/favoris"
+import { getCityCoords } from "../../lib/cityCoords"
 import { useResponsive } from "../hooks/useResponsive"
 import Link from "next/link"
+
+const MapAnnonces = dynamic(() => import("../components/MapAnnonces"), { ssr: false })
 
 const GRADIENTS = [
   "linear-gradient(135deg, #e8e0f0, #d4c5e8)",
@@ -18,6 +22,8 @@ export default function Favoris() {
   const [annonces, setAnnonces] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [favoris, setFavoris] = useState<number[]>([])
+  const [showMap, setShowMap] = useState(false)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
   const { isMobile } = useResponsive()
 
   useEffect(() => {
@@ -41,15 +47,46 @@ export default function Favoris() {
     setAnnonces(prev => prev.filter(a => a.id !== id))
   }
 
+  // Enrichir avec coords pour la carte
+  const annoncesAvecCoords = annonces.map(a => {
+    const coords = getCityCoords(a.ville || "")
+    return {
+      ...a,
+      scoreMatching: null, // pas de score sur favoris
+      _lat: coords ? coords[0] : null,
+      _lng: coords ? coords[1] : null,
+    }
+  })
+
+  const annoncesAvecGeo = annoncesAvecCoords.filter(a => a._lat && a._lng)
+
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px 48px" }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
 
-        <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.5px" }}>Mes favoris</h1>
-          <p style={{ color: "#6b7280", marginTop: 4, fontSize: 14 }}>
-            {favoris.length === 0 ? "Aucun favori pour l'instant" : `${favoris.length} logement${favoris.length > 1 ? "s" : ""} sauvegardé${favoris.length > 1 ? "s" : ""}`}
-          </p>
+        <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
+          <div>
+            <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.5px" }}>Mes favoris</h1>
+            <p style={{ color: "#6b7280", marginTop: 4, fontSize: 14 }}>
+              {favoris.length === 0 ? "Aucun favori pour l'instant" : `${favoris.length} logement${favoris.length > 1 ? "s" : ""} sauvegardé${favoris.length > 1 ? "s" : ""}`}
+            </p>
+          </div>
+
+          {/* Toggle Liste / Carte, visible seulement s'il y a des favoris géolocalisés */}
+          {annoncesAvecGeo.length > 0 && (
+            <div style={{ display: "flex", background: "white", borderRadius: 12, padding: 4, gap: 2, border: "1px solid #e5e7eb" }}>
+              <button onClick={() => setShowMap(false)}
+                style={{ padding: "7px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600,
+                  background: !showMap ? "#111" : "transparent", color: !showMap ? "white" : "#6b7280" }}>
+                Liste
+              </button>
+              <button onClick={() => setShowMap(true)}
+                style={{ padding: "7px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600,
+                  background: showMap ? "#111" : "transparent", color: showMap ? "white" : "#6b7280" }}>
+                Carte
+              </button>
+            </div>
+          )}
         </div>
 
         {loading ? (
@@ -60,14 +97,32 @@ export default function Favoris() {
           </div>
         ) : annonces.length === 0 ? (
           <div style={{ textAlign: "center", padding: "80px 0" }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🤍</div>
             <p style={{ fontSize: 16, fontWeight: 600, color: "#374151", marginBottom: 8 }}>Aucun favori</p>
-            <p style={{ fontSize: 14, color: "#9ca3af", marginBottom: 24 }}>Clique sur le cœur d'une annonce pour la sauvegarder ici.</p>
+            <p style={{ fontSize: 14, color: "#9ca3af", marginBottom: 24 }}>Cliquez sur le cœur d&apos;une annonce pour la sauvegarder ici.</p>
             <Link href="/annonces" style={{ background: "#111", color: "white", padding: "12px 28px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>
               Voir les annonces
             </Link>
           </div>
+        ) : showMap ? (
+          // Vue carte : seulement les favoris
+          <div style={{ background: "white", borderRadius: 20, overflow: "hidden", height: "70vh", minHeight: 480, border: "1px solid #e5e7eb" }}>
+            {annoncesAvecGeo.length > 0 ? (
+              <MapAnnonces
+                annonces={annoncesAvecCoords}
+                selectedId={selectedId}
+                onSelect={id => setSelectedId(id)}
+                onBoundsChange={() => { /* pas de filtre bbox sur les favoris */ }}
+                centerHint={null}
+              />
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", flexDirection: "column", padding: 40, textAlign: "center" }}>
+                <p style={{ fontSize: 15, fontWeight: 600, color: "#374151", marginBottom: 8 }}>Aucune localisation disponible</p>
+                <p style={{ fontSize: 13, color: "#9ca3af" }}>Les villes de vos favoris ne sont pas dans notre référentiel géographique.</p>
+              </div>
+            )}
+          </div>
         ) : (
+          // Vue liste
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 20 }}>
             {annonces.map(a => {
               const photo = Array.isArray(a.photos) && a.photos.length > 0 ? a.photos[0] : null
@@ -90,8 +145,9 @@ export default function Favoris() {
                     <button
                       onClick={e => handleRetirer(e, a.id)}
                       title="Retirer des favoris"
-                      style={{ position: "absolute", top: 10, right: 10, background: "white", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.15)", fontSize: 16 }}>
-                      ❤️
+                      aria-label="Retirer des favoris"
+                      style={{ position: "absolute", top: 10, right: 10, background: "white", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.15)", color: "#dc2626" }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-7-11a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 6.5-7 11-7 11z"/></svg>
                     </button>
                   </div>
 
