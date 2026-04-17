@@ -72,6 +72,27 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 
 ## Historique des batchs
 
+### Batch 17 — Hotfix publish + notifs + scroll + ville+CP (2026-04-18)
+- **Fix publish annonce** : `/proprietaire/ajouter` et `/modifier` tentent
+  d'insérer lat/lng, puis retentent automatiquement sans lat/lng si la
+  colonne n'existe pas en DB (migration pas encore lancée). Détection via
+  regex sur le message d'erreur Supabase. Débloque la publication même
+  sans migration batch 16 appliquée.
+- **Fix badge visites** : désormais = visites `proposée` dont
+  `propose_par !== myEmail` (= demandes reçues qui attendent ma réponse).
+  Plus de badge quand MOI j'ai proposé et j'attends la réponse de l'autre.
+  Plus de badge non plus sur les visites confirmées (plus d'action attendue).
+- **Fix scroll messagerie mobile** : remplacement de `scrollIntoView` par
+  un `scrollTop = scrollHeight` ciblé sur le conteneur messages (pas le
+  document entier). Double `requestAnimationFrame` pour attendre le layout
+  complet sur mobile. Plus de décrochage ni de scroll document parasite.
+- **CityAutocomplete refondu** : recherche par **nom OU code postal**
+  (détection automatique selon input numérique), affichage du code postal
+  dans chaque suggestion, gestion des villes multi-CP (Paris 75001–75020),
+  inputMode `numeric` sur mobile si CP, prop `onSelect` optionnelle pour
+  capturer le CP côté parent. Toutes les ~35 000 communes FR accessibles
+  via l'API gouv.
+
 ### Batch 16 — Mobile UX, géoloc exacte, admin threads (2026-04-18)
 - **Messagerie mobile fullscreen** : quand une conversation est active sur mobile,
   suppression du padding conteneur + du h1, le chat occupe `100vw × (100vh - 64px)`.

@@ -119,7 +119,16 @@ export default function AjouterBien() {
 
     Object.keys(data).forEach(k => { if (data[k] === null || data[k] === "") delete data[k] })
 
-    const { error } = await supabase.from("annonces").insert([data])
+    // Tentative avec lat/lng. Si colonnes absentes en DB (migration pas lancée),
+    // on retire et on retente pour ne pas bloquer la publication.
+    let { error } = await supabase.from("annonces").insert([data])
+    if (error && /lat|lng|column.*does not exist/i.test(error.message || "")) {
+      const dataNoCoords = { ...data }
+      delete dataNoCoords.lat
+      delete dataNoCoords.lng
+      const retry = await supabase.from("annonces").insert([dataNoCoords])
+      error = retry.error
+    }
     if (!error) {
       // Marquer le compte comme propriétaire actif
       await supabase.from("profils").upsert({

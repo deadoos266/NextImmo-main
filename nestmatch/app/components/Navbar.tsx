@@ -33,12 +33,13 @@ export default function Navbar() {
   useEffect(() => {
     if (!session?.user?.email) return
     const email = session.user.email
-    // Notification uniquement pour les visites CONFIRMÉES à venir
-    // (pas les demandes en attente — visibles dans la page mais sans badge)
+    // Notification uniquement quand une action est attendue de MA part :
+    // une demande en attente proposée par l'AUTRE partie.
+    // Si c'est moi qui ai proposé et que j'attends une réponse → pas de notif.
+    // Si c'est confirmé → pas de notif non plus (plus d'action attendue).
     const col = proprietaireActive ? "proprietaire_email" : "locataire_email"
     supabase.from("visites").select("id", { count: "exact", head: true })
-      .eq(col, email).eq("statut", "confirmée")
-      .gte("date_visite", new Date().toISOString().split("T")[0])
+      .eq(col, email).eq("statut", "proposée").neq("propose_par", email)
       .then(({ count }) => setBadgeVisites(count ?? 0))
   }, [session, proprietaireActive, pathname])
 

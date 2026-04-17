@@ -170,7 +170,15 @@ export default function ModifierBien() {
       updates.charges_copro_annuelles = toInt(form.charges_copro_annuelles)
     }
 
-    const { error } = await supabase.from("annonces").update(updates).eq("id", bienId)
+    // Tentative avec lat/lng. Si colonnes absentes en DB, on retire et on retente.
+    let { error } = await supabase.from("annonces").update(updates).eq("id", bienId)
+    if (error && /lat|lng|column.*does not exist/i.test(error.message || "")) {
+      const updatesNoCoords = { ...updates }
+      delete updatesNoCoords.lat
+      delete updatesNoCoords.lng
+      const retry = await supabase.from("annonces").update(updatesNoCoords).eq("id", bienId)
+      error = retry.error
+    }
     setSaving(false)
     if (error) { alert("La sauvegarde a échoué. Veuillez réessayer."); return }
     setSaved(true)

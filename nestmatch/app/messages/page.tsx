@@ -222,6 +222,7 @@ function MessagesInner() {
   const [envoyantVisite, setEnvoyantVisite] = useState(false)
   const [demandantDossier, setDemandantDossier] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const myEmail = session?.user?.email
 
@@ -230,24 +231,27 @@ function MessagesInner() {
     if (session?.user?.email) loadConversations()
   }, [session, status, withEmail])
 
-  // Scroll automatique :
-  // - au switch de conversation : position au bas INSTANTANEMENT (pas d'animation qui glisse)
-  // - à l'arrivée d'un nouveau message dans la conv active : scroll smooth vers le bas
+  // Scroll automatique — on cible le conteneur messages directement
+  // (plus fiable que scrollIntoView qui peut faire glisser le document entier sur mobile)
   const prevConvKey = useRef<string | null>(null)
   const prevMsgCount = useRef(0)
   useEffect(() => {
+    const scrollToBottom = (smooth: boolean) => {
+      const el = messagesContainerRef.current
+      if (!el) return
+      el.scrollTo({ top: el.scrollHeight, behavior: smooth ? "smooth" : "auto" })
+    }
     if (prevConvKey.current !== convActive) {
-      // Changement de conv : sauter directement en bas, sans animation visible
+      // Changement de conv : sauter directement en bas, sans animation
       prevConvKey.current = convActive
       prevMsgCount.current = messages.length
-      requestAnimationFrame(() => {
-        if (bottomRef.current) bottomRef.current.scrollIntoView({ block: "end" })
-      })
+      // Double RAF pour attendre que le layout soit complet (mobile)
+      requestAnimationFrame(() => requestAnimationFrame(() => scrollToBottom(false)))
       return
     }
-    // Même conv : ne scroll que si nouveau message
+    // Même conv : scroll smooth si nouveau message
     if (messages.length > prevMsgCount.current) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
+      requestAnimationFrame(() => scrollToBottom(true))
     }
     prevMsgCount.current = messages.length
   }, [messages, convActive])
@@ -761,7 +765,7 @@ function MessagesInner() {
                 </div>
 
                 {/* Messages */}
-                <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "12px 14px" : "20px 24px", display: "flex", flexDirection: "column", gap: 8, background: isMobile ? "#fafafa" : "white" }}>
+                <div ref={messagesContainerRef} style={{ flex: 1, overflowY: "auto", padding: isMobile ? "12px 14px" : "20px 24px", display: "flex", flexDirection: "column", gap: 8, background: isMobile ? "#fafafa" : "white" }}>
                   {messages.length === 0 && (
                     <div style={{ textAlign: "center", color: "#9ca3af", marginTop: 40 }}>
                       <p style={{ fontSize: 14 }}>Démarrez la conversation</p>
