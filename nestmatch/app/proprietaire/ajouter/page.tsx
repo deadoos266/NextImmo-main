@@ -164,11 +164,12 @@ export default function AjouterBien() {
                 value={form.adresse}
                 onChange={v => setForm(f => ({ ...f, adresse: v }))}
                 onSelect={a => {
-                  // Si la ville n'est pas encore renseignée, on la remplit à partir de la suggestion
+                  // La ville de l'adresse sélectionnée est autoritaire : l'adresse
+                  // "6 rue de Rivoli 75001 Paris" force la ville à Paris
                   setForm(f => ({
                     ...f,
                     adresse: a.street || a.label,
-                    ville: f.ville || a.city,
+                    ville: a.city || f.ville,
                   }))
                 }}
                 city={form.ville || undefined}

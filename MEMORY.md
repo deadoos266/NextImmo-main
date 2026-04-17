@@ -78,6 +78,30 @@ Différenciation : score de compatibilité propriété/locataire via algo maison
 - messagerie : tri non-lus en premier
 - Build : Suspense wrapping sur `/auth` et `/annonces`
 
+### Batch 11 — Features moyennes (2026-04-17)
+- **#74 Estimateur de budget locataire** : page `/estimateur` avec règle 3×
+  revenus (loyer idéal + max raisonnable + bonus garant), CTA direct vers
+  /annonces avec budget_max pré-rempli
+- **#71 Recherche full-text** : input "Rechercher" dans la sidebar filtres
+  de `/annonces`, filtre sur titre + description + ville + adresse
+- **#72 Historique candidatures locataire** : page `/mes-candidatures`
+  liste les annonces contactées avec statut déduit (contact / dossier
+  envoyé / visite programmée / bail signé / refusée)
+- **#76 Export visites .ics** : route `/api/visites/ics` (GET, auth
+  requise) génère un fichier iCalendar avec les visites à venir,
+  compatible Google/Apple/Outlook. Bouton "Exporter (.ics)" dans `/visites`
+- **#73 Recommandations de quartiers** : page `/recommandations` classe
+  les villes par score moyen de compatibilité avec le dossier locataire
+  (top 8, annonces compatibles, loyer médian, CTA ville)
+- **#75 Pages SEO par ville** : `/location/[ville]` server component avec
+  metadata optimisée (title, description, canonical, OG), grille annonces,
+  contenu éditorial, maillage interne vers autres villes. Ajoutées au
+  sitemap.ts. Contribue à la longue traîne "location appartement paris"
+- Adresse/ville liées : l'AddressAutocomplete rend la ville autoritaire
+  quand une adresse est choisie (écrase la saisie manuelle)
+- #70 Système d'avis reporté : nécessite nouvelle table `avis` + flow de
+  détection bail terminé (batch dédié)
+
 ### Batch 10 — Adresse autocomplete BAN (2026-04-17)
 - **#94 AddressAutocomplete via BAN** (api-adresse.data.gouv.fr, gratuit
   sans clé) : nouveau composant `components/AddressAutocomplete.tsx` avec

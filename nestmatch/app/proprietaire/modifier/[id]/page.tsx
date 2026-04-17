@@ -224,7 +224,7 @@ export default function ModifierBien() {
                   setForm(f => ({
                     ...f,
                     adresse: a.street || a.label,
-                    ville: f.ville || a.city,
+                    ville: a.city || f.ville,
                   }))
                 }}
                 city={form.ville || undefined}

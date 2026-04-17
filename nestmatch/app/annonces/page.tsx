@@ -137,6 +137,7 @@ function AnnoncesContent() {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [favoris, setFavoris] = useState<number[]>([])
   const [showFilters, setShowFilters] = useState(false)
+  const [motCle, setMotCle] = useState("")
   const [showMap, setShowMap] = useState(false)
   const { data: session, status } = useSession()
   const { role } = useRole()
@@ -223,6 +224,12 @@ function AnnoncesContent() {
       if (dispoImmediate && a.dispo !== "Disponible maintenant") return false
       if (filtreParking && !a.parking) return false
       if (filtreExterieur && !a.balcon && !a.terrasse && !a.jardin) return false
+      // Recherche full-text : titre + description + ville + adresse
+      if (motCle.trim()) {
+        const q = motCle.toLowerCase().trim()
+        const haystack = `${a.titre || ""} ${a.description || ""} ${a.ville || ""} ${a.adresse || ""}`.toLowerCase()
+        if (!haystack.includes(q)) return false
+      }
       return true
     })
 
@@ -314,6 +321,16 @@ function AnnoncesContent() {
         <div style={{ width: isMobile ? "100%" : 200, flexShrink: 0, overflowY: "auto", display: isMobile && !showFilters ? "none" : "block", maxHeight: isMobile ? 300 : undefined }}>
           <div style={{ background: "white", borderRadius: 18, padding: 18 }}>
             <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 14, color: "#111" }}>Affiner</p>
+
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>Rechercher</p>
+              <input
+                value={motCle}
+                onChange={e => setMotCle(e.target.value)}
+                placeholder="Mot-clé, quartier..."
+                style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: 12, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+              />
+            </div>
 
             <div style={{ marginBottom: 16 }}>
               <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>Trier par</p>
