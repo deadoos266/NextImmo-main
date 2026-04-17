@@ -330,7 +330,6 @@ export default function Navbar() {
                     <Link key={item.href} href={item.href}
                       style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: isActive(item.href) ? "#111" : "#374151", background: isActive(item.href) ? "#f3f4f6" : "transparent", fontWeight: isActive(item.href) ? 700 : 500, fontSize: 15, borderBottom: "1px solid #f9fafb", justifyContent: "space-between" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                        <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{item.icon}</span>
                         {item.label}
                       </div>
                       {(item as any).badge > 0 && (
