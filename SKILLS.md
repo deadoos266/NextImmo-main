@@ -66,19 +66,25 @@
 
 ## Workflow par type de tâche
 
+**Règle d'or** :
+- Feature non triviale ou gros refactor → commencer par `architect`
+- Tout batch prêt à commit → finir par `verifier` avant de push
+
 | Type de tâche | Séquence d'agents |
 |---|---|
-| Nouvelle route API | `code-explorer` → implémentation → `security-reviewer` → `typescript-reviewer` |
-| Nouveau composant UI | `code-explorer` → implémentation → `responsive-auditor` → `accessibility-reviewer` |
-| Modif page publique | implémentation → `copy-editor-fr` → `seo-specialist` → `performance-optimizer` |
-| Modif carte Leaflet | `code-explorer` → implémentation → `performance-optimizer` |
-| Modif schéma Supabase | `database-reviewer` → migration → `security-reviewer` (RLS) |
-| Modif scoring / matching | `code-explorer` → implémentation → `business-logic-reviewer` |
-| Batch responsive mobile | `responsive-auditor` (audit) → implémentation → `accessibility-reviewer` |
+| Feature non triviale (> 1 fichier impacté) | `architect` → `code-explorer` → implémentation → reviewers spécifiques → `verifier` |
+| Nouvelle route API | `architect` → `code-explorer` → implémentation → `security-reviewer` → `typescript-reviewer` → `verifier` |
+| Nouveau composant UI | `code-explorer` → implémentation → `responsive-auditor` → `accessibility-reviewer` → `verifier` |
+| Modif page publique | implémentation → `copy-editor-fr` → `seo-specialist` → `performance-optimizer` → `verifier` |
+| Modif carte Leaflet | `code-explorer` → implémentation → `performance-optimizer` → `verifier` |
+| Modif schéma Supabase | `architect` → `database-reviewer` → migration → `security-reviewer` (RLS) → `verifier` |
+| Modif scoring / matching | `architect` → `code-explorer` → implémentation → `business-logic-reviewer` → `verifier` |
+| Batch responsive mobile | `responsive-auditor` (audit) → implémentation → `accessibility-reviewer` → `verifier` |
 | Correction copie FR | `copy-editor-fr` uniquement |
-| Gros batch multi-fichiers | → `refactor-cleaner` à la fin |
-| Modif auth / session | `security-reviewer` obligatoire |
-| Intégration IA / agents | `ai-integration-reviewer` |
+| Gros batch multi-fichiers | → `refactor-cleaner` → `verifier` à la fin |
+| Modif auth / session | `architect` → `security-reviewer` obligatoire → `verifier` |
+| Intégration IA / agents | `architect` → `ai-integration-reviewer` → `verifier` |
+| Fix urgent / patch build | `verifier` minimum (skip architect) |
 
 ## Checklist avant commit
 
