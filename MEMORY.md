@@ -78,6 +78,41 @@ Différenciation : score de compatibilité propriété/locataire via algo maison
 - messagerie : tri non-lus en premier
 - Build : Suspense wrapping sur `/auth` et `/annonces`
 
+### Batch 13 — Système de signalements (2026-04-17)
+- **#100 Signalements complets** :
+  - Nouveau `lib/signalements.ts` : types + 8 raisons prédéfinies
+    (frauduleux, hors_plateforme, inapproprié, doublon, prix_abusif,
+    description_fausse, spam, autre)
+  - API `/api/signalements` : POST (user auth requise, rate-limit 10/jour,
+    anti-doublon 7 jours) + GET (admin only, filtrable par statut)
+  - API `/api/signalements/[id]` : PATCH pour traiter/rejeter/rouvrir
+    (admin only), enregistre traite_par + traite_at
+  - Composant `SignalerButton` avec modale : sélection motif radio +
+    description optionnelle, tolère 1000 chars
+  - Intégré dans `/annonces/[id]` sous la carte propriétaire
+    (label discret "Signaler cette annonce")
+  - Nouvel onglet admin "Signalements" en 2e position avec filtres
+    (Ouverts / Traités / Rejetés / Tous), actions Marquer traité /
+    Rejeter / Rouvrir, infos signaleur + lien vers cible
+
+  **Requiert migration DB :**
+  ```sql
+  CREATE TABLE IF NOT EXISTS signalements (
+    id bigserial PRIMARY KEY,
+    type text NOT NULL,
+    target_id text NOT NULL,
+    raison text NOT NULL,
+    description text NULL,
+    signale_par text NOT NULL,
+    statut text NOT NULL DEFAULT 'ouvert',
+    traite_par text NULL,
+    traite_at timestamptz NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
+  );
+  CREATE INDEX IF NOT EXISTS idx_signalements_statut ON signalements(statut);
+  CREATE INDEX IF NOT EXISTS idx_signalements_signale_par ON signalements(signale_par);
+  ```
+
 ### Batch 12-bis — Pouvoirs admin (2026-04-17)
 - **#97 AdminBar globale** : `components/AdminBar.tsx` visible sur toutes
   les pages si `isAdmin`. Bandeau noir sticky top avec badge ADMIN +

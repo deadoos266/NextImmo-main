@@ -4,13 +4,14 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
 import { displayName } from "../../lib/privacy"
+import { RAISONS, getRaisonLabel } from "../../lib/signalements"
 
 /**
  * Dashboard admin refondu.
  * Le layout parent vérifie is_admin côté serveur — ici on se concentre sur l'UX.
  */
 
-const ONGLETS = ["Vue d'ensemble", "Annonces", "Utilisateurs", "Messages", "SEO", "Activité"] as const
+const ONGLETS = ["Vue d'ensemble", "Signalements", "Annonces", "Utilisateurs", "Messages", "SEO", "Activité"] as const
 type Onglet = typeof ONGLETS[number]
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://nestmatch.fr"
@@ -97,6 +98,8 @@ export default function Admin() {
   const [loading, setLoading] = useState(true)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [search, setSearch] = useState("")
+  const [signalements, setSignalements] = useState<any[]>([])
+  const [signalStatutFilter, setSignalStatutFilter] = useState<"ouvert" | "traite" | "rejete" | "all">("ouvert")
 
   useEffect(() => {
     if (status === "authenticated" && !session?.user?.isAdmin) router.replace("/")
@@ -116,6 +119,31 @@ export default function Admin() {
     if (u) setUsers(u)
     if (m) setMessages(m)
     setLoading(false)
+    loadSignalements(signalStatutFilter)
+  }
+
+  async function loadSignalements(statut: "ouvert" | "traite" | "rejete" | "all") {
+    try {
+      const res = await fetch(`/api/signalements?statut=${statut}`)
+      const json = await res.json()
+      if (res.ok && json.success) setSignalements(json.signalements || [])
+    } catch { /* silencieux */ }
+  }
+
+  async function traiterSignalement(id: number, nouveauStatut: "traite" | "rejete" | "ouvert") {
+    try {
+      const res = await fetch(`/api/signalements/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statut: nouveauStatut }),
+      })
+      if (res.ok) {
+        setSignalements(signalements.filter(s => s.id !== id || signalStatutFilter === "all"))
+        if (signalStatutFilter === "all") {
+          setSignalements(signalements.map(s => s.id === id ? { ...s, statut: nouveauStatut } : s))
+        }
+      }
+    } catch { /* noop */ }
   }
 
   async function supprimerAnnonce(id: number) {
@@ -521,6 +549,84 @@ export default function Admin() {
             </div>
           )
         })()}
+
+        {onglet === "Signalements" && (
+          <div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 16, background: "white", borderRadius: 12, padding: 4, width: "fit-content" }}>
+              {(["ouvert", "traite", "rejete", "all"] as const).map(f => (
+                <button key={f} onClick={() => { setSignalStatutFilter(f); loadSignalements(f) }}
+                  style={{ padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 12, fontFamily: "inherit", background: signalStatutFilter === f ? "#111" : "transparent", color: signalStatutFilter === f ? "white" : "#6b7280" }}>
+                  {f === "ouvert" ? "Ouverts" : f === "traite" ? "Traités" : f === "rejete" ? "Rejetés" : "Tous"}
+                </button>
+              ))}
+            </div>
+
+            {signalements.length === 0 ? (
+              <div style={{ background: "white", borderRadius: 20, padding: 48, textAlign: "center" }}>
+                <p style={{ fontSize: 16, fontWeight: 600, color: "#374151", marginBottom: 4 }}>Aucun signalement {signalStatutFilter === "ouvert" ? "ouvert" : signalStatutFilter === "traite" ? "traité" : signalStatutFilter === "rejete" ? "rejeté" : ""}</p>
+                <p style={{ fontSize: 13, color: "#9ca3af" }}>Rien à modérer pour l&apos;instant.</p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {signalements.map(s => {
+                  const statutColor = s.statut === "ouvert" ? "#ea580c" : s.statut === "traite" ? "#16a34a" : "#6b7280"
+                  const statutBg = s.statut === "ouvert" ? "#fff7ed" : s.statut === "traite" ? "#dcfce7" : "#f3f4f6"
+                  const targetUrl = s.type === "annonce" ? `/annonces/${s.target_id}` : s.type === "user" ? `/admin` : "/messages"
+                  return (
+                    <div key={s.id} style={{ background: "white", borderRadius: 16, padding: 20, display: "flex", gap: 16, flexWrap: "wrap", borderLeft: `4px solid ${statutColor}` }}>
+                      <div style={{ flex: 1, minWidth: 240 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
+                          <span style={{ background: statutBg, color: statutColor, padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                            {s.statut}
+                          </span>
+                          <span style={{ background: "#f3f4f6", color: "#374151", padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
+                            {s.type}
+                          </span>
+                          <span style={{ fontSize: 11, color: "#9ca3af" }}>
+                            {new Date(s.created_at).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>{getRaisonLabel(s.raison)}</p>
+                        {s.description && (
+                          <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.5, marginBottom: 8, fontStyle: "italic", background: "#f9fafb", padding: "8px 12px", borderRadius: 8 }}>
+                            &laquo; {s.description} &raquo;
+                          </p>
+                        )}
+                        <p style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>
+                          Signalé par <strong>{displayName(s.signale_par)}</strong> · Cible : <a href={targetUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#1d4ed8", textDecoration: "none", fontWeight: 600 }}>{s.type === "annonce" ? `Annonce #${s.target_id}` : s.type === "user" ? s.target_id : `Message #${s.target_id}`}</a>
+                        </p>
+                        {s.traite_par && (
+                          <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
+                            Traité par {s.traite_par} le {new Date(s.traite_at).toLocaleDateString("fr-FR")}
+                          </p>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", gap: 8, flexShrink: 0, alignItems: "flex-start" }}>
+                        {s.statut === "ouvert" ? (
+                          <>
+                            <button onClick={() => traiterSignalement(s.id, "traite")}
+                              style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                              Marquer traité
+                            </button>
+                            <button onClick={() => traiterSignalement(s.id, "rejete")}
+                              style={{ background: "white", color: "#6b7280", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                              Rejeter
+                            </button>
+                          </>
+                        ) : (
+                          <button onClick={() => traiterSignalement(s.id, "ouvert")}
+                            style={{ background: "white", color: "#ea580c", border: "1.5px solid #fed7aa", borderRadius: 999, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                            Rouvrir
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {onglet === "Activité" && (() => {
           type Event = { label: string; date: string; meta?: string; color: string }

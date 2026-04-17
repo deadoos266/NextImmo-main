@@ -9,6 +9,7 @@ import BookingVisite from "./BookingVisite"
 import OwnerActions from "./OwnerActions"
 import ViewTracker from "./ViewTracker"
 import MapBienWrapper from "./MapBienWrapper"
+import SignalerButton from "../../components/SignalerButton"
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || 'https://nestmatch.fr'
 
@@ -233,6 +234,11 @@ export default async function Annonce({ params }: any) {
                   </div>
                   <span style={{ color: "#9ca3af", fontSize: 12 }}>{annonce.membre}</span>
                 </div>
+              </div>
+
+              {/* Signalement (confidentiel, contenu inapproprié, arnaque, etc.) */}
+              <div style={{ marginTop: 14, textAlign: "center" }}>
+                <SignalerButton type="annonce" targetId={String(annonce.id)} label="Signaler cette annonce" compact />
               </div>
             </div>
           </div>
