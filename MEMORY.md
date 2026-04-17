@@ -78,6 +78,26 @@ Différenciation : score de compatibilité propriété/locataire via algo maison
 - messagerie : tri non-lus en premier
 - Build : Suspense wrapping sur `/auth` et `/annonces`
 
+### Batch 6 — Privacy + routes + bugs (2026-04-17)
+- **#47 Privacy emails proprios** : nouveau `lib/privacy.ts` avec `displayName()`,
+  remplace les emails bruts par des noms lisibles dans /messages
+- **#51 Toggle loc exacte** : option dans ajouter/modifier, passée à MapBien
+  via prop `exact`. **Requiert colonne DB `localisation_exacte boolean` sur annonces.**
+- **#59 Routes manquantes** : 7 redirects créés (/connexion, /login, /parametres,
+  /edl, /publier, /proprietaire/mes-biens, /carnet-entretien)
+- **#60 Page 404 custom** : `app/not-found.tsx` fond charte + 404 gros + liens utiles
+- **#61 Footer + pages légales** : liens # morts retirés, footer 4 colonnes propres.
+  Stubs créés : `/cgu`, `/mentions-legales`, `/confidentialite` (à personnaliser
+  par le responsable légal, marqués "[à compléter]")
+- **#50 Cookie sur carte** : l'icône flottante masquée sur /annonces via `usePathname`
+- **#49 Carte anglaise** : `attributionControl.setPrefix(false)` (retire "Leaflet"),
+  aria-labels + titles FR sur zoom in/out, localisation des popup close buttons
+- **#46 Flow visites** : ajout du champ `propose_par` à l'insertion (depuis
+  BookingVisite locataire et messages/proposerVisite). Dans VisitesProprio et
+  AgendaVisites : boutons Confirmer/Refuser masqués si `v.propose_par === myEmail`,
+  remplacés par "En attente du locataire". **Requiert colonne DB `propose_par text`
+  sur visites.**
+
 ### Batch 5 — Favoris + tel intl + accents (2026-04-17)
 - **#42 Carte favoris** : toggle Liste/Carte sur `/favoris`, MapAnnonces réutilisé
   avec uniquement les biens favoris (scoreMatching=null pour ne pas afficher),

@@ -64,10 +64,11 @@ export default function BookingVisite({
       heure,
       message: message || null,
       statut: "proposée",
+      propose_par: myEmail!,
     }).select().single()
 
     if (error) {
-      setErreur("L'envoi de la demande de visite a echoue. Veuillez reessayer.")
+      setErreur("L'envoi de la demande de visite a échoué. Veuillez réessayer.")
     } else {
       setExistante(data)
       setOpen(false)

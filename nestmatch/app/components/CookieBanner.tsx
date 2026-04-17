@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect } from "react"
+import { usePathname } from "next/navigation"
 import { useResponsive } from "../hooks/useResponsive"
 import Link from "next/link"
 
@@ -127,12 +128,17 @@ function FloatingCookieButton({ onClick }: { onClick: () => void }) {
 /* ── Main banner ── */
 export default function CookieBanner() {
   const { isMobile } = useResponsive()
+  const pathname = usePathname()
   const [visible, setVisible] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
   const [functional, setFunctional] = useState(true)
   const [analytics, setAnalytics] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [animateIn, setAnimateIn] = useState(false)
+
+  // Masquer l'icône flottante sur les pages avec grande carte (chevauche les
+  // contrôles map bottom-right). Le bandeau initial reste affiché.
+  const hideFloatingOnThisPage = pathname === "/annonces"
 
   useEffect(() => {
     const stored = getStoredConsent()
@@ -180,6 +186,7 @@ export default function CookieBanner() {
   }
 
   if (!visible && dismissed) {
+    if (hideFloatingOnThisPage) return null
     return <FloatingCookieButton onClick={handleReopen} />
   }
 

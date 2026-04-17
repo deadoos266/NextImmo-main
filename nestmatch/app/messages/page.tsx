@@ -433,7 +433,8 @@ function MessagesInner() {
       date_visite: visiteDate,
       heure: visiteHeure,
       message: visiteMessage.trim() || null,
-      statut: "proposée"
+      statut: "proposée",
+      propose_par: myEmail,
     }]).select().single()
     if (visite) {
       setVisitesConv(prev => [...prev, visite])

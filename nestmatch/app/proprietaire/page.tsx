@@ -26,7 +26,8 @@ function jours(d: string) {
   return `Passée`
 }
 
-function VisitesProprio({ visites, biens, setVisites }: { visites: any[]; biens: any[]; setVisites: any }) {
+function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[]; biens: any[]; setVisites: any; myEmail?: string | null }) {
+  // Passe myEmail au composant AgendaVisites interne
   const [filtre, setFiltre] = useState<string>("toutes")
   const [vue, setVue] = useState<"liste" | "agenda">("liste")
   const { isMobile } = useResponsive()
@@ -68,7 +69,7 @@ function VisitesProprio({ visites, biens, setVisites }: { visites: any[]; biens:
 
       {/* Vue Agenda */}
       {vue === "agenda" && (
-        <AgendaVisites visites={visites} biens={biensMap} mode="proprietaire" onChangerStatut={changerStatutAgenda} />
+        <AgendaVisites visites={visites} biens={biensMap} mode="proprietaire" onChangerStatut={changerStatutAgenda} myEmail={myEmail} />
       )}
 
       {vue === "liste" && <>
@@ -146,9 +147,9 @@ function VisitesProprio({ visites, biens, setVisites }: { visites: any[]; biens:
                       </p>
                     </div>
 
-                    {/* Actions */}
+                    {/* Actions — ne pas proposer "Confirmer/Refuser" si c'est MOI qui ai proposé la visite */}
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      {v.statut === "proposée" && (
+                      {v.statut === "proposée" && v.propose_par !== myEmail && (
                         <>
                           <button onClick={() => changerStatut(v.id, "confirmée")}
                             style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "7px 14px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
@@ -159,6 +160,11 @@ function VisitesProprio({ visites, biens, setVisites }: { visites: any[]; biens:
                             Refuser
                           </button>
                         </>
+                      )}
+                      {v.statut === "proposée" && v.propose_par === myEmail && (
+                        <span style={{ fontSize: 11, color: "#6b7280", fontStyle: "italic", padding: "7px 12px" }}>
+                          En attente de la réponse du locataire
+                        </span>
                       )}
                       {v.statut === "confirmée" && (
                         <button onClick={() => changerStatut(v.id, "effectuée")}
@@ -787,7 +793,7 @@ export default function Proprietaire() {
         )}
 
         {onglet === "Visites" && (
-          <VisitesProprio visites={visites} biens={biens} setVisites={setVisites} />
+          <VisitesProprio visites={visites} biens={biens} setVisites={setVisites} myEmail={session?.user?.email} />
         )}
       </div>
     </main>

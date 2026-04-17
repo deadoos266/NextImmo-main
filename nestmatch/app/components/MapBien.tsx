@@ -16,10 +16,17 @@ function fixLeafletIcons() {
 function FrenchLocale() {
   const map = useMap()
   useEffect(() => {
-    map.attributionControl.setPrefix('<a href="https://leafletjs.com/">Leaflet</a>')
+    // Retire le préfixe "Leaflet" (anglais)
+    map.attributionControl.setPrefix(false)
     const zoom = (map as any).zoomControl
-    if (zoom?._zoomInButton) zoom._zoomInButton.title = "Zoomer"
-    if (zoom?._zoomOutButton) zoom._zoomOutButton.title = "Dezoomer"
+    if (zoom?._zoomInButton) {
+      zoom._zoomInButton.title = "Zoomer"
+      zoom._zoomInButton.setAttribute("aria-label", "Zoomer")
+    }
+    if (zoom?._zoomOutButton) {
+      zoom._zoomOutButton.title = "Dézoomer"
+      zoom._zoomOutButton.setAttribute("aria-label", "Dézoomer")
+    }
   }, [map])
   return null
 }

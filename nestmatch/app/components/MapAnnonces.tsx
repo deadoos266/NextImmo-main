@@ -38,16 +38,28 @@ function fixLeafletIcons() {
 function useFrenchLeaflet() {
   const map = useMap()
   useEffect(() => {
-    // Remplace "Leaflet" par un lien discret en francais
-    map.attributionControl.setPrefix('<a href="https://leafletjs.com/">Leaflet</a>')
-    // Titres des controles de zoom
+    // Retire le préfixe "Leaflet" (anglais) de l'attribution
+    map.attributionControl.setPrefix(false)
+
+    // Titres des contrôles de zoom
     const zoom = (map as any).zoomControl
-    if (zoom && zoom._zoomInButton && zoom._zoomOutButton) {
+    if (zoom?._zoomInButton && zoom?._zoomOutButton) {
       zoom._zoomInButton.title = "Zoomer"
-      zoom._zoomOutButton.title = "Dezoomer"
+      zoom._zoomOutButton.title = "Dézoomer"
       zoom._zoomInButton.setAttribute("aria-label", "Zoomer")
-      zoom._zoomOutButton.setAttribute("aria-label", "Dezoomer")
+      zoom._zoomOutButton.setAttribute("aria-label", "Dézoomer")
     }
+
+    // Localiser les boutons de fermeture des popups (dynamique : run à chaque popup)
+    const frenchifyPopupClose = () => {
+      document.querySelectorAll(".leaflet-popup-close-button").forEach(el => {
+        el.setAttribute("aria-label", "Fermer")
+        el.setAttribute("title", "Fermer")
+      })
+    }
+    frenchifyPopupClose()
+    map.on("popupopen", frenchifyPopupClose)
+    return () => { map.off("popupopen", frenchifyPopupClose) }
   }, [map])
   return null
 }
