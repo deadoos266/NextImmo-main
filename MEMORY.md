@@ -72,6 +72,58 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 
 ## Historique des batchs
 
+### Batch 23 — Dark mode + scroll sticky-bottom + fix boutons visite (2026-04-18)
+- **Fix boutons visite dans /messages** : avant, quand on recevait une
+  demande de visite, les boutons **Refuser** ET **Annuler** s'affichaient
+  côte à côte, ce qui n'a pas de sens (Annuler = retrait de ma propre
+  demande). Logique clarifiée en 3 cas exclusifs :
+  1. Demande reçue en attente (l'autre a proposé) → Confirmer /
+     Contre-proposer / **Refuser** (pas d'Annuler)
+  2. Ma propre proposition en attente → **Annuler** uniquement
+  3. Visite confirmée des 2 côtés → **Annuler** (avec motif obligatoire)
+- **Dark mode (#69)** : implémentation complète via variables CSS.
+  - `lib/theme.ts` : helpers `getStoredTheme`, `setStoredTheme`, `applyTheme`,
+    `resolveTheme`. Persistance localStorage clé `nestmatch-theme`.
+    Valeurs : `light` | `dark` | `system` (suit l'OS).
+  - `globals.css` : variables `--bg`, `--card`, `--card-alt`, `--text`,
+    `--text-muted`, `--text-dim`, `--border`, `--border-strong`, `--hover`
+    définies pour light (racine) et dark (`[data-theme="dark"]`).
+  - **Overrides CSS legacy** : comme les styles inline utilisent des
+    couleurs hardcodées partout (`#F7F4EF`, `white`, `#111`, etc.), on
+    redéfinit ces couleurs au niveau global avec des sélecteurs
+    d'attribut `[style*="background: white"]` etc. Évite une migration
+    massive des centaines d'endroits.
+  - Inputs/textarea/select : bg et bordure dark auto.
+  - `ThemeToggle.tsx` : boutons Clair / Sombre / Système dans
+    AccountSettings. Applique le thème en direct sans reload.
+  - **Anti-flash** : script inline dans `app/layout.tsx` qui lit
+    localStorage et pose `data-theme` sur `<html>` AVANT le premier
+    paint. Pas de flash blanc → sombre au chargement.
+- **Scroll messages : refonte sticky-bottom** (WhatsApp style) :
+  - Flag `stickBottomRef` : true si user est à < 80px du fond
+  - `MutationObserver` + `ResizeObserver` sur le conteneur : à chaque
+    changement de taille/contenu (image qui charge, nouveau msg),
+    re-stick automatique si flag true
+  - Listener scroll user : si l'user scroll vers le haut, `stickBottom`
+    passe à false → on respecte sa lecture, plus de saut forcé
+  - Au changement de conv : reset stickBottom=true + scroll immédiat
+  - Retries 50/200/600/1200ms pour couvrir les images lentes
+  - Solution beaucoup plus robuste que les précédentes tentatives
+    (scrollIntoView, scrollTo+RAF) qui ratait au reload
+
+### Batch 22 — Fix scroll messages au reload (2026-04-18)
+- **Fix scroll /messages au reload** : la page retombait sur le premier
+  message du fil à chaque rechargement. Trois causes combinées :
+  1. Le navigateur restaure automatiquement le scroll (top = premier msg)
+  2. Les images/avatars chargent après coup et poussent le scrollHeight
+  3. Un seul RAF ne suffit pas à attraper tous les layout shifts mobile
+- **Solutions empilées** :
+  - `window.history.scrollRestoration = "manual"` sur la page messages
+  - Retries de `scrollTo(bottom)` à 0ms + RAF + 120ms + 350ms + 800ms
+  - Listener `img.load` sur chaque image dans le conteneur messages :
+    re-scroll en bas dès qu'une image finit de charger
+  - Le scroll vise le conteneur messages directement (jamais le document)
+
 ### Batch 21 — Carte CartoDB Positron style SeLoger (2026-04-18)
 - **Tuiles par défaut = CartoDB Positron** (`light_all`) — style
   minimaliste gris clair, même esprit que SeLoger / Leboncoin / PAP.

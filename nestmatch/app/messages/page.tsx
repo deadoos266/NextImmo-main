@@ -234,30 +234,77 @@ function MessagesInner() {
     if (session?.user?.email) loadConversations()
   }, [session, status, withEmail])
 
-  // Scroll automatique — on cible le conteneur messages directement
-  // (plus fiable que scrollIntoView qui peut faire glisser le document entier sur mobile)
-  const prevConvKey = useRef<string | null>(null)
-  const prevMsgCount = useRef(0)
+  // Désactive la restauration auto du scroll par le navigateur sur /messages
   useEffect(() => {
-    const scrollToBottom = (smooth: boolean) => {
-      const el = messagesContainerRef.current
-      if (!el) return
-      el.scrollTo({ top: el.scrollHeight, behavior: smooth ? "smooth" : "auto" })
+    if (typeof window === "undefined") return
+    const prev = window.history.scrollRestoration
+    try { window.history.scrollRestoration = "manual" } catch { /* noop */ }
+    return () => { try { window.history.scrollRestoration = prev } catch { /* noop */ } }
+  }, [])
+
+  // ─── Scroll « sticky bottom » style WhatsApp ───────────────────────────
+  // Stratégie :
+  // 1. Flag `stickBottom` = true quand on vient d'ouvrir la conv OU l'user
+  //    est déjà en bas (< 80px du fond)
+  // 2. MutationObserver + ResizeObserver sur le conteneur → à chaque changement
+  //    de taille (image qui charge, nouveau message, réponse API arrivée),
+  //    on force scrollTop = scrollHeight si stickBottom
+  // 3. Si l'user scroll vers le haut de > 80px, stickBottom devient false
+  //    (on respecte sa lecture)
+  // 4. Au changement de conv, on reset stickBottom = true
+  const stickBottomRef = useRef(true)
+  const prevConvKey2 = useRef<string | null>(null)
+
+  // Au changement de conv : on "re-stick" + scroll instantané en bas
+  useEffect(() => {
+    if (!convActive) return
+    if (prevConvKey2.current !== convActive) {
+      prevConvKey2.current = convActive
+      stickBottomRef.current = true
+      // Force un premier scroll bottom dès que le conteneur est dispo
+      requestAnimationFrame(() => {
+        const el = messagesContainerRef.current
+        if (el) el.scrollTop = el.scrollHeight
+      })
     }
-    if (prevConvKey.current !== convActive) {
-      // Changement de conv : sauter directement en bas, sans animation
-      prevConvKey.current = convActive
-      prevMsgCount.current = messages.length
-      // Double RAF pour attendre que le layout soit complet (mobile)
-      requestAnimationFrame(() => requestAnimationFrame(() => scrollToBottom(false)))
-      return
+  }, [convActive])
+
+  // Listener scroll user : détecte quand il scrolle vers le haut pour
+  // NE PAS le ramener contre son gré
+  useEffect(() => {
+    const el = messagesContainerRef.current
+    if (!el) return
+    const onScroll = () => {
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+      stickBottomRef.current = distanceFromBottom < 80
     }
-    // Même conv : scroll smooth si nouveau message
-    if (messages.length > prevMsgCount.current) {
-      requestAnimationFrame(() => scrollToBottom(true))
+    el.addEventListener("scroll", onScroll, { passive: true })
+    return () => el.removeEventListener("scroll", onScroll)
+  }, [convActive])
+
+  // Observers : à chaque changement de taille / contenu, on re-stick si flag
+  useEffect(() => {
+    const el = messagesContainerRef.current
+    if (!el) return
+    const stick = () => {
+      if (stickBottomRef.current) el.scrollTop = el.scrollHeight
     }
-    prevMsgCount.current = messages.length
-  }, [messages, convActive])
+    const resizeObs = new ResizeObserver(() => requestAnimationFrame(stick))
+    resizeObs.observe(el)
+    Array.from(el.children).forEach(child => resizeObs.observe(child as Element))
+    const mutObs = new MutationObserver(() => requestAnimationFrame(stick))
+    mutObs.observe(el, { childList: true, subtree: true })
+    // Première vague : plusieurs retries pour couvrir images lentes
+    const t1 = setTimeout(stick, 50)
+    const t2 = setTimeout(stick, 200)
+    const t3 = setTimeout(stick, 600)
+    const t4 = setTimeout(stick, 1200)
+    return () => {
+      resizeObs.disconnect()
+      mutObs.disconnect()
+      clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4)
+    }
+  }, [convActive])
 
   // Temps réel — écoute les nouveaux messages de la conv active
   useEffect(() => {
@@ -966,6 +1013,8 @@ function MessagesInner() {
                                 </p>
                               )}
                             </div>
+                            {/* Cas 1 — Demande REÇUE (l'autre partie a proposé, c'est à moi d'agir)
+                                → Confirmer / Contre-proposer / Refuser. Pas d'Annuler. */}
                             {isPending && v.propose_par !== myEmail && (
                               <div style={{ display: "flex", gap: 6, flexShrink: 0, flexWrap: "wrap" }}>
                                 <button onClick={() => changerStatutVisite(v.id, "confirmée")}
@@ -988,7 +1037,17 @@ function MessagesInner() {
                                 </button>
                               </div>
                             )}
-                            {(isPending || v.statut === "confirmée") && (
+                            {/* Cas 2 — Ma PROPRE proposition en attente (j'attends la réponse)
+                                → Annuler uniquement (retirer ma demande). */}
+                            {isPending && v.propose_par === myEmail && (
+                              <button onClick={() => setVisiteCancelTarget({ v, mode: "annulation" })}
+                                style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "5px 10px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
+                                Annuler
+                              </button>
+                            )}
+                            {/* Cas 3 — Visite confirmée des 2 côtés
+                                → Annuler (avec motif, message auto posté). */}
+                            {v.statut === "confirmée" && (
                               <button onClick={() => setVisiteCancelTarget({ v, mode: "annulation" })}
                                 style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "5px 10px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
                                 Annuler

@@ -2,6 +2,7 @@
 import { useState } from "react"
 import { signOut } from "next-auth/react"
 import PasswordInput from "../components/PasswordInput"
+import ThemeToggle from "../components/ThemeToggle"
 
 const inp = { width: "100%", padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit" }
 
@@ -28,6 +29,11 @@ export default function AccountSettings({ userEmail }: { userEmail: string | nul
         }
       />
       {showPwd && <ChangePasswordForm onDone={() => setShowPwd(false)} />}
+
+      <div style={{ height: 1, background: "#f3f4f6", margin: "20px 0" }} />
+
+      {/* Thème clair/sombre */}
+      <ThemeToggle />
 
       <div style={{ height: 1, background: "#f3f4f6", margin: "20px 0" }} />
 
