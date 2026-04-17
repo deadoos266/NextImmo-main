@@ -72,6 +72,23 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 
 ## Historique des batchs
 
+### Batch 18 — Carte FR + ville sur /annonces + Paris-default (2026-04-18)
+- **Tuiles carte 100% françaises** : bascule complète vers OSM France
+  (`tile.openstreetmap.fr/osmfr`) pour MapBien et MapAnnonces (mode Plan
+  et Détaillé). Fini les labels anglais résiduels du fournisseur Carto.
+  Attribution aussi en français.
+- **Plus de Paris par défaut sur la carte** : quand aucune ville n'est
+  sélectionnée (URL ni profil), la carte `/annonces` s'ouvre sur le
+  centre de la France (`[46.603, 1.888]`) avec zoom 6 (vue nationale).
+  Zoom 12 si ville précise, 10 si annonces avec coords.
+- **Champ ville dans la sidebar `/annonces`** : nouveau CityAutocomplete
+  tout en haut des filtres, permet de changer la ville sans retourner à
+  l'accueil. Met à jour l'URL `?ville=X` et reset la zone carte.
+- **Fini la suggestion Paris au focus vide** : CityAutocomplete ne propose
+  plus de villes par défaut quand le champ est vide. Les suggestions
+  apparaissent uniquement après avoir tapé au moins 2 caractères (nom ou
+  code postal).
+
 ### Batch 17 — Hotfix publish + notifs + scroll + ville+CP (2026-04-18)
 - **Fix publish annonce** : `/proprietaire/ajouter` et `/modifier` tentent
   d'insérer lat/lng, puis retentent automatiquement sans lat/lng si la

@@ -8,8 +8,8 @@ type MapType = "plan" | "satellite" | "standard"
 
 const TILES: Record<MapType, { url: string; attribution: string; label: string }> = {
   plan: {
-    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-    attribution: '&copy; <a href="https://carto.com/">CARTO</a> &middot; &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    url: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
+    attribution: '&copy; <a href="https://www.openstreetmap.fr/">OpenStreetMap France</a>',
     label: "Plan",
   },
   satellite: {
@@ -20,7 +20,7 @@ const TILES: Record<MapType, { url: string; attribution: string; label: string }
   standard: {
     url: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
     attribution: '&copy; <a href="https://www.openstreetmap.fr/">OpenStreetMap France</a>',
-    label: "Detaille",
+    label: "Détaillé",
   },
 }
 
@@ -166,16 +166,18 @@ export default function MapAnnonces({
 
   const withCoords = spreadOverlappingMarkers(annonces.filter(a => a._lat && a._lng))
 
-  // Centre prioritaire : centerHint (ville URL/profil) > 1ere annonce > Paris
+  // Centre prioritaire : centerHint (ville URL/profil) > 1ere annonce > Centre de la France (pas Paris)
   const center: [number, number] = centerHint
     ? centerHint
     : withCoords.length > 0
       ? [withCoords[0]._lat, withCoords[0]._lng]
-      : [48.8566, 2.3522]
+      : [46.603354, 1.888334] // Centre géographique de la France métropolitaine
+  // Zoom : 12 si ville précise, 6 si vue France entière
+  const initialZoom = centerHint ? 12 : (withCoords.length > 0 ? 10 : 6)
 
   if (withCoords.length === 0 && !centerHint) return (
-    <div style={{ width: "100%", height: "100%", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <p style={{ color: "#9ca3af", fontSize: 14 }}>Aucune coordonnee disponible pour ces annonces</p>
+    <div style={{ width: "100%", height: "100%", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <p style={{ color: "#9ca3af", fontSize: 14, textAlign: "center" }}>Aucune annonce avec coordonnées disponibles pour cette recherche</p>
     </div>
   )
   const tile = TILES[mapType]
@@ -203,7 +205,7 @@ export default function MapAnnonces({
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
       <MapContainer
         center={center}
-        zoom={12}
+        zoom={initialZoom}
         style={{ height: "100%", width: "100%" }}
         scrollWheelZoom={true}
       >

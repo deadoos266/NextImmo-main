@@ -73,10 +73,9 @@ export default function CityAutocomplete({ value, onChange, onSelect, placeholde
   const trimmed = query.trim()
   const qNorm = normalize(trimmed)
 
-  // Suggestions locales de secours (CITY_NAMES principales, affichage au focus)
-  const localFallback: Suggestion[] = !trimmed
-    ? CITY_NAMES.slice(0, 8).map(n => ({ nom: n, codePostaux: [] }))
-    : []
+  // Plus de suggestions par défaut quand le champ est vide : évite de suggérer
+  // Paris en premier et de donner l'impression qu'il est "sélectionné".
+  const localFallback: Suggestion[] = []
 
   // Recherche distante : par code postal (numérique) ou par nom
   useEffect(() => {

@@ -10,6 +10,7 @@ import { getCityCoords } from "../../lib/cityCoords"
 import { getFavoris, toggleFavori } from "../../lib/favoris"
 import { calculerCompletudeProfil } from "../../lib/profilCompleteness"
 import { useResponsive } from "../hooks/useResponsive"
+import CityAutocomplete from "../components/CityAutocomplete"
 
 const MapAnnonces = dynamic(() => import("../components/MapAnnonces"), { ssr: false })
 
@@ -321,6 +322,25 @@ function AnnoncesContent() {
         <div style={{ width: isMobile ? "100%" : 200, flexShrink: 0, overflowY: "auto", display: isMobile && !showFilters ? "none" : "block", maxHeight: isMobile ? 300 : undefined }}>
           <div style={{ background: "white", borderRadius: 18, padding: 18 }}>
             <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 14, color: "#111" }}>Affiner</p>
+
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>Ville</p>
+              <CityAutocomplete
+                value={activeVille || ""}
+                onChange={v => {
+                  // Met à jour l'URL → active la recherche sur cette ville
+                  const sp = new URLSearchParams(searchParams?.toString() || "")
+                  if (v.trim()) sp.set("ville", v.trim())
+                  else sp.delete("ville")
+                  // Reset la zone carte pour voir la nouvelle ville
+                  setMapBounds(null)
+                  const qs = sp.toString()
+                  router.replace(qs ? `/annonces?${qs}` : "/annonces", { scroll: false })
+                }}
+                placeholder="Ville ou code postal"
+                style={{ fontSize: 12, padding: "8px 12px" }}
+              />
+            </div>
 
             <div style={{ marginBottom: 16 }}>
               <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>Rechercher</p>
