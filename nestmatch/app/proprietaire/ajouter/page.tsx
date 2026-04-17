@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "../../../lib/supabase"
 import { useResponsive } from "../../hooks/useResponsive"
 import LocataireEmailField from "../../components/LocataireEmailField"
+import CityAutocomplete from "../../components/CityAutocomplete"
 
 const Toggle = ({ label, k, toggles, setToggles }: any) => (
   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
@@ -152,7 +153,7 @@ export default function AjouterBien() {
               <input style={inp} value={form.titre} onChange={set("titre")} placeholder="Ex: Bel appartement T2 lumineux" />
             </F>
             <F l="Ville">
-              <input style={inp} value={form.ville} onChange={set("ville")} placeholder="Ex: Paris 11e" />
+              <CityAutocomplete value={form.ville} onChange={v => setForm(f => ({ ...f, ville: v }))} placeholder="Commencez à taper..." />
             </F>
             <F l="Adresse / Quartier">
               <input style={inp} value={form.adresse} onChange={set("adresse")} placeholder="Ex: Rue de la Roquette" />

@@ -2,6 +2,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useResponsive } from "./hooks/useResponsive"
+import CityAutocomplete from "./components/CityAutocomplete"
 
 export default function Home() {
   const { isMobile, isTablet } = useResponsive()
@@ -42,13 +43,13 @@ export default function Home() {
         {isMobile ? (
           <form onSubmit={handleSearch} style={{ display: "flex", flexDirection: "column", background: "white", borderRadius: 20, boxShadow: "0 4px 24px rgba(0,0,0,0.10)", width: "100%", overflow: "hidden" }}>
             <div style={{ padding: "14px 18px", borderBottom: "1px solid #f3f4f6" }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px" }}>Ville</span>
-              <input
-                type="text"
-                placeholder="Paris, Lyon, Bordeaux..."
+              <span style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: 4 }}>Ville</span>
+              <CityAutocomplete
                 value={searchVille}
-                onChange={e => setSearchVille(e.target.value)}
-                style={{ display: "block", width: "100%", outline: "none", fontSize: 15, background: "transparent", marginTop: 4, border: "none", color: "#111", boxSizing: "border-box" }} />
+                onChange={setSearchVille}
+                placeholder="Paris, Lyon, Bordeaux..."
+                style={{ border: "none", padding: 0, fontSize: 15, background: "transparent" }}
+              />
             </div>
             <div style={{ padding: "14px 18px", borderBottom: "1px solid #f3f4f6" }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px" }}>Budget max</span>
@@ -67,13 +68,13 @@ export default function Home() {
         ) : (
           <form onSubmit={handleSearch} style={{ display: "flex", alignItems: "stretch", background: "white", borderRadius: 999, boxShadow: "0 4px 32px rgba(0,0,0,0.10)", width: "100%", maxWidth: 720, overflow: "hidden" }}>
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", flex: 1, textAlign: "left", padding: "16px 24px" }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px" }}>Ville</span>
-              <input
-                type="text"
-                placeholder="Paris, Lyon, Bordeaux..."
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>Ville</span>
+              <CityAutocomplete
                 value={searchVille}
-                onChange={e => setSearchVille(e.target.value)}
-                style={{ outline: "none", fontSize: 15, background: "transparent", marginTop: 4, border: "none", color: "#111" }} />
+                onChange={setSearchVille}
+                placeholder="Paris, Lyon, Bordeaux..."
+                style={{ border: "none", padding: 0, fontSize: 15, background: "transparent" }}
+              />
             </div>
             <div style={{ width: 1, background: "#e5e7eb", margin: "12px 0" }} />
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", flex: 1, textAlign: "left", padding: "16px 24px" }}>

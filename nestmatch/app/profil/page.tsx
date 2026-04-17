@@ -6,6 +6,8 @@ import { supabase } from "../../lib/supabase"
 import { useResponsive } from "../hooks/useResponsive"
 import { useRole } from "../providers"
 import AccountSettings from "./AccountSettings"
+import CityAutocomplete from "../components/CityAutocomplete"
+import Tooltip from "../components/Tooltip"
 
 // Composants HORS du composant principal pour éviter le bug de focus
 const Toggle = ({ label, k, toggles, setToggles }: any) => (
@@ -234,14 +236,28 @@ export default function Profil() {
         {!proprietaireActive && <>
         <Sec t="Mes critères de recherche">
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
-            <F l="Ville souhaitée"><input style={inp} value={form.ville_souhaitee} onChange={set("ville_souhaitee")} placeholder="Paris, Lyon..." /></F>
-            <F l="Mode de localisation">
+            <F l={<>Ville souhaitée <Tooltip text="Choisissez une ville dans la liste. Elle sera utilisée pour centrer la carte et matcher les annonces. Tapez pour filtrer les suggestions." /></>}>
+              <CityAutocomplete value={form.ville_souhaitee} onChange={v => setForm(f => ({ ...f, ville_souhaitee: v }))} placeholder="Commencez à taper..." />
+            </F>
+            <F l={<>Mode de localisation <Tooltip text="Strict : seules les annonces dans votre ville exacte s'affichent. Souple : les villes voisines sont aussi visibles, avec un score ajusté." /></>}>
               <select style={sel} value={form.mode_localisation} onChange={set("mode_localisation")}>
                 <option value="souple">Souple — autres villes visibles</option>
                 <option value="strict">Strict — uniquement ma ville</option>
               </select>
             </F>
-            <F l="Type de quartier"><input style={inp} value={form.type_quartier} onChange={set("type_quartier")} placeholder="Centre-ville, calme..." /></F>
+            <F l="Type de quartier">
+              <select style={sel} value={form.type_quartier} onChange={set("type_quartier")}>
+                <option value="">Peu importe</option>
+                <option value="centre-ville">Centre-ville</option>
+                <option value="intra muros">Intra muros</option>
+                <option value="residentiel">Résidentiel</option>
+                <option value="peri-urbain">Péri-urbain</option>
+                <option value="campagne">Campagne</option>
+                <option value="bord de mer">Bord de mer</option>
+                <option value="calme">Calme</option>
+                <option value="anime">Animé</option>
+              </select>
+            </F>
             <F l="Budget min (€/mois)"><input style={inp} type="number" value={form.budget_min} onChange={set("budget_min")} placeholder="600" /></F>
             <F l="Budget max (€/mois)"><input style={inp} type="number" value={form.budget_max} onChange={set("budget_max")} placeholder="1200" /></F>
             <F l="Surface min (m²)"><input style={inp} type="number" value={form.surface_min} onChange={set("surface_min")} placeholder="30" /></F>
@@ -252,10 +268,10 @@ export default function Profil() {
             <F l="Chambres minimum">
               <select style={sel} value={form.chambres_min} onChange={set("chambres_min")}>{["0","1","2","3","4+"].map(v=><option key={v}>{v}</option>)}</select>
             </F>
-            <F l="DPE minimum accepté">
+            <F l={<>DPE minimum accepté <Tooltip text="Le Diagnostic de Performance Énergétique classe un logement de A (très économe) à G (très énergivore). Choisir D signifie que vous refusez les classes E, F, G (logements considérés passoires thermiques)." /></>}>
               <select style={sel} value={form.dpe_min} onChange={set("dpe_min")}>{["A","B","C","D","E","F","G"].map(v=><option key={v}>{v}</option>)}</select>
             </F>
-            <F l="Type de bail">
+            <F l={<>Type de bail <Tooltip text="Longue durée : bail classique 3 ans (ou 1 an meublé). Courte durée : bail saisonnier. Bail mobilité : 1 à 10 mois pour étudiants/salariés en mission. Colocation : bail partagé entre plusieurs locataires." /></>}>
               <select style={sel} value={form.type_bail} onChange={set("type_bail")}>{["longue durée","courte durée","bail mobilité","colocation"].map(v=><option key={v}>{v}</option>)}</select>
             </F>
           </div>
@@ -287,7 +303,7 @@ export default function Profil() {
 
         <Sec t="Mon profil locataire">
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
-            <F l="Situation professionnelle">
+            <F l={<>Situation professionnelle <Tooltip text="Votre situation actuelle. Les propriétaires y sont sensibles : CDI et fonctionnaire rassurent le plus, mais un garant solide peut compenser un CDD, une situation d'indépendant ou d'étudiant." /></>}>
               <select style={sel} value={form.situation_pro} onChange={set("situation_pro")}>{["CDI","CDD","indépendant","étudiant","retraité","fonctionnaire","autre"].map(v=><option key={v}>{v}</option>)}</select>
             </F>
             <F l="Revenus mensuels nets (€)"><input style={inp} type="number" value={form.revenus_mensuels} onChange={set("revenus_mensuels")} placeholder="2500" /></F>
@@ -297,7 +313,7 @@ export default function Profil() {
             <F l="Nombre d'occupants">
               <select style={sel} value={form.nb_occupants} onChange={set("nb_occupants")}>{["1","2","3","4","5+"].map(v=><option key={v}>{v}</option>)}</select>
             </F>
-            <F l="Type de garant">
+            <F l={<>Type de garant <Tooltip text="Personnel : un proche (parent, etc.) se porte caution. Visale : garantie gratuite d'Action Logement, très acceptée par les propriétaires. Caution bancaire : somme bloquée en banque. Avoir un garant multiplie vos chances d'obtenir un logement." /></>}>
               <select style={sel} value={form.type_garant} onChange={set("type_garant")}>{["","personnel","organisme (Visale)","caution bancaire","aucun"].map(v=><option key={v} value={v}>{v||"Non renseigné"}</option>)}</select>
             </F>
           </div>

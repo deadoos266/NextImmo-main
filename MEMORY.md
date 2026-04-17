@@ -78,6 +78,21 @@ Différenciation : score de compatibilité propriété/locataire via algo maison
 - messagerie : tri non-lus en premier
 - Build : Suspense wrapping sur `/auth` et `/annonces`
 
+### Batch 4 — UX formulaires (2026-04-17)
+- **CityAutocomplete** : nouveau composant combobox avec filtre clavier,
+  sélection stricte depuis `lib/cityCoords.ts` (52 villes FR).
+  Navigation flèches haut/bas + Entrée, reset si texte invalide.
+  Exporte `CITY_NAMES` (array trié) et `normalizeCityName`.
+  Intégré dans : /profil, /proprietaire/ajouter, /proprietaire/modifier, / (home)
+- **Type de quartier** : input texte → select avec options prédéfinies
+  (centre-ville, intra muros, résidentiel, péri-urbain, campagne, bord de mer,
+  calme, animé) dans /profil
+- **Tooltip** : nouveau composant point d'interrogation (?) avec bulle
+  explicative au hover/focus/click. Position adaptative (haut/bas selon
+  espace), flèche pointante, z-index 2000.
+  Intégré sur : DPE, type de bail, situation pro, type de garant (dans /profil)
+  + titre "Mon dossier locataire" (dans /dossier)
+
 ### Batch 3 — Dashboard + bugs (2026-04-16)
 - **3-A Bugs bloquants** : messages debug /dossier supprimés, error.message générique,
   ContactButton anti-doublon (useRef), carte centrée sur `?ville=`
@@ -146,6 +161,17 @@ Différenciation : score de compatibilité propriété/locataire via algo maison
 - **Messagerie moderne complète** : reply-to un message spécifique, sélection
   multiple (supprimer/copier/transférer), indicateurs "envoyé/lu" dans les
   bulles elles-mêmes (pas juste dans la liste des convs)
+- **#52 Refonte espace admin** (gros chantier) : la page `/admin` actuelle
+  est minimale (juste liste annonces/profils/messages avec delete). Besoin
+  d'une vraie refonte après brainstorming :
+  - Modération : signalements, vérification manuelle des annonces
+  - Analytics globales : nb users, nb annonces, conversion, activité
+  - Gestion users : roles, ban/unban, voir profil complet, historique
+  - Audit logs : qui a fait quoi et quand
+  - Export données
+  - Protection serveur (actuellement juste code client `nestmatch2024` — à refaire
+    avec vraie vérification `is_admin` côté middleware/API)
+  - Dashboard dédié séparé de celui du proprio
 - **Change email** : actuellement "bientôt" dans AccountSettings
   (flow vérification + cascade DB)
 - **Notifications email** : toggle pas encore branché
@@ -180,6 +206,19 @@ Différenciation : score de compatibilité propriété/locataire via algo maison
 - Ajouter filtres surface min/max et nombre de pièces
 - Clarifier ou supprimer bouton "Personnalisé" (sans action actuellement)
 - Placeholder barre de recherche : "Ville, quartier, code postal"
+
+### UX formulaires — inputs avec choix restreints
+- **#53 Ville en sélection (pas saisie libre)** : remplacer tous les inputs texte
+  "ville" par un combobox/autocomplete avec la liste de `lib/cityCoords.ts`.
+  Évite les fautes qui cassent le matching et le centrage carte. Concerne :
+  /profil (ville_souhaitee), /proprietaire/ajouter + /modifier, barre home.
+- **#54 Type de quartier en sélection** : remplacer l'input texte libre par un
+  select avec options prédéfinies ("centre-ville", "intra muros", "péri-urbain",
+  "résidentiel", "campagne", "bord de mer", "calme", "animé"). Dans /profil.
+- **#55 Tooltips (?) sur notions complexes** : créer un composant `Tooltip`
+  réutilisable (petit point d'interrogation + encadré au hover/focus).
+  À appliquer sur : DPE, situation pro, type de garant, ALUR, dossier complet,
+  mode strict/souple, "dossier partagé", etc.
 
 ### Autres
 - `duree_credit` dans vue agrégée Performance (total crédit restant tous biens)

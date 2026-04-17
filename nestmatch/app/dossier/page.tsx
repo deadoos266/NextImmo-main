@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
 import { useResponsive } from "../hooks/useResponsive"
+import Tooltip from "../components/Tooltip"
 
 const SITUATIONS = ["CDI", "CDD", "Indépendant / Freelance", "Fonctionnaire", "Étudiant", "Retraité", "Sans emploi"]
 const TYPES_GARANT = ["Personne physique", "Organisme (Visale, Action Logement)", "Aucun garant"]
@@ -256,7 +257,10 @@ export default function Dossier() {
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 16 : 0 }}>
             <div>
-              <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.5px" }}>Mon dossier locataire</h1>
+              <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.5px", display: "flex", alignItems: "center" }}>
+                Mon dossier locataire
+                <Tooltip text="Votre dossier réunit tous les justificatifs demandés par les propriétaires (identité, revenus, garant). Plus il est complet, plus votre candidature est crédible. Il est partagé uniquement avec les propriétaires que vous contactez, à votre initiative." />
+              </h1>
               <p style={{ color: "#6b7280", fontSize: 14, marginTop: 4 }}>Complétez vos informations et déposez vos documents pour maximiser vos chances.</p>
             </div>
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>

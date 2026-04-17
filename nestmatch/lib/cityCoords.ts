@@ -64,3 +64,19 @@ export function getCityCoords(ville: string): [number, number] | null {
   }
   return null
 }
+
+// Liste triée des noms de villes en capitales propres (pour affichage UI)
+// Ex: "paris" -> "Paris", "saint-etienne" -> "Saint-Etienne"
+function toTitleCase(s: string): string {
+  return s.split(/([\s-])/).map(part =>
+    part.match(/^[\s-]$/) ? part : part.charAt(0).toUpperCase() + part.slice(1)
+  ).join("")
+}
+
+export const CITY_NAMES: string[] = Object.keys(CITY_COORDS)
+  .map(toTitleCase)
+  .sort((a, b) => a.localeCompare(b, "fr"))
+
+export function normalizeCityName(name: string): string {
+  return toTitleCase(name.toLowerCase().trim())
+}
