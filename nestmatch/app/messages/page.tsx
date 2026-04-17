@@ -580,15 +580,15 @@ function MessagesInner() {
         onClose={() => setVisiteCancelTarget(null)}
         onConfirm={handleAnnulerVisite}
       />
-      <div style={{ maxWidth: 1140, margin: "0 auto", padding: isMobile ? "20px 16px" : "32px 48px" }}>
+      <div style={{ maxWidth: isMobile && convActiveData ? "100%" : 1140, margin: "0 auto", padding: isMobile && convActiveData ? 0 : isMobile ? "20px 16px" : "32px 48px" }}>
         {(!isMobile || !convActiveData) && (
-          <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 800, marginBottom: isMobile ? 16 : 24, letterSpacing: "-0.5px" }}>Messages</h1>
+          <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 800, marginBottom: isMobile ? 16 : 24, letterSpacing: "-0.5px", padding: isMobile ? 0 : undefined }}>Messages</h1>
         )}
 
-        <div style={{ display: "flex", gap: 16, height: isMobile ? "calc(100vh - 120px)" : "76vh" }}>
+        <div style={{ display: "flex", gap: isMobile && convActiveData ? 0 : 16, height: isMobile ? "calc(100vh - 64px)" : "76vh" }}>
 
           {/* ── Colonne gauche : conversations ── */}
-          <div style={{ width: isMobile ? "100%" : 300, flexShrink: 0, background: "white", borderRadius: 20, display: isMobile && convActiveData ? "none" : "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+          <div style={{ width: isMobile ? "100%" : 300, flexShrink: 0, background: "white", borderRadius: isMobile ? 0 : 20, display: isMobile && convActiveData ? "none" : "flex", flexDirection: "column", overflow: "hidden", boxShadow: isMobile ? "none" : "0 2px 12px rgba(0,0,0,0.06)" }}>
             {/* Recherche */}
             <div style={{ padding: "14px 16px", borderBottom: "1px solid #f3f4f6" }}>
               <input
@@ -709,7 +709,7 @@ function MessagesInner() {
           </div>
 
           {/* ── Colonne droite : chat ── */}
-          <div style={{ flex: 1, background: "white", borderRadius: 20, display: isMobile && !convActiveData ? "none" : "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+          <div style={{ flex: 1, background: "white", borderRadius: isMobile ? 0 : 20, display: isMobile && !convActiveData ? "none" : "flex", flexDirection: "column", overflow: "hidden", boxShadow: isMobile ? "none" : "0 2px 12px rgba(0,0,0,0.06)" }}>
             {!convActiveData ? (
               <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", color: "#9ca3af", gap: 12 }}>
                 <p style={{ fontSize: 16, fontWeight: 600, color: "#374151" }}>Sélectionnez une conversation</p>
@@ -761,7 +761,7 @@ function MessagesInner() {
                 </div>
 
                 {/* Messages */}
-                <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "12px 14px" : "20px 24px", display: "flex", flexDirection: "column", gap: 8, background: isMobile ? "#fafafa" : "white" }}>
                   {messages.length === 0 && (
                     <div style={{ textAlign: "center", color: "#9ca3af", marginTop: 40 }}>
                       <p style={{ fontSize: 14 }}>Démarrez la conversation</p>
@@ -975,7 +975,7 @@ function MessagesInner() {
                 )}
 
                 {/* Zone saisie */}
-                <div style={{ borderTop: "1px solid #f3f4f6", padding: "10px 20px 14px" }}>
+                <div style={{ borderTop: "1px solid #f3f4f6", padding: isMobile ? "10px 12px 12px" : "10px 20px 14px", background: "white" }}>
                   {/* Bouton dossier + réponses rapides */}
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
                     {!proprietaireActive && (
@@ -993,7 +993,7 @@ function MessagesInner() {
                     {convActiveData?.annonceId && (
                       <button onClick={() => setShowVisiteForm(!showVisiteForm)}
                         style={{ background: showVisiteForm ? "#111" : "#eff6ff", border: "1.5px solid " + (showVisiteForm ? "#111" : "#bfdbfe"), color: showVisiteForm ? "white" : "#1d4ed8", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
-                        📅 {showVisiteForm ? "Fermer" : "Proposer une visite"}
+                        {showVisiteForm ? "Fermer" : "Proposer une visite"}
                       </button>
                     )}
                     <div style={{ width: 1, height: 16, background: "#e5e7eb" }} />
@@ -1006,7 +1006,7 @@ function MessagesInner() {
                   </div>
                   {showVisiteForm && convActiveData?.annonceId && (
                     <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
-                      <p style={{ fontSize: 12, fontWeight: 800, color: "#1d4ed8", marginBottom: 12 }}>📅 Proposer une visite</p>
+                      <p style={{ fontSize: 12, fontWeight: 800, color: "#1d4ed8", marginBottom: 12 }}>Proposer une visite</p>
                       <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
                         <div style={{ flex: 1 }}>
                           <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 4, textTransform: "uppercase" as const }}>Date</label>
@@ -1052,7 +1052,7 @@ function MessagesInner() {
                     <input ref={inputRef} value={nouveau} onChange={e => setNouveau(e.target.value)}
                       onKeyDown={e => e.key === "Enter" && !e.shiftKey && envoyer()}
                       placeholder={replyTo ? "Votre réponse…" : "Votre message…"}
-                      style={{ flex: 1, padding: "11px 16px", border: "1.5px solid #e5e7eb", borderRadius: 999, fontSize: 14, outline: "none", fontFamily: "inherit" }} />
+                      style={{ flex: 1, padding: "11px 16px", border: "1.5px solid #e5e7eb", borderRadius: 999, fontSize: 16, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }} />
                     <button onClick={envoyer} disabled={envoi || !nouveau.trim()}
                       style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "0 22px", fontWeight: 700, fontSize: 14, cursor: envoi || !nouveau.trim() ? "not-allowed" : "pointer", opacity: envoi || !nouveau.trim() ? 0.4 : 1, fontFamily: "inherit" }}>
                       Envoyer

@@ -188,7 +188,7 @@ export default function Dossier() {
     </div>
   )
 
-  const inputStyle: any = { width: "100%", padding: "10px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }
+  const inputStyle: any = { width: "100%", padding: "10px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: isMobile ? 16 : 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box", background: "white", color: "#111" }
 
   function DocRow({ docKey, label, desc }: { docKey: DocKey; label: string; desc?: string }) {
     const uploaded = docs[docKey] || []
@@ -258,27 +258,27 @@ export default function Dossier() {
         <div style={{ maxWidth: 960, margin: "0 auto", padding: isMobile ? "24px 16px" : "32px 48px" }}>
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 16 : 0 }}>
-            <div>
-              <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.5px", display: "flex", alignItems: "center" }}>
+            <div style={{ width: isMobile ? "100%" : undefined }}>
+              <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 800, letterSpacing: "-0.5px", display: "flex", alignItems: "center" }}>
                 Mon dossier locataire
                 <Tooltip text="Votre dossier réunit tous les justificatifs demandés par les propriétaires (identité, revenus, garant). Plus il est complet, plus votre candidature est crédible. Il est partagé uniquement avec les propriétaires que vous contactez, à votre initiative." />
               </h1>
-              <p style={{ color: "#6b7280", fontSize: 14, marginTop: 4 }}>Complétez vos informations et déposez vos documents pour maximiser vos chances.</p>
+              <p style={{ color: "#6b7280", fontSize: isMobile ? 13 : 14, marginTop: 4, lineHeight: 1.5 }}>Complétez vos informations et déposez vos documents pour maximiser vos chances.</p>
             </div>
-            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              <div style={{ background: "white", borderRadius: 16, padding: "14px 18px", textAlign: "center", border: `2px solid ${scoreColor}` }}>
-                <div style={{ fontSize: 26, fontWeight: 900, color: scoreColor }}>{score}%</div>
+            <div style={{ display: "flex", gap: isMobile ? 10 : 12, alignItems: "center", flexWrap: "wrap", width: isMobile ? "100%" : undefined }}>
+              <div style={{ background: "white", borderRadius: 16, padding: isMobile ? "10px 14px" : "14px 18px", textAlign: "center", border: `2px solid ${scoreColor}`, flexShrink: 0 }}>
+                <div style={{ fontSize: isMobile ? 22 : 26, fontWeight: 900, color: scoreColor }}>{score}%</div>
                 <div style={{ fontSize: 10, color: "#6b7280", fontWeight: 700, textTransform: "uppercase", marginTop: 2 }}>Complétude</div>
-                <div style={{ background: "#f3f4f6", borderRadius: 999, height: 3, marginTop: 6, width: 80 }}>
+                <div style={{ background: "#f3f4f6", borderRadius: 999, height: 3, marginTop: 6, width: 70 }}>
                   <div style={{ background: scoreColor, borderRadius: 999, height: 3, width: `${score}%`, transition: "width 0.4s" }} />
                 </div>
               </div>
               <a href="/carnet" className="no-print"
-                style={{ padding: "12px 20px", background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 12, fontWeight: 700, fontSize: 14, textDecoration: "none", display: "inline-block" }}>
+                style={{ padding: isMobile ? "10px 14px" : "12px 20px", background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 12, fontWeight: 700, fontSize: isMobile ? 13 : 14, textDecoration: "none", display: "inline-block", whiteSpace: "nowrap" }}>
                 Carnet d'entretien
               </a>
               <button onClick={genererDossierPDF} disabled={generatingPDF} className="no-print"
-                style={{ padding: "12px 20px", background: generatingPDF ? "#9ca3af" : "#111", color: "white", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 14, cursor: generatingPDF ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+                style={{ padding: isMobile ? "10px 14px" : "12px 20px", background: generatingPDF ? "#9ca3af" : "#111", color: "white", border: "none", borderRadius: 12, fontWeight: 700, fontSize: isMobile ? 13 : 14, cursor: generatingPDF ? "not-allowed" : "pointer", fontFamily: "inherit", whiteSpace: "nowrap", flex: isMobile ? 1 : undefined }}>
                 {generatingPDF ? "Génération..." : "Télécharger PDF"}
               </button>
             </div>
@@ -292,7 +292,7 @@ export default function Dossier() {
           )}
 
           {/* Contenu PDF */}
-          <div id="dossier-pdf-content" style={{ background: "white", borderRadius: 20, padding: 32, marginBottom: 20 }}>
+          <div id="dossier-pdf-content" style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 32, marginBottom: 20 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, paddingBottom: 16, borderBottom: "2px solid #f3f4f6" }}>
               <div>
                 <h2 style={{ fontSize: 20, fontWeight: 900 }}>Dossier locataire</h2>
@@ -303,7 +303,7 @@ export default function Dossier() {
                 <div style={{ fontSize: 10, color: "#6b7280", fontWeight: 700, textTransform: "uppercase" }}>Complétude</div>
               </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
               {[
                 { label: "Nom", value: form.nom },
                 { label: "Téléphone", value: form.telephone },
@@ -321,7 +321,7 @@ export default function Dossier() {
             <h3 style={{ fontSize: 12, fontWeight: 800, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
               Pièces justificatives ({docsCount}/{allDocs.length} catégories)
             </h3>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: 8 }}>
               {allDocs.map(doc => {
                 const files = docs[doc.key] || []
                 return (
@@ -336,7 +336,7 @@ export default function Dossier() {
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 24, alignItems: "flex-start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 380px", gap: isMobile ? 16 : 24, alignItems: "flex-start" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
               <div className="print-section" style={{ background: "white", borderRadius: 20, padding: 24 }}>

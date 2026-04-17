@@ -105,6 +105,8 @@ export default function Admin() {
   const [contactFilter, setContactFilter] = useState<ContactStatut | "all">("ouvert")
   const [contactExpanded, setContactExpanded] = useState<number | null>(null)
   const [contactReponse, setContactReponse] = useState<Record<number, string>>({})
+  const [convThread, setConvThread] = useState<{ a: string; b: string; annonceId?: number | null; messages: any[] } | null>(null)
+  const [loadingThread, setLoadingThread] = useState(false)
 
   useEffect(() => {
     if (status === "authenticated" && !session?.user?.isAdmin) router.replace("/")
@@ -134,6 +136,22 @@ export default function Admin() {
       const json = await res.json()
       if (res.ok && json.success) setContacts(json.contacts || [])
     } catch { /* silencieux */ }
+  }
+
+  async function openConversation(a: string, b: string, annonceId?: number | null) {
+    setConvThread({ a, b, annonceId, messages: [] })
+    setLoadingThread(true)
+    try {
+      let query = supabase.from("messages")
+        .select("*")
+        .or(`and(from_email.eq.${a},to_email.eq.${b}),and(from_email.eq.${b},to_email.eq.${a})`)
+        .order("created_at", { ascending: true })
+      if (annonceId) query = query.eq("annonce_id", annonceId)
+      const { data } = await query
+      setConvThread({ a, b, annonceId, messages: data || [] })
+    } finally {
+      setLoadingThread(false)
+    }
   }
 
   async function patchContact(id: number, patch: { statut?: ContactStatut; reponse?: string | null; prendre_en_charge?: boolean }) {
@@ -478,7 +496,7 @@ export default function Admin() {
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
                 <thead>
                   <tr style={{ background: "#f9fafb" }}>
-                    {["De", "À", "Message", "Date", "Lu"].map(h => (
+                    {["De", "À", "Message", "Date", "Lu", ""].map(h => (
                       <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px" }}>{h}</th>
                     ))}
                   </tr>
@@ -494,6 +512,12 @@ export default function Admin() {
                         <span style={{ background: m.lu ? "#dcfce7" : "#fee2e2", color: m.lu ? "#16a34a" : "#dc2626", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                           {m.lu ? "Lu" : "Non lu"}
                         </span>
+                      </td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <button onClick={() => openConversation(m.from_email, m.to_email, m.annonce_id ?? null)}
+                          style={{ background: "#111", color: "white", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                          Voir thread
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -809,6 +833,60 @@ export default function Admin() {
         })()}
 
       </div>
+
+      {/* Modale : thread de conversation complet entre 2 utilisateurs */}
+      {convThread && (
+        <>
+          <div onClick={() => setConvThread(null)}
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9000 }} />
+          <div role="dialog" aria-modal="true"
+            style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", background: "white", borderRadius: 20, padding: 0, width: "min(720px, 94vw)", maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", zIndex: 9001, fontFamily: "'DM Sans', sans-serif", overflow: "hidden" }}>
+            <div style={{ padding: "18px 24px", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px" }}>Conversation</p>
+                <p style={{ fontSize: 14, fontWeight: 700, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {convThread.a} &nbsp;↔&nbsp; {convThread.b}
+                </p>
+                {convThread.annonceId && (
+                  <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
+                    Annonce <a href={`/annonces/${convThread.annonceId}`} target="_blank" rel="noopener noreferrer" style={{ color: "#1d4ed8", textDecoration: "none" }}>#{convThread.annonceId}</a>
+                  </p>
+                )}
+              </div>
+              <button onClick={() => setConvThread(null)}
+                style={{ background: "#f3f4f6", border: "none", borderRadius: 999, width: 32, height: 32, fontSize: 16, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
+                ×
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px", background: "#fafafa", display: "flex", flexDirection: "column", gap: 8 }}>
+              {loadingThread ? (
+                <p style={{ textAlign: "center", color: "#9ca3af", padding: 40 }}>Chargement…</p>
+              ) : convThread.messages.length === 0 ? (
+                <p style={{ textAlign: "center", color: "#9ca3af", padding: 40 }}>Aucun message dans cette conversation.</p>
+              ) : convThread.messages.map(m => {
+                const mine = m.from_email === convThread.a
+                return (
+                  <div key={m.id} style={{ display: "flex", justifyContent: mine ? "flex-start" : "flex-end" }}>
+                    <div style={{ maxWidth: "75%", background: mine ? "white" : "#111", color: mine ? "#111" : "white", padding: "10px 14px", borderRadius: 14, border: mine ? "1px solid #e5e7eb" : "none" }}>
+                      <p style={{ fontSize: 10, fontWeight: 700, color: mine ? "#6b7280" : "#9ca3af", marginBottom: 4 }}>
+                        {m.from_email}
+                      </p>
+                      <p style={{ fontSize: 13, lineHeight: 1.5, whiteSpace: "pre-wrap", margin: 0 }}>{m.contenu}</p>
+                      <p style={{ fontSize: 10, color: mine ? "#9ca3af" : "#d1d5db", marginTop: 4 }}>
+                        {new Date(m.created_at).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        {m.lu && " · Lu"}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div style={{ padding: "12px 24px", borderTop: "1px solid #f3f4f6", fontSize: 12, color: "#6b7280", textAlign: "center" }}>
+              {convThread.messages.length} message(s) · Vue admin en lecture seule
+            </div>
+          </div>
+        </>
+      )}
     </main>
   )
 }

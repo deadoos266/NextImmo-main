@@ -75,7 +75,12 @@ export default async function Annonce({ params }: any) {
 
   const dpeColor: any = { A: "#22c55e", B: "#84cc16", C: "#eab308", D: "#f97316", E: "#ef4444", F: "#dc2626", G: "#991b1b" }
   const photos: string[] = Array.isArray(annonce.photos) ? annonce.photos : []
-  const coords = getCityCoords(annonce.ville || "")
+  // Priorité : lat/lng précis sauvés depuis l'autocomplete BAN. Fallback : centre ville.
+  const hasExactCoords = typeof annonce.lat === "number" && typeof annonce.lng === "number"
+  const cityCoords = getCityCoords(annonce.ville || "")
+  const coords: [number, number] | null = hasExactCoords
+    ? [annonce.lat as number, annonce.lng as number]
+    : cityCoords
 
   const jsonLd = {
     "@context": "https://schema.org",

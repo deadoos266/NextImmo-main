@@ -72,6 +72,34 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 
 ## Historique des batchs
 
+### Batch 16 — Mobile UX, géoloc exacte, admin threads (2026-04-18)
+- **Messagerie mobile fullscreen** : quand une conversation est active sur mobile,
+  suppression du padding conteneur + du h1, le chat occupe `100vw × (100vh - 64px)`.
+  Bordures et ombres retirées sur mobile pour un vrai feel plein écran, fond gris
+  doux `#fafafa` pour la zone messages (style messagerie native), input en 16px
+  (anti-zoom iOS), zone saisie compacte
+- **Dossier locataire mobile** : grid cartes 2 colonnes au lieu de 3 (identité +
+  pièces), boutons header qui wrapent, tailles de police adaptées, padding PDF
+  preview réduit de 32 à 18px, inputs en 16px
+- **Géolocalisation exacte du bien** : colonnes `lat` et `lng` (double precision)
+  ajoutées à `annonces`. L'autocomplete BAN capture déjà les coords ; elles sont
+  désormais sauvegardées à la publication/modification de l'annonce et utilisées
+  en priorité par MapBien. Fallback sur les coords ville si absentes (annonces
+  historiques)
+- **Admin — vue conversation complète** : bouton « Voir thread » sur chaque
+  message dans l'onglet Messages ouvre une modale affichant tout l'échange
+  entre les deux utilisateurs (avec filtre par annonce si présente). Messages
+  gauche/droite colorés selon expéditeur, horodatage + statut lu, lien vers
+  l'annonce, lecture seule admin
+
+  **Requiert migration DB :**
+  ```sql
+  ALTER TABLE annonces
+    ADD COLUMN IF NOT EXISTS lat double precision NULL,
+    ADD COLUMN IF NOT EXISTS lng double precision NULL;
+  CREATE INDEX IF NOT EXISTS idx_annonces_coords ON annonces(lat, lng) WHERE lat IS NOT NULL;
+  ```
+
 ### Batch 15 — Page contact + admin assignation (2026-04-18)
 - **Nouvelle page publique `/contact`** : formulaire nom/email/sujet/message,
   rate-limit 5/h par email, 8 sujets prédéfinis (`lib/contacts.ts`), design

@@ -52,6 +52,7 @@ export default function AjouterBien() {
     locataire_email: "", date_debut_bail: "", mensualite_credit: "", valeur_bien: "",
     duree_credit: "",
     taxe_fonciere: "", assurance_pno: "", charges_copro_annuelles: "",
+    lat: null as number | null, lng: null as number | null,
   })
   const [toggles, setToggles] = useState({
     meuble: false, animaux: false, parking: false, cave: false,
@@ -101,6 +102,7 @@ export default function AjouterBien() {
       proprietaire: session?.user?.name, proprietaire_email: session?.user?.email,
       membre: "Membre depuis " + new Date().getFullYear(), verifie: true,
       photos: photos.length > 0 ? photos : null,
+      lat: form.lat, lng: form.lng,
       ...toggles,
     }
 
@@ -165,11 +167,14 @@ export default function AjouterBien() {
                 onChange={v => setForm(f => ({ ...f, adresse: v }))}
                 onSelect={a => {
                   // La ville de l'adresse sélectionnée est autoritaire : l'adresse
-                  // "6 rue de Rivoli 75001 Paris" force la ville à Paris
+                  // "6 rue de Rivoli 75001 Paris" force la ville à Paris.
+                  // lat/lng capturés pour affichage précis sur la carte.
                   setForm(f => ({
                     ...f,
                     adresse: a.street || a.label,
                     ville: a.city || f.ville,
+                    lat: a.lat,
+                    lng: a.lng,
                   }))
                 }}
                 city={form.ville || undefined}

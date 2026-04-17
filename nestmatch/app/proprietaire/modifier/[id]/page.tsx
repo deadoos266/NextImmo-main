@@ -56,6 +56,7 @@ export default function ModifierBien() {
     description: "", type_bien: "Appartement",
     locataire_email: "", date_debut_bail: "", mensualite_credit: "", valeur_bien: "", duree_credit: "",
     taxe_fonciere: "", assurance_pno: "", charges_copro_annuelles: "",
+    lat: null as number | null, lng: null as number | null,
   })
   const [toggles, setToggles] = useState({
     meuble: false, animaux: false, parking: false, cave: false,
@@ -103,6 +104,8 @@ export default function ModifierBien() {
       taxe_fonciere: data.taxe_fonciere ? String(data.taxe_fonciere) : "",
       assurance_pno: data.assurance_pno ? String(data.assurance_pno) : "",
       charges_copro_annuelles: data.charges_copro_annuelles ? String(data.charges_copro_annuelles) : "",
+      lat: typeof data.lat === "number" ? data.lat : null,
+      lng: typeof data.lng === "number" ? data.lng : null,
     })
     setToggles({
       meuble: !!data.meuble, animaux: !!data.animaux, parking: !!data.parking,
@@ -152,6 +155,7 @@ export default function ModifierBien() {
       etage: form.etage || null, dpe: form.dpe, dispo: form.dispo, statut: form.statut,
       description: form.description, type_bien: form.type_bien,
       photos: photos.length > 0 ? photos : null,
+      lat: form.lat, lng: form.lng,
       ...toggles,
     }
 
@@ -226,6 +230,8 @@ export default function ModifierBien() {
                     ...f,
                     adresse: a.street || a.label,
                     ville: a.city || f.ville,
+                    lat: a.lat,
+                    lng: a.lng,
                   }))
                 }}
                 city={form.ville || undefined}
