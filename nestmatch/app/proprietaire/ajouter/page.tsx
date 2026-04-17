@@ -7,6 +7,7 @@ import { useResponsive } from "../../hooks/useResponsive"
 import LocataireEmailField from "../../components/LocataireEmailField"
 import CityAutocomplete from "../../components/CityAutocomplete"
 import Tooltip from "../../components/Tooltip"
+import MarketRentHint from "./MarketRentHint"
 
 const Toggle = ({ label, k, toggles, setToggles }: any) => (
   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
@@ -268,6 +269,9 @@ export default function AjouterBien() {
             <F l="Loyer mensuel (€)"><input style={inp} type="number" value={form.prix} onChange={set("prix")} placeholder="1100" /></F>
             <F l="Charges (€/mois)"><input style={inp} type="number" value={form.charges} onChange={set("charges")} placeholder="80" /></F>
             <F l="Dépôt de garantie (€)"><input style={inp} type="number" value={form.caution} onChange={set("caution")} placeholder="1100" /></F>
+          </div>
+          <MarketRentHint ville={form.ville} surface={form.surface} pieces={form.pieces} prix={form.prix} />
+          <div style={{ display: "none" }}>
           </div>
         </Sec>
 

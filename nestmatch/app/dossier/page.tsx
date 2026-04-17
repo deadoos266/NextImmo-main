@@ -6,6 +6,7 @@ import { supabase } from "../../lib/supabase"
 import { useResponsive } from "../hooks/useResponsive"
 import Tooltip from "../components/Tooltip"
 import PhoneInput from "../components/PhoneInput"
+import SharePanel from "./SharePanel"
 
 const SITUATIONS = ["CDI", "CDD", "Indépendant / Freelance", "Fonctionnaire", "Étudiant", "Retraité", "Sans emploi"]
 const TYPES_GARANT = ["Personne physique", "Organisme (Visale, Action Logement)", "Aucun garant"]
@@ -421,6 +422,7 @@ export default function Dossier() {
 
             {/* Sidebar documents */}
             <div>
+              <SharePanel />
               <div style={{ background: "white", borderRadius: 20, padding: 24, position: "sticky", top: 80 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                   <h3 style={{ fontSize: 15, fontWeight: 800 }}>Documents</h3>

@@ -78,6 +78,26 @@ Différenciation : score de compatibilité propriété/locataire via algo maison
 - messagerie : tri non-lus en premier
 - Build : Suspense wrapping sur `/auth` et `/annonces`
 
+### Batch 9 — Quick wins roadmap (2026-04-17)
+- **#64 Onboarding 3 étapes** : page `/onboarding` avec wizard (ville+budget →
+  taille → critères), auth/page redirige les nouveaux locataires dessus
+  après inscription. Proprios vont direct au dashboard
+- **#65 Loyer de marché suggéré** : nouveau `lib/marketRent.ts` (médiane DB
+  par ville + surface ±25% + pièces), composant `MarketRentHint` affiche
+  l'estimation et l'écart vs prix saisi (vert si conforme, orange/rouge sinon)
+  dans `/proprietaire/ajouter`
+- **#66 Partage dossier par lien sécurisé** : token HMAC stateless (pas de
+  migration DB), `lib/dossierToken.ts` avec generate/verify. Route
+  `/api/dossier/share` (POST, auth requise) génère URL 7 jours. Page
+  `/dossier-partage/[token]` en lecture seule (metadata robots: noindex).
+  `SharePanel.tsx` intégré dans `/dossier` avec copy-to-clipboard
+- **#67 Complétude dossier badge sur /annonces** : nouveau helper partagé
+  `lib/profilCompleteness.ts`, badge orange "Dossier X% — compléter" affiché
+  dans le bandeau si < 100% (locataires uniquement)
+- **#68 Alerte expiration annonce proprio** : bannière orange dans "Mes biens"
+  si annonce disponible depuis > 45 jours sans update, CTA "Rafraîchir"
+  (lien vers modifier)
+
 ### Batch 8 — Annulation visites avec motif (2026-04-17)
 - **#63 Annulation de visite (confirmée ou proposée)** :
   - Nouveau composant `AnnulerVisiteDialog` : modale avec textarea motif
@@ -289,6 +309,96 @@ Différenciation : score de compatibilité propriété/locataire via algo maison
 - Page `/` et `/annonces` en `"use client"` → convertir en Server Components (SEO)
 
 ---
+
+## 🗺️ Roadmap fonctionnalités — par ordre de facilité
+
+### 🟢 Quick wins (1-3h chacun, no-brainers)
+- **#64 Onboarding guidé 3 étapes** après inscription : wizard ville+budget →
+  type de bien → critères essentiels → direction `/annonces` avec filtres
+  pré-remplis. Juste une page wizard ou modale
+- **#65 Loyer de marché suggéré** quand un proprio publie : calcul live de
+  la médiane des biens similaires (ville + surface ±20% + pièces) depuis la DB
+  et affichage "Dans votre ville, un T2 de 45 m² se loue en moyenne 720 €/mois"
+- **#66 Partage de dossier locataire par lien sécurisé** : génération d'un
+  token unique à durée limitée (ex 7 jours), URL `/dossier-partage/[token]`
+  qui affiche le dossier en lecture seule. Utile pour partager hors plateforme
+- **#67 Progress bar complétude dossier plus visible** sur `/annonces` :
+  badge "Dossier 60% complet" avec CTA si pas 100%
+- **#68 Alerte expiration annonce** : au bout de N jours sans update, bannière
+  "Votre annonce est en ligne depuis X jours, envisagez de la rafraîchir"
+- **#69 Dark mode** : toggle dans Paramètres compte, stocké en localStorage,
+  variables CSS pour la palette
+
+### 🟡 Moyens (demi-journée à journée)
+- **#70 Système d'avis après bail terminé** : nouvelle table `avis`
+  (locataire → proprio + proprio → locataire), formulaire post-bail,
+  affichage "★ 4.8 · 12 avis" sur fiche proprio
+- **#71 Recherche full-text dans annonces** : filtre par mot-clé sur
+  titre + description + ville (PostgreSQL tsvector ou simple ILIKE)
+- **#72 Historique candidatures locataire** : page `/mes-candidatures`
+  listant les annonces contactées + statut (contact fait / dossier envoyé /
+  visite programmée / bail signé / rejetée)
+- **#73 Recommandations de quartiers** : basé sur critères + budget,
+  suggestions des villes/quartiers où ça matche bien (liste top 5)
+- **#74 Estimateur de budget locataire** : outil "Je gagne X, mon budget
+  loyer idéal c'est Y" sur `/profil` ou page dédiée (règle 3× revenus)
+- **#75 Pages SEO par ville** : `/location/paris`, `/location/lyon` etc.
+  avec titre optimisé, meta description, liste des annonces + contenu
+  éditorial court (booster SEO, aide à l'indexation)
+- **#76 Calendrier sync** : export .ics des visites confirmées pour
+  Google Calendar / Apple / Outlook
+
+### 🟠 Plus complexes (plusieurs jours)
+- **#77 Notifications email transactionnelles** (gros impact rétention) :
+  setup Resend/Sendgrid + 5-6 templates email (nouveau message, nouvelle
+  candidature, visite proposée/confirmée/annulée, dossier partagé, mot de
+  passe changé). Toggle user dans `AccountSettings` déjà placeholder,
+  à brancher
+- **#78 Alertes email nouvelles annonces matchantes** (LE différenciant) :
+  cron job Supabase quotidien ou edge function, reprend l'algo matching
+  sur les annonces créées depuis X heures, envoie email résumé aux
+  locataires avec score > 70%. Requires Resend/Sendgrid
+- **#79 Notifications push web** : Service Worker + VAPID keys + opt-in
+  dans Paramètres compte. Pour les événements urgents (msg reçu, visite
+  confirmée)
+- **#80 Checklist légale obligatoire** : quand un proprio publie, case à
+  cocher "Je certifie avoir réalisé les diagnostics : DPE / amiante /
+  plomb / électricité / gaz". Génère un PDF récapitulatif signé
+- **#81 Fiscalité locataire** : récap annuel des loyers payés pour
+  déclaration d'impôts (avis des sommes payées)
+- **#82 Fiscalité propriétaire** : récap annuel revenus fonciers pour
+  déclaration 2044 (loyers encaissés - charges - intérêts emprunt)
+- **#83 Screening auto candidats** (côté proprio) : score de qualité
+  visible dès réception de candidature (revenus/loyer, complétude dossier,
+  situation pro, garant présent)
+- **#84 Analytics avancées proprio** : taux de conversion vs marché
+  local, temps moyen pour louer, nb de vues par jour, recommandations
+  automatiques ("Vos photos ont moins de vues que la moyenne")
+- **#85 Colocation intelligente** : matching entre locataires cherchant
+  à cohabiter. Nouveau type de profil "colocation", filtres par âge/sexe/
+  fumeur/animaux, création d'un "groupe" de colocataires qui candidate
+  ensemble
+
+### 🔴 Très complexes / long terme
+- **#86 Signature électronique du bail** : DocuSign-like intégré, PDF
+  signé avec audit trail (horodatage, IP, identités). Nécessite legal
+  review et probablement un service tiers (Yousign, DocuSign)
+- **#87 Vérification identité (KYC)** : upload pièce d'identité + selfie,
+  matching visage (service type Onfido / Veriff). Badge "Vérifié" sur
+  profil
+- **#88 PWA mobile** : manifest + service worker + icône add-to-home.
+  Premier pas avant une vraie app. Couvre 80% des besoins mobile
+- **#89 Application mobile native** : React Native / Expo. Gros projet,
+  gestion deux stores, notifications natives, caméra pour photos
+- **#90 Système de parrainage** : lien unique par user, bonus (mois
+  premium gratuit ou badge VIP) à chaque parrain + filleul
+- **#91 Blog / guides éditoriaux** : "Comment remplir son dossier locataire",
+  "Les obligations du bailleur", "Louer sans agence" — SEO + autorité
+- **#92 Chatbot IA d'assistance** : les agents Opus/Sonnet existent déjà
+  (`lib/agents/`), intégrer un widget chat dans l'app pour questions user
+  ("Comment déposer mon dossier ?", "Que faire si mon proprio ne répond pas ?")
+- **#93 Programme fidélité** : proprios ayant signé N baux sur la plateforme
+  → meilleure mise en avant, badge "Proprio expérimenté"
 
 ## Dette technique connue
 - 0 test automatisé

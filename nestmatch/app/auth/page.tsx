@@ -84,7 +84,13 @@ function AuthContent() {
         return
       }
 
-      router.push(role === "proprietaire" ? "/proprietaire" : "/profil")
+      // Les nouveaux locataires passent par l'onboarding pour remplir critères essentiels.
+      // Les proprios vont direct au dashboard.
+      if (role === "proprietaire") {
+        router.push("/proprietaire")
+      } else {
+        router.push(mode === "inscription" ? "/onboarding" : "/annonces")
+      }
     } catch {
       setError("Une erreur est survenue. Veuillez réessayer.")
       setLoading(false)

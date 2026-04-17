@@ -424,6 +424,23 @@ export default function Proprietaire() {
               </div>
             ) : biens.map(b => (
               <div key={b.id} style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24 }}>
+                {(() => {
+                  // Alerte expiration si bien disponible et publié depuis > 45 jours sans update
+                  const baseDate = b.updated_at || b.created_at
+                  if (!baseDate || (b.statut && b.statut !== "disponible")) return null
+                  const jours = Math.floor((Date.now() - new Date(baseDate).getTime()) / (1000 * 60 * 60 * 24))
+                  if (jours < 45) return null
+                  return (
+                    <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 12, padding: "10px 14px", marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                      <p style={{ fontSize: 13, color: "#9a3412", margin: 0 }}>
+                        <strong>Annonce en ligne depuis {jours} jours.</strong> Pensez à la rafraîchir (photos, description, prix) pour regagner en visibilité.
+                      </p>
+                      <a href={`/proprietaire/modifier/${b.id}`} style={{ fontSize: 12, fontWeight: 700, color: "#9a3412", textDecoration: "none", padding: "5px 12px", border: "1.5px solid #fed7aa", borderRadius: 999, background: "white", flexShrink: 0 }}>
+                        Rafraîchir
+                      </a>
+                    </div>
+                  )
+                })()}
                 <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "stretch" : "flex-start", gap: isMobile ? 14 : 0 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>

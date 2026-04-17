@@ -8,6 +8,7 @@ import { useSession } from "next-auth/react"
 import { useRole } from "../providers"
 import { getCityCoords } from "../../lib/cityCoords"
 import { getFavoris, toggleFavori } from "../../lib/favoris"
+import { calculerCompletudeProfil } from "../../lib/profilCompleteness"
 import { useResponsive } from "../hooks/useResponsive"
 
 const MapAnnonces = dynamic(() => import("../components/MapAnnonces"), { ssr: false })
@@ -255,11 +256,14 @@ function AnnoncesContent() {
             </span>
             <a href="/proprietaire" style={{ fontSize: 12, fontWeight: 700, color: "#111", textDecoration: "none", padding: "4px 12px", border: "1.5px solid #e5e7eb", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0 }}>Mes biens</a>
           </div>
-        ) : status === "authenticated" && profil ? (
+        ) : status === "authenticated" && profil ? (() => {
+          const { score: completude } = calculerCompletudeProfil(profil)
+          const completudeColor = completude >= 80 ? "#16a34a" : completude >= 50 ? "#ea580c" : "#dc2626"
+          return (
           <div style={{ background: "white", borderRadius: 12, padding: isMobile ? "8px 14px" : "10px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid #e5e7eb", gap: 8, flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <span style={{ fontSize: isMobile ? 11 : 13, fontWeight: 700, color: "#16a34a" }}>
-                {urlVille || urlBudget || urlType ? "Recherche" : "Personnalise"}
+                {urlVille || urlBudget || urlType ? "Recherche" : "Personnalisé"}
               </span>
               {activeVille && <span style={{ background: "#f3f4f6", padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 600 }}>{activeVille}</span>}
               {!isMobile && activeBudget > 0 && <span style={{ background: "#f3f4f6", padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 600 }}>Max {activeBudget} &euro;</span>}
@@ -267,10 +271,17 @@ function AnnoncesContent() {
               {(urlVille || urlBudget || urlType) && (
                 <button onClick={clearUrlFilters} style={{ background: "none", border: "none", fontSize: 11, fontWeight: 600, color: "#6b7280", cursor: "pointer", textDecoration: "underline", padding: 0, fontFamily: "inherit" }}>Effacer</button>
               )}
+              {/* Badge complétude dossier : visible si < 100 */}
+              {!isProprietaire && completude < 100 && (
+                <a href="/profil" style={{ background: "#fff7ed", border: `1px solid ${completudeColor}33`, color: completudeColor, padding: "2px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  Dossier {completude}% <span style={{ opacity: 0.8 }}>— compléter</span>
+                </a>
+              )}
             </div>
             <a href="/profil" style={{ fontSize: 11, fontWeight: 700, color: "#111", textDecoration: "none", padding: "4px 10px", border: "1.5px solid #e5e7eb", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0 }}>Profil</a>
           </div>
-        ) : status === "unauthenticated" ? (
+          )
+        })() : status === "unauthenticated" ? (
           <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: isMobile ? "8px 14px" : "10px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <span style={{ fontSize: isMobile ? 11 : 13, fontWeight: 600, color: "#92400e" }}>{isMobile ? "Connectez-vous pour le matching" : "Connectez-vous pour le score de compatibilite"}</span>
