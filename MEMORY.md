@@ -72,6 +72,16 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 
 ## Historique des batchs
 
+### Batch 21 — Carte CartoDB Positron style SeLoger (2026-04-18)
+- **Tuiles par défaut = CartoDB Positron** (`light_all`) — style
+  minimaliste gris clair, même esprit que SeLoger / Leboncoin / PAP.
+  Beaucoup plus soft qu'OSM France, centré sur la mise en valeur des
+  marqueurs prix plutôt que de la cartographie. Labels OSM : en France,
+  noms de villes/rues en français (l'attribution reste en anglais,
+  contrainte de licence Carto — impossible à contourner pour les
+  tuiles gratuites). Mode « Détaillé » reste OSM France pour les cas
+  où l'utilisateur veut zoomer sur les rues/POI.
+
 ### Batch 20 — Carte FR garantie + contre-proposition visite (2026-04-18)
 - **Carte 100% française + soft** : retour à OSM France (osmfr) pour garantir
   que tous les labels sont en français, avec un filtre CSS

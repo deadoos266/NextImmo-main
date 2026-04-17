@@ -6,14 +6,16 @@ import "leaflet/dist/leaflet.css"
 
 type MapType = "plan" | "satellite" | "standard"
 
-// Tuiles OSM France = labels 100% FR. On adoucit le rendu via un filtre CSS
-// appliqué sur le TileLayer (voir prop `className`). Style SeLoger = soft mais FR.
+// Tuiles par défaut = CartoDB Positron (style minimaliste gris clair,
+// utilisé par SeLoger / Leboncoin / PAP / la plupart des sites immo).
+// Les labels viennent des données OSM : en France, les noms de villes/rues
+// sont en français. L'attribution reste anglaise (contrainte de licence).
+// Mode "Détaillé" = OSM France en fallback pour zoomer sur les rues.
 const TILES: Record<MapType, { url: string; attribution: string; label: string; soft?: boolean }> = {
   plan: {
-    url: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
-    attribution: '&copy; <a href="https://www.openstreetmap.fr/">OpenStreetMap France</a>',
+    url: "https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png",
+    attribution: '&copy; <a href="https://carto.com/">CARTO</a> &middot; &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     label: "Plan",
-    soft: true,
   },
   satellite: {
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -210,10 +212,6 @@ export default function MapAnnonces({
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
-      {/* Filtre CSS doux appliqué à la couche de tuiles OSM France pour un rendu
-          moins chargé visuellement (style SeLoger). Le filtre s'applique via
-          une classe CSS injectée ci-dessous. */}
-      <style>{`.leaflet-tile-soft { filter: saturate(0.72) brightness(1.04) contrast(0.94); }`}</style>
       <MapContainer
         center={center}
         zoom={initialZoom}
@@ -224,7 +222,6 @@ export default function MapAnnonces({
           key={mapType}
           attribution={tile.attribution}
           url={tile.url}
-          className={tile.soft ? "leaflet-tile-soft" : undefined}
         />
         <BoundsWatcher onMoved={handleMoved} />
         <FrenchLeafletLocale />
