@@ -64,15 +64,15 @@ export default function Navbar() {
   }, [isSmall])
 
   const espaceLinks = proprietaireActive ? [
-    { href: "/profil",               icon: "👤", label: "Mon profil",         desc: "Informations personnelles" },
-    { href: "/proprietaire",         icon: "🏠", label: "Mes biens",          desc: "Gestion de mes annonces" },
-    { href: "/proprietaire/ajouter", icon: "➕", label: "Publier un bien",    desc: "Ajouter une nouvelle annonce" },
-    { href: "/carnet",               icon: "🔨", label: "Carnet d'entretien", desc: "Historique des travaux" },
+    { href: "/profil",               label: "Mon profil",         desc: "Informations personnelles" },
+    { href: "/proprietaire",         label: "Mes biens",          desc: "Gestion de mes annonces" },
+    { href: "/proprietaire/ajouter", label: "Publier un bien",    desc: "Ajouter une nouvelle annonce" },
+    { href: "/carnet",               label: "Carnet d'entretien", desc: "Historique des travaux" },
   ] : [
-    { href: "/profil",   icon: "👤", label: "Mon profil",         desc: "Critères de recherche & matching" },
-    { href: "/dossier",  icon: "📁", label: "Mon dossier",        desc: "Documents & complétion" },
-    { href: "/visites",  icon: "📅", label: "Mes visites",        desc: "Demandes & confirmations", badge: badgeVisites },
-    { href: "/carnet",   icon: "🔨", label: "Carnet d'entretien", desc: "Historique des travaux" },
+    { href: "/profil",   label: "Mon profil",         desc: "Critères de recherche & matching" },
+    { href: "/dossier",  label: "Mon dossier",        desc: "Documents & complétion" },
+    { href: "/visites",  label: "Mes visites",        desc: "Demandes & confirmations", badge: badgeVisites },
+    { href: "/carnet",   label: "Carnet d'entretien", desc: "Historique des travaux" },
   ]
 
   const espaceActif = isActive("/profil") || isActive("/dossier") || isActive("/proprietaire") || isActive("/carnet") || isActive("/visites")
@@ -83,7 +83,7 @@ export default function Navbar() {
   const totalBadge = badgeVisites + badgeMessages
 
   return (
-    <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: isSmall ? "0 16px" : "0 48px", background: "white", borderBottom: "1px solid #e5e7eb", position: "sticky", top: 0, zIndex: 1000, height: 64, boxShadow: "0 1px 8px rgba(0,0,0,0.05)" }}>
+    <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: isSmall ? "0 16px" : "0 48px", background: "white", borderBottom: "1px solid #e5e7eb", position: "sticky", top: 0, zIndex: 7000, height: 64, boxShadow: "0 1px 8px rgba(0,0,0,0.05)" }}>
 
       {/* Logo */}
       <Link href="/" style={{ fontSize: isSmall ? 18 : 22, fontWeight: 800, textDecoration: "none", color: "#111", letterSpacing: "-0.5px" }}>
@@ -121,7 +121,6 @@ export default function Navbar() {
                           style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", textDecoration: "none", color: "#111", borderBottom: "1px solid #f9fafb" }}
                           onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
                           onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                          <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
                           <div style={{ flex: 1 }}>
                             <p style={{ fontSize: 13, fontWeight: 600, margin: 0 }}>{item.label}</p>
                             <p style={{ fontSize: 11, color: "#9ca3af", margin: 0, marginTop: 1 }}>{item.desc}</p>
@@ -216,18 +215,59 @@ export default function Navbar() {
         </div>
       )}
 
-      {/* Mobile : hamburger */}
+      {/* Mobile : burger gauche, circulaire, animation smooth (option A) */}
       {isSmall && (
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          style={{ position: "relative", background: "none", border: "1.5px solid #e5e7eb", borderRadius: 10, width: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-            <span style={{ display: "block", width: 18, height: 2, background: "#111", borderRadius: 2, transition: "all 0.2s", transform: mobileOpen ? "rotate(45deg) translate(5px, 5px)" : "none" }} />
-            <span style={{ display: "block", width: 18, height: 2, background: "#111", borderRadius: 2, opacity: mobileOpen ? 0 : 1, transition: "opacity 0.2s" }} />
-            <span style={{ display: "block", width: 18, height: 2, background: "#111", borderRadius: 2, transition: "all 0.2s", transform: mobileOpen ? "rotate(-45deg) translate(5px, -5px)" : "none" }} />
-          </div>
+          aria-label={mobileOpen ? "Fermer le menu" : "Ouvrir le menu"}
+          style={{
+            order: -1,
+            position: "relative",
+            background: "white",
+            border: "1.5px solid #e5e7eb",
+            borderRadius: "50%",
+            width: 40,
+            height: 40,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            flexShrink: 0,
+            transition: "box-shadow 0.2s ease, border-color 0.2s ease",
+            boxShadow: mobileOpen ? "0 2px 12px rgba(0,0,0,0.12)" : "none",
+            padding: 0,
+          }}
+        >
+          <span style={{ position: "relative", width: 18, height: 14, display: "block" }}>
+            {/* Barre haute */}
+            <span style={{
+              position: "absolute", left: 0,
+              top: mobileOpen ? 6 : 0,
+              width: 18, height: 2, background: "#111", borderRadius: 2,
+              transform: mobileOpen ? "rotate(45deg)" : "rotate(0deg)",
+              transformOrigin: "center",
+              transition: "top 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.22s cubic-bezier(0.4, 0, 0.2, 1) 0.12s",
+            }} />
+            {/* Barre milieu — s'efface en s'échappant latéralement */}
+            <span style={{
+              position: "absolute", left: 0, top: 6,
+              width: 18, height: 2, background: "#111", borderRadius: 2,
+              opacity: mobileOpen ? 0 : 1,
+              transform: mobileOpen ? "translateX(-22px)" : "translateX(0)",
+              transition: "opacity 0.15s ease, transform 0.18s ease",
+            }} />
+            {/* Barre basse */}
+            <span style={{
+              position: "absolute", left: 0,
+              top: mobileOpen ? 6 : 12,
+              width: 18, height: 2, background: "#111", borderRadius: 2,
+              transform: mobileOpen ? "rotate(-45deg)" : "rotate(0deg)",
+              transformOrigin: "center",
+              transition: "top 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.22s cubic-bezier(0.4, 0, 0.2, 1) 0.12s",
+            }} />
+          </span>
           {totalBadge > 0 && !mobileOpen && (
-            <span style={{ position: "absolute", top: -4, right: -4, background: "#ef4444", color: "white", borderRadius: 999, fontSize: 9, fontWeight: 800, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>
+            <span style={{ position: "absolute", top: -2, right: -2, background: "#ef4444", color: "white", borderRadius: 999, fontSize: 9, fontWeight: 800, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: "2px solid white" }}>
               {totalBadge > 9 ? "9+" : totalBadge}
             </span>
           )}
@@ -237,8 +277,8 @@ export default function Navbar() {
       {/* Mobile : drawer overlay */}
       {isSmall && mobileOpen && (
         <>
-          <div onClick={() => setMobileOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 1100, background: "rgba(0,0,0,0.3)" }} />
-          <div style={{ position: "fixed", top: 64, right: 0, bottom: 0, width: "min(320px, 100vw)", background: "white", zIndex: 1200, overflowY: "auto", boxShadow: "-8px 0 32px rgba(0,0,0,0.12)" }}>
+          <div onClick={() => setMobileOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 8000, background: "rgba(0,0,0,0.3)" }} />
+          <div style={{ position: "fixed", top: 64, left: 0, bottom: 0, width: "min(320px, 100vw)", background: "white", zIndex: 8001, overflowY: "auto", boxShadow: "8px 0 32px rgba(0,0,0,0.12)" }}>
 
             {/* User info */}
             {session && (
@@ -257,12 +297,11 @@ export default function Navbar() {
             {/* Nav links */}
             <div style={{ padding: "8px 0" }}>
               {[
-                { href: "/annonces", icon: "🏠", label: "Annonces" },
-                { href: "/favoris",  icon: "❤️", label: "Favoris" },
+                { href: "/annonces", label: "Annonces" },
+                { href: "/favoris",  label: "Favoris" },
               ].map(item => (
                 <Link key={item.href} href={item.href}
                   style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: isActive(item.href) ? "#111" : "#374151", background: isActive(item.href) ? "#f3f4f6" : "transparent", fontWeight: isActive(item.href) ? 700 : 500, fontSize: 15, borderBottom: "1px solid #f9fafb" }}>
-                  <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{item.icon}</span>
                   {item.label}
                 </Link>
               ))}

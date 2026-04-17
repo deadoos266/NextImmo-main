@@ -45,7 +45,6 @@ function DossierCard({ contenu, isMine }: { contenu: string; isMine: boolean }) 
   return (
     <div style={{ background: isMine ? "#1a1a1a" : "#f9fafb", border: `1.5px solid ${isMine ? "#333" : "#e5e7eb"}`, borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 280 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <span style={{ fontSize: 18 }}>📁</span>
         <div style={{ flex: 1 }}>
           <p style={{ fontWeight: 700, fontSize: 13, color: isMine ? "white" : "#111", margin: 0 }}>Dossier locataire</p>
           <p style={{ fontSize: 11, color: isMine ? "#9ca3af" : "#6b7280", margin: 0 }}>{data.email}</p>
@@ -84,11 +83,10 @@ function DemandeDossierCard({ isMine, dossierRecu, onEnvoyer, envoyant }: {
     return (
       <div style={{ background: "#1a1a1a", border: "1.5px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 280 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 20 }}>📋</span>
           <div>
             <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0 }}>Dossier demandé</p>
             <p style={{ fontSize: 11, color: dossierRecu ? "#86efac" : "#9ca3af", margin: "2px 0 0" }}>
-              {dossierRecu ? "✓ Dossier reçu" : "En attente de réponse..."}
+              {dossierRecu ? "Dossier reçu" : "En attente de réponse..."}
             </p>
           </div>
         </div>
@@ -98,7 +96,6 @@ function DemandeDossierCard({ isMine, dossierRecu, onEnvoyer, envoyant }: {
   return (
     <div style={{ background: "#f9fafb", border: "1.5px solid #e5e7eb", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 280 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-        <span style={{ fontSize: 20 }}>📋</span>
         <div>
           <p style={{ fontWeight: 700, fontSize: 13, color: "#111", margin: 0 }}>Demande de dossier</p>
           <p style={{ fontSize: 11, color: "#6b7280", margin: "2px 0 0" }}>Le propriétaire souhaite voir votre dossier</p>
@@ -106,13 +103,12 @@ function DemandeDossierCard({ isMine, dossierRecu, onEnvoyer, envoyant }: {
       </div>
       {dossierRecu ? (
         <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#dcfce7", borderRadius: 8, padding: "7px 12px" }}>
-          <span style={{ fontSize: 12 }}>✓</span>
           <span style={{ fontSize: 12, fontWeight: 700, color: "#15803d" }}>Dossier envoyé</span>
         </div>
       ) : (
         <button onClick={onEnvoyer} disabled={envoyant}
           style={{ width: "100%", background: envoyant ? "#e5e7eb" : "#111", color: envoyant ? "#9ca3af" : "white", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: envoyant ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
-          {envoyant ? "Envoi en cours..." : "📁 Envoyer mon dossier"}
+          {envoyant ? "Envoi en cours..." : "Envoyer mon dossier"}
         </button>
       )}
     </div>
@@ -131,9 +127,8 @@ function EdlCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
     return (
       <div style={{ background: "#1a1a1a", border: "1.5px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 280 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 20 }}>📋</span>
           <div>
-            <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0 }}>État des lieux envoye</p>
+            <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0 }}>État des lieux envoyé</p>
             <p style={{ fontSize: 11, color: "#9ca3af", margin: "2px 0 0" }}>
               {data.bienTitre || "Bien"} — {dateLabel}
             </p>
@@ -146,7 +141,6 @@ function EdlCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
   return (
     <div style={{ background: "#f9fafb", border: "1.5px solid #e5e7eb", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 280 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-        <span style={{ fontSize: 20 }}>📋</span>
         <div>
           <p style={{ fontWeight: 700, fontSize: 13, color: "#111", margin: 0 }}>État des lieux d'{typeLabel}</p>
           <p style={{ fontSize: 11, color: "#6b7280", margin: "2px 0 0" }}>
@@ -466,8 +460,24 @@ function MessagesInner() {
   }
 
   async function changerStatutVisite(id: string, statut: string) {
+    if (!myEmail) return
+    const visite = visitesConv.find(v => v.id === id)
+    if (!visite) return
     await supabase.from("visites").update({ statut }).eq("id", id)
     setVisitesConv(prev => prev.map(v => v.id === id ? { ...v, statut } : v))
+    // Poster un message automatique pour informer l'autre partie
+    const other = visite.proprietaire_email === myEmail ? visite.locataire_email : visite.proprietaire_email
+    const dateFormatee = new Date(visite.date_visite + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+    const contenu = statut === "confirmée"
+      ? `Visite confirmée pour le ${dateFormatee} à ${visite.heure}.`
+      : `Statut de visite mis à jour : ${statut}.`
+    const { data: msg } = await supabase.from("messages").insert([{
+      from_email: myEmail, to_email: other, contenu, lu: false, created_at: new Date().toISOString()
+    }]).select().single()
+    if (msg) {
+      setMessages(prev => [...prev, msg])
+      setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: msg } : c))
+    }
   }
 
   async function handleAnnulerVisite(motif: string) {
@@ -513,7 +523,7 @@ function MessagesInner() {
     if (visite) {
       setVisitesConv(prev => [...prev, visite])
       const dateFormatee = new Date(visiteDate + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
-      const contenu = `📅 Demande de visite le ${dateFormatee} à ${visiteHeure}${visiteMessage.trim() ? ` — "${visiteMessage.trim()}"` : ""}`
+      const contenu = `Demande de visite le ${dateFormatee} à ${visiteHeure}${visiteMessage.trim() ? ` — "${visiteMessage.trim()}"` : ""}`
       const { data: msg } = await supabase.from("messages").insert([{ from_email: myEmail, to_email: convActiveData.other, contenu, lu: false, created_at: new Date().toISOString() }]).select().single()
       if (msg) {
         setMessages(prev => [...prev, msg])
@@ -591,7 +601,6 @@ function MessagesInner() {
             <div style={{ flex: 1, overflowY: "auto" }}>
               {convsFiltrees.length === 0 ? (
                 <div style={{ padding: "32px 20px", textAlign: "center", color: "#9ca3af" }}>
-                  <div style={{ fontSize: 32, marginBottom: 8 }}>💬</div>
                   <p style={{ fontSize: 13, fontWeight: 600 }}>{recherche ? "Aucun résultat" : "Aucun message"}</p>
                   {!recherche && (
                     <p style={{ fontSize: 12, marginTop: 4, textAlign: "center", lineHeight: 1.5 }}>
@@ -672,7 +681,7 @@ function MessagesInner() {
                               style={{ width: "100%", padding: "10px 14px", background: "none", border: "none", borderBottom: "1px solid #f3f4f6", textAlign: "left", fontSize: 13, cursor: "pointer", fontFamily: "inherit", color: "#374151", display: "flex", alignItems: "center", gap: 8 }}
                               onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
                               onMouseLeave={e => (e.currentTarget.style.background = "none")}>
-                              ✓ Marquer comme lu
+                              Marquer comme lu
                             </button>
                           )}
                           {ann && (
@@ -680,7 +689,7 @@ function MessagesInner() {
                               style={{ width: "100%", padding: "10px 14px", background: "none", border: "none", borderBottom: "1px solid #f3f4f6", textAlign: "left", fontSize: 13, cursor: "pointer", fontFamily: "inherit", color: "#374151", display: "flex", alignItems: "center", gap: 8 }}
                               onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
                               onMouseLeave={e => (e.currentTarget.style.background = "none")}>
-                              🏠 Voir l'annonce
+                              Voir l'annonce
                             </button>
                           )}
                           <button onClick={e => { e.stopPropagation(); supprimerConversation(conv.key); setMenuConv(null) }}
@@ -688,7 +697,7 @@ function MessagesInner() {
                             style={{ width: "100%", padding: "10px 14px", background: "none", border: "none", textAlign: "left", fontSize: 13, cursor: supprimant === conv.key ? "not-allowed" : "pointer", fontFamily: "inherit", color: "#dc2626", display: "flex", alignItems: "center", gap: 8, opacity: supprimant === conv.key ? 0.5 : 1 }}
                             onMouseEnter={e => (e.currentTarget.style.background = "#fee2e2")}
                             onMouseLeave={e => (e.currentTarget.style.background = "none")}>
-                            🗑 {supprimant === conv.key ? "Suppression…" : "Supprimer"}
+                            {supprimant === conv.key ? "Suppression…" : "Supprimer"}
                           </button>
                         </div>
                       </>
@@ -703,7 +712,6 @@ function MessagesInner() {
           <div style={{ flex: 1, background: "white", borderRadius: 20, display: isMobile && !convActiveData ? "none" : "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
             {!convActiveData ? (
               <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", color: "#9ca3af", gap: 12 }}>
-                <div style={{ fontSize: 48 }}>💬</div>
                 <p style={{ fontSize: 16, fontWeight: 600, color: "#374151" }}>Sélectionnez une conversation</p>
                 {!proprietaireActive ? (
                   <>
@@ -731,7 +739,7 @@ function MessagesInner() {
                       {Array.isArray(annonceActive.photos) && annonceActive.photos[0] ? (
                         <img src={annonceActive.photos[0]} alt="" style={{ width: 42, height: 42, borderRadius: 10, objectFit: "cover" }} />
                       ) : (
-                        <div style={{ width: 42, height: 42, borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🏠</div>
+                        <div style={{ width: 42, height: 42, borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#6b7280", fontWeight: 700 }}>{(annonceActive.titre || "A")[0].toUpperCase()}</div>
                       )}
                       <div style={{ flex: 1 }}>
                         <p style={{ fontWeight: 700, fontSize: 14 }}>{annonceActive.titre}</p>
@@ -918,7 +926,7 @@ function MessagesInner() {
                 {visitesConv.length > 0 && (
                   <div style={{ borderTop: "1px solid #f3f4f6", padding: "12px 20px", background: "#fafafa" }}>
                     <p style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
-                      📅 Demandes de visite
+                      Demandes de visite
                     </p>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                       {visitesConv.map(v => {
@@ -941,7 +949,7 @@ function MessagesInner() {
                                 </p>
                               )}
                             </div>
-                            {proprietaireActive && isPending && v.propose_par !== myEmail && (
+                            {isPending && v.propose_par !== myEmail && (
                               <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                                 <button onClick={() => changerStatutVisite(v.id, "confirmée")}
                                   style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "5px 12px", fontWeight: 700, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
@@ -973,13 +981,13 @@ function MessagesInner() {
                     {!proprietaireActive && (
                       <button onClick={envoyerDossier} disabled={envoyantDossier}
                         style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", color: "#15803d", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: envoyantDossier ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, opacity: envoyantDossier ? 0.6 : 1 }}>
-                        📁 {envoyantDossier ? "Envoi..." : "Mon dossier"}
+                        {envoyantDossier ? "Envoi..." : "Mon dossier"}
                       </button>
                     )}
                     {proprietaireActive && (
                       <button onClick={demanderDossier} disabled={demandantDossier}
                         style={{ background: "#fef3c7", border: "1.5px solid #fde68a", color: "#d97706", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: demandantDossier ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, opacity: demandantDossier ? 0.6 : 1 }}>
-                        📋 {demandantDossier ? "Envoi..." : "Demander le dossier"}
+                        {demandantDossier ? "Envoi..." : "Demander le dossier"}
                       </button>
                     )}
                     {convActiveData?.annonceId && (

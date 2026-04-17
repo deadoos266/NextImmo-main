@@ -10,7 +10,7 @@ const HEURES = [
 
 const STATUT_STYLE: Record<string, { bg: string; color: string; label: string }> = {
   "proposée":  { bg: "#fff7ed", color: "#c2410c", label: "En attente de confirmation" },
-  "confirmée": { bg: "#dcfce7", color: "#15803d", label: "Confirmée ✓" },
+  "confirmée": { bg: "#dcfce7", color: "#15803d", label: "Confirmée" },
   "annulée":   { bg: "#fee2e2", color: "#dc2626", label: "Annulée" },
   "effectuée": { bg: "#f3f4f6", color: "#374151", label: "Effectuée" },
 }
@@ -96,7 +96,6 @@ export default function BookingVisite({
     return (
       <div style={{ background: "white", borderRadius: 20, padding: "20px 24px", border: "1.5px solid #e5e7eb", marginTop: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-          <span style={{ fontSize: 20 }}>📅</span>
           <p style={{ fontWeight: 700, fontSize: 15 }}>Votre visite</p>
           <span style={{ marginLeft: "auto", background: style.bg, color: style.color, fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>
             {style.label}
@@ -123,7 +122,7 @@ export default function BookingVisite({
       {!open ? (
         <button onClick={() => setOpen(true)}
           style={{ width: "100%", padding: "13px 0", background: "#f0fdf4", border: "1.5px solid #bbf7d0", color: "#15803d", borderRadius: 14, fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          📅 Proposer une visite
+          Proposer une visite
         </button>
       ) : (
         <div style={{ background: "white", borderRadius: 20, padding: "20px 24px", border: "2px solid #111" }}>

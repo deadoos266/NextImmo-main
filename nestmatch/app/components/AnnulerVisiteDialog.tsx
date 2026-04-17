@@ -68,7 +68,7 @@ export default function AnnulerVisiteDialog({ open, onClose, onConfirm, mode = "
           position: "fixed",
           inset: 0,
           background: "rgba(0,0,0,0.5)",
-          zIndex: 2000,
+          zIndex: 9000,
         }}
       />
       {/* Modal */}
@@ -86,7 +86,7 @@ export default function AnnulerVisiteDialog({ open, onClose, onConfirm, mode = "
           padding: 28,
           width: "min(480px, 92vw)",
           boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
-          zIndex: 2001,
+          zIndex: 9001,
           fontFamily: "'DM Sans', sans-serif",
         }}
       >

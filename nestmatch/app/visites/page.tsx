@@ -11,11 +11,11 @@ import { annulerVisite } from "../../lib/visitesHelpers"
 
 type Statut = "proposée" | "confirmée" | "annulée" | "effectuée"
 
-const STATUT: Record<Statut, { bg: string; color: string; border: string; label: string; icon: string }> = {
-  "proposée":  { bg: "#fff7ed", color: "#c2410c", border: "#fed7aa", label: "En attente",   icon: "⏳" },
-  "confirmée": { bg: "#dcfce7", color: "#15803d", border: "#bbf7d0", label: "Confirmée",    icon: "✅" },
-  "annulée":   { bg: "#fee2e2", color: "#dc2626", border: "#fecaca", label: "Annulée",      icon: "❌" },
-  "effectuée": { bg: "#f3f4f6", color: "#374151", border: "#e5e7eb", label: "Effectuée",   icon: "🏠" },
+const STATUT: Record<Statut, { bg: string; color: string; border: string; label: string }> = {
+  "proposée":  { bg: "#fff7ed", color: "#c2410c", border: "#fed7aa", label: "En attente" },
+  "confirmée": { bg: "#dcfce7", color: "#15803d", border: "#bbf7d0", label: "Confirmée" },
+  "annulée":   { bg: "#fee2e2", color: "#dc2626", border: "#fecaca", label: "Annulée" },
+  "effectuée": { bg: "#f3f4f6", color: "#374151", border: "#e5e7eb", label: "Effectuée" },
 }
 
 function formatDate(d: string) {
@@ -125,7 +125,6 @@ export default function MesVisites() {
         {/* Prochaine visite confirmée */}
         {prochaine && (
           <div style={{ background: "#dcfce7", border: "1.5px solid #bbf7d0", borderRadius: 20, padding: isMobile ? "16px 18px" : "20px 24px", marginBottom: 24, display: "flex", alignItems: isMobile ? "flex-start" : "center", gap: isMobile ? 12 : 16, flexDirection: isMobile ? "column" : "row" }}>
-            <span style={{ fontSize: 32 }}>✅</span>
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: 12, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "0.5px" }}>Prochaine visite confirmée</p>
               <p style={{ fontWeight: 800, fontSize: 16, color: "#111", marginTop: 2 }}>
@@ -164,11 +163,11 @@ export default function MesVisites() {
         <div style={{ display: "flex", background: "white", borderRadius: 12, padding: 4, gap: 2, marginBottom: 20, width: "fit-content" }}>
           <button onClick={() => setVue("liste")}
             style={{ padding: "7px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, background: vue === "liste" ? "#111" : "transparent", color: vue === "liste" ? "white" : "#6b7280" }}>
-            ☰ Liste
+            Liste
           </button>
           <button onClick={() => setVue("agenda")}
             style={{ padding: "7px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, background: vue === "agenda" ? "#111" : "transparent", color: vue === "agenda" ? "white" : "#6b7280" }}>
-            📅 Agenda
+            Agenda
           </button>
         </div>
 
@@ -195,7 +194,6 @@ export default function MesVisites() {
         {/* Liste */}
         {filtrées.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 0", background: "white", borderRadius: 20 }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>📅</div>
             <p style={{ fontSize: 15, fontWeight: 600, color: "#374151" }}>
               {filtre === "toutes" ? "Aucune visite demandée" : "Aucune visite dans cette catégorie"}
             </p>
@@ -225,7 +223,7 @@ export default function MesVisites() {
                       <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                     </div>
                   ) : (
-                    <div style={{ width: isMobile ? "100%" : 120, height: isMobile ? 80 : undefined, flexShrink: 0, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🏠</div>
+                    <div style={{ width: isMobile ? "100%" : 120, height: isMobile ? 80 : undefined, flexShrink: 0, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 700, color: "#6b7280" }}>{(ann?.titre || "B")[0].toUpperCase()}</div>
                   )}
 
                   {/* Contenu */}
@@ -236,13 +234,13 @@ export default function MesVisites() {
                         <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 1 }}>{ann?.ville}{ann?.prix ? ` · ${ann.prix} €/mois` : ""}</p>
                       </div>
                       <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`, fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 999, flexShrink: 0, whiteSpace: "nowrap" }}>
-                        {s.icon} {s.label}
+                        {s.label}
                       </span>
                     </div>
 
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: v.message ? 8 : 0, flexWrap: "wrap" }}>
                       <span style={{ fontSize: isMobile ? 12 : 14, fontWeight: 700, color: "#111" }}>
-                        📅 {formatDate(v.date_visite)} à {v.heure}
+                        {formatDate(v.date_visite)} à {v.heure}
                       </span>
                       {future && v.statut !== "annulée" && (
                         <span style={{ fontSize: 11, background: "#f3f4f6", color: "#6b7280", padding: "1px 8px", borderRadius: 999, fontWeight: 600 }}>
@@ -265,7 +263,7 @@ export default function MesVisites() {
                       {ann?.proprietaire_email && (
                         <Link href={`/messages?with=${ann.proprietaire_email}`}
                           style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "5px 12px" }}>
-                          💬 Contacter
+                          Contacter
                         </Link>
                       )}
                       {(v.statut === "proposée" || v.statut === "confirmée") && (

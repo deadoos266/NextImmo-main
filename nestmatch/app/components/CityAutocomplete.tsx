@@ -3,9 +3,11 @@ import { useState, useRef, useEffect } from "react"
 import { CITY_NAMES } from "../../lib/cityCoords"
 
 /**
- * Combobox de sélection de ville : filtre au clavier, sélection obligatoire
- * depuis la liste de lib/cityCoords.ts. Empêche les fautes d'orthographe qui
- * cassent le matching et le centrage de la carte.
+ * Combobox de sélection de ville.
+ * - Filtre sur la liste locale `CITY_NAMES` (principales villes FR + cityCoords)
+ * - Complète avec l'API officielle geo.api.gouv.fr (toutes les communes françaises)
+ *   quand la recherche dépasse 2 caractères et ne match rien localement.
+ * Empêche les fautes en exigeant une sélection depuis la liste.
  */
 interface Props {
   value: string
@@ -24,21 +26,15 @@ export default function CityAutocomplete({ value, onChange, placeholder, require
   const [query, setQuery] = useState(value)
   const [open, setOpen] = useState(false)
   const [highlight, setHighlight] = useState(0)
+  const [remote, setRemote] = useState<string[]>([])
   const wrapRef = useRef<HTMLDivElement>(null)
 
-  // Sync avec la valeur externe (ex: quand le form reset ou preload)
-  useEffect(() => {
-    setQuery(value)
-  }, [value])
+  useEffect(() => { setQuery(value) }, [value])
 
-  // Fermer au clic extérieur
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
         setOpen(false)
-        // Reset query à la dernière valeur valide si texte libre
-        const exists = CITY_NAMES.some(c => normalize(c) === normalize(query))
-        if (!exists) setQuery(value)
       }
     }
     document.addEventListener("mousedown", handleClickOutside)
@@ -46,9 +42,31 @@ export default function CityAutocomplete({ value, onChange, placeholder, require
   }, [query, value])
 
   const qNorm = normalize(query)
-  const filtered = query
-    ? CITY_NAMES.filter(c => normalize(c).includes(qNorm)).slice(0, 10)
-    : CITY_NAMES.slice(0, 10)
+  const local = query
+    ? CITY_NAMES.filter(c => normalize(c).includes(qNorm)).slice(0, 6)
+    : CITY_NAMES.slice(0, 8)
+
+  // Complément API gouv : quand local < 6 suggestions et query >= 2 chars
+  useEffect(() => {
+    if (!query || query.trim().length < 2) { setRemote([]); return }
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(query.trim())}&fields=nom,codesPostaux&boost=population&limit=12`)
+        const data = await res.json()
+        if (cancelled) return
+        const names = Array.isArray(data)
+          ? data.map((c: any) => c.nom).filter((n: string) => !local.some(l => normalize(l) === normalize(n)))
+          : []
+        setRemote(names.slice(0, 8))
+      } catch {
+        setRemote([])
+      }
+    }, 250)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [query])
+
+  const filtered = [...local, ...remote].slice(0, 12)
 
   function select(ville: string) {
     onChange(ville)

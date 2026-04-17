@@ -79,7 +79,7 @@ export default function SignalerButton({ type, targetId, label = "Signaler", com
 
       {open && (
         <>
-          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 2000 }} />
+          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9000 }} />
           <div
             role="dialog"
             aria-modal="true"
@@ -95,7 +95,7 @@ export default function SignalerButton({ type, targetId, label = "Signaler", com
               maxHeight: "90vh",
               overflowY: "auto",
               boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
-              zIndex: 2001,
+              zIndex: 9001,
               fontFamily: "'DM Sans', sans-serif",
             }}
           >

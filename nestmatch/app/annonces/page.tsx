@@ -305,11 +305,11 @@ function AnnoncesContent() {
         <div style={{ display: "flex", gap: 8, padding: "0 16px 10px", flexShrink: 0 }}>
           <button onClick={() => setShowFilters(!showFilters)}
             style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 14px", background: showFilters ? "#111" : "white", color: showFilters ? "white" : "#374151", border: "1.5px solid #e5e7eb", borderRadius: 10, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
-            ⚙ Filtres
+            Filtres
           </button>
           <button onClick={() => setShowMap(!showMap)}
             style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 14px", background: showMap ? "#111" : "white", color: showMap ? "white" : "#374151", border: "1.5px solid #e5e7eb", borderRadius: 10, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
-            📍 Carte
+            Carte
           </button>
         </div>
       )}
@@ -426,10 +426,13 @@ function AnnoncesContent() {
                       <CardPhoto annonce={a} height={150} />
                       <button
                         onClick={e => handleToggleFavori(e, a.id)}
-                        style={{ position: "absolute", top: 10, right: 10, zIndex: 4, background: "white", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.15)", fontSize: 16, transition: "transform 0.15s" }}
+                        aria-label={favoris.includes(a.id) ? "Retirer des favoris" : "Ajouter aux favoris"}
+                        style={{ position: "absolute", top: 10, right: 10, zIndex: 4, background: "white", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.15)", transition: "transform 0.15s" }}
                         onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.15)")}
                         onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}>
-                        {favoris.includes(a.id) ? "❤️" : "🤍"}
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill={favoris.includes(a.id) ? "#dc2626" : "none"} stroke={favoris.includes(a.id) ? "#dc2626" : "#6b7280"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                        </svg>
                       </button>
                     </div>
 

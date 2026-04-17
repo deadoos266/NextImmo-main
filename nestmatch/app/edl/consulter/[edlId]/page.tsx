@@ -311,7 +311,6 @@ export default function ConsulterEdlPage() {
   if (error) return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ background: "white", borderRadius: 20, padding: "40px 48px", textAlign: "center", maxWidth: 420, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
-        <div style={{ fontSize: 40, marginBottom: 16 }}>🔒</div>
         <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>{error}</h2>
         <Link href="/" style={{ fontSize: 13, color: "#1d4ed8", textDecoration: "none", fontWeight: 600 }}>
           Retour a l'accueil
@@ -350,34 +349,28 @@ export default function ConsulterEdlPage() {
 
         {/* ─── Status banner ─── */}
         {statut === "brouillon" && (
-          <div style={{ background: "#f3f4f6", border: "1.5px solid #e5e7eb", borderRadius: 14, padding: "14px 20px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 18 }}>📝</span>
-            <p style={{ fontSize: 14, fontWeight: 600, color: "#6b7280", margin: 0 }}>Ce document est en cours de preparation par le proprietaire</p>
+          <div style={{ background: "#f3f4f6", border: "1.5px solid #e5e7eb", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: "#6b7280", margin: 0 }}>Ce document est en cours de préparation par le propriétaire</p>
           </div>
         )}
 
         {statut === "envoye" && (
-          <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 14, padding: "14px 20px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 18 }}>📋</span>
+          <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
             <p style={{ fontSize: 14, fontWeight: 700, color: "#1d4ed8", margin: 0 }}>Veuillez vérifier les informations puis valider ou contester cet état des lieux</p>
           </div>
         )}
 
         {statut === "valide" && (
-          <div style={{ background: "#dcfce7", border: "1.5px solid #bbf7d0", borderRadius: 14, padding: "14px 20px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 18 }}>✓</span>
+          <div style={{ background: "#dcfce7", border: "1.5px solid #bbf7d0", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
             <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: 0 }}>
-              État des lieux valide {edl.date_validation ? `le ${new Date(edl.date_validation).toLocaleDateString("fr-FR")}` : ""}
+              État des lieux validé {edl.date_validation ? `le ${new Date(edl.date_validation).toLocaleDateString("fr-FR")}` : ""}
             </p>
           </div>
         )}
 
         {statut === "conteste" && (
           <div style={{ background: "#fefce8", border: "1.5px solid #fde68a", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: edl.commentaire_locataire ? 8 : 0 }}>
-              <span style={{ fontSize: 18 }}>⚠</span>
-              <p style={{ fontSize: 14, fontWeight: 700, color: "#92400e", margin: 0 }}>État des lieux contesté — en attente de révision par le propriétaire</p>
-            </div>
+            <p style={{ fontSize: 14, fontWeight: 700, color: "#92400e", margin: edl.commentaire_locataire ? "0 0 8px" : 0 }}>État des lieux contesté — en attente de révision par le propriétaire</p>
             {edl.commentaire_locataire && (
               <p style={{ fontSize: 13, color: "#92400e", margin: "4px 0 0", fontStyle: "italic" }}>
                 "{edl.commentaire_locataire}"

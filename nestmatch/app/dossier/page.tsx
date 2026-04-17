@@ -233,7 +233,7 @@ export default function Dossier() {
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {uploaded.map((url, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, background: "#f0fdf4", borderRadius: 8, padding: "5px 10px" }}>
-                <span style={{ fontSize: 11, color: "#16a34a" }}>📄</span>
+                <span style={{ fontSize: 11, color: "#16a34a", fontWeight: 700 }}>•</span>
                 <a href={url} target="_blank" rel="noopener"
                   style={{ fontSize: 12, fontWeight: 600, color: "#166534", textDecoration: "none", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   Fichier {i + 1}
@@ -275,7 +275,7 @@ export default function Dossier() {
               </div>
               <a href="/carnet" className="no-print"
                 style={{ padding: "12px 20px", background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 12, fontWeight: 700, fontSize: 14, textDecoration: "none", display: "inline-block" }}>
-                🔨 Carnet d'entretien
+                Carnet d'entretien
               </a>
               <button onClick={genererDossierPDF} disabled={generatingPDF} className="no-print"
                 style={{ padding: "12px 20px", background: generatingPDF ? "#9ca3af" : "#111", color: "white", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 14, cursor: generatingPDF ? "not-allowed" : "pointer", fontFamily: "inherit" }}>

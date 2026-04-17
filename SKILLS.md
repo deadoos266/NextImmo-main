@@ -63,3 +63,32 @@
 - **Dev local** : `.env.local` (gitignore)
 - **Prod** : Environment Variables Vercel
 - **Variables requises** : voir `nestmatch/.env.example`
+
+## Workflow par type de tâche
+
+| Type de tâche | Séquence d'agents |
+|---|---|
+| Nouvelle route API | `code-explorer` → implémentation → `security-reviewer` → `typescript-reviewer` |
+| Nouveau composant UI | `code-explorer` → implémentation → `responsive-auditor` → `accessibility-reviewer` |
+| Modif page publique | implémentation → `copy-editor-fr` → `seo-specialist` → `performance-optimizer` |
+| Modif carte Leaflet | `code-explorer` → implémentation → `performance-optimizer` |
+| Modif schéma Supabase | `database-reviewer` → migration → `security-reviewer` (RLS) |
+| Modif scoring / matching | `code-explorer` → implémentation → `business-logic-reviewer` |
+| Batch responsive mobile | `responsive-auditor` (audit) → implémentation → `accessibility-reviewer` |
+| Correction copie FR | `copy-editor-fr` uniquement |
+| Gros batch multi-fichiers | → `refactor-cleaner` à la fin |
+| Modif auth / session | `security-reviewer` obligatoire |
+| Intégration IA / agents | `ai-integration-reviewer` |
+
+## Checklist avant commit
+
+- [ ] Build local OK (`npm run build` dans `nestmatch/`)
+- [ ] Pas de `console.log` résiduels
+- [ ] Pas de secrets hardcodés
+- [ ] Pas d'emojis dans l'UI (hors bannière cookies)
+- [ ] Accents français présents partout
+- [ ] Inline styles uniquement
+- [ ] z-index respecte la hiérarchie documentée dans MEMORY.md
+- [ ] Séparation des rôles vérifiée (proprio ne voit jamais les scores)
+- [ ] Message de commit conventionnel (feat/fix/refactor/perf/sec/docs/chore)
+- [ ] MEMORY.md mis à jour si changement d'architecture

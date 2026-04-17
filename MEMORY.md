@@ -5,7 +5,7 @@
 - **Stack** : Next.js 15 App Router, React 19, TypeScript, Supabase, NextAuth (Google + Credentials), Leaflet, SDK Anthropic
 - **URL prod** : https://next-immo-main.vercel.app
 - **Repo** : github.com/deadoos266/NextImmo-main (public — à passer en privé)
-- **Dernière mise à jour** : 2026-04-16
+- **Dernière mise à jour** : 2026-04-17
 
 ## Pitch produit
 Plateforme P2P de location immobilière (marché français). Locataires et propriétaires en direct, sans agence.
@@ -27,6 +27,21 @@ Différenciation : score de compatibilité propriété/locataire via algo maison
 - Score affiché : `Math.round(score / 10) + "%"`
 - Imports Supabase depuis `lib/supabase.ts` (browser) ou `lib/supabase-server.ts` (serveur)
 - Détection proprio : via `useRole()` (flag `is_proprietaire` ou présence d'annonces)
+
+## Hiérarchie z-index (à respecter partout)
+
+| Couche | z-index |
+|---|---|
+| Toasts / notifications | 9999 |
+| Modales (signalement, confirmations) | 9000 |
+| Menu burger mobile ouvert | 8000 |
+| AdminBar | 1001 |
+| Header / Navbar sticky | 1000 |
+| Overlays carte Leaflet | 500 |
+| Bannière cookies | 400 |
+| Contenu standard | 1 |
+
+Toute nouvelle couche doit être ajoutée ici avec justification.
 
 ## Tables Supabase clés
 | Table | PK | Usage |
@@ -56,6 +71,11 @@ Différenciation : score de compatibilité propriété/locataire via algo maison
 ---
 
 ## Historique des batchs
+
+### Batch 14 — Setup agents Claude Code (2026-04-17)
+- Création de `.claude/agents/` avec 12 sous-agents spécialisés
+- SKILLS.md enrichi : matrice workflows par type de tâche, checklist pré-commit
+- MEMORY.md : section "Hiérarchie z-index" documentée
 
 ### Batch 1 — Sécurité + Perf (2026-04-16)
 - Retrait secrets versionnés, `.env.example`, `.gitignore` renforcé

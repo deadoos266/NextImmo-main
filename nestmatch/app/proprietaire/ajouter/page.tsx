@@ -176,10 +176,17 @@ export default function AjouterBien() {
                 placeholder="Ex : 6 rue de Rivoli"
               />
             </F>
-            <F l="Disponibilité">
-              <select style={sel} value={form.dispo} onChange={set("dispo")}>
-                {["Disponible maintenant","Disponible 1er du mois prochain","Disponible dans 1 mois","Disponible dans 2 mois","Disponible dans 3 mois","Date à définir"].map(v => <option key={v}>{v}</option>)}
-              </select>
+            <F l="Disponible à partir du">
+              <input
+                type="date"
+                style={inp}
+                value={form.dispo && form.dispo !== "Disponible maintenant" && /^\d{4}-\d{2}-\d{2}$/.test(form.dispo) ? form.dispo : ""}
+                min={new Date().toISOString().split("T")[0]}
+                onChange={e => setForm(f => ({ ...f, dispo: e.target.value || "Disponible maintenant" }))}
+              />
+              <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 6 }}>
+                Laisser vide = &quot;Disponible maintenant&quot;
+              </p>
             </F>
           </div>
         </Sec>

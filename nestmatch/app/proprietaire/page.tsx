@@ -13,11 +13,11 @@ import { annulerVisite } from "../../lib/visitesHelpers"
 const ONGLETS = ["Tableau de bord", "Mes biens", "Performance", "Documents", "Candidatures", "Loyers", "Visites"] as const
 type Onglet = typeof ONGLETS[number]
 
-const STATUT_V: Record<string, { bg: string; color: string; border: string; label: string; icon: string }> = {
-  "proposée":  { bg: "#fff7ed", color: "#c2410c", border: "#fed7aa", label: "En attente",  icon: "⏳" },
-  "confirmée": { bg: "#dcfce7", color: "#15803d", border: "#bbf7d0", label: "Confirmée",   icon: "✅" },
-  "annulée":   { bg: "#fee2e2", color: "#dc2626", border: "#fecaca", label: "Annulée",     icon: "❌" },
-  "effectuée": { bg: "#f3f4f6", color: "#374151", border: "#e5e7eb", label: "Effectuée",  icon: "🏠" },
+const STATUT_V: Record<string, { bg: string; color: string; border: string; label: string }> = {
+  "proposée":  { bg: "#fff7ed", color: "#c2410c", border: "#fed7aa", label: "En attente" },
+  "confirmée": { bg: "#dcfce7", color: "#15803d", border: "#bbf7d0", label: "Confirmée" },
+  "annulée":   { bg: "#fee2e2", color: "#dc2626", border: "#fecaca", label: "Annulée" },
+  "effectuée": { bg: "#f3f4f6", color: "#374151", border: "#e5e7eb", label: "Effectuée" },
 }
 
 function jours(d: string) {
@@ -86,11 +86,11 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
         <div style={{ display: "flex", background: "white", borderRadius: 12, padding: 4, gap: 2 }}>
           <button onClick={() => setVue("liste")}
             style={{ padding: "7px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, background: vue === "liste" ? "#111" : "transparent", color: vue === "liste" ? "white" : "#6b7280" }}>
-            ☰ Liste
+            Liste
           </button>
           <button onClick={() => setVue("agenda")}
             style={{ padding: "7px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, background: vue === "agenda" ? "#111" : "transparent", color: vue === "agenda" ? "white" : "#6b7280" }}>
-            📅 Agenda
+            Agenda
           </button>
         </div>
       </div>
@@ -132,7 +132,6 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
       {/* Liste */}
       {filtrées.length === 0 ? (
         <div style={{ textAlign: "center", padding: "50px 0", background: "white", borderRadius: 20, color: "#9ca3af" }}>
-          <div style={{ fontSize: 36, marginBottom: 10 }}>📅</div>
           <p style={{ fontSize: 15, fontWeight: 600, color: "#374151" }}>Aucune visite{filtre !== "toutes" ? " dans cette catégorie" : ""}</p>
           {filtre === "toutes" && <p style={{ fontSize: 13, marginTop: 6 }}>Les demandes de visites de vos locataires apparaîtront ici</p>}
         </div>
@@ -152,7 +151,7 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
                       <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     </div>
                   ) : (
-                    <div style={{ width: 100, flexShrink: 0, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>🏠</div>
+                    <div style={{ width: 100, flexShrink: 0, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 700, color: "#6b7280" }}>{(bien?.titre || "B")[0].toUpperCase()}</div>
                   )
                 )}
 
@@ -161,7 +160,7 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
                     <div style={{ minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`, fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 999 }}>
-                          {s.icon} {s.label}
+                          {s.label}
                         </span>
                         {bien && <span style={{ fontSize: 12, color: "#9ca3af" }}>{bien.titre} · {bien.ville}</span>}
                       </div>
@@ -226,7 +225,7 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
                     </div>
                     <Link href={`/messages?with=${v.locataire_email}`}
                       style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "5px 12px", flexShrink: 0 }}>
-                      💬
+                      Message
                     </Link>
                   </div>
                 </div>
@@ -619,7 +618,6 @@ export default function Proprietaire() {
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {biens.filter((b: any) => !b.photos || (Array.isArray(b.photos) && b.photos.length < 3)).length > 0 && (
                       <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#fff7ed", borderRadius: 12, border: "1px solid #fed7aa" }}>
-                        <span style={{ fontSize: 20 }}>📸</span>
                         <div>
                           <p style={{ fontSize: 13, fontWeight: 700, color: "#9a3412" }}>Ajoutez plus de photos</p>
                           <p style={{ fontSize: 12, color: "#ea580c" }}>{biens.filter((b: any) => !b.photos || (Array.isArray(b.photos) && b.photos.length < 3)).length} bien(s) avec moins de 3 photos — les annonces avec 5+ photos recoivent 3x plus de vues</p>
@@ -628,7 +626,6 @@ export default function Proprietaire() {
                     )}
                     {biens.filter((b: any) => !b.description || b.description.length < 100).length > 0 && (
                       <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#eff6ff", borderRadius: 12, border: "1px solid #bfdbfe" }}>
-                        <span style={{ fontSize: 20 }}>✍️</span>
                         <div>
                           <p style={{ fontSize: 13, fontWeight: 700, color: "#1e40af" }}>Enrichissez vos descriptions</p>
                           <p style={{ fontSize: 12, color: "#1d4ed8" }}>{biens.filter((b: any) => !b.description || b.description.length < 100).length} bien(s) sans description detaillee — une bonne description augmente les contacts de 40%</p>
@@ -637,7 +634,6 @@ export default function Proprietaire() {
                     )}
                     {biens.filter((b: any) => !b.dpe).length > 0 && (
                       <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#dcfce7", borderRadius: 12, border: "1px solid #bbf7d0" }}>
-                        <span style={{ fontSize: 20 }}>🏷️</span>
                         <div>
                           <p style={{ fontSize: 13, fontWeight: 700, color: "#166534" }}>Renseignez le DPE</p>
                           <p style={{ fontSize: 12, color: "#16a34a" }}>{biens.filter((b: any) => !b.dpe).length} bien(s) sans DPE — le DPE est obligatoire et rassure les locataires</p>
@@ -646,9 +642,8 @@ export default function Proprietaire() {
                     )}
                     {biens.every((b: any) => b.photos && Array.isArray(b.photos) && b.photos.length >= 3 && b.description && b.description.length >= 100 && b.dpe) && (
                       <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#dcfce7", borderRadius: 12, border: "1px solid #bbf7d0" }}>
-                        <span style={{ fontSize: 20 }}>🎯</span>
                         <div>
-                          <p style={{ fontSize: 13, fontWeight: 700, color: "#166534" }}>Vos annonces sont optimisees !</p>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: "#166534" }}>Vos annonces sont optimisées !</p>
                           <p style={{ fontSize: 12, color: "#16a34a" }}>Tous vos biens ont des photos, descriptions et DPE — continuez comme ca</p>
                         </div>
                       </div>

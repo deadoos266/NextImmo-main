@@ -188,7 +188,7 @@ export default function AgendaVisites({
       {jourSelectionne && (
         <div style={{ background: "white", borderRadius: 20, padding: "20px 24px" }}>
           <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 16 }}>
-            📅 {new Date(jourSelectionne + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+            {new Date(jourSelectionne + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
           </h3>
 
           {visitesJour.length === 0 ? (
@@ -206,7 +206,7 @@ export default function AgendaVisites({
                         <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       </div>
                     ) : (
-                      <div style={{ width: 80, flexShrink: 0, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>🏠</div>
+                      <div style={{ width: 80, flexShrink: 0, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, color: "#6b7280" }}>{(bien?.titre || "B")[0].toUpperCase()}</div>
                     )}
                     <div style={{ flex: 1, padding: "12px 16px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
@@ -219,10 +219,10 @@ export default function AgendaVisites({
                         </span>
                       </div>
 
-                      <p style={{ fontSize: 14, fontWeight: 700, color: "#111", marginBottom: 4 }}>⏰ {v.heure}</p>
+                      <p style={{ fontSize: 14, fontWeight: 700, color: "#111", marginBottom: 4 }}>{v.heure}</p>
 
                       {mode === "proprietaire" && (
-                        <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>👤 {v.locataire_email}</p>
+                        <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>{v.locataire_email}</p>
                       )}
                       {v.message && (
                         <p style={{ fontSize: 12, color: "#6b7280", fontStyle: "italic", marginBottom: 8 }}>"{v.message}"</p>

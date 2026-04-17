@@ -10,9 +10,9 @@ import { useResponsive } from "../hooks/useResponsive"
 type Statut = "planifié" | "en cours" | "terminé"
 type TypeEvent = "chaudière" | "plomberie" | "électricité" | "travaux" | "serrurerie" | "nuisibles" | "autre"
 
-const TYPE_ICONS: Record<TypeEvent, string> = {
-  "chaudière": "🔥", "plomberie": "🚿", "électricité": "⚡",
-  "travaux": "🔨", "serrurerie": "🔑", "nuisibles": "🐛", "autre": "📋",
+const TYPE_LABELS: Record<TypeEvent, string> = {
+  "chaudière": "Chaud.", "plomberie": "Plomb.", "électricité": "Élec.",
+  "travaux": "Trav.", "serrurerie": "Serr.", "nuisibles": "Nuis.", "autre": "Autre",
 }
 const STATUT_STYLE: Record<Statut, { bg: string; color: string; border: string }> = {
   "planifié": { bg: "#fff7ed", color: "#c2410c", border: "#fed7aa" },
@@ -152,7 +152,6 @@ export default function Carnet() {
   if (!proprietaireActive && biens.length === 0) return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px 48px" }}>
       <div style={{ maxWidth: 600, margin: "0 auto", textAlign: "center", paddingTop: 80 }}>
-        <div style={{ fontSize: 56, marginBottom: 16 }}>🔨</div>
         <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Carnet d'entretien</h1>
         <p style={{ fontSize: 15, color: "#6b7280", marginBottom: 24, lineHeight: 1.6 }}>
           Le carnet d'entretien est disponible une fois votre visite confirmée.<br />
@@ -183,7 +182,7 @@ export default function Carnet() {
           </div>
           <button onClick={() => setShowForm(!showForm)}
             style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "12px 24px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
-            {proprietaireActive ? "+ Ajouter" : "🔧 Signaler un problème"}
+            {proprietaireActive ? "+ Ajouter" : "Signaler un problème"}
           </button>
         </div>
 
@@ -194,7 +193,7 @@ export default function Carnet() {
               <div key={b.id} style={{ background: "white", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid #e5e7eb" }}>
                 {Array.isArray(b.photos) && b.photos[0]
                   ? <img src={b.photos[0]} alt="" style={{ width: 56, height: 56, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
-                  : <div style={{ width: 56, height: 56, borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0 }}>🏠</div>
+                  : <div style={{ width: 56, height: 56, borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, color: "#6b7280", flexShrink: 0 }}>{(b.titre || "B")[0].toUpperCase()}</div>
                 }
                 <div style={{ flex: 1 }}>
                   <p style={{ fontWeight: 700, fontSize: 15 }}>{b.titre}</p>
@@ -208,7 +207,7 @@ export default function Carnet() {
                   {b.proprietaire_email && (
                     <Link href={`/messages?with=${b.proprietaire_email}`}
                       style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "6px 14px" }}>
-                      💬 Contacter
+                      Contacter
                     </Link>
                   )}
                 </div>
@@ -253,8 +252,8 @@ export default function Carnet() {
               <div>
                 <label style={{ fontSize: 13, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 6 }}>Type</label>
                 <select style={inp} value={form.type} onChange={set("type")}>
-                  {(Object.keys(TYPE_ICONS) as TypeEvent[]).map(t => (
-                    <option key={t} value={t}>{TYPE_ICONS[t]} {t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                  {(Object.keys(TYPE_LABELS) as TypeEvent[]).map(t => (
+                    <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
                   ))}
                 </select>
               </div>
@@ -327,7 +326,6 @@ export default function Carnet() {
         {/* Liste */}
         {evenementsFiltres.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 0", background: "white", borderRadius: 20 }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🔨</div>
             <p style={{ fontSize: 15, fontWeight: 600, color: "#374151" }}>Aucun événement</p>
             <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>
               {proprietaireActive ? "Ajoutez votre premier événement d'entretien" : "Aucune intervention enregistrée pour ce logement"}
@@ -343,7 +341,7 @@ export default function Carnet() {
               const canEdit = proprietaireActive || e.locataire_email === session?.user?.email
               return (
                 <div key={e.id} style={{ background: "white", borderRadius: 16, padding: "18px 22px", display: "flex", alignItems: "flex-start", gap: 16, border: isLocataireEntry && proprietaireActive ? "1.5px solid #fde68a" : "1.5px solid transparent" }}>
-                  <div style={{ fontSize: 28, flexShrink: 0, lineHeight: 1 }}>{TYPE_ICONS[e.type as TypeEvent] ?? "📋"}</div>
+                  <div style={{ flexShrink: 0, background: "#f3f4f6", borderRadius: 10, padding: "6px 10px", fontSize: 11, fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: "0.5px" }}>{TYPE_LABELS[e.type as TypeEvent] ?? "Autre"}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>
                       <div>
@@ -378,7 +376,7 @@ export default function Carnet() {
                     <div style={{ display: "flex", gap: 12, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
                       {e.date_evenement && (
                         <span style={{ fontSize: 12, color: "#9ca3af" }}>
-                          📅 {new Date(e.date_evenement).toLocaleDateString("fr-FR")}
+                          {new Date(e.date_evenement).toLocaleDateString("fr-FR")}
                         </span>
                       )}
                       {canEdit && e.statut !== "terminé" && (
@@ -391,7 +389,7 @@ export default function Carnet() {
                       {!proprietaireActive && bien?.proprietaire_email && (
                         <Link href={`/messages?with=${bien.proprietaire_email}`}
                           style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "4px 10px" }}>
-                          💬 Contacter
+                          Contacter
                         </Link>
                       )}
                       {canEdit && (
