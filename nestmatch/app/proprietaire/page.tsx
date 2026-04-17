@@ -246,6 +246,7 @@ export default function Proprietaire() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const { isMobile } = useResponsive()
+  const myEmail = session?.user?.email ?? null
   const [onglet, setOnglet] = useState<Onglet>("Tableau de bord")
   const [biens, setBiens] = useState<any[]>([])
   const [candidatures, setCandidatures] = useState<any[]>([])
