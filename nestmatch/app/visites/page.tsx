@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "../../lib/supabase"
 import AgendaVisites from "../components/AgendaVisites"
+import AnnulerVisiteDialog from "../components/AnnulerVisiteDialog"
 import { useResponsive } from "../hooks/useResponsive"
+import { annulerVisite } from "../../lib/visitesHelpers"
 
 type Statut = "proposée" | "confirmée" | "annulée" | "effectuée"
 
@@ -67,9 +69,25 @@ export default function MesVisites() {
     setLoading(false)
   }
 
-  async function annuler(id: string) {
-    await supabase.from("visites").update({ statut: "annulée" }).eq("id", id)
-    setVisites(prev => prev.map(v => v.id === id ? { ...v, statut: "annulée" } : v))
+  const [cancelTarget, setCancelTarget] = useState<any | null>(null)
+  const myEmail = session?.user?.email ?? ""
+
+  async function handleAnnulation(motif: string) {
+    if (!cancelTarget) return
+    const v = cancelTarget
+    const res = await annulerVisite({
+      visiteId: v.id,
+      fromEmail: myEmail,
+      toEmail: v.proprietaire_email,
+      dateVisite: v.date_visite,
+      heureVisite: v.heure,
+      motif,
+      statutActuel: v.statut,
+    })
+    if (res.ok) {
+      setVisites(prev => prev.map(x => x.id === v.id ? { ...x, statut: "annulée" } : x))
+      setCancelTarget(null)
+    }
   }
 
   const filtrées = filtre === "toutes" ? visites : visites.filter(v => v.statut === filtre)
@@ -83,6 +101,12 @@ export default function MesVisites() {
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px 48px" }}>
+      <AnnulerVisiteDialog
+        open={!!cancelTarget}
+        mode={cancelTarget?.statut === "confirmée" ? "annulation" : "annulation"}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={handleAnnulation}
+      />
       <div style={{ maxWidth: 860, margin: "0 auto" }}>
 
         {/* Header */}
@@ -237,8 +261,8 @@ export default function MesVisites() {
                           💬 Contacter
                         </Link>
                       )}
-                      {v.statut === "proposée" && (
-                        <button onClick={() => annuler(v.id)}
+                      {(v.statut === "proposée" || v.statut === "confirmée") && (
+                        <button onClick={() => setCancelTarget(v)}
                           style={{ fontSize: 12, fontWeight: 600, color: "#dc2626", background: "none", border: "1.5px solid #fecaca", borderRadius: 999, padding: "5px 12px", cursor: "pointer", fontFamily: "inherit" }}>
                           Annuler
                         </button>

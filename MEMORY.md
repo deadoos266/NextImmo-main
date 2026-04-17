@@ -78,6 +78,23 @@ Différenciation : score de compatibilité propriété/locataire via algo maison
 - messagerie : tri non-lus en premier
 - Build : Suspense wrapping sur `/auth` et `/annonces`
 
+### Batch 8 — Annulation visites avec motif (2026-04-17)
+- **#63 Annulation de visite (confirmée ou proposée)** :
+  - Nouveau composant `AnnulerVisiteDialog` : modale avec textarea motif
+    (requis en mode annulation, optionnel en mode refus), ESC pour fermer,
+    backdrop cliquable, confirmation rouge
+  - Nouveau helper `lib/visitesHelpers.ts::annulerVisite()` : UPDATE statut
+    à "annulée" + INSERT message auto dans la conv avec format
+    "Visite annulée/Demande refusée — date/heure — Motif : [texte]"
+  - Intégré dans :
+    - `/proprietaire` (VisitesProprio) : bouton Annuler sur visites
+      confirmées ET sur propositions en attente du locataire
+    - `/visites` (locataire) : bouton Annuler étendu aux visites confirmées
+      (plus seulement proposées)
+    - `/messages` (section visitesConv inline) : mêmes boutons, même flow,
+      puis loadMessages() pour rafraîchir l'affichage du message auto
+  - Destinataire du message auto = l'autre partie (proprio ↔ locataire)
+
 ### Batch 7 — Messagerie moderne (2026-04-17)
 - **#62 Messagerie complète** :
   - Reply-to : bouton "Répondre" dans le menu actions, preview du message

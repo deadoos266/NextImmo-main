@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "../../lib/supabase"
 import AgendaVisites from "../components/AgendaVisites"
+import AnnulerVisiteDialog from "../components/AnnulerVisiteDialog"
 import { useResponsive } from "../hooks/useResponsive"
 import PipelineFunnel from "./PipelineFunnel"
+import { annulerVisite } from "../../lib/visitesHelpers"
 
 const ONGLETS = ["Tableau de bord", "Mes biens", "Performance", "Documents", "Candidatures", "Loyers", "Visites"] as const
 type Onglet = typeof ONGLETS[number]
@@ -27,14 +29,32 @@ function jours(d: string) {
 }
 
 function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[]; biens: any[]; setVisites: any; myEmail?: string | null }) {
-  // Passe myEmail au composant AgendaVisites interne
   const [filtre, setFiltre] = useState<string>("toutes")
   const [vue, setVue] = useState<"liste" | "agenda">("liste")
+  const [cancelTarget, setCancelTarget] = useState<{ v: any; mode: "refus" | "annulation" } | null>(null)
   const { isMobile } = useResponsive()
 
   async function changerStatut(id: string, statut: string) {
     await supabase.from("visites").update({ statut }).eq("id", id)
     setVisites((prev: any[]) => prev.map(v => v.id === id ? { ...v, statut } : v))
+  }
+
+  async function handleAnnulation(motif: string) {
+    if (!cancelTarget || !myEmail) return
+    const v = cancelTarget.v
+    const res = await annulerVisite({
+      visiteId: v.id,
+      fromEmail: myEmail,
+      toEmail: v.locataire_email,
+      dateVisite: v.date_visite,
+      heureVisite: v.heure,
+      motif,
+      statutActuel: v.statut,
+    })
+    if (res.ok) {
+      setVisites((prev: any[]) => prev.map(x => x.id === v.id ? { ...x, statut: "annulée" } : x))
+      setCancelTarget(null)
+    }
   }
 
   const filtrées = filtre === "toutes" ? visites : visites.filter(v => v.statut === filtre)
@@ -53,6 +73,14 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
 
   return (
     <div>
+      {/* Modale d'annulation de visite */}
+      <AnnulerVisiteDialog
+        open={!!cancelTarget}
+        mode={cancelTarget?.mode}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={handleAnnulation}
+      />
+
       {/* Toggle vue */}
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
         <div style={{ display: "flex", background: "white", borderRadius: 12, padding: 4, gap: 2 }}>
@@ -155,22 +183,34 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
                             style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "7px 14px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
                             ✓ Confirmer
                           </button>
-                          <button onClick={() => changerStatut(v.id, "annulée")}
+                          <button onClick={() => setCancelTarget({ v, mode: "refus" })}
                             style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "7px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
                             Refuser
                           </button>
                         </>
                       )}
                       {v.statut === "proposée" && v.propose_par === myEmail && (
-                        <span style={{ fontSize: 11, color: "#6b7280", fontStyle: "italic", padding: "7px 12px" }}>
-                          En attente de la réponse du locataire
-                        </span>
+                        <>
+                          <span style={{ fontSize: 11, color: "#6b7280", fontStyle: "italic", padding: "7px 12px" }}>
+                            En attente du locataire
+                          </span>
+                          <button onClick={() => setCancelTarget({ v, mode: "annulation" })}
+                            style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "7px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+                            Annuler
+                          </button>
+                        </>
                       )}
                       {v.statut === "confirmée" && (
-                        <button onClick={() => changerStatut(v.id, "effectuée")}
-                          style={{ background: "#f3f4f6", border: "none", color: "#374151", borderRadius: 999, padding: "7px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
-                          Effectuée
-                        </button>
+                        <>
+                          <button onClick={() => changerStatut(v.id, "effectuée")}
+                            style={{ background: "#f3f4f6", border: "none", color: "#374151", borderRadius: 999, padding: "7px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+                            Effectuée
+                          </button>
+                          <button onClick={() => setCancelTarget({ v, mode: "annulation" })}
+                            style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "7px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+                            Annuler
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>

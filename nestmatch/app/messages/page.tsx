@@ -8,6 +8,8 @@ import { useRole } from "../providers"
 import { Suspense } from "react"
 import { useResponsive } from "../hooks/useResponsive"
 import { displayName } from "../../lib/privacy"
+import AnnulerVisiteDialog from "../components/AnnulerVisiteDialog"
+import { annulerVisite } from "../../lib/visitesHelpers"
 
 const DOSSIER_PREFIX = "[DOSSIER_CARD]"
 const DEMANDE_DOSSIER_PREFIX = "[DEMANDE_DOSSIER]"
@@ -216,6 +218,8 @@ function MessagesInner() {
   const [replyTo, setReplyTo] = useState<{ id: number; contenu: string; from: string } | null>(null)
   // Menu d'actions sur un message (id du msg ouvert, null = fermé)
   const [menuMsgId, setMenuMsgId] = useState<number | null>(null)
+  // Modale annulation visite (inline dans la conv)
+  const [visiteCancelTarget, setVisiteCancelTarget] = useState<{ v: any; mode: "refus" | "annulation" } | null>(null)
   const [visitesConv, setVisitesConv] = useState<any[]>([])
   const [showVisiteForm, setShowVisiteForm] = useState(false)
   const [visiteDate, setVisiteDate] = useState("")
@@ -466,6 +470,31 @@ function MessagesInner() {
     setVisitesConv(prev => prev.map(v => v.id === id ? { ...v, statut } : v))
   }
 
+  async function handleAnnulerVisite(motif: string) {
+    if (!visiteCancelTarget || !myEmail) return
+    const v = visiteCancelTarget.v
+    // Destinataire = l'autre partie de la visite
+    const toEmail = v.proprietaire_email === myEmail ? v.locataire_email : v.proprietaire_email
+    const res = await annulerVisite({
+      visiteId: v.id,
+      fromEmail: myEmail,
+      toEmail,
+      dateVisite: v.date_visite,
+      heureVisite: v.heure,
+      motif,
+      statutActuel: v.statut,
+    })
+    if (res.ok) {
+      setVisitesConv(prev => prev.map(x => x.id === v.id ? { ...x, statut: "annulée" } : x))
+      // Actualiser les messages pour voir le message auto-posté
+      if (convActive) {
+        const conv = conversations.find(c => c.key === convActive)
+        if (conv) loadMessages(myEmail, conv.other)
+      }
+      setVisiteCancelTarget(null)
+    }
+  }
+
   async function proposerVisite() {
     if (!convActiveData?.annonceId || !myEmail || !visiteDate || !visiteHeure) return
     setEnvoyantVisite(true)
@@ -535,6 +564,12 @@ function MessagesInner() {
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
+      <AnnulerVisiteDialog
+        open={!!visiteCancelTarget}
+        mode={visiteCancelTarget?.mode}
+        onClose={() => setVisiteCancelTarget(null)}
+        onConfirm={handleAnnulerVisite}
+      />
       <div style={{ maxWidth: 1140, margin: "0 auto", padding: isMobile ? "20px 16px" : "32px 48px" }}>
         {(!isMobile || !convActiveData) && (
           <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 800, marginBottom: isMobile ? 16 : 24, letterSpacing: "-0.5px" }}>Messages</h1>
@@ -906,20 +941,20 @@ function MessagesInner() {
                                 </p>
                               )}
                             </div>
-                            {proprietaireActive && isPending && (
+                            {proprietaireActive && isPending && v.propose_par !== myEmail && (
                               <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                                 <button onClick={() => changerStatutVisite(v.id, "confirmée")}
                                   style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "5px 12px", fontWeight: 700, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
                                   ✓ Confirmer
                                 </button>
-                                <button onClick={() => changerStatutVisite(v.id, "annulée")}
+                                <button onClick={() => setVisiteCancelTarget({ v, mode: "refus" })}
                                   style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "5px 10px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
                                   Refuser
                                 </button>
                               </div>
                             )}
-                            {!proprietaireActive && isPending && (
-                              <button onClick={() => changerStatutVisite(v.id, "annulée")}
+                            {(isPending || v.statut === "confirmée") && (
+                              <button onClick={() => setVisiteCancelTarget({ v, mode: "annulation" })}
                                 style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "5px 10px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
                                 Annuler
                               </button>
