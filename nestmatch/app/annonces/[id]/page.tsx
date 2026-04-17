@@ -187,9 +187,10 @@ export default async function Annonce({ params }: any) {
               <div style={{ background: "white", borderRadius: 20, padding: 24 }}>
                 <h2 style={{ fontSize: 17, fontWeight: 800, marginBottom: 6 }}>Localisation</h2>
                 <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 14 }}>
-                  {annonce.ville}{annonce.adresse ? ` — ${annonce.adresse}` : ""}. L&apos;adresse exacte est partagee apres contact avec le proprietaire.
+                  {annonce.ville}{annonce.localisation_exacte && annonce.adresse ? ` — ${annonce.adresse}` : ""}
+                  {!annonce.localisation_exacte && ". L'adresse exacte est partagée après contact avec le propriétaire."}
                 </p>
-                <MapBienWrapper lat={coords[0]} lng={coords[1]} ville={annonce.ville || ""} />
+                <MapBienWrapper lat={coords[0]} lng={coords[1]} ville={annonce.ville || ""} exact={!!annonce.localisation_exacte} />
               </div>
             )}
           </div>

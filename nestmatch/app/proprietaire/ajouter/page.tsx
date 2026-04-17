@@ -6,6 +6,7 @@ import { supabase } from "../../../lib/supabase"
 import { useResponsive } from "../../hooks/useResponsive"
 import LocataireEmailField from "../../components/LocataireEmailField"
 import CityAutocomplete from "../../components/CityAutocomplete"
+import Tooltip from "../../components/Tooltip"
 
 const Toggle = ({ label, k, toggles, setToggles }: any) => (
   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
@@ -53,6 +54,7 @@ export default function AjouterBien() {
   const [toggles, setToggles] = useState({
     meuble: false, animaux: false, parking: false, cave: false,
     fibre: false, balcon: false, terrasse: false, jardin: false, ascenseur: false,
+    localisation_exacte: false,
   })
 
   const set = (key: string) => (e: any) => setForm(f => ({ ...f, [key]: e.target.value }))
@@ -303,6 +305,15 @@ export default function AjouterBien() {
 
         <Sec t="Description">
           <textarea style={{ ...inp, minHeight: 120, resize: "vertical" }} value={form.description} onChange={set("description")} placeholder="Décrivez votre bien..." />
+        </Sec>
+
+        <Sec t={<>Confidentialité de la localisation <Tooltip text="Par défaut, seul un cercle autour de la ville est affiché sur la carte publique, ce qui protège votre adresse exacte. Activez cette option uniquement si vous souhaitez afficher la position précise du bien à tous les visiteurs de l'annonce." /></>}>
+          <Toggle label="Afficher la localisation exacte du bien sur la carte publique" k="localisation_exacte" toggles={toggles} setToggles={setToggles} />
+          <p style={{ fontSize: 12, color: "#6b7280", marginTop: 6, lineHeight: 1.5 }}>
+            {toggles.localisation_exacte
+              ? "Les visiteurs verront un marqueur précis à l'adresse du bien."
+              : "Les visiteurs verront uniquement une zone approximative (cercle de 400 m autour de la ville). Recommandé."}
+          </p>
         </Sec>
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>

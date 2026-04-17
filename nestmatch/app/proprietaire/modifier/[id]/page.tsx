@@ -6,6 +6,7 @@ import { supabase } from "../../../../lib/supabase"
 import { useResponsive } from "../../../hooks/useResponsive"
 import LocataireEmailField from "../../../components/LocataireEmailField"
 import CityAutocomplete from "../../../components/CityAutocomplete"
+import Tooltip from "../../../components/Tooltip"
 
 const Toggle = ({ label, k, toggles, setToggles }: any) => (
   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
@@ -58,6 +59,7 @@ export default function ModifierBien() {
   const [toggles, setToggles] = useState({
     meuble: false, animaux: false, parking: false, cave: false,
     fibre: false, balcon: false, terrasse: false, jardin: false, ascenseur: false,
+    localisation_exacte: false,
   })
 
   useEffect(() => {
@@ -104,6 +106,7 @@ export default function ModifierBien() {
       meuble: !!data.meuble, animaux: !!data.animaux, parking: !!data.parking,
       cave: !!data.cave, fibre: !!data.fibre, balcon: !!data.balcon,
       terrasse: !!data.terrasse, jardin: !!data.jardin, ascenseur: !!data.ascenseur,
+      localisation_exacte: !!data.localisation_exacte,
     })
     if (Array.isArray(data.photos)) setPhotos(data.photos)
     setLoading(false)
@@ -347,6 +350,15 @@ export default function ModifierBien() {
             <Toggle label="Jardin" k="jardin" toggles={toggles} setToggles={setToggles} />
             <Toggle label="Ascenseur" k="ascenseur" toggles={toggles} setToggles={setToggles} />
           </div>
+        </Sec>
+
+        <Sec t={<>Confidentialité de la localisation <Tooltip text="Par défaut, seul un cercle autour de la ville est affiché sur la carte publique, ce qui protège votre adresse exacte. Activez cette option uniquement si vous souhaitez afficher la position précise du bien à tous les visiteurs de l'annonce." /></>}>
+          <Toggle label="Afficher la localisation exacte du bien sur la carte publique" k="localisation_exacte" toggles={toggles} setToggles={setToggles} />
+          <p style={{ fontSize: 12, color: "#6b7280", marginTop: 6, lineHeight: 1.5 }}>
+            {toggles.localisation_exacte
+              ? "Les visiteurs verront un marqueur précis à l'adresse du bien."
+              : "Les visiteurs verront uniquement une zone approximative (cercle de 400 m autour de la ville). Recommandé."}
+          </p>
         </Sec>
 
         <Sec t="Description">

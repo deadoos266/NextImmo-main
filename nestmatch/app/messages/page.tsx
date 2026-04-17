@@ -7,6 +7,7 @@ import { supabase } from "../../lib/supabase"
 import { useRole } from "../providers"
 import { Suspense } from "react"
 import { useResponsive } from "../hooks/useResponsive"
+import { displayName } from "../../lib/privacy"
 
 const DOSSIER_PREFIX = "[DOSSIER_CARD]"
 const DEMANDE_DOSSIER_PREFIX = "[DEMANDE_DOSSIER]"
@@ -560,12 +561,12 @@ function MessagesInner() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
                           <p style={{ fontWeight: conv.unread > 0 ? 800 : 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 130, color: "#111" }}>
-                            {ann?.titre || conv.other}
+                            {ann?.titre || displayName(conv.other, ann?.proprietaire)}
                           </p>
                           <span style={{ fontSize: 10, color: "#9ca3af", whiteSpace: "nowrap" }}>{time}</span>
                         </div>
                         {ann?.titre && (
-                          <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{conv.other}</p>
+                          <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName(conv.other, ann?.proprietaire)}</p>
                         )}
                         <p style={{ fontSize: 12, color: conv.unread > 0 ? "#374151" : "#9ca3af", fontWeight: conv.unread > 0 ? 600 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{preview}</p>
                       </div>
@@ -652,11 +653,11 @@ function MessagesInner() {
                       )}
                       <div style={{ flex: 1 }}>
                         <p style={{ fontWeight: 700, fontSize: 14 }}>{annonceActive.titre}</p>
-                        <p style={{ fontSize: 12, color: "#9ca3af" }}>{annonceActive.ville} · {convActiveData.other}</p>
+                        <p style={{ fontSize: 12, color: "#9ca3af" }}>{annonceActive.ville} &middot; {displayName(convActiveData.other, annonceActive.proprietaire)}</p>
                       </div>
                       <Link href={`/annonces/${convActiveData.annonceId}`}
                         style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "6px 14px", whiteSpace: "nowrap" }}>
-                        Voir l'annonce
+                        Voir l&apos;annonce
                       </Link>
                     </>
                   ) : (
@@ -664,7 +665,7 @@ function MessagesInner() {
                       <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 16 }}>
                         {convActiveData.other[0]?.toUpperCase()}
                       </div>
-                      <p style={{ fontWeight: 700, fontSize: 14 }}>{convActiveData.other}</p>
+                      <p style={{ fontWeight: 700, fontSize: 14 }}>{displayName(convActiveData.other)}</p>
                     </>
                   )}
                 </div>

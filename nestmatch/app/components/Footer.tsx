@@ -12,41 +12,7 @@ export default function Footer() {
 
       {/* Bloc principal */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "32px 20px 28px" : "52px 48px 40px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : isTablet ? "repeat(3, 1fr)" : "repeat(5, 1fr)", gap: isMobile ? 28 : 40 }}>
-
-          {/* Par localités */}
-          <div style={col}>
-            <p style={head}>Par localités</p>
-            {["Appartements", "Maisons", "Studios", "Colocations", "Logements meublés"].map(l => (
-              <a key={l} href="#" style={link}>{l}</a>
-            ))}
-            {!isMobile && (
-              <>
-                <div style={{ marginTop: 8 }} />
-                <p style={head}>Par commodités</p>
-                {["Avec parking", "Avec balcon", "Animaux acceptés", "Fibre optique", "Ascenseur"].map(l => (
-                  <a key={l} href="#" style={link}>{l}</a>
-                ))}
-              </>
-            )}
-          </div>
-
-          {/* L'immobilier */}
-          <div style={col}>
-            <p style={head}>L'immobilier</p>
-            {["Estimation & prix", "Toutes les villes", "Tous les départements", "Toutes les régions"].map(l => (
-              <a key={l} href="#" style={link}>{l}</a>
-            ))}
-            {!isMobile && (
-              <>
-                <div style={{ marginTop: 8 }} />
-                <p style={head}>Par régions</p>
-                {["Île-de-France", "Auvergne-Rhône-Alpes", "PACA", "Nouvelle-Aquitaine", "Occitanie"].map(l => (
-                  <a key={l} href="#" style={link}>{l}</a>
-                ))}
-              </>
-            )}
-          </div>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: isMobile ? 28 : 40 }}>
 
           {/* Par villes */}
           <div style={col}>
@@ -56,44 +22,32 @@ export default function Footer() {
             ))}
           </div>
 
-          {/* Aide & Entreprise */}
+          {/* Navigation principale */}
           <div style={col}>
-            <p style={head}>Aide & FAQ</p>
-            {["Comment ça marche ?", "Je suis locataire", "Je suis propriétaire", "Sécurité", "Dossier locataire", "Contact"].map(l => (
-              <a key={l} href="#" style={link}>{l}</a>
-            ))}
-            {!isMobile && (
-              <>
-                <div style={{ marginTop: 8 }} />
-                <p style={head}>L'entreprise</p>
-                {["Qui sommes-nous ?", "Nous recrutons", "Mentions légales", "CGU"].map(l => (
-                  <a key={l} href="#" style={link}>{l}</a>
-                ))}
-              </>
-            )}
+            <p style={head}>Explorer</p>
+            <a href="/" style={link}>Accueil</a>
+            <a href="/annonces" style={link}>Toutes les annonces</a>
+            <a href="/favoris" style={link}>Mes favoris</a>
+            <a href="/auth" style={link}>Se connecter</a>
+            <a href="/auth?mode=inscription" style={link}>Créer un compte</a>
           </div>
 
-          {/* Services pro */}
-          {!isMobile && (
-            <div style={col}>
-              <p style={head}>Services pro</p>
-              {["Tous nos services pro", "Diffuser une annonce", "Solutions agences"].map(l => (
-                <a key={l} href="#" style={link}>{l}</a>
-              ))}
-              <div style={{ marginTop: 8 }} />
-              <p style={head}>À découvrir</p>
-              {["Guide du locataire", "Guide du propriétaire", "Bail en ligne", "Quittances PDF"].map(l => (
-                <a key={l} href="#" style={link}>{l}</a>
-              ))}
+          {/* Propriétaires */}
+          <div style={col}>
+            <p style={head}>Propriétaires</p>
+            <a href="/proprietaire/ajouter" style={link}>Publier un bien</a>
+            <a href="/proprietaire" style={link}>Mon espace</a>
+            <a href="/carnet" style={link}>Carnet d&apos;entretien</a>
+          </div>
 
-              <div style={{ marginTop: 16, background: "#111", borderRadius: 12, padding: "12px 14px", display: "inline-flex", alignItems: "center", gap: 10 }}>
-                <div>
-                  <p style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600 }}>Decouvrir</p>
-                  <p style={{ fontSize: 13, color: "white", fontWeight: 700 }}>L'app NestMatch</p>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Légal & aide */}
+          <div style={col}>
+            <p style={head}>Informations</p>
+            <a href="/cgu" style={link}>CGU</a>
+            <a href="/mentions-legales" style={link}>Mentions légales</a>
+            <a href="/confidentialite" style={link}>Politique de confidentialité</a>
+            <a href="/cookies" style={link}>Cookies</a>
+          </div>
         </div>
       </div>
 
@@ -101,14 +55,14 @@ export default function Footer() {
       <div style={{ borderTop: "1px solid #f3f4f6", padding: isMobile ? "16px 20px" : "20px 48px", maxWidth: 1200, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", flexWrap: "wrap", gap: 12, flexDirection: isMobile ? "column" : "row" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.5px" }}>NestMatch</span>
-          <span style={{ fontSize: 12, color: "#9ca3af" }}>© {new Date().getFullYear()}</span>
+          <span style={{ fontSize: 12, color: "#9ca3af" }}>© {new Date().getFullYear()} — Location entre particuliers</span>
         </div>
         <div style={{ display: "flex", gap: isMobile ? 12 : 20, flexWrap: "wrap" }}>
           {[
-            { label: "Confidentialité", href: "#" },
+            { label: "Confidentialité", href: "/confidentialite" },
             { label: "Cookies", href: "/cookies" },
-            { label: "CGU", href: "#" },
-            { label: "Mentions légales", href: "#" },
+            { label: "CGU", href: "/cgu" },
+            { label: "Mentions légales", href: "/mentions-legales" },
           ].map(l => (
             <a key={l.label} href={l.href} style={{ fontSize: 12, color: "#9ca3af", textDecoration: "none" }}>{l.label}</a>
           ))}
