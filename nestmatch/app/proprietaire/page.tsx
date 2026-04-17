@@ -9,6 +9,7 @@ import AnnulerVisiteDialog from "../components/AnnulerVisiteDialog"
 import { useResponsive } from "../hooks/useResponsive"
 import PipelineFunnel from "./PipelineFunnel"
 import { annulerVisite } from "../../lib/visitesHelpers"
+import { computeScreening } from "../../lib/screening"
 
 const ONGLETS = ["Tableau de bord", "Mes biens", "Performance", "Documents", "Candidatures", "Loyers", "Visites"] as const
 type Onglet = typeof ONGLETS[number]
@@ -283,10 +284,28 @@ export default function Proprietaire() {
         }
       }
     }
-    if (m) setCandidatures(m.filter((msg: any) => msg.type === "candidature"))
+    const candidaturesArr = m ? m.filter((msg: any) => msg.type === "candidature") : []
+    if (m) setCandidatures(candidaturesArr)
     if (l) setLoyers(l)
     setVisites(v || [])
     if (ve) console.error("Visites error:", ve.message)
+
+    // Préchargement des dossiers des candidats — permet au screening auto
+    // de s'afficher dès le chargement sans que le proprio ait à cliquer
+    // « Voir le dossier » pour chaque candidature.
+    const emails = Array.from(new Set(candidaturesArr.map((c: any) => c.from_email).filter(Boolean)))
+    if (emails.length > 0) {
+      const { data: profilsCandidats } = await supabase
+        .from("profils")
+        .select("*")
+        .in("email", emails)
+      if (profilsCandidats) {
+        const map: Record<string, any> = {}
+        profilsCandidats.forEach((p: any) => { if (p.email) map[p.email] = p })
+        setDossiers(map)
+      }
+    }
+
     setLoading(false)
   }
 
@@ -756,30 +775,82 @@ export default function Proprietaire() {
         )}
 
         {/* CANDIDATURES */}
-        {onglet === "Candidatures" && (
+        {onglet === "Candidatures" && (() => {
+          // Enrichir chaque candidature avec son screening automatique
+          // (basé sur le profil pré-chargé + le loyer de l'annonce visée)
+          const candidaturesAvecScreening = candidatures.map((c: any) => {
+            const bien = biens.find(b => b.id === c.annonce_id)
+            const loyer = bien ? (Number(bien.prix || 0) + Number(bien.charges || 0)) : null
+            const screening = computeScreening(dossiers[c.from_email] || null, loyer)
+            return { ...c, _screening: screening, _bien: bien }
+          })
+          // Tri par score desc — les meilleurs candidats en haut
+          const candidaturesTriees = [...candidaturesAvecScreening].sort((a, b) => b._screening.score - a._screening.score)
+
+          return (
           <div style={{ background: "white", borderRadius: 20, padding: 24 }}>
-            <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>Candidatures reçues</h2>
-            {candidatures.length === 0 ? (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 800 }}>Candidatures reçues</h2>
+              {candidatures.length > 0 && (
+                <p style={{ fontSize: 12, color: "#6b7280" }}>
+                  Tri par score de qualité (solvabilité, situation pro, garant, complétude)
+                </p>
+              )}
+            </div>
+            <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 18, lineHeight: 1.5 }}>
+              Le score est calculé automatiquement à partir du dossier du candidat. C'est une aide à la décision, pas un verdict.
+            </p>
+
+            {candidaturesTriees.length === 0 ? (
               <div style={{ textAlign: "center", padding: "40px 0", color: "#9ca3af" }}>
                 <p style={{ fontSize: 15, fontWeight: 600 }}>Aucune candidature pour le moment</p>
               </div>
-            ) : candidatures.map((c: any) => {
+            ) : candidaturesTriees.map((c: any) => {
               const isOpen = dossierOuvert === c.from_email
               const d = dossiers[c.from_email]
+              const s = c._screening
               return (
                 <div key={c.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                  <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontWeight: 700, fontSize: 14 }}>{c.from_email}</p>
-                      <p style={{ color: "#6b7280", fontSize: 12, marginTop: 2 }}>{c.contenu?.slice(0, 80)}{c.contenu?.length > 80 ? "..." : ""}</p>
-                      <p style={{ color: "#9ca3af", fontSize: 11, marginTop: 4 }}>{new Date(c.created_at).toLocaleDateString("fr-FR")}</p>
+                  <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 14, flexWrap: "wrap" }}>
+                    {/* Badge screening — score + label */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 260 }}>
+                      <div style={{
+                        background: s.bg,
+                        color: s.color,
+                        border: `1.5px solid ${s.border}`,
+                        borderRadius: 14,
+                        padding: "8px 14px",
+                        textAlign: "center",
+                        flexShrink: 0,
+                        minWidth: 72,
+                      }}>
+                        <div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1 }}>{s.score}</div>
+                        <div style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 3 }}>{s.label}</div>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontWeight: 700, fontSize: 14 }}>{c.from_email}</p>
+                        <p style={{ fontSize: 13, color: "#374151", marginTop: 3, fontWeight: 500 }}>{s.summary}</p>
+                        {c._bien && (
+                          <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 3 }}>
+                            Pour : <strong style={{ color: "#6b7280" }}>{c._bien.titre}</strong> · {c._bien.prix} €/mois
+                          </p>
+                        )}
+                        {s.flags.length > 0 && (
+                          <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                            {s.flags.map((f: string, i: number) => (
+                              <span key={i} style={{ fontSize: 11, background: "#fff7ed", color: "#c2410c", padding: "2px 8px", borderRadius: 999, border: "1px solid #fed7aa" }}>{f}</span>
+                            ))}
+                          </div>
+                        )}
+                        <p style={{ color: "#9ca3af", fontSize: 11, marginTop: 6 }}>{new Date(c.created_at).toLocaleDateString("fr-FR")}{c.contenu ? ` · "${c.contenu.slice(0, 50)}${c.contenu.length > 50 ? "…" : ""}"` : ""}</p>
+                      </div>
                     </div>
-                    <div style={{ display: "flex", gap: 8 }}>
+                    <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                       <button onClick={() => voirDossier(c.from_email)}
-                        style={{ background: isOpen ? "#111" : "white", color: isOpen ? "white" : "#111", border: "1.5px solid #e5e7eb", padding: "7px 14px", borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                        style={{ background: isOpen ? "#111" : "white", color: isOpen ? "white" : "#111", border: "1.5px solid #e5e7eb", padding: "7px 14px", borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
                         {isOpen ? "Masquer le dossier" : "Voir le dossier"}
                       </button>
-                      <a href={`/messages?with=${encodeURIComponent(c.from_email)}`} style={{ background: "#111", color: "white", padding: "7px 14px", borderRadius: 999, textDecoration: "none", fontSize: 13, fontWeight: 600 }}>Repondre</a>
+                      <a href={`/messages?with=${encodeURIComponent(c.from_email)}`} style={{ background: "#111", color: "white", padding: "7px 14px", borderRadius: 999, textDecoration: "none", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>Répondre</a>
                     </div>
                   </div>
                   {isOpen && (
@@ -812,7 +883,8 @@ export default function Proprietaire() {
               )
             })}
           </div>
-        )}
+          )
+        })()}
 
         {/* LOYERS */}
         {onglet === "Loyers" && (

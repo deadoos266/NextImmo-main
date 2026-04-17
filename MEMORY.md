@@ -72,6 +72,30 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 
 ## Historique des batchs
 
+### Batch 25 — Screening automatique candidats (#83) (2026-04-18)
+- **Nouveau `lib/screening.ts`** : fonction `computeScreening(profil, loyer)`
+  qui retourne un score 0-100 + tier + couleur + résumé 1-ligne + flags.
+  4 dimensions :
+  - Solvabilité (règle 33%) : 0-45 pts (ratio revenus/loyer)
+  - Situation pro : 0-25 pts (CDI/fonctionnaire > CDD/indep > étudiant)
+  - Garant : 0-20 pts (bonus si présent)
+  - Complétude profil : 0-10 pts
+- **Tiers** : Excellent (≥80 vert) / Bon (≥60 vert clair) / À examiner
+  (≥40 orange) / Risqué (≥20 rouge) / Incomplet (<20 gris)
+- **Intégration dashboard proprio onglet Candidatures** :
+  - Préchargement de tous les dossiers candidats au `loadData` (plus
+    besoin de cliquer « Voir le dossier » pour voir le score)
+  - Badge score + label à gauche de chaque candidature
+  - Résumé 1-ligne « CDI · 2850 €/mois · Garant parent · 3.2× loyer »
+  - Flags d'alerte visibles (« Revenus insuffisants », « Pas de garant »…)
+  - Tri auto par score desc : meilleurs candidats en haut
+  - Infos du bien visé (titre + prix) pour contextualiser le score
+  - Bouton « Voir le dossier » conservé pour le détail complet
+- **Pas de migration DB** : tout est calculé à partir des données
+  existantes (table `profils` + `annonces`).
+- **Précision** : c'est une AIDE À LA DÉCISION, pas un verdict —
+  le proprio peut toujours examiner chaque dossier à la main.
+
 ### Batch 24 — Hotfix dark mode + messages + audit notifs visites (2026-04-18)
 - **Audit complet des notifs visites** : plusieurs endroits comptaient
   encore les visites `proposée` incluant celles proposées par
