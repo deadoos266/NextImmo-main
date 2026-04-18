@@ -762,7 +762,7 @@ export default function Dossier() {
             <div>
               <SharePanel />
               <AccessLogPanel />
-              <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24, position: isMobile ? "static" : "sticky", top: 80 }}>
+              <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                   <h3 style={{ fontSize: 15, fontWeight: 800 }}>Documents</h3>
                   <span style={{ fontSize: 12, fontWeight: 700, color: scoreColor }}>{docsCount}/{allDocs.length} catégories</span>
