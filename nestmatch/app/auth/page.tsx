@@ -3,6 +3,8 @@ import { Suspense, useState } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import PasswordInput from "../components/PasswordInput"
+import Logo from "../components/Logo"
+import { BRAND } from "../../lib/brand"
 
 type Mode = "connexion" | "inscription"
 type Role = "locataire" | "proprietaire"
@@ -140,6 +142,10 @@ function AuthContent() {
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 16px" }}>
         <div style={{ background: "white", borderRadius: 24, padding: "32px 24px", width: "100%", maxWidth: 460, boxShadow: "0 4px 32px rgba(0,0,0,0.08)" }}>
 
+          <div style={{ textAlign: "center", marginBottom: 24 }}>
+            <Logo variant="auth" />
+          </div>
+
           {/* Toggle connexion / inscription */}
           <div style={{ display: "flex", background: "#f3f4f6", borderRadius: 14, padding: 4, marginBottom: 32 }}>
             {(["connexion", "inscription"] as Mode[]).map(m => (
@@ -154,7 +160,7 @@ function AuthContent() {
             {mode === "connexion" ? "Bon retour" : "Créer un compte"}
           </h1>
           <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 28 }}>
-            {mode === "connexion" ? "Connecte-toi pour accéder à ton espace." : "Rejoins NestMatch gratuitement."}
+            {mode === "connexion" ? "Connecte-toi pour accéder à ton espace." : `Rejoins ${BRAND.name} gratuitement.`}
           </p>
 
           {/* Choix du rôle — seulement à l'inscription */}

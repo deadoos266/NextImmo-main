@@ -7,8 +7,9 @@ import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import CookieBanner from './components/CookieBanner'
 import ToastStack from './components/ToastStack'
+import { BRAND } from '../lib/brand'
 
-const BASE_URL = process.env.NEXT_PUBLIC_URL || 'https://nestmatch.fr'
+const BASE_URL = process.env.NEXT_PUBLIC_URL || BRAND.url
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -17,17 +18,20 @@ const dmSans = DM_Sans({
   variable: '--font-dm-sans',
 })
 
+const DEFAULT_TITLE = `${BRAND.name} — Location entre particuliers sans agence`
+const DEFAULT_DESC = `${BRAND.name} connecte propriétaires et locataires directement. Score de matching, gestion du dossier, des visites et des loyers. Zéro frais d'agence.`
+
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: 'NestMatch — Location entre particuliers sans agence',
-    template: '%s | NestMatch',
+    default: DEFAULT_TITLE,
+    template: `%s | ${BRAND.name}`,
   },
-  description: 'NestMatch connecte propriétaires et locataires directement. Score de matching, dossier certifié, gestion des loyers. Zéro frais d\'agence.',
+  description: DEFAULT_DESC,
   keywords: ['location appartement', 'location particulier', 'sans agence', 'logement', 'louer appartement', 'matching locataire'],
-  authors: [{ name: 'NestMatch' }],
-  creator: 'NestMatch',
-  publisher: 'NestMatch',
+  authors: [{ name: BRAND.name }],
+  creator: BRAND.name,
+  publisher: BRAND.name,
   robots: {
     index: true,
     follow: true,
@@ -37,19 +41,26 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'fr_FR',
     url: BASE_URL,
-    siteName: 'NestMatch',
-    title: 'NestMatch — Location entre particuliers sans agence',
-    description: 'NestMatch connecte propriétaires et locataires directement. Score de matching, dossier certifié, gestion des loyers. Zéro frais d\'agence.',
-    images: [{ url: '/og-default.png', width: 1200, height: 630, alt: 'NestMatch — Location entre particuliers' }],
+    siteName: BRAND.name,
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESC,
+    images: [{ url: '/og-default.png', width: 1200, height: 630, alt: `${BRAND.name} — Location entre particuliers` }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'NestMatch — Location entre particuliers sans agence',
-    description: 'NestMatch connecte propriétaires et locataires directement. Zéro frais d\'agence.',
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESC,
     images: ['/og-default.png'],
   },
   alternates: {
     canonical: BASE_URL,
+  },
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/logo-mark.svg', type: 'image/svg+xml', sizes: 'any' },
+    ],
+    apple: '/logo-mark.svg',
   },
 }
 

@@ -3,6 +3,8 @@ import { notFound } from "next/navigation"
 import { verifyDossierToken } from "../../../lib/dossierToken"
 import { supabase } from "../../../lib/supabase"
 import { displayName } from "../../../lib/privacy"
+import { BRAND } from "../../../lib/brand"
+import AccessLogPing from "./AccessLogPing"
 
 export const metadata = {
   title: "Dossier locataire partagé",
@@ -60,14 +62,41 @@ export default async function DossierPartage({ params }: { params: Promise<{ tok
           <p style={{ fontSize: 13, color: "#6b7280" }}>Dossier locataire</p>
         </div>
 
+        <AccessLogPing token={token} />
+
         <div style={sectionStyle}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>Informations</h2>
-          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Situation pro</span><span style={{ fontWeight: 600 }}>{profil.situation_pro || "—"}</span></div>
-          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Revenus mensuels nets</span><span style={{ fontWeight: 600 }}>{profil.revenus_mensuels ? `${Number(profil.revenus_mensuels).toLocaleString("fr-FR")} €` : "—"}</span></div>
-          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Nombre d&apos;occupants</span><span style={{ fontWeight: 600 }}>{profil.nb_occupants || "—"}</span></div>
+          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>Identité & situation</h2>
+          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Date de naissance</span><span style={{ fontWeight: 600 }}>{profil.date_naissance ? new Date(profil.date_naissance).toLocaleDateString("fr-FR") : "—"}</span></div>
+          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Nationalité</span><span style={{ fontWeight: 600 }}>{profil.nationalite || "—"}</span></div>
+          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Situation familiale</span><span style={{ fontWeight: 600 }}>{profil.situation_familiale || "—"}</span></div>
+          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Enfants à charge</span><span style={{ fontWeight: 600 }}>{profil.nb_enfants ?? 0}</span></div>
+          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Nombre d&apos;occupants prévus</span><span style={{ fontWeight: 600 }}>{profil.nb_occupants || "—"}</span></div>
           <div style={rowStyle}><span style={{ color: "#6b7280" }}>Profil</span><span style={{ fontWeight: 600 }}>{profil.profil_locataire || "—"}</span></div>
-          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Garant</span><span style={{ fontWeight: 600 }}>{profil.garant ? (profil.type_garant || "Oui") : "Non"}</span></div>
         </div>
+
+        <div style={sectionStyle}>
+          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>Situation professionnelle</h2>
+          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Statut</span><span style={{ fontWeight: 600 }}>{profil.situation_pro || "—"}</span></div>
+          {profil.employeur_nom && <div style={rowStyle}><span style={{ color: "#6b7280" }}>Employeur</span><span style={{ fontWeight: 600 }}>{profil.employeur_nom}</span></div>}
+          {profil.date_embauche && <div style={rowStyle}><span style={{ color: "#6b7280" }}>Date d&apos;embauche</span><span style={{ fontWeight: 600 }}>{new Date(profil.date_embauche).toLocaleDateString("fr-FR")}</span></div>}
+          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Revenus mensuels nets</span><span style={{ fontWeight: 600 }}>{profil.revenus_mensuels ? `${Number(profil.revenus_mensuels).toLocaleString("fr-FR")} €` : "—"}</span></div>
+        </div>
+
+        <div style={sectionStyle}>
+          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>Logement actuel & garanties</h2>
+          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Statut</span><span style={{ fontWeight: 600 }}>{profil.logement_actuel_type || "—"}</span></div>
+          {profil.logement_actuel_ville && <div style={rowStyle}><span style={{ color: "#6b7280" }}>Ville actuelle</span><span style={{ fontWeight: 600 }}>{profil.logement_actuel_ville}</span></div>}
+          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Garant</span><span style={{ fontWeight: 600 }}>{profil.garant ? (profil.type_garant || "Oui") : "Non"}</span></div>
+          <div style={rowStyle}><span style={{ color: "#6b7280" }}>APL</span><span style={{ fontWeight: 600 }}>{profil.a_apl ? "Oui" : "Non"}</span></div>
+          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Mobilité pro (Visale)</span><span style={{ fontWeight: 600 }}>{profil.mobilite_pro ? "Oui" : "Non"}</span></div>
+        </div>
+
+        {profil.presentation && (
+          <div style={sectionStyle}>
+            <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>Présentation du candidat</h2>
+            <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>{profil.presentation}</p>
+          </div>
+        )}
 
         <div style={sectionStyle}>
           <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>Critères de recherche</h2>
@@ -100,7 +129,7 @@ export default async function DossierPartage({ params }: { params: Promise<{ tok
         </div>
 
         <p style={{ fontSize: 11, color: "#9ca3af", textAlign: "center", marginTop: 20 }}>
-          Lien de partage sécurisé · <Link href="/" style={{ color: "#6b7280" }}>NestMatch</Link>
+          Lien de partage sécurisé · <Link href="/" style={{ color: "#6b7280" }}>{BRAND.name}</Link>
         </p>
       </div>
     </main>

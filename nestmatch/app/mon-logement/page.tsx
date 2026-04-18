@@ -6,6 +6,8 @@ import Link from "next/link"
 import { supabase } from "../../lib/supabase"
 import { useResponsive } from "../hooks/useResponsive"
 import { joursRetardLoyer } from "../../lib/loyerHelpers"
+import { BRAND } from "../../lib/brand"
+import { drawLogoPDF } from "../../lib/brandPDF"
 
 /**
  * Mon logement actuel — vue dédiée locataire après bail signé.
@@ -99,27 +101,28 @@ export default function MonLogement() {
       const { default: jsPDF } = await import("jspdf")
       const doc = new jsPDF()
       const now = new Date().toLocaleDateString("fr-FR")
+      drawLogoPDF(doc, { x: 20, y: 18, size: "medium" })
       doc.setFontSize(18); doc.setFont("helvetica", "bold")
-      doc.text("Historique des loyers", 105, 22, { align: "center" })
+      doc.text("Historique des loyers", 105, 30, { align: "center" })
       doc.setFontSize(10); doc.setFont("helvetica", "normal")
-      doc.text(`Édité le ${now}`, 105, 28, { align: "center" })
-      doc.setDrawColor(200, 200, 200); doc.line(20, 34, 190, 34)
+      doc.text(`Édité le ${now}`, 105, 36, { align: "center" })
+      doc.setDrawColor(200, 200, 200); doc.line(20, 42, 190, 42)
 
       doc.setFont("helvetica", "bold"); doc.setFontSize(11)
-      doc.text("BIEN", 20, 44)
+      doc.text("BIEN", 20, 52)
       doc.setFont("helvetica", "normal"); doc.setFontSize(9)
-      doc.text(bien.titre || "", 20, 51)
-      if (bien.adresse) doc.text(bien.adresse, 20, 57)
-      if (bien.ville) doc.text(bien.ville, 20, bien.adresse ? 63 : 57)
+      doc.text(bien.titre || "", 20, 59)
+      if (bien.adresse) doc.text(bien.adresse, 20, 65)
+      if (bien.ville) doc.text(bien.ville, 20, bien.adresse ? 71 : 65)
 
       const locataireEmail = session?.user?.email || ""
       doc.setFont("helvetica", "bold"); doc.setFontSize(11)
-      doc.text("LOCATAIRE", 110, 44)
+      doc.text("LOCATAIRE", 110, 52)
       doc.setFont("helvetica", "normal"); doc.setFontSize(9)
-      doc.text(locataireEmail, 110, 51)
+      doc.text(locataireEmail, 110, 59)
 
       // Table
-      let y = 80
+      let y = 88
       doc.line(20, y - 4, 190, y - 4)
       doc.setFont("helvetica", "bold"); doc.setFontSize(10)
       doc.text("Mois", 22, y)
@@ -157,7 +160,7 @@ export default function MonLogement() {
       doc.text(`Total loyers confirmés : ${totalConfirme.toLocaleString("fr-FR")} €`, 20, y)
 
       doc.setFontSize(8); doc.setFont("helvetica", "italic"); doc.setTextColor(120, 120, 120)
-      doc.text("Document généré depuis NestMatch — à valeur indicative.", 105, 290, { align: "center" })
+      doc.text(`Document généré depuis ${BRAND.name} — à valeur indicative.`, 105, 290, { align: "center" })
 
       const ts = new Date().toISOString().slice(0, 10)
       doc.save(`historique-loyers-${ts}.pdf`)
@@ -183,7 +186,7 @@ export default function MonLogement() {
             Aucun logement actif
           </h1>
           <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.6, marginBottom: 24 }}>
-            Vous n&apos;avez pas encore signé de bail via NestMatch. Retrouvez vos candidatures en cours pour suivre leur avancement.
+            Vous n&apos;avez pas encore signé de bail via {BRAND.name}. Retrouvez vos candidatures en cours pour suivre leur avancement.
           </p>
           <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
             <Link href="/mes-candidatures" style={{ background: "#111", color: "white", padding: "12px 24px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>

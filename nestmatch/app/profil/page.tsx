@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
 import { useResponsive } from "../hooks/useResponsive"
 import { useRole } from "../providers"
-import AccountSettings from "./AccountSettings"
+import Link from "next/link"
 import CityAutocomplete from "../components/CityAutocomplete"
 import Tooltip from "../components/Tooltip"
 
@@ -315,7 +315,15 @@ export default function Profil() {
         </div>
         </>}
 
-        <AccountSettings userEmail={session.user?.email ?? null} />
+        <div style={{ background: "white", borderRadius: 20, padding: 24, marginTop: 24, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+          <div>
+            <h2 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 4px" }}>Paramètres du compte</h2>
+            <p style={{ fontSize: 13, color: "#6b7280", margin: 0, lineHeight: 1.5 }}>Mot de passe, apparence (clair/sombre), notifications, suppression de compte.</p>
+          </div>
+          <Link href="/parametres" style={{ background: "#111", color: "white", borderRadius: 999, padding: "10px 22px", textDecoration: "none", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap" }}>
+            Ouvrir les paramètres →
+          </Link>
+        </div>
       </div>
     </main>
   )

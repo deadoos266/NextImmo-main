@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
+import { BRAND } from "@/lib/brand"
 
 /**
  * GET /api/visites/ics
@@ -78,10 +79,10 @@ export async function GET() {
   const lines: string[] = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//NestMatch//Visites//FR",
+    `PRODID:-//${BRAND.name}//Visites//FR`,
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
-    "X-WR-CALNAME:Visites NestMatch",
+    `X-WR-CALNAME:Visites ${BRAND.name}`,
     "X-WR-TIMEZONE:Europe/Paris",
   ]
 
@@ -98,7 +99,7 @@ export async function GET() {
       ann?.ville ? `Ville : ${ann.ville}` : "",
       v.message ? `Message : ${v.message}` : "",
       "",
-      "Gérer sur NestMatch : " + (process.env.NEXT_PUBLIC_URL || "https://next-immo-main.vercel.app") + "/visites",
+      `Gérer sur ${BRAND.name} : ` + (process.env.NEXT_PUBLIC_URL || "https://next-immo-main.vercel.app") + "/visites",
     ].filter(Boolean).join("\n")
 
     lines.push(

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">
+  <defs>
+    <linearGradient id="nmGrad" x1="200" y1="60" x2="200" y2="340" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FF8A1E"/>
+      <stop offset="55%" stop-color="#FF4A1C"/>
+      <stop offset="100%" stop-color="#E8271C"/>
+    </linearGradient>
+  </defs>
+  <path d="M 105 325 L 200 95" stroke="url(#nmGrad)" stroke-width="54" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 200 95 L 295 325" stroke="url(#nmGrad)" stroke-width="54" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="url(#nmGrad)">
+    <rect x="178" y="228" width="20" height="20" rx="4"/>
+    <rect x="202" y="228" width="20" height="20" rx="4"/>
+    <rect x="178" y="252" width="20" height="20" rx="4"/>
+    <rect x="202" y="252" width="20" height="20" rx="4"/>
+  </g>
+</svg>

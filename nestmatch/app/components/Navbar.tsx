@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useRole } from "../providers"
 import { supabase } from "../../lib/supabase"
 import { useResponsive } from "../hooks/useResponsive"
+import Logo from "./Logo"
 
 export default function Navbar() {
   const { data: session } = useSession()
@@ -103,9 +104,10 @@ export default function Navbar() {
     <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: isSmall ? "0 16px" : "0 48px", background: "white", borderBottom: "1px solid #e5e7eb", position: "sticky", top: 0, zIndex: 7000, height: 64, boxShadow: "0 1px 8px rgba(0,0,0,0.05)" }}>
 
       {/* Logo */}
-      <Link href="/" style={{ fontSize: isSmall ? 18 : 22, fontWeight: 800, textDecoration: "none", color: "#111", letterSpacing: "-0.5px" }}>
-        NestMatch {isAdmin && <Link href="/admin" style={{ fontSize: 11, background: "#111", color: "white", padding: "2px 6px", borderRadius: 999, marginLeft: 6, textDecoration: "none" }}>ADMIN</Link>}
-      </Link>
+      <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+        <Logo variant={isSmall ? "compact" : "navbar"} />
+        {isAdmin && <Link href="/admin" style={{ fontSize: 11, background: "#111", color: "white", padding: "2px 6px", borderRadius: 999, textDecoration: "none" }}>ADMIN</Link>}
+      </div>
 
       {/* Desktop : liens centraux */}
       {!isSmall && (
@@ -211,6 +213,18 @@ export default function Navbar() {
                         <p style={{ fontSize: 12, color: "#6b7280", marginTop: 1 }}>{item.desc}</p>
                       </Link>
                     ))}
+                    <Link href="/parametres" onClick={() => setMenuOpen(false)}
+                      style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", textDecoration: "none", color: "#111", borderTop: "1px solid #f3f4f6" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                      </svg>
+                      <div>
+                        <p style={{ fontSize: 14, fontWeight: 600 }}>Paramètres</p>
+                        <p style={{ fontSize: 12, color: "#6b7280", marginTop: 1 }}>Compte, apparence, sécurité</p>
+                      </div>
+                    </Link>
                     <div style={{ borderTop: "1px solid #f3f4f6", padding: 8 }}>
                       <button onClick={() => { setMenuOpen(false); signOut({ callbackUrl: "/" }) }}
                         style={{ width: "100%", padding: "10px 12px", background: "none", border: "none", borderRadius: 10, cursor: "pointer", textAlign: "left", fontSize: 14, fontWeight: 600, color: "#dc2626", fontFamily: "inherit" }}
@@ -374,6 +388,11 @@ export default function Navbar() {
                       )}
                     </Link>
                   ))}
+
+                  <Link href="/parametres" onClick={() => setMobileOpen(false)}
+                    style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: isActive("/parametres") ? "#111" : "#374151", background: isActive("/parametres") ? "#f3f4f6" : "transparent", fontWeight: isActive("/parametres") ? 700 : 500, fontSize: 15, borderBottom: "1px solid #f9fafb" }}>
+                    Paramètres
+                  </Link>
 
                   <div style={{ padding: 16, borderTop: "1px solid #f3f4f6", marginTop: 8 }}>
                     <button onClick={() => { setMobileOpen(false); signOut({ callbackUrl: "/" }) }}

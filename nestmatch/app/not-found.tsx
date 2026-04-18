@@ -1,4 +1,6 @@
 import Link from "next/link"
+import Logo from "./components/Logo"
+import { BRAND } from "../lib/brand"
 
 export const metadata = {
   title: "Page introuvable",
@@ -24,6 +26,9 @@ export default function NotFound() {
         textAlign: "center",
         boxShadow: "0 4px 32px rgba(0,0,0,0.06)",
       }}>
+        <div style={{ marginBottom: 18 }}>
+          <Logo variant="compact" />
+        </div>
         {/* Gros "404" stylisé */}
         <p style={{
           fontSize: 96,
@@ -51,7 +56,7 @@ export default function NotFound() {
           lineHeight: 1.6,
           marginBottom: 28,
         }}>
-          Le lien a peut-être changé ou la page a été déplacée. Retournez à l&apos;accueil ou explorez NestMatch.
+          Le lien a peut-être changé ou la page a été déplacée. Retournez à l&apos;accueil ou explorez {BRAND.name}.
         </p>
 
         {/* CTA principal */}

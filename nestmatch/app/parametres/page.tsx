@@ -1,5 +1,151 @@
-import { redirect } from "next/navigation"
+"use client"
+import { Suspense, useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useResponsive } from "../hooks/useResponsive"
+import OngletProfil from "./OngletProfil"
+import OngletApparence from "./OngletApparence"
+import OngletSecurite from "./OngletSecurite"
+import OngletCompte from "./OngletCompte"
 
-export default function ParametresRedirect() {
-  redirect("/profil")
+type Tab = "profil" | "apparence" | "securite" | "compte"
+
+const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
+  {
+    key: "profil",
+    label: "Profil",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+      </svg>
+    ),
+  },
+  {
+    key: "apparence",
+    label: "Apparence",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+      </svg>
+    ),
+  },
+  {
+    key: "securite",
+    label: "Sécurité",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+    ),
+  },
+  {
+    key: "compte",
+    label: "Compte",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    ),
+  },
+]
+
+function isValidTab(v: string | null): v is Tab {
+  return v === "profil" || v === "apparence" || v === "securite" || v === "compte"
+}
+
+function ParametresInner() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { isMobile } = useResponsive()
+  const initial = searchParams.get("tab")
+  const [onglet, setOnglet] = useState<Tab>(isValidTab(initial) ? initial : "profil")
+
+  // Sync URL <- state (replace pour éviter de polluer l'historique)
+  useEffect(() => {
+    const current = searchParams.get("tab")
+    if (current !== onglet) {
+      const qs = new URLSearchParams(searchParams?.toString() || "")
+      qs.set("tab", onglet)
+      router.replace(`/parametres?${qs.toString()}`, { scroll: false })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onglet])
+
+  return (
+    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ maxWidth: 1040, margin: "0 auto", padding: isMobile ? "24px 16px 40px" : "40px 48px 60px" }}>
+        <h1 style={{ fontSize: isMobile ? 24 : 30, fontWeight: 800, letterSpacing: "-0.5px", margin: "0 0 6px" }}>Paramètres</h1>
+        <p style={{ fontSize: isMobile ? 13 : 14, color: "#6b7280", margin: "0 0 24px", lineHeight: 1.5 }}>
+          Gérez votre compte, votre apparence et vos préférences de notifications.
+        </p>
+
+        <div style={{ display: "flex", gap: isMobile ? 0 : 24, flexDirection: isMobile ? "column" : "row", alignItems: "flex-start" }}>
+          {/* Sidebar onglets desktop / tabs horizontaux mobile */}
+          <nav
+            aria-label="Catégories des paramètres"
+            style={{
+              flexShrink: 0,
+              width: isMobile ? "100%" : 220,
+              display: "flex",
+              flexDirection: isMobile ? "row" : "column",
+              gap: 4,
+              marginBottom: isMobile ? 16 : 0,
+              overflowX: isMobile ? "auto" : "visible",
+              paddingBottom: isMobile ? 2 : 0,
+            }}
+          >
+            {TABS.map(t => {
+              const active = onglet === t.key
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setOnglet(t.key)}
+                  aria-current={active ? "page" : undefined}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: isMobile ? "10px 14px" : "11px 14px",
+                    background: active ? "#111" : "white",
+                    color: active ? "white" : "#374151",
+                    border: `1.5px solid ${active ? "#111" : "#e5e7eb"}`,
+                    borderRadius: 12,
+                    fontSize: 14,
+                    fontWeight: active ? 800 : 600,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    textAlign: "left",
+                    width: isMobile ? "auto" : "100%",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {t.icon}
+                  {t.label}
+                </button>
+              )
+            })}
+          </nav>
+
+          <div style={{ flex: 1, minWidth: 0, width: isMobile ? "100%" : undefined }}>
+            {onglet === "profil" && <OngletProfil />}
+            {onglet === "apparence" && <OngletApparence />}
+            {onglet === "securite" && <OngletSecurite />}
+            {onglet === "compte" && <OngletCompte />}
+          </div>
+        </div>
+      </div>
+    </main>
+  )
+}
+
+export default function ParametresPage() {
+  return (
+    <Suspense fallback={
+      <main style={{ minHeight: "100vh", background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif", color: "#6b7280" }}>Chargement…</main>
+    }>
+      <ParametresInner />
+    </Suspense>
+  )
 }

@@ -5,6 +5,8 @@ import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "../../../../lib/supabase"
 import { useResponsive } from "../../../hooks/useResponsive"
+import { BRAND } from "../../../../lib/brand"
+import { drawLogoPDF } from "../../../../lib/brandPDF"
 // jsPDF lazy-loaded pour alleger le bundle initial (voir genererEdlPDF)
 
 // ─── Types & Config ─────────────────────────────────────────────────────────
@@ -122,6 +124,8 @@ async function genererEdlPDF(edl: any, bien: any) {
   const dateLabel = new Date(edl.date_edl).toLocaleDateString("fr-FR")
   const typeLabel = edl.type === "entree" ? "ENTREE" : "SORTIE"
 
+  drawLogoPDF(doc, { x: 20, y: 18, size: "medium" })
+  y = 30
   title(`ETAT DES LIEUX D'${typeLabel}`)
   doc.setFontSize(9); doc.setFont("helvetica", "normal")
   doc.text(`Etabli contradictoirement le ${dateLabel}`, 105, y, { align: "center" }); y += 10
@@ -192,7 +196,7 @@ async function genererEdlPDF(edl: any, bien: any) {
   doc.text("Le Locataire", 155, y, { align: "center" })
 
   doc.setFontSize(7); doc.setTextColor(150, 150, 150)
-  doc.text("Document genere par NestMatch — nestmatch.fr", 105, 285, { align: "center" })
+  doc.text(`Document genere par ${BRAND.name} — ${BRAND.url.replace(/^https?:\/\//, "")}`, 105, 285, { align: "center" })
 
   doc.save(`edl-${edl.type}-${(bien?.ville || "bien").toLowerCase().replace(/\s/g, "-")}-${edl.date_edl}.pdf`)
 }
@@ -537,7 +541,7 @@ export default function ConsulterEdlPage() {
         )}
 
         <p style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", marginTop: 20, lineHeight: 1.6 }}>
-          Document contradictoire — généré par NestMatch.
+          Document contradictoire — généré par {BRAND.name}.
         </p>
       </div>
     </main>

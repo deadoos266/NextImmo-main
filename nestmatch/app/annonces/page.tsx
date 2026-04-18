@@ -160,6 +160,13 @@ function AnnoncesContent() {
   const [filtreExterieur, setFiltreExterieur] = useState(false)
   const [filtreMeuble, setFiltreMeuble] = useState(false)
   const [budgetChip, setBudgetChip] = useState<number | null>(null)
+  // HARD LOCK : si le profil dossier indique animaux=true, on exclut les
+  // annonces sans animaux autorisés (pas d'override possible sans modifier
+  // le profil). Évite aux locataires à animaux de voir des biens où ils
+  // seraient refusés d'office.
+  const [filtreAnimauxLock, setFiltreAnimauxLock] = useState(false)
+  const [filtreDpeMax, setFiltreDpeMax] = useState<string>("")  // "A" | "B" | ... | "G" — max toléré
+  const [criteresHydrated, setCriteresHydrated] = useState(false)
   // Recherches sauvegardées (locataire seulement) : filtres nommés stockés en
   // localStorage. Permet de retrouver ses critères en 1 clic.
   type SavedSearch = {
@@ -328,7 +335,15 @@ function AnnoncesContent() {
             if (p.pieces_min && piecesMin === 0) setPiecesMin(Number(p.pieces_min))
             if (p.parking && !filtreParking) setFiltreParking(true)
             if ((p.balcon || p.terrasse || p.jardin) && !filtreExterieur) setFiltreExterieur(true)
+            if (p.meuble && !filtreMeuble) setFiltreMeuble(true)
+            if (p.budget_max && budgetChip === null) setBudgetChip(Number(p.budget_max))
+            if (p.dpe_min && !filtreDpeMax) setFiltreDpeMax(String(p.dpe_min))
+            // HARD LOCK animaux : si l'user a des animaux en profil, on
+            // bride la liste. L'user ne peut pas désactiver ce filtre ici —
+            // il doit modifier son profil (cohérence annonce ↔ dossier).
+            if (p.animaux === true) setFiltreAnimauxLock(true)
           }
+          setCriteresHydrated(true)
         }
       }
       setLoading(false)
@@ -429,6 +444,10 @@ function AnnoncesContent() {
       if (filtreExterieur && !a.balcon && !a.terrasse && !a.jardin) return false
       if (filtreMeuble && !a.meuble) return false
       if (budgetChip && a.prix && a.prix > budgetChip) return false
+      // HARD LOCK animaux — propriétaires qui n'acceptent pas, on cache.
+      if (filtreAnimauxLock && !a.animaux) return false
+      // DPE : A est meilleur que G. On filtre si dpe > filtreDpeMax.
+      if (filtreDpeMax && a.dpe && a.dpe.localeCompare(filtreDpeMax) > 0) return false
       // Surface min/max (m²)
       const surfMinN = surfaceMin ? parseInt(surfaceMin, 10) : 0
       const surfMaxN = surfaceMax ? parseInt(surfaceMax, 10) : 0
@@ -746,6 +765,15 @@ function AnnoncesContent() {
                   {chip.label}
                 </button>
               ))}
+              {/* HARD LOCK animaux — non toggable ici, seul /profil permet de désactiver. */}
+              {filtreAnimauxLock && (
+                <a
+                  href="/profil"
+                  title="Vous avez des animaux dans votre profil — seules les annonces qui les acceptent sont affichées. Cliquez pour modifier."
+                  style={{ background: "#fef3c7", color: "#92400e", border: "1.5px solid #fde68a", borderRadius: 999, padding: "5px 12px", fontSize: 12, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  🔒 Animaux OK (profil)
+                </a>
+              )}
             </div>
           )}
 

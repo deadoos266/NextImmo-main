@@ -6,6 +6,8 @@ import Link from "next/link"
 import { supabase } from "../../../../lib/supabase"
 import { validateImage } from "../../../../lib/fileValidation"
 import { useResponsive } from "../../../hooks/useResponsive"
+import { BRAND } from "../../../../lib/brand"
+import { drawLogoPDF } from "../../../../lib/brandPDF"
 // jsPDF lazy-loaded pour alleger le bundle initial (voir genererEdlPDF)
 
 // ─── Types & Config ─────────────────────────────────────────────────────────
@@ -110,6 +112,8 @@ async function genererEdlPDF(data: {
   const dateLabel = new Date(data.dateEdl).toLocaleDateString("fr-FR")
   const typeLabel = data.type === "entree" ? "ENTREE" : "SORTIE"
 
+  drawLogoPDF(doc, { x: 20, y: 18, size: "medium" })
+  y = 30
   title(`ETAT DES LIEUX D'${typeLabel}`)
   doc.setFontSize(9); doc.setFont("helvetica", "normal")
   doc.text(`Etabli contradictoirement le ${dateLabel}`, 105, y, { align: "center" }); y += 10
@@ -190,7 +194,7 @@ async function genererEdlPDF(data: {
   }
 
   if (data.photoCount > 0) {
-    text(`Annexe photographique : ${data.photoCount} photo(s) stockee(s) en ligne sur NestMatch.`)
+    text(`Annexe photographique : ${data.photoCount} photo(s) stockee(s) en ligne sur ${BRAND.name}.`)
     y += 4
   }
 
@@ -216,7 +220,7 @@ async function genererEdlPDF(data: {
   doc.line(120, y + 15, 185, y + 15)
 
   doc.setFontSize(7); doc.setTextColor(150, 150, 150)
-  doc.text("Document genere par NestMatch — nestmatch.fr", 105, 285, { align: "center" })
+  doc.text(`Document genere par ${BRAND.name} — ${BRAND.url.replace(/^https?:\/\//, "")}`, 105, 285, { align: "center" })
 
   doc.save(`edl-${data.type}-${data.villeBien.toLowerCase().replace(/\s/g, "-")}-${data.dateEdl}.pdf`)
 }

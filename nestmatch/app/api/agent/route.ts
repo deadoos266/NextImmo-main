@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   return NextResponse.json({
     status: "ok",
-    description: "NestMatch Agent API — Opus (planification) + Sonnet (exécution)",
+    description: "Agent API — Opus (planification) + Sonnet (exécution)",
     endpoints: {
       POST: "/api/agent (auth requise)",
       body: ["message", "sessionId?", "context?", "showThinking?"],

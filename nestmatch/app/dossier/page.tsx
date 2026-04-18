@@ -8,6 +8,7 @@ import { useResponsive } from "../hooks/useResponsive"
 import Tooltip from "../components/Tooltip"
 import PhoneInput from "../components/PhoneInput"
 import SharePanel from "./SharePanel"
+import AccessLogPanel from "./AccessLogPanel"
 
 const SITUATIONS = ["CDI", "CDD", "Intérim", "Indépendant / Freelance", "Fonctionnaire", "Alternance", "Étudiant", "Retraité", "Sans emploi"]
 const TYPES_GARANT = ["Personne physique", "Organisme Visale", "Action Logement", "Caution bancaire", "Aucun garant"]
@@ -67,9 +68,18 @@ function toArray(val: any): string[] {
   return [val]
 }
 
+import { useRole } from "../providers"
+
 export default function Dossier() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const { proprietaireActive } = useRole()
+
+  // Garde rôle : le dossier est LOCATAIRE-only. Un proprio qui y arrive
+  // (via historique navigateur, lien partagé…) est redirigé sans bruit.
+  useEffect(() => {
+    if (proprietaireActive) router.replace("/proprietaire")
+  }, [proprietaireActive, router])
   const [profil, setProfil] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -216,35 +226,58 @@ export default function Dossier() {
     setTimeout(() => setSaved(false), 3000)
   }
 
-  async function genererDossierPDF() {
+  async function genererDossierPDFClick() {
     setGeneratingPDF(true)
     try {
-      const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
-        import("jspdf"), import("html2canvas"),
-      ])
-      const el = document.getElementById("dossier-pdf-content")
-      if (!el) { setGeneratingPDF(false); return }
-      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: "#ffffff" })
-      const imgData = canvas.toDataURL("image/png")
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
-      const pageW = pdf.internal.pageSize.getWidth()
-      const pageH = pdf.internal.pageSize.getHeight()
-      const imgH = (canvas.height / canvas.width) * pageW
-      let yPos = 0
-      while (yPos < imgH) {
-        if (yPos > 0) pdf.addPage()
-        pdf.addImage(imgData, "PNG", 0, -yPos, pageW, imgH)
-        yPos += pageH
-      }
-      pdf.save(`dossier_${(form.nom || "locataire").replace(/\s+/g, "_")}.pdf`)
-    } catch (e: any) { alert("Erreur PDF: " + e.message) }
+      const { genererDossierPDF } = await import("../../lib/dossierPDF")
+      await genererDossierPDF({
+        nom: form.nom,
+        email: session?.user?.email || "",
+        telephone: form.telephone,
+        dateNaissance: form.date_naissance,
+        nationalite: form.nationalite,
+        situationFamiliale: form.situation_familiale,
+        nbEnfants: form.nb_enfants,
+        situationPro: form.situation_pro,
+        employeurNom: form.employeur_nom,
+        dateEmbauche: form.date_embauche,
+        revenusMensuels: form.revenus_mensuels ? Number(form.revenus_mensuels) : null,
+        nbOccupants: form.nb_occupants,
+        logementActuelType: form.logement_actuel_type,
+        logementActuelVille: form.logement_actuel_ville,
+        aApl: form.a_apl,
+        mobilitePro: form.mobilite_pro,
+        garant: form.garant,
+        typeGarant: form.type_garant,
+        presentation: form.presentation,
+        villeSouhaitee: profil?.ville_souhaitee || "",
+        budgetMax: profil?.budget_max ?? null,
+        score,
+        docs: allDocs.map(d => ({ key: d.key, label: d.label, count: (docs[d.key] || []).length })),
+      })
+    } catch (e) {
+      alert("Erreur génération PDF : " + (e instanceof Error ? e.message : "inconnue"))
+    }
     setGeneratingPDF(false)
   }
 
-  const allDocs = [...DOCS_REQUIS, ...(form.garant ? DOCS_GARANT : [])]
+  // Les docs optionnels recommandés selon situation sont pris en compte dans la
+  // complétude dès qu'ils sont pertinents (étudiant → certificat, APL → attestation).
+  const docsOptionnelsPertinents = DOCS_OPTIONNELS.filter(d => {
+    if (d.conditionel === "etudiant") return form.situation_pro === "Étudiant" || form.situation_pro === "Alternance"
+    if (d.conditionel === "apl") return form.a_apl
+    if (d.conditionel === "pro_salarie") return ["CDI", "CDD", "Intérim", "Fonctionnaire", "Alternance"].includes(form.situation_pro)
+    if (d.conditionel === "toujours") return false // "assurance" toujours visible mais non comptée comme obligatoire
+    return false
+  })
+  const allDocs = [...DOCS_REQUIS, ...docsOptionnelsPertinents, ...(form.garant ? DOCS_GARANT : [])]
   // Compte le nombre de catégories avec au moins 1 fichier
   const docsCount = allDocs.filter(d => (docs[d.key] || []).length > 0).length
-  const champs = [!!form.nom, !!form.telephone, !!form.situation_pro, !!form.revenus_mensuels, form.garant !== undefined, !!profil?.ville_souhaitee, !!profil?.budget_max]
+  const champs = [
+    !!form.nom, !!form.telephone, !!form.situation_pro, !!form.revenus_mensuels,
+    form.garant !== undefined, !!profil?.ville_souhaitee, !!profil?.budget_max,
+    !!form.date_naissance, !!form.situation_familiale, !!form.logement_actuel_type, !!form.nationalite,
+  ]
   const scoreInfo = Math.round((champs.filter(Boolean).length / champs.length) * 100)
   const scoreDoc = allDocs.length > 0 ? Math.round((docsCount / allDocs.length) * 100) : 0
   const score = Math.round((scoreInfo + scoreDoc) / 2)
@@ -263,18 +296,38 @@ export default function Dossier() {
 
   const inputStyle: any = { width: "100%", padding: "10px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: isMobile ? 16 : 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box", background: "white", color: "#111" }
 
-  function DocRow({ docKey, label, desc }: { docKey: DocKey; label: string; desc?: string }) {
+  function DocRow({ docKey, label, desc, hint }: { docKey: DocKey; label: string; desc?: string; hint?: string }) {
     const uploaded = docs[docKey] || []
     const max = DOC_MAX[docKey]
     const isUploading = uploading === docKey
     const canAdd = uploaded.length < max
+    const isDragActive = dragKey === docKey
 
     return (
-      <div style={{ padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
+      <div
+        onDragOver={e => { if (canAdd) { e.preventDefault(); setDragKey(docKey) } }}
+        onDragLeave={() => { if (dragKey === docKey) setDragKey(null) }}
+        onDrop={e => {
+          e.preventDefault()
+          setDragKey(null)
+          if (!canAdd) return
+          if (e.dataTransfer.files?.length) uploadDoc(docKey, e.dataTransfer.files)
+        }}
+        style={{
+          padding: "12px 0",
+          borderBottom: "1px solid #f3f4f6",
+          background: isDragActive ? "#eff6ff" : "transparent",
+          borderRadius: isDragActive ? 10 : 0,
+          outline: isDragActive ? "1.5px dashed #111" : "none",
+          outlineOffset: isDragActive ? -4 : 0,
+          transition: "background 0.12s",
+        }}
+      >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: uploaded.length > 0 ? 8 : 0 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: 13, fontWeight: 700 }}>{label}</p>
-            {desc && <p style={{ fontSize: 11, color: "#9ca3af", lineHeight: 1.4, marginTop: 2 }}>{desc}</p>}
+            {desc && <p style={{ fontSize: 11, color: "#6b7280", lineHeight: 1.4, marginTop: 2 }}>{desc}</p>}
+            {hint && <p style={{ fontSize: 10, color: "#9ca3af", lineHeight: 1.4, marginTop: 3, fontStyle: "italic" }}>{hint}</p>}
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0, marginLeft: 12 }}>
             {canAdd && (
@@ -288,8 +341,10 @@ export default function Dossier() {
                   onChange={e => { if (e.target.files?.length) uploadDoc(docKey, e.target.files); e.target.value = "" }}
                 />
                 <button
+                  type="button"
                   onClick={() => fileRefs.current[docKey]?.click()}
                   disabled={isUploading}
+                  title="Ajouter ou glisser-déposer un fichier ici"
                   style={{ fontSize: 12, fontWeight: 700, color: "#111", background: "none", border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "5px 12px", cursor: isUploading ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: isUploading ? 0.6 : 1 }}>
                   {isUploading ? "Upload..." : uploaded.length > 0 ? `+ Ajouter (${uploaded.length}/${max})` : "Ajouter"}
                 </button>
@@ -304,24 +359,50 @@ export default function Dossier() {
         {/* Liste des fichiers uploadés */}
         {uploaded.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {uploaded.map((url, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, background: "#f0fdf4", borderRadius: 8, padding: "5px 10px" }}>
-                <span style={{ fontSize: 11, color: "#16a34a", fontWeight: 700 }}>•</span>
-                <a href={url} target="_blank" rel="noopener"
-                  style={{ fontSize: 12, fontWeight: 600, color: "#166534", textDecoration: "none", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  Fichier {i + 1}
-                </a>
-                <button onClick={() => removeDoc(docKey, i)}
-                  style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", background: "none", border: "none", cursor: "pointer", padding: "0 4px", fontFamily: "inherit" }}>
-                  ✕
-                </button>
-              </div>
-            ))}
+            {uploaded.map((url, i) => {
+              const confirming = removeTarget?.key === docKey && removeTarget?.idx === i
+              return (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, background: confirming ? "#fee2e2" : "#f0fdf4", borderRadius: 8, padding: "5px 10px", border: confirming ? "1px solid #fca5a5" : "1px solid transparent", transition: "all 0.15s" }}>
+                  <span style={{ fontSize: 11, color: confirming ? "#b91c1c" : "#16a34a", fontWeight: 700 }}>•</span>
+                  <a href={url} target="_blank" rel="noopener"
+                    style={{ fontSize: 12, fontWeight: 600, color: confirming ? "#991b1b" : "#166534", textDecoration: "none", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    Fichier {i + 1}
+                  </a>
+                  {confirming ? (
+                    <>
+                      <button type="button" onClick={() => { removeDoc(docKey, i); setRemoveTarget(null) }}
+                        style={{ fontSize: 11, fontWeight: 700, color: "white", background: "#dc2626", border: "none", borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontFamily: "inherit" }}>
+                        Confirmer
+                      </button>
+                      <button type="button" onClick={() => setRemoveTarget(null)}
+                        style={{ fontSize: 11, fontWeight: 600, color: "#111", background: "white", border: "1px solid #e5e7eb", borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontFamily: "inherit" }}>
+                        Annuler
+                      </button>
+                    </>
+                  ) : (
+                    <button type="button" onClick={() => setRemoveTarget({ key: docKey, idx: i })}
+                      title="Supprimer ce fichier"
+                      style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", background: "none", border: "none", cursor: "pointer", padding: "0 4px", fontFamily: "inherit" }}>
+                      ✕
+                    </button>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
     )
   }
+
+  // Décide quels documents optionnels afficher selon le profil courant.
+  const docsOptionnelsVisibles = DOCS_OPTIONNELS.filter(d => {
+    if (d.conditionel === "etudiant") return form.situation_pro === "Étudiant" || form.situation_pro === "Alternance"
+    if (d.conditionel === "apl") return form.a_apl
+    if (d.conditionel === "pro_salarie") return ["CDI", "CDD", "Intérim", "Fonctionnaire", "Alternance"].includes(form.situation_pro)
+    if (d.conditionel === "toujours") return true
+    return false
+  })
 
   return (
     <>
@@ -350,7 +431,7 @@ export default function Dossier() {
                 style={{ padding: isMobile ? "10px 14px" : "12px 20px", background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 12, fontWeight: 700, fontSize: isMobile ? 13 : 14, textDecoration: "none", display: "inline-block", whiteSpace: "nowrap" }}>
                 Carnet d'entretien
               </a>
-              <button onClick={genererDossierPDF} disabled={generatingPDF} className="no-print"
+              <button onClick={genererDossierPDFClick} disabled={generatingPDF} className="no-print"
                 style={{ padding: isMobile ? "10px 14px" : "12px 20px", background: generatingPDF ? "#9ca3af" : "#111", color: "white", border: "none", borderRadius: 12, fontWeight: 700, fontSize: isMobile ? 13 : 14, cursor: generatingPDF ? "not-allowed" : "pointer", fontFamily: "inherit", whiteSpace: "nowrap", flex: isMobile ? 1 : undefined }}>
                 {generatingPDF ? "Génération..." : "Télécharger PDF"}
               </button>
@@ -413,7 +494,7 @@ export default function Dossier() {
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
               <div className="print-section" style={{ background: "white", borderRadius: 20, padding: 24 }}>
-                <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>Informations personnelles</h2>
+                <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>Identité</h2>
                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
                   <F label="Nom complet">
                     <input value={form.nom} onChange={e => setForm(f => ({ ...f, nom: e.target.value }))} placeholder="Jean Dupont" style={inputStyle} />
@@ -424,6 +505,33 @@ export default function Dossier() {
                 </div>
                 <F label="Email">
                   <input value={session?.user?.email || ""} disabled style={{ ...inputStyle, background: "#f9fafb", color: "#9ca3af" }} />
+                </F>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
+                  <F label="Date de naissance">
+                    <input type="date" value={form.date_naissance} onChange={e => setForm(f => ({ ...f, date_naissance: e.target.value }))} style={inputStyle} />
+                  </F>
+                  <F label="Nationalité">
+                    <select value={form.nationalite} onChange={e => setForm(f => ({ ...f, nationalite: e.target.value }))} style={{ ...inputStyle, background: "white" }}>
+                      <option value="">— Sélectionner —</option>
+                      {NATIONALITES_COURANTES.map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                  </F>
+                </div>
+                <F label="Situation familiale">
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {SITUATIONS_FAMILIALES.map(s => (
+                      <button key={s} type="button" onClick={() => setForm(f => ({ ...f, situation_familiale: s }))}
+                        style={{ padding: "7px 14px", borderRadius: 999, border: "1.5px solid", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600,
+                          background: form.situation_familiale === s ? "#111" : "white",
+                          color: form.situation_familiale === s ? "white" : "#111",
+                          borderColor: form.situation_familiale === s ? "#111" : "#e5e7eb" }}>
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </F>
+                <F label="Nombre d'enfants à charge">
+                  <input type="number" min={0} max={15} value={form.nb_enfants} onChange={e => setForm(f => ({ ...f, nb_enfants: Math.max(0, Math.min(15, Number(e.target.value) || 0)) }))} style={inputStyle} />
                 </F>
               </div>
 
@@ -449,6 +557,48 @@ export default function Dossier() {
                   <F label="Nombre d'occupants">
                     <input type="number" min={1} max={10} value={form.nb_occupants} onChange={e => setForm(f => ({ ...f, nb_occupants: Number(e.target.value) }))} style={inputStyle} />
                   </F>
+                </div>
+                {/* Employeur + date embauche : uniquement pour les situations salariées */}
+                {["CDI", "CDD", "Intérim", "Fonctionnaire", "Alternance"].includes(form.situation_pro) && (
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
+                    <F label="Employeur">
+                      <input value={form.employeur_nom} onChange={e => setForm(f => ({ ...f, employeur_nom: e.target.value }))} placeholder="Nom de votre employeur" style={inputStyle} />
+                    </F>
+                    <F label={<>Date d&apos;embauche <Tooltip text="L'ancienneté rassure les propriétaires. Un CDI de plus de 12 mois est un signal très positif." /></>}>
+                      <input type="date" value={form.date_embauche} onChange={e => setForm(f => ({ ...f, date_embauche: e.target.value }))} style={inputStyle} />
+                    </F>
+                  </div>
+                )}
+              </div>
+
+              {/* ─── Logement actuel ─── */}
+              <div className="print-section" style={{ background: "white", borderRadius: 20, padding: 24 }}>
+                <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>Logement actuel</h2>
+                <F label="Statut">
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {LOGEMENT_TYPES.map(l => (
+                      <button key={l} type="button" onClick={() => setForm(f => ({ ...f, logement_actuel_type: l }))}
+                        style={{ padding: "7px 14px", borderRadius: 999, border: "1.5px solid", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600,
+                          background: form.logement_actuel_type === l ? "#111" : "white",
+                          color: form.logement_actuel_type === l ? "white" : "#111",
+                          borderColor: form.logement_actuel_type === l ? "#111" : "#e5e7eb" }}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </F>
+                <F label="Ville actuelle">
+                  <input value={form.logement_actuel_ville} onChange={e => setForm(f => ({ ...f, logement_actuel_ville: e.target.value }))} placeholder="Ex : Paris" style={inputStyle} />
+                </F>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+                    <input type="checkbox" checked={form.a_apl} onChange={e => setForm(f => ({ ...f, a_apl: e.target.checked }))} style={{ width: 18, height: 18, accentColor: "#111", cursor: "pointer" }} />
+                    <span style={{ fontSize: 14, color: "#111" }}>Je bénéficie des APL (aide au logement)</span>
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+                    <input type="checkbox" checked={form.mobilite_pro} onChange={e => setForm(f => ({ ...f, mobilite_pro: e.target.checked }))} style={{ width: 18, height: 18, accentColor: "#111", cursor: "pointer" }} />
+                    <span style={{ fontSize: 14, color: "#111" }}>Je déménage pour raison professionnelle (éligible Visale)</span>
+                  </label>
                 </div>
               </div>
 
@@ -487,6 +637,25 @@ export default function Dossier() {
                 )}
               </div>
 
+              {/* ─── Présentation ─── */}
+              <div className="print-section" style={{ background: "white", borderRadius: 20, padding: 24 }}>
+                <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 6, display: "flex", alignItems: "center" }}>
+                  Présentation
+                  <Tooltip text="Une lettre de présentation courte humanise votre dossier. Expliquez votre projet (pourquoi ce logement, pourquoi cette ville, contexte pro), et ce que le proprio doit savoir sur vous. 500 caractères max." />
+                </h2>
+                <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 12, lineHeight: 1.5 }}>
+                  Quelques lignes pour vous présenter au propriétaire — facultatif mais très apprécié.
+                </p>
+                <textarea
+                  value={form.presentation}
+                  onChange={e => setForm(f => ({ ...f, presentation: e.target.value.slice(0, 500) }))}
+                  placeholder="Ex : Bonjour, je suis ingénieur en CDI depuis 3 ans. Je cherche un logement proche de mon nouveau bureau à partir du 1er septembre. Très soigneux, non fumeur, sans animaux."
+                  rows={4}
+                  style={{ width: "100%", padding: "12px 14px", border: "1.5px solid #e5e7eb", borderRadius: 12, fontSize: 14, fontFamily: "inherit", outline: "none", resize: "vertical", boxSizing: "border-box", lineHeight: 1.5 }}
+                />
+                <p style={{ fontSize: 11, color: "#9ca3af", margin: "6px 0 0", textAlign: "right" }}>{form.presentation.length}/500</p>
+              </div>
+
               <button onClick={sauvegarder} disabled={saving} className="no-print"
                 style={{ background: saving ? "#9ca3af" : saved ? "#16a34a" : "#111", color: "white", border: "none", borderRadius: 999, padding: "14px 0", fontWeight: 700, fontSize: 15, cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit", transition: "background 0.2s" }}>
                 {saving ? "Sauvegarde..." : saved ? "Dossier sauvegardé ✓" : "Sauvegarder mon dossier"}
@@ -496,6 +665,7 @@ export default function Dossier() {
             {/* Sidebar documents */}
             <div>
               <SharePanel />
+              <AccessLogPanel />
               <div style={{ background: "white", borderRadius: 20, padding: 24, position: "sticky", top: 80 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                   <h3 style={{ fontSize: 15, fontWeight: 800 }}>Documents</h3>
@@ -504,8 +674,19 @@ export default function Dossier() {
                 <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 16 }}>PDF, JPG ou PNG. Plusieurs fichiers possibles pour les bulletins et quittances.</p>
 
                 {DOCS_REQUIS.map(doc => (
-                  <DocRow key={doc.key} docKey={doc.key} label={doc.label} desc={doc.desc} />
+                  <DocRow key={doc.key} docKey={doc.key} label={doc.label} desc={doc.desc} hint={doc.hint} />
                 ))}
+
+                {docsOptionnelsVisibles.length > 0 && (
+                  <>
+                    <div style={{ borderTop: "1px solid #f3f4f6", margin: "16px 0 12px" }}>
+                      <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 12 }}>Recommandé selon votre situation</p>
+                    </div>
+                    {docsOptionnelsVisibles.map(doc => (
+                      <DocRow key={doc.key} docKey={doc.key} label={doc.label} desc={doc.desc} />
+                    ))}
+                  </>
+                )}
 
                 {form.garant && (
                   <>

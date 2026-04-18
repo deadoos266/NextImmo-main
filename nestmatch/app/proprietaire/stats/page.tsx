@@ -8,6 +8,8 @@ import { Suspense } from "react"
 // jsPDF lazy-loaded pour alleger le bundle initial (voir genererQuittancePDF)
 import { useResponsive } from "../../hooks/useResponsive"
 import LocataireEmailField from "../../components/LocataireEmailField"
+import { BRAND } from "../../../lib/brand"
+import { drawLogoPDF } from "../../../lib/brandPDF"
 
 // ─── SVG Bar Chart ──────────────────────────────────────────────────────────
 
@@ -229,52 +231,53 @@ async function genererQuittancePDF({
   const totalCC = loyerHC + charges
   const today = new Date().toLocaleDateString("fr-FR")
 
+  drawLogoPDF(doc, { x: 20, y: 18, size: "medium" })
   doc.setFontSize(20); doc.setFont("helvetica", "bold")
-  doc.text("QUITTANCE DE LOYER", 105, 25, { align: "center" })
+  doc.text("QUITTANCE DE LOYER", 105, 34, { align: "center" })
   doc.setFontSize(11); doc.setFont("helvetica", "normal")
-  doc.text(`Période : ${moisLabel}`, 105, 33, { align: "center" })
-  doc.setDrawColor(200, 200, 200); doc.line(20, 40, 190, 40)
+  doc.text(`Période : ${moisLabel}`, 105, 42, { align: "center" })
+  doc.setDrawColor(200, 200, 200); doc.line(20, 48, 190, 48)
 
-  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("BAILLEUR", 20, 50)
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("BAILLEUR", 20, 58)
   doc.setFont("helvetica", "normal"); doc.setFontSize(9)
-  doc.text(`Nom : ${nomProprietaire}`, 20, 57)
-  doc.text(`Email : ${emailProprietaire}`, 20, 63)
+  doc.text(`Nom : ${nomProprietaire}`, 20, 65)
+  doc.text(`Email : ${emailProprietaire}`, 20, 71)
 
-  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("LOCATAIRE", 110, 50)
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("LOCATAIRE", 110, 58)
   doc.setFont("helvetica", "normal"); doc.setFontSize(9)
-  doc.text(`Email : ${emailLocataire}`, 110, 57)
+  doc.text(`Email : ${emailLocataire}`, 110, 65)
 
-  doc.line(20, 70, 190, 70)
-  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("BIEN LOUÉ", 20, 78)
+  doc.line(20, 78, 190, 78)
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("BIEN LOUÉ", 20, 86)
   doc.setFont("helvetica", "normal"); doc.setFontSize(9)
-  doc.text(titreBien, 20, 85)
-  doc.text(adresse || villeBien, 20, 91)
+  doc.text(titreBien, 20, 93)
+  doc.text(adresse || villeBien, 20, 99)
 
-  doc.line(20, 98, 190, 98)
-  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("DÉTAIL DU RÈGLEMENT", 20, 106)
+  doc.line(20, 106, 190, 106)
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("DÉTAIL DU RÈGLEMENT", 20, 114)
   doc.setFont("helvetica", "normal"); doc.setFontSize(9)
-  doc.text("Loyer hors charges :", 20, 114)
-  doc.text(`${loyerHC.toLocaleString("fr-FR")} €`, 170, 114, { align: "right" })
-  doc.text("Charges locatives :", 20, 121)
-  doc.text(`${charges.toLocaleString("fr-FR")} €`, 170, 121, { align: "right" })
-  doc.line(100, 126, 190, 126)
+  doc.text("Loyer hors charges :", 20, 122)
+  doc.text(`${loyerHC.toLocaleString("fr-FR")} €`, 170, 122, { align: "right" })
+  doc.text("Charges locatives :", 20, 129)
+  doc.text(`${charges.toLocaleString("fr-FR")} €`, 170, 129, { align: "right" })
+  doc.line(100, 134, 190, 134)
   doc.setFont("helvetica", "bold"); doc.setFontSize(10)
-  doc.text("TOTAL CHARGES COMPRISES :", 20, 134)
-  doc.text(`${totalCC.toLocaleString("fr-FR")} €`, 170, 134, { align: "right" })
+  doc.text("TOTAL CHARGES COMPRISES :", 20, 142)
+  doc.text(`${totalCC.toLocaleString("fr-FR")} €`, 170, 142, { align: "right" })
 
-  doc.line(20, 141, 190, 141)
+  doc.line(20, 149, 190, 149)
   doc.setFont("helvetica", "normal"); doc.setFontSize(8)
   const attestation = `Je soussigné(e), ${nomProprietaire}, bailleur du logement désigné ci-dessus, déclare avoir reçu de ${emailLocataire} la somme de ${totalCC.toLocaleString("fr-FR")} € correspondant au loyer et charges du mois de ${moisLabel}.`
   const lines = doc.splitTextToSize(attestation, 170)
-  doc.text(lines, 20, 149)
+  doc.text(lines, 20, 157)
 
   doc.setFontSize(9)
-  doc.text(`Fait le ${today}`, 20, 175)
-  doc.text("Signature du bailleur :", 110, 175)
-  doc.line(110, 190, 185, 190)
+  doc.text(`Fait le ${today}`, 20, 183)
+  doc.text("Signature du bailleur :", 110, 183)
+  doc.line(110, 198, 185, 198)
 
   doc.setFontSize(7); doc.setTextColor(150, 150, 150)
-  doc.text("Document généré par NestMatch — nestmatch.fr", 105, 285, { align: "center" })
+  doc.text(`Document généré par ${BRAND.name} — ${BRAND.url.replace(/^https?:\/\//, "")}`, 105, 285, { align: "center" })
 
   doc.save(`quittance-${moisLabel.toLowerCase().replace(" ", "-")}.pdf`)
 }

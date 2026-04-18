@@ -5,6 +5,8 @@ import { useRouter, useParams, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "../../../../lib/supabase"
 import { useResponsive } from "../../../hooks/useResponsive"
+import { BRAND } from "../../../../lib/brand"
+import { drawLogoPDF } from "../../../../lib/brandPDF"
 // jsPDF lazy-loaded pour alleger le bundle initial (voir genererBailPDF)
 
 // ─── Bail PDF Generator (conforme loi ALUR) ────────────────────────────────
@@ -77,6 +79,10 @@ async function genererBailPDF(data: {
     doc.text(val, 80, y)
     y += 5.5
   }
+
+  // ── Header brand (logo NestMatch en haut à gauche)
+  drawLogoPDF(doc, { x: 20, y: 18, size: "medium" })
+  y = 30
 
   // ── Titre
   addTitle(`CONTRAT DE LOCATION`)
@@ -246,7 +252,7 @@ async function genererBailPDF(data: {
 
   // ── Footer
   doc.setFontSize(7); doc.setTextColor(150, 150, 150)
-  doc.text("Document généré par NestMatch — nestmatch.fr — Ce document ne se substitue pas à un conseil juridique.", 105, 285, { align: "center" })
+  doc.text(`Document généré par ${BRAND.name} — ${BRAND.url.replace(/^https?:\/\//, "")} — Ce document ne se substitue pas à un conseil juridique.`, 105, 285, { align: "center" })
 
   doc.save(`bail-${data.villeBien.toLowerCase()}-${data.dateDebut}.pdf`)
 }

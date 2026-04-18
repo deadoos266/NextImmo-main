@@ -25,6 +25,12 @@ export interface ScreeningProfil {
   ville_souhaitee?: string | null
   budget_max?: number | string | null
   profil_locataire?: string | null
+  // Nouveaux champs (migration 007) utilisés pour bonus/malus
+  date_embauche?: string | null
+  logement_actuel_type?: string | null
+  mobilite_pro?: boolean | null
+  a_apl?: boolean | null
+  presentation?: string | null
 }
 
 export interface ScreeningResult {
@@ -160,7 +166,45 @@ export function computeScreening(profil: ScreeningProfil | null | undefined, loy
   const remplis = champs.filter(v => v !== null && v !== undefined && v !== "").length
   const completudeScore = Math.round((remplis / champs.length) * 10)
 
-  const score = Math.min(100, solvabiliteScore + situationScore + garantScore + completudeScore)
+  // ─── Bonus/malus contextuels (−10 à +15) ────────────────
+  // Ancienneté emploi : un CDI stable depuis +12 mois vaut mieux qu'un CDI
+  // signé la semaine dernière. Source : date_embauche (migration 007).
+  let bonusContexte = 0
+  if (profil.date_embauche) {
+    const t = new Date(profil.date_embauche).getTime()
+    if (Number.isFinite(t)) {
+      const mois = (Date.now() - t) / (1000 * 60 * 60 * 24 * 30.44)
+      if (mois >= 24) bonusContexte += 8
+      else if (mois >= 12) bonusContexte += 5
+      else if (mois >= 6) bonusContexte += 2
+      else if (mois >= 0 && mois < 3) flags.push("Emploi récent (< 3 mois)")
+    }
+  }
+
+  // Visale — garantie Action Logement — très apprécié des proprios
+  if (typeGarant.includes("visale")) bonusContexte += 3
+
+  // Mobilité pro : éligible Visale même sans garant, signal positif
+  if (profil.mobilite_pro === true && !aGarant) bonusContexte += 2
+
+  // APL : sécurise une partie du loyer
+  if (profil.a_apl === true) bonusContexte += 2
+
+  // Présentation écrite : engagement dans la candidature
+  if (profil.presentation && profil.presentation.trim().length >= 50) bonusContexte += 2
+
+  // Logement actuel "Hébergé" + pas de garant + revenus faibles = risque
+  if (profil.logement_actuel_type === "Hébergé" && !aGarant && ratio !== null && ratio < 2.5) {
+    bonusContexte -= 5
+    flags.push("Hébergé sans garant")
+  }
+
+  // Flag "Étudiant sans garant" — signal fort pour le proprio
+  if (SITUATION_PRO_FAIBLE.has(sit) && !aGarant) {
+    flags.push(`${sit} sans garant`)
+  }
+
+  const score = Math.max(0, Math.min(100, solvabiliteScore + situationScore + garantScore + completudeScore + bonusContexte))
 
   let tier: ScreeningResult["tier"]
   let color: string
