@@ -582,17 +582,30 @@ function MessagesInner() {
     const convList = Array.from(convMap.values())
     setConversations(convList)
 
-    // Fetch photos de profil des peers via la table users (Google OAuth image).
+    // Fetch photos de profil des peers : priorité à profils.photo_url_custom
+    // (avatar uploadé par l'user), fallback users.image (Google OAuth).
     const peerEmails = [...new Set(convList.map(c => (c.other || "").toLowerCase()).filter(Boolean))]
     if (peerEmails.length > 0) {
-      const { data: users } = await supabase.from("users").select("email, image").in("email", peerEmails)
-      if (users) {
-        const map: Record<string, string> = {}
-        users.forEach((u: any) => {
-          if (u.email && u.image) map[u.email.toLowerCase()] = u.image
-        })
-        setPeerImages(map)
+      const [usersRes, profilsRes] = await Promise.all([
+        supabase.from("users").select("email, image").in("email", peerEmails),
+        supabase.from("profils").select("email, photo_url_custom").in("email", peerEmails),
+      ])
+      const map: Record<string, string> = {}
+      // Fallback : Google / provider image
+      for (const u of usersRes.data || []) {
+        const e = (u as { email?: string | null }).email?.toLowerCase()
+        const img = (u as { image?: string | null }).image
+        if (e && img) map[e] = img
       }
+      // Priorité : avatar custom uploadé par l'user (si colonne présente)
+      if (!profilsRes.error) {
+        for (const p of profilsRes.data || []) {
+          const e = (p as { email?: string | null }).email?.toLowerCase()
+          const img = (p as { photo_url_custom?: string | null }).photo_url_custom
+          if (e && img) map[e] = img
+        }
+      }
+      setPeerImages(map)
     }
 
     // Fetch les annonces liées (avec locataire_email + statut pour badges)

@@ -22,6 +22,7 @@ export default function Profil() {
   const [saved, setSaved] = useState(false)
   const [erreur, setErreur] = useState("")
   const [dataLoaded, setDataLoaded] = useState(false)
+  const [photoCustom, setPhotoCustom] = useState<string | null>(null)
   const [form, setForm] = useState({
     ville_souhaitee: "", mode_localisation: "souple", type_quartier: "", budget_min: "", budget_max: "",
     surface_min: "", surface_max: "", pieces_min: "1", chambres_min: "0",
@@ -43,6 +44,7 @@ export default function Profil() {
       supabase.from("profils").select("*").eq("email", session.user.email).single()
         .then(({ data }) => {
           if (data) {
+            setPhotoCustom((data as { photo_url_custom?: string | null }).photo_url_custom || null)
             setForm({
               ville_souhaitee: data.ville_souhaitee || "",
               mode_localisation: data.mode_localisation || "souple",
@@ -141,8 +143,8 @@ export default function Profil() {
 
         <div style={{ background: "white", borderRadius: 24, padding: isMobile ? "20px 18px" : 32, marginBottom: 20, display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "space-between", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 16 : 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 14 : 24 }}>
-            {session.user?.image
-              ? <img src={session.user.image} alt="p" style={{ width: isMobile ? 52 : 72, height: isMobile ? 52 : 72, borderRadius: "50%" }} />
+            {(photoCustom || session.user?.image)
+              ? <img src={photoCustom || session.user?.image || ""} alt="p" referrerPolicy="no-referrer" style={{ width: isMobile ? 52 : 72, height: isMobile ? 52 : 72, borderRadius: "50%", objectFit: "cover" }} />
               : <div style={{ width: isMobile ? 52 : 72, height: isMobile ? 52 : 72, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? 20 : 28, color: "white", fontWeight: 800 }}>{session.user?.name?.[0]}</div>
             }
             <div>

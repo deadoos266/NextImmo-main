@@ -14,6 +14,7 @@ export default function OngletProfil() {
   const [initialBio, setInitialBio] = useState("")
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
@@ -21,7 +22,16 @@ export default function OngletProfil() {
   useEffect(() => {
     const email = session?.user?.email
     if (!email) return
-    supabase.from("profils").select("photo_url_custom, bio_publique").eq("email", email).single().then(({ data }) => {
+    supabase.from("profils").select("photo_url_custom, bio_publique").eq("email", email).single().then(({ data, error }) => {
+      if (error) {
+        // Probable cause : migration 008 pas encore appliquée (colonnes absentes).
+        setSaveError(
+          error.message.includes("column") || error.code === "42703"
+            ? "Configuration incomplète : la migration 008_parametres_profil_public.sql n'a pas été appliquée. Contactez un administrateur."
+            : `Erreur de chargement : ${error.message}`
+        )
+        return
+      }
       setPhoto(data?.photo_url_custom || null)
       setBio(data?.bio_publique || "")
       setInitialBio(data?.bio_publique || "")
@@ -74,17 +84,24 @@ export default function OngletProfil() {
     const email = session?.user?.email
     if (!email) return
     setSaving(true)
+    setSaveError(null)
     const trimmed = bio.trim().slice(0, 300)
     const { error } = await supabase.from("profils").upsert(
       { email, bio_publique: trimmed || null },
       { onConflict: "email" },
     )
     setSaving(false)
-    if (!error) {
-      setInitialBio(trimmed)
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2400)
+    if (error) {
+      setSaveError(
+        error.code === "42703" || error.message.includes("column")
+          ? "Colonne bio_publique introuvable — la migration 008 doit être appliquée dans Supabase."
+          : `Enregistrement impossible : ${error.message}`
+      )
+      return
     }
+    setInitialBio(trimmed)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2400)
   }
 
   const bioChanged = bio.trim() !== initialBio.trim()
@@ -150,6 +167,9 @@ export default function OngletProfil() {
             {saving ? "Enregistrement…" : saved ? "Enregistré ✓" : "Enregistrer"}
           </button>
         </div>
+        {saveError && (
+          <p style={{ fontSize: 12, color: "#dc2626", margin: "10px 0 0", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "8px 12px", lineHeight: 1.5 }}>{saveError}</p>
+        )}
       </section>
 
       <section style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 16, padding: 18 }}>

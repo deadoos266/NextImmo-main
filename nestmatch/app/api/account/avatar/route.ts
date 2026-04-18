@@ -78,7 +78,22 @@ export async function POST(req: NextRequest) {
     .upload(path, bytes, { contentType: file.type, upsert: true })
   if (upErr) {
     console.error("[avatar upload]", upErr)
-    return NextResponse.json({ error: "Upload échoué" }, { status: 500 })
+    const msg = upErr.message || ""
+    // Surface les causes fréquentes (bucket manquant, policies absentes)
+    // pour que le développeur ou admin voie tout de suite quoi corriger.
+    if (/bucket.*not found|bucket.*n'existe/i.test(msg) || /The resource was not found/i.test(msg)) {
+      return NextResponse.json(
+        { error: "Bucket 'avatars' introuvable dans Supabase. Créez-le (public=true) avant de téléverser une photo." },
+        { status: 500 },
+      )
+    }
+    if (/row-level security|policy|permission/i.test(msg)) {
+      return NextResponse.json(
+        { error: "Politique de stockage refuse l'upload. Vérifiez la configuration du bucket 'avatars'." },
+        { status: 500 },
+      )
+    }
+    return NextResponse.json({ error: `Upload échoué : ${msg}` }, { status: 500 })
   }
 
   const { data: urlData } = supabaseAdmin.storage.from("avatars").getPublicUrl(path)
@@ -90,7 +105,14 @@ export async function POST(req: NextRequest) {
     .upsert({ email, photo_url_custom: url }, { onConflict: "email" })
   if (dbErr) {
     console.error("[avatar db upsert]", dbErr)
-    return NextResponse.json({ error: "Erreur base de données" }, { status: 500 })
+    const code = (dbErr as { code?: string }).code
+    if (code === "42703" || /column.*photo_url_custom/i.test(dbErr.message || "")) {
+      return NextResponse.json(
+        { error: "Colonne 'photo_url_custom' absente. Appliquez la migration 008_parametres_profil_public.sql dans Supabase." },
+        { status: 500 },
+      )
+    }
+    return NextResponse.json({ error: `Erreur base de données : ${dbErr.message || "inconnue"}` }, { status: 500 })
   }
 
   return NextResponse.json({ ok: true, url })

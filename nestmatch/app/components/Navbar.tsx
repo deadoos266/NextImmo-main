@@ -17,8 +17,12 @@ export default function Navbar() {
   const pathname = usePathname()
   const [badgeVisites, setBadgeVisites] = useState(0)
   const [badgeMessages, setBadgeMessages] = useState(0)
+  const [photoCustom, setPhotoCustom] = useState<string | null>(null)
   const { isMobile, isTablet } = useResponsive()
   const isSmall = isMobile || isTablet
+  // Priorité photo : custom uploadée > Google (session). Si la colonne n'existe
+  // pas (migration 008 pas appliquée), on retombe silencieusement sur session.
+  const avatarSrc = photoCustom || session?.user?.image || null
 
   const isActive = (path: string) => pathname?.startsWith(path)
   const linkStyle = (path: string): any => ({
@@ -30,6 +34,18 @@ export default function Navbar() {
     borderRadius: 8,
     background: isActive(path) ? "#f3f4f6" : "transparent",
   })
+
+  // Charge la photo custom si la migration 008 a posé la colonne.
+  useEffect(() => {
+    const email = session?.user?.email?.toLowerCase()
+    if (!email) { setPhotoCustom(null); return }
+    supabase.from("profils").select("photo_url_custom").eq("email", email).single()
+      .then(({ data, error }) => {
+        if (error) return // colonne absente ou profil pas encore créé
+        const v = (data as { photo_url_custom?: string | null } | null)?.photo_url_custom
+        if (v) setPhotoCustom(v)
+      })
+  }, [session?.user?.email])
 
   useEffect(() => {
     if (!session?.user?.email) return
@@ -176,8 +192,8 @@ export default function Navbar() {
             <div style={{ position: "relative" }}>
               <div onClick={() => setMenuOpen(!menuOpen)}
                 style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "6px 12px", borderRadius: 999, border: "1.5px solid #e5e7eb", background: menuOpen ? "#f3f4f6" : "white" }}>
-                {session.user?.image
-                  ? <img src={session.user.image} alt="avatar" style={{ width: 30, height: 30, borderRadius: "50%", objectFit: "cover" }} />
+                {avatarSrc
+                  ? <img src={avatarSrc} alt="avatar" referrerPolicy="no-referrer" style={{ width: 30, height: 30, borderRadius: "50%", objectFit: "cover" }} />
                   : <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 13 }}>{session.user?.name?.[0]}</div>
                 }
                 <span style={{ fontSize: 14, fontWeight: 600 }}>{session.user?.name?.split(" ")[0]}</span>
@@ -333,8 +349,8 @@ export default function Navbar() {
             {/* User info */}
             {session && (
               <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: 12 }}>
-                {session.user?.image
-                  ? <img src={session.user.image} alt="avatar" style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }} />
+                {avatarSrc
+                  ? <img src={avatarSrc} alt="avatar" referrerPolicy="no-referrer" style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }} />
                   : <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 15 }}>{session.user?.name?.[0]}</div>
                 }
                 <div>
