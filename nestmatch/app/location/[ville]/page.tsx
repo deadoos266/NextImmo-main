@@ -15,7 +15,7 @@ function cityFromSlug(slug: string): string | null {
   return match || null
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://next-immo-main.vercel.app"
+const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://nestmatch.fr"
 
 export async function generateMetadata({ params }: any): Promise<Metadata> {
   const { ville } = await params

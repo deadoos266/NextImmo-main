@@ -25,24 +25,12 @@ import {
 } from "@/lib/agentMemory"
 import { runOpus } from "@/lib/agents/opusAgent"
 import { runSonnet } from "@/lib/agents/sonnetAgent"
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit"
 
-// ── Rate limit simple en mémoire (process-local, suffisant pour un MVP) ─────
-const RATE_LIMIT_MAX = 20
-const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000 // 10 minutes
-const rateLimitHits = new Map<string, number[]>()
-
-function checkRateLimit(key: string): { allowed: boolean; retryAfterSec?: number } {
-  const now = Date.now()
-  const hits = (rateLimitHits.get(key) ?? []).filter(t => now - t < RATE_LIMIT_WINDOW_MS)
-  if (hits.length >= RATE_LIMIT_MAX) {
-    const oldest = hits[0]
-    const retryAfterSec = Math.ceil((RATE_LIMIT_WINDOW_MS - (now - oldest)) / 1000)
-    return { allowed: false, retryAfterSec }
-  }
-  hits.push(now)
-  rateLimitHits.set(key, hits)
-  return { allowed: true }
-}
+// Rate-limit double : par email (20/10min) ET par IP (30/10min) pour éviter
+// qu'un attaquant multi-comptes cumule les requêtes LLM (coût Anthropic).
+const EMAIL_LIMIT = { max: 20, windowMs: 10 * 60 * 1000 }
+const IP_LIMIT = { max: 30, windowMs: 10 * 60 * 1000 }
 
 export async function POST(req: NextRequest) {
   try {
@@ -53,12 +41,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Authentification requise" }, { status: 401 })
     }
 
-    // ── Rate limit par email ───────────────────────────────────────────────
-    const rl = checkRateLimit(userEmail)
-    if (!rl.allowed) {
+    // ── Rate limit par email + IP (anti multi-comptes) ─────────────────────
+    const rlEmail = checkRateLimit(`agent:email:${userEmail}`, EMAIL_LIMIT)
+    if (!rlEmail.allowed) {
       return NextResponse.json(
         { error: "Trop de requêtes, réessayez plus tard" },
-        { status: 429, headers: { "Retry-After": String(rl.retryAfterSec ?? 60) } }
+        { status: 429, headers: { "Retry-After": String(rlEmail.retryAfterSec ?? 60) } }
+      )
+    }
+    const ip = getClientIp(req.headers)
+    const rlIp = checkRateLimit(`agent:ip:${ip}`, IP_LIMIT)
+    if (!rlIp.allowed) {
+      return NextResponse.json(
+        { error: "Trop de requêtes depuis cette adresse" },
+        { status: 429, headers: { "Retry-After": String(rlIp.retryAfterSec ?? 60) } }
       )
     }
 

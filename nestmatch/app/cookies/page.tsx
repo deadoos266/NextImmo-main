@@ -78,37 +78,37 @@ export default function CookiesPage() {
             href="/"
             style={{ fontSize: 13, color: "#6b7280", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 20 }}
           >
-            <span style={{ fontSize: 16 }}>←</span> Retour a l'accueil
+            <span style={{ fontSize: 16 }}>←</span> Retour à l&apos;accueil
           </Link>
           <h1 style={{ fontSize: isMobile ? 28 : 36, fontWeight: 800, color: "#111", margin: "0 0 8px", letterSpacing: "-0.5px" }}>
             Politique de cookies
           </h1>
-          <p style={{ fontSize: 14, color: "#6b7280", margin: 0 }}>Derniere mise a jour : avril 2026</p>
+          <p style={{ fontSize: 14, color: "#6b7280", margin: 0 }}>En vigueur au 18 avril 2026</p>
         </div>
 
         {/* Content card */}
         <div style={{ background: "white", borderRadius: 20, padding: isMobile ? "24px 20px" : "36px 40px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
 
           {/* 1. Qu'est-ce qu'un cookie */}
-          <Section title="1. Qu'est-ce qu'un cookie ?">
+          <Section title="1. Qu&apos;est-ce qu&apos;un cookie ?">
             <P>
-              Un cookie est un petit fichier texte depose sur votre navigateur lorsque vous visitez un site web.
-              Il permet au site de memoriser certaines informations sur votre visite, comme vos preferences
-              de langue ou le contenu de votre panier, afin de faciliter votre prochaine visite et de rendre
+              Un cookie est un petit fichier texte déposé sur votre navigateur lorsque vous visitez un site web.
+              Il permet au site de mémoriser certaines informations sur votre visite, comme vos préférences
+              de langue ou votre état de connexion, afin de faciliter votre prochaine visite et de rendre
               le site plus utile pour vous.
             </P>
             <P>
-              Les cookies peuvent etre "de session" (supprimes a la fermeture du navigateur) ou "persistants"
-              (conserves pendant une duree definie). Ils peuvent etre deposes par NestMatch ("cookies internes")
-              ou par des services tiers ("cookies tiers").
+              Les cookies peuvent être « de session » (supprimés à la fermeture du navigateur) ou « persistants »
+              (conservés pendant une durée définie). Ils peuvent être déposés par NestMatch (« cookies internes »)
+              ou par des services tiers (« cookies tiers »).
             </P>
           </Section>
 
           {/* 2. Les cookies que nous utilisons */}
           <Section title="2. Les cookies que nous utilisons">
             <P>
-              NestMatch utilise un nombre limite de cookies, strictement necessaires au fonctionnement du service
-              ou soumis a votre consentement prealable.
+              NestMatch utilise un nombre limité de cookies, strictement nécessaires au fonctionnement du service
+              ou soumis à votre consentement préalable.
             </P>
             <div style={{ overflowX: "auto", margin: "16px 0" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
@@ -220,12 +220,12 @@ export default function CookiesPage() {
               ))}
             </ul>
             <P>
-              Pour exercer ces droits, vous pouvez nous contacter a l'adresse suivante :{" "}
+              Pour exercer ces droits, vous pouvez nous contacter à l&apos;adresse suivante :{" "}
               <strong>contact@nestmatch.fr</strong>
             </P>
             <P>
-              Vous pouvez egalement introduire une reclamation aupres de la CNIL (Commission Nationale de
-              l'Informatique et des Libertes) :{" "}
+              Vous pouvez également introduire une réclamation auprès de la CNIL (Commission Nationale de
+              l&apos;Informatique et des Libertés) :{" "}
               <a
                 href="https://www.cnil.fr"
                 target="_blank"
@@ -240,10 +240,9 @@ export default function CookiesPage() {
           {/* 6. Modifications */}
           <Section title="6. Modifications de cette politique">
             <P>
-              NestMatch se reserve le droit de modifier la presente politique de cookies afin de l'adapter
-              aux evolutions reglementaires ou aux changements apportes au site. La date de derniere mise
-              a jour est indiquee en haut de cette page. Nous vous invitons a consulter cette page
-              regulierement.
+              NestMatch se réserve le droit de modifier la présente politique de cookies afin de l&apos;adapter
+              aux évolutions réglementaires ou aux changements apportés au site. La date de dernière mise
+              à jour est indiquée en haut de cette page. Nous vous invitons à la consulter régulièrement.
             </P>
           </Section>
 
@@ -267,7 +266,7 @@ export default function CookiesPage() {
                   fontFamily: "'DM Sans', sans-serif",
                 }}
               >
-                Modifier mes preferences
+                Modifier mes préférences
               </button>
               <Link
                 href="/"
@@ -284,18 +283,18 @@ export default function CookiesPage() {
                   textAlign: "center",
                 }}
               >
-                Retour a l'accueil
+                Retour à l&apos;accueil
               </Link>
             </div>
           ) : (
             <div>
-              <p style={{ fontSize: 16, fontWeight: 800, color: "#111", margin: "0 0 16px" }}>Vos preferences</p>
+              <p style={{ fontSize: 16, fontWeight: 800, color: "#111", margin: "0 0 16px" }}>Vos préférences</p>
 
               <div style={{ marginBottom: 16 }}>
-                <PreferenceRow label="Necessaires" description="Session, authentification, securite." checked={true} disabled />
-                <PreferenceRow label="Fonctionnels" description="Preferences, favoris, personnalisation." checked={functional} onChange={setFunctional} />
+                <PreferenceRow label="Nécessaires" description="Session, authentification, sécurité." checked={true} disabled />
+                <PreferenceRow label="Fonctionnels" description="Préférences, favoris, personnalisation." checked={functional} onChange={setFunctional} />
                 <PreferenceRow label="Analytiques" description="Pages vues, performance. Aucun outil tiers." checked={analytics} onChange={setAnalytics} />
-                <PreferenceRow label="Marketing" description="Non utilise actuellement." checked={false} disabled />
+                <PreferenceRow label="Marketing" description="Non utilisé actuellement." checked={false} disabled />
               </div>
 
               <div style={{ display: "flex", gap: 10, flexDirection: isMobile ? "column" : "row" }}>

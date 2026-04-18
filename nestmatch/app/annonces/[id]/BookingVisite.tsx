@@ -143,12 +143,13 @@ export default function BookingVisite({
                     type="button"
                     onClick={() => setHeure(h)}
                     style={{
-                      padding: "8px 0",
+                      padding: "12px 0",
+                      minHeight: 44,
                       borderRadius: 8,
                       border: heure === h ? "2px solid #111" : "1.5px solid #e5e7eb",
                       background: heure === h ? "#111" : "white",
                       color: heure === h ? "white" : "#111",
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: heure === h ? 800 : 600,
                       cursor: "pointer",
                       fontFamily: "inherit",

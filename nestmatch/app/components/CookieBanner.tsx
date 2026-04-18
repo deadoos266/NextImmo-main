@@ -136,9 +136,12 @@ export default function CookieBanner() {
   const [dismissed, setDismissed] = useState(false)
   const [animateIn, setAnimateIn] = useState(false)
 
-  // Masquer l'icône flottante sur les pages avec grande carte pleine-largeur.
-  // Ailleurs (fiches annonce, /location/[ville]), la carte est encadrée donc OK.
-  const hideFloatingOnThisPage = pathname === "/annonces"
+  // Masquer l'icône flottante sur toutes les pages avec carte Leaflet pour
+  // éviter le chevauchement avec les contrôles zoom / attribution.
+  const hideFloatingOnThisPage =
+    pathname === "/annonces" ||
+    pathname?.startsWith("/annonces/") === true ||
+    pathname?.startsWith("/location/") === true
 
   useEffect(() => {
     const stored = getStoredConsent()

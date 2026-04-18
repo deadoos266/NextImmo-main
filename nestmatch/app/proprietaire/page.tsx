@@ -8,18 +8,11 @@ import AgendaVisites from "../components/AgendaVisites"
 import AnnulerVisiteDialog from "../components/AnnulerVisiteDialog"
 import { useResponsive } from "../hooks/useResponsive"
 import PipelineFunnel from "./PipelineFunnel"
-import { annulerVisite } from "../../lib/visitesHelpers"
+import { annulerVisite, STATUT_VISITE_STYLE as STATUT_V } from "../../lib/visitesHelpers"
 import { computeScreening } from "../../lib/screening"
 
 const ONGLETS = ["Tableau de bord", "Mes biens", "Performance", "Documents", "Candidatures", "Loyers", "Visites"] as const
 type Onglet = typeof ONGLETS[number]
-
-const STATUT_V: Record<string, { bg: string; color: string; border: string; label: string }> = {
-  "proposée":  { bg: "#fff7ed", color: "#c2410c", border: "#fed7aa", label: "En attente" },
-  "confirmée": { bg: "#dcfce7", color: "#15803d", border: "#bbf7d0", label: "Confirmée" },
-  "annulée":   { bg: "#fee2e2", color: "#dc2626", border: "#fecaca", label: "Annulée" },
-  "effectuée": { bg: "#f3f4f6", color: "#374151", border: "#e5e7eb", label: "Effectuée" },
-}
 
 function jours(d: string) {
   const diff = Math.ceil((new Date(d).getTime() - Date.now()) / 86400000)

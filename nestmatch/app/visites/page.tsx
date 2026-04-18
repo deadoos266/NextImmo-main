@@ -7,16 +7,7 @@ import { supabase } from "../../lib/supabase"
 import AgendaVisites from "../components/AgendaVisites"
 import AnnulerVisiteDialog from "../components/AnnulerVisiteDialog"
 import { useResponsive } from "../hooks/useResponsive"
-import { annulerVisite } from "../../lib/visitesHelpers"
-
-type Statut = "proposée" | "confirmée" | "annulée" | "effectuée"
-
-const STATUT: Record<Statut, { bg: string; color: string; border: string; label: string }> = {
-  "proposée":  { bg: "#fff7ed", color: "#c2410c", border: "#fed7aa", label: "En attente" },
-  "confirmée": { bg: "#dcfce7", color: "#15803d", border: "#bbf7d0", label: "Confirmée" },
-  "annulée":   { bg: "#fee2e2", color: "#dc2626", border: "#fecaca", label: "Annulée" },
-  "effectuée": { bg: "#f3f4f6", color: "#374151", border: "#e5e7eb", label: "Effectuée" },
-}
+import { annulerVisite, STATUT_VISITE_STYLE as STATUT, type StatutVisite as Statut } from "../../lib/visitesHelpers"
 
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })

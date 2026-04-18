@@ -204,30 +204,7 @@ export default function Home() {
       </section>
 
       {/* FAQ */}
-      <section style={{ maxWidth: 800, margin: "0 auto", padding: isMobile ? "48px 20px" : "72px 48px" }}>
-        <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "1.5px", textAlign: "center", marginBottom: 14 }}>Questions fréquentes</p>
-        <h2 style={{ fontSize: isMobile ? 26 : 36, fontWeight: 800, textAlign: "center", marginBottom: isMobile ? 28 : 40, letterSpacing: "-1px" }}>
-          Tout ce que vous vous demandez.
-        </h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {[
-            { q: "NestMatch est-il vraiment gratuit ?", r: "Oui, l'inscription et l'utilisation sont 100% gratuites pour les locataires et les propriétaires. Aucune commission n'est prélevée sur les loyers." },
-            { q: "Comment fonctionne le score de compatibilité ?", r: "Notre algorithme compare vos critères (budget, surface, localisation, équipements, DPE) aux caractéristiques de chaque annonce. Le score va de 0 à 100% et prend en compte 7 dimensions." },
-            { q: "Mon dossier est-il sécurisé ?", r: "Vos documents sont stockés de manière chiffrée. Ils ne sont partagés qu'avec les propriétaires que vous contactez, et uniquement après votre accord explicite." },
-            { q: "Les annonces sont-elles vérifiées ?", r: "Chaque bien est publié par un propriétaire vérifié par email. Les annonces frauduleuses sont signalables en un clic et examinées manuellement." },
-            { q: "Puis-je générer un bail depuis NestMatch ?", r: "Oui, une fois la candidature acceptée, le bail est généré automatiquement au format PDF, conforme à la loi ALUR. L'état des lieux peut également être réalisé en ligne." },
-            { q: "Que se passe-t-il si j'ai un problème avec mon logement ?", r: "Le carnet d'entretien intégré permet au locataire et au propriétaire de documenter les incidents et travaux. En cas de litige sérieux, nous recommandons la commission départementale de conciliation." },
-          ].map((f) => (
-            <details key={f.q} style={{ background: "white", borderRadius: 14, padding: "18px 20px", border: "1px solid #f3f4f6" }}>
-              <summary style={{ fontSize: 15, fontWeight: 700, cursor: "pointer", listStyle: "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                {f.q}
-                <span style={{ color: "#6b7280", fontSize: 18, fontWeight: 400 }}>+</span>
-              </summary>
-              <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.7, marginTop: 12 }}>{f.r}</p>
-            </details>
-          ))}
-        </div>
-      </section>
+      <FAQSection isMobile={isMobile} />
 
       {/* Features (conserve la section existante) */}
       <section style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "48px 20px" : isTablet ? "60px 32px" : "80px 48px" }}>
@@ -263,5 +240,50 @@ export default function Home() {
       </section>
 
     </main>
+  )
+}
+
+// ─── FAQ + JSON-LD FAQPage pour rich results Google ───────────────────────────
+const FAQ_ITEMS = [
+  { q: "NestMatch est-il vraiment gratuit ?", r: "Oui, l'inscription et l'utilisation sont 100% gratuites pour les locataires et les propriétaires. Aucune commission n'est prélevée sur les loyers." },
+  { q: "Comment fonctionne le score de compatibilité ?", r: "Notre algorithme compare vos critères (budget, surface, localisation, équipements, DPE) aux caractéristiques de chaque annonce. Le score va de 0 à 100% et prend en compte 7 dimensions." },
+  { q: "Mon dossier est-il sécurisé ?", r: "Vos documents sont stockés de manière chiffrée. Ils ne sont partagés qu'avec les propriétaires que vous contactez, et uniquement après votre accord explicite." },
+  { q: "Les annonces sont-elles vérifiées ?", r: "Chaque bien est publié par un propriétaire vérifié par email. Les annonces frauduleuses sont signalables en un clic et examinées manuellement." },
+  { q: "Puis-je générer un bail depuis NestMatch ?", r: "Oui, une fois la candidature acceptée, le bail est généré automatiquement au format PDF, conforme à la loi ALUR. L'état des lieux peut également être réalisé en ligne." },
+  { q: "Que se passe-t-il si j'ai un problème avec mon logement ?", r: "Le carnet d'entretien intégré permet au locataire et au propriétaire de documenter les incidents et travaux. En cas de litige sérieux, nous recommandons la commission départementale de conciliation." },
+]
+
+function FAQSection({ isMobile }: { isMobile: boolean }) {
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQ_ITEMS.map(f => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.r },
+    })),
+  }
+  return (
+    <section style={{ maxWidth: 800, margin: "0 auto", padding: isMobile ? "48px 20px" : "72px 48px" }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd).replace(/</g, "\\u003c") }}
+      />
+      <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "1.5px", textAlign: "center", marginBottom: 14 }}>Questions fréquentes</p>
+      <h2 style={{ fontSize: isMobile ? 26 : 36, fontWeight: 800, textAlign: "center", marginBottom: isMobile ? 28 : 40, letterSpacing: "-1px" }}>
+        Tout ce que vous vous demandez.
+      </h2>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {FAQ_ITEMS.map(f => (
+          <details key={f.q} style={{ background: "white", borderRadius: 14, padding: "18px 20px", border: "1px solid #f3f4f6" }}>
+            <summary style={{ fontSize: 15, fontWeight: 700, cursor: "pointer", listStyle: "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              {f.q}
+              <span style={{ color: "#6b7280", fontSize: 18, fontWeight: 400 }}>+</span>
+            </summary>
+            <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.7, marginTop: 12 }}>{f.r}</p>
+          </details>
+        ))}
+      </div>
+    </section>
   )
 }

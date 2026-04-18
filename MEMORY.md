@@ -72,6 +72,109 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 
 ## Historique des batchs
 
+### Batch 32 — Pages légales rédigées + sécu HIGH + iOS zoom inputs (2026-04-18)
+
+#### Pages footer complètes
+- **CGU** (`app/cgu/page.tsx`) : réécriture complète, 15 sections structurées
+  (objet, définitions, inscription, description service, gratuité,
+  obligations, modération, responsabilité LCEN, propriété intellectuelle,
+  données, cookies, résiliation, modification, droit applicable, contact).
+  Plus aucun `[à compléter]`. Noindex retiré (contenu production-ready).
+- **Politique de confidentialité** (`app/confidentialite/page.tsx`) :
+  réécriture complète, 12 sections RGPD (préambule, responsable, données
+  collectées, finalités, base légale, destinataires listés par nom,
+  durées de conservation chiffrées, mesures de sécurité réelles listées,
+  droits RGPD complets y compris directives post-mortem, transferts hors
+  UE, cookies, modifications). Noindex retiré.
+- **Mentions légales** (`app/mentions-legales/page.tsx`) : structure
+  complète LCEN, placeholders restants (raison sociale, SIRET, RCS,
+  capital, adresse, directeur publication) SIGNALÉS visuellement en
+  surligné jaune au lieu du `[à compléter]` discret. Encadré d'alerte
+  orange en tête de page. Hébergeur (Vercel) et sous-traitants (Supabase)
+  renseignés en vrai. Noindex maintenu jusqu'à saisie des infos société.
+- **Cookies** (`app/cookies/page.tsx`) : accents FR corrigés partout
+  ("Dernière mise à jour", "préférences", "Retour à l'accueil",
+  "Qu'est-ce qu'un cookie", "préférences Vos préférences", "Nécessaires",
+  "Modifications se réserve"). Contenu déjà complet, aucun placeholder.
+
+#### Sécurité HIGH (3 fixes du security audit)
+- **`/api/account/change-password`** : rate-limit 5/15min/email + 15/15min/IP
+  (anti brute-force sur le password actuel).
+- **`/api/contact`** : ajout rate-limit IP 10/h en plus du limit email
+  existant (anti-spam indépendant de l'email changé par le spammeur).
+- **`/api/account/delete`** : rate-limit 1/h/email (action irréversible,
+  limite les abus session volée).
+
+#### iOS zoom auto au focus (responsive audit critical)
+- Tous les `inp` / `inputStyle` passés de `fontSize: 14` (ou 13 pour admin)
+  → `fontSize: 16` sur 9 fichiers : profil, AccountSettings, proprietaire
+  (ajouter, modifier, bail, edl), carnet, admin. Fini le zoom Safari
+  iOS au focus des champs.
+
+### Batch 31 — Sécu critique + SEO + metadata + cleanup (audits 4 agents) (2026-04-18)
+
+**Lancé 4 audits agents en parallèle** (seo-specialist, security-reviewer,
+responsive-auditor, refactor-cleaner) puis applied fixes critiques.
+
+#### Sécurité critique (5 fixes)
+- **`/api/visites/ics/route.ts`** : split `.or(email)` en 2 requêtes `.eq()`
+  séparées pour éviter injection PostgREST via email (certains caractères
+  valides cassent le filtre).
+- **`/api/account/delete/route.ts`** : même fix — 4 `.or(email)` → 10
+  `.eq(email)` séparés.
+- **`/api/signalements/route.ts`** : arrêt du leak de schéma DB en prod.
+  `error.code` + `error.message` exposés uniquement en dev.
+- **`/api/dossier/share/route.ts`** :
+  - fin du fallback `Host` header (attaque open redirect)
+  - rate-limit 10/h/email + 20/h/IP ajouté
+  - check `is_banned` en DB avant génération de token (ban effectif
+    même si JWT encore valide)
+- **`/api/agent/route.ts`** : refactor pour utiliser `lib/rateLimit.ts`
+  partagé au lieu d'une copie locale + ajout rate-limit IP (30/10min)
+  en plus de l'email (anti multi-comptes).
+
+#### SEO (13 nouveaux layouts + fixes critiques)
+- **13 `layout.tsx` créés** pour metadata par route :
+  - Privées (noindex + description) : `/proprietaire`, `/profil`,
+    `/dossier`, `/messages`, `/visites`, `/favoris`, `/carnet`,
+    `/mes-candidatures`, `/recommandations`, `/auth`, `/onboarding`
+  - Publiques (OG + canonical) : `/contact`, `/estimateur`, `/cookies`
+- **CGU / mentions-legales / confidentialite** : `robots: noindex` ajouté
+  temporairement (contenu avec `[à compléter]` — à retirer quand rempli).
+- **`/annonces`** : ajout d'un `<h1>` visuellement masqué (clip-rect)
+  contextuel selon ville. SEO-friendly.
+- **`/location/[ville]`** : `BASE_URL` fallback corrigé
+  (`next-immo-main.vercel.app` → `nestmatch.fr`).
+- **FAQ JSON-LD schema** sur la home (composant `FAQSection` extrait) —
+  éligible rich results Google "Questions fréquentes".
+- **`sitemap.ts`** : filtre sur `statut=disponible` (ou null) pour ne pas
+  indexer les annonces louées/archivées + ajout `/contact`.
+- **`robots.ts`** : ajout disallows `/recommandations`,
+  `/mes-candidatures`, `/carnet-entretien`, `/dossier-partage`,
+  `/onboarding`, `/parametres`, `/publier`, `/edl`, `/auth`,
+  `/connexion`, `/login`, `/test`.
+
+#### Responsive
+- **`CookieBanner`** : `hideFloatingOnThisPage` étendu à toutes les pages
+  avec carte (`/annonces`, `/annonces/[id]`, `/location/[ville]`).
+- **`BookingVisite`** : boutons de créneaux passent à `minHeight: 44`
+  (WCAG zone tactile mobile).
+
+#### Cleanup
+- `PipelineFunnel.tsx` : import `supabase` inutilisé retiré.
+
+#### Reste à faire (hors scope batch 31)
+- iOS zoom : `fontSize: 16` sur inputs mobiles (profil, dossier, admin,
+  messages search, /annonces sidebar) — batch responsive dédié
+- Breakpoint tablette (640–1024px) mal géré sur /annonces, fiche,
+  /proprietaire, /messages — utiliser `isSmall = isMobile || isTablet`
+- 7 duplications significatives identifiées (Toggle, Sec, F, STATUT_VISITE,
+  GRADIENTS, jours, fixLeafletIcons) — factorisation à faire
+- 12 `as any` non documentés dans subscriptions Realtime
+- Orphelin `lib/zIndex.ts` : soit câbler partout, soit supprimer
+- `lib/agentMemory.ts` : 3 exports jamais consommés, à décider
+- Placeholders `[à compléter]` dans les 3 pages légales (compliance FR)
+
 ### Batch 30 — Tests Vitest + filtres surface/pièces + accents FR (2026-04-18)
 - **Bootstrap Vitest** (`nestmatch/vitest.config.ts`) : première infra de
   tests du projet. Environnement node, coverage v8, include `lib/**/*.test.ts`.

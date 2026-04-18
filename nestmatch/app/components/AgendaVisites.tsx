@@ -1,23 +1,10 @@
 "use client"
 import { useState } from "react"
 import Link from "next/link"
+import { STATUT_VISITE_STYLE as STATUT, STATUT_VISITE_DOT as DOT } from "../../lib/visitesHelpers"
 
 const JOURS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
 const MOIS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
-
-const STATUT: Record<string, { color: string; bg: string; border: string; label: string }> = {
-  "proposée":  { color: "#c2410c", bg: "#fff7ed", border: "#fed7aa", label: "En attente" },
-  "confirmée": { color: "#15803d", bg: "#dcfce7", border: "#bbf7d0", label: "Confirmée" },
-  "annulée":   { color: "#dc2626", bg: "#fee2e2", border: "#fecaca", label: "Annulée" },
-  "effectuée": { color: "#374151", bg: "#f3f4f6", border: "#e5e7eb", label: "Effectuée" },
-}
-
-const DOT: Record<string, string> = {
-  "proposée":  "#f97316",
-  "confirmée": "#16a34a",
-  "annulée":   "#dc2626",
-  "effectuée": "#9ca3af",
-}
 
 export default function AgendaVisites({
   visites,

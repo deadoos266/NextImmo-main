@@ -4,7 +4,7 @@ import { signOut } from "next-auth/react"
 import PasswordInput from "../components/PasswordInput"
 import ThemeToggle from "../components/ThemeToggle"
 
-const inp = { width: "100%", padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit" }
+const inp = { width: "100%", padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 16, outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit" }
 
 export default function AccountSettings({ userEmail }: { userEmail: string | null }) {
   const [showPwd, setShowPwd] = useState(false)

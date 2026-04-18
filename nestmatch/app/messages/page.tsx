@@ -10,7 +10,7 @@ import { Suspense } from "react"
 import { useResponsive } from "../hooks/useResponsive"
 import { displayName } from "../../lib/privacy"
 import AnnulerVisiteDialog from "../components/AnnulerVisiteDialog"
-import { annulerVisite } from "../../lib/visitesHelpers"
+import { annulerVisite, STATUT_VISITE_STYLE as STATUT_VISITE } from "../../lib/visitesHelpers"
 
 const DOSSIER_PREFIX = "[DOSSIER_CARD]"
 const DEMANDE_DOSSIER_PREFIX = "[DEMANDE_DOSSIER]"
@@ -43,13 +43,6 @@ function formatVisiteDate(raw: unknown, opts: Intl.DateTimeFormatOptions = { day
   const d = new Date(ymd + "T12:00:00")
   if (isNaN(d.getTime())) return ""
   return d.toLocaleDateString("fr-FR", opts)
-}
-
-const STATUT_VISITE: Record<string, { bg: string; color: string; border: string; label: string }> = {
-  "proposée":  { bg: "#fff7ed", color: "#c2410c", border: "#fed7aa", label: "En attente" },
-  "confirmée": { bg: "#dcfce7", color: "#15803d", border: "#bbf7d0", label: "Confirmée" },
-  "annulée":   { bg: "#fee2e2", color: "#dc2626", border: "#fecaca", label: "Annulée" },
-  "effectuée": { bg: "#f3f4f6", color: "#374151", border: "#e5e7eb", label: "Effectuée" },
 }
 
 // ─── Dossier Card ────────────────────────────────────────────────────────────

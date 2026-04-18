@@ -270,7 +270,7 @@ export default function Admin() {
   if (!session?.user?.isAdmin) return null
 
   const statuts = ["disponible", "loué", "en visite", "réservé"]
-  const inputStyle: React.CSSProperties = { padding: "8px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 13, outline: "none", fontFamily: "inherit" }
+  const inputStyle: React.CSSProperties = { padding: "8px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 16, outline: "none", fontFamily: "inherit" }
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>

@@ -45,13 +45,24 @@ export async function GET() {
     return NextResponse.json({ error: "Authentification requise" }, { status: 401 })
   }
 
-  // Récupère toutes les visites (côté locataire OU proprio) non annulées
-  const { data: visites } = await supabaseAdmin
-    .from("visites")
-    .select("id, annonce_id, date_visite, heure, statut, message, locataire_email, proprietaire_email")
-    .or(`locataire_email.eq.${email},proprietaire_email.eq.${email}`)
-    .in("statut", ["proposée", "confirmée"])
-    .order("date_visite", { ascending: true })
+  // Récupère toutes les visites (côté locataire OU proprio) non annulées.
+  // Deux requêtes séparées puis merge pour éviter toute injection dans le .or()
+  // (certains caractères d'email valides peuvent casser le filtre PostgREST).
+  const [locRes, propRes] = await Promise.all([
+    supabaseAdmin
+      .from("visites")
+      .select("id, annonce_id, date_visite, heure, statut, message, locataire_email, proprietaire_email")
+      .eq("locataire_email", email)
+      .in("statut", ["proposée", "confirmée"]),
+    supabaseAdmin
+      .from("visites")
+      .select("id, annonce_id, date_visite, heure, statut, message, locataire_email, proprietaire_email")
+      .eq("proprietaire_email", email)
+      .in("statut", ["proposée", "confirmée"]),
+  ])
+  const byId = new Map<string, any>()
+  ;[...(locRes.data || []), ...(propRes.data || [])].forEach(v => { if (v?.id) byId.set(String(v.id), v) })
+  const visites = Array.from(byId.values()).sort((a, b) => (a.date_visite || "").localeCompare(b.date_visite || ""))
 
   const annonceIds = Array.from(new Set((visites || []).map(v => v.annonce_id).filter(Boolean)))
   const { data: annonces } = annonceIds.length > 0

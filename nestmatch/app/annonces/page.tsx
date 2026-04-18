@@ -315,6 +315,13 @@ function AnnoncesContent() {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", overflow: "hidden" }}>
 
+      {/* H1 SEO visible pour les crawlers — masqué visuellement mais lu par Google */}
+      <h1 style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0, 0, 0, 0)", whiteSpace: "nowrap", border: 0 }}>
+        {activeVille
+          ? `Logements à louer à ${activeVille} — annonces entre particuliers`
+          : "Logements à louer — annonces entre particuliers en France"}
+      </h1>
+
       {/* Bandeau compact */}
       <div style={{ flexShrink: 0, padding: isMobile ? "10px 16px" : "10px 32px" }}>
         {isProprietaire ? (
