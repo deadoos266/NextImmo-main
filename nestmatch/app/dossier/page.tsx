@@ -531,16 +531,6 @@ export default function Dossier() {
                 style={{ padding: isMobile ? "9px 14px" : "12px 20px", background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 12, fontWeight: 700, fontSize: isMobile ? 13 : 14, textDecoration: "none", display: "inline-flex", alignItems: "center", whiteSpace: "nowrap", flex: isMobile ? "1 1 auto" : undefined, justifyContent: "center" }}>
                 Carnet d'entretien
               </a>
-              <button
-                type="button"
-                onClick={telechargerDossierZip}
-                disabled={generatingPDF}
-                title="PDF récap + toutes vos pièces justificatives dans un zip"
-                className="no-print"
-                style={{ padding: isMobile ? "9px 14px" : "12px 20px", background: generatingPDF ? "#9ca3af" : "#111", color: "white", border: "none", borderRadius: 12, fontWeight: 800, fontSize: isMobile ? 13 : 14, cursor: generatingPDF ? "wait" : "pointer", fontFamily: "inherit", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6, flex: isMobile ? "1 1 auto" : undefined, justifyContent: "center" }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                {generatingPDF ? "Préparation…" : "Télécharger le dossier"}
-              </button>
             </div>
           </div>
 
@@ -807,26 +797,26 @@ export default function Dossier() {
 
               </div>
 
-              {/* ─── Card Téléchargement dossier (sous les pièces) ─── */}
-              <div className="no-print" style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 22, marginTop: 16, border: "1.5px solid #e5e7eb" }}>
-                <h3 style={{ fontSize: 15, fontWeight: 800, margin: "0 0 4px" }}>Télécharger mon dossier</h3>
-                <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 14px", lineHeight: 1.5 }}>
-                  PDF récap + toutes les pièces justificatives, organisées par catégorie.
+              {/* ─── Card Téléchargement dossier (sous toutes les pièces) ─── */}
+              <div className="no-print" style={{ background: "linear-gradient(135deg, #111 0%, #1f2937 100%)", borderRadius: 20, padding: isMobile ? 20 : 24, marginTop: 16, color: "white" }}>
+                <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 6px", color: "white" }}>Télécharger mon dossier</h3>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", margin: "0 0 16px", lineHeight: 1.5 }}>
+                  Le récapitulatif PDF + toutes vos pièces justificatives (identité, bulletins, quittances, garant…) regroupés en un seul fichier zip organisé par catégorie.
                 </p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   <button
                     type="button"
                     onClick={telechargerDossierZip}
                     disabled={generatingPDF}
-                    style={{ width: "100%", background: generatingPDF ? "#9ca3af" : "#111", color: "white", border: "none", borderRadius: 12, padding: "12px 16px", fontWeight: 800, fontSize: 13, cursor: generatingPDF ? "wait" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    style={{ width: "100%", background: generatingPDF ? "#6b7280" : "white", color: "#111", border: "none", borderRadius: 12, padding: "14px 18px", fontWeight: 800, fontSize: 14, cursor: generatingPDF ? "wait" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     {generatingPDF ? "Préparation…" : "Dossier complet (.zip)"}
                   </button>
                   <button
                     type="button"
                     onClick={genererDossierPDFClick}
                     disabled={generatingPDF}
-                    style={{ width: "100%", background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "10px 16px", fontWeight: 700, fontSize: 12, cursor: generatingPDF ? "wait" : "pointer", fontFamily: "inherit" }}>
+                    style={{ width: "100%", background: "transparent", color: "white", border: "1.5px solid rgba(255,255,255,0.3)", borderRadius: 12, padding: "10px 16px", fontWeight: 700, fontSize: 12, cursor: generatingPDF ? "wait" : "pointer", fontFamily: "inherit" }}>
                     PDF récap seul
                   </button>
                 </div>
