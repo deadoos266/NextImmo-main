@@ -9,7 +9,9 @@
       "Bash(npx tsc *)",
       "Bash(findstr /C:\"Vue d'ensemble\" /C:\"togglerAdmin\")",
       "Bash(cmd /c dir /b \"C:\\\\Users\\\\fab-d\\\\OneDrive\\\\Bureau\\\\NextImmo-main\\\\NextImmo-main\\\\.claude\")",
-      "Bash(cmd *)"
+      "Bash(cmd *)",
+      "Bash(grep -E \"^\\(build-error-resolver|silent-failure-hunter|type-design-analyzer|code-simplifier|doc-updater|tdd-guide|pr-test-analyzer|planner|code-reviewer|chief-of-staff\\)\\\\.md$\")",
+      "Bash(npm run *)"
     ]
   }
 }

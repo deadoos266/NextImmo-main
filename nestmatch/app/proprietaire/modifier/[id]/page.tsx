@@ -3,6 +3,7 @@ import { useSession } from "next-auth/react"
 import { useState, useRef, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { supabase } from "../../../../lib/supabase"
+import { validateImage } from "../../../../lib/fileValidation"
 import { useResponsive } from "../../../hooks/useResponsive"
 import LocataireEmailField from "../../../components/LocataireEmailField"
 import CityAutocomplete from "../../../components/CityAutocomplete"
@@ -127,11 +128,19 @@ export default function ModifierBien() {
     if (!session?.user?.email) return
     setUploadingPhoto(true)
     setPhotoError(null)
+
+    const check = await validateImage(file)
+    if (!check.ok) {
+      setPhotoError(check.error)
+      setUploadingPhoto(false)
+      return
+    }
+
     const ext = file.name.split(".").pop()
     const path = `${session.user.email}/${Date.now()}.${ext}`
     const { error } = await supabase.storage.from("annonces-photos").upload(path, file, { upsert: false })
     if (error) {
-      setPhotoError(`Erreur upload: ${error.message}`)
+      setPhotoError("L'envoi de la photo a échoué, veuillez réessayer.")
       setUploadingPhoto(false)
       return
     }

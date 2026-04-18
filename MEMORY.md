@@ -72,6 +72,43 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 
 ## Historique des batchs
 
+### Batch 26 — Durcissement sécurité : rate-limit + MIME + RLS + migrations (2026-04-18)
+- **Nouveau `lib/rateLimit.ts`** : helper générique extrait du pattern
+  `/api/agent`. Fournit `checkRateLimit(key, { max, windowMs })` et
+  `getClientIp(headers)`. Map en mémoire, process-local (MVP Vercel OK,
+  à migrer Upstash Redis pour du multi-instance sérieux).
+- **Rate-limit sur `/api/auth/register`** : 10 inscriptions / IP / heure
+  + 3 tentatives / email / heure. Anti-spray ciblé et anti-bot.
+  Retourne 429 avec header `Retry-After`.
+- **Nouveau `lib/fileValidation.ts`** : validation uploads côté client.
+  - `validateImage(file)` : MIME (jpeg/png/webp/heic), taille (≤ 10 Mo),
+    magic bytes (attrape les renaming .svg→.jpg)
+  - `validateDocument(file)` : idem + PDF, ≤ 15 Mo
+  - Magic bytes checkés sur les 16 premiers octets (FF D8 FF pour JPEG,
+    89 50 4E 47 pour PNG, RIFF+WEBP, %PDF, ftyp pour HEIC)
+- **Validation appliquée aux 4 sites d'upload** :
+  - `/proprietaire/ajouter` (photo bien)
+  - `/proprietaire/modifier/[id]` (photo bien)
+  - `/proprietaire/edl/[id]` (photos EDL, loop avec rapport fichiers refusés)
+  - `/dossier` (docs locataire PDF + images)
+- **Nouvelles migrations Supabase** :
+  - `004_batch26_security_hardening.sql` : consolide toutes les migrations
+    pending (batches 6, 12-bis, 13, 15, 16) — lat/lng, localisation_exacte,
+    propose_par, is_banned + ban_reason, tables signalements + contacts,
+    + **activation RLS** sur `visites` et `carnet_entretien` avec
+    policies par email (locataire OU proprio)
+  - `005_storage_bucket_policies.sql` : buckets `annonces-photos` et
+    `dossiers` avec `file_size_limit` + `allowed_mime_types` enforcés
+    côté serveur (vraie défense MIME, bypassable impossible).
+    Policies d'insert : un user ne peut écrire que dans son propre
+    dossier (path commence par son email).
+
+  **Actions user requises (hors code)** :
+  1. Appliquer `004_batch26_security_hardening.sql` dans Supabase SQL Editor
+  2. Appliquer `005_storage_bucket_policies.sql` dans Supabase SQL Editor
+  3. Passer le repo GitHub en privé (Settings → Danger Zone → Change
+     visibility) — historique contient anciens secrets
+
 ### Batch 25 — Screening automatique candidats (#83) (2026-04-18)
 - **Nouveau `lib/screening.ts`** : fonction `computeScreening(profil, loyer)`
   qui retourne un score 0-100 + tier + couleur + résumé 1-ligne + flags.
@@ -571,9 +608,13 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 - **#47 Masquer emails proprios côté public** : les emails des proprios apparaissent
   dans fiche annonce, threads messagerie, etc. Risque scraping/spam/phishing.
   À remplacer par prénom + "Propriétaire vérifié" ou identifiant anonyme.
-- **RLS Supabase** : partiellement désactivée sur `visites` et `carnet_entretien`
-- **Uploads photos sans validation MIME serveur** (SVG/HTML déguisé possible)
-- **Admin protégé uniquement côté client** (`nestmatch2024`)
+  (Partiellement adressé batch 6 via `lib/privacy.ts::displayName`, pas étendu partout)
+- ~~**RLS Supabase** : partiellement désactivée sur `visites` et `carnet_entretien`~~
+  → **fixé batch 26** (migration 004, RLS activée avec policies email)
+- ~~**Uploads photos sans validation MIME serveur**~~
+  → **fixé batch 26** (client + bucket policies migration 005)
+- **Admin protégé uniquement côté client** (`nestmatch2024`) — partiellement
+  adressé batch 12 (layout server-side), code client legacy restant à nettoyer
 
 ### Bugs UX
 - **#44 Accents manquants** : 8 fichiers restants (proprietaire/edl, proprietaire/page,
@@ -782,6 +823,8 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 
 ## Dette technique connue
 - 0 test automatisé
-- Repo GitHub encore public (historique contient anciens secrets)
-- Pas de rate-limit sur `/api/auth/register`
+- Repo GitHub encore public (historique contient anciens secrets) — **à passer privé**
+- ~~Pas de rate-limit sur `/api/auth/register`~~ → fixé batch 26
 - `lib/cityCoords.ts` : fichier statique, à surveiller si grossit
+- Rate-limit en mémoire (`lib/rateLimit.ts`) : process-local, à migrer Upstash
+  Redis ou Supabase si on passe multi-instance Vercel

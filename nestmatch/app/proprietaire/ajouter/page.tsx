@@ -3,6 +3,7 @@ import { useSession } from "next-auth/react"
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../../lib/supabase"
+import { validateImage } from "../../../lib/fileValidation"
 import { useResponsive } from "../../hooks/useResponsive"
 import LocataireEmailField from "../../components/LocataireEmailField"
 import CityAutocomplete from "../../components/CityAutocomplete"
@@ -71,6 +72,14 @@ export default function AjouterBien() {
     if (!session?.user?.email) return
     setUploadingPhoto(true)
     setPhotoError(null)
+
+    const check = await validateImage(file)
+    if (!check.ok) {
+      setPhotoError(check.error)
+      setUploadingPhoto(false)
+      return
+    }
+
     const ext = file.name.split(".").pop()
     const timestamp = Date.now()
     const path = `${session.user.email}/${timestamp}.${ext}`

@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "../../../../lib/supabase"
+import { validateImage } from "../../../../lib/fileValidation"
 import { useResponsive } from "../../../hooks/useResponsive"
 // jsPDF lazy-loaded pour alleger le bundle initial (voir genererEdlPDF)
 
@@ -362,7 +363,13 @@ export default function EdlPage() {
     if (maxToAdd <= 0) { alert("Maximum 5 photos par piece"); return }
     const filesToUpload = Array.from(files).slice(0, maxToAdd)
     setUploadingPiece(pieceIdx)
+    const rejected: string[] = []
     for (const file of filesToUpload) {
+      const check = await validateImage(file)
+      if (!check.ok) {
+        rejected.push(`${file.name} : ${check.error}`)
+        continue
+      }
       const ext = file.name.split(".").pop()
       const path = `edl/${session.user.email}/${bienId}/${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`
       const { error } = await supabase.storage.from("annonces-photos").upload(path, file, { upsert: false })
@@ -373,6 +380,7 @@ export default function EdlPage() {
       ))
     }
     setUploadingPiece(null)
+    if (rejected.length > 0) alert(`Fichiers refusés :\n${rejected.join("\n")}`)
   }
 
   function removePhoto(pieceIdx: number, photoIdx: number) {

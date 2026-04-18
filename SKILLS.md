@@ -2,15 +2,53 @@
 
 ## Agents a invoquer
 
+### Agents de design / planning
+
 | Agent | Quand |
 |-------|-------|
+| `planner` | Gros chantier multi-phases (notifs email, KYC, refonte filtres) — product breakdown AVANT architect |
+| `architect` | Feature non triviale — design tech avant implementation, valide invariants |
 | `code-explorer` | Avant modif d'une zone inconnue — cartographier le code |
+
+### Agents d'implémentation / fix
+
+| Agent | Quand |
+|-------|-------|
+| `build-error-resolver` | Build Vercel ou tsc qui pete — fix minimal, pas de refactor |
+| `code-simplifier` | Apres batch — simplifier sans changer le comportement |
+| `refactor-cleaner` | Apres gros batch — detecter le code mort et imports inutilises |
+| `doc-updater` | Fin de batch — maintenir MEMORY.md / SKILLS.md / CLAUDE.md en sync |
+
+### Reviewers spécialisés
+
+| Agent | Quand |
+|-------|-------|
+| `code-reviewer` | Review générique chapeau — avis large avant de déléguer aux reviewers spécialisés |
 | `typescript-reviewer` | Apres toute modif TypeScript significative |
+| `type-design-analyzer` | Avant introduire un modèle domaine critique — invariants via types (discriminated unions) |
 | `security-reviewer` | Routes API, upload, auth, manipulation de donnees utilisateur |
+| `business-logic-reviewer` | Modifs matching / screening / flux visite / rôles |
 | `performance-optimizer` | Avant commits touchant le bundle client ou pages critiques (`/`, `/annonces`) |
-| `seo-specialist` | Toute modif metadata, pages publiques, sitemap |
+| `ai-integration-reviewer` | Modif `lib/agents/` — rate-limit, auth, prompt injection |
 | `database-reviewer` | Modifs schema Supabase, nouvelles tables, nouvelles queries |
-| `refactor-cleaner` | Apres gros batch — detecter le code mort |
+| `accessibility-reviewer` | Batch UI — WCAG AA, contrastes, clavier |
+| `responsive-auditor` | Batch UI — mobile/tablette/desktop, zones tactiles |
+| `seo-specialist` | Toute modif metadata, pages publiques, sitemap |
+| `copy-editor-fr` | Modif texte user-facing — accents, anglicismes, voussoiement |
+| `silent-failure-hunter` | Doute sur try/catch vides, `.catch(() => [])`, fallbacks qui cachent des bugs |
+
+### Agents de test
+
+| Agent | Quand |
+|-------|-------|
+| `tdd-guide` | Écrire les PREMIERS tests (bootstrap Vitest) ou tests pour nouvelle feature critique |
+| `pr-test-analyzer` | PR prête ou push conséquent — couverture réelle du comportement changé |
+
+### Agents de vérification finale
+
+| Agent | Quand |
+|-------|-------|
+| `verifier` | APRES toute implementation — chaque claim du commit verifie contre le code |
 
 ## Workflow git
 - **Branche** : `main` uniquement (pas de feature branches pour l'instant)
@@ -67,24 +105,30 @@
 ## Workflow par type de tâche
 
 **Règle d'or** :
-- Feature non triviale ou gros refactor → commencer par `architect`
+- Gros chantier multi-phases → commencer par `planner` puis `architect`
+- Feature non triviale → commencer par `architect`
 - Tout batch prêt à commit → finir par `verifier` avant de push
+- Fin de batch significatif → `doc-updater` pour sync MEMORY.md
 
 | Type de tâche | Séquence d'agents |
 |---|---|
+| Gros chantier (notifs email, KYC, filtres) | `planner` → `architect` → `code-explorer` → implémentation → reviewers → `verifier` → `doc-updater` |
 | Feature non triviale (> 1 fichier impacté) | `architect` → `code-explorer` → implémentation → reviewers spécifiques → `verifier` |
-| Nouvelle route API | `architect` → `code-explorer` → implémentation → `security-reviewer` → `typescript-reviewer` → `verifier` |
+| Nouvelle route API | `architect` → `code-explorer` → implémentation → `security-reviewer` → `typescript-reviewer` → `silent-failure-hunter` → `verifier` |
 | Nouveau composant UI | `code-explorer` → implémentation → `responsive-auditor` → `accessibility-reviewer` → `verifier` |
 | Modif page publique | implémentation → `copy-editor-fr` → `seo-specialist` → `performance-optimizer` → `verifier` |
 | Modif carte Leaflet | `code-explorer` → implémentation → `performance-optimizer` → `verifier` |
-| Modif schéma Supabase | `architect` → `database-reviewer` → migration → `security-reviewer` (RLS) → `verifier` |
-| Modif scoring / matching | `architect` → `code-explorer` → implémentation → `business-logic-reviewer` → `verifier` |
+| Modif schéma Supabase | `architect` → `database-reviewer` → migration → `security-reviewer` (RLS) → `verifier` → `doc-updater` |
+| Modif scoring / matching | `architect` → `code-explorer` → implémentation → `business-logic-reviewer` → `tdd-guide` → `verifier` |
+| Nouveau modèle domaine critique | `planner` → `type-design-analyzer` → `architect` → implémentation → `verifier` |
 | Batch responsive mobile | `responsive-auditor` (audit) → implémentation → `accessibility-reviewer` → `verifier` |
 | Correction copie FR | `copy-editor-fr` uniquement |
-| Gros batch multi-fichiers | → `refactor-cleaner` → `verifier` à la fin |
-| Modif auth / session | `architect` → `security-reviewer` obligatoire → `verifier` |
+| Gros batch multi-fichiers | `code-simplifier` → `refactor-cleaner` → `verifier` → `doc-updater` |
+| Modif auth / session | `architect` → `security-reviewer` obligatoire → `silent-failure-hunter` → `verifier` |
 | Intégration IA / agents | `architect` → `ai-integration-reviewer` → `verifier` |
-| Fix urgent / patch build | `verifier` minimum (skip architect) |
+| Fix urgent / patch build | `build-error-resolver` → `verifier` |
+| Écrire des tests (premier ou nouveau) | `tdd-guide` (implémentation) → `pr-test-analyzer` (review) |
+| PR prête à merge | `code-reviewer` → `pr-test-analyzer` → `verifier` |
 
 ## Checklist avant commit
 

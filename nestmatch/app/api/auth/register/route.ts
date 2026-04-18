@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { z } from "zod"
 import { supabaseAdmin } from "../../../../lib/supabase-server"
+import { checkRateLimit, getClientIp } from "../../../../lib/rateLimit"
 
 const registerSchema = z.object({
   email: z.string().email("Email invalide"),
@@ -13,7 +14,20 @@ const registerSchema = z.object({
   role: z.enum(["locataire", "proprietaire"]).default("locataire"),
 })
 
+// Rate-limit : 10 inscriptions / IP / heure + 3 tentatives / email / heure
+const IP_LIMIT = { max: 10, windowMs: 60 * 60 * 1000 }
+const EMAIL_LIMIT = { max: 3, windowMs: 60 * 60 * 1000 }
+
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request.headers)
+  const rlIp = checkRateLimit(`register:ip:${ip}`, IP_LIMIT)
+  if (!rlIp.allowed) {
+    return NextResponse.json(
+      { success: false, error: "Trop de tentatives, réessayez plus tard." },
+      { status: 429, headers: { "Retry-After": String(rlIp.retryAfterSec ?? 3600) } }
+    )
+  }
+
   let body: unknown
   try {
     body = await request.json()
@@ -28,6 +42,16 @@ export async function POST(request: NextRequest) {
   }
 
   const { email, password, name, role } = parsed.data
+
+  // Rate-limit par email (anti spray ciblé)
+  const emailKey = email.toLowerCase()
+  const rlEmail = checkRateLimit(`register:email:${emailKey}`, EMAIL_LIMIT)
+  if (!rlEmail.allowed) {
+    return NextResponse.json(
+      { success: false, error: "Trop de tentatives pour cet email, réessayez plus tard." },
+      { status: 429, headers: { "Retry-After": String(rlEmail.retryAfterSec ?? 3600) } }
+    )
+  }
 
   // Check for existing user — return a generic message to avoid email enumeration
   const { data: existing } = await supabaseAdmin

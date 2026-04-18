@@ -3,6 +3,7 @@ import { useSession } from "next-auth/react"
 import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
+import { validateDocument } from "../../lib/fileValidation"
 import { useResponsive } from "../hooks/useResponsive"
 import Tooltip from "../components/Tooltip"
 import PhoneInput from "../components/PhoneInput"
@@ -102,11 +103,16 @@ export default function Dossier() {
 
     const newUrls: string[] = []
     for (const file of toUpload) {
+      const check = await validateDocument(file)
+      if (!check.ok) {
+        setUploadError(check.error)
+        continue
+      }
       const ext = file.name.split(".").pop()
       const path = `${session.user.email}/${key}_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
       const { error } = await supabase.storage.from("dossiers").upload(path, file, { upsert: false })
       if (error) {
-        setUploadError("L'envoi du fichier a echoue, veuillez reessayer.")
+        setUploadError("L'envoi du fichier a échoué, veuillez réessayer.")
         break
       }
       const { data: urlData } = supabase.storage.from("dossiers").getPublicUrl(path)
