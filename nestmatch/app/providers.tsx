@@ -29,19 +29,26 @@ export function useRole() { return useContext(RoleContext) }
 
 function RoleProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession()
-  const [role, setRoleState] = useState<Role>("locataire")
-  const [isAdmin, setIsAdminState] = useState(false)
-  const [proprietaireActive, setProprietaireActiveState] = useState(false)
+  // Lazy init depuis localStorage pour éviter tout flash (AdminBar qui
+  // s'affiche en "Propriétaire" 1 frame avant de corriger en "Locataire").
+  const [role, setRoleState] = useState<Role>(() => {
+    if (typeof window === "undefined") return "locataire"
+    const saved = localStorage.getItem("nestmatch_role")
+    return saved === "proprietaire" ? "proprietaire" : "locataire"
+  })
+  const [isAdmin, setIsAdminState] = useState(() => {
+    if (typeof window === "undefined") return false
+    return localStorage.getItem("nestmatch_admin") === "true"
+  })
+  const [proprietaireActive, setProprietaireActiveState] = useState(() => {
+    if (typeof window === "undefined") return false
+    return localStorage.getItem("nestmatch_proprio_active") === "true"
+  })
   const [mounted, setMounted] = useState(false)
 
-  // Initialise from localStorage on mount, then override with session values
-  useEffect(() => {
-    const saved = localStorage.getItem("nestmatch_role") as Role | null
-    if (saved === "locataire" || saved === "proprietaire") setRoleState(saved)
-    setMounted(true)
-  }, [])
+  useEffect(() => { setMounted(true) }, [])
 
-  // Sync role and isAdmin from the authenticated session
+  // Sync role et isAdmin depuis la session authentifiée
   useEffect(() => {
     if (status === "authenticated" && session?.user) {
       const sessionRole = session.user.role
@@ -56,19 +63,21 @@ function RoleProvider({ children }: { children: ReactNode }) {
       setProprietaireActiveState(false)
       setRoleState("locataire")
       localStorage.removeItem("nestmatch_admin")
+      localStorage.removeItem("nestmatch_proprio_active")
     }
   }, [session, status])
 
-  // Check proprietaire status: profil flag OR has published annonces.
-  // IMPORTANT : respecter le choix manuel stocké dans localStorage (admin qui
-  // switche via AdminBar). On n'auto-sync que si rien n'est stocké.
+  // Auto-sync `proprietaireActive` UNIQUEMENT si pas de choix manuel stocké.
+  // Dès que le user (ou admin) a cliqué une fois sur le toggle AdminBar,
+  // localStorage contient "true" ou "false" et on ne re-sync PLUS JAMAIS.
   useEffect(() => {
     if (status !== "authenticated" || !session?.user?.email) return
     const saved = localStorage.getItem("nestmatch_proprio_active")
     if (saved === "true" || saved === "false") {
-      setProprietaireActiveState(saved === "true")
+      // Choix manuel déjà fait — on respecte, on ne touche à rien
       return
     }
+    // Pas de choix stocké → on détecte depuis la DB
     const email = session.user.email
     Promise.all([
       supabase.from("profils").select("is_proprietaire").eq("email", email).single(),
