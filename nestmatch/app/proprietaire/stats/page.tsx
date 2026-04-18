@@ -341,11 +341,15 @@ function StatsInner() {
     if (!newLoyerMois || !newLoyerMontant || !bienId) return
     setSavingLoyer(true)
     const montant = Number(newLoyerMontant)
+    const locataireEmail = (bien?.locataire_email || "").toLowerCase() || null
+    const proprietaireEmail = (bien?.proprietaire_email || "").toLowerCase() || null
     const { data } = await supabase.from("loyers").upsert({
       annonce_id: Number(bienId),
       mois: newLoyerMois,
       montant,
-      statut: "déclaré"
+      statut: "déclaré",
+      locataire_email: locataireEmail,
+      proprietaire_email: proprietaireEmail,
     }, { onConflict: "annonce_id,mois" }).select().single()
     if (data) setLoyers(prev => [...prev.filter(l => l.mois !== newLoyerMois), data])
     setNewLoyerMois("")
@@ -354,8 +358,42 @@ function StatsInner() {
   }
 
   async function confirmerLoyer(id: string) {
-    await supabase.from("loyers").update({ statut: "confirmé" }).eq("id", id)
-    setLoyers(prev => prev.map(l => l.id === id ? { ...l, statut: "confirmé" } : l))
+    // 1. Passe le loyer en "confirmé"
+    const nowIso = new Date().toISOString()
+    await supabase.from("loyers").update({ statut: "confirmé", date_confirmation: nowIso }).eq("id", id)
+    setLoyers(prev => prev.map(l => l.id === id ? { ...l, statut: "confirmé", date_confirmation: nowIso } : l))
+
+    // 2. Envoie la quittance au locataire via la messagerie (card cliquable)
+    const loyer = loyers.find(l => l.id === id)
+    if (!loyer || !bien) return
+    const locataireEmail = (bien.locataire_email || "").toLowerCase()
+    const proprietaireEmail = (bien.proprietaire_email || "").toLowerCase()
+    if (!locataireEmail) return
+
+    const payload = {
+      loyerId: id,
+      bienId: bien.id,
+      bienTitre: bien.titre,
+      mois: loyer.mois,
+      montant: loyer.montant,
+      dateConfirmation: nowIso,
+    }
+    const { data: msg } = await supabase.from("messages").insert([{
+      from_email: proprietaireEmail,
+      to_email: locataireEmail,
+      contenu: `[QUITTANCE_CARD]${JSON.stringify(payload)}`,
+      lu: false,
+      annonce_id: bien.id,
+      created_at: nowIso,
+    }]).select().single()
+
+    // 3. Trace l'envoi côté loyer
+    if (msg?.id) {
+      await supabase.from("loyers").update({
+        quittance_envoyee_at: nowIso,
+        quittance_message_id: msg.id,
+      }).eq("id", id)
+    }
   }
 
   async function sauvegarderBien() {

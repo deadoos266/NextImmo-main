@@ -10,6 +10,8 @@ import OwnerActions from "./OwnerActions"
 import ViewTracker from "./ViewTracker"
 import MapBienWrapper from "./MapBienWrapper"
 import SignalerButton from "../../components/SignalerButton"
+import ShareButton from "./ShareButton"
+import Link from "next/link"
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || 'https://nestmatch.fr'
 
@@ -61,6 +63,39 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
 export default async function Annonce({ params }: any) {
   const { id } = await params
   const { data: annonce } = await supabase.from("annonces").select("*").eq("id", id).single()
+
+  // Social proof : compteurs vues + candidatures (distincts). Server-side,
+  // head-only pour éviter de transférer des lignes, juste le count.
+  let nbVues = 0
+  let nbCandidatures = 0
+  if (annonce?.id) {
+    const [{ count: vuesCount }, { count: candCount }] = await Promise.all([
+      supabase.from("clics_annonces").select("annonce_id", { count: "exact", head: true }).eq("annonce_id", annonce.id),
+      supabase.from("messages").select("id", { count: "exact", head: true }).eq("annonce_id", annonce.id),
+    ])
+    nbVues = vuesCount ?? 0
+    nbCandidatures = candCount ?? 0
+  }
+
+  // Annonces similaires : même ville + prix ±30 % + exclut la louée courante,
+  // exclut les biens marqués "loué". Server-side pour le SEO et pour éviter un
+  // round-trip client. Limit 4.
+  let similaires: any[] = []
+  if (annonce?.ville) {
+    const prix = Number(annonce.prix) || 0
+    const prixMin = Math.round(prix * 0.7)
+    const prixMax = Math.round(prix * 1.3)
+    const { data: sim } = await supabase
+      .from("annonces")
+      .select("id, titre, ville, prix, surface, pieces, photos, dpe, statut")
+      .eq("ville", annonce.ville)
+      .neq("id", annonce.id)
+      .gte("prix", prixMin)
+      .lte("prix", prixMax)
+      .or("statut.is.null,statut.neq.loué")
+      .limit(4)
+    similaires = sim || []
+  }
 
   if (!annonce) return (
     <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif" }}>
@@ -156,9 +191,33 @@ export default async function Annonce({ params }: any) {
             <span style={{ background: annonce.dispo === "Disponible maintenant" ? "#dcfce7" : "#fff7ed", color: annonce.dispo === "Disponible maintenant" ? "#16a34a" : "#ea580c", padding: "6px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700, whiteSpace: "nowrap" }}>
               {annonce.dispo}
             </span>
+            <ShareButton title={annonce.titre || "Logement à louer"} url={`${BASE_URL}/annonces/${id}`} />
             <FavoriButton id={annonce.id} />
           </div>
         </div>
+
+        {annonce.statut === "loué" && (
+          <div style={{ background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 14, padding: "14px 18px", marginBottom: 16, color: "#991b1b", fontSize: 14, fontWeight: 600 }}>
+            Cette annonce n&apos;est plus disponible — le bien a déjà été loué.
+            {" "}
+            <a href="/annonces" style={{ color: "#991b1b", fontWeight: 700, textDecoration: "underline" }}>Voir d&apos;autres biens →</a>
+          </div>
+        )}
+
+        {(nbVues >= 5 || nbCandidatures >= 2) && annonce.statut !== "loué" && (
+          <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+            {nbVues >= 5 && (
+              <span style={{ background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1e40af", fontSize: 12, fontWeight: 700, padding: "4px 12px", borderRadius: 999 }}>
+                {nbVues} personnes ont consulté ce bien
+              </span>
+            )}
+            {nbCandidatures >= 2 && (
+              <span style={{ background: "#fff7ed", border: "1px solid #fed7aa", color: "#c2410c", fontSize: 12, fontWeight: 700, padding: "4px 12px", borderRadius: 999 }}>
+                Plusieurs candidats déjà intéressés
+              </span>
+            )}
+          </div>
+        )}
 
         <PhotoCarousel photos={photos} />
 
@@ -279,6 +338,27 @@ export default async function Annonce({ params }: any) {
             </div>
           </div>
         </div>
+
+        {similaires.length > 0 && (
+          <section style={{ marginTop: 48 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 16 }}>Autres biens similaires à {annonce.ville}</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
+              {similaires.map(s => {
+                const firstPhoto = Array.isArray(s.photos) && s.photos.length > 0 ? s.photos[0] : null
+                return (
+                  <Link key={s.id} href={`/annonces/${s.id}`} style={{ textDecoration: "none", color: "inherit", background: "white", borderRadius: 16, overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", display: "flex", flexDirection: "column", transition: "transform .15s ease" }}>
+                    <div style={{ background: "#f3f4f6", height: 140, backgroundImage: firstPhoto ? `url(${firstPhoto})` : undefined, backgroundSize: "cover", backgroundPosition: "center" }} />
+                    <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
+                      <p style={{ fontSize: 14, fontWeight: 800, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.titre}</p>
+                      <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>{s.ville} · {s.surface} m² · {s.pieces} pièces</p>
+                      <p style={{ fontSize: 15, fontWeight: 800, margin: "auto 0 0", color: "#111" }}>{s.prix} €<span style={{ fontSize: 12, color: "#6b7280", fontWeight: 500 }}>/mois</span></p>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </section>
+        )}
       </div>
     </main>
   )

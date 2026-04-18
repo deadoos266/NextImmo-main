@@ -59,9 +59,33 @@ export default function ToastStack() {
         const m = payload.new as any
         // Skip si déjà sur /messages (user voit direct le message)
         if (pathname?.startsWith("/messages")) return
-        // Skip les messages automatiques peu utiles (dossier, EDL prefixes)
+        // Messages système : toast spécifique selon le préfixe
         const raw = m.contenu || ""
-        if (raw.startsWith("[DOSSIER_CARD]") || raw.startsWith("[EDL_CARD]") || raw.startsWith("[DEMANDE_DOSSIER]")) return
+        if (raw.startsWith("[DOSSIER_CARD]") || raw.startsWith("[DEMANDE_DOSSIER]")) return
+        if (raw.startsWith("[EDL_CARD]")) {
+          push({ type: "message", title: "État des lieux partagé", body: "Ouvrir vos messages", href: "/messages" })
+          return
+        }
+        if (raw.startsWith("[BAIL_CARD]")) {
+          push({ type: "message", title: "Bail reçu", body: "Ouvrir vos messages", href: "/messages" })
+          return
+        }
+        if (raw.startsWith("[QUITTANCE_CARD]")) {
+          push({ type: "message", title: "Quittance reçue", body: "Ouvrir vos messages", href: "/messages" })
+          return
+        }
+        if (raw.startsWith("[VISITE_CARD]") || raw.startsWith("[CONTRE_PROPOSITION]")) {
+          push({ type: "visite_nouvelle", title: "Proposition de visite", body: "Ouvrir vos messages", href: "/messages" })
+          return
+        }
+        if (raw.startsWith("[CANDIDATURE_RETIREE]")) {
+          push({ type: "visite_annulee", title: "Candidature retirée", body: "Le locataire a retiré sa candidature", href: "/messages" })
+          return
+        }
+        if (raw.startsWith("[RELANCE]")) {
+          push({ type: "message", title: "Relance candidat", body: raw.replace("[RELANCE]", "").slice(0, 80), href: "/messages" })
+          return
+        }
         const preview = raw.replace(/^\[REPLY:\d+\]\n/, "").slice(0, 80)
         push({
           type: "message",

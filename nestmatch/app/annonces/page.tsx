@@ -18,6 +18,36 @@ const MapAnnonces = dynamic(() => import("../components/MapAnnonces"), { ssr: fa
 // Gradients placeholder partagés dans lib/cardGradients.ts
 import { CARD_GRADIENTS as GRADIENTS } from "../../lib/cardGradients"
 
+/**
+ * Highlight d'un terme dans un texte. Retourne un fragment JSX avec
+ * les matchs entourés de <mark>. Case-insensitive, accents-insensitive
+ * (normalisation NFD sur les 2 côtés pour matcher "ecole" vs "école").
+ */
+function highlightMatch(text: string, query: string): React.ReactNode {
+  const q = query.trim()
+  if (!q || !text) return text
+  const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+  const haystack = norm(text)
+  const needle = norm(q)
+  if (needle.length === 0 || !haystack.includes(needle)) return text
+  const parts: React.ReactNode[] = []
+  let cursor = 0
+  let idx = haystack.indexOf(needle, cursor)
+  let keyN = 0
+  while (idx !== -1) {
+    if (idx > cursor) parts.push(text.slice(cursor, idx))
+    parts.push(
+      <mark key={keyN++} style={{ background: "#fef08a", color: "#111", padding: "0 2px", borderRadius: 3 }}>
+        {text.slice(idx, idx + needle.length)}
+      </mark>
+    )
+    cursor = idx + needle.length
+    idx = haystack.indexOf(needle, cursor)
+  }
+  if (cursor < text.length) parts.push(text.slice(cursor))
+  return <>{parts}</>
+}
+
 function CardPhoto({ annonce, height = 170 }: { annonce: any; height?: number }) {
   const [idx, setIdx] = useState(0)
   const realPhotos: string[] = Array.isArray(annonce.photos) && annonce.photos.length > 0 ? annonce.photos : []
@@ -128,6 +158,26 @@ function AnnoncesContent() {
   const [dispoImmediate, setDispoImmediate] = useState(false)
   const [filtreParking, setFiltreParking] = useState(false)
   const [filtreExterieur, setFiltreExterieur] = useState(false)
+  const [filtreMeuble, setFiltreMeuble] = useState(false)
+  const [budgetChip, setBudgetChip] = useState<number | null>(null)
+  // Recherches sauvegardées (locataire seulement) : filtres nommés stockés en
+  // localStorage. Permet de retrouver ses critères en 1 clic.
+  type SavedSearch = {
+    id: string
+    name: string
+    ville: string
+    budgetMax: number | null
+    surfaceMin: string
+    surfaceMax: string
+    piecesMin: number
+    meuble: boolean
+    parking: boolean
+    exterieur: boolean
+    dispo: boolean
+    savedAt: string
+  }
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([])
+  const [showSaved, setShowSaved] = useState(false)
   const [surfaceMin, setSurfaceMin] = useState<string>("")
   const [surfaceMax, setSurfaceMax] = useState<string>("")
   const [piecesMin, setPiecesMin] = useState<number>(0)
@@ -178,9 +228,92 @@ function AnnoncesContent() {
     setFavoris(getFavoris())
   }, [])
 
+  // Hydrate les recherches sauvegardées depuis localStorage (keyed par email)
+  useEffect(() => {
+    const email = session?.user?.email?.toLowerCase()
+    if (!email) return
+    try {
+      const raw = localStorage.getItem(`nestmatch:savedSearches:${email}`)
+      if (raw) {
+        const arr = JSON.parse(raw)
+        if (Array.isArray(arr)) setSavedSearches(arr)
+      }
+    } catch { /* noop */ }
+  }, [session?.user?.email])
+
+  function persistSavedSearches(list: SavedSearch[]) {
+    const email = session?.user?.email?.toLowerCase()
+    if (!email) return
+    try { localStorage.setItem(`nestmatch:savedSearches:${email}`, JSON.stringify(list)) } catch { /* noop */ }
+  }
+
+  function sauverRecherche() {
+    const parts: string[] = []
+    if (activeVille) parts.push(activeVille)
+    if (budgetChip) parts.push(`< ${budgetChip} €`)
+    else if (activeBudget) parts.push(`< ${activeBudget} €`)
+    if (piecesMin) parts.push(`${piecesMin}+ pièces`)
+    if (filtreMeuble) parts.push("Meublé")
+    if (filtreParking) parts.push("Parking")
+    const nameAuto = parts.length > 0 ? parts.join(" · ") : "Toutes les annonces"
+    const name = window.prompt("Nom de la recherche :", nameAuto)
+    if (!name || !name.trim()) return
+    const search: SavedSearch = {
+      id: Date.now().toString(36),
+      name: name.trim().slice(0, 60),
+      ville: activeVille || "",
+      budgetMax: budgetChip ?? activeBudget ?? null,
+      surfaceMin,
+      surfaceMax,
+      piecesMin,
+      meuble: filtreMeuble,
+      parking: filtreParking,
+      exterieur: filtreExterieur,
+      dispo: dispoImmediate,
+      savedAt: new Date().toISOString(),
+    }
+    const next = [search, ...savedSearches].slice(0, 10)
+    setSavedSearches(next)
+    persistSavedSearches(next)
+    setShowSaved(true)
+  }
+
+  function appliquerRecherche(s: SavedSearch) {
+    setBudgetChip(s.budgetMax ?? null)
+    setSurfaceMin(s.surfaceMin)
+    setSurfaceMax(s.surfaceMax)
+    setPiecesMin(s.piecesMin)
+    setFiltreMeuble(s.meuble)
+    setFiltreParking(s.parking)
+    setFiltreExterieur(s.exterieur)
+    setDispoImmediate(s.dispo)
+    // La ville passe par l'URL car activeVille est dérivé d'urlVille
+    const params = new URLSearchParams()
+    if (s.ville) params.set("ville", s.ville)
+    if (s.budgetMax) params.set("budget_max", String(s.budgetMax))
+    if (s.surfaceMin) params.set("surface_min", s.surfaceMin)
+    if (s.surfaceMax) params.set("surface_max", s.surfaceMax)
+    if (s.piecesMin) params.set("pieces_min", String(s.piecesMin))
+    const qs = params.toString()
+    router.replace(qs ? `/annonces?${qs}` : "/annonces")
+    setShowSaved(false)
+  }
+
+  function supprimerRecherche(id: string) {
+    const next = savedSearches.filter(s => s.id !== id)
+    setSavedSearches(next)
+    persistSavedSearches(next)
+  }
+
   useEffect(() => {
     async function fetchData() {
-      const { data: a } = await supabase.from("annonces").select("*")
+      // N'affiche pas les biens marqués "loué" dans la recherche publique —
+      // le proprio les garde pour stats/historique mais ils ne doivent plus
+      // apparaître aux locataires.
+      const { data: a } = await supabase
+        .from("annonces")
+        .select("*")
+        .or("statut.is.null,statut.neq.loué")
       if (a) setAnnonces(a)
       if (session?.user?.email) {
         const { data: p } = await supabase.from("profils").select("*").eq("email", session.user.email).single()
@@ -294,6 +427,8 @@ function AnnoncesContent() {
       if (dispoImmediate && a.dispo !== "Disponible maintenant") return false
       if (filtreParking && !a.parking) return false
       if (filtreExterieur && !a.balcon && !a.terrasse && !a.jardin) return false
+      if (filtreMeuble && !a.meuble) return false
+      if (budgetChip && a.prix && a.prix > budgetChip) return false
       // Surface min/max (m²)
       const surfMinN = surfaceMin ? parseInt(surfaceMin, 10) : 0
       const surfMaxN = surfaceMax ? parseInt(surfaceMax, 10) : 0
@@ -542,6 +677,78 @@ function AnnoncesContent() {
 
         {/* Liste */}
         <div style={{ width: isSmall ? "100%" : 360, flex: isSmall && !showMap ? 1 : undefined, flexShrink: 0, overflowY: "auto", display: isSmall && showMap ? "none" : "flex", flexDirection: "column", gap: 0 }}>
+          {/* Recherches sauvegardées (locataire) */}
+          {!isProprietaire && session?.user?.email && (
+            <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 10, flexWrap: "wrap", position: "relative" }}>
+              <button
+                type="button"
+                onClick={sauverRecherche}
+                title="Sauvegarder ces filtres"
+                style={{ background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                Sauvegarder
+              </button>
+              {savedSearches.length > 0 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowSaved(v => !v)}
+                    style={{ background: showSaved ? "#111" : "white", color: showSaved ? "white" : "#111", border: `1.5px solid ${showSaved ? "#111" : "#e5e7eb"}`, borderRadius: 999, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                    Mes recherches ({savedSearches.length})
+                  </button>
+                  {showSaved && (
+                    <>
+                      <div onClick={() => setShowSaved(false)} style={{ position: "fixed", inset: 0, zIndex: 990 }} />
+                      <div style={{ position: "absolute", top: 36, left: 0, background: "white", border: "1px solid #e5e7eb", borderRadius: 14, boxShadow: "0 8px 28px rgba(0,0,0,0.12)", zIndex: 991, minWidth: 280, maxWidth: 340, padding: 6 }}>
+                        {savedSearches.map(s => (
+                          <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8 }}
+                            onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
+                            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                            <button type="button" onClick={() => appliquerRecherche(s)}
+                              style={{ flex: 1, background: "none", border: "none", textAlign: "left", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
+                              <p style={{ fontSize: 13, fontWeight: 700, color: "#111", margin: 0 }}>{s.name}</p>
+                              <p style={{ fontSize: 11, color: "#9ca3af", margin: "2px 0 0" }}>
+                                Sauvegardé {new Date(s.savedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                              </p>
+                            </button>
+                            <button type="button" onClick={() => supprimerRecherche(s.id)}
+                              aria-label="Supprimer"
+                              style={{ background: "none", border: "none", color: "#dc2626", fontSize: 14, cursor: "pointer", padding: 4, fontFamily: "inherit" }}>
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Chips filtres rapides */}
+          {!isProprietaire && (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+              {[
+                { label: "< 800 €", active: budgetChip === 800, toggle: () => setBudgetChip(budgetChip === 800 ? null : 800) },
+                { label: "< 1 000 €", active: budgetChip === 1000, toggle: () => setBudgetChip(budgetChip === 1000 ? null : 1000) },
+                { label: "< 1 500 €", active: budgetChip === 1500, toggle: () => setBudgetChip(budgetChip === 1500 ? null : 1500) },
+                { label: "Meublé", active: filtreMeuble, toggle: () => setFiltreMeuble(v => !v) },
+                { label: "Parking", active: filtreParking, toggle: () => setFiltreParking(v => !v) },
+                { label: "Extérieur", active: filtreExterieur, toggle: () => setFiltreExterieur(v => !v) },
+                { label: "Dispo maintenant", active: dispoImmediate, toggle: () => setDispoImmediate(v => !v) },
+              ].map(chip => (
+                <button
+                  key={chip.label}
+                  type="button"
+                  onClick={chip.toggle}
+                  style={{ background: chip.active ? "#111" : "white", color: chip.active ? "white" : "#374151", border: `1.5px solid ${chip.active ? "#111" : "#e5e7eb"}`, borderRadius: 999, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Compteur */}
           <div style={{ padding: "2px 0 10px", flexShrink: 0 }}>
             <p style={{ fontSize: 13, color: "#6b7280" }}>
@@ -600,7 +807,7 @@ function AnnoncesContent() {
                     {/* Infos */}
                     <div style={{ padding: "12px 14px 14px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 3 }}>
-                        <p style={{ fontWeight: 700, fontSize: 14, flex: 1, marginRight: 8, lineHeight: 1.3 }}>{a.titre}</p>
+                        <p style={{ fontWeight: 700, fontSize: 14, flex: 1, marginRight: 8, lineHeight: 1.3 }}>{motCle.trim() ? highlightMatch(a.titre || "", motCle) : a.titre}</p>
                         {info && (
                           <span style={{ background: info.bg, color: info.color, padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, flexShrink: 0, marginTop: 2 }}>
                             {Math.round(score / 10)}%
@@ -610,7 +817,7 @@ function AnnoncesContent() {
                           <span style={{ background: "#f3f4f6", color: "#374151", padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, flexShrink: 0 }}>Votre bien</span>
                         )}
                       </div>
-                      <p style={{ color: "#9ca3af", fontSize: 12, marginBottom: 8 }}>{a.ville}</p>
+                      <p style={{ color: "#9ca3af", fontSize: 12, marginBottom: 8 }}>{motCle.trim() ? highlightMatch(a.ville || "", motCle) : a.ville}</p>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div style={{ display: "flex", gap: 10, fontSize: 12, color: "#6b7280" }}>
                           <span>{a.surface} m²</span>

@@ -17,7 +17,10 @@
       "Bash(rm \"app/api/admin/annonces/[id]/route.ts\")",
       "Bash(rmdir \"app/api/admin/annonces/[id]\")",
       "Bash(npm test *)",
-      "WebFetch(domain:www.seloger.com)"
+      "WebFetch(domain:www.seloger.com)",
+      "Bash(npx next *)",
+      "Bash(npx vitest *)",
+      "Bash(xargs grep *)"
     ]
   }
 }

@@ -21,12 +21,22 @@ const STATUT_LABEL: Record<Statut, { label: string; bg: string; color: string }>
   rejete:   { label: "Visite refusée",      bg: "#fee2e2", color: "#b91c1c" },
 }
 
+const RETRAIT_PREFIX = "[CANDIDATURE_RETIREE]"
+const RELANCE_PREFIX = "[RELANCE]"
+// Délai avant de pouvoir relancer (jours sans réponse du proprio)
+const RELANCE_DELAI_JOURS = 7
+// Cooldown entre deux relances (jours)
+const RELANCE_COOLDOWN_JOURS = 5
+
 export default function MesCandidatures() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const { isMobile } = useResponsive()
   const [candidatures, setCandidatures] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [retraitId, setRetraitId] = useState<number | null>(null)
+  const [retraitEnCours, setRetraitEnCours] = useState(false)
+  const [relancantId, setRelancantId] = useState<number | null>(null)
 
   useEffect(() => {
     if (status === "unauthenticated") { router.push("/auth"); return }
@@ -63,41 +73,126 @@ export default function MesCandidatures() {
       .eq("locataire_email", email)
       .in("annonce_id", ids)
 
+    // 3bis. Messages reçus DES proprios (pour détecter si ils ont répondu)
+    const { data: msgsRecus } = await supabase
+      .from("messages")
+      .select("from_email, annonce_id, created_at, contenu")
+      .eq("to_email", email)
+      .in("annonce_id", ids)
+      .order("created_at", { ascending: false })
+
     // 4. Détecter dossier envoyé (préfixe [DOSSIER_CARD])
     const dossierEnvoyeIds = new Set<number>()
+    const retireeIds = new Set<number>()
     for (const m of msgs || []) {
-      if (typeof m.contenu === "string" && m.contenu.startsWith("[DOSSIER_CARD]")) {
-        dossierEnvoyeIds.add(m.annonce_id)
-      }
+      if (typeof m.contenu !== "string") continue
+      if (m.contenu.startsWith("[DOSSIER_CARD]")) dossierEnvoyeIds.add(m.annonce_id)
+      if (m.contenu.startsWith(RETRAIT_PREFIX)) retireeIds.add(m.annonce_id)
     }
 
     // 5. Consolidation
-    const result = ids.map(id => {
-      const c = candidatsMap.get(id)
-      const annonce = anns?.find(a => a.id === id)
-      const visitesAnn = visites?.filter(v => v.annonce_id === id) || []
-      const hasVisiteConfirme = visitesAnn.some(v => v.statut === "confirmée" || v.statut === "effectuée")
-      const hasVisiteProposee = visitesAnn.some(v => v.statut === "proposée")
-      const hasVisiteRefusee = visitesAnn.some(v => v.statut === "annulée")
-      const baisSigne = annonce?.statut === "loué" && annonce?.locataire_email === email
+    const emailLower = email.toLowerCase()
+    const now = Date.now()
+    const result = ids
+      .map(id => {
+        const c = candidatsMap.get(id)
+        const annonce = anns?.find(a => a.id === id)
+        const visitesAnn = visites?.filter(v => v.annonce_id === id) || []
+        const hasVisiteConfirme = visitesAnn.some(v => v.statut === "confirmée" || v.statut === "effectuée")
+        const hasVisiteProposee = visitesAnn.some(v => v.statut === "proposée")
+        const hasVisiteRefusee = visitesAnn.some(v => v.statut === "annulée")
+        const baisSigne = annonce?.statut === "loué" && (annonce?.locataire_email || "").toLowerCase() === emailLower
 
-      let statut: Statut = "contact"
-      if (baisSigne) statut = "bail"
-      else if (hasVisiteConfirme) statut = "visite"
-      else if (dossierEnvoyeIds.has(id)) statut = "dossier"
-      else if (hasVisiteRefusee && !hasVisiteConfirme && !hasVisiteProposee) statut = "rejete"
+        let statut: Statut = "contact"
+        if (baisSigne) statut = "bail"
+        else if (hasVisiteConfirme) statut = "visite"
+        else if (dossierEnvoyeIds.has(id)) statut = "dossier"
+        else if (hasVisiteRefusee && !hasVisiteConfirme && !hasVisiteProposee) statut = "rejete"
 
-      return {
-        ...c,
-        annonce,
-        visites: visitesAnn,
-        statut,
-        dossierEnvoye: dossierEnvoyeIds.has(id),
-      }
-    })
+        // Détection besoin de relance :
+        // - dernier msg du proprio OU jamais de réponse
+        // - MES derniers messages (dont dernière relance envoyée)
+        const msgsEnvoyesCetteAnn = (msgs || []).filter(m => m.annonce_id === id)
+        const msgsRecusCetteAnn = (msgsRecus || []).filter(m => m.annonce_id === id)
+        const dernierEnvoye = msgsEnvoyesCetteAnn[0] // déjà triés desc
+        const dernierRecu = msgsRecusCetteAnn[0]
+        const dernierEnvoyeAt = dernierEnvoye?.created_at ? new Date(dernierEnvoye.created_at).getTime() : 0
+        const dernierRecuAt = dernierRecu?.created_at ? new Date(dernierRecu.created_at).getTime() : 0
+        const dernierRelanceAt = msgsEnvoyesCetteAnn
+          .filter(m => typeof m.contenu === "string" && m.contenu.startsWith(RELANCE_PREFIX))
+          .map(m => new Date(m.created_at).getTime())
+          .reduce((max, t) => Math.max(max, t), 0)
+        const joursDepuisMoi = Math.floor((now - Math.max(dernierEnvoyeAt, dernierRelanceAt)) / 86400000)
+        const proprioARepondu = dernierRecuAt > dernierEnvoyeAt
+        const cooldownActif = dernierRelanceAt > 0 && (now - dernierRelanceAt) / 86400000 < RELANCE_COOLDOWN_JOURS
+        const peutRelancer = !baisSigne && !proprioARepondu && joursDepuisMoi >= RELANCE_DELAI_JOURS && !cooldownActif
+
+        return {
+          ...c,
+          annonce,
+          visites: visitesAnn,
+          statut,
+          dossierEnvoye: dossierEnvoyeIds.has(id),
+          baisSigne,
+          peutRelancer,
+          joursSansReponse: joursDepuisMoi,
+        }
+      })
+      // Filtrer les baux déjà signés — ils apparaissent dans /mon-logement,
+      // pas ici. /mes-candidatures = seulement les candidatures en cours.
+      // Filtrer aussi les candidatures que le locataire a retirées lui-même.
+      .filter(r => !r.baisSigne && !retireeIds.has(r.annonce_id))
 
     setCandidatures(result)
     setLoading(false)
+  }
+
+  async function retirerCandidature(annonce_id: number, proprietaire: string, titre: string) {
+    if (!session?.user?.email) return
+    setRetraitEnCours(true)
+    const email = session.user.email
+    // 1. Annuler les visites en cours (proposée / confirmée) pour cette annonce.
+    await supabase
+      .from("visites")
+      .update({ statut: "annulée" })
+      .eq("annonce_id", annonce_id)
+      .eq("locataire_email", email)
+      .in("statut", ["proposée", "confirmée"])
+    // 2. Poster un message système pour notifier le propriétaire.
+    const payload = JSON.stringify({ bienTitre: titre, retireLe: new Date().toISOString() })
+    await supabase.from("messages").insert([{
+      from_email: email,
+      to_email: proprietaire,
+      contenu: `${RETRAIT_PREFIX}${payload}`,
+      annonce_id,
+      lu: false,
+      created_at: new Date().toISOString(),
+    }])
+    // 3. Retirer de la liste locale — plus besoin d'un round-trip DB.
+    setCandidatures(prev => prev.filter(c => c.annonce_id !== annonce_id))
+    setRetraitId(null)
+    setRetraitEnCours(false)
+  }
+
+  async function relancerCandidature(annonce_id: number, proprietaire: string, titre: string) {
+    if (!session?.user?.email) return
+    setRelancantId(annonce_id)
+    const email = session.user.email
+    const contenu = `${RELANCE_PREFIX}Bonjour, avez-vous eu l'occasion de consulter ma candidature pour « ${titre || "votre bien"} » ? Je reste très intéressé(e) et disponible pour échanger ou visiter. Merci !`
+    await supabase.from("messages").insert([{
+      from_email: email,
+      to_email: proprietaire,
+      contenu,
+      annonce_id,
+      lu: false,
+      created_at: new Date().toISOString(),
+    }])
+    // Marque cette candidature comme relancée localement (cooldown immédiat)
+    setCandidatures(prev => prev.map(c => c.annonce_id === annonce_id
+      ? { ...c, peutRelancer: false, joursSansReponse: 0 }
+      : c
+    ))
+    setRelancantId(null)
   }
 
   if (status === "loading" || loading) return (
@@ -158,6 +253,42 @@ export default function MesCandidatures() {
                         style={{ fontSize: 12, fontWeight: 700, color: "white", background: "#111", textDecoration: "none", borderRadius: 999, padding: "7px 14px" }}>
                         Annonce
                       </Link>
+                    )}
+                    {c.peutRelancer && (
+                      <button
+                        type="button"
+                        disabled={relancantId === c.annonce_id}
+                        onClick={() => relancerCandidature(c.annonce_id, c.proprietaire, ann?.titre || "")}
+                        title={`Sans réponse depuis ${c.joursSansReponse} jours`}
+                        style={{ fontSize: 12, fontWeight: 700, color: "white", background: "#f59e0b", border: "none", borderRadius: 999, padding: "7px 14px", cursor: relancantId === c.annonce_id ? "wait" : "pointer", fontFamily: "inherit", opacity: relancantId === c.annonce_id ? 0.7 : 1 }}>
+                        {relancantId === c.annonce_id ? "…" : `Relancer (${c.joursSansReponse} j)`}
+                      </button>
+                    )}
+                    {retraitId === c.annonce_id ? (
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button
+                          type="button"
+                          disabled={retraitEnCours}
+                          onClick={() => retirerCandidature(c.annonce_id, c.proprietaire, ann?.titre || "")}
+                          style={{ fontSize: 12, fontWeight: 700, color: "white", background: "#dc2626", border: "none", borderRadius: 999, padding: "7px 14px", cursor: retraitEnCours ? "wait" : "pointer", fontFamily: "inherit", opacity: retraitEnCours ? 0.7 : 1 }}>
+                          {retraitEnCours ? "…" : "Confirmer"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={retraitEnCours}
+                          onClick={() => setRetraitId(null)}
+                          style={{ fontSize: 12, fontWeight: 600, color: "#111", background: "#f3f4f6", border: "none", borderRadius: 999, padding: "7px 14px", cursor: "pointer", fontFamily: "inherit" }}>
+                          Annuler
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setRetraitId(c.annonce_id)}
+                        title="Retirer votre candidature — annule les visites en cours et notifie le propriétaire."
+                        style={{ fontSize: 12, fontWeight: 600, color: "#dc2626", background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 999, padding: "7px 14px", cursor: "pointer", fontFamily: "inherit" }}>
+                        Retirer
+                      </button>
                     )}
                   </div>
                 </div>

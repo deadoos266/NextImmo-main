@@ -10,6 +10,7 @@ import { useResponsive } from "../hooks/useResponsive"
 import PipelineFunnel from "./PipelineFunnel"
 import { annulerVisite, STATUT_VISITE_STYLE as STATUT_V } from "../../lib/visitesHelpers"
 import { computeScreening } from "../../lib/screening"
+import { joursRetardLoyer, labelRetard } from "../../lib/loyerHelpers"
 
 const ONGLETS = ["Tableau de bord", "Mes biens", "Mes locataires", "Performance", "Documents", "Candidatures", "Loyers", "Visites"] as const
 type Onglet = typeof ONGLETS[number]
@@ -337,8 +338,40 @@ export default function Proprietaire() {
   }
 
   async function confirmerLoyer(id: number) {
-    await supabase.from("loyers").update({ statut: "confirmé", date_confirmation: new Date().toISOString() }).eq("id", id)
-    setLoyers(loyers.map(l => l.id === id ? { ...l, statut: "confirmé" } : l))
+    // Symétrique avec /proprietaire/stats : confirme + envoie la quittance
+    // via messagerie au locataire (card cliquable).
+    const loyer = loyers.find(l => l.id === id)
+    if (!loyer) return
+    const bien = biens.find(b => b.id === loyer.annonce_id)
+    const nowIso = new Date().toISOString()
+    await supabase.from("loyers").update({ statut: "confirmé", date_confirmation: nowIso }).eq("id", id)
+    setLoyers(loyers.map(l => l.id === id ? { ...l, statut: "confirmé", date_confirmation: nowIso } : l))
+
+    const locataireEmail = (bien?.locataire_email || "").toLowerCase()
+    const proprietaireEmail = (bien?.proprietaire_email || myEmail || "").toLowerCase()
+    if (!bien || !locataireEmail || !proprietaireEmail) return
+    const payload = {
+      loyerId: id,
+      bienId: bien.id,
+      bienTitre: bien.titre,
+      mois: loyer.mois,
+      montant: loyer.montant,
+      dateConfirmation: nowIso,
+    }
+    const { data: msg } = await supabase.from("messages").insert([{
+      from_email: proprietaireEmail,
+      to_email: locataireEmail,
+      contenu: `[QUITTANCE_CARD]${JSON.stringify(payload)}`,
+      lu: false,
+      annonce_id: bien.id,
+      created_at: nowIso,
+    }]).select().single()
+    if (msg?.id) {
+      await supabase.from("loyers").update({
+        quittance_envoyee_at: nowIso,
+        quittance_message_id: msg.id,
+      }).eq("id", id)
+    }
   }
 
   if (status === "loading" || loading) return (
@@ -547,14 +580,36 @@ export default function Proprietaire() {
                   </p>
                 </div>
               )
+              const moisCourant = new Date().toISOString().slice(0, 7) // YYYY-MM
               return actifs.map((b: any) => {
-                const moisLoyers = loyers.filter((l: any) => l.annonce_id === b.id && l.statut === "confirmé").length
+                const loyersBien = loyers.filter((l: any) => l.annonce_id === b.id)
+                const moisLoyers = loyersBien.filter((l: any) => l.statut === "confirmé").length
+                const loyerDuMois = loyersBien.find((l: any) => l.mois === moisCourant)
+                const loyerMoisStatut: "paye" | "declare" | "absent" =
+                  loyerDuMois?.statut === "confirmé" ? "paye"
+                  : loyerDuMois?.statut === "déclaré" ? "declare"
+                  : "absent"
+                // Détecter retard sur TOUT loyer non confirmé, pas seulement celui du mois.
+                const retardsBien = loyersBien
+                  .map((l: any) => ({ l, jours: joursRetardLoyer(l.mois, l.statut) }))
+                  .filter((x: any) => x.jours > 0)
+                const retardPlusAncien = retardsBien.reduce((m: any, x: any) => x.jours > (m?.jours || 0) ? x : m, null as any)
+                const loyerMoisStyle =
+                  loyerMoisStatut === "paye"    ? { bg: "#dcfce7", color: "#15803d", label: "Loyer du mois reçu" }
+                  : loyerMoisStatut === "declare" ? { bg: "#fff7ed", color: "#c2410c", label: "Loyer du mois en attente" }
+                  : { bg: "#fee2e2", color: "#dc2626", label: "Loyer du mois à déclarer" }
                 return (
                   <div key={b.id} style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24, display: "flex", flexDirection: isMobile ? "column" : "row", gap: 16, alignItems: isMobile ? "stretch" : "center" }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
                         <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{b.titre}</h3>
                         <span style={{ background: "#dcfce7", color: "#15803d", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>Bail actif</span>
+                        <span style={{ background: loyerMoisStyle.bg, color: loyerMoisStyle.color, padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>{loyerMoisStyle.label}</span>
+                        {retardPlusAncien && (
+                          <span title={`Loyer de ${new Date(retardPlusAncien.l.mois + "-01T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })} en retard`} style={{ background: "#fef2f2", color: "#b91c1c", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700, border: "1.5px solid #fecaca" }}>
+                            {labelRetard(retardPlusAncien.jours)}{retardsBien.length > 1 ? ` · ${retardsBien.length} mois` : ""}
+                          </span>
+                        )}
                       </div>
                       <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 10px" }}>{b.adresse ? b.adresse + " · " : ""}{b.ville}</p>
                       <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
@@ -565,8 +620,12 @@ export default function Proprietaire() {
                       </div>
                     </div>
                     <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: 8, flexWrap: "wrap" }}>
-                      <a href={`/messages?with=${encodeURIComponent(b.locataire_email)}`} style={{ background: "#111", color: "white", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>Message</a>
-                      <a href={`/proprietaire/stats?id=${b.id}`} style={{ background: "white", border: "1.5px solid #e5e7eb", color: "#111", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>Loyers</a>
+                      {loyerMoisStatut !== "paye" && (
+                        <a href={`/proprietaire/stats?id=${b.id}`} style={{ background: "#111", color: "white", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>
+                          {loyerMoisStatut === "declare" ? "Confirmer loyer" : "Déclarer loyer"}
+                        </a>
+                      )}
+                      <a href={`/messages?with=${encodeURIComponent(b.locataire_email)}`} style={{ background: loyerMoisStatut === "paye" ? "#111" : "white", color: loyerMoisStatut === "paye" ? "white" : "#111", border: loyerMoisStatut === "paye" ? "none" : "1.5px solid #e5e7eb", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>Message</a>
                       <a href={`/proprietaire/edl/${b.id}`} style={{ background: "white", border: "1.5px solid #e5e7eb", color: "#111", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>EDL</a>
                     </div>
                   </div>
@@ -854,15 +913,53 @@ export default function Proprietaire() {
           // Tri par score desc — les meilleurs candidats en haut
           const candidaturesTriees = [...candidaturesAvecScreening].sort((a, b) => b._screening.score - a._screening.score)
 
+          const exportCandidatsCSV = () => {
+            if (candidaturesTriees.length === 0) return
+            // CSV RFC 4180 — quote si contient , " ou \n
+            const esc = (v: unknown) => {
+              const s = v == null ? "" : String(v)
+              return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+            }
+            const headers = ["Email", "Score", "Label", "Bien", "Prix", "Flags", "Date contact", "Premier message"]
+            const rows = candidaturesTriees.map((c: any) => [
+              c.from_email,
+              c._screening.score,
+              c._screening.label,
+              c._bien?.titre || "",
+              c._bien?.prix ?? "",
+              (c._screening.flags || []).join(" / "),
+              new Date(c.created_at).toLocaleDateString("fr-FR"),
+              (c.contenu || "").slice(0, 200),
+            ])
+            const csv = "\uFEFF" + [headers, ...rows].map(r => r.map(esc).join(",")).join("\n")
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement("a")
+            a.href = url
+            a.download = `candidatures-${new Date().toISOString().slice(0, 10)}.csv`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+          }
+
           return (
           <div style={{ background: "white", borderRadius: 20, padding: 24 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
               <h2 style={{ fontSize: 16, fontWeight: 800 }}>Candidatures reçues</h2>
-              {candidatures.length > 0 && (
-                <p style={{ fontSize: 12, color: "#6b7280" }}>
-                  Tri par score de qualité (solvabilité, situation pro, garant, complétude)
-                </p>
-              )}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                {candidatures.length > 0 && (
+                  <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>
+                    Tri par score (solvabilité, pro, garant, complétude)
+                  </p>
+                )}
+                {candidaturesTriees.length > 0 && (
+                  <button type="button" onClick={exportCandidatsCSV}
+                    style={{ background: "white", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "6px 14px", fontSize: 12, fontWeight: 700, color: "#111", cursor: "pointer", fontFamily: "inherit" }}>
+                    Exporter CSV
+                  </button>
+                )}
+              </div>
             </div>
             <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 18, lineHeight: 1.5 }}>
               Le score est calculé automatiquement à partir du dossier du candidat. C'est une aide à la décision, pas un verdict.

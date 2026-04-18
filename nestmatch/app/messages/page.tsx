@@ -16,6 +16,8 @@ const DOSSIER_PREFIX = "[DOSSIER_CARD]"
 const BAIL_PREFIX = "[BAIL_CARD]"
 const DEMANDE_DOSSIER_PREFIX = "[DEMANDE_DOSSIER]"
 const EDL_PREFIX = "[EDL_CARD]"
+const RETRAIT_PREFIX = "[CANDIDATURE_RETIREE]"
+const RELANCE_PREFIX = "[RELANCE]"
 // Prefix encodé dans contenu pour un message en réponse à un autre.
 // Format : "[REPLY:<id>]\n<texte>". Permet d'implémenter le reply-to sans migration DB.
 const REPLY_REGEX = /^\[REPLY:(\d+)\]\n([\s\S]*)$/
@@ -48,7 +50,7 @@ function formatVisiteDate(raw: unknown, opts: Intl.DateTimeFormatOptions = { day
 
 // ─── Dossier Card ────────────────────────────────────────────────────────────
 
-function DossierCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
+function DossierCard({ contenu, isMine, annonceId }: { contenu: string; isMine: boolean; annonceId?: number | null }) {
   let data: any = {}
   try { data = JSON.parse(contenu.slice(DOSSIER_PREFIX.length)) } catch {}
   const scoreColor = data.score >= 80 ? "#15803d" : data.score >= 50 ? "#c2410c" : "#b91c1c"
@@ -70,6 +72,21 @@ function DossierCard({ contenu, isMine }: { contenu: string; isMine: boolean }) 
         {data.revenus_mensuels && <Row label="Revenus" val={`${Number(data.revenus_mensuels).toLocaleString("fr-FR")} €/mois`} isMine={isMine} />}
         {data.garant        && <Row label="Garant"    val={data.type_garant || "Oui"}                                  isMine={isMine} />}
       </div>
+      {!isMine && data.shareUrl && (
+        <a href={data.shareUrl} target="_blank" rel="noopener noreferrer"
+          style={{ display: "block", marginTop: 10, background: "#111", color: "white", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, textAlign: "center", textDecoration: "none", fontFamily: "inherit" }}>
+          Voir les pièces du dossier →
+        </a>
+      )}
+      {!isMine && annonceId && data.email && (
+        <a href={`/proprietaire/bail/${annonceId}?locataire=${encodeURIComponent(data.email)}`}
+          style={{ display: "block", marginTop: 6, background: "#16a34a", color: "white", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, textAlign: "center", textDecoration: "none", fontFamily: "inherit" }}>
+          Accepter &amp; générer le bail →
+        </a>
+      )}
+      {isMine && data.shareUrl && (
+        <p style={{ marginTop: 8, fontSize: 10, color: "#9ca3af" }}>Lien de partage 30 j inclus pour le propriétaire.</p>
+      )}
     </div>
   )
 }
@@ -137,7 +154,7 @@ function EdlCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
   if (isMine) {
     return (
       <div style={{ background: "#1a1a1a", border: "1.5px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 280 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: data.edlId ? 10 : 0 }}>
           <div>
             <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0 }}>État des lieux envoyé</p>
             <p style={{ fontSize: 11, color: "#9ca3af", margin: "2px 0 0" }}>
@@ -145,6 +162,12 @@ function EdlCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
             </p>
           </div>
         </div>
+        {data.edlId && (
+          <a href={`/edl/consulter/${data.edlId}`}
+            style={{ display: "block", background: "white", color: "#111", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, textAlign: "center", textDecoration: "none", fontFamily: "inherit" }}>
+            Consulter l&apos;EDL →
+          </a>
+        )}
       </div>
     )
   }
@@ -213,6 +236,49 @@ function BailCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
   )
 }
 
+// ─── Candidature retirée Card ────────────────────────────────────────────────
+
+function CandidatureRetireeCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any = {}
+  try { data = JSON.parse(contenu.slice(RETRAIT_PREFIX.length)) } catch { /* ignore */ }
+  const dateStr = data.retireLe
+    ? new Date(data.retireLe).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    : ""
+  return (
+    <div style={{ background: "#fef2f2", border: "1.5px dashed #fca5a5", borderRadius: 14, padding: "12px 16px", minWidth: 220, maxWidth: 320 }}>
+      <p style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 4px" }}>Candidature retirée</p>
+      <p style={{ fontSize: 13, color: "#991b1b", margin: 0, lineHeight: 1.4 }}>
+        {isMine ? "Vous avez retiré votre candidature" : "Le candidat a retiré sa candidature"}
+        {data.bienTitre ? ` pour « ${data.bienTitre} »` : ""}.
+      </p>
+      {dateStr && <p style={{ fontSize: 11, color: "#b91c1c", margin: "4px 0 0" }}>{dateStr}</p>}
+    </div>
+  )
+}
+
+// ─── Avatar ──────────────────────────────────────────────────────────────────
+
+function Avatar({ email, image, size = 36 }: { email: string; image?: string | null; size?: number }) {
+  const initial = (email || "?").trim().slice(0, 1).toUpperCase()
+  if (image) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={image}
+        alt=""
+        style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0, background: "#e5e7eb" }}
+        referrerPolicy="no-referrer"
+      />
+    )
+  }
+  return (
+    <div style={{ width: size, height: size, borderRadius: "50%", background: "#e5e7eb", color: "#374151", display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 700, flexShrink: 0 }}>
+      {initial}
+    </div>
+  )
+}
+
 // ─── Date separator ──────────────────────────────────────────────────────────
 
 function dateSep(dateStr: string) {
@@ -249,6 +315,9 @@ function MessagesInner() {
 
   const [conversations, setConversations] = useState<any[]>([])
   const [annonces, setAnnonces] = useState<Record<number, any>>({})
+  // Photos de profil des interlocuteurs (keyed par email lower). Chargé après
+  // la liste de conv pour afficher un avatar dans la liste et dans le header chat.
+  const [peerImages, setPeerImages] = useState<Record<string, string>>({})
   const [convActive, setConvActive] = useState<string | null>(null)
   const [messages, setMessages] = useState<any[]>([])
   const [nouveau, setNouveau] = useState("")
@@ -256,8 +325,23 @@ function MessagesInner() {
   const [envoi, setEnvoi] = useState(false)
   const [envoyantDossier, setEnvoyantDossier] = useState(false)
   const [recherche, setRecherche] = useState("")
+  // Onglet de filtrage des conversations : "actifs" (bail en cours) vs
+  // "candidats" (visite/dossier en cours). Côté proprio : biens loués vs
+  // candidatures. Côté locataire : son logement vs ses candidatures.
+  const [messagesTab, setMessagesTab] = useState<"actifs" | "candidats">("actifs")
+  // Ajuste automatiquement l'onglet par défaut selon le contexte : si l'user
+  // n'a aucun bail actif, on bascule sur "Candidatures" (évite liste vide au load).
+  const [tabInitialized, setTabInitialized] = useState(false)
   const [supprimant, setSupprimant] = useState<string | null>(null)
   const [menuConv, setMenuConv] = useState<string | null>(null)
+  // Archivage côté client : Set de conv.key archivées (localStorage par email).
+  // On ne touche pas la DB — archiver = "hors de ma vue", pas "supprimé".
+  const [archivedKeys, setArchivedKeys] = useState<Set<string>>(new Set())
+  const [showArchived, setShowArchived] = useState(false)
+  // Notes privées proprio sur chaque candidat (localStorage). Jamais partagées.
+  const [candidatNotes, setCandidatNotes] = useState<Record<string, string>>({})
+  const [noteEditKey, setNoteEditKey] = useState<string | null>(null)
+  const [noteDraft, setNoteDraft] = useState("")
   // Reply-to : infos du message auquel on répond (null = pas de reply)
   const [replyTo, setReplyTo] = useState<{ id: number; contenu: string; from: string } | null>(null)
   // Menu d'actions sur un message (id du msg ouvert, null = fermé)
@@ -286,6 +370,42 @@ function MessagesInner() {
     if (status === "unauthenticated") router.push("/auth")
     if (session?.user?.email) loadConversations()
   }, [session, status, withEmail])
+
+  // Hydrate archivedKeys depuis localStorage dès qu'on a l'email.
+  useEffect(() => {
+    if (!myEmail) return
+    try {
+      const raw = localStorage.getItem(`nestmatch:archivedConvs:${myEmail}`)
+      if (raw) {
+        const arr = JSON.parse(raw)
+        if (Array.isArray(arr)) setArchivedKeys(new Set(arr))
+      }
+    } catch { /* localStorage indisponible */ }
+    try {
+      const raw = localStorage.getItem(`nestmatch:candidatNotes:${myEmail}`)
+      if (raw) {
+        const obj = JSON.parse(raw)
+        if (obj && typeof obj === "object") setCandidatNotes(obj)
+      }
+    } catch { /* idem */ }
+  }, [myEmail])
+
+  function saveNote(convKey: string, texte: string) {
+    if (!myEmail) return
+    const trimmed = texte.trim()
+    setCandidatNotes(prev => {
+      const next = { ...prev }
+      if (trimmed) next[convKey] = trimmed
+      else delete next[convKey]
+      try { localStorage.setItem(`nestmatch:candidatNotes:${myEmail}`, JSON.stringify(next)) } catch { /* quota */ }
+      return next
+    })
+  }
+
+  function openNoteEditor(convKey: string) {
+    setNoteDraft(candidatNotes[convKey] || "")
+    setNoteEditKey(convKey)
+  }
 
   // Désactive la restauration auto du scroll par le navigateur sur /messages
   useEffect(() => {
@@ -367,10 +487,14 @@ function MessagesInner() {
 
     const me = myEmail.toLowerCase()
     const other = conv.other.toLowerCase()
+    const convAnnId = conv.annonceId ?? null
     const isRelevant = (m: any) => {
       const f = (m.from_email || "").toLowerCase()
       const t = (m.to_email || "").toLowerCase()
-      return (f === me && t === other) || (f === other && t === me)
+      const peers = (f === me && t === other) || (f === other && t === me)
+      if (!peers) return false
+      const mAnn = m.annonce_id ?? null
+      return mAnn === convAnnId
     }
 
     const channel = supabase.channel(`messages-${convActive}`)
@@ -406,18 +530,22 @@ function MessagesInner() {
     const me = myEmail.toLowerCase()
     const other = conv.other.toLowerCase()
 
-    const isMine = (row: { proprietaire_email?: string; locataire_email?: string }) => {
+    const convAnnId = conv.annonceId ?? null
+    const isMine = (row: { proprietaire_email?: string; locataire_email?: string; annonce_id?: number | null }) => {
       const p = (row.proprietaire_email || "").toLowerCase()
       const l = (row.locataire_email || "").toLowerCase()
-      return (p === me && l === other) || (p === other && l === me)
+      const peers = (p === me && l === other) || (p === other && l === me)
+      if (!peers) return false
+      const rowAnn = row.annonce_id ?? null
+      return convAnnId == null || rowAnn === convAnnId
     }
 
     const channel = supabase.channel(`visites-${convActive}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "visites" }, (payload) => {
-        if (isMine(payload.new as any)) loadVisitesConv(conv.other)
+        if (isMine(payload.new as any)) loadVisitesConv(conv.other, convAnnId)
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "visites" }, (payload) => {
-        if (isMine(payload.new as any)) loadVisitesConv(conv.other)
+        if (isMine(payload.new as any)) loadVisitesConv(conv.other, convAnnId)
       })
       .subscribe()
 
@@ -435,21 +563,37 @@ function MessagesInner() {
     if (data) {
       data.forEach((m: any) => {
         const other = m.from_email === email ? m.to_email : m.from_email
-        const key = [email, other].sort().join("|")
+        // Clé SCOPÉE par annonce_id : 2 annonces du même proprio = 2 conv distinctes.
+        // Seuls les messages sans annonce_id (rare, ex: premier msg historique)
+        // tombent dans une conv "autre" partagée.
+        const annId = m.annonce_id || "none"
+        const key = [email, other].sort().join("|") + `:${annId}`
         if (!convMap.has(key)) convMap.set(key, { key, other, lastMsg: m, unread: 0, annonceId: m.annonce_id || null })
         if (m.to_email === email && !m.lu) convMap.get(key)!.unread++
-        // garder l'annonce_id de la conv (premier message qui en a un)
-        if (m.annonce_id && !convMap.get(key)!.annonceId) convMap.get(key)!.annonceId = m.annonce_id
       })
     }
 
     if (withEmail && withEmail !== email) {
-      const key = [email, withEmail].sort().join("|")
+      // Arrivée depuis un lien ?with=X sans annonce → conv "libre"
+      const key = [email, withEmail].sort().join("|") + ":none"
       if (!convMap.has(key)) convMap.set(key, { key, other: withEmail, lastMsg: null, unread: 0, annonceId: null })
     }
 
     const convList = Array.from(convMap.values())
     setConversations(convList)
+
+    // Fetch photos de profil des peers via la table users (Google OAuth image).
+    const peerEmails = [...new Set(convList.map(c => (c.other || "").toLowerCase()).filter(Boolean))]
+    if (peerEmails.length > 0) {
+      const { data: users } = await supabase.from("users").select("email, image").in("email", peerEmails)
+      if (users) {
+        const map: Record<string, string> = {}
+        users.forEach((u: any) => {
+          if (u.email && u.image) map[u.email.toLowerCase()] = u.image
+        })
+        setPeerImages(map)
+      }
+    }
 
     // Fetch les annonces liées (avec locataire_email + statut pour badges)
     const ids = [...new Set(convList.map(c => c.annonceId).filter(Boolean))]
@@ -469,24 +613,36 @@ function MessagesInner() {
       const target = convList.find(c => c.other === withEmail)
       if (target) {
         setConvActive(target.key)
-        loadMessages(email, target.other)
-        loadVisitesConv(target.other)
+        loadMessages(email, target.other, target.annonceId)
+        loadVisitesConv(target.other, target.annonceId)
       }
     }
     setLoading(false)
   }
 
-  async function loadMessages(email: string, other: string) {
+  async function loadMessages(email: string, other: string, annonceId?: number | null) {
+    const me = email.toLowerCase()
+    const peer = other.toLowerCase()
     const [{ data: sent }, { data: received }] = await Promise.all([
-      supabase.from("messages").select("*").eq("from_email", email).eq("to_email", other),
-      supabase.from("messages").select("*").eq("from_email", other).eq("to_email", email),
+      supabase.from("messages").select("*").eq("from_email", me).eq("to_email", peer),
+      supabase.from("messages").select("*").eq("from_email", peer).eq("to_email", me),
     ])
-    const data = [...(sent || []), ...(received || [])].sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    )
+    let all = [...(sent || []), ...(received || [])]
+    // Scope par annonce — une conv est liée à UNE annonce. Les messages
+    // sans annonce_id apparaissent dans la conv "libre" (annonceId=null).
+    if (annonceId != null) {
+      all = all.filter(m => m.annonce_id === annonceId)
+    } else {
+      all = all.filter(m => !m.annonce_id)
+    }
+    const data = all.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
     setMessages(data)
-    await supabase.from("messages").update({ lu: true }).eq("to_email", email).eq("from_email", other)
-    setConversations(prev => prev.map(c => c.other === other ? { ...c, unread: 0 } : c))
+    // Marquer lus seulement les messages de cette conv
+    const unreadIds = data.filter(m => m.to_email?.toLowerCase() === me && !m.lu).map(m => m.id)
+    if (unreadIds.length > 0) {
+      await supabase.from("messages").update({ lu: true }).in("id", unreadIds)
+    }
+    setConversations(prev => prev.map(c => c.other === other && c.annonceId === (annonceId ?? null) ? { ...c, unread: 0 } : c))
   }
 
   async function envoyer() {
@@ -495,7 +651,15 @@ function MessagesInner() {
     const conv = conversations.find(c => c.key === convActive)
     if (!conv) return
     const contenuFinal = encodeReply(replyTo?.id ?? null, nouveau.trim())
-    const msg = { from_email: myEmail, to_email: conv.other, contenu: contenuFinal, lu: false, created_at: new Date().toISOString() }
+    // Propager annonce_id pour que le message reste scope à la conv du bien
+    const msg: Record<string, unknown> = {
+      from_email: myEmail,
+      to_email: conv.other,
+      contenu: contenuFinal,
+      lu: false,
+      created_at: new Date().toISOString(),
+    }
+    if (conv.annonceId) msg.annonce_id = conv.annonceId
     const { data } = await supabase.from("messages").insert([msg]).select().single()
     if (data) {
       setMessages(prev => [...prev, data])
@@ -560,9 +724,35 @@ function MessagesInner() {
       }
     }
 
-    const payload = { email: myEmail, nom: profil?.nom || session?.user?.name || "", situation_pro: profil?.situation_pro || "", revenus_mensuels: profil?.revenus_mensuels || "", garant: profil?.garant || false, type_garant: profil?.type_garant || "", nb_occupants: profil?.nb_occupants || 1, score: Math.min(score, 100) }
-    const msg = { from_email: myEmail, to_email: conv.other, contenu: DOSSIER_PREFIX + JSON.stringify(payload), lu: false, created_at: new Date().toISOString() }
-    const { data } = await supabase.from("messages").insert([msg]).select().single()
+    // Génère un lien de partage sécurisé (HMAC 7j) pour que le proprio
+    // puisse consulter les pièces justificatives directement.
+    let shareUrl: string | null = null
+    try {
+      const res = await fetch("/api/dossier/share", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ days: 30 }) })
+      const json = await res.json()
+      if (res.ok && json.success) shareUrl = json.url
+    } catch { /* silent — le dossier est envoyé sans lien, le proprio verra juste le récap */ }
+
+    const payload = {
+      email: myEmail,
+      nom: profil?.nom || session?.user?.name || "",
+      situation_pro: profil?.situation_pro || "",
+      revenus_mensuels: profil?.revenus_mensuels || "",
+      garant: profil?.garant || false,
+      type_garant: profil?.type_garant || "",
+      nb_occupants: profil?.nb_occupants || 1,
+      score: Math.min(score, 100),
+      shareUrl,
+    }
+    const msgBody: Record<string, unknown> = {
+      from_email: myEmail,
+      to_email: conv.other,
+      contenu: DOSSIER_PREFIX + JSON.stringify(payload),
+      lu: false,
+      created_at: new Date().toISOString(),
+    }
+    if (conv.annonceId) msgBody.annonce_id = conv.annonceId
+    const { data } = await supabase.from("messages").insert([msgBody]).select().single()
     if (data) {
       setMessages(prev => [...prev, data])
       setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: data } : c))
@@ -587,7 +777,23 @@ function MessagesInner() {
     setConversations(prev => prev.map(c => c.key === conv.key ? { ...c, unread: 0 } : c))
   }
 
-  async function loadVisitesConv(otherEmail: string) {
+  function archiveStorageKey(email: string) {
+    return `nestmatch:archivedConvs:${email.toLowerCase()}`
+  }
+
+  function toggleArchive(key: string) {
+    if (!myEmail) return
+    setArchivedKeys(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      try { localStorage.setItem(archiveStorageKey(myEmail), JSON.stringify([...next])) } catch { /* quota exceeded — on ignore */ }
+      return next
+    })
+    if (convActive === key) { setConvActive(null); setMessages([]) }
+  }
+
+  async function loadVisitesConv(otherEmail: string, annonceId?: number | null) {
     if (!myEmail) return
     const me = myEmail.toLowerCase()
     const other = otherEmail.toLowerCase()
@@ -597,6 +803,7 @@ function MessagesInner() {
     } else {
       query = query.eq("locataire_email", me).eq("proprietaire_email", other)
     }
+    if (annonceId) query = query.eq("annonce_id", annonceId)
     const { data } = await query.in("statut", ["proposée", "confirmée"]).order("date_visite", { ascending: true })
     setVisitesConv(data || [])
   }
@@ -655,7 +862,7 @@ function MessagesInner() {
       // Actualiser les messages pour voir le message auto-posté
       if (convActive) {
         const conv = conversations.find(c => c.key === convActive)
-        if (conv) loadMessages(myEmail, conv.other)
+        if (conv) loadMessages(myEmail, conv.other, conv.annonceId)
       }
       setVisiteCancelTarget(null)
     }
@@ -707,7 +914,28 @@ function MessagesInner() {
   const convActiveData = conversations.find(c => c.key === convActive)
   const annonceActive = convActiveData?.annonceId ? annonces[convActiveData.annonceId] : null
 
+  // Détection "bail actif" pour la conv : annonce liée a un statut loué +
+  // l'autre interlocuteur EST le locataire (côté proprio) OU le proprio
+  // (côté locataire). Sinon c'est une candidature / ancienne conv.
+  const me = (myEmail || "").toLowerCase()
+  const isActiveBail = (conv: { other: string; annonceId: number | null }) => {
+    if (!conv.annonceId) return false
+    const ann = annonces[conv.annonceId]
+    if (!ann) return false
+    if (ann.statut !== "loué" || !ann.locataire_email) return false
+    const loc = (ann.locataire_email || "").toLowerCase()
+    const prop = (ann.proprietaire_email || "").toLowerCase()
+    const other = (conv.other || "").toLowerCase()
+    // Proprio côté : je suis le proprio du bien ET l'autre est le locataire actif
+    if (prop === me && other === loc) return true
+    // Locataire côté : je suis le locataire actif ET l'autre est le proprio
+    if (loc === me && other === prop) return true
+    return false
+  }
+
   const convsFiltrees = conversations
+    .filter(c => messagesTab === "actifs" ? isActiveBail(c) : !isActiveBail(c))
+    .filter(c => showArchived ? archivedKeys.has(c.key) : !archivedKeys.has(c.key))
     .filter(c =>
       !recherche || c.other.toLowerCase().includes(recherche.toLowerCase()) ||
       (annonces[c.annonceId]?.titre || "").toLowerCase().includes(recherche.toLowerCase())
@@ -720,6 +948,19 @@ function MessagesInner() {
       const db = b.lastMsg?.created_at ? new Date(b.lastMsg.created_at).getTime() : 0
       return db - da
     })
+
+  const countActifs = conversations.filter(c => isActiveBail(c) && !archivedKeys.has(c.key)).length
+  const countCandidats = conversations.filter(c => !isActiveBail(c) && !archivedKeys.has(c.key)).length
+  const countArchived = conversations.filter(c => archivedKeys.has(c.key)).length
+
+  // Default tab intelligent : au premier load, si aucun bail actif → candidatures
+  useEffect(() => {
+    if (tabInitialized || loading) return
+    if (conversations.length > 0) {
+      if (countActifs === 0 && countCandidats > 0) setMessagesTab("candidats")
+      setTabInitialized(true)
+    }
+  }, [conversations.length, countActifs, countCandidats, loading, tabInitialized])
 
   const dossierDejaEnvoye = messages.some(m =>
     typeof m.contenu === "string" && m.contenu.startsWith(DOSSIER_PREFIX)
@@ -755,13 +996,51 @@ function MessagesInner() {
 
           {/* ── Colonne gauche : conversations ── */}
           <div style={{ width: isMobile ? "100%" : 300, flexShrink: 0, background: "white", borderRadius: isMobile ? 0 : 20, display: isMobile && convActiveData ? "none" : "flex", flexDirection: "column", overflow: "hidden", boxShadow: isMobile ? "none" : "0 2px 12px rgba(0,0,0,0.06)" }}>
-            {/* Recherche */}
-            <div style={{ padding: "14px 16px", borderBottom: "1px solid #f3f4f6" }}>
+            {/* Onglets Biens loués / Candidatures */}
+            <div style={{ display: "flex", padding: "10px 10px 0", gap: 6, borderBottom: "1px solid #f3f4f6" }}>
+              {([
+                { k: "actifs" as const,    label: proprietaireActive ? "Biens loués" : "Mon bail", count: countActifs },
+                { k: "candidats" as const, label: proprietaireActive ? "Candidatures" : "Mes candidatures", count: countCandidats },
+              ]).map(t => {
+                const active = messagesTab === t.k
+                return (
+                  <button
+                    key={t.k}
+                    onClick={() => setMessagesTab(t.k)}
+                    style={{
+                      flex: 1,
+                      padding: "9px 8px",
+                      background: active ? "#111" : "white",
+                      color: active ? "white" : "#374151",
+                      border: `1.5px solid ${active ? "#111" : "#e5e7eb"}`,
+                      borderRadius: 10,
+                      fontSize: 12,
+                      fontWeight: active ? 800 : 600,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      marginBottom: 10,
+                    }}
+                  >
+                    {t.label}{t.count > 0 && <span style={{ marginLeft: 6, fontSize: 10, opacity: 0.8 }}>({t.count})</span>}
+                  </button>
+                )
+              })}
+            </div>
+            {/* Recherche + toggle archivées */}
+            <div style={{ padding: "10px 16px 12px", borderBottom: "1px solid #f3f4f6", display: "flex", flexDirection: "column", gap: 8 }}>
               <input
                 value={recherche} onChange={e => setRecherche(e.target.value)}
                 placeholder="Rechercher..."
                 style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 13, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
               />
+              {(countArchived > 0 || showArchived) && (
+                <button
+                  type="button"
+                  onClick={() => setShowArchived(v => !v)}
+                  style={{ background: showArchived ? "#111" : "white", color: showArchived ? "white" : "#374151", border: `1.5px solid ${showArchived ? "#111" : "#e5e7eb"}`, borderRadius: 8, padding: "6px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textAlign: "center" }}>
+                  {showArchived ? "← Retour" : `Archivées (${countArchived})`}
+                </button>
+              )}
             </div>
 
             <div style={{ flex: 1, overflowY: "auto" }}>
@@ -784,7 +1063,9 @@ function MessagesInner() {
                 const previewText = rawPreview.startsWith(DOSSIER_PREFIX) ? "Dossier envoyé"
                   : rawPreview.startsWith(DEMANDE_DOSSIER_PREFIX) ? "Dossier demandé"
                   : rawPreview.startsWith(EDL_PREFIX) ? "État des lieux envoyé"
-                  : rawPreview.startsWith("[BAIL_CARD]") ? "Bail généré"
+                  : rawPreview.startsWith(BAIL_PREFIX) ? "Bail généré"
+                  : rawPreview.startsWith(RETRAIT_PREFIX) ? "Candidature retirée"
+                  : rawPreview.startsWith(RELANCE_PREFIX) ? "Relance : " + rawPreview.slice(RELANCE_PREFIX.length)
                   : parseReply(rawPreview).text // ignore le préfixe [REPLY:id]
                 const preview = rawPreview
                   ? (previewText.length > 35 ? previewText.slice(0, 35) + "…" : previewText)
@@ -812,19 +1093,23 @@ function MessagesInner() {
 
                 return (
                   <div key={conv.key}
-                    onClick={() => { setConvActive(conv.key); setMenuConv(null); setVisitesConv([]); loadMessages(myEmail!, conv.other); loadVisitesConv(conv.other) }}
+                    onClick={() => { setConvActive(conv.key); setMenuConv(null); setVisitesConv([]); loadMessages(myEmail!, conv.other, conv.annonceId); loadVisitesConv(conv.other, conv.annonceId) }}
                     style={{ padding: "12px 16px", cursor: "pointer", background: isActive ? "#f9fafb" : "white", borderBottom: "1px solid #f3f4f6", borderLeft: isActive ? "3px solid #111" : conv.unread > 0 ? "3px solid #ef4444" : "3px solid transparent", position: "relative" }}
                     onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "#fafafa"; const btn = e.currentTarget.querySelector(".menu-btn") as HTMLElement; if (btn) btn.style.opacity = "1" }}
                     onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "white"; if (menuConv !== conv.key) { const btn = e.currentTarget.querySelector(".menu-btn") as HTMLElement; if (btn) btn.style.opacity = "0" } }}
                   >
                     <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                      {/* Avatar annonce ou initiale */}
+                      {/* Avatar annonce (ou peer si pas d'annonce) + badge unread */}
                       <div style={{ position: "relative", flexShrink: 0 }}>
                         {photo ? (
                           <img src={photo} alt="" style={{ width: 40, height: 40, borderRadius: 10, objectFit: "cover", display: "block" }} />
                         ) : (
-                          <div style={{ width: 40, height: 40, borderRadius: 10, background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 15 }}>
-                            {conv.other[0]?.toUpperCase()}
+                          <Avatar email={conv.other} image={peerImages[conv.other.toLowerCase()]} size={40} />
+                        )}
+                        {/* Si annonce présente, overlay peer avatar pour contexte humain */}
+                        {photo && (
+                          <div style={{ position: "absolute", bottom: -3, right: -3, border: "2px solid white", borderRadius: "50%" }}>
+                            <Avatar email={conv.other} image={peerImages[conv.other.toLowerCase()]} size={18} />
                           </div>
                         )}
                         {conv.unread > 0 && (
@@ -847,6 +1132,11 @@ function MessagesInner() {
                           <span style={{ display: "inline-block", background: relBadge.bg, color: relBadge.color, fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 999, marginBottom: 2 }}>
                             {relBadge.label}
                           </span>
+                        )}
+                        {proprietaireActive && candidatNotes[conv.key] && (
+                          <p style={{ fontSize: 11, color: "#ca8a04", fontWeight: 600, margin: "2px 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={candidatNotes[conv.key]}>
+                            Note : {candidatNotes[conv.key]}
+                          </p>
                         )}
                         <p style={{ fontSize: 12, color: conv.unread > 0 ? "#374151" : "#9ca3af", fontWeight: conv.unread > 0 ? 600 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{preview}</p>
                       </div>
@@ -881,6 +1171,12 @@ function MessagesInner() {
                               Voir l'annonce
                             </button>
                           )}
+                          <button onClick={e => { e.stopPropagation(); toggleArchive(conv.key); setMenuConv(null) }}
+                            style={{ width: "100%", padding: "10px 14px", background: "none", border: "none", borderBottom: "1px solid #f3f4f6", textAlign: "left", fontSize: 13, cursor: "pointer", fontFamily: "inherit", color: "#374151", display: "flex", alignItems: "center", gap: 8 }}
+                            onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
+                            onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+                            {archivedKeys.has(conv.key) ? "Désarchiver" : "Archiver"}
+                          </button>
                           <button onClick={e => { e.stopPropagation(); supprimerConversation(conv.key); setMenuConv(null) }}
                             disabled={supprimant === conv.key}
                             style={{ width: "100%", padding: "10px 14px", background: "none", border: "none", textAlign: "left", fontSize: 13, cursor: supprimant === conv.key ? "not-allowed" : "pointer", fontFamily: "inherit", color: "#dc2626", display: "flex", alignItems: "center", gap: 8, opacity: supprimant === conv.key ? 0.5 : 1 }}
@@ -925,11 +1221,17 @@ function MessagesInner() {
                   )}
                   {annonceActive ? (
                     <>
-                      {Array.isArray(annonceActive.photos) && annonceActive.photos[0] ? (
-                        <img src={annonceActive.photos[0]} alt="" style={{ width: 42, height: 42, borderRadius: 10, objectFit: "cover" }} />
-                      ) : (
-                        <div style={{ width: 42, height: 42, borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#6b7280", fontWeight: 700 }}>{(annonceActive.titre || "A")[0].toUpperCase()}</div>
-                      )}
+                      <div style={{ position: "relative", flexShrink: 0 }}>
+                        {Array.isArray(annonceActive.photos) && annonceActive.photos[0] ? (
+                          <img src={annonceActive.photos[0]} alt="" style={{ width: 42, height: 42, borderRadius: 10, objectFit: "cover", display: "block" }} />
+                        ) : (
+                          <div style={{ width: 42, height: 42, borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#6b7280", fontWeight: 700 }}>{(annonceActive.titre || "A")[0].toUpperCase()}</div>
+                        )}
+                        {/* Avatar peer en overlay pour contexte humain */}
+                        <div style={{ position: "absolute", bottom: -4, right: -4, border: "2px solid white", borderRadius: "50%" }}>
+                          <Avatar email={convActiveData.other} image={peerImages[convActiveData.other.toLowerCase()]} size={22} />
+                        </div>
+                      </div>
                       <div style={{ flex: 1 }}>
                         <p style={{ fontWeight: 700, fontSize: 14 }}>{annonceActive.titre}</p>
                         <p style={{ fontSize: 12, color: "#9ca3af" }}>{annonceActive.ville} &middot; {displayName(convActiveData.other, annonceActive.proprietaire)}</p>
@@ -941,13 +1243,62 @@ function MessagesInner() {
                     </>
                   ) : (
                     <>
-                      <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 16 }}>
-                        {convActiveData.other[0]?.toUpperCase()}
-                      </div>
+                      <Avatar email={convActiveData.other} image={peerImages[convActiveData.other.toLowerCase()]} size={42} />
                       <p style={{ fontWeight: 700, fontSize: 14 }}>{displayName(convActiveData.other)}</p>
                     </>
                   )}
                 </div>
+
+                {/* Note privée proprio (visible uniquement côté proprio) */}
+                {proprietaireActive && convActiveData && (
+                  <div style={{ background: "#fefce8", borderBottom: "1px solid #fef08a", padding: "8px 16px", display: "flex", alignItems: "center", gap: 8 }}>
+                    {noteEditKey === convActiveData.key ? (
+                      <>
+                        <input
+                          autoFocus
+                          value={noteDraft}
+                          onChange={e => setNoteDraft(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === "Enter") { saveNote(convActiveData.key, noteDraft); setNoteEditKey(null) }
+                            if (e.key === "Escape") setNoteEditKey(null)
+                          }}
+                          placeholder="Note privée sur ce candidat (visible uniquement par vous)"
+                          maxLength={240}
+                          style={{ flex: 1, background: "white", border: "1.5px solid #fde68a", borderRadius: 8, padding: "6px 10px", fontSize: 13, outline: "none", fontFamily: "inherit" }}
+                        />
+                        <button type="button"
+                          onClick={() => { saveNote(convActiveData.key, noteDraft); setNoteEditKey(null) }}
+                          style={{ background: "#ca8a04", color: "white", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                          Enregistrer
+                        </button>
+                        <button type="button" onClick={() => setNoteEditKey(null)}
+                          style={{ background: "white", color: "#713f12", border: "1.5px solid #fde68a", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                          Annuler
+                        </button>
+                      </>
+                    ) : candidatNotes[convActiveData.key] ? (
+                      <>
+                        <span style={{ fontSize: 12, color: "#713f12", flex: 1, lineHeight: 1.4 }}>
+                          <strong style={{ color: "#a16207", fontWeight: 700 }}>Note : </strong>
+                          {candidatNotes[convActiveData.key]}
+                        </span>
+                        <button type="button" onClick={() => openNoteEditor(convActiveData.key)}
+                          style={{ background: "none", color: "#ca8a04", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                          Modifier
+                        </button>
+                        <button type="button" onClick={() => saveNote(convActiveData.key, "")}
+                          style={{ background: "none", color: "#b91c1c", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                          Supprimer
+                        </button>
+                      </>
+                    ) : (
+                      <button type="button" onClick={() => openNoteEditor(convActiveData.key)}
+                        style={{ background: "none", color: "#a16207", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
+                        + Ajouter une note privée sur ce candidat
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* Messages */}
                 <div ref={messagesContainerRef} style={{ flex: 1, overflowY: "auto", padding: isMobile ? "12px 14px" : "20px 24px", display: "flex", flexDirection: "column", gap: 8, background: isMobile ? "#fafafa" : "white" }}>
@@ -970,11 +1321,12 @@ function MessagesInner() {
                     const isDemande = typeof m.contenu === "string" && m.contenu === DEMANDE_DOSSIER_PREFIX
                     const isEdl = typeof m.contenu === "string" && m.contenu.startsWith(EDL_PREFIX)
                     const isBail = typeof m.contenu === "string" && m.contenu.startsWith(BAIL_PREFIX)
+                    const isRetrait = typeof m.contenu === "string" && m.contenu.startsWith(RETRAIT_PREFIX)
                     return (
                       <div key={m.id} style={{ display: "flex", justifyContent: isMine ? "flex-end" : "flex-start" }}>
                         {isDossier ? (
                           <div>
-                            <DossierCard contenu={m.contenu} isMine={isMine} />
+                            <DossierCard contenu={m.contenu} isMine={isMine} annonceId={m.annonce_id || convActiveData?.annonceId || null} />
                             <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
@@ -1005,9 +1357,18 @@ function MessagesInner() {
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
+                        ) : isRetrait ? (
+                          <div>
+                            <CandidatureRetireeCard contenu={m.contenu} isMine={isMine} />
+                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
                         ) : (() => {
                           // Parse reply-to : si le message est une réponse, afficher la quote au-dessus
-                          const { replyToId, text } = parseReply(m.contenu || "")
+                          const { replyToId, text: rawText } = parseReply(m.contenu || "")
+                          const isRelance = rawText.startsWith(RELANCE_PREFIX)
+                          const text = isRelance ? rawText.slice(RELANCE_PREFIX.length) : rawText
                           const quoted = replyToId ? messages.find(x => x.id === replyToId) : null
                           const quotedText = quoted ? parseReply(quoted.contenu || "").text : null
                           const quotedLabel = quoted ? (quoted.from_email === myEmail ? "Vous" : displayName(quoted.from_email)) : null
@@ -1056,6 +1417,11 @@ function MessagesInner() {
                                       {quotedText.length > 120 ? quotedText.slice(0, 120) + "…" : quotedText}
                                     </p>
                                   </div>
+                                )}
+                                {isRelance && (
+                                  <span style={{ display: "inline-block", background: isMine ? "rgba(255,255,255,0.2)" : "#fef3c7", color: isMine ? "white" : "#92400e", fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.4px" }}>
+                                    Relance
+                                  </span>
                                 )}
                                 <p id={`msg-${m.id}`} style={{ fontSize: 14, lineHeight: 1.5, margin: 0 }}>{text}</p>
                                 <p style={{ fontSize: 10, opacity: 0.5, marginTop: 4, textAlign: "right", margin: "4px 0 0" }}>

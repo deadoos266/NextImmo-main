@@ -29,6 +29,7 @@ export const SUJETS_CONTACT: SujetContact[] = [
   { code: "question_generale", label: "Question générale" },
   { code: "bug", label: "Signaler un bug" },
   { code: "compte", label: "Problème de compte" },
+  { code: "reset_password", label: "Mot de passe oublié" },
   { code: "proprietaire", label: "Question côté propriétaire" },
   { code: "locataire", label: "Question côté locataire" },
   { code: "rgpd", label: "Protection des données (RGPD)" },

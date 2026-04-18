@@ -1,7 +1,7 @@
 "use client"
 import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
-import { useRouter, useParams } from "next/navigation"
+import { useRouter, useParams, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "../../../../lib/supabase"
 import { useResponsive } from "../../../hooks/useResponsive"
@@ -257,7 +257,12 @@ export default function BailPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const params = useParams()
+  const searchParams = useSearchParams()
   const bienId = params.id as string
+  // Pré-sélection locataire via query param ?locataire=email
+  // (workflow : proprio accepte un candidat depuis la messagerie → land ici
+  // avec le bon email déjà renseigné dans le form, pas besoin de saisie manuelle)
+  const locatairePreselectionne = searchParams?.get("locataire") || ""
   const { isMobile } = useResponsive()
   const [bien, setBien] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -281,6 +286,13 @@ export default function BailPage() {
   async function loadBien() {
     const { data } = await supabase.from("annonces").select("*").eq("id", bienId).single()
     if (data) {
+      // Si pré-sélection via ?locataire=email ET pas encore de locataire sur le bien,
+      // on update avant d'afficher le formulaire pour que le flow soit cohérent.
+      const emailFromQuery = locatairePreselectionne.trim().toLowerCase()
+      if (emailFromQuery && !data.locataire_email) {
+        await supabase.from("annonces").update({ locataire_email: emailFromQuery }).eq("id", bienId)
+        data.locataire_email = emailFromQuery
+      }
       setBien(data)
       setForm(f => ({
         ...f,
@@ -333,6 +345,7 @@ export default function BailPage() {
       const patch: Record<string, unknown> = {
         locataire_email: locataireEmail,
         statut: "loué",
+        bail_genere_at: new Date().toISOString(),
       }
       if (form.dateDebut) patch.date_debut_bail = form.dateDebut
       await supabase.from("annonces").update(patch).eq("id", bien.id)
@@ -350,19 +363,11 @@ export default function BailPage() {
           loyerHC: bien.prix,
           charges: bien.charges,
         })
+        // Le client parse désormais [BAIL_CARD] partout → plus besoin du message texte doublon.
         await supabase.from("messages").insert([{
           from_email: fromEmail,
           to_email: locataireEmail,
           contenu: `[BAIL_CARD]${bailPayload}`,
-          lu: false,
-          annonce_id: bien.id,
-          created_at: new Date().toISOString(),
-        }])
-        // Version texte de secours (si le client ne supporte pas le prefix)
-        await supabase.from("messages").insert([{
-          from_email: fromEmail,
-          to_email: locataireEmail,
-          contenu: `Bail généré pour « ${bien.titre} » à ${bien.ville}. Début : ${dateStr}. Le PDF vient d'être téléchargé par le propriétaire.`,
           lu: false,
           annonce_id: bien.id,
           created_at: new Date().toISOString(),

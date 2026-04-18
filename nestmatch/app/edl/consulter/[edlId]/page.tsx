@@ -221,41 +221,18 @@ export default function ConsulterEdlPage() {
   }, [session, status, edlId])
 
   async function loadEdl() {
-    const { data, error: err } = await supabase
-      .from("etats_des_lieux")
-      .select("*")
-      .eq("id", edlId)
-      .single()
-
-    if (err || !data) {
-      setError("État des lieux introuvable")
+    // Accès via API serveur : auth + vérification email côté service_role,
+    // pas d'exposition directe de la table via l'anon key.
+    const res = await fetch(`/api/edl/${encodeURIComponent(edlId as string)}`, { cache: "no-store" })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: "Erreur de chargement" }))
+      setError(body?.error || (res.status === 403 ? "Vous n'avez pas accès à cet état des lieux" : "État des lieux introuvable"))
       setLoading(false)
       return
     }
-
-    // Verify access: locataire email must match
-    const userEmail = session?.user?.email?.toLowerCase()
-    const edlLocataireEmail = (data.email_locataire || data.locataire_email || "").toLowerCase()
-    const edlProprietaireEmail = (data.proprietaire_email || "").toLowerCase()
-
-    if (userEmail !== edlLocataireEmail && userEmail !== edlProprietaireEmail) {
-      setError("Vous n'avez pas accès à cet état des lieux")
-      setLoading(false)
-      return
-    }
-
+    const { edl: data, bien: bienData } = await res.json()
     setEdl(data)
-
-    // Load the bien
-    if (data.annonce_id) {
-      const { data: bienData } = await supabase
-        .from("annonces")
-        .select("titre, ville, adresse, surface")
-        .eq("id", data.annonce_id)
-        .single()
-      if (bienData) setBien(bienData)
-    }
-
+    if (bienData) setBien(bienData)
     setLoading(false)
   }
 

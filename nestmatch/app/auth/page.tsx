@@ -38,6 +38,10 @@ function AuthContent() {
   const [form, setForm] = useState<FormState>({ name: "", email: "", password: "" })
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [resetOpen, setResetOpen] = useState(false)
+  const [resetEmail, setResetEmail] = useState("")
+  const [resetState, setResetState] = useState<"idle" | "sending" | "sent" | "error">("idle")
+  const [resetError, setResetError] = useState("")
 
   function handleChange(field: keyof FormState) {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,6 +98,39 @@ function AuthContent() {
     } catch {
       setError("Une erreur est survenue. Veuillez réessayer.")
       setLoading(false)
+    }
+  }
+
+  async function envoyerResetPassword(e: React.FormEvent) {
+    e.preventDefault()
+    setResetError("")
+    const email = resetEmail.trim().toLowerCase()
+    if (!email || !email.includes("@")) {
+      setResetError("Veuillez saisir une adresse e-mail valide.")
+      return
+    }
+    setResetState("sending")
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nom: "Demande réinitialisation",
+          email,
+          sujet: "reset_password",
+          message: `Demande de réinitialisation de mot de passe pour ${email}. Merci de recontacter l'utilisateur sous 24 h pour lui communiquer un nouveau mot de passe temporaire.`,
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.success) {
+        setResetState("error")
+        setResetError(json.error || "Envoi impossible. Réessayez plus tard.")
+        return
+      }
+      setResetState("sent")
+    } catch {
+      setResetState("error")
+      setResetError("Erreur réseau. Réessayez plus tard.")
     }
   }
 
@@ -185,7 +222,17 @@ function AuthContent() {
               />
             </div>
             <div>
-              <label style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "block", color: "#6b7280" }}>Mot de passe</label>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                <label style={{ fontSize: 13, fontWeight: 700, color: "#6b7280" }}>Mot de passe</label>
+                {mode === "connexion" && (
+                  <button
+                    type="button"
+                    onClick={() => { setResetOpen(v => !v); setResetEmail(form.email); setResetState("idle"); setResetError("") }}
+                    style={{ fontSize: 12, color: "#1d4ed8", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit", fontWeight: 600 }}>
+                    Mot de passe oublié ?
+                  </button>
+                )}
+              </div>
               <PasswordInput
                 value={form.password}
                 onChange={v => setForm(prev => ({ ...prev, password: v }))}
@@ -195,6 +242,48 @@ function AuthContent() {
                 autoComplete={mode === "inscription" ? "new-password" : "current-password"}
               />
             </div>
+
+            {resetOpen && mode === "connexion" && (
+              <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 12, padding: 14 }}>
+                {resetState === "sent" ? (
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: "#15803d", margin: "0 0 6px" }}>Demande envoyée</p>
+                    <p style={{ fontSize: 12, color: "#4b5563", margin: 0, lineHeight: 1.5 }}>
+                      Notre équipe vous recontactera à <strong>{resetEmail}</strong> sous 24 h pour vous transmettre un nouveau mot de passe temporaire.
+                    </p>
+                  </div>
+                ) : (
+                  <form onSubmit={envoyerResetPassword} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <p style={{ fontSize: 12, color: "#4b5563", margin: 0, lineHeight: 1.5 }}>
+                      Indiquez votre adresse e-mail, nous vous recontacterons pour réinitialiser votre mot de passe.
+                    </p>
+                    <input
+                      type="email"
+                      placeholder="votre@email.fr"
+                      value={resetEmail}
+                      onChange={e => setResetEmail(e.target.value)}
+                      required
+                      style={{ width: "100%", padding: "10px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                    />
+                    {resetError && <p style={{ fontSize: 12, color: "#dc2626", margin: 0 }}>{resetError}</p>}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        type="submit"
+                        disabled={resetState === "sending"}
+                        style={{ background: "#111", color: "white", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: resetState === "sending" ? "wait" : "pointer", fontFamily: "inherit", opacity: resetState === "sending" ? 0.7 : 1 }}>
+                        {resetState === "sending" ? "Envoi…" : "Envoyer la demande"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setResetOpen(false)}
+                        style={{ background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                        Annuler
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
 
             {error && (
               <p style={{ color: "#dc2626", fontSize: 13, margin: 0 }}>{error}</p>

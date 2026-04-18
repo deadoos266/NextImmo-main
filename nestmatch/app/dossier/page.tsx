@@ -9,30 +9,54 @@ import Tooltip from "../components/Tooltip"
 import PhoneInput from "../components/PhoneInput"
 import SharePanel from "./SharePanel"
 
-const SITUATIONS = ["CDI", "CDD", "Indépendant / Freelance", "Fonctionnaire", "Étudiant", "Retraité", "Sans emploi"]
-const TYPES_GARANT = ["Personne physique", "Organisme (Visale, Action Logement)", "Aucun garant"]
+const SITUATIONS = ["CDI", "CDD", "Intérim", "Indépendant / Freelance", "Fonctionnaire", "Alternance", "Étudiant", "Retraité", "Sans emploi"]
+const TYPES_GARANT = ["Personne physique", "Organisme Visale", "Action Logement", "Caution bancaire", "Aucun garant"]
+const SITUATIONS_FAMILIALES = ["Célibataire", "En couple", "Marié·e", "PACS", "Divorcé·e", "Veuf·ve"]
+const LOGEMENT_TYPES = ["Locataire", "Propriétaire", "Hébergé", "Foyer / résidence", "Colocation", "Chez mes parents", "Autre"]
+const NATIONALITES_COURANTES = ["Française", "Belge", "Suisse", "Européenne (UE)", "Hors UE"]
 
-type DocKey = "identite" | "bulletins" | "avis_imposition" | "contrat" | "quittances" | "rib" | "identite_garant" | "bulletins_garant" | "avis_garant"
+type DocKey =
+  | "identite" | "bulletins" | "avis_imposition" | "contrat" | "quittances" | "rib"
+  | "identite_garant" | "bulletins_garant" | "avis_garant"
+  | "certificat_scolarite" | "attestation_caf" | "attestation_assurance" | "attestation_employeur"
 
 // Nombre max de fichiers par catégorie
 const DOC_MAX: Record<DocKey, number> = {
-  identite: 1, bulletins: 3, avis_imposition: 1, contrat: 1,
-  quittances: 3, rib: 1, identite_garant: 1, bulletins_garant: 3, avis_garant: 1,
+  identite: 2, // recto + verso
+  bulletins: 6, // extensible pour les CDI longs
+  avis_imposition: 2, // année N et N-1
+  contrat: 1,
+  quittances: 3,
+  rib: 1,
+  identite_garant: 2,
+  bulletins_garant: 3,
+  avis_garant: 1,
+  certificat_scolarite: 1,
+  attestation_caf: 1,
+  attestation_assurance: 1,
+  attestation_employeur: 1,
 }
 
-const DOCS_REQUIS: { key: DocKey; label: string; desc: string }[] = [
-  { key: "identite", label: "Pièce d'identité", desc: "CNI ou passeport en cours de validité" },
-  { key: "bulletins", label: "3 derniers bulletins de salaire", desc: "Ajoutez jusqu'à 3 fichiers" },
-  { key: "avis_imposition", label: "Dernier avis d'imposition", desc: "Disponible sur impots.gouv.fr" },
-  { key: "contrat", label: "Contrat de travail", desc: "CDI, CDD ou justificatif de situation" },
-  { key: "quittances", label: "Quittances de loyer", desc: "3 dernières — ajoutez jusqu'à 3 fichiers" },
-  { key: "rib", label: "RIB", desc: "Relevé d'identité bancaire" },
+const DOCS_REQUIS: { key: DocKey; label: string; desc: string; hint?: string }[] = [
+  { key: "identite", label: "Pièce d'identité", desc: "CNI (recto + verso), passeport ou titre de séjour en cours de validité.", hint: "Masquez le numéro si vous préférez — gardez la photo et la date de naissance lisibles." },
+  { key: "bulletins", label: "Bulletins de salaire", desc: "Les 3 derniers pour un CDI/CDD. Vous pouvez en ajouter jusqu'à 6 si ancienneté longue.", hint: "Attendus par les proprios pour vérifier la stabilité des revenus." },
+  { key: "avis_imposition", label: "Avis d'imposition", desc: "Dernier avis (année N-1). Idéalement aussi l'année précédente si disponible.", hint: "Téléchargeable sur impots.gouv.fr → Mes documents." },
+  { key: "contrat", label: "Contrat de travail", desc: "Contrat signé OU attestation employeur récente (< 3 mois).", hint: "Pour les CDD / alternance, ajoutez la date de fin de contrat." },
+  { key: "quittances", label: "3 dernières quittances de loyer", desc: "Preuves que vous payez actuellement votre loyer.", hint: "Si vous êtes hébergé ou propriétaire, laissez vide et précisez-le dans votre présentation." },
+  { key: "rib", label: "RIB", desc: "Relevé d'identité bancaire à votre nom.", hint: "Permet au proprio de vérifier l'identité du titulaire du compte." },
+]
+
+const DOCS_OPTIONNELS: { key: DocKey; label: string; desc: string; conditionel?: string }[] = [
+  { key: "attestation_employeur", label: "Attestation employeur", desc: "Attestation d'emploi récente (< 3 mois) avec date d'embauche et salaire. Fortement recommandé en plus du contrat.", conditionel: "pro_salarie" },
+  { key: "certificat_scolarite", label: "Certificat de scolarité", desc: "À demander à votre établissement. Obligatoire si vous êtes étudiant ou en alternance.", conditionel: "etudiant" },
+  { key: "attestation_caf", label: "Attestation CAF / APL", desc: "Si vous êtes éligible aux aides au logement. Renforce la solvabilité.", conditionel: "apl" },
+  { key: "attestation_assurance", label: "Attestation d'assurance habitation", desc: "Peut être fournie après la signature du bail, mais l'avoir déjà rassure le proprio.", conditionel: "toujours" },
 ]
 
 const DOCS_GARANT: { key: DocKey; label: string; desc?: string }[] = [
-  { key: "identite_garant", label: "Pièce d'identité du garant" },
-  { key: "bulletins_garant", label: "Bulletins de salaire du garant", desc: "Jusqu'à 3 fichiers" },
-  { key: "avis_garant", label: "Avis d'imposition du garant" },
+  { key: "identite_garant", label: "Pièce d'identité du garant", desc: "CNI ou passeport — recto + verso si CNI." },
+  { key: "bulletins_garant", label: "Bulletins de salaire du garant", desc: "3 derniers bulletins." },
+  { key: "avis_garant", label: "Avis d'imposition du garant", desc: "Dernier avis (année N-1)." },
 ]
 
 // dossier_docs stocke { key: string[] } (tableau d'URLs par catégorie)
@@ -58,9 +82,30 @@ export default function Dossier() {
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   const [form, setForm] = useState({
-    nom: "", telephone: "", situation_pro: "",
-    revenus_mensuels: "", garant: false, type_garant: "", nb_occupants: 1,
+    // Identité
+    nom: "", telephone: "",
+    date_naissance: "",
+    nationalite: "",
+    situation_familiale: "",
+    nb_enfants: 0,
+    // Pro
+    situation_pro: "",
+    employeur_nom: "",
+    date_embauche: "",
+    revenus_mensuels: "",
+    // Famille / logement
+    nb_occupants: 1,
+    logement_actuel_type: "",
+    logement_actuel_ville: "",
+    a_apl: false,
+    mobilite_pro: false,
+    // Garant
+    garant: false, type_garant: "",
+    // Présentation
+    presentation: "",
   })
+  const [removeTarget, setRemoveTarget] = useState<{ key: DocKey; idx: number } | null>(null)
+  const [dragKey, setDragKey] = useState<DocKey | null>(null)
 
   useEffect(() => {
     if (status === "unauthenticated") { router.push("/auth"); return }
@@ -74,11 +119,22 @@ export default function Dossier() {
       setForm({
         nom: data.nom || session?.user?.name || "",
         telephone: data.telephone || "",
+        date_naissance: data.date_naissance || "",
+        nationalite: data.nationalite || "",
+        situation_familiale: data.situation_familiale || "",
+        nb_enfants: data.nb_enfants ?? 0,
         situation_pro: data.situation_pro || "",
+        employeur_nom: data.employeur_nom || "",
+        date_embauche: data.date_embauche || "",
         revenus_mensuels: data.revenus_mensuels || "",
+        nb_occupants: data.nb_occupants || 1,
+        logement_actuel_type: data.logement_actuel_type || "",
+        logement_actuel_ville: data.logement_actuel_ville || "",
+        a_apl: !!data.a_apl,
+        mobilite_pro: !!data.mobilite_pro,
         garant: data.garant || false,
         type_garant: data.type_garant || "",
-        nb_occupants: data.nb_occupants || 1,
+        presentation: data.presentation || "",
       })
       if (data.dossier_docs) {
         // Convertir l'ancien format string → string[]
@@ -143,6 +199,17 @@ export default function Dossier() {
       nom: form.nom, telephone: form.telephone, situation_pro: form.situation_pro,
       revenus_mensuels: form.revenus_mensuels ? Number(form.revenus_mensuels) : null,
       garant: form.garant, type_garant: form.type_garant, nb_occupants: form.nb_occupants,
+      date_naissance: form.date_naissance || null,
+      nationalite: form.nationalite || null,
+      situation_familiale: form.situation_familiale || null,
+      nb_enfants: form.nb_enfants,
+      employeur_nom: form.employeur_nom || null,
+      date_embauche: form.date_embauche || null,
+      logement_actuel_type: form.logement_actuel_type || null,
+      logement_actuel_ville: form.logement_actuel_ville || null,
+      a_apl: form.a_apl,
+      mobilite_pro: form.mobilite_pro,
+      presentation: form.presentation ? form.presentation.slice(0, 500) : null,
     }, { onConflict: "email" })
     setSaving(false)
     setSaved(true)

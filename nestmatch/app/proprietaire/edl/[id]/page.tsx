@@ -394,7 +394,8 @@ export default function EdlPage() {
     setSaving(true)
     const payload: any = {
       annonce_id: Number(bienId),
-      proprietaire_email: session.user.email,
+      // Source de vérité = le proprietaire_email du BIEN, pas la session (cas co-propriétaire)
+      proprietaire_email: (bien?.proprietaire_email || session.user.email || "").toLowerCase(),
       type,
       date_edl: dateEdl,
       prenom_bailleur: prenomBailleur,
@@ -402,8 +403,8 @@ export default function EdlPage() {
       email_bailleur: emailBailleur,
       prenom_locataire: prenomLocataire,
       nom_locataire: nomLocataire,
-      email_locataire: emailLocataire,
-      locataire_email: emailLocataire,
+      email_locataire: emailLocataire.trim().toLowerCase(),
+      locataire_email: emailLocataire.trim().toLowerCase(),
       compteurs,
       cles,
       observations,
@@ -432,10 +433,12 @@ export default function EdlPage() {
     if (edlId) {
       const cardPayload = JSON.stringify({ edlId, bienTitre: bien.titre, type, dateEdl })
       await supabase.from("messages").insert([{
-        from_email: session.user.email,
-        to_email: emailLocataire.trim(),
+        from_email: (bien.proprietaire_email || session.user.email || "").toLowerCase(),
+        to_email: emailLocataire.trim().toLowerCase(),
         contenu: "[EDL_CARD]" + cardPayload,
         lu: false,
+        annonce_id: Number(bienId), // rattache le message à la conv du bien
+        created_at: new Date().toISOString(),
       }])
     }
     setSending(false)

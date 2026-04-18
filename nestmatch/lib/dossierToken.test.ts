@@ -53,9 +53,14 @@ describe("generateDossierToken + verifyDossierToken", () => {
 
   it("token altéré (signature cassée) → null", () => {
     const token = generateDossierToken("a@b.fr", 7)
-    // On casse la signature en remplaçant le dernier caractère
-    const tampered = token.slice(0, -1) + (token.slice(-1) === "A" ? "B" : "A")
-    expect(verifyDossierToken(tampered)).toBeNull()
+    // On casse la signature au MILIEU (dernier caractère base64url peut être
+    // un bit de padding non-significatif → modification sans effet).
+    const [payload, sig] = token.split(".")
+    const mid = Math.floor(sig.length / 2)
+    const ch = sig.charAt(mid)
+    const swap = ch === "a" ? "b" : "a"
+    const tamperedSig = sig.slice(0, mid) + swap + sig.slice(mid + 1)
+    expect(verifyDossierToken(`${payload}.${tamperedSig}`)).toBeNull()
   })
 
   it("payload altéré (email changé) → null (signature ne correspond plus)", () => {

@@ -18,6 +18,8 @@ export interface Profil {
   budget_max?: number
   surface_min?: number
   pieces_min?: number
+  chambres_min?: number
+  rez_de_chaussee_ok?: boolean
   animaux?: boolean
   meuble?: boolean
   parking?: boolean
@@ -37,6 +39,8 @@ export interface Annonce {
   prix?: number
   surface?: number
   pieces?: number
+  chambres?: number
+  etage?: string | number
   animaux?: boolean
   meuble?: boolean
   parking?: boolean
@@ -69,6 +73,15 @@ export function estExclu(annonce: Annonce, profil: Profil): boolean {
 
   // Animaux refusés
   if (toBool(profil.animaux) === true && toBool(annonce.animaux) === false) return true
+
+  // Rez-de-chaussée refusé — si profil a coché "PAS de RDC" et annonce au RDC,
+  // exclu. On considère RDC les valeurs : "0", "RDC", "rdc", "Rez-de-chaussée".
+  if (toBool(profil.rez_de_chaussee_ok) === false) {
+    const etage = String(annonce.etage ?? "").toLowerCase().trim()
+    if (etage && (etage === "0" || etage.includes("rdc") || etage.includes("rez"))) {
+      return true
+    }
+  }
 
   return false
 }
@@ -150,6 +163,18 @@ export function calculerScore(annonce: Annonce, profil: Profil): number {
     }
   } else {
     score += 75 // neutre
+  }
+
+  // ── CHAMBRES (50 pts) ─────────────────────────
+  // Bonus si l'annonce a au moins autant de chambres que demandé, malus sinon.
+  if (profil.chambres_min && annonce.chambres !== undefined && annonce.chambres !== null) {
+    const diff = Number(annonce.chambres) - Number(profil.chambres_min)
+    if (diff >= 1)       score += 50
+    else if (diff === 0)  score += 45
+    else if (diff === -1) score += 25
+    else                  score += 10
+  } else {
+    score += 30 // neutre
   }
 
   // ── MEUBLÉ (100 pts) ──────────────────────────

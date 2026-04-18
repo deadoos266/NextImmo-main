@@ -133,6 +133,23 @@ export default function ModifierBien() {
 
   async function sauvegarder() {
     if (!form.titre || !form.ville || !form.prix) { alert("Remplis au minimum le titre, la ville et le loyer."); return }
+    if (form.titre.length > 120) { alert("Le titre doit faire 120 caractères maximum."); return }
+    if ((form.description || "").length > 10000) { alert("La description doit faire 10 000 caractères maximum."); return }
+    const prix = parseInt(form.prix || "0", 10) || 0
+    if (prix <= 0 || prix > 50000) { alert("Le loyer doit être compris entre 1 et 50 000 €."); return }
+    const surface = parseInt(form.surface || "0", 10) || 0
+    if (surface < 0 || surface > 1000) { alert("La surface doit être comprise entre 0 et 1000 m²."); return }
+    if (dejaLoue && form.locataire_email) {
+      const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRe.test(form.locataire_email.trim())) {
+        alert("L'email du locataire n'est pas valide.")
+        return
+      }
+      if (form.locataire_email.trim().toLowerCase() === (session?.user?.email || "").toLowerCase()) {
+        alert("L'email du locataire ne peut pas être le vôtre.")
+        return
+      }
+    }
     setSaving(true)
 
     const updates: any = {
@@ -147,7 +164,7 @@ export default function ModifierBien() {
     }
 
     if (dejaLoue) {
-      updates.locataire_email = form.locataire_email || null
+      updates.locataire_email = form.locataire_email ? form.locataire_email.trim().toLowerCase() : null
       updates.date_debut_bail = form.date_debut_bail || null
       updates.mensualite_credit = toInt(form.mensualite_credit)
       updates.valeur_bien = toInt(form.valeur_bien)

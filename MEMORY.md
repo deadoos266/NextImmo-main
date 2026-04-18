@@ -72,6 +72,361 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 
 ## Historique des batchs
 
+### Batch 40 — Acquisition + réengagement : relance, lightbox, social proof, filtres (2026-04-18)
+
+6 features orientées engagement / conversion :
+
+#### Bouton Relancer candidature (locataire)
+- `/mes-candidatures` : fetch aussi les messages REÇUS des proprios pour
+  détecter l'absence de réponse. Bouton orange "Relancer (X j)" visible
+  si dernière msg locataire > 7 j sans réponse ET pas de relance < 5 j.
+  Poste un `[RELANCE]` formaté. Badge "RELANCE" visible dans la bulle
+  chat (côté proprio). ToastStack handle le préfixe.
+
+#### Lightbox photos annonce
+- `PhotoCarousel` : clic sur photo ouvre un lightbox fullscreen (portal
+  body). Navigation flèches clavier + Esc + swipe click. Bloque le
+  scroll body. Hint "Cliquez pour agrandir" sur la photo principale.
+  Zéro dépendance — portal + keyboard listener.
+
+#### Social proof fiche annonce
+- `/annonces/[id]` : pills "N personnes ont consulté ce bien" (seuil 5)
+  et "Plusieurs candidats déjà intéressés" (seuil 2). Server-side
+  count sur `clics_annonces` et `messages` (head-only, aucun row
+  transféré). Ne s'affiche pas si loué.
+
+#### Chips filtres rapides
+- `/annonces` : 7 chips toggle au-dessus des résultats : `< 800 €`,
+  `< 1 000 €`, `< 1 500 €`, Meublé, Parking, Extérieur, Dispo maintenant.
+  Nouveau state `filtreMeuble` + `budgetChip`. Accès 1-clic aux filtres
+  les plus utilisés sans ouvrir la sidebar.
+
+#### Recherches sauvegardées locataire
+- Bouton "Sauvegarder" (icône bookmark) + popover "Mes recherches (N)".
+  Stocke jusqu'à 10 recherches en localStorage (`nestmatch:savedSearches:
+  {email}`) avec nom personnalisable. Clic → restaure filtres + URL params
+  (ville, budget_max, surface_min/max, pieces_min). × pour supprimer.
+
+#### Templates réponses (vérification)
+- Déjà existants dans `MESSAGES_RAPIDES` (proprio + locataire), 5 templates
+  par rôle. Pas besoin de refonte — fonctionnels.
+
+#### Fichiers touchés
+- `app/mes-candidatures/page.tsx` — détection absence réponse + relancer
+- `app/messages/page.tsx` — render badge RELANCE + preview
+- `app/components/ToastStack.tsx` — préfixe [RELANCE]
+- `app/annonces/[id]/PhotoCarousel.tsx` — lightbox + keyboard nav
+- `app/annonces/[id]/page.tsx` — counters social proof server-side
+- `app/annonces/page.tsx` — chips filtres + recherches sauvegardées
+
+#### Skip MVP (encore)
+- Filtres URL dans recherches sauvegardées (besoin de modifier la lecture
+  URL plus finement). Workaround : on set les states + on passe en URL.
+- Compteur "nouvelles annonces depuis dernière visite" sur savedSearches
+  (besoin lastVisited).
+- Notification cloche navbar centralisée (messages = déjà ok).
+
+### Batch 39 — Confort UX : archive, avatar, brouillon, notes, CSV, PDF (2026-04-18)
+
+Suite du batch 38 — 6 features de confort pour réduire la friction quotidienne.
+
+#### Archive conversation (localStorage)
+- `/messages` : menu ⋯ de chaque conv a une option "Archiver" / "Désarchiver".
+  Set persistée dans `nestmatch:archivedConvs:{email}`. Toggle "Archivées (N)"
+  dans la sidebar pour voir les conv masquées. Zéro migration DB — archiver
+  = "hors de ma vue", pas suppression. Count tabs exclut les archivées.
+
+#### Avatar photo profil dans chat
+- Nouveau composant `Avatar` local dans `messages/page.tsx` : photo ronde ou
+  initiale en fallback. Fetch `users.image` (photo Google OAuth) pour tous
+  les peers de la conv list au load. Affiché en overlay bas-droit de la
+  photo annonce (conv list + header chat). Personnifie la relation.
+
+#### Brouillon auto-save ajouter annonce
+- `/proprietaire/ajouter` : auto-save debouncé (900 ms) dans localStorage
+  (`nestmatch:draftAnnonce:v1:{email}`). Au mount, si brouillon existant :
+  banner bleue "Brouillon détecté — Reprendre / Repartir de zéro". Hint
+  "Brouillon sauvegardé" flash 1.4 s à chaque save. Effacé au publish
+  réussi. Fini la perte de 10 min de saisie sur un refresh accidentel.
+
+#### Notes privées sur candidat (proprio)
+- Bande jaune sous le header chat (côté proprio seulement) : "+ Ajouter une
+  note privée sur ce candidat". Inline edit + Enter pour sauver, Esc pour
+  annuler. Preview dans la conv list ("Note : …"). Stockage localStorage
+  `nestmatch:candidatNotes:{email}` = Record<convKey, string>. Jamais
+  partagé, invisible côté candidat.
+
+#### Export CSV candidats
+- Onglet Candidatures dans `/proprietaire` : bouton "Exporter CSV" génère
+  un fichier BOM UTF-8 avec Email, Score, Label, Bien, Prix, Flags, Date,
+  Message. Trié par score desc (comme l'affichage). Escape RFC 4180.
+  Utile pour un proprio avec 15 candidats sur une annonce.
+
+#### Historique loyers PDF (locataire)
+- `/mon-logement` section Mes loyers : bouton "Télécharger PDF" → jsPDF
+  lazy-loaded (déjà utilisé pour bails/quittances). Table mois/montant/
+  statut/date confirmation + total payé. Permet au locataire de fournir
+  un justificatif consolidé (banque, CAF, déclaration d'impôts).
+
+#### Fichiers touchés
+- `app/messages/page.tsx` — archive, avatar, notes privées, preview prefix
+- `app/proprietaire/ajouter/page.tsx` — brouillon auto-save + banner
+- `app/proprietaire/page.tsx` — bouton Exporter CSV
+- `app/mon-logement/page.tsx` — bouton Télécharger PDF + génération jsPDF
+
+#### Skip MVP
+- Mode vacances proprio (besoin champ DB séparé)
+- Raccourcis clavier avancés
+- Email verification enforcement (besoin Resend)
+- Calendrier visites (vue mois)
+- Refus candidat dédié (messagerie directe suffit pour MVP)
+
+### Batch 38 — Fonctionnalités manquantes : retrait candidat, partage, retard loyer (2026-04-18)
+
+Audit UX proactif (agent Explore) → 6 fonctionnalités critiques manquantes
+shipped : annonces "Louée" filtrées, retrait candidature, partage annonce,
+annonces similaires, badge retard loyer, mot de passe oublié.
+
+#### Annonce "Louée" → masquée publiquement
+- `/annonces` list : `.or("statut.is.null,statut.neq.loué")` — le proprio
+  garde le bien pour stats/historique mais il disparaît des résultats.
+- `/annonces/[id]` : bannière rouge "Cette annonce n'est plus disponible"
+  si statut=loué (au cas où quelqu'un a l'URL mémorisée).
+
+#### Retrait candidature locataire
+- Bouton "Retirer" dans `/mes-candidatures` (confirm inline) → annule les
+  visites pending + poste un message `[CANDIDATURE_RETIREE]{bienTitre,...}`
+  au propriétaire + disparaît de la liste (filter par préfixe).
+- Nouvelle card `CandidatureRetireeCard` dans `/messages` (bordée pointillée
+  rouge). Prefix géré dans ToastStack ("Candidature retirée") et dans le
+  preview de la conv list.
+
+#### Partage d'annonce
+- Nouveau `ShareButton` (client) sur fiche annonce publique. Web Share API
+  si dispo (mobile), sinon popover desktop : Copier lien / WhatsApp / SMS /
+  E-mail. Pas de dépendance externe, URLs pré-formattées.
+
+#### Annonces similaires
+- Section "Autres biens similaires à {ville}" en bas de `/annonces/[id]` :
+  server-side (4 biens, même ville, prix ±30 %, exclut loués et l'annonce
+  courante). Grid responsive, cartes avec photo + ville + surface + prix.
+  Zéro JS client → bon pour le SEO.
+
+#### Badge retard loyer
+- Nouveau `lib/loyerHelpers.ts` : `joursRetardLoyer(mois, statut)` avec
+  règle butoir = 10 du mois. 8 tests vitest (79 au total maintenant).
+- `/mon-logement` : bannière rouge + par-ligne "En retard X j" + compteur
+  de loyers en retard à côté du titre "Mes loyers".
+- `/proprietaire` onglet "Mes locataires" : badge rouge "En retard Xj · N mois"
+  sur la carte du bien loué.
+
+#### Mot de passe oublié (fallback sans infra email)
+- Lien "Mot de passe oublié ?" à côté du label "Mot de passe" en mode
+  connexion (caché en inscription). Ouvre un formulaire inline qui poste
+  dans `/api/contact` avec sujet `reset_password` (nouveau code ajouté dans
+  `lib/contacts.ts`). L'admin voit la demande dans `/admin` et reset
+  manuellement. Message de succès clair ("sous 24 h"). Pas de Resend mais
+  l'user n'est plus bloqué.
+
+#### Fichiers touchés
+- `lib/loyerHelpers.ts` + `.test.ts` — nouveau module, 8 tests
+- `lib/contacts.ts` — ajout du sujet `reset_password`
+- `app/annonces/page.tsx` — filtre statut loué
+- `app/annonces/[id]/page.tsx` — bannière louée + Share + Similaires
+- `app/annonces/[id]/ShareButton.tsx` — nouveau client component
+- `app/mes-candidatures/page.tsx` — retrait candidature + filtre
+- `app/messages/page.tsx` — CandidatureRetireeCard + preview
+- `app/components/ToastStack.tsx` — préfixe [CANDIDATURE_RETIREE]
+- `app/mon-logement/page.tsx` — bannière + badge retard
+- `app/proprietaire/page.tsx` — badge retard sur "Mes locataires"
+- `app/auth/page.tsx` — lien + form mot de passe oublié
+
+#### Restant (skip MVP)
+- Reset password auto via Resend (besoin infra email).
+- Vérification email à l'inscription.
+- Archiver conversation.
+- Calendrier visites (vue mois).
+
+### Batch 37 — 2e auto-audit : fuites cross-conv + leak EDL (2026-04-18)
+
+Second self-audit post-batch 36 → 6 trous shipped (2 CRITICAL, 4 HIGH).
+
+#### CRITICAL
+- **Realtime messages cross-conv** (`messages/page.tsx::isRelevant`) : la
+  subscription `INSERT` n'incluait PAS `annonce_id`, donc un message d'une
+  conv A (même peer, autre annonce) apparaissait en live dans la conv B.
+  Fix : check `m.annonce_id === conv.annonceId ?? null` en plus des peers.
+- **ToastStack préfixes manquants** : un locataire qui recevait un
+  `[BAIL_CARD]{...json}` ou `[QUITTANCE_CARD]{...}` voyait le JSON brut
+  dans le toast. Fix : switch sur préfixe, affiche titre dédié ("Bail
+  reçu" / "Quittance reçue" / "Proposition de visite") → href `/messages`.
+  Skip total pour `[DOSSIER_CARD]` et `[DEMANDE_DOSSIER]` (déjà fait).
+
+#### HIGH
+- **`loadVisitesConv` scope annonce_id** : mêmes peers sur 2 annonces =
+  les visites de l'autre annonce leakaient dans la sidebar. Signature
+  élargie `(otherEmail, annonceId?)` + tous les call sites (3) passent
+  `conv.annonceId`. `isMine` dans la sub realtime vérifie aussi l'annonce.
+- **`/mon-logement` case-insensitive** : `.eq("locataire_email", email)`
+  remplacé par `.ilike(...)` sur annonces + visites — couvre les données
+  legacy mixed-case (les emails NextAuth n'étaient pas toujours lowercase
+  avant le batch 35).
+- **`robots.ts` disallow** : ajout de `/bail`, `/mon-logement`, `/stats`
+  (routes privées, ne doivent pas être indexées).
+- **API serveur `/api/edl/[id]`** (vuln access) : avant, `/edl/consulter/
+  [edlId]` faisait `supabase.from("etats_des_lieux").eq("id",...)` côté
+  client avec l'anon key et vérifiait l'email en JS. RLS absente → data
+  PII EDL fetchable par n'importe qui avec l'UUID. Nouveau : route API
+  `getServerSession + supabaseAdmin`, renvoie 403 si pas locataire/proprio
+  /admin. Le client ne touche plus la table directement.
+
+#### Fichiers touchés
+- `app/messages/page.tsx` — realtime filter + loadVisitesConv scope
+- `app/components/ToastStack.tsx` — préfixes bail/quittance/visite
+- `app/mon-logement/page.tsx` — `.ilike` sur locataire_email
+- `app/robots.ts` — disallow privées
+- `app/api/edl/[id]/route.ts` — nouvelle route GET sécurisée
+- `app/edl/consulter/[edlId]/page.tsx` — fetch via API, plus de Supabase direct
+
+#### Restant / à suivre
+- RLS complète sur `etats_des_lieux`, `loyers`, `carnet_entretien` (les
+  writes client-side restent possibles avec l'anon key — vuln moyenne).
+- Notif aux candidats orphelins au signature du bail (besoin Resend).
+
+### Batch 36 — Auto-audit gestion documentaire (8 trous bouchés) (2026-04-18)
+
+Self-audit du batch 35 → 8 gaps identifiés et shipped.
+
+#### CRITICAL
+- **Conv key scope par annonce_id** (`messages/page.tsx`) : avant, 2
+  annonces du même proprio fusionnaient dans UNE conv (clé
+  `[me, other].sort().join("|")`). Nouveau : `...|":${annId}"`. Deux
+  annonces = deux conv distinctes. `loadMessages` filtre par `annonce_id`
+  de la conv active. `envoyer()` propage `annonce_id` dans l'insert.
+- **Section Documents complète dans `/mon-logement`** : liste des EDL
+  (entrée/sortie avec statut Validé/Contesté/À valider + badge "Action
+  requise" global), liste des loyers/quittances (mois, montant, lien
+  chat vers quittance envoyée), infos bail actif avec date de début.
+  Plus de compteurs stériles, vraies entrées cliquables.
+
+#### HIGH
+- **Default `messagesTab` intelligent** : useEffect post-load bascule
+  auto sur "Candidatures" si `countActifs === 0 && countCandidats > 0`.
+  Fini la liste vide au premier chargement.
+- **Indicateurs loyer dans onglet "Mes locataires"** : chaque ligne
+  affiche le statut du loyer du mois courant : "Loyer du mois reçu"
+  (vert) / "En attente" (orange) / "À déclarer" (rouge). CTA "Confirmer
+  loyer" ou "Déclarer loyer" en 1 clic (lien `/proprietaire/stats?id=X`).
+- **Dossier chat inclut `shareUrl`** : `envoyerDossier` appelle d'abord
+  `/api/dossier/share` (token HMAC 30 j), inclut l'URL dans le payload
+  `[DOSSIER_CARD]`. Côté proprio : bouton "Voir les pièces du dossier →"
+  (ouvre la vue partagée read-only avec tous les justificatifs).
+  Fini le proprio qui voit un score sans pouvoir consulter les pièces.
+- **Workflow "Accepter candidat → générer bail"** : bouton "Accepter &
+  générer le bail →" dans `DossierCard` (proprio côté). Navigue vers
+  `/proprietaire/bail/[id]?locataire=email`. La page bail lit le query
+  param, update `annonces.locataire_email` si absent, pré-remplit le
+  formulaire. Un proprio peut accepter un candidat sans jamais aller
+  dans `/modifier` saisir l'email à la main.
+- **EdlCard côté proprio** affiche maintenant aussi un bouton "Consulter
+  l'EDL" (pas uniquement côté locataire) — le proprio pouvait pas
+  vérifier ce qu'il avait envoyé.
+
+#### Fichiers touchés
+- `app/messages/page.tsx` — conv key, loadMessages, envoyer, default tab,
+  DossierCard shareUrl + bouton accepter, EdlCard proprio
+- `app/mon-logement/page.tsx` — refonte complète avec sections Documents
+- `app/proprietaire/page.tsx` — indicateurs loyer mensuel dans Mes locataires
+- `app/proprietaire/bail/[id]/page.tsx` — query param `locataire`
+  pré-sélection + auto-update annonce
+
+#### Restant
+- Notification automatique aux candidats orphelins quand bail signé
+  (nécessite email infra Resend).
+- Refonte dossier chat pour afficher visuellement les docs inline (pas
+  juste le lien) — skip MVP.
+
+### Batch 35 — Refonte gestion documentaire + messagerie 2 sections (2026-04-18)
+
+**Audit complet** de la chaîne bail / EDL / quittance / dossier / messages
+par agent code-explorer → 18 bugs identifiés (4 CRITICAL + 8 HIGH).
+
+#### Migration SQL `006_gestion_documentaire.sql`
+- `loyers` : `locataire_email`, `proprietaire_email`, `date_confirmation`,
+  `quittance_envoyee_at`, `quittance_message_id` + back-fill depuis annonces
+- `etats_des_lieux` : `locataire_email`, `proprietaire_email` + back-fill
+- `annonces` : `bail_genere_at`
+- `carnet_entretien` : `locataire_email`, `proprietaire_email` + back-fill
+- Indexes sur messages (from/to/annonce), locataire/proprio
+
+#### Flow quittance (CRITICAL fix — jamais rendue avant)
+- `/proprietaire/stats::confirmerLoyer` : ajoute emails au `loyers.upsert`,
+  au passage à "confirmé" poste `[QUITTANCE_CARD]{loyerId,bienTitre,mois,
+  montant,dateConfirmation}` dans conv locataire, set `quittance_envoyee_at`
+  + `quittance_message_id`
+- `/proprietaire::confirmerLoyer` (onglet Loyers agrégé) : asymétrie corrigée,
+  pousse aussi la quittance (avant : juste update statut)
+- **Nouveau `QuittanceCard`** dans `messages/page.tsx` + préfixe
+  `QUITTANCE_PREFIX` + preview conv list reconnaît
+
+#### Flow bail (HIGH)
+- `bail_genere_at` écrit dans `annonces` au moment de la génération PDF
+- Suppression du message texte doublon (seule `[BAIL_CARD]` reste → un seul
+  message au locataire, pas 2)
+
+#### Flow EDL (HIGH)
+- `proprietaire_email` dans l'insert = `bien.proprietaire_email`, plus
+  `session.user.email` (correction cas co-propriétaire)
+- emails lowercased partout (locataire + proprio)
+- Message `[EDL_CARD]` : ajout `annonce_id` + `created_at` + from/to lowercased
+  → conv rattachée au bien, plus de thread orphelin
+- `EdlCard` côté proprio affiche maintenant aussi le bouton "Consulter l'EDL"
+  (avant : proprio aveugle sur sa propre card)
+
+#### Messagerie 2 sections (HIGH)
+- **Onglets toggle Biens loués / Candidatures** en tête de la colonne conv.
+  Côté proprio : "Biens loués" = conv avec locataire actif d'un de ses biens
+  ("statut=loué AND locataire_email=other"). Côté locataire : "Mon bail" =
+  conv avec le proprio d'un bien où il est locataire_email.
+- Les autres conv tombent dans "Candidatures" / "Mes candidatures".
+- Compteurs (N) affichés sur chaque onglet.
+- Helper `isActiveBail(conv)` partagé, robuste aux cas locataire/proprio.
+
+#### Isolation candidat / locataire actif
+- `/mes-candidatures` filtre désormais OUT les baux signés (ils vivent
+  dans `/mon-logement`) → plus de doublon affichage.
+- EDL + quittances envoyées uniquement au `locataire_email` (pas à tous
+  les candidats qui ont contacté l'annonce).
+
+#### Nouveau error boundary
+- `app/error.tsx` + `app/global-error.tsx` créés — capture les runtime
+  errors côté client avec UI de fallback propre (bouton "Réessayer" +
+  "Retour à l'accueil").
+
+#### matching.ts (HIGH fix orphelins profil)
+- `chambres_min` maintenant exploité (bloc 50 pts dans calculerScore)
+- `rez_de_chaussee_ok` : filtre dur dans estExclu — si profil coche "pas de
+  RDC" et annonce au RDC, bien exclu
+
+#### DRY / tests
+- `profil/page.tsx` utilise maintenant `calculerCompletudeProfil` partagé
+  (avant : duplication avec lib/profilCompleteness)
+- Test flaky `dossierToken tampered signature` fixé (altération au milieu
+  du hash au lieu du dernier caractère → évite cas où bit non-significatif)
+
+#### Restant (hors scope batch 35)
+- **RLS absente** sur messages/loyers/etats_des_lieux/annonces — gros
+  chantier (tout est lu via anon key browser). Passage par routes API
+  service_role nécessaire pour RLS propre → batch dédié.
+- **PDF bail / quittance non stockés** en Storage → bucket `baux` +
+  `quittances` prévus dans l'audit, à créer quand besoin d'historique
+  persistant.
+- **Colonne doublon `email_locataire` vs `locataire_email`** dans `etats_des_lieux`
+  — les 2 sont écrites maintenant pour compat, drop de la colonne legacy
+  dans un batch futur.
+- **Dossier chat ne contient pas les fichiers** (juste score + récap) —
+  intégration SharePanel dans message à venir.
+
 ### Batch 34 (suite) — Preview annonce + plan du site + KPI cliquables + tests (2026-04-18)
 
 - **Preview annonce avant publication** : bouton "Prévisualiser" dans

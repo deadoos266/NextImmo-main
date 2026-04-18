@@ -1,6 +1,6 @@
 "use client"
 import { useSession } from "next-auth/react"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../../lib/supabase"
 import { validateImage } from "../../../lib/fileValidation"
@@ -12,6 +12,11 @@ import Tooltip from "../../components/Tooltip"
 import MarketRentHint from "./MarketRentHint"
 
 import { Toggle, Sec, F } from "../../components/FormHelpers"
+
+const DRAFT_VERSION = 1
+function draftStorageKey(email: string) {
+  return `nestmatch:draftAnnonce:v${DRAFT_VERSION}:${email.toLowerCase()}`
+}
 
 export default function AjouterBien() {
   const { data: session } = useSession()
@@ -39,6 +44,63 @@ export default function AjouterBien() {
     fibre: false, balcon: false, terrasse: false, jardin: false, ascenseur: false,
     localisation_exacte: false,
   })
+  // Auto-save : on propose la restauration au premier load s'il y a un brouillon
+  // non publié. Sinon auto-save silencieux à chaque frappe (debounced).
+  const [draftPromptOpen, setDraftPromptOpen] = useState(false)
+  const [draftLoadedAt, setDraftLoadedAt] = useState<string | null>(null)
+  const [savedHint, setSavedHint] = useState(false)
+
+  // Au mount : check localStorage pour un brouillon existant.
+  useEffect(() => {
+    if (!session?.user?.email) return
+    try {
+      const raw = localStorage.getItem(draftStorageKey(session.user.email))
+      if (!raw) return
+      const draft = JSON.parse(raw)
+      if (draft && draft.form && typeof draft.form.titre === "string") {
+        setDraftLoadedAt(draft.savedAt || null)
+        setDraftPromptOpen(true)
+      }
+    } catch { /* corrupted — on ignore */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.email])
+
+  // Auto-save debounced à chaque changement form/toggles/photos.
+  useEffect(() => {
+    if (!session?.user?.email) return
+    // Ne sauvegarde pas un form vide (évite d'écraser si l'user revient)
+    const hasContent = form.titre || form.ville || form.prix || form.description || photos.length > 0
+    if (!hasContent) return
+    const t = setTimeout(() => {
+      try {
+        const payload = { form, toggles, photos, savedAt: new Date().toISOString() }
+        localStorage.setItem(draftStorageKey(session.user!.email!), JSON.stringify(payload))
+        setSavedHint(true)
+        setTimeout(() => setSavedHint(false), 1400)
+      } catch { /* quota — silencieux */ }
+    }, 900)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, toggles, photos, session?.user?.email])
+
+  function restaurerBrouillon() {
+    if (!session?.user?.email) return
+    try {
+      const raw = localStorage.getItem(draftStorageKey(session.user.email))
+      if (!raw) { setDraftPromptOpen(false); return }
+      const draft = JSON.parse(raw)
+      if (draft.form) setForm((f) => ({ ...f, ...draft.form }))
+      if (draft.toggles) setToggles((t) => ({ ...t, ...draft.toggles }))
+      if (Array.isArray(draft.photos)) setPhotos(draft.photos)
+    } catch { /* noop */ }
+    setDraftPromptOpen(false)
+  }
+
+  function repartirDeZero() {
+    if (!session?.user?.email) return
+    try { localStorage.removeItem(draftStorageKey(session.user.email)) } catch { /* noop */ }
+    setDraftPromptOpen(false)
+  }
 
   const set = (key: string) => (e: any) => setForm(f => ({ ...f, [key]: e.target.value }))
   const toInt = (v: string) => v ? parseInt(v) : null
@@ -101,7 +163,7 @@ export default function AjouterBien() {
     }
 
     if (dejaLoue) {
-      data.locataire_email = form.locataire_email || null
+      data.locataire_email = form.locataire_email ? form.locataire_email.trim().toLowerCase() : null
       data.date_debut_bail = form.date_debut_bail || null
       data.mensualite_credit = toInt(form.mensualite_credit)
       data.valeur_bien = toInt(form.valeur_bien)
@@ -129,6 +191,7 @@ export default function AjouterBien() {
         email: session!.user!.email!,
         is_proprietaire: true,
       }, { onConflict: "email" })
+      try { localStorage.removeItem(draftStorageKey(session!.user!.email!)) } catch { /* noop */ }
       router.push("/proprietaire")
     } else {
       alert("La publication a échoué. Veuillez vérifier les champs et réessayer.")
@@ -156,8 +219,34 @@ export default function AjouterBien() {
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 48px" }}>
         <a href="/proprietaire" style={{ fontSize: 14, color: "#6b7280", textDecoration: "none" }}>← Retour au dashboard</a>
-        <h1 style={{ fontSize: 30, fontWeight: 800, margin: "16px 0 4px", letterSpacing: "-0.5px" }}>Ajouter un bien</h1>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap", margin: "16px 0 4px" }}>
+          <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.5px", margin: 0 }}>Ajouter un bien</h1>
+          {savedHint && (
+            <span style={{ fontSize: 12, color: "#16a34a", fontWeight: 700 }}>Brouillon sauvegardé</span>
+          )}
+        </div>
         <p style={{ color: "#6b7280", marginBottom: 20, fontSize: 14 }}>Publiez une annonce ou enregistrez un bien déjà loué pour le gérer</p>
+
+        {draftPromptOpen && (
+          <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 14, padding: "14px 18px", marginBottom: 20, display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#1e3a8a", margin: 0 }}>Brouillon détecté</p>
+              <p style={{ fontSize: 12, color: "#1e40af", margin: "4px 0 0", lineHeight: 1.5 }}>
+                Vous avez commencé à rédiger une annonce{draftLoadedAt ? ` le ${new Date(draftLoadedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}` : ""}. Voulez-vous la reprendre ?
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" onClick={restaurerBrouillon}
+                style={{ background: "#1d4ed8", color: "white", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                Reprendre
+              </button>
+              <button type="button" onClick={repartirDeZero}
+                style={{ background: "white", color: "#1e40af", border: "1.5px solid #bfdbfe", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                Repartir de zéro
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Progress bar de complétude — style SeLoger : feedback visible sur ce qui reste à remplir */}
         <div style={{ background: "white", borderRadius: 16, padding: isMobile ? "14px 16px" : "18px 22px", marginBottom: 24, border: "1px solid #e5e7eb" }}>

@@ -11,6 +11,7 @@ import Tooltip from "../components/Tooltip"
 
 // Composants HORS du composant principal pour éviter le bug de focus
 import { Toggle, Sec, F } from "../components/FormHelpers"
+import { calculerCompletudeProfil } from "../../lib/profilCompleteness"
 
 export default function Profil() {
   const { data: session, status } = useSession()
@@ -81,17 +82,10 @@ export default function Profil() {
 
   const set = (key: string) => (e: any) => setForm(f => ({ ...f, [key]: e.target.value }))
 
-  const criteres = [
-    { label: "Ville souhaitée", ok: !!form.ville_souhaitee, poids: 20 },
-    { label: "Budget maximum", ok: !!form.budget_max, poids: 20 },
-    { label: "Revenus mensuels", ok: !!form.revenus_mensuels, poids: 20 },
-    { label: "Surface minimum", ok: !!form.surface_min, poids: 15 },
-    { label: "Type de garant", ok: !!form.type_garant, poids: 15 },
-    { label: "Type de quartier", ok: !!form.type_quartier, poids: 10 },
-  ]
-  const scoreCompletion = criteres.reduce((acc, c) => acc + (c.ok ? c.poids : 0), 0)
+  // Source unique de vérité : lib/profilCompleteness (aussi utilisé sur /annonces)
+  const { score: scoreCompletion, manquants: manquantsLabels } = calculerCompletudeProfil(form)
   const scoreColor = scoreCompletion >= 80 ? "#16a34a" : scoreCompletion >= 50 ? "#f59e0b" : "#ef4444"
-  const manquants = criteres.filter(c => !c.ok)
+  const manquants = manquantsLabels.map(label => ({ label }))
 
   async function sauvegarder() {
     setSaving(true)
