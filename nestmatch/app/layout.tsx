@@ -64,17 +64,15 @@ export const metadata: Metadata = {
   },
 }
 
-// Script anti-flash : applique le thème stocké AVANT le premier paint pour
-// éviter un flash blanc -> sombre au chargement. Lit `nestmatch-theme` en
-// localStorage (valeurs "light" | "dark" | "system") et pose data-theme
-// sur <html> en conséquence.
-const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem('nestmatch-theme')||'system';var e=t;if(t==='system'){e=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',e);}catch(_){}})();`
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" className={dmSans.variable}>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        {/* Anti-flash thème : doit s'exécuter synchrone AVANT le premier paint
+            pour éviter un flash light→dark au chargement. Fichier statique
+            pour respecter un CSP sans 'unsafe-inline'. */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script src="/theme-init.js" />
       </head>
       <body style={{ fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif" }}>
         <Providers>

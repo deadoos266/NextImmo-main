@@ -1,0 +1,19 @@
+{
+  "extends": ["next/core-web-vitals"],
+  "plugins": ["@typescript-eslint"],
+  "parser": "@typescript-eslint/parser",
+  "rules": {
+    "react/no-unescaped-entities": "off",
+    "@next/next/no-img-element": "warn",
+    "@next/next/no-html-link-for-pages": "warn",
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }]
+  },
+  "ignorePatterns": [
+    "node_modules/",
+    ".next/",
+    "coverage/",
+    "out/",
+    "public/theme-init.js"
+  ]
+}

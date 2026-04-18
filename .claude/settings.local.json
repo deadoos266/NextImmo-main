@@ -21,7 +21,9 @@
       "Bash(npx next *)",
       "Bash(npx vitest *)",
       "Bash(xargs grep *)",
-      "Bash(xargs sed *)"
+      "Bash(xargs sed *)",
+      "Bash(npm --version)",
+      "Bash(npm uninstall *)"
     ]
   }
 }

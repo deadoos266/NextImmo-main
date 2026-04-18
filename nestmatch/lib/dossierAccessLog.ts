@@ -31,10 +31,11 @@ export function parseUserAgent(ua: string): string {
   else if (u.includes("firefox/")) browser = "Firefox"
   else if (u.includes("safari/")) browser = "Safari"
   let os = ""
+  // Ordre important : les UA iPhone/iPad contiennent "Mac OS X" → tester iOS avant macOS.
   if (u.includes("windows")) os = "Windows"
-  else if (u.includes("mac os")) os = "macOS"
-  else if (u.includes("android")) os = "Android"
   else if (u.includes("iphone") || u.includes("ipad")) os = "iOS"
+  else if (u.includes("android")) os = "Android"
+  else if (u.includes("mac os")) os = "macOS"
   else if (u.includes("linux")) os = "Linux"
   return os ? `${browser} / ${os}` : browser
 }
