@@ -18,6 +18,7 @@ const DEMANDE_DOSSIER_PREFIX = "[DEMANDE_DOSSIER]"
 const EDL_PREFIX = "[EDL_CARD]"
 const RETRAIT_PREFIX = "[CANDIDATURE_RETIREE]"
 const RELANCE_PREFIX = "[RELANCE]"
+const LOCATION_PREFIX = "[LOCATION_ACCEPTEE]"
 // Prefix encodé dans contenu pour un message en réponse à un autre.
 // Format : "[REPLY:<id>]\n<texte>". Permet d'implémenter le reply-to sans migration DB.
 const REPLY_REGEX = /^\[REPLY:(\d+)\]\n([\s\S]*)$/
@@ -236,6 +237,39 @@ function BailCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
   )
 }
 
+// ─── Location acceptée Card ──────────────────────────────────────────────────
+
+function LocationAccepteeCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any = {}
+  try { data = JSON.parse(contenu.slice(LOCATION_PREFIX.length)) } catch { /* ignore */ }
+  const dateStr = data.accepteLe
+    ? new Date(data.accepteLe).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    : ""
+  return (
+    <div style={{ background: "#dcfce7", border: "1.5px solid #86efac", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 340 }}>
+      <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>
+        {isMine ? "Location confirmée" : "Félicitations !"}
+      </p>
+      <p style={{ fontSize: 14, fontWeight: 700, color: "#111", margin: 0, lineHeight: 1.4 }}>
+        {isMine ? "Vous avez accepté cette candidature." : "Votre candidature a été acceptée."}
+        {data.bienTitre ? ` (${data.bienTitre})` : ""}
+      </p>
+      <p style={{ fontSize: 12, color: "#166534", margin: "6px 0 0", lineHeight: 1.5 }}>
+        {isMine
+          ? "Le locataire peut désormais accéder à « Mon logement ». Générez le bail quand vous êtes prêt."
+          : "Retrouvez votre logement, vos quittances et l'état des lieux dans « Mon logement »."}
+      </p>
+      {dateStr && <p style={{ fontSize: 11, color: "#15803d", margin: "6px 0 0" }}>{dateStr}</p>}
+      {!isMine && (
+        <a href="/mon-logement" style={{ display: "inline-block", marginTop: 10, background: "#15803d", color: "white", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
+          Voir mon logement →
+        </a>
+      )}
+    </div>
+  )
+}
+
 // ─── Candidature retirée Card ────────────────────────────────────────────────
 
 function CandidatureRetireeCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
@@ -341,6 +375,8 @@ function MessagesInner() {
   // Notes privées proprio sur chaque candidat (localStorage). Jamais partagées.
   const [candidatNotes, setCandidatNotes] = useState<Record<string, string>>({})
   const [noteEditKey, setNoteEditKey] = useState<string | null>(null)
+  const [accepterLocationOpen, setAccepterLocationOpen] = useState(false)
+  const [accepteEnCours, setAccepteEnCours] = useState(false)
   const [noteDraft, setNoteDraft] = useState("")
   // Reply-to : infos du message auquel on répond (null = pas de reply)
   const [replyTo, setReplyTo] = useState<{ id: number; contenu: string; from: string } | null>(null)
@@ -405,6 +441,57 @@ function MessagesInner() {
   function openNoteEditor(convKey: string) {
     setNoteDraft(candidatNotes[convKey] || "")
     setNoteEditKey(convKey)
+  }
+
+  /**
+   * Acceptation d'un candidat comme locataire officiel du bien.
+   *
+   * Action proprio : met à jour annonces.statut = "loué" + locataire_email.
+   * Conséquence : la conv migre automatiquement vers "Biens loués" (proprio)
+   *   / "Mon bail" (locataire), et /mon-logement devient accessible au locataire.
+   * Poste un message [LOCATION_ACCEPTEE] pour notifier le locataire.
+   *
+   * N'impose pas la génération du bail — le proprio peut la faire plus tard
+   * via le bouton dédié dans /proprietaire.
+   */
+  async function accepterLocation() {
+    if (!myEmail || !convActiveData?.annonceId || !proprietaireActive) return
+    const conv = conversations.find(c => c.key === convActive)
+    if (!conv) return
+    setAccepteEnCours(true)
+    const peerEmail = conv.other.toLowerCase()
+    const annId = convActiveData.annonceId
+    // 1. Update annonce : statut "loué" + locataire officiel
+    const { error: updErr } = await supabase
+      .from("annonces")
+      .update({ statut: "loué", locataire_email: peerEmail })
+      .eq("id", annId)
+    if (updErr) {
+      alert(`Erreur mise à jour annonce : ${updErr.message}`)
+      setAccepteEnCours(false)
+      return
+    }
+    // 2. Reflect local : update annonces map + conversations (sert la migration
+    //    visuelle onglet Candidatures → Biens loués sans reload).
+    setAnnonces(prev => ({ ...prev, [annId]: { ...(prev[annId] || {}), statut: "loué", locataire_email: peerEmail } }))
+    // 3. Poster un message [LOCATION_ACCEPTEE] pour le locataire
+    const ann = annonces[annId]
+    const titre = ann?.titre || "votre logement"
+    const payload = JSON.stringify({ bienTitre: titre, annonceId: annId, accepteLe: new Date().toISOString() })
+    const { data: msg } = await supabase.from("messages").insert([{
+      from_email: myEmail,
+      to_email: peerEmail,
+      contenu: `${LOCATION_PREFIX}${payload}`,
+      annonce_id: annId,
+      lu: false,
+      created_at: new Date().toISOString(),
+    }]).select().single()
+    if (msg) {
+      setMessages(prev => [...prev, msg])
+      setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: msg } : c))
+    }
+    setAccepteEnCours(false)
+    setAccepterLocationOpen(false)
   }
 
   // Désactive la restauration auto du scroll par le navigateur sur /messages
@@ -817,7 +904,10 @@ function MessagesInner() {
       query = query.eq("locataire_email", me).eq("proprietaire_email", other)
     }
     if (annonceId) query = query.eq("annonce_id", annonceId)
-    const { data } = await query.in("statut", ["proposée", "confirmée"]).order("date_visite", { ascending: true })
+    // On charge aussi les visites "annulée" récentes pour garder un contexte
+    // visuel (permet à l'user de voir "ma proposition a été refusée" et d'offrir
+    // un CTA "Proposer un autre créneau" directement depuis la carte).
+    const { data } = await query.in("statut", ["proposée", "confirmée", "annulée"]).order("date_visite", { ascending: true })
     setVisitesConv(data || [])
   }
 
@@ -1079,6 +1169,7 @@ function MessagesInner() {
                   : rawPreview.startsWith(BAIL_PREFIX) ? "Bail généré"
                   : rawPreview.startsWith(RETRAIT_PREFIX) ? "Candidature retirée"
                   : rawPreview.startsWith(RELANCE_PREFIX) ? "Relance : " + rawPreview.slice(RELANCE_PREFIX.length)
+                  : rawPreview.startsWith(LOCATION_PREFIX) ? "Location acceptée ✓"
                   : parseReply(rawPreview).text // ignore le préfixe [REPLY:id]
                 const preview = rawPreview
                   ? (previewText.length > 35 ? previewText.slice(0, 35) + "…" : previewText)
@@ -1249,6 +1340,19 @@ function MessagesInner() {
                         <p style={{ fontWeight: 700, fontSize: 14 }}>{annonceActive.titre}</p>
                         <p style={{ fontSize: 12, color: "#9ca3af" }}>{annonceActive.ville} &middot; {displayName(convActiveData.other, annonceActive.proprietaire)}</p>
                       </div>
+                      {/* Bouton "Louer à ce candidat" — côté proprio uniquement.
+                         Cache si la location est déjà actée pour ce candidat. */}
+                      {proprietaireActive && annonceActive && (
+                        (annonceActive.statut !== "loué" || (annonceActive.locataire_email || "").toLowerCase() !== convActiveData.other.toLowerCase()) && (
+                          <button
+                            type="button"
+                            onClick={() => setAccepterLocationOpen(true)}
+                            title="Accepter ce locataire et marquer le bien comme loué"
+                            style={{ fontSize: 12, fontWeight: 800, color: "white", background: "#16a34a", border: "none", borderRadius: 999, padding: "6px 14px", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                            Louer à ce candidat
+                          </button>
+                        )
+                      )}
                       <Link href={`/annonces/${convActiveData.annonceId}`}
                         style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "6px 14px", whiteSpace: "nowrap" }}>
                         Voir l&apos;annonce
@@ -1261,6 +1365,35 @@ function MessagesInner() {
                     </>
                   )}
                 </div>
+
+                {/* Confirmation inline : louer à ce candidat */}
+                {accepterLocationOpen && proprietaireActive && convActiveData && (
+                  <div style={{ background: "#f0fdf4", borderBottom: "1px solid #bbf7d0", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+                    <p style={{ fontSize: 13, color: "#166534", margin: 0, lineHeight: 1.5 }}>
+                      <strong>Louer à {displayName(convActiveData.other)} ?</strong> Le bien sera marqué comme loué
+                      {annonceActive && (annonceActive.statut === "loué") && (annonceActive.locataire_email || "").toLowerCase() !== convActiveData.other.toLowerCase() && (
+                        <> (et remplacera <em>{displayName(annonceActive.locataire_email || "")}</em>)</>
+                      )}
+                      . Le locataire recevra une notification et accédera à « Mon logement ». Vous pourrez générer le bail quand vous voulez depuis votre dashboard.
+                    </p>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <button
+                        type="button"
+                        onClick={accepterLocation}
+                        disabled={accepteEnCours}
+                        style={{ background: accepteEnCours ? "#9ca3af" : "#16a34a", color: "white", border: "none", borderRadius: 999, padding: "8px 18px", fontWeight: 800, fontSize: 13, cursor: accepteEnCours ? "wait" : "pointer", fontFamily: "inherit" }}>
+                        {accepteEnCours ? "Enregistrement…" : "Confirmer la location"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAccepterLocationOpen(false)}
+                        disabled={accepteEnCours}
+                        style={{ background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "8px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Note privée proprio (visible uniquement côté proprio) */}
                 {proprietaireActive && convActiveData && (
@@ -1335,6 +1468,7 @@ function MessagesInner() {
                     const isEdl = typeof m.contenu === "string" && m.contenu.startsWith(EDL_PREFIX)
                     const isBail = typeof m.contenu === "string" && m.contenu.startsWith(BAIL_PREFIX)
                     const isRetrait = typeof m.contenu === "string" && m.contenu.startsWith(RETRAIT_PREFIX)
+                    const isLocation = typeof m.contenu === "string" && m.contenu.startsWith(LOCATION_PREFIX)
                     return (
                       <div key={m.id} style={{ display: "flex", justifyContent: isMine ? "flex-end" : "flex-start" }}>
                         {isDossier ? (
@@ -1373,6 +1507,13 @@ function MessagesInner() {
                         ) : isRetrait ? (
                           <div>
                             <CandidatureRetireeCard contenu={m.contenu} isMine={isMine} />
+                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        ) : isLocation ? (
+                          <div>
+                            <LocationAccepteeCard contenu={m.contenu} isMine={isMine} />
                             <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
@@ -1554,6 +1695,25 @@ function MessagesInner() {
                                 Annuler
                               </button>
                             )}
+                            {/* Cas 4 — Visite annulée : bouton pour reproposer
+                                directement sans avoir à chercher le bouton en bas. */}
+                            {v.statut === "annulée" && (
+                              <button onClick={() => {
+                                setCounterTarget(null)
+                                setVisiteDate("")
+                                setVisiteHeure("10:00")
+                                setVisiteMessage("")
+                                setShowVisiteForm(true)
+                                // Scroll vers le form pour que l'user le voie
+                                setTimeout(() => {
+                                  const el = document.getElementById("visite-form-anchor")
+                                  if (el) el.scrollIntoView({ behavior: "smooth", block: "center" })
+                                }, 80)
+                              }}
+                                style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "5px 12px", fontWeight: 700, fontSize: 11, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
+                                Proposer un autre créneau
+                              </button>
+                            )}
                           </div>
                         )
                       })}
@@ -1599,7 +1759,7 @@ function MessagesInner() {
                     ))}
                   </div>
                   {showVisiteForm && convActiveData?.annonceId && (
-                    <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
+                    <div id="visite-form-anchor" style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
                       <p style={{ fontSize: 12, fontWeight: 800, color: "#1d4ed8", marginBottom: 12 }}>
                         {counterTarget ? "Contre-proposer un autre créneau" : "Proposer une visite"}
                       </p>

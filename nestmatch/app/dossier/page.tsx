@@ -123,7 +123,8 @@ export default function Dossier() {
   }, [session, status])
 
   async function load() {
-    const { data } = await supabase.from("profils").select("*").eq("email", session!.user!.email!).single()
+    const email = session!.user!.email!.toLowerCase()
+    const { data } = await supabase.from("profils").select("*").eq("email", email).single()
     if (data) {
       setProfil(data)
       setForm({
@@ -204,8 +205,12 @@ export default function Dossier() {
   async function sauvegarder() {
     if (!session?.user?.email) return
     setSaving(true)
-    await supabase.from("profils").upsert({
-      email: session.user.email,
+    setUploadError(null)
+    // Lowercase l'email : clé primaire de profils, évite les doublons
+    // si la session retourne une casse différente de la ligne DB.
+    const email = session.user.email.toLowerCase()
+    const { error } = await supabase.from("profils").upsert({
+      email,
       nom: form.nom, telephone: form.telephone, situation_pro: form.situation_pro,
       revenus_mensuels: form.revenus_mensuels ? Number(form.revenus_mensuels) : null,
       garant: form.garant, type_garant: form.type_garant, nb_occupants: form.nb_occupants,
@@ -222,6 +227,18 @@ export default function Dossier() {
       presentation: form.presentation ? form.presentation.slice(0, 500) : null,
     }, { onConflict: "email" })
     setSaving(false)
+    if (error) {
+      const code = (error as { code?: string }).code
+      const msg = error.message || ""
+      if (code === "42703" || /column.*(presentation|date_naissance|nationalite|situation_familiale|employeur_nom|date_embauche|logement_actuel|a_apl|mobilite_pro|nb_enfants)/i.test(msg)) {
+        setUploadError("Enregistrement partiel : certaines colonnes n'existent pas en base. La migration 007 doit être appliquée puis forcer un reload schema (NOTIFY pgrst, 'reload schema').")
+      } else if (code === "23502" || /null value.*not-null/i.test(msg)) {
+        setUploadError("Contrainte NOT NULL violée. Appliquez la migration 009 (drop NOT NULL sur nom, telephone…).")
+      } else {
+        setUploadError(`Enregistrement impossible : ${msg}`)
+      }
+      return
+    }
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
   }
@@ -406,13 +423,13 @@ export default function Dossier() {
           transition: "background 0.12s",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: uploaded.length > 0 ? 8 : 0 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: uploaded.length > 0 ? 8 : 0, gap: 8, flexWrap: "wrap" }}>
+          <div style={{ flex: "1 1 180px", minWidth: 0 }}>
             <p style={{ fontSize: 13, fontWeight: 700 }}>{label}</p>
             {desc && <p style={{ fontSize: 11, color: "#6b7280", lineHeight: 1.4, marginTop: 2 }}>{desc}</p>}
             {hint && <p style={{ fontSize: 10, color: "#9ca3af", lineHeight: 1.4, marginTop: 3, fontStyle: "italic" }}>{hint}</p>}
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0, marginLeft: 12 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
             {canAdd && (
               <>
                 <input
@@ -494,24 +511,24 @@ export default function Dossier() {
       <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
         <div style={{ maxWidth: 960, margin: "0 auto", padding: isMobile ? "24px 16px" : "32px 48px" }}>
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 16 : 0 }}>
-            <div style={{ width: isMobile ? "100%" : undefined }}>
-              <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 800, letterSpacing: "-0.5px", display: "flex", alignItems: "center" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: isMobile ? 20 : 28, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 14 : 0 }}>
+            <div style={{ width: isMobile ? "100%" : undefined, minWidth: 0 }}>
+              <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 800, letterSpacing: "-0.5px", display: "flex", alignItems: "center", margin: 0 }}>
                 Mon dossier locataire
                 <Tooltip text="Votre dossier réunit tous les justificatifs demandés par les propriétaires (identité, revenus, garant). Plus il est complet, plus votre candidature est crédible. Il est partagé uniquement avec les propriétaires que vous contactez, à votre initiative." />
               </h1>
               <p style={{ color: "#6b7280", fontSize: isMobile ? 13 : 14, marginTop: 4, lineHeight: 1.5 }}>Complétez vos informations et déposez vos documents pour maximiser vos chances.</p>
             </div>
-            <div style={{ display: "flex", gap: isMobile ? 10 : 12, alignItems: "center", flexWrap: "wrap", width: isMobile ? "100%" : undefined }}>
-              <div style={{ background: "white", borderRadius: 16, padding: isMobile ? "10px 14px" : "14px 18px", textAlign: "center", border: `2px solid ${scoreColor}`, flexShrink: 0 }}>
-                <div style={{ fontSize: isMobile ? 22 : 26, fontWeight: 900, color: scoreColor }}>{score}%</div>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", width: isMobile ? "100%" : undefined, justifyContent: isMobile ? "flex-start" : "flex-end" }}>
+              <div style={{ background: "white", borderRadius: 16, padding: isMobile ? "8px 12px" : "14px 18px", textAlign: "center", border: `2px solid ${scoreColor}`, flexShrink: 0 }}>
+                <div style={{ fontSize: isMobile ? 20 : 26, fontWeight: 900, color: scoreColor, lineHeight: 1 }}>{score}%</div>
                 <div style={{ fontSize: 10, color: "#6b7280", fontWeight: 700, textTransform: "uppercase", marginTop: 2 }}>Complétude</div>
-                <div style={{ background: "#f3f4f6", borderRadius: 999, height: 3, marginTop: 6, width: 70 }}>
+                <div style={{ background: "#f3f4f6", borderRadius: 999, height: 3, marginTop: 6, width: isMobile ? 56 : 70 }}>
                   <div style={{ background: scoreColor, borderRadius: 999, height: 3, width: `${score}%`, transition: "width 0.4s" }} />
                 </div>
               </div>
               <a href="/carnet" className="no-print"
-                style={{ padding: isMobile ? "10px 14px" : "12px 20px", background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 12, fontWeight: 700, fontSize: isMobile ? 13 : 14, textDecoration: "none", display: "inline-block", whiteSpace: "nowrap" }}>
+                style={{ padding: isMobile ? "9px 14px" : "12px 20px", background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 12, fontWeight: 700, fontSize: isMobile ? 13 : 14, textDecoration: "none", display: "inline-flex", alignItems: "center", whiteSpace: "nowrap", flex: isMobile ? "1 1 auto" : undefined, justifyContent: "center" }}>
                 Carnet d'entretien
               </a>
             </div>
@@ -526,17 +543,17 @@ export default function Dossier() {
 
           {/* Contenu PDF */}
           <div id="dossier-pdf-content" style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 32, marginBottom: 20 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, paddingBottom: 16, borderBottom: "2px solid #f3f4f6" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: 20, paddingBottom: 16, borderBottom: "2px solid #f3f4f6", flexWrap: "wrap", gap: 12 }}>
               <div>
-                <h2 style={{ fontSize: 20, fontWeight: 900 }}>Dossier locataire</h2>
+                <h2 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 900, margin: 0 }}>Dossier locataire</h2>
                 <p style={{ fontSize: 13, color: "#6b7280", marginTop: 2 }}>Généré le {new Date().toLocaleDateString("fr-FR")}</p>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 22, fontWeight: 900, color: scoreColor }}>{score}%</div>
+                <div style={{ fontSize: isMobile ? 20 : 22, fontWeight: 900, color: scoreColor }}>{score}%</div>
                 <div style={{ fontSize: 10, color: "#6b7280", fontWeight: 700, textTransform: "uppercase" }}>Complétude</div>
               </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginBottom: 20 }}>
               {[
                 { label: "Nom", value: form.nom },
                 { label: "Téléphone", value: form.telephone },
@@ -545,16 +562,16 @@ export default function Dossier() {
                 { label: "Revenus nets/mois", value: form.revenus_mensuels ? `${Number(form.revenus_mensuels).toLocaleString("fr-FR")} €` : "" },
                 { label: "Garant", value: form.garant ? (form.type_garant || "Oui") : "Non" },
               ].map(f => (
-                <div key={f.label} style={{ background: "#f9fafb", borderRadius: 10, padding: "10px 14px" }}>
+                <div key={f.label} style={{ background: "#f9fafb", borderRadius: 10, padding: "10px 14px", minWidth: 0 }}>
                   <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", marginBottom: 4 }}>{f.label}</p>
-                  <p style={{ fontSize: 13, fontWeight: 600 }}>{f.value || "—"}</p>
+                  <p style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis" }}>{f.value || "—"}</p>
                 </div>
               ))}
             </div>
             <h3 style={{ fontSize: 12, fontWeight: 800, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
               Pièces justificatives ({docsCount}/{allDocs.length} catégories)
             </h3>
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 8 }}>
               {allDocs.map(doc => {
                 const files = docs[doc.key] || []
                 return (
@@ -569,10 +586,29 @@ export default function Dossier() {
             </div>
           </div>
 
+          {/* ─── Présentation (juste sous le récap complétude) ─── */}
+          <div className="print-section" style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24, marginBottom: 20 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 6, display: "flex", alignItems: "center" }}>
+              Présentation
+              <Tooltip text="Une lettre de présentation courte humanise votre dossier. Expliquez votre projet (pourquoi ce logement, pourquoi cette ville, contexte pro), et ce que le proprio doit savoir sur vous. 500 caractères max." />
+            </h2>
+            <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 12, lineHeight: 1.5 }}>
+              Quelques lignes pour vous présenter au propriétaire — facultatif mais très apprécié. Pensez à cliquer sur « Sauvegarder mon dossier » en bas pour conserver vos modifications.
+            </p>
+            <textarea
+              value={form.presentation}
+              onChange={e => setForm(f => ({ ...f, presentation: e.target.value.slice(0, 500) }))}
+              placeholder="Ex : Bonjour, je suis ingénieur en CDI depuis 3 ans. Je cherche un logement proche de mon nouveau bureau à partir du 1er septembre. Très soigneux, non fumeur, sans animaux."
+              rows={4}
+              style={{ width: "100%", padding: "12px 14px", border: "1.5px solid #e5e7eb", borderRadius: 12, fontSize: isMobile ? 16 : 14, fontFamily: "inherit", outline: "none", resize: "vertical", boxSizing: "border-box", lineHeight: 1.5 }}
+            />
+            <p style={{ fontSize: 11, color: "#9ca3af", margin: "6px 0 0", textAlign: "right" }}>{form.presentation.length}/500</p>
+          </div>
+
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 380px", gap: isMobile ? 16 : 24, alignItems: "flex-start" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
-              <div className="print-section" style={{ background: "white", borderRadius: 20, padding: 24 }}>
+              <div className="print-section" style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24 }}>
                 <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>Identité</h2>
                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
                   <F label="Nom complet">
@@ -614,7 +650,7 @@ export default function Dossier() {
                 </F>
               </div>
 
-              <div className="print-section" style={{ background: "white", borderRadius: 20, padding: 24 }}>
+              <div className="print-section" style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24 }}>
                 <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>Situation professionnelle</h2>
                 <F label="Statut">
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -651,7 +687,7 @@ export default function Dossier() {
               </div>
 
               {/* ─── Logement actuel ─── */}
-              <div className="print-section" style={{ background: "white", borderRadius: 20, padding: 24 }}>
+              <div className="print-section" style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24 }}>
                 <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>Logement actuel</h2>
                 <F label="Statut">
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -681,7 +717,7 @@ export default function Dossier() {
                 </div>
               </div>
 
-              <div className="print-section" style={{ background: "white", borderRadius: 20, padding: 24 }}>
+              <div className="print-section" style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24 }}>
                 <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20, display: "flex", alignItems: "center" }}>
                   Garant
                   <Tooltip text="Un garant est une personne ou un organisme qui s'engage à payer votre loyer si vous ne pouvez plus le faire. Avoir un garant rassure le propriétaire et multiplie vos chances d'obtenir un logement." />
@@ -716,64 +752,17 @@ export default function Dossier() {
                 )}
               </div>
 
-              {/* ─── Présentation ─── */}
-              <div className="print-section" style={{ background: "white", borderRadius: 20, padding: 24 }}>
-                <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 6, display: "flex", alignItems: "center" }}>
-                  Présentation
-                  <Tooltip text="Une lettre de présentation courte humanise votre dossier. Expliquez votre projet (pourquoi ce logement, pourquoi cette ville, contexte pro), et ce que le proprio doit savoir sur vous. 500 caractères max." />
-                </h2>
-                <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 12, lineHeight: 1.5 }}>
-                  Quelques lignes pour vous présenter au propriétaire — facultatif mais très apprécié.
-                </p>
-                <textarea
-                  value={form.presentation}
-                  onChange={e => setForm(f => ({ ...f, presentation: e.target.value.slice(0, 500) }))}
-                  placeholder="Ex : Bonjour, je suis ingénieur en CDI depuis 3 ans. Je cherche un logement proche de mon nouveau bureau à partir du 1er septembre. Très soigneux, non fumeur, sans animaux."
-                  rows={4}
-                  style={{ width: "100%", padding: "12px 14px", border: "1.5px solid #e5e7eb", borderRadius: 12, fontSize: 14, fontFamily: "inherit", outline: "none", resize: "vertical", boxSizing: "border-box", lineHeight: 1.5 }}
-                />
-                <p style={{ fontSize: 11, color: "#9ca3af", margin: "6px 0 0", textAlign: "right" }}>{form.presentation.length}/500</p>
-              </div>
-
               <button onClick={sauvegarder} disabled={saving} className="no-print"
                 style={{ background: saving ? "#9ca3af" : saved ? "#16a34a" : "#111", color: "white", border: "none", borderRadius: 999, padding: "14px 0", fontWeight: 700, fontSize: 15, cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit", transition: "background 0.2s" }}>
                 {saving ? "Sauvegarde..." : saved ? "Dossier sauvegardé ✓" : "Sauvegarder mon dossier"}
               </button>
-
-              {/* ─── Téléchargement du dossier ─── */}
-              <div className="no-print" style={{ background: "white", borderRadius: 20, padding: 24, border: "1.5px solid #e5e7eb" }}>
-                <h2 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 6px" }}>Télécharger mon dossier</h2>
-                <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px", lineHeight: 1.5 }}>
-                  Deux formats disponibles. Pour candidater hors plateforme ou constituer un backup local.
-                </p>
-                <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 10, alignItems: "stretch" }}>
-                  <button
-                    type="button"
-                    onClick={telechargerDossierZip}
-                    disabled={generatingPDF}
-                    style={{ flex: 1, background: generatingPDF ? "#9ca3af" : "#111", color: "white", border: "none", borderRadius: 12, padding: "14px 20px", fontWeight: 800, fontSize: 14, cursor: generatingPDF ? "wait" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    {generatingPDF ? "Préparation…" : "Télécharger mon dossier complet (.zip)"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={genererDossierPDFClick}
-                    disabled={generatingPDF}
-                    style={{ background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "14px 20px", fontWeight: 700, fontSize: 13, cursor: generatingPDF ? "wait" : "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
-                    PDF récap seul
-                  </button>
-                </div>
-                <p style={{ fontSize: 11, color: "#9ca3af", margin: "12px 0 0", lineHeight: 1.5 }}>
-                  <strong>Le zip contient :</strong> le PDF récapitulatif + toutes vos pièces justificatives (identité, bulletins, quittances, garant…) organisées par catégorie.
-                </p>
-              </div>
             </div>
 
             {/* Sidebar documents */}
             <div>
               <SharePanel />
               <AccessLogPanel />
-              <div style={{ background: "white", borderRadius: 20, padding: 24, position: "sticky", top: 80 }}>
+              <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24, position: isMobile ? "static" : "sticky", top: 80 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                   <h3 style={{ fontSize: 15, fontWeight: 800 }}>Documents</h3>
                   <span style={{ fontSize: 12, fontWeight: 700, color: scoreColor }}>{docsCount}/{allDocs.length} catégories</span>
@@ -806,6 +795,31 @@ export default function Dossier() {
                   </>
                 )}
 
+              </div>
+
+              {/* ─── Card Téléchargement dossier (sous les pièces) ─── */}
+              <div className="no-print" style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 22, marginTop: 16, border: "1.5px solid #e5e7eb" }}>
+                <h3 style={{ fontSize: 15, fontWeight: 800, margin: "0 0 4px" }}>Télécharger mon dossier</h3>
+                <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 14px", lineHeight: 1.5 }}>
+                  PDF récap + toutes les pièces justificatives, organisées par catégorie.
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={telechargerDossierZip}
+                    disabled={generatingPDF}
+                    style={{ width: "100%", background: generatingPDF ? "#9ca3af" : "#111", color: "white", border: "none", borderRadius: 12, padding: "12px 16px", fontWeight: 800, fontSize: 13, cursor: generatingPDF ? "wait" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    {generatingPDF ? "Préparation…" : "Dossier complet (.zip)"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={genererDossierPDFClick}
+                    disabled={generatingPDF}
+                    style={{ width: "100%", background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "10px 16px", fontWeight: 700, fontSize: 12, cursor: generatingPDF ? "wait" : "pointer", fontFamily: "inherit" }}>
+                    PDF récap seul
+                  </button>
+                </div>
               </div>
             </div>
           </div>

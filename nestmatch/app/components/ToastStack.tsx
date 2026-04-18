@@ -86,6 +86,10 @@ export default function ToastStack() {
           push({ type: "message", title: "Relance candidat", body: raw.replace("[RELANCE]", "").slice(0, 80), href: "/messages" })
           return
         }
+        if (raw.startsWith("[LOCATION_ACCEPTEE]")) {
+          push({ type: "visite_confirmee", title: "Candidature acceptée !", body: "Rendez-vous dans « Mon logement »", href: "/mon-logement" })
+          return
+        }
         const preview = raw.replace(/^\[REPLY:\d+\]\n/, "").slice(0, 80)
         push({
           type: "message",
