@@ -328,27 +328,36 @@ function MessagesInner() {
     const conv = conversations.find(c => c.key === convActive)
     if (!conv) return
 
+    const me = myEmail.toLowerCase()
+    const other = conv.other.toLowerCase()
+    const isRelevant = (m: any) => {
+      const f = (m.from_email || "").toLowerCase()
+      const t = (m.to_email || "").toLowerCase()
+      return (f === me && t === other) || (f === other && t === me)
+    }
+
     const channel = supabase.channel(`messages-${convActive}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
         const m = payload.new as any
-        const isRelevant =
-          (m.from_email === myEmail && m.to_email === conv.other) ||
-          (m.from_email === conv.other && m.to_email === myEmail)
-        if (isRelevant) {
-          setMessages(prev => {
-            if (prev.find(x => x.id === m.id)) return prev
-            return [...prev, m]
-          })
-          if (m.to_email === myEmail) {
-            supabase.from("messages").update({ lu: true }).eq("id", m.id)
-            setConversations(prev => prev.map(c => c.key === convActive ? { ...c, unread: 0, lastMsg: m } : c))
-          }
+        if (!isRelevant(m)) return
+        setMessages(prev => {
+          if (prev.find(x => x.id === m.id)) return prev
+          return [...prev, m]
+        })
+        if ((m.to_email || "").toLowerCase() === me) {
+          supabase.from("messages").update({ lu: true }).eq("id", m.id)
+          setConversations(prev => prev.map(c => c.key === convActive ? { ...c, unread: 0, lastMsg: m } : c))
         }
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" }, (payload) => {
+        const m = payload.old as any
+        // DELETE payload ne contient que la PK par défaut — on retire par id
+        setMessages(prev => prev.filter(x => x.id !== m.id))
       })
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [convActive, myEmail])
+  }, [convActive, myEmail, conversations])
 
   // Temps réel — écoute les nouvelles visites + changements de statut
   // pour la conv active (affiche direct les contre-propositions reçues)
@@ -463,11 +472,16 @@ function MessagesInner() {
 
   async function supprimerMessage(id: number) {
     if (!confirm("Supprimer ce message ?")) return
-    const { error } = await supabase.from("messages").delete().eq("id", id)
-    if (!error) {
-      setMessages(prev => prev.filter(m => m.id !== id))
-    }
+    // Optimistic : retirer direct, DB sync en arrière-plan
+    const backup = messages.find(m => m.id === id)
+    setMessages(prev => prev.filter(m => m.id !== id))
     setMenuMsgId(null)
+    const { error } = await supabase.from("messages").delete().eq("id", id)
+    if (error && backup) {
+      // Rollback si échec
+      setMessages(prev => [...prev, backup].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()))
+      alert("Impossible de supprimer le message")
+    }
   }
 
   async function copierMessage(contenu: string) {
@@ -1002,8 +1016,8 @@ function MessagesInner() {
                                 </button>
                                 {menuMsgId === m.id && (
                                   <>
-                                    <div onClick={() => setMenuMsgId(null)} style={{ position: "fixed", inset: 0, zIndex: 50 }} />
-                                    <div style={{ position: "absolute", top: 30, [isMine ? "left" : "right"]: 0, background: "white", border: "1px solid #e5e7eb", borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.12)", zIndex: 60, minWidth: 160, overflow: "hidden" } as React.CSSProperties}>
+                                    <div onClick={() => setMenuMsgId(null)} style={{ position: "fixed", inset: 0, zIndex: 9998 }} />
+                                    <div style={{ position: "absolute", top: 30, [isMine ? "left" : "right"]: 0, background: "white", border: "1px solid #e5e7eb", borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.12)", zIndex: 9999, minWidth: 160, overflow: "hidden" } as React.CSSProperties}>
                                       <button onClick={() => repondreMessage(m)}
                                         style={{ display: "block", width: "100%", padding: "10px 14px", background: "white", border: "none", textAlign: "left", fontSize: 13, color: "#111", cursor: "pointer", fontFamily: "inherit" }}
                                         onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}

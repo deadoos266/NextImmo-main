@@ -32,22 +32,40 @@ export default function Navbar() {
 
   useEffect(() => {
     if (!session?.user?.email) return
-    const email = session.user.email
+    const email = session.user.email.toLowerCase()
     // Notification uniquement quand une action est attendue de MA part :
     // une demande en attente proposée par l'AUTRE partie.
-    // Si c'est moi qui ai proposé et que j'attends une réponse → pas de notif.
-    // Si c'est confirmé → pas de notif non plus (plus d'action attendue).
     const col = proprietaireActive ? "proprietaire_email" : "locataire_email"
-    supabase.from("visites").select("id", { count: "exact", head: true })
+    const refresh = () => supabase.from("visites").select("id", { count: "exact", head: true })
       .eq(col, email).eq("statut", "proposée").neq("propose_par", email)
       .then(({ count }) => setBadgeVisites(count ?? 0))
+    refresh()
+    // Real-time : tout changement sur visites qui me concernent
+    const channel = supabase.channel(`navbar-visites-${email}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "visites" }, (payload) => {
+        const row = (payload.new || payload.old) as any
+        const p = (row?.proprietaire_email || "").toLowerCase()
+        const l = (row?.locataire_email || "").toLowerCase()
+        if (p === email || l === email) refresh()
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
   }, [session, proprietaireActive, pathname])
 
   useEffect(() => {
     if (!session?.user?.email) return
-    supabase.from("messages").select("id", { count: "exact", head: true })
-      .eq("to_email", session.user.email).eq("lu", false)
+    const email = session.user.email.toLowerCase()
+    const refresh = () => supabase.from("messages").select("id", { count: "exact", head: true })
+      .eq("to_email", email).eq("lu", false)
       .then(({ count }) => setBadgeMessages(count ?? 0))
+    refresh()
+    // Real-time : nouveau message reçu OU message marqué lu
+    const channel = supabase.channel(`navbar-messages-${email}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `to_email=eq.${email}` }, refresh)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages", filter: `to_email=eq.${email}` }, refresh)
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" }, refresh)
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
   }, [session, pathname])
 
   // Fermer le menu mobile au changement de route

@@ -72,6 +72,41 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 
 ## Historique des batchs
 
+### Batch 29 — Notifs temps réel globales + AdminBar persist + msg realtime (2026-04-18)
+- **ToastStack global** (`components/ToastStack.tsx` monté dans `layout.tsx`) :
+  provider client qui écoute Supabase Realtime pour l'user connecté.
+  Affiche des toasts bottom-right sur :
+  - INSERT message où `to_email = moi` (skip si déjà sur /messages, skip
+    les messages système `[DOSSIER_CARD]` etc.)
+  - INSERT visite qui me concerne et dont `propose_par !== moi` (skip si
+    sur /visites ou /messages)
+  - UPDATE visite `statut` → toast "Visite confirmée" / "Visite annulée"
+  Toasts cliquables → navigation vers la page concernée. Auto-dismiss 5.5s.
+  Rendu via `createPortal(document.body)` pour échapper tout stacking context.
+- **Navbar badges temps réel** : les badges Visites et Messages s'abonnent
+  aux changements Supabase Realtime et se mettent à jour sans reload.
+  Plus besoin de naviguer pour voir une nouvelle notif.
+- **AdminBar switch persiste** (#bug) : le choix Locataire/Propriétaire via
+  AdminBar était écrasé à chaque changement de page car `providers.tsx`
+  re-syncait `proprietaireActive` depuis Supabase. Fix : si
+  `localStorage.nestmatch_proprio_active` est présent (= choix manuel),
+  on le respecte et on skip l'auto-sync Supabase.
+- **Delete message optimiste** (#bug) : `supprimerMessage` filtre
+  désormais localement AVANT l'appel DB. Rollback si DB fail. Plus de
+  latence perçue au clic Supprimer.
+- **Delete message en temps réel** : ajout handler DELETE sur la
+  subscription messages. L'autre partie voit le message disparaître
+  sans reload.
+- **Menu 3 points z-index** (#bug) : backdrop 50 → 9998, dropdown 60 → 9999.
+  Plus caché par les messages suivants.
+- **SQL fallback signalements/contacts RLS** : policy permissive
+  `FOR ALL TO public` documentée — à appliquer si le
+  `SUPABASE_SERVICE_ROLE_KEY` Vercel est mal configuré.
+
+**Prérequis Supabase Realtime** (dashboard Database → Replication) :
+tables `messages`, `visites`, `signalements`, `contacts` doivent être
+dans la publication `supabase_realtime`. Sans ça, aucun temps réel.
+
 ### Batch 28 — Géocodage mondial, proprio delete, real-time visites, date fix (2026-04-18)
 - **Géocodage mondial via Nominatim** (`lib/geocoding.ts`) : fini les
   38 villes hardcodées. Stratégie en 3 niveaux :

@@ -59,19 +59,25 @@ function RoleProvider({ children }: { children: ReactNode }) {
     }
   }, [session, status])
 
-  // Check proprietaire status: profil flag OR has published annonces
+  // Check proprietaire status: profil flag OR has published annonces.
+  // IMPORTANT : respecter le choix manuel stocké dans localStorage (admin qui
+  // switche via AdminBar). On n'auto-sync que si rien n'est stocké.
   useEffect(() => {
-    if (status === "authenticated" && session?.user?.email) {
-      const email = session.user.email
-      Promise.all([
-        supabase.from("profils").select("is_proprietaire").eq("email", email).single(),
-        supabase.from("annonces").select("id", { count: "exact", head: true }).eq("proprietaire_email", email),
-      ]).then(([{ data: profil }, { count }]) => {
-        const isProprio = profil?.is_proprietaire === true || (count ?? 0) > 0
-        setProprietaireActiveState(isProprio)
-        localStorage.setItem("nestmatch_proprio_active", isProprio ? "true" : "false")
-      })
+    if (status !== "authenticated" || !session?.user?.email) return
+    const saved = localStorage.getItem("nestmatch_proprio_active")
+    if (saved === "true" || saved === "false") {
+      setProprietaireActiveState(saved === "true")
+      return
     }
+    const email = session.user.email
+    Promise.all([
+      supabase.from("profils").select("is_proprietaire").eq("email", email).single(),
+      supabase.from("annonces").select("id", { count: "exact", head: true }).eq("proprietaire_email", email),
+    ]).then(([{ data: profil }, { count }]) => {
+      const isProprio = profil?.is_proprietaire === true || (count ?? 0) > 0
+      setProprietaireActiveState(isProprio)
+      localStorage.setItem("nestmatch_proprio_active", isProprio ? "true" : "false")
+    })
   }, [session, status])
 
   function setRole(r: Role) {

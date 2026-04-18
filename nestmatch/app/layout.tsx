@@ -6,6 +6,7 @@ import AdminBar from './components/AdminBar'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import CookieBanner from './components/CookieBanner'
+import ToastStack from './components/ToastStack'
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || 'https://nestmatch.fr'
 
@@ -71,6 +72,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
           <Footer />
           <CookieBanner />
+          <ToastStack />
         </Providers>
       </body>
     </html>
