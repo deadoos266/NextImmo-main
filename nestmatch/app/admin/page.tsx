@@ -190,7 +190,7 @@ export default function Admin() {
   }
 
   async function supprimerAnnonce(id: number) {
-    const res = await fetch(`/api/admin/annonces/${id}`, { method: "DELETE" })
+    const res = await fetch(`/api/annonces/${id}`, { method: "DELETE" })
     const json = await res.json().catch(() => ({}))
     if (!res.ok || !json.success) {
       alert(`Suppression échouée : ${json.error || res.statusText}`)

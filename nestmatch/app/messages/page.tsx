@@ -28,6 +28,22 @@ function encodeReply(replyToId: number | null, text: string): string {
   return replyToId ? `[REPLY:${replyToId}]\n${text}` : text
 }
 
+/**
+ * Parse une date_visite robustement :
+ *   - "2024-03-01"              → "2024-03-01"
+ *   - "2024-03-01T00:00:00"     → "2024-03-01"
+ *   - "2024-03-01T00:00:00.000Z"→ "2024-03-01"
+ *   - null / invalide           → ""
+ * Puis formate en FR ("1 mars"). Evite "Invalid Date".
+ */
+function formatVisiteDate(raw: unknown, opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" }): string {
+  if (!raw || typeof raw !== "string") return ""
+  const ymd = raw.split("T")[0]
+  const d = new Date(ymd + "T12:00:00")
+  if (isNaN(d.getTime())) return ""
+  return d.toLocaleDateString("fr-FR", opts)
+}
+
 const STATUT_VISITE: Record<string, { bg: string; color: string; border: string; label: string }> = {
   "proposée":  { bg: "#fff7ed", color: "#c2410c", border: "#fed7aa", label: "En attente" },
   "confirmée": { bg: "#dcfce7", color: "#15803d", border: "#bbf7d0", label: "Confirmée" },
@@ -334,6 +350,34 @@ function MessagesInner() {
     return () => { supabase.removeChannel(channel) }
   }, [convActive, myEmail])
 
+  // Temps réel — écoute les nouvelles visites + changements de statut
+  // pour la conv active (affiche direct les contre-propositions reçues)
+  useEffect(() => {
+    if (!convActive || !myEmail) return
+    const conv = conversations.find(c => c.key === convActive)
+    if (!conv) return
+
+    const me = myEmail.toLowerCase()
+    const other = conv.other.toLowerCase()
+
+    const isMine = (row: { proprietaire_email?: string; locataire_email?: string }) => {
+      const p = (row.proprietaire_email || "").toLowerCase()
+      const l = (row.locataire_email || "").toLowerCase()
+      return (p === me && l === other) || (p === other && l === me)
+    }
+
+    const channel = supabase.channel(`visites-${convActive}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "visites" }, (payload) => {
+        if (isMine(payload.new as any)) loadVisitesConv(conv.other)
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "visites" }, (payload) => {
+        if (isMine(payload.new as any)) loadVisitesConv(conv.other)
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [convActive, myEmail, conversations])
+
   async function loadConversations() {
     const email = session!.user!.email!
     const { data } = await supabase.from("messages")
@@ -494,11 +538,13 @@ function MessagesInner() {
 
   async function loadVisitesConv(otherEmail: string) {
     if (!myEmail) return
+    const me = myEmail.toLowerCase()
+    const other = otherEmail.toLowerCase()
     let query = supabase.from("visites").select("*")
     if (proprietaireActive) {
-      query = query.eq("proprietaire_email", myEmail).eq("locataire_email", otherEmail)
+      query = query.eq("proprietaire_email", me).eq("locataire_email", other)
     } else {
-      query = query.eq("locataire_email", myEmail).eq("proprietaire_email", otherEmail)
+      query = query.eq("locataire_email", me).eq("proprietaire_email", other)
     }
     const { data } = await query.in("statut", ["proposée", "confirmée"]).order("date_visite", { ascending: true })
     setVisitesConv(data || [])
@@ -526,7 +572,7 @@ function MessagesInner() {
     setVisitesConv(prev => prev.map(v => v.id === id ? { ...v, statut } : v))
     // Poster un message automatique pour informer l'autre partie
     const other = visite.proprietaire_email === myEmail ? visite.locataire_email : visite.proprietaire_email
-    const dateFormatee = new Date(visite.date_visite + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+    const dateFormatee = formatVisiteDate(visite.date_visite, { weekday: "long", day: "numeric", month: "long", year: "numeric" })
     const contenu = statut === "confirmée"
       ? `Visite confirmée pour le ${dateFormatee} à ${visite.heure}.`
       : `Statut de visite mis à jour : ${statut}.`
@@ -589,7 +635,7 @@ function MessagesInner() {
     }]).select().single()
     if (visite) {
       setVisitesConv(prev => [...prev, visite])
-      const dateFormatee = new Date(visiteDate + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+      const dateFormatee = formatVisiteDate(visiteDate, { weekday: "long", day: "numeric", month: "long", year: "numeric" })
       const prefix = isCounter ? "Contre-proposition" : "Demande de visite"
       const contenu = `${prefix} : ${dateFormatee} à ${visiteHeure}${visiteMessage.trim() ? ` — "${visiteMessage.trim()}"` : ""}`
       const { data: msg } = await supabase.from("messages").insert([{ from_email: myEmail, to_email: convActiveData.other, contenu, lu: false, created_at: new Date().toISOString() }]).select().single()
@@ -1006,7 +1052,7 @@ function MessagesInner() {
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                                 <span style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>
-                                  {new Date(v.date_visite + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short", year: "numeric" })} à {v.heure}
+                                  {formatVisiteDate(v.date_visite, { weekday: "short", day: "numeric", month: "short", year: "numeric" })} à {v.heure}
                                 </span>
                                 <span style={{ background: s.bg, color: s.color, fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 999, border: `1px solid ${s.border}`, flexShrink: 0 }}>
                                   {s.label}
@@ -1109,7 +1155,7 @@ function MessagesInner() {
                       </p>
                       {counterTarget && (
                         <p style={{ fontSize: 11, color: "#6b7280", marginBottom: 10, lineHeight: 1.5 }}>
-                          La proposition initiale (<strong>{new Date(counterTarget.date_visite + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} à {counterTarget.heure}</strong>) sera annulée et remplacée par votre nouveau créneau.
+                          La proposition initiale (<strong>{formatVisiteDate(counterTarget.date_visite)} à {counterTarget.heure}</strong>) sera annulée et remplacée par votre nouveau créneau.
                         </p>
                       )}
                       <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>

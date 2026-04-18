@@ -254,6 +254,7 @@ export default function Proprietaire() {
   const [loyers, setLoyers] = useState<any[]>([])
   const [visites, setVisites] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [supprimerId, setSupprimerId] = useState<number | null>(null)
   const [dossierOuvert, setDossierOuvert] = useState<string | null>(null)
   const [dossiers, setDossiers] = useState<Record<string, any>>({})
   const [clicsParBien, setClicsParBien] = useState<Record<number, number>>({})
@@ -329,6 +330,17 @@ export default function Proprietaire() {
   async function changerStatut(id: number, statut: string) {
     await supabase.from("annonces").update({ statut }).eq("id", id)
     setBiens(biens.map(b => b.id === id ? { ...b, statut } : b))
+  }
+
+  async function supprimerBien(id: number) {
+    const res = await fetch(`/api/annonces/${id}`, { method: "DELETE" })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok || !json.success) {
+      alert(`Suppression échouée : ${json.error || res.statusText}`)
+      return
+    }
+    setBiens(biens.filter(b => b.id !== id))
+    setSupprimerId(null)
   }
 
   async function confirmerLoyer(id: number) {
@@ -502,6 +514,16 @@ export default function Proprietaire() {
                     <a href={`/annonces/${b.id}`} style={{ textAlign: "center", padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, textDecoration: "none", color: "#6b7280", fontSize: 12, fontWeight: 600, flex: isMobile ? 1 : undefined }}>
                       Voir l&apos;annonce
                     </a>
+                    {supprimerId === b.id ? (
+                      <div style={{ display: "flex", gap: 6, flex: isMobile ? 1 : undefined }}>
+                        <button onClick={() => supprimerBien(b.id)} style={{ background: "#dc2626", color: "white", border: "none", borderRadius: 10, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Confirmer</button>
+                        <button onClick={() => setSupprimerId(null)} style={{ background: "#f3f4f6", color: "#111", border: "none", borderRadius: 10, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setSupprimerId(b.id)} style={{ textAlign: "center", padding: "8px 12px", border: "1.5px solid #fecaca", background: "#fef2f2", borderRadius: 10, color: "#dc2626", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", flex: isMobile ? 1 : undefined }}>
+                        Supprimer
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

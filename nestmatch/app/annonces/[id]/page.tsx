@@ -75,12 +75,18 @@ export default async function Annonce({ params }: any) {
 
   const dpeColor: any = { A: "#22c55e", B: "#84cc16", C: "#eab308", D: "#f97316", E: "#ef4444", F: "#dc2626", G: "#991b1b" }
   const photos: string[] = Array.isArray(annonce.photos) ? annonce.photos : []
-  // Priorité : lat/lng précis sauvés depuis l'autocomplete BAN. Fallback : centre ville.
+  // Priorité : lat/lng précis sauvés depuis l'autocomplete BAN.
+  // Fallback 1 : cityCoords statique. Fallback 2 (client) : geocoding Nominatim
+  // via MapBienWrapper.
   const hasExactCoords = typeof annonce.lat === "number" && typeof annonce.lng === "number"
   const cityCoords = getCityCoords(annonce.ville || "")
-  const coords: [number, number] | null = hasExactCoords
-    ? [annonce.lat as number, annonce.lng as number]
+  // Coords passées au wrapper : précises si dispo, sinon centre ville (statique), sinon null
+  // (le wrapper gère le fallback géocodage côté client).
+  const initialCoords: { lat: number | null; lng: number | null } = hasExactCoords
+    ? { lat: annonce.lat as number, lng: annonce.lng as number }
     : cityCoords
+      ? { lat: cityCoords[0], lng: cityCoords[1] }
+      : { lat: null, lng: null }
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -191,7 +197,7 @@ export default async function Annonce({ params }: any) {
               </div>
             )}
 
-            {coords && (
+            {annonce.ville && (
               <div style={{ background: "white", borderRadius: 20, padding: 24 }}>
                 <h2 style={{ fontSize: 17, fontWeight: 800, marginBottom: 6 }}>Localisation</h2>
                 <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 14 }}>
@@ -200,8 +206,8 @@ export default async function Annonce({ params }: any) {
                     : `${annonce.ville} — zone approximative`}
                 </p>
                 <MapBienWrapper
-                  lat={coords[0]}
-                  lng={coords[1]}
+                  lat={initialCoords.lat}
+                  lng={initialCoords.lng}
                   ville={annonce.ville || ""}
                   exact={!!annonce.localisation_exacte && hasExactCoords}
                 />

@@ -11,7 +11,11 @@
       "Bash(cmd /c dir /b \"C:\\\\Users\\\\fab-d\\\\OneDrive\\\\Bureau\\\\NextImmo-main\\\\NextImmo-main\\\\.claude\")",
       "Bash(cmd *)",
       "Bash(grep -E \"^\\(build-error-resolver|silent-failure-hunter|type-design-analyzer|code-simplifier|doc-updater|tdd-guide|pr-test-analyzer|planner|code-reviewer|chief-of-staff\\)\\\\.md$\")",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(rm nestmatch/app/api/admin/annonces/[id]/route.ts)",
+      "Bash(rmdir nestmatch/app/api/admin/annonces/[id])",
+      "Bash(rm \"app/api/admin/annonces/[id]/route.ts\")",
+      "Bash(rmdir \"app/api/admin/annonces/[id]\")"
     ]
   }
 }

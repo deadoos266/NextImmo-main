@@ -78,8 +78,14 @@ export async function POST(req: NextRequest) {
   })
 
   if (error) {
-    console.error("[/api/signalements POST]", error)
-    return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 })
+    console.error("[/api/signalements POST]", error, { email, type: parsed.data.type, target_id: parsed.data.target_id })
+    // Remonter le code Postgres pour faciliter le debug (42P01 = table manquante,
+    // 23502 = NOT NULL manquant, 23514 = CHECK violation, etc.)
+    const hint = error.code ? ` (code ${error.code})` : ""
+    return NextResponse.json(
+      { success: false, error: `Erreur base de données${hint} : ${error.message || "inconnue"}` },
+      { status: 500 }
+    )
   }
 
   return NextResponse.json({ success: true })

@@ -72,6 +72,45 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 
 ## Historique des batchs
 
+### Batch 28 — Géocodage mondial, proprio delete, real-time visites, date fix (2026-04-18)
+- **Géocodage mondial via Nominatim** (`lib/geocoding.ts`) : fini les
+  38 villes hardcodées. Stratégie en 3 niveaux :
+  1. `annonce.lat/lng` (BAN à la publication)
+  2. `cityCoords.ts` statique (52 villes FR, instantané)
+  3. Nominatim API (gratuite, sans clé, rate-limited 1 req/s) — résultat
+     cacheé 30 jours dans localStorage
+  Toute ville du monde est maintenant géocodée (Vannes, Lorient, Quimper,
+  petites villes, international). Queue séquentielle pour respecter
+  le rate-limit OSM.
+- **Respect `localisation_exacte` sur la liste /annonces** : si le proprio
+  n'a pas activé la loc exacte, les markers de la grande carte utilisent
+  le centre ville (cityCoords/Nominatim) au lieu de la lat/lng précise DB.
+  Avant, le flag n'était respecté que sur la fiche annonce — leak privacy
+  sur la liste.
+- **`MapBienWrapper` refondu** : accepte `lat/lng` null et fallback sur
+  geocoding client si absents. La fiche annonce affiche toujours la carte
+  tant que `ville` est présente.
+- **Proprio delete son propre annonce (#bug)** : il n'y avait pas de
+  bouton. Ajout du bouton Supprimer (rouge, confirmation inline) dans
+  l'onglet Mes biens. Route unifiée `/api/annonces/[id]` DELETE qui
+  accepte admin OU owner (`getServerSession + is_admin ou proprietaire_email
+  match`). Ancienne route `/api/admin/annonces/[id]` supprimée.
+- **Invalid Date en contre-proposition (#bug)** : helper `formatVisiteDate`
+  qui parse robustement "2024-03-01", "2024-03-01T00:00:00",
+  "2024-03-01T00:00:00.000Z". Plus de "Invalid Date" quand Supabase renvoie
+  le format timestamp au lieu de date.
+- **Contre-prop receveur ne voyait pas les boutons (#bug)** : abonnement
+  Supabase Realtime sur table `visites` (INSERT + UPDATE) pour la conv
+  active. Quand le proprio fait une contre-proposition, le locataire voit
+  direct la nouvelle visite apparaître avec boutons Confirmer/
+  Contre-proposer/Refuser sans reload.
+- **Case-sensitivity emails dans `loadVisitesConv`** : emails lowercased
+  dans les filtres `.eq()` Supabase (case-sensitive en Postgres). Couvre
+  les visites dont les emails ont été stockés mixed-case avant batch 27.
+- **Signalements 500 debug** : l'erreur API renvoie désormais le code
+  Postgres + message (au lieu de "Erreur serveur" générique). Facilite
+  le diagnostic si la table a une contrainte CHECK différente.
+
 ### Batch 27 — Bugs UX : admin delete, modal signaler, loc exacte, flow visite, cookie (2026-04-18)
 - **Bug admin delete annonces** : `supabase.from("annonces").delete()` côté
   browser échouait silencieusement (RLS ou FK). Remplacé par route API

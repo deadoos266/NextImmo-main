@@ -1,10 +1,11 @@
 /**
- * DELETE /api/admin/annonces/[id]
+ * DELETE /api/annonces/[id]
  *
- * Admin-only. Supprime une annonce et nettoie toutes les lignes dépendantes
- * en service_role (bypass RLS, bypass silent-fails du client anon).
+ * Supprime une annonce + nettoyage cascade (visites, messages, carnet,
+ * loyers, EDL, clics, signalements liés).
  *
- * Protection : session NextAuth + flag is_admin vérifié côté serveur.
+ * Autorisé pour : admin OU proprietaire_email === session.email.
+ * Utilise service_role pour bypass RLS et garantir la suppression.
  */
 
 import { NextRequest, NextResponse } from "next/server"
@@ -22,25 +23,29 @@ export async function DELETE(
     return NextResponse.json({ success: false, error: "Authentification requise" }, { status: 401 })
   }
 
-  // Vérifier flag admin en DB
-  const { data: user, error: userErr } = await supabaseAdmin
-    .from("users")
-    .select("is_admin")
-    .eq("email", email)
-    .single()
-
-  if (userErr || !user?.is_admin) {
-    return NextResponse.json({ success: false, error: "Accès refusé" }, { status: 403 })
-  }
-
   const { id: idParam } = await params
   const id = Number(idParam)
   if (!Number.isFinite(id) || id <= 0) {
     return NextResponse.json({ success: false, error: "ID invalide" }, { status: 400 })
   }
 
-  // Nettoyage en cascade — on avale les erreurs individuelles des tables
-  // qui n'existent peut-être pas encore (setup local), mais on log.
+  // Charge l'annonce + le flag admin en parallèle
+  const [annonceRes, userRes] = await Promise.all([
+    supabaseAdmin.from("annonces").select("id, proprietaire_email").eq("id", id).single(),
+    supabaseAdmin.from("users").select("is_admin").eq("email", email).single(),
+  ])
+
+  if (annonceRes.error || !annonceRes.data) {
+    return NextResponse.json({ success: false, error: "Annonce introuvable" }, { status: 404 })
+  }
+
+  const isAdmin = userRes.data?.is_admin === true
+  const isOwner = (annonceRes.data.proprietaire_email || "").toLowerCase() === email
+
+  if (!isAdmin && !isOwner) {
+    return NextResponse.json({ success: false, error: "Accès refusé" }, { status: 403 })
+  }
+
   const idStr = String(id)
   const cleanups = await Promise.allSettled([
     supabaseAdmin.from("visites").delete().eq("annonce_id", id),
@@ -56,13 +61,12 @@ export async function DELETE(
     .map((r, i) => ({ r, i }))
     .filter(({ r }) => r.status === "rejected" || (r.status === "fulfilled" && (r.value as any)?.error))
   if (failures.length > 0) {
-    console.warn(`[admin/annonces DELETE] cleanup warnings for annonce ${id}:`, failures.map(f => f.i))
+    console.warn(`[annonces DELETE] cleanup warnings for annonce ${id}:`, failures.map(f => f.i))
   }
 
-  // Enfin, l'annonce elle-même
   const { error: delErr } = await supabaseAdmin.from("annonces").delete().eq("id", id)
   if (delErr) {
-    console.error(`[admin/annonces DELETE] échec suppression annonce ${id}:`, delErr)
+    console.error(`[annonces DELETE] échec suppression annonce ${id}:`, delErr)
     return NextResponse.json(
       { success: false, error: `Suppression échouée : ${delErr.message}` },
       { status: 500 }

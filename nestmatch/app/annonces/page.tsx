@@ -7,6 +7,7 @@ import { calculerScore, estExclu, labelScore } from "../../lib/matching"
 import { useSession } from "next-auth/react"
 import { useRole } from "../providers"
 import { getCityCoords } from "../../lib/cityCoords"
+import { geocodeCity } from "../../lib/geocoding"
 import { getFavoris, toggleFavori } from "../../lib/favoris"
 import { calculerCompletudeProfil } from "../../lib/profilCompleteness"
 import { useResponsive } from "../hooks/useResponsive"
@@ -137,6 +138,9 @@ function AnnoncesContent() {
   const [mapBounds, setMapBounds] = useState<any>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [favoris, setFavoris] = useState<number[]>([])
+  // Map ville-normalisée → coords, rempli en background par Nominatim
+  // pour les annonces sans lat/lng et sans ville dans cityCoords.ts
+  const [geocoded, setGeocoded] = useState<Record<string, [number, number]>>({})
   const [showFilters, setShowFilters] = useState(false)
   const [motCle, setMotCle] = useState("")
   const [showMap, setShowMap] = useState(false)
@@ -196,17 +200,63 @@ function AnnoncesContent() {
     setMapBounds(bounds)
   }, [router])
 
+  // Normalisation ville identique à lib/geocoding (pour lookup dans `geocoded`)
+  const normalizeVille = (v: string) => v.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+
   const annoncesEnrichies = annonces
     .filter(a => !profil || !estExclu(a, profil))
     .map(a => {
-      const coords = getCityCoords(a.ville || "")
+      // Priorité :
+      //   1. lat/lng DB (BAN autocomplete) UNIQUEMENT si localisation_exacte=true
+      //      — si proprio ne veut pas dévoiler, on ne les utilise pas
+      //   2. cityCoords statique (centre ville)
+      //   3. geocoded async (Nominatim en background)
+      const canUseDbCoords = !!a.localisation_exacte && typeof a.lat === "number" && typeof a.lng === "number"
+      let lat: number | null = null
+      let lng: number | null = null
+      if (canUseDbCoords) {
+        lat = a.lat
+        lng = a.lng
+      } else {
+        const staticCoords = getCityCoords(a.ville || "")
+        if (staticCoords) {
+          lat = staticCoords[0]
+          lng = staticCoords[1]
+        } else if (a.ville) {
+          const g = geocoded[normalizeVille(a.ville)]
+          if (g) { lat = g[0]; lng = g[1] }
+        }
+      }
       return {
         ...a,
         scoreMatching: profil ? calculerScore(a, profil) : null,
-        _lat: coords ? coords[0] : null,
-        _lng: coords ? coords[1] : null,
+        _lat: lat,
+        _lng: lng,
       }
     })
+
+  // Background geocoding pour les villes pas dans cityCoords + pas en DB
+  useEffect(() => {
+    const missing = annonces
+      .filter(a => typeof a.lat !== "number" && typeof a.lng !== "number")
+      .filter(a => a.ville && !getCityCoords(a.ville))
+      .map(a => a.ville as string)
+    const uniques = Array.from(new Set(missing.map(normalizeVille).filter(v => !geocoded[v])))
+    if (uniques.length === 0) return
+    let cancelled = false
+    ;(async () => {
+      for (const norm of uniques) {
+        if (cancelled) return
+        const orig = missing.find(v => normalizeVille(v) === norm) ?? norm
+        const coords = await geocodeCity(orig)
+        if (cancelled) return
+        if (coords) {
+          setGeocoded(prev => prev[norm] ? prev : { ...prev, [norm]: coords })
+        }
+      }
+    })()
+    return () => { cancelled = true }
+  }, [annonces, geocoded])
 
   // Filtres URL/profil + options de filtre (sans le mapBounds) —
   // ce qui sera passe comme markers a la carte
