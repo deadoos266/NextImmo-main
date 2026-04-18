@@ -41,6 +41,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Raison invalide" }, { status: 422 })
   }
 
+  // On ne signale pas son propre contenu
+  if (parsed.data.type === "annonce") {
+    const { data: annonce } = await supabaseAdmin
+      .from("annonces")
+      .select("proprietaire_email")
+      .eq("id", Number(parsed.data.target_id))
+      .single()
+    if (annonce && (annonce.proprietaire_email || "").toLowerCase() === email) {
+      return NextResponse.json({ success: false, error: "Vous ne pouvez pas signaler votre propre annonce." }, { status: 403 })
+    }
+  }
+  if (parsed.data.type === "user" && parsed.data.target_id.toLowerCase() === email) {
+    return NextResponse.json({ success: false, error: "Vous ne pouvez pas vous signaler vous-même." }, { status: 403 })
+  }
+
   // Rate limit 10/jour/user
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
   const { count } = await supabaseAdmin

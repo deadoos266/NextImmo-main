@@ -1,6 +1,7 @@
 "use client"
 import { useSession } from "next-auth/react"
 import { useEffect, useState, useRef, useCallback } from "react"
+import { createPortal } from "react-dom"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "../../lib/supabase"
@@ -228,6 +229,9 @@ function MessagesInner() {
   const [replyTo, setReplyTo] = useState<{ id: number; contenu: string; from: string } | null>(null)
   // Menu d'actions sur un message (id du msg ouvert, null = fermé)
   const [menuMsgId, setMenuMsgId] = useState<number | null>(null)
+  // Ancre du menu ⋯ : coords du bouton + côté d'affichage. Rendu via
+  // portal dans <body> pour échapper overflow-hidden du scroll chat.
+  const [menuAnchor, setMenuAnchor] = useState<{ top: number; left: number; right: number; isMine: boolean } | null>(null)
   // Modale annulation visite (inline dans la conv)
   const [visiteCancelTarget, setVisiteCancelTarget] = useState<{ v: any; mode: "refus" | "annulation" } | null>(null)
   const [visitesConv, setVisitesConv] = useState<any[]>([])
@@ -1008,34 +1012,36 @@ function MessagesInner() {
                                 } as React.CSSProperties}
                               >
                                 <button
-                                  onClick={e => { e.stopPropagation(); setMenuMsgId(menuMsgId === m.id ? null : m.id) }}
+                                  onClick={e => {
+                                    e.stopPropagation()
+                                    if (menuMsgId === m.id) {
+                                      setMenuMsgId(null)
+                                      setMenuAnchor(null)
+                                    } else {
+                                      const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
+                                      setMenuAnchor({
+                                        top: rect.bottom + 6,
+                                        left: rect.left,
+                                        right: window.innerWidth - rect.right,
+                                        isMine,
+                                      })
+                                      setMenuMsgId(m.id)
+                                    }
+                                  }}
                                   aria-label="Actions sur le message"
                                   style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "50%", width: 26, height: 26, cursor: "pointer", fontSize: 14, color: "#6b7280", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, fontFamily: "inherit", lineHeight: 1, boxShadow: "0 2px 6px rgba(0,0,0,0.1)" }}
                                 >
                                   ⋯
                                 </button>
-                                {menuMsgId === m.id && (
+                                {/* Menu rendu via portal plus bas pour échapper overflow chat */}
+                                {false && (
                                   <>
-                                    <div onClick={() => setMenuMsgId(null)} style={{ position: "fixed", inset: 0, zIndex: 9998 }} />
-                                    <div style={{ position: "absolute", top: 30, [isMine ? "left" : "right"]: 0, background: "white", border: "1px solid #e5e7eb", borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.12)", zIndex: 9999, minWidth: 160, overflow: "hidden" } as React.CSSProperties}>
-                                      <button onClick={() => repondreMessage(m)}
-                                        style={{ display: "block", width: "100%", padding: "10px 14px", background: "white", border: "none", textAlign: "left", fontSize: 13, color: "#111", cursor: "pointer", fontFamily: "inherit" }}
-                                        onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
-                                        onMouseLeave={e => (e.currentTarget.style.background = "white")}>
-                                        Répondre
-                                      </button>
-                                      <button onClick={() => copierMessage(m.contenu)}
-                                        style={{ display: "block", width: "100%", padding: "10px 14px", background: "white", border: "none", textAlign: "left", fontSize: 13, color: "#111", cursor: "pointer", fontFamily: "inherit" }}
-                                        onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
-                                        onMouseLeave={e => (e.currentTarget.style.background = "white")}>
-                                        Copier le texte
-                                      </button>
+                                    <div style={{}} />
+                                    <div style={{}}>
+                                      <button>Répondre</button>
+                                      <button>Copier</button>
                                       {isMine && (
-                                        <button onClick={() => supprimerMessage(m.id)}
-                                          style={{ display: "block", width: "100%", padding: "10px 14px", background: "white", border: "none", textAlign: "left", fontSize: 13, color: "#dc2626", cursor: "pointer", fontFamily: "inherit", borderTop: "1px solid #f3f4f6" }}
-                                          onMouseEnter={e => (e.currentTarget.style.background = "#fef2f2")}
-                                          onMouseLeave={e => (e.currentTarget.style.background = "white")}>
-                                          Supprimer
+                                        <button>Supprimer
                                         </button>
                                       )}
                                     </div>
@@ -1229,6 +1235,43 @@ function MessagesInner() {
           </div>
         </div>
       </div>
+      {/* Menu actions message — portal body pour échapper overflow-hidden du chat */}
+      {menuMsgId !== null && menuAnchor && typeof document !== "undefined" && (() => {
+        const m = messages.find(x => x.id === menuMsgId)
+        if (!m) return null
+        const close = () => { setMenuMsgId(null); setMenuAnchor(null) }
+        const menuStyle: React.CSSProperties = menuAnchor.isMine
+          ? { position: "fixed", top: menuAnchor.top, left: menuAnchor.left, zIndex: 10001, background: "white", border: "1px solid #e5e7eb", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", minWidth: 170, overflow: "hidden" }
+          : { position: "fixed", top: menuAnchor.top, right: menuAnchor.right, zIndex: 10001, background: "white", border: "1px solid #e5e7eb", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", minWidth: 170, overflow: "hidden" }
+        return createPortal(
+          <>
+            <div onClick={close} style={{ position: "fixed", inset: 0, zIndex: 10000 }} />
+            <div style={menuStyle}>
+              <button onClick={() => { repondreMessage(m); close() }}
+                style={{ display: "block", width: "100%", padding: "10px 14px", background: "white", border: "none", textAlign: "left", fontSize: 13, color: "#111", cursor: "pointer", fontFamily: "inherit" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
+                onMouseLeave={e => (e.currentTarget.style.background = "white")}>
+                Répondre
+              </button>
+              <button onClick={() => { copierMessage(m.contenu); close() }}
+                style={{ display: "block", width: "100%", padding: "10px 14px", background: "white", border: "none", textAlign: "left", fontSize: 13, color: "#111", cursor: "pointer", fontFamily: "inherit" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
+                onMouseLeave={e => (e.currentTarget.style.background = "white")}>
+                Copier le texte
+              </button>
+              {menuAnchor.isMine && (
+                <button onClick={() => { supprimerMessage(m.id); close() }}
+                  style={{ display: "block", width: "100%", padding: "10px 14px", background: "white", border: "none", textAlign: "left", fontSize: 13, color: "#dc2626", cursor: "pointer", fontFamily: "inherit", borderTop: "1px solid #f3f4f6" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#fef2f2")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "white")}>
+                  Supprimer
+                </button>
+              )}
+            </div>
+          </>,
+          document.body
+        )
+      })()}
     </main>
   )
 }

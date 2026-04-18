@@ -13,9 +13,12 @@ interface Props {
   targetId: string
   label?: string
   compact?: boolean
+  /** Email à qui appartient la cible. Si = session.user.email, le bouton
+   *  est masqué (on ne signale pas son propre contenu). */
+  hideForEmail?: string | null
 }
 
-export default function SignalerButton({ type, targetId, label = "Signaler", compact = false }: Props) {
+export default function SignalerButton({ type, targetId, label = "Signaler", compact = false, hideForEmail }: Props) {
   const { data: session } = useSession()
   const [open, setOpen] = useState(false)
   const [raison, setRaison] = useState("")
@@ -45,6 +48,9 @@ export default function SignalerButton({ type, targetId, label = "Signaler", com
   useEffect(() => { setMounted(true) }, [])
 
   if (!session) return null
+  // On ne signale pas son propre contenu
+  const myEmail = session.user?.email?.toLowerCase()
+  if (hideForEmail && myEmail && myEmail === hideForEmail.toLowerCase()) return null
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()

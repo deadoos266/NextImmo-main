@@ -257,7 +257,7 @@ export default async function Annonce({ params }: any) {
 
               {/* Signalement (confidentiel, contenu inapproprié, arnaque, etc.) */}
               <div style={{ marginTop: 14, textAlign: "center" }}>
-                <SignalerButton type="annonce" targetId={String(annonce.id)} label="Signaler cette annonce" compact />
+                <SignalerButton type="annonce" targetId={String(annonce.id)} label="Signaler cette annonce" compact hideForEmail={annonce.proprietaire_email} />
               </div>
             </div>
           </div>
