@@ -62,7 +62,7 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
   // "En attente" = demandes qui attendent MA réponse (proposées par le locataire).
   // Les visites que J'AI proposées et pour lesquelles j'attends le locataire
   // ne comptent pas comme une notif (rien à faire de mon côté).
-  const nbAttente = visites.filter(v => v.statut === "proposée" && v.propose_par !== myEmail).length
+  const nbAttente = visites.filter(v => v.statut === "proposée" && (v.propose_par || "").toLowerCase() !== (myEmail || "").toLowerCase()).length
   const nbConfirmées = visites.filter(v => v.statut === "confirmée").length
   const nbEffectuées = visites.filter(v => v.statut === "effectuée").length
 
@@ -180,7 +180,7 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
 
                     {/* Actions — ne pas proposer "Confirmer/Refuser" si c'est MOI qui ai proposé la visite */}
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      {v.statut === "proposée" && v.propose_par !== myEmail && (
+                      {v.statut === "proposée" && (v.propose_par || "").toLowerCase() !== (myEmail || "").toLowerCase() && (
                         <>
                           <button onClick={() => changerStatut(v.id, "confirmée")}
                             style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "7px 14px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
@@ -192,7 +192,7 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
                           </button>
                         </>
                       )}
-                      {v.statut === "proposée" && v.propose_par === myEmail && (
+                      {v.statut === "proposée" && (v.propose_par || "").toLowerCase() === (myEmail || "").toLowerCase() && (
                         <>
                           <span style={{ fontSize: 11, color: "#6b7280", fontStyle: "italic", padding: "7px 12px" }}>
                             En attente du locataire
@@ -247,7 +247,7 @@ export default function Proprietaire() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const { isMobile } = useResponsive()
-  const myEmail = session?.user?.email ?? null
+  const myEmail = session?.user?.email?.toLowerCase() ?? null
   const [onglet, setOnglet] = useState<Onglet>("Tableau de bord")
   const [biens, setBiens] = useState<any[]>([])
   const [candidatures, setCandidatures] = useState<any[]>([])
@@ -376,8 +376,8 @@ export default function Proprietaire() {
               {o === "Loyers" && loyersAttendus > 0 && (
                 <span style={{ marginLeft: 6, background: "#ef4444", color: "white", borderRadius: 999, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{loyersAttendus}</span>
               )}
-              {o === "Visites" && visites.filter(v => v.statut === "proposée" && v.propose_par !== myEmail).length > 0 && (
-                <span style={{ marginLeft: 6, background: "#f97316", color: "white", borderRadius: 999, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{visites.filter(v => v.statut === "proposée" && v.propose_par !== myEmail).length}</span>
+              {o === "Visites" && visites.filter(v => v.statut === "proposée" && (v.propose_par || "").toLowerCase() !== (myEmail || "").toLowerCase()).length > 0 && (
+                <span style={{ marginLeft: 6, background: "#f97316", color: "white", borderRadius: 999, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{visites.filter(v => v.statut === "proposée" && (v.propose_par || "").toLowerCase() !== (myEmail || "").toLowerCase()).length}</span>
               )}
             </button>
           ))}

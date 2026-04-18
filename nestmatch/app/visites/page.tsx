@@ -70,7 +70,7 @@ export default function MesVisites() {
   }
 
   const [cancelTarget, setCancelTarget] = useState<any | null>(null)
-  const myEmail = session?.user?.email ?? ""
+  const myEmail = session?.user?.email?.toLowerCase() ?? ""
 
   async function handleAnnulation(motif: string) {
     if (!cancelTarget) return
@@ -93,7 +93,7 @@ export default function MesVisites() {
   const filtrées = filtre === "toutes" ? visites : visites.filter(v => v.statut === filtre)
   // "En attente" compte uniquement les demandes qui attendent MA réponse
   // (proposées par le proprio), pas celles que j'ai moi-même proposées.
-  const nbAttente = visites.filter(v => v.statut === "proposée" && v.propose_par !== myEmail).length
+  const nbAttente = visites.filter(v => v.statut === "proposée" && (v.propose_par || "").toLowerCase() !== (myEmail || "").toLowerCase()).length
   const nbConfirmées = visites.filter(v => v.statut === "confirmée").length
   const prochaine = visites.find(v => v.statut === "confirmée" && new Date(v.date_visite) >= new Date())
 

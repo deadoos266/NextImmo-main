@@ -229,7 +229,7 @@ export default function AgendaVisites({
                       )}
 
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        {mode === "proprietaire" && v.statut === "proposée" && onChangerStatut && v.propose_par !== myEmail && (
+                        {mode === "proprietaire" && v.statut === "proposée" && onChangerStatut && (v.propose_par || "").toLowerCase() !== (myEmail || "").toLowerCase() && (
                           <>
                             <button onClick={() => onChangerStatut(v.id, "confirmée")}
                               style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "6px 14px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
@@ -241,7 +241,7 @@ export default function AgendaVisites({
                             </button>
                           </>
                         )}
-                        {mode === "proprietaire" && v.statut === "proposée" && v.propose_par === myEmail && (
+                        {mode === "proprietaire" && v.statut === "proposée" && (v.propose_par || "").toLowerCase() === (myEmail || "").toLowerCase() && (
                           <span style={{ fontSize: 11, color: "#6b7280", fontStyle: "italic" }}>
                             En attente du locataire
                           </span>

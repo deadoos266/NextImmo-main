@@ -93,7 +93,7 @@ export default async function Annonce({ params }: any) {
       "@type": "PostalAddress",
       addressLocality: annonce.ville,
       addressCountry: "FR",
-      streetAddress: annonce.adresse || undefined,
+      streetAddress: annonce.localisation_exacte ? (annonce.adresse || undefined) : undefined,
     },
     offers: {
       "@type": "Offer",
@@ -125,7 +125,9 @@ export default async function Annonce({ params }: any) {
         <div className="r-detail-header" style={{ margin: "16px 0 20px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
             <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.5px" }}>{annonce.titre}</h1>
-            <p style={{ color: "#6b7280", marginTop: 4 }}>{annonce.adresse}{annonce.adresse && " · "}{annonce.ville}</p>
+            <p style={{ color: "#6b7280", marginTop: 4 }}>
+              {annonce.localisation_exacte && annonce.adresse ? `${annonce.adresse} · ${annonce.ville}` : annonce.ville}
+            </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, marginLeft: 16 }}>
             <span style={{ background: annonce.dispo === "Disponible maintenant" ? "#dcfce7" : "#fff7ed", color: annonce.dispo === "Disponible maintenant" ? "#16a34a" : "#ea580c", padding: "6px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700, whiteSpace: "nowrap" }}>
@@ -193,10 +195,16 @@ export default async function Annonce({ params }: any) {
               <div style={{ background: "white", borderRadius: 20, padding: 24 }}>
                 <h2 style={{ fontSize: 17, fontWeight: 800, marginBottom: 6 }}>Localisation</h2>
                 <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 14 }}>
-                  {annonce.ville}{annonce.localisation_exacte && annonce.adresse ? ` — ${annonce.adresse}` : ""}
-                  {!annonce.localisation_exacte && ". L'adresse exacte est partagée après contact avec le propriétaire."}
+                  {annonce.localisation_exacte && annonce.adresse
+                    ? `${annonce.adresse} · ${annonce.ville}`
+                    : `${annonce.ville} — zone approximative`}
                 </p>
-                <MapBienWrapper lat={coords[0]} lng={coords[1]} ville={annonce.ville || ""} exact={!!annonce.localisation_exacte} />
+                <MapBienWrapper
+                  lat={coords[0]}
+                  lng={coords[1]}
+                  ville={annonce.ville || ""}
+                  exact={!!annonce.localisation_exacte && hasExactCoords}
+                />
               </div>
             )}
           </div>

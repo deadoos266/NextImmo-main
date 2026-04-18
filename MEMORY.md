@@ -72,6 +72,46 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 
 ## Historique des batchs
 
+### Batch 27 — Bugs UX : admin delete, modal signaler, loc exacte, flow visite, cookie (2026-04-18)
+- **Bug admin delete annonces** : `supabase.from("annonces").delete()` côté
+  browser échouait silencieusement (RLS ou FK). Remplacé par route API
+  `/api/admin/annonces/[id]` en service_role (bypass RLS) + cleanup en
+  cascade des tables dépendantes (visites, messages, carnet_entretien,
+  loyers, etats_des_lieux, clics_annonces, signalements). Protection
+  serveur : `getServerSession + is_admin` vérifiés en DB. L'erreur
+  réelle est désormais remontée à l'admin via alert.
+- **Modal SignalerButton passait sous la carte** : `position: fixed` piégé
+  par un stacking context parent (sidebar sticky + filter dark mode).
+  Fix : `createPortal(modal, document.body)` — le modal est rendu
+  directement dans `<body>`, échappe tout stacking context.
+- **Adresse fuitée dans l'en-tête de fiche annonce** : ligne 128 affichait
+  `annonce.adresse · annonce.ville` même quand `localisation_exacte=false`.
+  Fix : affichage conditionnel — adresse uniquement si toggle ON.
+  Même fix appliqué sur `streetAddress` du JSON-LD SEO.
+- **Texte sous carte trop verbeux** : "L'adresse exacte est partagée
+  après contact avec le propriétaire" remplacé par "Ville — zone
+  approximative" (quand OFF) ou "Adresse · Ville" (quand ON).
+- **Marker loc exacte pointait mal** : quand `localisation_exacte=true`
+  mais lat/lng absents (ancienne annonce avant migration 004), le
+  marqueur s'affichait au centre-ville (trompeur). Fix : dans
+  `/annonces/[id]/page.tsx`, `exact` passé à `MapBienWrapper` est
+  désormais `localisation_exacte && hasExactCoords` — si pas de vraies
+  coordonnées, le cercle approximatif est affiché à la place du marker.
+- **#46 Flow visite confirmation inversée** : les comparaisons
+  `v.propose_par !== myEmail` cassaient quand les emails avaient des
+  cases différentes (Google OAuth conserve parfois la casse originale,
+  Credentials lowercase). Fix :
+  - `myEmail` normalisé en lowercase au source dans
+    `/proprietaire/page.tsx`, `/visites/page.tsx`, `/messages/page.tsx`
+  - Emails normalisés lowercase à l'insert dans `proposerVisite`
+    (proprietaire_email, locataire_email, propose_par)
+  - Comparaisons runtime enveloppées de `.toLowerCase()` sur les deux
+    côtés pour robustesse sur données existantes mixed-case (prop,
+    /visites, /messages, AgendaVisites)
+- **#50 Cookie icon empiètement carte** : icône flottante déplacée
+  `bottom-right` → `bottom-left`. L'attribution Leaflet (bottom-right)
+  et les contrôles zoom (top-left) sont désormais dégagés partout.
+
 ### Batch 26 — Durcissement sécurité : rate-limit + MIME + RLS + migrations (2026-04-18)
 - **Nouveau `lib/rateLimit.ts`** : helper générique extrait du pattern
   `/api/agent`. Fournit `checkRateLimit(key, { max, windowMs })` et
@@ -619,16 +659,14 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 ### Bugs UX
 - **#44 Accents manquants** : 8 fichiers restants (proprietaire/edl, proprietaire/page,
   carnet, BookingVisite, proprietaire/ajouter, proprietaire/modifier, dossier, edl/consulter)
-- **#46 Flow visites confirmation inversée** : côté proprio, après refus d'une visite
-  locataire + nouvelle proposition, le système demande au proprio de confirmer
-  sa propre visite. Confusion de rôles dans le cycle "proposée" → "confirmée".
-  À debug dans VisitesProprio / AgendaVisites.
-- **#49 Carte toujours partiellement en anglais** : malgré `FrenchLeafletLocale`
-  et tuiles OSM.fr, certains éléments restent en anglais. Probable tooltips zoom
-  Leaflet ou attribution tiers.
-- **#50 Cookie icon empiète sur la carte (bis)** : malgré z-index 400 et position
-  bottom-right, l'icône cookie se superpose aux contrôles map (bottom-right).
-  À déplacer bottom-left OU masquer sur pages avec carte OU top-right.
+- ~~**#46 Flow visites confirmation inversée**~~ → **fixé batch 27**
+  (normalisation lowercase systématique des emails à la source + insert + compares)
+- **#49 Carte toujours partiellement en anglais** : les éléments critiques
+  (zoom, popup close, attribution prefix) sont déjà traduits via `FrenchLeafletLocale`
+  (MapBien + MapAnnonces). Restant : noms propres "OpenStreetMap", "CARTO" dans
+  l'attribution (impossibles à traduire, licence impose). Considérer comme
+  fermé sauf nouvelle remontée concrète.
+- ~~**#50 Cookie icon empiète sur la carte**~~ → **fixé batch 27** (déplacé bottom-left)
 
 ---
 

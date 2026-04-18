@@ -227,7 +227,7 @@ function MessagesInner() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const myEmail = session?.user?.email
+  const myEmail = session?.user?.email?.toLowerCase()
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth")
@@ -579,13 +579,13 @@ function MessagesInner() {
 
     const { data: visite } = await supabase.from("visites").insert([{
       annonce_id: convActiveData.annonceId,
-      proprietaire_email: propEmail,
-      locataire_email: locEmail,
+      proprietaire_email: propEmail.toLowerCase(),
+      locataire_email: locEmail.toLowerCase(),
       date_visite: visiteDate,
       heure: visiteHeure,
       message: visiteMessage.trim() || null,
       statut: "proposée",
-      propose_par: myEmail,
+      propose_par: myEmail.toLowerCase(),
     }]).select().single()
     if (visite) {
       setVisitesConv(prev => [...prev, visite])
@@ -1020,7 +1020,7 @@ function MessagesInner() {
                             </div>
                             {/* Cas 1 — Demande REÇUE (l'autre partie a proposé, c'est à moi d'agir)
                                 → Confirmer / Contre-proposer / Refuser. Pas d'Annuler. */}
-                            {isPending && v.propose_par !== myEmail && (
+                            {isPending && (v.propose_par || "").toLowerCase() !== (myEmail || "").toLowerCase() && (
                               <div style={{ display: "flex", gap: 6, flexShrink: 0, flexWrap: "wrap" }}>
                                 <button onClick={() => changerStatutVisite(v.id, "confirmée")}
                                   style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "5px 12px", fontWeight: 700, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
@@ -1044,7 +1044,7 @@ function MessagesInner() {
                             )}
                             {/* Cas 2 — Ma PROPRE proposition en attente (j'attends la réponse)
                                 → Annuler uniquement (retirer ma demande). */}
-                            {isPending && v.propose_par === myEmail && (
+                            {isPending && (v.propose_par || "").toLowerCase() === (myEmail || "").toLowerCase() && (
                               <button onClick={() => setVisiteCancelTarget({ v, mode: "annulation" })}
                                 style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "5px 10px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
                                 Annuler

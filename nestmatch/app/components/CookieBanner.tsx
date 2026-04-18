@@ -96,7 +96,7 @@ function FloatingCookieButton({ onClick }: { onClick: () => void }) {
       style={{
         position: "fixed",
         bottom: 20,
-        right: 20,
+        left: 20,
         zIndex: 400,
         width: 40,
         height: 40,
@@ -136,8 +136,8 @@ export default function CookieBanner() {
   const [dismissed, setDismissed] = useState(false)
   const [animateIn, setAnimateIn] = useState(false)
 
-  // Masquer l'icône flottante sur les pages avec grande carte (chevauche les
-  // contrôles map bottom-right). Le bandeau initial reste affiché.
+  // Masquer l'icône flottante sur les pages avec grande carte pleine-largeur.
+  // Ailleurs (fiches annonce, /location/[ville]), la carte est encadrée donc OK.
   const hideFloatingOnThisPage = pathname === "/annonces"
 
   useEffect(() => {

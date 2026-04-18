@@ -190,8 +190,14 @@ export default function Admin() {
   }
 
   async function supprimerAnnonce(id: number) {
-    const { error } = await supabase.from("annonces").delete().eq("id", id)
-    if (!error) { setAnnonces(annonces.filter(a => a.id !== id)); setConfirmId(null) }
+    const res = await fetch(`/api/admin/annonces/${id}`, { method: "DELETE" })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok || !json.success) {
+      alert(`Suppression échouée : ${json.error || res.statusText}`)
+      return
+    }
+    setAnnonces(annonces.filter(a => a.id !== id))
+    setConfirmId(null)
   }
 
   async function supprimerUtilisateur(email: string) {
