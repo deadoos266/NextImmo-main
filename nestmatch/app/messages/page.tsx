@@ -904,11 +904,19 @@ function MessagesInner() {
       query = query.eq("locataire_email", me).eq("proprietaire_email", other)
     }
     if (annonceId) query = query.eq("annonce_id", annonceId)
-    // On charge aussi les visites "annulée" récentes pour garder un contexte
-    // visuel (permet à l'user de voir "ma proposition a été refusée" et d'offrir
-    // un CTA "Proposer un autre créneau" directement depuis la carte).
-    const { data } = await query.in("statut", ["proposée", "confirmée", "annulée"]).order("date_visite", { ascending: true })
-    setVisitesConv(data || [])
+    const { data } = await query
+      .in("statut", ["proposée", "confirmée", "annulée"])
+      .order("date_visite", { ascending: true })
+    const all = data || []
+    // Toutes les visites actives (proposée/confirmée) + UNIQUEMENT la visite
+    // annulée la plus récente (pour offrir "Proposer un autre créneau" sans
+    // polluer la conv avec tout l'historique).
+    const actives = all.filter(v => v.statut === "proposée" || v.statut === "confirmée")
+    const annuleesSorted = all
+      .filter(v => v.statut === "annulée")
+      .sort((a, b) => new Date(b.created_at || b.date_visite || 0).getTime() - new Date(a.created_at || a.date_visite || 0).getTime())
+    const derniereAnnulee = actives.length === 0 && annuleesSorted.length > 0 ? [annuleesSorted[0]] : []
+    setVisitesConv([...actives, ...derniereAnnulee])
   }
 
   async function demanderDossier() {
@@ -1095,7 +1103,7 @@ function MessagesInner() {
           <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 800, marginBottom: isMobile ? 16 : 24, letterSpacing: "-0.5px", padding: isMobile ? 0 : undefined }}>Messages</h1>
         )}
 
-        <div style={{ display: "flex", gap: isMobile && convActiveData ? 0 : 16, height: isMobile ? "calc(100vh - 64px)" : "76vh" }}>
+        <div style={{ display: "flex", gap: isMobile && convActiveData ? 0 : 16, height: isMobile ? "calc(100vh - 72px)" : "76vh" }}>
 
           {/* ── Colonne gauche : conversations ── */}
           <div style={{ width: isMobile ? "100%" : 300, flexShrink: 0, background: "white", borderRadius: isMobile ? 0 : 20, display: isMobile && convActiveData ? "none" : "flex", flexDirection: "column", overflow: "hidden", boxShadow: isMobile ? "none" : "0 2px 12px rgba(0,0,0,0.06)" }}>

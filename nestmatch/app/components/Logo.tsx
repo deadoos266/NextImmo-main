@@ -21,13 +21,13 @@ const SIZES: Record<LogoVariant, {
   gap: number
   showText: boolean
 }> = {
-  navbar:  { iconSize: 34, fontSize: 20, weight: 900, letterSpacing: "-0.5px", gap: 8,  showText: true  },
-  footer:  { iconSize: 28, fontSize: 17, weight: 800, letterSpacing: "-0.3px", gap: 8,  showText: true  },
-  auth:    { iconSize: 56, fontSize: 26, weight: 900, letterSpacing: "-0.8px", gap: 12, showText: true  },
-  hero:    { iconSize: 72, fontSize: 38, weight: 900, letterSpacing: "-1.2px", gap: 14, showText: true  },
-  compact: { iconSize: 28, fontSize: 16, weight: 800, letterSpacing: "-0.3px", gap: 8,  showText: false },
-  email:   { iconSize: 36, fontSize: 20, weight: 800, letterSpacing: "-0.5px", gap: 10, showText: true  },
-  pdf:     { iconSize: 24, fontSize: 16, weight: 800, letterSpacing: "-0.3px", gap: 8,  showText: true  },
+  navbar:  { iconSize: 46, fontSize: 24, weight: 900, letterSpacing: "-0.5px", gap: 10, showText: true  },
+  footer:  { iconSize: 36, fontSize: 19, weight: 800, letterSpacing: "-0.3px", gap: 10, showText: true  },
+  auth:    { iconSize: 72, fontSize: 30, weight: 900, letterSpacing: "-0.8px", gap: 14, showText: true  },
+  hero:    { iconSize: 96, fontSize: 44, weight: 900, letterSpacing: "-1.2px", gap: 18, showText: true  },
+  compact: { iconSize: 40, fontSize: 16, weight: 800, letterSpacing: "-0.3px", gap: 8,  showText: false },
+  email:   { iconSize: 48, fontSize: 22, weight: 800, letterSpacing: "-0.5px", gap: 12, showText: true  },
+  pdf:     { iconSize: 32, fontSize: 17, weight: 800, letterSpacing: "-0.3px", gap: 10, showText: true  },
 }
 
 /**

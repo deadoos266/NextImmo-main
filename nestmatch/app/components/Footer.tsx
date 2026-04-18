@@ -1,9 +1,11 @@
 "use client"
 import { useResponsive } from "../hooks/useResponsive"
+import { useRole } from "../providers"
 import Logo from "./Logo"
 
 export default function Footer() {
   const { isMobile, isTablet } = useResponsive()
+  const { proprietaireActive } = useRole()
   const col: any = { display: "flex", flexDirection: "column", gap: 8 }
   const link: any = { color: "#6b7280", textDecoration: "none", fontSize: 13, fontWeight: 400, lineHeight: 1.5 }
   const head: any = { fontSize: 12, fontWeight: 800, color: "#111", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 6 }
@@ -33,12 +35,27 @@ export default function Footer() {
             <a href="/auth?mode=inscription" style={link}>Créer un compte</a>
           </div>
 
-          {/* Propriétaires */}
+          {/* Mon espace — adapté au rôle. Le locataire ne voit PAS les
+              raccourcis "Publier un bien / Mon espace proprio" (hors scope).
+              Le proprio voit ses actions de gestion. */}
           <div style={col}>
-            <p style={head}>Propriétaires</p>
-            <a href="/proprietaire/ajouter" style={link}>Publier un bien</a>
-            <a href="/proprietaire" style={link}>Mon espace</a>
-            <a href="/carnet" style={link}>Carnet d&apos;entretien</a>
+            {proprietaireActive ? (
+              <>
+                <p style={head}>Mon espace propriétaire</p>
+                <a href="/proprietaire" style={link}>Mes biens</a>
+                <a href="/proprietaire/ajouter" style={link}>Publier un bien</a>
+                <a href="/carnet" style={link}>Carnet d&apos;entretien</a>
+                <a href="/proprietaire/stats" style={link}>Statistiques</a>
+              </>
+            ) : (
+              <>
+                <p style={head}>Mon espace</p>
+                <a href="/dossier" style={link}>Mon dossier</a>
+                <a href="/mes-candidatures" style={link}>Mes candidatures</a>
+                <a href="/visites" style={link}>Mes visites</a>
+                <a href="/mon-logement" style={link}>Mon logement</a>
+              </>
+            )}
           </div>
 
           {/* Légal & aide */}

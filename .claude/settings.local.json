@@ -20,7 +20,8 @@
       "WebFetch(domain:www.seloger.com)",
       "Bash(npx next *)",
       "Bash(npx vitest *)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(xargs sed *)"
     ]
   }
 }

@@ -9,7 +9,7 @@ export const metadata = {
 export default function NotFound() {
   return (
     <main style={{
-      minHeight: "calc(100vh - 64px)",
+      minHeight: "calc(100vh - 72px)",
       background: "#F7F4EF",
       fontFamily: "'DM Sans', sans-serif",
       display: "flex",

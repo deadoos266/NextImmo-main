@@ -117,7 +117,7 @@ export default function Navbar() {
   const totalBadge = badgeVisites + badgeMessages
 
   return (
-    <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: isSmall ? "0 16px" : "0 48px", background: "white", borderBottom: "1px solid #e5e7eb", position: "sticky", top: 0, zIndex: 7000, height: 64, boxShadow: "0 1px 8px rgba(0,0,0,0.05)" }}>
+    <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: isSmall ? "0 16px" : "0 48px", background: "white", borderBottom: "1px solid #e5e7eb", position: "sticky", top: 0, zIndex: 7000, height: 72, boxShadow: "0 1px 8px rgba(0,0,0,0.05)" }}>
 
       {/* Logo */}
       <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
@@ -193,8 +193,8 @@ export default function Navbar() {
               <div onClick={() => setMenuOpen(!menuOpen)}
                 style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "6px 12px", borderRadius: 999, border: "1.5px solid #e5e7eb", background: menuOpen ? "#f3f4f6" : "white" }}>
                 {avatarSrc
-                  ? <img src={avatarSrc} alt="avatar" referrerPolicy="no-referrer" style={{ width: 30, height: 30, borderRadius: "50%", objectFit: "cover" }} />
-                  : <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 13 }}>{session.user?.name?.[0]}</div>
+                  ? <img src={avatarSrc} alt="avatar" referrerPolicy="no-referrer" style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }} />
+                  : <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 16 }}>{session.user?.name?.[0]}</div>
                 }
                 <span style={{ fontSize: 14, fontWeight: 600 }}>{session.user?.name?.split(" ")[0]}</span>
                 <span style={{ fontSize: 10, color: "#6b7280" }}>▼</span>
@@ -337,7 +337,7 @@ export default function Navbar() {
           <div
             aria-hidden={!mobileOpen}
             style={{
-              position: "fixed", top: 64, left: 0, bottom: 0,
+              position: "fixed", top: 72, left: 0, bottom: 0,
               width: "100vw",
               background: "white", zIndex: 8001, overflowY: "auto",
               boxShadow: mobileOpen ? "0 0 40px rgba(0,0,0,0.15)" : "none",
@@ -350,8 +350,8 @@ export default function Navbar() {
             {session && (
               <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: 12 }}>
                 {avatarSrc
-                  ? <img src={avatarSrc} alt="avatar" referrerPolicy="no-referrer" style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }} />
-                  : <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 15 }}>{session.user?.name?.[0]}</div>
+                  ? <img src={avatarSrc} alt="avatar" referrerPolicy="no-referrer" style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover" }} />
+                  : <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 18 }}>{session.user?.name?.[0]}</div>
                 }
                 <div>
                   <p style={{ fontWeight: 700, fontSize: 14 }}>{session.user?.name}</p>
