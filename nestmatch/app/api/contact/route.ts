@@ -11,6 +11,8 @@ const schema = z.object({
   email: z.string().email().max(180),
   sujet: z.string().min(1),
   message: z.string().min(10).max(4000),
+  // Honeypot : champ invisible rempli par les bots uniquement → si non vide, on rejette silencieusement.
+  website: z.string().optional(),
 })
 
 /**
@@ -41,6 +43,11 @@ export async function POST(req: NextRequest) {
       { success: false, error: parsed.error.errors[0]?.message ?? "Données invalides" },
       { status: 422 },
     )
+  }
+
+  // Honeypot trigger : on renvoie un faux succès pour ne pas alerter le bot.
+  if (parsed.data.website && parsed.data.website.trim().length > 0) {
+    return NextResponse.json({ success: true })
   }
 
   const validSujets = SUJETS_CONTACT.map(s => s.code)

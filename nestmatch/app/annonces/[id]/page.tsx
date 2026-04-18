@@ -117,12 +117,29 @@ export default async function Annonce({ params }: any) {
     numberOfRooms: annonce.pieces || undefined,
   }
 
+  // BreadcrumbList : aide Google à afficher le fil d'Ariane dans les SERP
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Accueil", item: BASE_URL },
+      { "@type": "ListItem", position: 2, name: "Annonces", item: `${BASE_URL}/annonces` },
+      { "@type": "ListItem", position: 3, name: annonce.titre, item: `${BASE_URL}/annonces/${id}` },
+    ],
+  }
+
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbLd).replace(/</g, "\\u003c"),
         }}
       />
       <div className="r-container" style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 48px" }}>

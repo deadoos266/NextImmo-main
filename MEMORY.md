@@ -72,6 +72,42 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 
 ## Historique des batchs
 
+### Batch 33 — DRY refactor + BreadcrumbList + sécu agent sessionId (2026-04-18)
+
+#### Duplications extraites en helpers partagés
+- **`STATUT_VISITE_STYLE` + `STATUT_VISITE_DOT`** → `lib/visitesHelpers.ts`.
+  4 duplications supprimées (AgendaVisites, `/visites`, `/messages`,
+  `/proprietaire`). Cohérence visuelle garantie, un seul endroit à
+  modifier si la palette change.
+- **`Toggle` + `Sec` + `F`** → `app/components/FormHelpers.tsx`.
+  3 duplications supprimées (`/profil`, `/proprietaire/ajouter`,
+  `/proprietaire/modifier`). Composants définis hors des pages React →
+  pas de risque de perte de focus sur inputs (règle NestMatch).
+- **`lib/dateHelpers.ts`** créé avec `joursRelatif()` et `formatDateFR()`
+  robustes (gèrent les 3 formats Supabase : date, timestamp, ISO complet,
+  retournent "" si invalide au lieu de "Invalid Date").
+
+#### SEO
+- **BreadcrumbList JSON-LD** ajouté sur `/annonces/[id]` (Accueil →
+  Annonces → {titre}) — éligible rich result fil d'Ariane Google.
+
+#### Sécurité — cloisonnement sessions agent IA
+- **`lib/agentMemory.ts::getOrCreateSession`** : si un sessionId existe
+  déjà mais appartient à un autre user (`existing.userEmail !== userEmail`),
+  on refuse l'accès et on écrase par une nouvelle session vide. Empêche
+  un attaquant qui devinerait/forgerait un sessionId de reprendre la
+  conversation d'un autre utilisateur.
+- **`/api/agent`** : validation stricte du format sessionId (regex UUID).
+  Un sessionId non-UUID est ignoré → nouvel UUID généré. Anti-forge.
+
+#### Responsive tablette (#audit responsive-auditor CRITICAL)
+- **/annonces** : basculement `isMobile` → `isSmall = isMobile || isTablet`
+  sur les 4 décisions de layout clés (toggle Filtres/Carte, flex direction,
+  sidebar width, sidebar display toggle, list column width, map display).
+  iPad portrait (768px) pouvait afficher sidebar 200 + list 360 + carte
+  simultanément, écrasant la carte ; désormais stack vertical propre
+  avec bouton Filtres/Carte actif en tablette comme en mobile.
+
 ### Batch 32 — Pages légales rédigées + sécu HIGH + iOS zoom inputs (2026-04-18)
 
 #### Pages footer complètes

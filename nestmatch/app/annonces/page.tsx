@@ -368,8 +368,9 @@ function AnnoncesContent() {
         ) : null}
       </div>
 
-      {/* Barre mobile filtres + carte */}
-      {isMobile && (
+      {/* Barre filtres + carte affichée aussi en tablette (iPad portrait trop étroit
+          pour sidebar 200 + liste 360 + carte simultanées) */}
+      {isSmall && (
         <div style={{ display: "flex", gap: 8, padding: "0 16px 10px", flexShrink: 0 }}>
           <button onClick={() => setShowFilters(!showFilters)}
             style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 14px", background: showFilters ? "#111" : "white", color: showFilters ? "white" : "#374151", border: "1.5px solid #e5e7eb", borderRadius: 10, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
@@ -382,11 +383,11 @@ function AnnoncesContent() {
         </div>
       )}
 
-      {/* Corps principal */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden", padding: isMobile ? "0 16px 16px" : "0 12px 12px 24px", gap: 12, flexDirection: isMobile ? "column" : "row" }}>
+      {/* Corps principal — stack vertical en mobile/tablette, horizontal desktop */}
+      <div style={{ flex: 1, display: "flex", overflow: "hidden", padding: isMobile ? "0 16px 16px" : "0 12px 12px 24px", gap: 12, flexDirection: isSmall ? "column" : "row" }}>
 
-        {/* Sidebar filtres */}
-        <div style={{ width: isMobile ? "100%" : 200, flexShrink: 0, overflowY: "auto", display: isMobile && !showFilters ? "none" : "block", maxHeight: isMobile ? 300 : undefined }}>
+        {/* Sidebar filtres — masquée en mobile/tablette sauf toggle on */}
+        <div style={{ width: isSmall ? "100%" : 200, flexShrink: 0, overflowY: "auto", display: isSmall && !showFilters ? "none" : "block", maxHeight: isSmall ? 300 : undefined }}>
           <div style={{ background: "white", borderRadius: 18, padding: 18 }}>
             <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 14, color: "#111" }}>Affiner</p>
 
@@ -503,7 +504,7 @@ function AnnoncesContent() {
         </div>
 
         {/* Liste */}
-        <div style={{ width: isMobile ? "100%" : 360, flex: isMobile && !showMap ? 1 : undefined, flexShrink: 0, overflowY: "auto", display: isMobile && showMap ? "none" : "flex", flexDirection: "column", gap: 0 }}>
+        <div style={{ width: isSmall ? "100%" : 360, flex: isSmall && !showMap ? 1 : undefined, flexShrink: 0, overflowY: "auto", display: isSmall && showMap ? "none" : "flex", flexDirection: "column", gap: 0 }}>
           {/* Compteur */}
           <div style={{ padding: "2px 0 10px", flexShrink: 0 }}>
             <p style={{ fontSize: 13, color: "#6b7280" }}>
@@ -593,7 +594,7 @@ function AnnoncesContent() {
         </div>
 
         {/* Carte — isolation: isolate pour que Leaflet reste sous la navbar */}
-        <div style={{ flex: 1, position: "relative", isolation: "isolate", borderRadius: isMobile ? 0 : 18, overflow: "hidden", display: isMobile && !showMap ? "none" : "block" }}>
+        <div style={{ flex: 1, position: "relative", isolation: "isolate", borderRadius: isMobile ? 0 : 18, overflow: "hidden", display: isSmall && !showMap ? "none" : "block" }}>
           <MapAnnonces
             annonces={annoncesForMap}
             selectedId={selectedId}

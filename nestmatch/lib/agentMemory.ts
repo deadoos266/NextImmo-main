@@ -43,9 +43,28 @@ export function getOrCreateSession(
   userEmail?: string
 ): AgentSession {
   pruneOldSessions()
-  let session = store.get(sessionId)
-  if (!session) {
-    session = {
+  const existing = store.get(sessionId)
+  // Sécurité : si une session existe pour ce sessionId MAIS appartient à un
+  // autre utilisateur, on refuse d'y accéder et on crée une nouvelle session
+  // isolée. Évite qu'un attaquant connaissant/devinant un sessionId d'un
+  // autre user puisse reprendre sa conversation.
+  if (existing && userEmail && existing.userEmail && existing.userEmail !== userEmail) {
+    const fresh: AgentSession = {
+      sessionId,
+      userEmail,
+      messages: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }
+    // On écrase : l'ancienne session est perdue pour l'ancien propriétaire
+    // (attendu : il aurait dû garder son propre sessionId privé). C'est
+    // acceptable car en pratique le client UI stocke son sessionId, et la
+    // collision est uniquement le fait d'un appel API manuel/malveillant.
+    store.set(sessionId, fresh)
+    return fresh
+  }
+  if (!existing) {
+    const session: AgentSession = {
       sessionId,
       userEmail,
       messages: [],
@@ -53,8 +72,9 @@ export function getOrCreateSession(
       updatedAt: Date.now(),
     }
     store.set(sessionId, session)
+    return session
   }
-  return session
+  return existing
 }
 
 export function addMessage(

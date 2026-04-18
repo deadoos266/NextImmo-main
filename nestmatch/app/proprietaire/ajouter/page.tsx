@@ -11,29 +11,7 @@ import AddressAutocomplete from "../../components/AddressAutocomplete"
 import Tooltip from "../../components/Tooltip"
 import MarketRentHint from "./MarketRentHint"
 
-const Toggle = ({ label, k, toggles, setToggles }: any) => (
-  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-    <span style={{ fontSize: 14, fontWeight: 500 }}>{label}</span>
-    <div onClick={() => setToggles((t: any) => ({ ...t, [k]: !t[k] }))}
-      style={{ width: 44, height: 24, borderRadius: 999, background: toggles[k] ? "#111" : "#e5e7eb", cursor: "pointer", position: "relative", transition: "background 0.2s" }}>
-      <div style={{ width: 18, height: 18, borderRadius: "50%", background: "white", position: "absolute", top: 3, left: toggles[k] ? 23 : 3, transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }} />
-    </div>
-  </div>
-)
-
-const Sec = ({ t, children }: any) => (
-  <div style={{ background: "white", borderRadius: 20, padding: 28, marginBottom: 20 }}>
-    <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20 }}>{t}</h2>
-    {children}
-  </div>
-)
-
-const F = ({ l, children }: any) => (
-  <div style={{ marginBottom: 16 }}>
-    <label style={{ fontSize: 13, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 6 }}>{l}</label>
-    {children}
-  </div>
-)
+import { Toggle, Sec, F } from "../../components/FormHelpers"
 
 export default function AjouterBien() {
   const { data: session } = useSession()

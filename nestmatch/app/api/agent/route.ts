@@ -86,8 +86,16 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Validation sessionId : doit être un UUID (format strict) sinon ignoré.
+    // Empêche un attaquant de forger un sessionId pour tenter de récupérer
+    // la conversation d'un autre user.
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    const safeSessionId = incomingSessionId && UUID_RE.test(incomingSessionId)
+      ? incomingSessionId
+      : null
+
     // ── Session agent ──────────────────────────────────────────────────────
-    const sessionId = incomingSessionId ?? randomUUID()
+    const sessionId = safeSessionId ?? randomUUID()
     const agentSession = getOrCreateSession(sessionId, userEmail)
     const history = toAnthropicHistory(agentSession)
 
