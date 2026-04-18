@@ -96,7 +96,7 @@ async function telechargerPhotosZip(edl: any) {
   URL.revokeObjectURL(href)
 
   if (failed > 0) {
-    alert(`${failed} photo(s) n'ont pas pu etre telechargees. L'archive contient ${allPhotos.length - failed} photo(s).`)
+    alert(`${failed} photo(s) n'ont pas pu être téléchargées. L'archive contient ${allPhotos.length - failed} photo(s).`)
   }
 }
 
@@ -239,7 +239,7 @@ export default function ConsulterEdlPage() {
     const edlProprietaireEmail = (data.proprietaire_email || "").toLowerCase()
 
     if (userEmail !== edlLocataireEmail && userEmail !== edlProprietaireEmail) {
-      setError("Vous n'avez pas acces a cet etat des lieux")
+      setError("Vous n'avez pas accès à cet état des lieux")
       setLoading(false)
       return
     }
@@ -313,7 +313,7 @@ export default function ConsulterEdlPage() {
       <div style={{ background: "white", borderRadius: 20, padding: "40px 48px", textAlign: "center", maxWidth: 420, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
         <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>{error}</h2>
         <Link href="/" style={{ fontSize: 13, color: "#1d4ed8", textDecoration: "none", fontWeight: 600 }}>
-          Retour a l'accueil
+          Retour à l'accueil
         </Link>
       </div>
     </main>
@@ -381,11 +381,11 @@ export default function ConsulterEdlPage() {
 
         {/* ─── General info ─── */}
         <div style={cardS}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Informations generales</h2>
+          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Informations générales</h2>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
             <div><span style={lbl}>Type</span><p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>{edl.type === "entree" ? "Entree" : "Sortie"}</p></div>
             <div><span style={lbl}>Date</span><p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>{dateLabel}</p></div>
-            <div><span style={lbl}>Cles remises</span><p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>{edl.cles || "—"}</p></div>
+            <div><span style={lbl}>Clés remises</span><p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>{edl.cles || "—"}</p></div>
           </div>
         </div>
 
@@ -393,7 +393,7 @@ export default function ConsulterEdlPage() {
         <div style={cardS}>
           <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>Le bailleur</h2>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
-            <div><span style={lbl}>Prenom</span><p style={{ fontSize: 14, margin: 0 }}>{edl.prenom_bailleur || "—"}</p></div>
+            <div><span style={lbl}>Prénom</span><p style={{ fontSize: 14, margin: 0 }}>{edl.prenom_bailleur || "—"}</p></div>
             <div><span style={lbl}>Nom</span><p style={{ fontSize: 14, margin: 0 }}>{edl.nom_bailleur || "—"}</p></div>
             <div><span style={lbl}>Email</span><p style={{ fontSize: 14, margin: 0 }}>{edl.email_bailleur || "—"}</p></div>
           </div>
@@ -403,7 +403,7 @@ export default function ConsulterEdlPage() {
         <div style={cardS}>
           <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>Le locataire</h2>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
-            <div><span style={lbl}>Prenom</span><p style={{ fontSize: 14, margin: 0 }}>{edl.prenom_locataire || "—"}</p></div>
+            <div><span style={lbl}>Prénom</span><p style={{ fontSize: 14, margin: 0 }}>{edl.prenom_locataire || "—"}</p></div>
             <div><span style={lbl}>Nom</span><p style={{ fontSize: 14, margin: 0 }}>{edl.nom_locataire || "—"}</p></div>
             <div><span style={lbl}>Email</span><p style={{ fontSize: 14, margin: 0 }}>{edl.email_locataire || edl.locataire_email || "—"}</p></div>
           </div>
@@ -411,11 +411,11 @@ export default function ConsulterEdlPage() {
 
         {/* ─── Compteurs ─── */}
         <div style={cardS}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>Releves de compteurs</h2>
+          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>Relevés de compteurs</h2>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
-            <div><span style={lbl}>Eau (m3)</span><p style={{ fontSize: 14, margin: 0 }}>{compteurs.eau || "Non releve"}</p></div>
-            <div><span style={lbl}>Electricite (kWh)</span><p style={{ fontSize: 14, margin: 0 }}>{compteurs.elec || "Non releve"}</p></div>
-            <div><span style={lbl}>Gaz (m3)</span><p style={{ fontSize: 14, margin: 0 }}>{compteurs.gaz || "Non releve"}</p></div>
+            <div><span style={lbl}>Eau (m³)</span><p style={{ fontSize: 14, margin: 0 }}>{compteurs.eau || "Non relevé"}</p></div>
+            <div><span style={lbl}>Électricité (kWh)</span><p style={{ fontSize: 14, margin: 0 }}>{compteurs.elec || "Non relevé"}</p></div>
+            <div><span style={lbl}>Gaz (m³)</span><p style={{ fontSize: 14, margin: 0 }}>{compteurs.gaz || "Non relevé"}</p></div>
           </div>
         </div>
 
@@ -464,7 +464,7 @@ export default function ConsulterEdlPage() {
         {/* ─── Observations ─── */}
         {edl.observations && (
           <div style={cardS}>
-            <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>Observations generales</h2>
+            <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>Observations générales</h2>
             <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, margin: 0 }}>{edl.observations}</p>
           </div>
         )}
@@ -472,7 +472,7 @@ export default function ConsulterEdlPage() {
         {/* ─── Actions ─── */}
         {statut === "envoye" && (
           <div style={cardS}>
-            <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Votre decision</h2>
+            <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Votre décision</h2>
 
             {!showContest ? (
               <div style={{ display: "flex", gap: 12, flexDirection: isMobile ? "column" : "row" }}>
@@ -483,7 +483,7 @@ export default function ConsulterEdlPage() {
                     border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16,
                     cursor: validating ? "not-allowed" : "pointer", fontFamily: "inherit",
                   }}>
-                  {validating ? "Validation en cours..." : "Valider l'etat des lieux"}
+                  {validating ? "Validation en cours..." : "Valider l'état des lieux"}
                 </button>
                 <button onClick={() => setShowContest(true)}
                   style={{
@@ -501,7 +501,7 @@ export default function ConsulterEdlPage() {
                 <textarea
                   value={commentaire}
                   onChange={e => setCommentaire(e.target.value)}
-                  placeholder="Indiquez les elements que vous souhaitez contester et pourquoi..."
+                  placeholder="Indiquez les éléments que vous souhaitez contester et pourquoi..."
                   rows={4}
                   style={{
                     width: "100%", padding: "12px 14px", border: "1.5px solid #fde68a", borderRadius: 12,
@@ -545,7 +545,7 @@ export default function ConsulterEdlPage() {
                 border: "1.5px solid #111", borderRadius: 16, fontWeight: 800, fontSize: 14,
                 cursor: "pointer", fontFamily: "inherit",
               }}>
-              Telecharger le PDF
+              Télécharger le PDF
             </button>
             <button onClick={() => telechargerPhotosZip(edl)}
               style={{
@@ -554,13 +554,13 @@ export default function ConsulterEdlPage() {
                 border: "1.5px solid #111", borderRadius: 16, fontWeight: 700, fontSize: 14,
                 cursor: "pointer", fontFamily: "inherit",
               }}>
-              Telecharger les photos (.zip)
+              Télécharger les photos (.zip)
             </button>
           </div>
         )}
 
         <p style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", marginTop: 20, lineHeight: 1.6 }}>
-          Document contradictoire — genere par NestMatch.
+          Document contradictoire — généré par NestMatch.
         </p>
       </div>
     </main>

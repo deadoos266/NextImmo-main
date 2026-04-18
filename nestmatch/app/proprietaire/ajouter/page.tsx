@@ -85,7 +85,7 @@ export default function AjouterBien() {
     const path = `${session.user.email}/${timestamp}.${ext}`
     const { error } = await supabase.storage.from("annonces-photos").upload(path, file, { upsert: false })
     if (error) {
-      setPhotoError("L'envoi de la photo a echoue, veuillez reessayer.")
+      setPhotoError("L'envoi de la photo a échoué, veuillez réessayer.")
       setUploadingPhoto(false)
       return
     }
@@ -146,7 +146,7 @@ export default function AjouterBien() {
       }, { onConflict: "email" })
       router.push("/proprietaire")
     } else {
-      alert("La publication a echoue. Veuillez verifier les champs et reessayer.")
+      alert("La publication a échoué. Veuillez vérifier les champs et réessayer.")
     }
     setSaving(false)
   }
@@ -266,7 +266,7 @@ export default function AjouterBien() {
               </>
             )}
           </button>
-          <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 8 }}>La premiere photo sera la photo principale de l'annonce.</p>
+          <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 8 }}>La première photo sera la photo principale de l'annonce.</p>
         </Sec>
 
         {/* Champs supplémentaires si déjà loué */}
@@ -293,9 +293,9 @@ export default function AjouterBien() {
               </F>
             </div>
             <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 20, marginTop: 20 }}>
-              <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 14, color: "#111" }}>Charges annuelles du proprietaire</p>
+              <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 14, color: "#111" }}>Charges annuelles du propriétaire</p>
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
-                <F l="Taxe fonciere (€/an)">
+                <F l="Taxe foncière (€/an)">
                   <input style={inp} value={form.taxe_fonciere} onChange={set("taxe_fonciere")} type="number" placeholder="1200" />
                 </F>
                 <F l="Assurance PNO (€/an)">

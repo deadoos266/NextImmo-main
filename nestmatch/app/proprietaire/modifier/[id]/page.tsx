@@ -339,9 +339,9 @@ export default function ModifierBien() {
               </F>
             </div>
             <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 20, marginTop: 20 }}>
-              <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 14, color: "#111" }}>Charges annuelles du proprietaire</p>
+              <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 14, color: "#111" }}>Charges annuelles du propriétaire</p>
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
-                <F l="Taxe fonciere (€/an)">
+                <F l="Taxe foncière (€/an)">
                   <input style={inp} value={form.taxe_fonciere} onChange={set("taxe_fonciere")} type="number" placeholder="1200" />
                 </F>
                 <F l="Assurance PNO (€/an)">

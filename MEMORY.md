@@ -72,6 +72,44 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 
 ## Historique des batchs
 
+### Batch 30 — Tests Vitest + filtres surface/pièces + accents FR (2026-04-18)
+- **Bootstrap Vitest** (`nestmatch/vitest.config.ts`) : première infra de
+  tests du projet. Environnement node, coverage v8, include `lib/**/*.test.ts`.
+  Scripts npm : `test`, `test:watch`, `test:coverage`.
+- **65 tests sur 5 fichiers lib** (tous verts) :
+  - `lib/matching.test.ts` (16 tests) — scoring, `estExclu`, profil vide,
+    edge cases. Coverage 81%.
+  - `lib/screening.test.ts` (16 tests) — 5 tiers (Incomplet à Excellent),
+    4 dimensions, flags, ratio 33%. Coverage 95%.
+  - `lib/cityCoords.test.ts` (13 tests) — accents (Saint-Étienne vs
+    Saint-Etienne), case-insensitive, `normalizeCityName`.
+  - `lib/dossierToken.test.ts` (10 tests) — HMAC round-trip, expiration,
+    token falsifié, malformé. Coverage 96%.
+  - `lib/profilCompleteness.test.ts` (10 tests) — progression monotone,
+    score + champs manquants.
+  - Ajout `coverage/` à `.gitignore`.
+- **Filtres /annonces** : ajout **surface min/max** (m²) et **nombre de
+  pièces minimum** (boutons 1+/2+/3+/4+/5+) dans la sidebar filtres.
+  Filtrage combine avec les filtres existants (budget, ville, équipements).
+- **Accents FR** (polish) — 5 fichiers nettoyés :
+  - `proprietaire/page.tsx` : "reçoivent", "détaillée", "comme ça",
+    "Ville souhaitée", "enregistré", "Confirmé"
+  - `proprietaire/ajouter/page.tsx` : "a échoué", "vérifier",
+    "réessayer", "première photo", "propriétaire", "Taxe foncière"
+  - `proprietaire/modifier/[id]/page.tsx` : idem (propriétaire, foncière)
+  - `edl/consulter/[edlId]/page.tsx` : ~15 labels UI (Informations
+    générales, Clés remises, Prénom, Relevés, Électricité, Observations
+    générales, Votre décision, Valider l'état, les éléments, Télécharger,
+    Retour à l'accueil, généré par NestMatch, etc.)
+  - `annonces/page.tsx` filtres : "Dispo immédiate", "Extérieur"
+  - `carnet/page.tsx`, `dossier/page.tsx`, `BookingVisite.tsx` : **0
+    problème trouvé** par le scan — déjà propres.
+- **Restant (sortie de scope volontaire)** : `proprietaire/edl/[id]/page.tsx`
+  a ~38 findings mais beaucoup sont des CLÉS d'enum utilisées côté DB
+  (`ETATS`, `ELEMENTS_PAR_TYPE`, `detectType`) — renommer casserait la
+  lecture des EDL existants. Nécessite un mapping `LABEL`/`KEY` séparé
+  (batch dédié). Idem strings PDF jsPDF (encoding WinAnsi à vérifier).
+
 ### Batch 29 — Notifs temps réel globales + AdminBar persist + msg realtime (2026-04-18)
 - **ToastStack global** (`components/ToastStack.tsx` monté dans `layout.tsx`) :
   provider client qui écoute Supabase Realtime pour l'user connecté.
@@ -808,7 +846,7 @@ dans la publication `supabase_realtime`. Sans ça, aucun temps réel.
   - `/confidentialite` — placeholder structuré
 
 ### Filtres /annonces (UI)
-- Ajouter filtres surface min/max et nombre de pièces
+- ~~Ajouter filtres surface min/max et nombre de pièces~~ → **fait batch 30**
 - Clarifier ou supprimer bouton "Personnalisé" (sans action actuellement)
 - Placeholder barre de recherche : "Ville, quartier, code postal"
 
@@ -934,7 +972,8 @@ dans la publication `supabase_realtime`. Sans ça, aucun temps réel.
   → meilleure mise en avant, badge "Proprio expérimenté"
 
 ## Dette technique connue
-- 0 test automatisé
+- ~~0 test automatisé~~ → **65 tests sur 5 fichiers lib (batch 30)**.
+  Restant : 0 test sur routes API, 0 test integration DB, 0 E2E.
 - Repo GitHub encore public (historique contient anciens secrets) — **à passer privé**
 - ~~Pas de rate-limit sur `/api/auth/register`~~ → fixé batch 26
 - `lib/cityCoords.ts` : fichier statique, à surveiller si grossit

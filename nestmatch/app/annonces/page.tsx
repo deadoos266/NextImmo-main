@@ -135,6 +135,9 @@ function AnnoncesContent() {
   const [dispoImmediate, setDispoImmediate] = useState(false)
   const [filtreParking, setFiltreParking] = useState(false)
   const [filtreExterieur, setFiltreExterieur] = useState(false)
+  const [surfaceMin, setSurfaceMin] = useState<string>("")
+  const [surfaceMax, setSurfaceMax] = useState<string>("")
+  const [piecesMin, setPiecesMin] = useState<number>(0)
   const [mapBounds, setMapBounds] = useState<any>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [favoris, setFavoris] = useState<number[]>([])
@@ -275,6 +278,13 @@ function AnnoncesContent() {
       if (dispoImmediate && a.dispo !== "Disponible maintenant") return false
       if (filtreParking && !a.parking) return false
       if (filtreExterieur && !a.balcon && !a.terrasse && !a.jardin) return false
+      // Surface min/max (m²)
+      const surfMinN = surfaceMin ? parseInt(surfaceMin, 10) : 0
+      const surfMaxN = surfaceMax ? parseInt(surfaceMax, 10) : 0
+      if (surfMinN > 0 && (!a.surface || a.surface < surfMinN)) return false
+      if (surfMaxN > 0 && (!a.surface || a.surface > surfMaxN)) return false
+      // Nombre de pièces minimum
+      if (piecesMin > 0 && (!a.pieces || a.pieces < piecesMin)) return false
       // Recherche full-text : titre + description + ville + adresse
       if (motCle.trim()) {
         const q = motCle.toLowerCase().trim()
@@ -426,12 +436,48 @@ function AnnoncesContent() {
               </div>
             )}
 
+            {/* Surface m² */}
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>Surface (m²)</p>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input type="number" min={0} placeholder="Min" value={surfaceMin} onChange={e => setSurfaceMin(e.target.value)}
+                  style={{ width: "50%", padding: "7px 10px", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: 12, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }} />
+                <input type="number" min={0} placeholder="Max" value={surfaceMax} onChange={e => setSurfaceMax(e.target.value)}
+                  style={{ width: "50%", padding: "7px 10px", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: 12, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }} />
+              </div>
+            </div>
+
+            {/* Nombre de pièces minimum */}
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>Pièces minimum</p>
+              <div style={{ display: "flex", gap: 6 }}>
+                {[0, 1, 2, 3, 4, 5].map(n => (
+                  <button key={n} onClick={() => setPiecesMin(n)}
+                    style={{
+                      flex: 1,
+                      padding: "7px 0",
+                      background: piecesMin === n ? "#111" : "white",
+                      color: piecesMin === n ? "white" : "#374151",
+                      border: `1.5px solid ${piecesMin === n ? "#111" : "#e5e7eb"}`,
+                      borderRadius: 8,
+                      fontSize: 12,
+                      fontWeight: piecesMin === n ? 800 : 600,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    {n === 0 ? "Tous" : `${n}+`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div>
               <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.5px" }}>Options</p>
               {[
-                { label: "Dispo immediate", val: dispoImmediate, set: setDispoImmediate },
+                { label: "Dispo immédiate", val: dispoImmediate, set: setDispoImmediate },
                 { label: "Parking", val: filtreParking, set: setFiltreParking },
-                { label: "Exterieur", val: filtreExterieur, set: setFiltreExterieur },
+                { label: "Extérieur", val: filtreExterieur, set: setFiltreExterieur },
               ].map(opt => (
                 <div key={opt.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                   <span style={{ fontSize: 12, color: "#374151" }}>{opt.label}</span>

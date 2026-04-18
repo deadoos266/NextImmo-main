@@ -1033,20 +1033,7 @@ function MessagesInner() {
                                 >
                                   ⋯
                                 </button>
-                                {/* Menu rendu via portal plus bas pour échapper overflow chat */}
-                                {false && (
-                                  <>
-                                    <div style={{}} />
-                                    <div style={{}}>
-                                      <button>Répondre</button>
-                                      <button>Copier</button>
-                                      {isMine && (
-                                        <button>Supprimer
-                                        </button>
-                                      )}
-                                    </div>
-                                  </>
-                                )}
+                                {/* Menu rendu via portal en bas de page pour échapper overflow chat */}
                               </div>
                             </div>
                           )

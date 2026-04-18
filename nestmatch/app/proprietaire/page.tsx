@@ -665,7 +665,7 @@ export default function Proprietaire() {
                       <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#fff7ed", borderRadius: 12, border: "1px solid #fed7aa" }}>
                         <div>
                           <p style={{ fontSize: 13, fontWeight: 700, color: "#9a3412" }}>Ajoutez plus de photos</p>
-                          <p style={{ fontSize: 12, color: "#ea580c" }}>{biens.filter((b: any) => !b.photos || (Array.isArray(b.photos) && b.photos.length < 3)).length} bien(s) avec moins de 3 photos — les annonces avec 5+ photos recoivent 3x plus de vues</p>
+                          <p style={{ fontSize: 12, color: "#ea580c" }}>{biens.filter((b: any) => !b.photos || (Array.isArray(b.photos) && b.photos.length < 3)).length} bien(s) avec moins de 3 photos — les annonces avec 5+ photos reçoivent 3x plus de vues</p>
                         </div>
                       </div>
                     )}
@@ -673,7 +673,7 @@ export default function Proprietaire() {
                       <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#eff6ff", borderRadius: 12, border: "1px solid #bfdbfe" }}>
                         <div>
                           <p style={{ fontSize: 13, fontWeight: 700, color: "#1e40af" }}>Enrichissez vos descriptions</p>
-                          <p style={{ fontSize: 12, color: "#1d4ed8" }}>{biens.filter((b: any) => !b.description || b.description.length < 100).length} bien(s) sans description detaillee — une bonne description augmente les contacts de 40%</p>
+                          <p style={{ fontSize: 12, color: "#1d4ed8" }}>{biens.filter((b: any) => !b.description || b.description.length < 100).length} bien(s) sans description détaillée — une bonne description augmente les contacts de 40%</p>
                         </div>
                       </div>
                     )}
@@ -689,7 +689,7 @@ export default function Proprietaire() {
                       <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#dcfce7", borderRadius: 12, border: "1px solid #bbf7d0" }}>
                         <div>
                           <p style={{ fontSize: 13, fontWeight: 700, color: "#166534" }}>Vos annonces sont optimisées !</p>
-                          <p style={{ fontSize: 12, color: "#16a34a" }}>Tous vos biens ont des photos, descriptions et DPE — continuez comme ca</p>
+                          <p style={{ fontSize: 12, color: "#16a34a" }}>Tous vos biens ont des photos, descriptions et DPE — continuez comme ça</p>
                         </div>
                       </div>
                     )}
@@ -890,7 +890,7 @@ export default function Proprietaire() {
                             { label: "Nb occupants", val: d.nb_occupants },
                             { label: "Animaux", val: d.animaux === true ? "Oui" : d.animaux === false ? "Non" : null },
                             { label: "Fumeur", val: d.fumeur === true ? "Oui" : d.fumeur === false ? "Non" : null },
-                            { label: "Ville souhaitee", val: d.ville_souhaitee },
+                            { label: "Ville souhaitée", val: d.ville_souhaitee },
                           ].filter(item => item.val != null && item.val !== "").map(item => (
                             <div key={item.label}>
                               <p style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 3 }}>{item.label}</p>
@@ -914,7 +914,7 @@ export default function Proprietaire() {
             <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>Suivi des loyers</h2>
             {loyers.length === 0 ? (
               <div style={{ textAlign: "center", padding: "40px 0", color: "#9ca3af" }}>
-                <p style={{ fontSize: 15, fontWeight: 600 }}>Aucun loyer enregistre</p>
+                <p style={{ fontSize: 15, fontWeight: 600 }}>Aucun loyer enregistré</p>
                 <p style={{ fontSize: 13, marginTop: 8 }}>Les loyers déclarés par vos locataires apparaîtront ici</p>
               </div>
             ) : loyers.map((l: any) => (
@@ -926,7 +926,7 @@ export default function Proprietaire() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   {l.statut === "confirmé" ? (
-                    <span style={{ background: "#dcfce7", color: "#16a34a", padding: "6px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700 }}>Confirme</span>
+                    <span style={{ background: "#dcfce7", color: "#16a34a", padding: "6px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700 }}>Confirmé</span>
                   ) : (
                     <>
                       <span style={{ background: "#fff7ed", color: "#ea580c", padding: "6px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700 }}>En attente</span>
