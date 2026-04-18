@@ -125,7 +125,7 @@ export default async function Annonce({ params }: any) {
           __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
         }}
       />
-      <div className="r-container" style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 48px" }}>
+      <div className="r-container" style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 48px" }}>
         <a href="/annonces" style={{ fontSize: 14, color: "#6b7280", textDecoration: "none" }}>← Retour aux annonces</a>
 
         <div className="r-detail-header" style={{ margin: "16px 0 20px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -215,7 +215,7 @@ export default async function Annonce({ params }: any) {
             )}
           </div>
 
-          <div className="r-detail-sidebar" style={{ width: 320, flexShrink: 0 }}>
+          <div className="r-detail-sidebar" style={{ width: 360, flexShrink: 0 }}>
             <div style={{ background: "white", borderRadius: 20, padding: 28, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", position: "sticky", top: 80 }}>
               <div style={{ marginBottom: 16 }}>
                 <span style={{ fontSize: 32, fontWeight: 800 }}>{annonce.prix} €</span>

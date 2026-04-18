@@ -128,7 +128,7 @@ export default function BookingVisite({
         <div style={{ background: "white", borderRadius: 20, padding: "20px 24px", border: "2px solid #111" }}>
           <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 18 }}>Proposer une visite</h3>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 14 }}>
             <div>
               <label style={{ fontSize: 13, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 6 }}>Date *</label>
               <input type="date" style={inp} value={date} onChange={e => setDate(e.target.value)}
@@ -136,10 +136,28 @@ export default function BookingVisite({
             </div>
             <div>
               <label style={{ fontSize: 13, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 6 }}>Créneau *</label>
-              <select style={inp} value={heure} onChange={e => setHeure(e.target.value)}>
-                <option value="">Choisir une heure</option>
-                {HEURES.map(h => <option key={h} value={h}>{h}</option>)}
-              </select>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+                {HEURES.map(h => (
+                  <button
+                    key={h}
+                    type="button"
+                    onClick={() => setHeure(h)}
+                    style={{
+                      padding: "8px 0",
+                      borderRadius: 8,
+                      border: heure === h ? "2px solid #111" : "1.5px solid #e5e7eb",
+                      background: heure === h ? "#111" : "white",
+                      color: heure === h ? "white" : "#111",
+                      fontSize: 13,
+                      fontWeight: heure === h ? 800 : 600,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    {h}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
