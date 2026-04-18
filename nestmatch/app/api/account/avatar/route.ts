@@ -100,19 +100,52 @@ export async function POST(req: NextRequest) {
   // Ajout d'un bust de cache — sinon le browser sert l'ancienne image.
   const url = `${urlData.publicUrl}?v=${Date.now()}`
 
-  const { error: dbErr } = await supabaseAdmin
+  // Upsert sûr : si le profil existe déjà on fait un UPDATE ciblé, sinon
+  // on INSERT en fournissant un `nom` fallback dérivé de la session (évite
+  // les violations NOT NULL sur champs hérités).
+  const { data: existing, error: selErr } = await supabaseAdmin
     .from("profils")
-    .upsert({ email, photo_url_custom: url }, { onConflict: "email" })
-  if (dbErr) {
-    console.error("[avatar db upsert]", dbErr)
-    const code = (dbErr as { code?: string }).code
-    if (code === "42703" || /column.*photo_url_custom/i.test(dbErr.message || "")) {
+    .select("email")
+    .eq("email", email)
+    .maybeSingle()
+
+  if (selErr) {
+    console.error("[avatar profil select]", selErr)
+    return NextResponse.json({ error: `Erreur base de données : ${selErr.message}` }, { status: 500 })
+  }
+
+  const handleDbErr = (e: { code?: string; message?: string } | null) => {
+    if (!e) return null
+    const code = e.code
+    if (code === "42703" || /column.*photo_url_custom/i.test(e.message || "")) {
       return NextResponse.json(
-        { error: "Colonne 'photo_url_custom' absente. Appliquez la migration 008_parametres_profil_public.sql dans Supabase." },
+        { error: "Colonne 'photo_url_custom' absente. Appliquez la migration 008 puis relancez NOTIFY pgrst, 'reload schema';" },
         { status: 500 },
       )
     }
-    return NextResponse.json({ error: `Erreur base de données : ${dbErr.message || "inconnue"}` }, { status: 500 })
+    if (code === "23502" || /null value.*not-null/i.test(e.message || "")) {
+      return NextResponse.json(
+        { error: "Contrainte NOT NULL dans 'profils'. Appliquez la migration 009_profils_nullable_fields.sql." },
+        { status: 500 },
+      )
+    }
+    return NextResponse.json({ error: `Erreur base de données : ${e.message || "inconnue"}` }, { status: 500 })
+  }
+
+  if (existing) {
+    const { error: updErr } = await supabaseAdmin
+      .from("profils")
+      .update({ photo_url_custom: url })
+      .eq("email", email)
+    const err = handleDbErr(updErr)
+    if (err) return err
+  } else {
+    const fallbackNom = session.user?.name?.trim() || email.split("@")[0] || "Utilisateur"
+    const { error: insErr } = await supabaseAdmin
+      .from("profils")
+      .insert({ email, nom: fallbackNom, photo_url_custom: url })
+    const err = handleDbErr(insErr)
+    if (err) return err
   }
 
   return NextResponse.json({ ok: true, url })

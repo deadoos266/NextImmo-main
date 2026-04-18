@@ -159,14 +159,26 @@ function AnnoncesContent() {
   const [filtreParking, setFiltreParking] = useState(false)
   const [filtreExterieur, setFiltreExterieur] = useState(false)
   const [filtreMeuble, setFiltreMeuble] = useState(false)
-  const [budgetChip, setBudgetChip] = useState<number | null>(null)
-  // HARD LOCK : si le profil dossier indique animaux=true, on exclut les
-  // annonces sans animaux autorisés (pas d'override possible sans modifier
-  // le profil). Évite aux locataires à animaux de voir des biens où ils
-  // seraient refusés d'office.
+  // Budget max effectif pour le filtre. Vient soit de profil.budget_max
+  // (source de vérité du locataire), soit d'un override manuel local via chip.
+  const [budgetMaxFiltre, setBudgetMaxFiltre] = useState<number | null>(null)
+  // HARD LOCK animaux : par défaut si profil.animaux=true on exclut les
+  // annonces sans animaux. L'user peut ponctuellement lever le lock pour la
+  // session en cours via un bouton dédié (pas de modification du profil).
   const [filtreAnimauxLock, setFiltreAnimauxLock] = useState(false)
+  const [animauxOverride, setAnimauxOverride] = useState(false)
   const [filtreDpeMax, setFiltreDpeMax] = useState<string>("")  // "A" | "B" | ... | "G" — max toléré
   const [criteresHydrated, setCriteresHydrated] = useState(false)
+  // Snapshot des valeurs initiales venues du profil. Permet de détecter les
+  // divergences et proposer un bouton « Resynchroniser avec mon profil ».
+  const [profilSnapshot, setProfilSnapshot] = useState<{
+    budget: number | null
+    meuble: boolean
+    parking: boolean
+    exterieur: boolean
+    dpe: string
+    animaux: boolean
+  } | null>(null)
   // Recherches sauvegardées (locataire seulement) : filtres nommés stockés en
   // localStorage. Permet de retrouver ses critères en 1 clic.
   type SavedSearch = {
@@ -257,7 +269,7 @@ function AnnoncesContent() {
   function sauverRecherche() {
     const parts: string[] = []
     if (activeVille) parts.push(activeVille)
-    if (budgetChip) parts.push(`< ${budgetChip} €`)
+    if (budgetMaxFiltre) parts.push(`< ${budgetMaxFiltre} €`)
     else if (activeBudget) parts.push(`< ${activeBudget} €`)
     if (piecesMin) parts.push(`${piecesMin}+ pièces`)
     if (filtreMeuble) parts.push("Meublé")
@@ -269,7 +281,7 @@ function AnnoncesContent() {
       id: Date.now().toString(36),
       name: name.trim().slice(0, 60),
       ville: activeVille || "",
-      budgetMax: budgetChip ?? activeBudget ?? null,
+      budgetMax: budgetMaxFiltre ?? activeBudget ?? null,
       surfaceMin,
       surfaceMax,
       piecesMin,
@@ -286,7 +298,7 @@ function AnnoncesContent() {
   }
 
   function appliquerRecherche(s: SavedSearch) {
-    setBudgetChip(s.budgetMax ?? null)
+    setBudgetMaxFiltre(s.budgetMax ?? null)
     setSurfaceMin(s.surfaceMin)
     setSurfaceMax(s.surfaceMax)
     setPiecesMin(s.piecesMin)
@@ -336,12 +348,19 @@ function AnnoncesContent() {
             if (p.parking && !filtreParking) setFiltreParking(true)
             if ((p.balcon || p.terrasse || p.jardin) && !filtreExterieur) setFiltreExterieur(true)
             if (p.meuble && !filtreMeuble) setFiltreMeuble(true)
-            if (p.budget_max && budgetChip === null) setBudgetChip(Number(p.budget_max))
+            if (p.budget_max && budgetMaxFiltre === null) setBudgetMaxFiltre(Number(p.budget_max))
             if (p.dpe_min && !filtreDpeMax) setFiltreDpeMax(String(p.dpe_min))
-            // HARD LOCK animaux : si l'user a des animaux en profil, on
-            // bride la liste. L'user ne peut pas désactiver ce filtre ici —
-            // il doit modifier son profil (cohérence annonce ↔ dossier).
             if (p.animaux === true) setFiltreAnimauxLock(true)
+            // Snapshot des valeurs initiales du profil pour pouvoir détecter
+            // les divergences et proposer un bouton "Resynchroniser".
+            setProfilSnapshot({
+              budget: p.budget_max ? Number(p.budget_max) : null,
+              meuble: !!p.meuble,
+              parking: !!p.parking,
+              exterieur: !!(p.balcon || p.terrasse || p.jardin),
+              dpe: p.dpe_min || "",
+              animaux: !!p.animaux,
+            })
           }
           setCriteresHydrated(true)
         }
@@ -443,9 +462,10 @@ function AnnoncesContent() {
       if (filtreParking && !a.parking) return false
       if (filtreExterieur && !a.balcon && !a.terrasse && !a.jardin) return false
       if (filtreMeuble && !a.meuble) return false
-      if (budgetChip && a.prix && a.prix > budgetChip) return false
-      // HARD LOCK animaux — propriétaires qui n'acceptent pas, on cache.
-      if (filtreAnimauxLock && !a.animaux) return false
+      if (budgetMaxFiltre && a.prix && a.prix > budgetMaxFiltre) return false
+      // HARD LOCK animaux — sauf si l'user a demandé explicitement à voir
+      // aussi les autres annonces pour cette session (animauxOverride).
+      if (filtreAnimauxLock && !animauxOverride && !a.animaux) return false
       // DPE : A est meilleur que G. On filtre si dpe > filtreDpeMax.
       if (filtreDpeMax && a.dpe && a.dpe.localeCompare(filtreDpeMax) > 0) return false
       // Surface min/max (m²)
@@ -745,37 +765,123 @@ function AnnoncesContent() {
             </div>
           )}
 
-          {/* Chips filtres rapides */}
-          {!isProprietaire && (
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-              {[
-                { label: "< 800 €", active: budgetChip === 800, toggle: () => setBudgetChip(budgetChip === 800 ? null : 800) },
-                { label: "< 1 000 €", active: budgetChip === 1000, toggle: () => setBudgetChip(budgetChip === 1000 ? null : 1000) },
-                { label: "< 1 500 €", active: budgetChip === 1500, toggle: () => setBudgetChip(budgetChip === 1500 ? null : 1500) },
-                { label: "Meublé", active: filtreMeuble, toggle: () => setFiltreMeuble(v => !v) },
-                { label: "Parking", active: filtreParking, toggle: () => setFiltreParking(v => !v) },
-                { label: "Extérieur", active: filtreExterieur, toggle: () => setFiltreExterieur(v => !v) },
-                { label: "Dispo maintenant", active: dispoImmediate, toggle: () => setDispoImmediate(v => !v) },
-              ].map(chip => (
-                <button
-                  key={chip.label}
-                  type="button"
-                  onClick={chip.toggle}
-                  style={{ background: chip.active ? "#111" : "white", color: chip.active ? "white" : "#374151", border: `1.5px solid ${chip.active ? "#111" : "#e5e7eb"}`, borderRadius: 999, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
-                  {chip.label}
-                </button>
-              ))}
-              {/* HARD LOCK animaux — non toggable ici, seul /profil permet de désactiver. */}
-              {filtreAnimauxLock && (
-                <a
-                  href="/profil"
-                  title="Vous avez des animaux dans votre profil — seules les annonces qui les acceptent sont affichées. Cliquez pour modifier."
-                  style={{ background: "#fef3c7", color: "#92400e", border: "1.5px solid #fde68a", borderRadius: 999, padding: "5px 12px", fontSize: 12, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                  🔒 Animaux OK (profil)
-                </a>
-              )}
-            </div>
-          )}
+          {/* Chips filtres rapides + indicateurs "issus du profil" */}
+          {!isProprietaire && (() => {
+            // Détection divergence vs snapshot profil (budget, meuble, parking, exterieur, dpe, animaux)
+            const divergesBudget = profilSnapshot && profilSnapshot.budget !== budgetMaxFiltre
+            const divergesMeuble = profilSnapshot && profilSnapshot.meuble !== filtreMeuble
+            const divergesParking = profilSnapshot && profilSnapshot.parking !== filtreParking
+            const divergesExterieur = profilSnapshot && profilSnapshot.exterieur !== filtreExterieur
+            const divergesDpe = profilSnapshot && profilSnapshot.dpe !== filtreDpeMax
+            const divergesAnimaux = animauxOverride // override local = divergence
+            const anyDiverge = divergesBudget || divergesMeuble || divergesParking || divergesExterieur || divergesDpe || divergesAnimaux
+            const fromProfil = (isFromProfil: boolean | null | undefined) =>
+              isFromProfil ? (
+                <span title="Issu de votre profil" style={{ width: 6, height: 6, borderRadius: "50%", background: "#f59e0b", display: "inline-block", marginLeft: 4 }} />
+              ) : null
+
+            const resync = () => {
+              if (!profilSnapshot) return
+              setBudgetMaxFiltre(profilSnapshot.budget)
+              setFiltreMeuble(profilSnapshot.meuble)
+              setFiltreParking(profilSnapshot.parking)
+              setFiltreExterieur(profilSnapshot.exterieur)
+              setFiltreDpeMax(profilSnapshot.dpe)
+              setAnimauxOverride(false)
+            }
+
+            return (
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10, alignItems: "center" }}>
+                {/* Budget perso : valeur exacte du profil, pas chip fixe */}
+                {budgetMaxFiltre !== null && (
+                  <button
+                    type="button"
+                    onClick={() => setBudgetMaxFiltre(null)}
+                    title="Cliquez pour retirer ce filtre"
+                    style={{ background: "#111", color: "white", border: "1.5px solid #111", borderRadius: 999, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center" }}>
+                    Budget ≤ {budgetMaxFiltre.toLocaleString("fr-FR")} €
+                    {!divergesBudget && profilSnapshot?.budget === budgetMaxFiltre && fromProfil(true)}
+                    <span style={{ marginLeft: 6, opacity: 0.7 }}>✕</span>
+                  </button>
+                )}
+                {/* Pas de budget pré-rempli : proposer 3 seuils rapides */}
+                {budgetMaxFiltre === null && (
+                  <>
+                    {[800, 1000, 1500, 2000].map(v => (
+                      <button key={v} type="button" onClick={() => setBudgetMaxFiltre(v)}
+                        style={{ background: "white", color: "#374151", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                        ≤ {v.toLocaleString("fr-FR")} €
+                      </button>
+                    ))}
+                  </>
+                )}
+
+                {[
+                  { label: "Meublé", active: filtreMeuble, toggle: () => setFiltreMeuble(v => !v), fromP: profilSnapshot?.meuble && filtreMeuble },
+                  { label: "Parking", active: filtreParking, toggle: () => setFiltreParking(v => !v), fromP: profilSnapshot?.parking && filtreParking },
+                  { label: "Extérieur", active: filtreExterieur, toggle: () => setFiltreExterieur(v => !v), fromP: profilSnapshot?.exterieur && filtreExterieur },
+                  { label: "Dispo maintenant", active: dispoImmediate, toggle: () => setDispoImmediate(v => !v), fromP: false },
+                ].map(chip => (
+                  <button
+                    key={chip.label}
+                    type="button"
+                    onClick={chip.toggle}
+                    style={{ background: chip.active ? "#111" : "white", color: chip.active ? "white" : "#374151", border: `1.5px solid ${chip.active ? "#111" : "#e5e7eb"}`, borderRadius: 999, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center" }}>
+                    {chip.label}
+                    {fromProfil(chip.fromP)}
+                  </button>
+                ))}
+
+                {/* HARD LOCK animaux avec override session : bouton cadenas informatif
+                   + bouton secondaire pour voir aussi les autres annonces sans toucher au profil. */}
+                {filtreAnimauxLock && !animauxOverride && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    <a
+                      href="/profil"
+                      title="Vous avez des animaux dans votre profil — les annonces qui ne les acceptent pas sont masquées."
+                      style={{ background: "#fef3c7", color: "#92400e", border: "1.5px solid #fde68a", borderRadius: 999, padding: "5px 12px", fontSize: 12, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      🔒 Animaux OK (profil)
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => setAnimauxOverride(true)}
+                      title="Voir aussi les annonces qui n'acceptent pas les animaux (session uniquement, votre profil reste inchangé)"
+                      style={{ background: "white", color: "#92400e", border: "1.5px solid #fde68a", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                      Voir toutes
+                    </button>
+                  </span>
+                )}
+                {filtreAnimauxLock && animauxOverride && (
+                  <button
+                    type="button"
+                    onClick={() => setAnimauxOverride(false)}
+                    title="Réactiver le filtre animaux"
+                    style={{ background: "white", color: "#92400e", border: "1.5px dashed #fde68a", borderRadius: 999, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                    🔓 Animaux désactivé — réactiver
+                  </button>
+                )}
+
+                {/* Bouton Resync visible si au moins un filtre diverge du profil */}
+                {profilSnapshot && anyDiverge && (
+                  <button
+                    type="button"
+                    onClick={resync}
+                    title="Remettre les filtres aux valeurs de votre profil"
+                    style={{ background: "white", color: "#1d4ed8", border: "1.5px solid #bfdbfe", borderRadius: 999, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                    Resynchroniser profil
+                  </button>
+                )}
+
+                {/* Lien discret vers /profil pour modifier son budget */}
+                {profilSnapshot?.budget && budgetMaxFiltre === profilSnapshot.budget && (
+                  <a href="/profil" style={{ fontSize: 11, color: "#6b7280", textDecoration: "underline", marginLeft: 4 }}>
+                    Modifier mon budget
+                  </a>
+                )}
+              </div>
+            )
+          })()}
 
           {/* Compteur */}
           <div style={{ padding: "2px 0 10px", flexShrink: 0 }}>

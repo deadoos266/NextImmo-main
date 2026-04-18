@@ -226,37 +226,120 @@ export default function Dossier() {
     setTimeout(() => setSaved(false), 3000)
   }
 
+  function buildDossierData() {
+    return {
+      nom: form.nom,
+      email: session?.user?.email || "",
+      telephone: form.telephone,
+      dateNaissance: form.date_naissance,
+      nationalite: form.nationalite,
+      situationFamiliale: form.situation_familiale,
+      nbEnfants: form.nb_enfants,
+      situationPro: form.situation_pro,
+      employeurNom: form.employeur_nom,
+      dateEmbauche: form.date_embauche,
+      revenusMensuels: form.revenus_mensuels ? Number(form.revenus_mensuels) : null,
+      nbOccupants: form.nb_occupants,
+      logementActuelType: form.logement_actuel_type,
+      logementActuelVille: form.logement_actuel_ville,
+      aApl: form.a_apl,
+      mobilitePro: form.mobilite_pro,
+      garant: form.garant,
+      typeGarant: form.type_garant,
+      presentation: form.presentation,
+      villeSouhaitee: profil?.ville_souhaitee || "",
+      budgetMax: profil?.budget_max ?? null,
+      score,
+      docs: allDocs.map(d => ({ key: d.key, label: d.label, count: (docs[d.key] || []).length })),
+    }
+  }
+
+  // Télécharge UNIQUEMENT le PDF récap (léger, rapide, pour envoyer par mail).
   async function genererDossierPDFClick() {
     setGeneratingPDF(true)
     try {
       const { genererDossierPDF } = await import("../../lib/dossierPDF")
-      await genererDossierPDF({
-        nom: form.nom,
-        email: session?.user?.email || "",
-        telephone: form.telephone,
-        dateNaissance: form.date_naissance,
-        nationalite: form.nationalite,
-        situationFamiliale: form.situation_familiale,
-        nbEnfants: form.nb_enfants,
-        situationPro: form.situation_pro,
-        employeurNom: form.employeur_nom,
-        dateEmbauche: form.date_embauche,
-        revenusMensuels: form.revenus_mensuels ? Number(form.revenus_mensuels) : null,
-        nbOccupants: form.nb_occupants,
-        logementActuelType: form.logement_actuel_type,
-        logementActuelVille: form.logement_actuel_ville,
-        aApl: form.a_apl,
-        mobilitePro: form.mobilite_pro,
-        garant: form.garant,
-        typeGarant: form.type_garant,
-        presentation: form.presentation,
-        villeSouhaitee: profil?.ville_souhaitee || "",
-        budgetMax: profil?.budget_max ?? null,
-        score,
-        docs: allDocs.map(d => ({ key: d.key, label: d.label, count: (docs[d.key] || []).length })),
-      })
+      await genererDossierPDF(buildDossierData())
     } catch (e) {
       alert("Erreur génération PDF : " + (e instanceof Error ? e.message : "inconnue"))
+    }
+    setGeneratingPDF(false)
+  }
+
+  // Télécharge le dossier COMPLET : PDF récap + toutes les pièces justificatives,
+  // regroupées en ZIP avec une arborescence claire par catégorie.
+  async function telechargerDossierZip() {
+    setGeneratingPDF(true)
+    try {
+      const [{ genererDossierPDFBlob }, { default: JSZip }] = await Promise.all([
+        import("../../lib/dossierPDF"),
+        import("jszip"),
+      ])
+      const zip = new JSZip()
+      const safeName = (form.nom || "locataire").replace(/[^a-zA-Z0-9-_]+/g, "_").slice(0, 40) || "locataire"
+      const rootFolder = zip.folder(`dossier_${safeName}`)
+      if (!rootFolder) throw new Error("Impossible de créer le dossier zip")
+
+      // 1. PDF récap en blob
+      const pdfBlob = await genererDossierPDFBlob(buildDossierData())
+      rootFolder.file(`recapitulatif_${safeName}.pdf`, pdfBlob)
+
+      // 2. Pour chaque catégorie de doc, fetch chaque URL et l'ajoute au zip
+      //    dans un sous-dossier par label lisible. Les échecs individuels
+      //    n'interrompent pas : on ajoute une entrée MANQUANT_* pour tracer.
+      const labelOf: Record<string, string> = {}
+      for (const d of [...DOCS_REQUIS, ...DOCS_OPTIONNELS, ...DOCS_GARANT]) {
+        labelOf[d.key] = d.label
+      }
+      const toFolderName = (lbl: string) => lbl
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 50)
+
+      const failed: string[] = []
+      const tasks: Promise<void>[] = []
+      for (const key of Object.keys(docs)) {
+        const urls = docs[key] || []
+        if (urls.length === 0) continue
+        const categoryFolder = rootFolder.folder(toFolderName(labelOf[key] || key))
+        if (!categoryFolder) continue
+        urls.forEach((url, i) => {
+          tasks.push((async () => {
+            try {
+              const res = await fetch(url)
+              if (!res.ok) throw new Error(`HTTP ${res.status}`)
+              const blob = await res.blob()
+              const cleanPath = url.split("?")[0]
+              const ext = (cleanPath.split(".").pop() || "bin").slice(0, 6).toLowerCase()
+              categoryFolder.file(`fichier_${String(i + 1).padStart(2, "0")}.${ext}`, blob)
+            } catch {
+              failed.push(`${labelOf[key] || key} — fichier ${i + 1}`)
+            }
+          })())
+        })
+      }
+      await Promise.all(tasks)
+
+      if (failed.length > 0) {
+        rootFolder.file(
+          "FICHIERS_MANQUANTS.txt",
+          `Certains fichiers n'ont pas pu être téléchargés :\n\n${failed.join("\n")}\n\nRéessayez depuis votre compte — ils restent accessibles en ligne.`
+        )
+      }
+
+      const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } })
+      const link = document.createElement("a")
+      link.href = URL.createObjectURL(blob)
+      link.download = `dossier_${safeName}.zip`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(link.href)
+
+      if (failed.length > 0) {
+        alert(`Dossier téléchargé.\n\n${failed.length} fichier(s) n'ont pas pu être récupérés — voir FICHIERS_MANQUANTS.txt dans le zip.`)
+      }
+    } catch (e) {
+      alert("Erreur téléchargement : " + (e instanceof Error ? e.message : "inconnue"))
     }
     setGeneratingPDF(false)
   }
@@ -431,10 +514,6 @@ export default function Dossier() {
                 style={{ padding: isMobile ? "10px 14px" : "12px 20px", background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 12, fontWeight: 700, fontSize: isMobile ? 13 : 14, textDecoration: "none", display: "inline-block", whiteSpace: "nowrap" }}>
                 Carnet d'entretien
               </a>
-              <button onClick={genererDossierPDFClick} disabled={generatingPDF} className="no-print"
-                style={{ padding: isMobile ? "10px 14px" : "12px 20px", background: generatingPDF ? "#9ca3af" : "#111", color: "white", border: "none", borderRadius: 12, fontWeight: 700, fontSize: isMobile ? 13 : 14, cursor: generatingPDF ? "not-allowed" : "pointer", fontFamily: "inherit", whiteSpace: "nowrap", flex: isMobile ? 1 : undefined }}>
-                {generatingPDF ? "Génération..." : "Télécharger PDF"}
-              </button>
             </div>
           </div>
 
@@ -660,6 +739,34 @@ export default function Dossier() {
                 style={{ background: saving ? "#9ca3af" : saved ? "#16a34a" : "#111", color: "white", border: "none", borderRadius: 999, padding: "14px 0", fontWeight: 700, fontSize: 15, cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit", transition: "background 0.2s" }}>
                 {saving ? "Sauvegarde..." : saved ? "Dossier sauvegardé ✓" : "Sauvegarder mon dossier"}
               </button>
+
+              {/* ─── Téléchargement du dossier ─── */}
+              <div className="no-print" style={{ background: "white", borderRadius: 20, padding: 24, border: "1.5px solid #e5e7eb" }}>
+                <h2 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 6px" }}>Télécharger mon dossier</h2>
+                <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px", lineHeight: 1.5 }}>
+                  Deux formats disponibles. Pour candidater hors plateforme ou constituer un backup local.
+                </p>
+                <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 10, alignItems: "stretch" }}>
+                  <button
+                    type="button"
+                    onClick={telechargerDossierZip}
+                    disabled={generatingPDF}
+                    style={{ flex: 1, background: generatingPDF ? "#9ca3af" : "#111", color: "white", border: "none", borderRadius: 12, padding: "14px 20px", fontWeight: 800, fontSize: 14, cursor: generatingPDF ? "wait" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    {generatingPDF ? "Préparation…" : "Télécharger mon dossier complet (.zip)"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={genererDossierPDFClick}
+                    disabled={generatingPDF}
+                    style={{ background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "14px 20px", fontWeight: 700, fontSize: 13, cursor: generatingPDF ? "wait" : "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                    PDF récap seul
+                  </button>
+                </div>
+                <p style={{ fontSize: 11, color: "#9ca3af", margin: "12px 0 0", lineHeight: 1.5 }}>
+                  <strong>Le zip contient :</strong> le PDF récapitulatif + toutes vos pièces justificatives (identité, bulletins, quittances, garant…) organisées par catégorie.
+                </p>
+              </div>
             </div>
 
             {/* Sidebar documents */}

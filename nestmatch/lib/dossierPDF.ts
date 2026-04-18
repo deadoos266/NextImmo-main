@@ -55,9 +55,32 @@ function fmtEuro(n?: number | null): string {
   return `${Number(n).toLocaleString("fr-FR")} €`
 }
 
-export async function genererDossierPDF(data: DossierData): Promise<void> {
+/**
+ * Variante interne : construit le jsPDF sans déclencher le save().
+ * Permet au code appelant de récupérer un Blob pour l'intégrer ailleurs
+ * (zip, envoi par email, etc.) ou de déclencher lui-même le download.
+ */
+async function buildDossierPDFDoc(data: DossierData) {
   const { default: jsPDF } = await import("jspdf")
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
+  renderDossier(doc, data)
+  return doc
+}
+
+export async function genererDossierPDFBlob(data: DossierData): Promise<Blob> {
+  const doc = await buildDossierPDFDoc(data)
+  return doc.output("blob")
+}
+
+export async function genererDossierPDF(data: DossierData): Promise<void> {
+  const doc = await buildDossierPDFDoc(data)
+  const safeName = (data.nom || "locataire").replace(/[^a-zA-Z0-9-_]+/g, "_").slice(0, 40)
+  doc.save(`dossier_${safeName}.pdf`)
+}
+
+type JsPDFDoc = Awaited<ReturnType<typeof buildDossierPDFDoc>>
+
+function renderDossier(doc: JsPDFDoc, data: DossierData): void {
   const W = 170
   const margin = 20
   const pageH = doc.internal.pageSize.getHeight()
@@ -203,7 +226,4 @@ export async function genererDossierPDF(data: DossierData): Promise<void> {
   doc.setTextColor(0, 0, 0)
 
   footer()
-
-  const safeName = (data.nom || "locataire").replace(/[^a-zA-Z0-9-_]+/g, "_").slice(0, 40)
-  doc.save(`dossier_${safeName}.pdf`)
 }
