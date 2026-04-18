@@ -75,8 +75,36 @@ export default async function LocationVille({ params }: any) {
   const total = (annonces || []).length
   const prixMedian = computeMedian((annonces || []).map(a => Number(a.prix)).filter(n => !isNaN(n) && n > 0))
 
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Accueil", item: BASE_URL },
+      { "@type": "ListItem", position: 2, name: "Annonces", item: `${BASE_URL}/annonces` },
+      { "@type": "ListItem", position: 3, name: `Location ${displayCity}`, item: `${BASE_URL}/location/${encodeURIComponent(ville)}` },
+    ],
+  }
+  const itemListLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    itemListElement: (annonces || []).slice(0, 12).map((a, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: `${BASE_URL}/annonces/${a.id}`,
+      name: a.titre,
+    })),
+  }
+
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd).replace(/</g, "\\u003c") }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListLd).replace(/</g, "\\u003c") }}
+      />
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 20px" }}>
 
         <p style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 10 }}>

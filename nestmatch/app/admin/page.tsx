@@ -6,6 +6,7 @@ import { supabase } from "../../lib/supabase"
 import { displayName } from "../../lib/privacy"
 import { RAISONS, getRaisonLabel } from "../../lib/signalements"
 import { STATUT_STYLE as CONTACT_STATUTS, getSujetLabel, type ContactStatut } from "../../lib/contacts"
+import { useResponsive } from "../hooks/useResponsive"
 
 /**
  * Dashboard admin refondu.
@@ -46,7 +47,8 @@ function exportCSV(rows: any[], filename: string) {
   const header = keys.join(",")
   const body = rows.map(r => keys.map(k => escape(r[k])).join(",")).join("\n")
   const csv = header + "\n" + body
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
+  // BOM UTF-8 pour qu'Excel reconnaisse l'encodage et affiche les accents
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" })
   const url = URL.createObjectURL(blob)
   const a = document.createElement("a")
   a.href = url
@@ -91,6 +93,7 @@ function MiniBars({ values, color = "#111" }: { values: number[]; color?: string
 export default function Admin() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const { isMobile } = useResponsive()
   const [onglet, setOnglet] = useState<Onglet>("Vue d'ensemble")
   const [annonces, setAnnonces] = useState<any[]>([])
   const [profils, setProfils] = useState<any[]>([])
@@ -274,7 +277,7 @@ export default function Admin() {
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 40px" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: isMobile ? "20px 14px" : "32px 40px" }}>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28, flexWrap: "wrap", gap: 16 }}>
           <div>

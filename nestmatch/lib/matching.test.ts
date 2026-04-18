@@ -140,3 +140,14 @@ describe("expliquerScore", () => {
     expect(raisons.some(r => r.includes("Dépasse"))).toBe(true)
   })
 })
+
+// Régression batch 34 : jardin pris en compte dans les équipements
+describe("calculerScore — jardin (régression batch 34)", () => {
+  it("un profil qui demande jardin + annonce avec jardin → score meilleur qu'annonce sans", () => {
+    const base: Annonce = { ville: "Lyon", prix: 1200, surface: 60, pieces: 3 }
+    const profil: Profil = { jardin: true }
+    const avecJardin = calculerScore({ ...base, jardin: true }, profil)
+    const sansJardin = calculerScore({ ...base, jardin: false }, profil)
+    expect(avecJardin).toBeGreaterThan(sansJardin)
+  })
+})

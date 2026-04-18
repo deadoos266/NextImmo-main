@@ -9,14 +9,7 @@ import Link from "next/link"
 
 const MapAnnonces = dynamic(() => import("../components/MapAnnonces"), { ssr: false })
 
-const GRADIENTS = [
-  "linear-gradient(135deg, #e8e0f0, #d4c5e8)",
-  "linear-gradient(135deg, #d4e8e0, #b8d4c8)",
-  "linear-gradient(135deg, #e8d4c5, #d4b89a)",
-  "linear-gradient(135deg, #c5d4e8, #a0b8d4)",
-  "linear-gradient(135deg, #e8e8c5, #d4d4a0)",
-  "linear-gradient(135deg, #e8c5d4, #d4a0b8)",
-]
+import { CARD_GRADIENTS as GRADIENTS } from "../../lib/cardGradients"
 
 export default function Favoris() {
   const [annonces, setAnnonces] = useState<any[]>([])

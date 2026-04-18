@@ -48,6 +48,7 @@ export default function Footer() {
             <a href="/mentions-legales" style={link}>Mentions légales</a>
             <a href="/confidentialite" style={link}>Politique de confidentialité</a>
             <a href="/cookies" style={link}>Cookies</a>
+            <a href="/plan-du-site" style={link}>Plan du site</a>
           </div>
         </div>
       </div>

@@ -11,7 +11,7 @@ import PipelineFunnel from "./PipelineFunnel"
 import { annulerVisite, STATUT_VISITE_STYLE as STATUT_V } from "../../lib/visitesHelpers"
 import { computeScreening } from "../../lib/screening"
 
-const ONGLETS = ["Tableau de bord", "Mes biens", "Performance", "Documents", "Candidatures", "Loyers", "Visites"] as const
+const ONGLETS = ["Tableau de bord", "Mes biens", "Mes locataires", "Performance", "Documents", "Candidatures", "Loyers", "Visites"] as const
 type Onglet = typeof ONGLETS[number]
 
 function jours(d: string) {
@@ -393,15 +393,25 @@ export default function Proprietaire() {
           <>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 12 : 18, marginBottom: 24 }}>
               {[
-                { label: "Biens disponibles", val: biensDispos, color: "#16a34a", bg: "#f0fdf4" },
-                { label: "Biens loués",       val: biensLoues, color: "#6b7280", bg: "#f9fafb" },
-                { label: "Loyers à confirmer", val: loyersAttendus, color: "#ea580c", bg: loyersAttendus > 0 ? "#fff7ed" : "white" },
-                { label: "Loyers confirmés",  val: loyersConfirmes, color: "#16a34a", bg: "white" },
+                { label: "Biens disponibles", val: biensDispos, color: "#16a34a", bg: "#f0fdf4", targetOnglet: "Mes biens" as const },
+                { label: "Biens loués",       val: biensLoues, color: "#6b7280", bg: "#f9fafb", targetOnglet: "Mes locataires" as const },
+                { label: "Loyers à confirmer", val: loyersAttendus, color: "#ea580c", bg: loyersAttendus > 0 ? "#fff7ed" : "white", targetOnglet: "Loyers" as const },
+                { label: "Loyers confirmés",  val: loyersConfirmes, color: "#16a34a", bg: "white", targetOnglet: "Loyers" as const },
               ].map(s => (
-                <div key={s.label} style={{ background: s.bg, borderRadius: 20, padding: isMobile ? "18px 20px" : "24px 28px", border: "1px solid #f3f4f6" }}>
+                <button
+                  key={s.label}
+                  onClick={() => setOnglet(s.targetOnglet)}
+                  style={{
+                    background: s.bg, borderRadius: 20, padding: isMobile ? "18px 20px" : "24px 28px",
+                    border: "1px solid #f3f4f6", textAlign: "left", cursor: "pointer",
+                    fontFamily: "inherit", transition: "transform 0.15s, box-shadow 0.15s",
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.06)" }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "none" }}
+                >
                   <div style={{ fontSize: isMobile ? 32 : 40, fontWeight: 800, color: s.color, letterSpacing: "-1px", lineHeight: 1 }}>{s.val}</div>
                   <div style={{ fontSize: 12, color: "#6b7280", marginTop: 8, fontWeight: 600 }}>{s.label}</div>
-                </div>
+                </button>
               ))}
             </div>
 
@@ -521,6 +531,48 @@ export default function Proprietaire() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* MES LOCATAIRES — biens loués avec locataire_email renseigné */}
+        {onglet === "Mes locataires" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {(() => {
+              const actifs = biens.filter((b: any) => b.statut === "loué" && b.locataire_email)
+              if (actifs.length === 0) return (
+                <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 24 : 40, textAlign: "center", color: "#9ca3af" }}>
+                  <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: "#6b7280" }}>Aucun locataire actif</p>
+                  <p style={{ fontSize: 13, lineHeight: 1.6 }}>
+                    Dès qu&apos;un bail sera signé sur un de vos biens (génération PDF depuis l&apos;onglet Documents), le locataire apparaîtra ici.
+                  </p>
+                </div>
+              )
+              return actifs.map((b: any) => {
+                const moisLoyers = loyers.filter((l: any) => l.annonce_id === b.id && l.statut === "confirmé").length
+                return (
+                  <div key={b.id} style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24, display: "flex", flexDirection: isMobile ? "column" : "row", gap: 16, alignItems: isMobile ? "stretch" : "center" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
+                        <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{b.titre}</h3>
+                        <span style={{ background: "#dcfce7", color: "#15803d", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>Bail actif</span>
+                      </div>
+                      <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 10px" }}>{b.adresse ? b.adresse + " · " : ""}{b.ville}</p>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
+                        <div><span style={{ color: "#9ca3af" }}>Locataire : </span><strong>{b.locataire_email}</strong></div>
+                        {b.date_debut_bail && <div><span style={{ color: "#9ca3af" }}>Début du bail : </span><strong>{new Date(b.date_debut_bail).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</strong></div>}
+                        <div><span style={{ color: "#9ca3af" }}>Loyer : </span><strong>{(b.prix || 0) + (b.charges || 0)} €</strong> <span style={{ color: "#6b7280" }}>/ mois</span></div>
+                        <div><span style={{ color: "#9ca3af" }}>Loyers confirmés : </span><strong>{moisLoyers}</strong></div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: 8, flexWrap: "wrap" }}>
+                      <a href={`/messages?with=${encodeURIComponent(b.locataire_email)}`} style={{ background: "#111", color: "white", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>Message</a>
+                      <a href={`/proprietaire/stats?id=${b.id}`} style={{ background: "white", border: "1.5px solid #e5e7eb", color: "#111", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>Loyers</a>
+                      <a href={`/proprietaire/edl/${b.id}`} style={{ background: "white", border: "1.5px solid #e5e7eb", color: "#111", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>EDL</a>
+                    </div>
+                  </div>
+                )
+              })
+            })()}
           </div>
         )}
 

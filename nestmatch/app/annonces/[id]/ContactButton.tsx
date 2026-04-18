@@ -44,21 +44,27 @@ export default function ContactButton({ annonce }: { annonce: any }) {
     try {
       const fromEmail = session.user!.email!
 
-      // Verifie si une conversation existe deja entre ces 2 emails pour cette annonce
-      // (plus strict : meme annonce uniquement — evite le doublon inter-annonces)
-      const { data: existants } = await supabase
-        .from("messages")
-        .select("id")
-        .or(`and(from_email.eq.${fromEmail},to_email.eq.${toEmail}),and(from_email.eq.${toEmail},to_email.eq.${fromEmail})`)
-        .limit(1)
-
-      const hasConversation = existants && existants.length > 0
+      // Verifie si une candidature existe deja entre ces 2 emails POUR CETTE ANNONCE
+      // (scopé par annonce_id — un locataire peut contacter plusieurs annonces
+      // du même proprio, chaque contact génère une entrée distincte).
+      // Deux requêtes .eq() au lieu de .or() pour éviter toute injection dans
+      // l'email (caractères spéciaux valides). Match uniquement sur le message
+      // initial de candidature type="candidature".
+      const me = fromEmail.toLowerCase()
+      const other = toEmail.toLowerCase()
+      const [sent, received] = await Promise.all([
+        supabase.from("messages").select("id")
+          .eq("from_email", me).eq("to_email", other).eq("annonce_id", annonce.id).limit(1),
+        supabase.from("messages").select("id")
+          .eq("from_email", other).eq("to_email", me).eq("annonce_id", annonce.id).limit(1),
+      ])
+      const hasConversation = (sent.data && sent.data.length > 0) || (received.data && received.data.length > 0)
 
       if (!hasConversation) {
         await supabase.from("messages").insert([{
-          from_email: fromEmail,
-          to_email: toEmail,
-          contenu: `Bonjour, je suis interesse(e) par votre annonce "${annonce.titre}" a ${annonce.ville}.`,
+          from_email: me,
+          to_email: other,
+          contenu: `Bonjour, je suis intéressé(e) par votre annonce « ${annonce.titre} » à ${annonce.ville}.`,
           lu: false,
           annonce_id: annonce.id,
           type: "candidature",
@@ -66,7 +72,7 @@ export default function ContactButton({ annonce }: { annonce: any }) {
         }])
       }
 
-      router.push(`/messages?with=${encodeURIComponent(toEmail)}`)
+      router.push(`/messages?with=${encodeURIComponent(other)}`)
     } finally {
       setLoading(false)
       // On garde inFlight a true pendant la navigation : le composant va

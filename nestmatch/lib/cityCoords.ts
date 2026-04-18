@@ -134,3 +134,12 @@ export const CITY_NAMES: string[] = Object.keys(CITY_COORDS)
 export function normalizeCityName(name: string): string {
   return toTitleCase(name.toLowerCase().trim())
 }
+
+/**
+ * Clé de lookup ville normalisée : lowercase, trim, accents retirés.
+ * Utilisée pour comparer / indexer des villes sans faux négatifs type
+ * "Saint-Étienne" vs "Saint-Etienne". Ne pas utiliser pour l'affichage UI.
+ */
+export function normalizeCityKey(name: string): string {
+  return name.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+}

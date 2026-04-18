@@ -18,6 +18,7 @@ export default function AjouterBien() {
   const router = useRouter()
   const { isMobile } = useResponsive()
   const [saving, setSaving] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
   const [photos, setPhotos] = useState<string[]>([])
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
@@ -78,6 +79,12 @@ export default function AjouterBien() {
 
   async function publier() {
     if (!form.titre || !form.ville || !form.prix) { alert("Remplis au minimum le titre, la ville et le loyer."); return }
+    if (form.titre.length > 120) { alert("Le titre doit faire 120 caractères maximum."); return }
+    if ((form.description || "").length > 10000) { alert("La description doit faire 10 000 caractères maximum."); return }
+    const prix = parseInt(form.prix || "0", 10) || 0
+    if (prix <= 0 || prix > 50000) { alert("Le loyer doit être compris entre 1 et 50 000 €."); return }
+    const surface = parseInt(form.surface || "0", 10) || 0
+    if (surface < 0 || surface > 1000) { alert("La surface doit être comprise entre 0 et 1000 m²."); return }
     setSaving(true)
 
     const data: any = {
@@ -129,12 +136,45 @@ export default function AjouterBien() {
     setSaving(false)
   }
 
+  // Checklist de complétude (inspirée SeLoger) — aide le proprio à voir ce qui manque
+  const checks = [
+    { key: "titre", label: "Titre", ok: !!form.titre.trim() },
+    { key: "type", label: "Type de bien", ok: !!form.type_bien },
+    { key: "ville", label: "Ville", ok: !!form.ville },
+    { key: "prix", label: "Loyer", ok: !!form.prix },
+    { key: "surface", label: "Surface", ok: !!form.surface },
+    { key: "pieces", label: "Pièces", ok: !!form.pieces },
+    { key: "description", label: "Description (80+ car.)", ok: (form.description || "").trim().length >= 80 },
+    { key: "photos", label: "Photos (1+ recommandé)", ok: photos.length >= 1 },
+    { key: "dpe", label: "DPE", ok: !!form.dpe },
+  ]
+  const nOk = checks.filter(c => c.ok).length
+  const completion = Math.round((nOk / checks.length) * 100)
+  const manquants = checks.filter(c => !c.ok).map(c => c.label)
+
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 48px" }}>
         <a href="/proprietaire" style={{ fontSize: 14, color: "#6b7280", textDecoration: "none" }}>← Retour au dashboard</a>
         <h1 style={{ fontSize: 30, fontWeight: 800, margin: "16px 0 4px", letterSpacing: "-0.5px" }}>Ajouter un bien</h1>
-        <p style={{ color: "#6b7280", marginBottom: 32, fontSize: 14 }}>Publiez une annonce ou enregistrez un bien déjà loué pour le gérer</p>
+        <p style={{ color: "#6b7280", marginBottom: 20, fontSize: 14 }}>Publiez une annonce ou enregistrez un bien déjà loué pour le gérer</p>
+
+        {/* Progress bar de complétude — style SeLoger : feedback visible sur ce qui reste à remplir */}
+        <div style={{ background: "white", borderRadius: 16, padding: isMobile ? "14px 16px" : "18px 22px", marginBottom: 24, border: "1px solid #e5e7eb" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, gap: 12, flexWrap: "wrap" }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: completion === 100 ? "#16a34a" : "#111", margin: 0 }}>
+              {completion === 100 ? "✓ Annonce complète — prête à publier" : `Annonce complète à ${completion}%`}
+            </p>
+            {completion < 100 && (
+              <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>
+                À compléter : {manquants.slice(0, 3).join(" · ")}{manquants.length > 3 ? ` · +${manquants.length - 3}` : ""}
+              </p>
+            )}
+          </div>
+          <div style={{ height: 6, background: "#f3f4f6", borderRadius: 999, overflow: "hidden" }}>
+            <div style={{ width: `${completion}%`, height: "100%", background: completion === 100 ? "#16a34a" : "#111", transition: "width 0.2s" }} />
+          </div>
+        </div>
 
         <Sec t="Informations générales">
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
@@ -343,14 +383,86 @@ export default function AjouterBien() {
           </p>
         </Sec>
 
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <a href="/proprietaire" style={{ padding: "14px 28px", border: "1.5px solid #e5e7eb", borderRadius: 999, textDecoration: "none", color: "#111", fontWeight: 600 }}>Annuler</a>
-          <button onClick={publier} disabled={saving}
-            style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, fontFamily: "inherit" }}>
-            {saving ? "Publication..." : dejaLoue ? "Enregistrer le bien" : "Publier l'annonce"}
-          </button>
+          <div style={{ display: "flex", gap: 12 }}>
+            <button
+              type="button"
+              onClick={() => setShowPreview(true)}
+              disabled={!form.titre || !form.ville || !form.prix}
+              style={{ background: "white", border: "1.5px solid #111", color: "#111", borderRadius: 999, padding: "14px 24px", fontWeight: 700, fontSize: 15, cursor: form.titre && form.ville && form.prix ? "pointer" : "not-allowed", opacity: form.titre && form.ville && form.prix ? 1 : 0.5, fontFamily: "inherit" }}
+            >
+              Prévisualiser
+            </button>
+            <button onClick={publier} disabled={saving}
+              style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, fontFamily: "inherit" }}>
+              {saving ? "Publication..." : dejaLoue ? "Enregistrer le bien" : "Publier l'annonce"}
+            </button>
+          </div>
         </div>
+
+        {showPreview && (
+          <PreviewModal form={form} toggles={toggles} photos={photos} onClose={() => setShowPreview(false)} />
+        )}
       </div>
     </main>
+  )
+}
+
+// ─── Modal de prévisualisation ──────────────────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function PreviewModal({ form, toggles, photos, onClose }: { form: any; toggles: any; photos: string[]; onClose: () => void }) {
+  const loyerTotal = (parseInt(form.prix || "0", 10) || 0) + (parseInt(form.charges || "0", 10) || 0)
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, overflow: "auto" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "white", borderRadius: 20, width: "min(720px, 100%)", maxHeight: "90vh", overflow: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ position: "sticky", top: 0, background: "white", padding: "18px 24px", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 1 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", margin: 0 }}>Aperçu de votre annonce</p>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 24, cursor: "pointer", color: "#6b7280", padding: 0, lineHeight: 1 }}>×</button>
+        </div>
+        <div style={{ padding: "20px 24px" }}>
+          {photos.length > 0 ? (
+            <div style={{ height: 280, background: `url(${photos[0]}) center/cover no-repeat`, borderRadius: 14, marginBottom: 18 }} />
+          ) : (
+            <div style={{ height: 280, background: "linear-gradient(135deg, #d4e8e0, #b8d4c8)", borderRadius: 14, marginBottom: 18, display: "flex", alignItems: "center", justifyContent: "center", color: "#6b7280", fontSize: 13 }}>
+              Aucune photo — ajoutez-en pour maximiser l&apos;intérêt
+            </div>
+          )}
+          <h2 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 6px", letterSpacing: "-0.5px" }}>{form.titre || "Titre de l'annonce"}</h2>
+          <p style={{ fontSize: 14, color: "#6b7280", margin: "0 0 14px" }}>
+            {form.adresse && toggles.localisation_exacte ? `${form.adresse} · ` : ""}{form.ville}
+          </p>
+          <div style={{ display: "flex", gap: 14, marginBottom: 18, flexWrap: "wrap", fontSize: 14, color: "#374151" }}>
+            {form.surface && <span><strong>{form.surface} m²</strong></span>}
+            {form.pieces && <span><strong>{form.pieces}</strong> pièces</span>}
+            {form.chambres && <span><strong>{form.chambres}</strong> chambres</span>}
+            {form.dpe && <span>DPE <strong>{form.dpe}</strong></span>}
+            {form.type_bien && <span style={{ color: "#6b7280" }}>{form.type_bien}</span>}
+          </div>
+          <div style={{ background: "#f9fafb", borderRadius: 12, padding: "14px 18px", marginBottom: 18 }}>
+            <p style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>{loyerTotal} €<span style={{ fontSize: 14, color: "#6b7280", fontWeight: 500 }}> / mois</span></p>
+            {form.charges && <p style={{ fontSize: 12, color: "#6b7280", margin: "4px 0 0" }}>dont {form.charges} € de charges</p>}
+          </div>
+          {form.description && (
+            <div style={{ marginBottom: 18 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 800, margin: "0 0 8px" }}>Description</h3>
+              <p style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{form.description}</p>
+            </div>
+          )}
+          <h3 style={{ fontSize: 15, fontWeight: 800, margin: "0 0 8px" }}>Équipements</h3>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 18 }}>
+            {Object.entries(toggles).filter(([, v]) => v).map(([k]) => (
+              <span key={k} style={{ background: "#f0fdf4", color: "#15803d", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600 }}>{k.replace(/_/g, " ")}</span>
+            ))}
+            {Object.entries(toggles).filter(([, v]) => v).length === 0 && (
+              <span style={{ fontSize: 13, color: "#9ca3af" }}>Aucun équipement coché.</span>
+            )}
+          </div>
+          <p style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", margin: "20px 0 0" }}>
+            Aperçu indicatif — le rendu public peut légèrement varier.
+          </p>
+        </div>
+      </div>
+    </div>
   )
 }

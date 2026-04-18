@@ -56,23 +56,42 @@ export default function BookingVisite({
     setSaving(true)
     setErreur("")
 
+    const me = (myEmail || "").toLowerCase()
+    const proprio = (proprietaireEmail || "").toLowerCase()
     const { data, error } = await supabase.from("visites").insert({
       annonce_id: annonceId,
-      locataire_email: myEmail!,
-      proprietaire_email: proprietaireEmail,
+      locataire_email: me,
+      proprietaire_email: proprio,
       date_visite: date,
       heure,
       message: message || null,
       statut: "proposée",
-      propose_par: myEmail!,
+      propose_par: me,
     }).select().single()
 
     if (error) {
       setErreur("L'envoi de la demande de visite a échoué. Veuillez réessayer.")
-    } else {
-      setExistante(data)
-      setOpen(false)
+      setSaving(false)
+      return
     }
+
+    // Post un message auto dans la conversation pour que le proprio voie la
+    // demande aussi dans /messages (pas uniquement dans l'onglet Visites).
+    const dateFormat = new Date(date + "T12:00:00").toLocaleDateString("fr-FR", {
+      weekday: "long", day: "numeric", month: "long",
+    })
+    const contenu = `Demande de visite : ${dateFormat} à ${heure}${message.trim() ? ` — « ${message.trim()} »` : ""}`
+    await supabase.from("messages").insert([{
+      from_email: me,
+      to_email: proprio,
+      contenu,
+      lu: false,
+      annonce_id: annonceId,
+      created_at: new Date().toISOString(),
+    }])
+
+    setExistante(data)
+    setOpen(false)
     setSaving(false)
   }
 

@@ -11,6 +11,7 @@ export default function ContactPage() {
   const [email, setEmail] = useState(session?.user?.email || "")
   const [sujet, setSujet] = useState("question_generale")
   const [message, setMessage] = useState("")
+  const [website, setWebsite] = useState("") // honeypot anti-bot — reste vide
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState("")
@@ -26,7 +27,7 @@ export default function ContactPage() {
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nom: nom.trim(), email: email.trim(), sujet, message: message.trim() }),
+        body: JSON.stringify({ nom: nom.trim(), email: email.trim(), sujet, message: message.trim(), website }),
       })
       const json = await res.json()
       if (!res.ok || !json.success) {
@@ -148,6 +149,19 @@ export default function ContactPage() {
               <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 6 }}>
                 {message.trim().length} / 4000 caractères
               </p>
+            </div>
+
+            {/* Honeypot invisible — si rempli par un bot → rejet silencieux côté API */}
+            <div aria-hidden="true" style={{ position: "absolute", left: "-9999px", top: 0, width: 1, height: 1, overflow: "hidden" }}>
+              <label htmlFor="website">Site web (laissez vide)</label>
+              <input
+                id="website"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+                value={website}
+                onChange={e => setWebsite(e.target.value)}
+              />
             </div>
 
             {error && (

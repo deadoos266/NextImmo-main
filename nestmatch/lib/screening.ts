@@ -130,10 +130,20 @@ export function computeScreening(profil: ScreeningProfil | null | undefined, loy
   }
 
   // ─── Garant (0-20) ──────────────────────────────────────
+  // Dérivé de type_garant (le formulaire /profil stocke un string comme
+  // "Personne physique", "Organisme (Visale)…", "Aucun garant") OU du
+  // flag explicite `garant` si présent.
   let garantScore = 0
-  if (profil.garant === true) {
+  const typeGarant = (profil.type_garant || "").toLowerCase().trim()
+  const aGarant = profil.garant === true || (
+    typeGarant.length > 0 &&
+    !typeGarant.includes("aucun") &&
+    !typeGarant.includes("sans")
+  )
+  const sansGarant = profil.garant === false || typeGarant.includes("aucun") || typeGarant.includes("sans")
+  if (aGarant) {
     garantScore = 20
-  } else if (profil.garant === false) {
+  } else if (sansGarant) {
     flags.push("Pas de garant")
   } else {
     flags.push("Garant non renseigné")

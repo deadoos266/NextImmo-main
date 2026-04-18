@@ -16,7 +16,8 @@
       "Bash(rmdir nestmatch/app/api/admin/annonces/[id])",
       "Bash(rm \"app/api/admin/annonces/[id]/route.ts\")",
       "Bash(rmdir \"app/api/admin/annonces/[id]\")",
-      "Bash(npm test *)"
+      "Bash(npm test *)",
+      "WebFetch(domain:www.seloger.com)"
     ]
   }
 }

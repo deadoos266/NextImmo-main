@@ -72,6 +72,128 @@ Toute nouvelle couche doit être ajoutée ici avec justification.
 
 ## Historique des batchs
 
+### Batch 34 (suite) — Preview annonce + plan du site + KPI cliquables + tests (2026-04-18)
+
+- **Preview annonce avant publication** : bouton "Prévisualiser" dans
+  `/proprietaire/ajouter` ouvre une modale live avec rendu fiche (photo
+  principale, titre, localisation, prix, description, équipements).
+- **Validation taille** : titre ≤ 120 car, description ≤ 10 000, loyer
+  1-50 000 €, surface 0-1000 m².
+- **Page `/plan-du-site`** créée — navigation vers toutes les pages
+  publiques (home, annonces, villes, estimateur, contact, légales).
+  Dans sitemap + footer. SEO + a11y.
+- **KPI cliquables** dashboard proprio : 4 cartes stats → lien onglet
+  correspondant (Mes biens, Mes locataires, Loyers). Hover effect.
+- **Filtres URL persistés** : `surface_min`, `surface_max`, `pieces_min`,
+  `q` en query params + sync URL → state à la navigation.
+- **BailCard rendu chat** : `[BAIL_CARD]` avec style dédié (vert/noir)
+  + preview conv liste.
+- **CSV admin UTF-8 BOM** : `\uFEFF` en tête pour Excel accents OK.
+- **6 nouveaux tests** : jardin régression (matching) + garant dérivé
+  (5 cas : personne physique, organisme, aucun, non renseigné, flag
+  boolean). **71 tests** passent.
+
+### Batch 34 — Audits produit (filtres/profil + messages/bail) + refonte majeure (2026-04-18)
+
+**Lancé 2 audits agents en parallèle** (filtres/profil/matching, messages/bail/locataire-proprio)
+puis fixes systématiques basés sur leurs findings.
+
+#### Bugs matching/screening (3 HIGH)
+- **`lib/matching.ts::calculerScore`** ignorait `jardin` dans les équipements
+  alors que le profil l'accepte comme toggle. Ajouté dans `equips[]`.
+  Ajout des types `jardin?: boolean` dans `Profil` et `Annonce`.
+- **`lib/screening.ts`** attendait `profil.garant: boolean` qui n'est JAMAIS
+  rempli par `/profil` (qui stocke `type_garant` string). Le screening
+  retournait "Garant non renseigné" pour 100% des candidats. Fix : dériver
+  `aGarant` depuis `type_garant` ("Personne physique" / "Organisme" → oui,
+  "Aucun garant" → non).
+- **Filtres ↔ profil sidebar** : la sidebar `/annonces` n'héritait
+  d'aucun champ du profil locataire (surface, pièces, parking, extérieur).
+  Fix : pré-remplissage depuis `profils` au chargement — sans écraser les
+  valeurs déjà saisies manuellement.
+
+#### Messages ↔ bail ↔ locataire/proprio — refonte majeure
+- **Nouvelle page `/mon-logement`** (locataire) : vue dédiée pour un
+  locataire ayant un bail actif (`annonces.locataire_email === email`).
+  Affiche le bien, photo principale, loyer, date début bail, contact
+  proprio en 1 clic, raccourcis visites/carnet/dossier, stats
+  (visites confirmées, EDL, loyers payés).
+  Redirige vers `/mes-candidatures` si aucun bail. Noindex.
+  Ajouté dans le menu Navbar "Mon espace" locataire.
+- **Nouvel onglet "Mes locataires"** dans `/proprietaire` (2e onglet
+  après "Mes biens"). Liste les biens avec `statut === "loué"` et
+  `locataire_email` renseigné. Pour chaque : badge "Bail actif", infos
+  complètes, loyers confirmés, raccourcis Message / Loyers / EDL.
+- **Génération de bail PDF → BAIL_CARD + cascade automatique** :
+  `/proprietaire/bail/[id]` après `doc.save()`, si `locataire_email`
+  renseigné :
+  - update `annonces` avec `locataire_email`, `statut="loué"`, `date_debut_bail`
+  - post `[BAIL_CARD]{payload JSON}` dans la conv locataire
+  - + version texte de secours "Bail généré pour..."
+  Fini la saisie manuelle du `locataire_email` dans `modifier/[id]`.
+- **Badges relation sur la liste de conversations** (`/messages`) :
+  `Bail actif` (vert) / `Candidat` (bleu) / `Ancienne candidature` (gris)
+  selon `annonces.statut` + `locataire_email` vs `conv.other` et `myEmail`.
+  Le `[BAIL_CARD]` est aussi reconnu dans la preview.
+- **`ContactButton`** : scoping des doublons de conv par `annonce_id`
+  (un locataire peut contacter plusieurs annonces du même proprio,
+  chaque contact génère une entrée candidature distincte). Requêtes
+  split `.eq()` au lieu de `.or()` (cohérent avec sécu batch 31).
+- **`BookingVisite`** : poste un message auto dans la conv
+  (`Demande de visite : ...`) en plus de l'insert dans `visites`.
+  Le proprio voit désormais la demande aussi dans `/messages`, plus
+  seulement dans l'onglet Visites. Flux unifié avec `proposerVisite`
+  côté chat.
+
+#### Filtres /annonces
+- **handleBoundsChange ne vide plus l'URL** : déplacer/zoomer la carte
+  ne supprime plus ville/budget/type des query params. L'utilisateur
+  peut raffiner sa recherche en zoomant sans perdre ses filtres.
+- **Centrage carte via Nominatim** : si `getCityCoords(activeVille)`
+  retourne null (ville hors `cityCoords.ts`), `geocodeCity()` est
+  appelé en background (cache localStorage 30j) et la carte se centre
+  dès que la réponse arrive.
+- **`CityAutocomplete` : suggestions par défaut au focus vide** — 12
+  grandes villes FR (Paris, Lyon, Marseille, etc.) proposées au focus
+  pour guider l'utilisateur. Disparaissent dès qu'il tape.
+- **`normalizeCityName` dédupliqué** : nouveau `normalizeCityKey()`
+  dans `lib/cityCoords.ts` (lowercase + NFD strip accents). Utilisé
+  dans `annonces/page.tsx`, `CityAutocomplete.tsx`, `lib/geocoding.ts`
+  au lieu de 4 copies quasi-identiques.
+
+#### DRY / refactor
+- **`lib/cardGradients.ts`** : `CARD_GRADIENTS` + `gradientForId()`
+  extraits. Utilisés dans `annonces/page` et `favoris/page`
+  (2 duplications éliminées).
+- **`app/components/leafletSetup.ts`** : `fixLeafletIcons()` extrait,
+  utilisé par `MapBien` et `MapAnnonces` (2 duplications).
+- Suppression dup `function fixLeafletIcons` locales.
+
+#### SEO
+- **BreadcrumbList JSON-LD** + **ItemList JSON-LD** ajoutés sur
+  `/location/[ville]` (rich results : fil d'Ariane + liste des 12
+  premières annonces).
+
+#### UX création annonce (SeLoger-inspired)
+- `/proprietaire/ajouter` : **progress bar + checklist de complétude**
+  en tête de page. Suivi live : titre, type, ville, loyer, surface,
+  pièces, description (80+ car.), photos, DPE. Libellé "Annonce
+  complète à X%" + liste des champs manquants. 100% → "✓ Annonce
+  complète — prête à publier" en vert.
+
+#### Sécu / UX additionnels
+- **Honeypot anti-bot** sur `/contact` (champ `website` caché visuellement +
+  rejet silencieux côté API si rempli → faux succès pour ne pas alerter
+  le bot).
+- **ICS escape** : `\r` et `\r\n` désormais échappés correctement
+  (avant seul `\n` l'était — injection secondaire possible).
+- **Admin UX mobile** : padding container `32px 40px` → `20px 14px`
+  en mobile, import de `useResponsive`.
+
+#### Pages légales (rappel batch 32)
+Les pages CGU / Confidentialité sont maintenant complètes. Mentions
+légales avec placeholders surlignés jaune (SIRET/RCS/capital à saisir).
+
 ### Batch 33 — DRY refactor + BreadcrumbList + sécu agent sessionId (2026-04-18)
 
 #### Duplications extraites en helpers partagés

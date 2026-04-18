@@ -171,3 +171,35 @@ describe("computeScreening — situation professionnelle", () => {
     expect(cdd - etu).toBe(5)  // 15 - 10
   })
 })
+
+// Régression batch 34 : le flag garant peut être dérivé de type_garant
+describe("computeScreening — garant dérivé de type_garant (régression batch 34)", () => {
+  const base = { revenus_mensuels: 3000, situation_pro: "CDI", nom: "X", telephone: "0600" } as ScreeningProfil
+  const loyer = 1000
+
+  it("type_garant 'Personne physique' donne le bonus garant même sans flag boolean", () => {
+    const r = computeScreening({ ...base, type_garant: "Personne physique" }, loyer)
+    expect(r.flags).not.toContain("Pas de garant")
+    expect(r.flags).not.toContain("Garant non renseigné")
+  })
+
+  it("type_garant 'Organisme (Visale)' → bonus garant", () => {
+    const r = computeScreening({ ...base, type_garant: "Organisme (Visale)" }, loyer)
+    expect(r.flags).not.toContain("Pas de garant")
+  })
+
+  it("type_garant 'Aucun garant' → pénalité Pas de garant", () => {
+    const r = computeScreening({ ...base, type_garant: "Aucun garant" }, loyer)
+    expect(r.flags).toContain("Pas de garant")
+  })
+
+  it("type_garant vide ET garant non défini → flag 'Garant non renseigné'", () => {
+    const r = computeScreening({ ...base, type_garant: null }, loyer)
+    expect(r.flags).toContain("Garant non renseigné")
+  })
+
+  it("flag garant=true prime sur type_garant vide", () => {
+    const r = computeScreening({ ...base, garant: true, type_garant: "" }, loyer)
+    expect(r.flags).not.toContain("Pas de garant")
+  })
+})

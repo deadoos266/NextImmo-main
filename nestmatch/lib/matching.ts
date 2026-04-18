@@ -23,10 +23,12 @@ export interface Profil {
   parking?: boolean
   balcon?: boolean
   terrasse?: boolean
+  jardin?: boolean
   cave?: boolean
   fibre?: boolean
   ascenseur?: boolean
   dpe_min?: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   preferences_implicites?: any
 }
 
@@ -40,6 +42,7 @@ export interface Annonce {
   parking?: boolean
   balcon?: boolean
   terrasse?: boolean
+  jardin?: boolean
   cave?: boolean
   fibre?: boolean
   ascenseur?: boolean
@@ -163,6 +166,7 @@ export function calculerScore(annonce: Annonce, profil: Profil): number {
     { want: toBool(profil.parking),   has: toBool(annonce.parking) },
     { want: toBool(profil.balcon),    has: toBool(annonce.balcon) },
     { want: toBool(profil.terrasse),  has: toBool(annonce.terrasse) },
+    { want: toBool(profil.jardin),    has: toBool(annonce.jardin) },
     { want: toBool(profil.cave),      has: toBool(annonce.cave) },
     { want: toBool(profil.fibre),     has: toBool(annonce.fibre) },
     { want: toBool(profil.ascenseur), has: toBool(annonce.ascenseur) },

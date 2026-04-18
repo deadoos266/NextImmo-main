@@ -14,6 +14,8 @@ import { supabaseAdmin } from "@/lib/supabase-server"
 function escapeICS(s: string): string {
   return String(s || "")
     .replace(/\\/g, "\\\\")
+    .replace(/\r\n/g, "\\n")
+    .replace(/\r/g, "\\n")
     .replace(/\n/g, "\\n")
     .replace(/,/g, "\\,")
     .replace(/;/g, "\\;")

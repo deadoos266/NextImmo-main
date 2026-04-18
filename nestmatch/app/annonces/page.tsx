@@ -6,7 +6,7 @@ import { supabase } from "../../lib/supabase"
 import { calculerScore, estExclu, labelScore } from "../../lib/matching"
 import { useSession } from "next-auth/react"
 import { useRole } from "../providers"
-import { getCityCoords } from "../../lib/cityCoords"
+import { getCityCoords, normalizeCityKey } from "../../lib/cityCoords"
 import { geocodeCity } from "../../lib/geocoding"
 import { getFavoris, toggleFavori } from "../../lib/favoris"
 import { calculerCompletudeProfil } from "../../lib/profilCompleteness"
@@ -15,15 +15,8 @@ import CityAutocomplete from "../components/CityAutocomplete"
 
 const MapAnnonces = dynamic(() => import("../components/MapAnnonces"), { ssr: false })
 
-// Carousel photo défini hors du composant principal (évite perte de focus)
-const GRADIENTS = [
-  "linear-gradient(135deg, #e8e0f0, #d4c5e8)",
-  "linear-gradient(135deg, #d4e8e0, #b8d4c8)",
-  "linear-gradient(135deg, #e8d4c5, #d4b89a)",
-  "linear-gradient(135deg, #c5d4e8, #a0b8d4)",
-  "linear-gradient(135deg, #e8e8c5, #d4d4a0)",
-  "linear-gradient(135deg, #e8c5d4, #d4a0b8)",
-]
+// Gradients placeholder partagés dans lib/cardGradients.ts
+import { CARD_GRADIENTS as GRADIENTS } from "../../lib/cardGradients"
 
 function CardPhoto({ annonce, height = 170 }: { annonce: any; height?: number }) {
   const [idx, setIdx] = useState(0)
@@ -157,6 +150,11 @@ function AnnoncesContent() {
   const urlVille = searchParams?.get("ville") || ""
   const urlBudget = parseInt(searchParams?.get("budget_max") || "0") || 0
   const urlType = searchParams?.get("type") || ""
+  // Nouveaux filtres persistés en URL (batch 34)
+  const urlSurfaceMin = searchParams?.get("surface_min") || ""
+  const urlSurfaceMax = searchParams?.get("surface_max") || ""
+  const urlPiecesMin = parseInt(searchParams?.get("pieces_min") || "0") || 0
+  const urlMotCle = searchParams?.get("q") || ""
 
   // Si l'URL ne specifie rien, on retombe sur les valeurs du profil locataire
   const activeVille = urlVille || (!isProprietaire && profil?.ville_souhaitee) || ""
@@ -166,6 +164,15 @@ function AnnoncesContent() {
   function clearUrlFilters() {
     router.replace("/annonces")
   }
+
+  // Sync local state ↔ URL lorsque les params changent (navigation)
+  useEffect(() => {
+    if (urlSurfaceMin !== surfaceMin) setSurfaceMin(urlSurfaceMin)
+    if (urlSurfaceMax !== surfaceMax) setSurfaceMax(urlSurfaceMax)
+    if (urlPiecesMin !== piecesMin) setPiecesMin(urlPiecesMin)
+    if (urlMotCle !== motCle) setMotCle(urlMotCle)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlSurfaceMin, urlSurfaceMax, urlPiecesMin, urlMotCle])
 
   useEffect(() => {
     setFavoris(getFavoris())
@@ -177,11 +184,24 @@ function AnnoncesContent() {
       if (a) setAnnonces(a)
       if (session?.user?.email) {
         const { data: p } = await supabase.from("profils").select("*").eq("email", session.user.email).single()
-        if (p) setProfil(p)
+        if (p) {
+          setProfil(p)
+          // Pré-remplir la sidebar depuis le profil — UNIQUEMENT si les
+          // champs locaux n'ont pas été explicitement modifiés (valeurs
+          // par défaut vides / 0). Sinon on respecte le choix user.
+          if (!isProprietaire) {
+            if (p.surface_min && !surfaceMin) setSurfaceMin(String(p.surface_min))
+            if (p.surface_max && !surfaceMax) setSurfaceMax(String(p.surface_max))
+            if (p.pieces_min && piecesMin === 0) setPiecesMin(Number(p.pieces_min))
+            if (p.parking && !filtreParking) setFiltreParking(true)
+            if ((p.balcon || p.terrasse || p.jardin) && !filtreExterieur) setFiltreExterieur(true)
+          }
+        }
       }
       setLoading(false)
     }
     fetchData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
 
   function handleToggleFavori(e: React.MouseEvent, id: number) {
@@ -192,19 +212,15 @@ function AnnoncesContent() {
   }
 
   const handleBoundsChange = useCallback((bounds: any, userDriven: boolean) => {
-    // Priorité à la zone UNIQUEMENT sur action user ("Rechercher dans cette zone")
-    // Le moveend initial (userDriven=false) ne doit pas toucher l'URL
-    if (userDriven && typeof window !== "undefined") {
-      const sp = new URL(window.location.href).searchParams
-      if (sp.has("ville") || sp.has("budget_max") || sp.has("type")) {
-        router.replace("/annonces", { scroll: false })
-      }
-    }
-    setMapBounds(bounds)
-  }, [router])
+    // Appliquer la zone uniquement sur action user ("Rechercher dans cette zone").
+    // On NE TOUCHE PAS aux filtres URL — l'utilisateur peut vouloir raffiner
+    // dans sa ville actuelle, effacer la ville serait contre-intuitif. Un
+    // bouton dédié "Voir toute la France" permet de reset la zone explicitement.
+    if (userDriven) setMapBounds(bounds)
+  }, [])
 
   // Normalisation ville identique à lib/geocoding (pour lookup dans `geocoded`)
-  const normalizeVille = (v: string) => v.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  const normalizeVille = normalizeCityKey
 
   const annoncesEnrichies = annonces
     .filter(a => !profil || !estExclu(a, profil))
@@ -310,7 +326,28 @@ function AnnoncesContent() {
     })
 
   // Coordonnees de centrage de la carte : ville URL > ville profil > aucune
-  const centerCity = activeVille ? getCityCoords(activeVille) : null
+  // 1. cityCoords statique (instantané, ~100 villes)
+  // 2. geocoded[normalizeVille] (Nominatim en background, cache localStorage)
+  const centerCity = activeVille
+    ? (getCityCoords(activeVille) ?? geocoded[normalizeVille(activeVille)] ?? null)
+    : null
+
+  // Déclenche un geocoding background pour la ville active si pas dans cityCoords
+  useEffect(() => {
+    if (!activeVille) return
+    if (getCityCoords(activeVille)) return
+    const key = normalizeVille(activeVille)
+    if (geocoded[key]) return
+    let cancelled = false
+    ;(async () => {
+      const { geocodeCity } = await import("../../lib/geocoding")
+      const coords = await geocodeCity(activeVille)
+      if (cancelled) return
+      if (coords) setGeocoded(prev => prev[key] ? prev : { ...prev, [key]: coords })
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeVille])
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", overflow: "hidden" }}>

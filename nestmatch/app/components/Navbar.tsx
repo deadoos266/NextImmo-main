@@ -85,13 +85,14 @@ export default function Navbar() {
     { href: "/proprietaire/ajouter", label: "Publier un bien",    desc: "Ajouter une nouvelle annonce" },
     { href: "/carnet",               label: "Carnet d'entretien", desc: "Historique des travaux" },
   ] : [
-    { href: "/profil",   label: "Mon profil",         desc: "Critères de recherche & matching" },
-    { href: "/dossier",  label: "Mon dossier",        desc: "Documents & complétion" },
-    { href: "/visites",  label: "Mes visites",        desc: "Demandes & confirmations", badge: badgeVisites },
-    { href: "/carnet",   label: "Carnet d'entretien", desc: "Historique des travaux" },
+    { href: "/profil",        label: "Mon profil",         desc: "Critères de recherche & matching" },
+    { href: "/dossier",       label: "Mon dossier",        desc: "Documents & complétion" },
+    { href: "/mon-logement",  label: "Mon logement",       desc: "Bail actif, loyer, documents" },
+    { href: "/visites",       label: "Mes visites",        desc: "Demandes & confirmations", badge: badgeVisites },
+    { href: "/carnet",        label: "Carnet d'entretien", desc: "Historique des travaux" },
   ]
 
-  const espaceActif = isActive("/profil") || isActive("/dossier") || isActive("/proprietaire") || isActive("/carnet") || isActive("/visites")
+  const espaceActif = isActive("/profil") || isActive("/dossier") || isActive("/mon-logement") || isActive("/proprietaire") || isActive("/carnet") || isActive("/visites")
   const espaceLinksAvecBadge = proprietaireActive
     ? espaceLinks.map(l => l.href === "/proprietaire" ? { ...l, badge: badgeVisites } : l)
     : espaceLinks

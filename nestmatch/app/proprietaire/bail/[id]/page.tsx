@@ -296,15 +296,18 @@ export default function BailPage() {
 
   const set = (key: string) => (e: any) => setForm(f => ({ ...f, [key]: e.target.value }))
 
-  function generer() {
+  async function generer() {
     if (!bien) return
+    const locataireEmail = (bien.locataire_email || "").toLowerCase().trim()
+
+    // 1. Génère + télécharge le PDF localement
     genererBailPDF({
       type: form.type,
       nomBailleur: form.nomBailleur,
       adresseBailleur: form.adresseBailleur,
       emailBailleur: bien.proprietaire_email || session?.user?.email || "",
       nomLocataire: form.nomLocataire,
-      emailLocataire: bien.locataire_email || "",
+      emailLocataire: locataireEmail,
       titreBien: bien.titre || "",
       adresseBien: bien.adresse || "",
       villeBien: bien.ville || "",
@@ -324,6 +327,48 @@ export default function BailPage() {
       dateReglement: form.dateReglement,
       dpe: bien.dpe || "",
     })
+
+    // 2. Traces côté DB + message auto au locataire (si email renseigné)
+    if (locataireEmail) {
+      const patch: Record<string, unknown> = {
+        locataire_email: locataireEmail,
+        statut: "loué",
+      }
+      if (form.dateDebut) patch.date_debut_bail = form.dateDebut
+      await supabase.from("annonces").update(patch).eq("id", bien.id)
+
+      const fromEmail = (bien.proprietaire_email || session?.user?.email || "").toLowerCase()
+      if (fromEmail) {
+        const dateStr = form.dateDebut
+          ? new Date(form.dateDebut).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+          : ""
+        const bailPayload = JSON.stringify({
+          titreBien: bien.titre,
+          villeBien: bien.ville,
+          dateDebut: form.dateDebut,
+          duree: form.duree,
+          loyerHC: bien.prix,
+          charges: bien.charges,
+        })
+        await supabase.from("messages").insert([{
+          from_email: fromEmail,
+          to_email: locataireEmail,
+          contenu: `[BAIL_CARD]${bailPayload}`,
+          lu: false,
+          annonce_id: bien.id,
+          created_at: new Date().toISOString(),
+        }])
+        // Version texte de secours (si le client ne supporte pas le prefix)
+        await supabase.from("messages").insert([{
+          from_email: fromEmail,
+          to_email: locataireEmail,
+          contenu: `Bail généré pour « ${bien.titre} » à ${bien.ville}. Début : ${dateStr}. Le PDF vient d'être téléchargé par le propriétaire.`,
+          lu: false,
+          annonce_id: bien.id,
+          created_at: new Date().toISOString(),
+        }])
+      }
+    }
   }
 
   if (loading) return (

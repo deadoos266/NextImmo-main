@@ -10,7 +10,7 @@
  * Pas d'appel sur SSR (guard typeof window).
  */
 
-import { getCityCoords } from "./cityCoords"
+import { getCityCoords, normalizeCityKey } from "./cityCoords"
 
 const CACHE_KEY = "geocoding_cache_v1"
 const TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 jours
@@ -19,9 +19,8 @@ const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 type CachedEntry = { lat: number; lng: number; at: number } | { miss: true; at: number }
 type CacheMap = Record<string, CachedEntry>
 
-function normalizeVille(ville: string): string {
-  return ville.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-}
+// Utilise normalizeCityKey de cityCoords pour cohérence
+const normalizeVille = normalizeCityKey
 
 function readCache(): CacheMap {
   if (typeof window === "undefined") return {}

@@ -29,15 +29,7 @@ const TILES: Record<MapType, { url: string; attribution: string; label: string; 
   },
 }
 
-// Fix des icones par defaut de Leaflet (probleme courant avec webpack)
-function fixLeafletIcons() {
-  delete (L.Icon.Default.prototype as any)._getIconUrl
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  })
-}
+import { fixLeafletIcons } from "./leafletSetup"
 
 // Locale FR pour Leaflet (prefixe d'attribution + zoom titles)
 function useFrenchLeaflet() {

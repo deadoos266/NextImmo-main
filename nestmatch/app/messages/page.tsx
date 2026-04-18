@@ -13,6 +13,7 @@ import AnnulerVisiteDialog from "../components/AnnulerVisiteDialog"
 import { annulerVisite, STATUT_VISITE_STYLE as STATUT_VISITE } from "../../lib/visitesHelpers"
 
 const DOSSIER_PREFIX = "[DOSSIER_CARD]"
+const BAIL_PREFIX = "[BAIL_CARD]"
 const DEMANDE_DOSSIER_PREFIX = "[DEMANDE_DOSSIER]"
 const EDL_PREFIX = "[EDL_CARD]"
 // Prefix encodé dans contenu pour un message en réponse à un autre.
@@ -169,6 +170,45 @@ function EdlCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
           Consulter l'EDL →
         </a>
       )}
+    </div>
+  )
+}
+
+// ─── Bail Card ──────────────────────────────────────────────────────────────
+
+function BailCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any = {}
+  try { data = JSON.parse(contenu.slice(BAIL_PREFIX.length)) } catch { /* ignore */ }
+  const dateStr = data.dateDebut
+    ? new Date(data.dateDebut).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    : ""
+  const loyer = Number(data.loyerHC || 0) + Number(data.charges || 0)
+
+  if (isMine) {
+    return (
+      <div style={{ background: "#1a1a1a", border: "1.5px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 280 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: "#a7f3d0", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>Bail envoyé</p>
+        <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0 }}>{data.titreBien || "Bien"} — {data.villeBien}</p>
+        <p style={{ fontSize: 11, color: "#9ca3af", margin: "4px 0 0" }}>Début {dateStr}{loyer > 0 ? ` · ${loyer} €/mois` : ""}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 300 }}>
+      <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>Bail généré</p>
+      <p style={{ fontWeight: 700, fontSize: 14, color: "#111", margin: 0 }}>{data.titreBien || "Bien"}</p>
+      <p style={{ fontSize: 12, color: "#6b7280", margin: "2px 0 10px" }}>{data.villeBien || ""}</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#374151" }}>
+        {dateStr && <div>Début : <strong>{dateStr}</strong></div>}
+        {loyer > 0 && <div>Loyer : <strong>{loyer} €/mois</strong></div>}
+        {data.duree && <div>Durée : <strong>{data.duree} mois</strong></div>}
+      </div>
+      <a href="/mon-logement"
+        style={{ display: "block", marginTop: 12, background: "#15803d", color: "white", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 700, textAlign: "center", textDecoration: "none", fontFamily: "inherit" }}>
+        Voir mon logement →
+      </a>
     </div>
   )
 }
@@ -411,10 +451,10 @@ function MessagesInner() {
     const convList = Array.from(convMap.values())
     setConversations(convList)
 
-    // Fetch les annonces liées
+    // Fetch les annonces liées (avec locataire_email + statut pour badges)
     const ids = [...new Set(convList.map(c => c.annonceId).filter(Boolean))]
     if (ids.length > 0) {
-      const { data: ann } = await supabase.from("annonces").select("id, titre, ville, photos").in("id", ids)
+      const { data: ann } = await supabase.from("annonces").select("id, titre, ville, photos, proprietaire_email, locataire_email, statut").in("id", ids)
       if (ann) {
         const map: Record<number, any> = {}
         ann.forEach((a: any) => { map[a.id] = a })
@@ -744,6 +784,7 @@ function MessagesInner() {
                 const previewText = rawPreview.startsWith(DOSSIER_PREFIX) ? "Dossier envoyé"
                   : rawPreview.startsWith(DEMANDE_DOSSIER_PREFIX) ? "Dossier demandé"
                   : rawPreview.startsWith(EDL_PREFIX) ? "État des lieux envoyé"
+                  : rawPreview.startsWith("[BAIL_CARD]") ? "Bail généré"
                   : parseReply(rawPreview).text // ignore le préfixe [REPLY:id]
                 const preview = rawPreview
                   ? (previewText.length > 35 ? previewText.slice(0, 35) + "…" : previewText)
@@ -751,6 +792,23 @@ function MessagesInner() {
                 const time = conv.lastMsg?.created_at
                   ? new Date(conv.lastMsg.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
                   : ""
+
+                // Badge de relation : locataire actif (bail actif), candidat, autre
+                let relBadge: { label: string; bg: string; color: string } | null = null
+                if (ann?.statut === "loué" && ann?.locataire_email) {
+                  const locEmail = (ann.locataire_email || "").toLowerCase()
+                  const other = (conv.other || "").toLowerCase()
+                  const me = (myEmail || "").toLowerCase()
+                  // Côté proprio : l'autre est le locataire si locataire_email === other
+                  // Côté locataire : l'autre est le proprio si locataire_email === me
+                  if (other === locEmail || me === locEmail) {
+                    relBadge = { label: "Bail actif", bg: "#dcfce7", color: "#15803d" }
+                  } else if (conv.annonceId) {
+                    relBadge = { label: "Ancienne candidature", bg: "#f3f4f6", color: "#6b7280" }
+                  }
+                } else if (conv.annonceId) {
+                  relBadge = { label: "Candidat", bg: "#eff6ff", color: "#1d4ed8" }
+                }
 
                 return (
                   <div key={conv.key}
@@ -784,6 +842,11 @@ function MessagesInner() {
                         </div>
                         {ann?.titre && (
                           <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName(conv.other, ann?.proprietaire)}</p>
+                        )}
+                        {relBadge && (
+                          <span style={{ display: "inline-block", background: relBadge.bg, color: relBadge.color, fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 999, marginBottom: 2 }}>
+                            {relBadge.label}
+                          </span>
                         )}
                         <p style={{ fontSize: 12, color: conv.unread > 0 ? "#374151" : "#9ca3af", fontWeight: conv.unread > 0 ? 600 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{preview}</p>
                       </div>
@@ -906,6 +969,7 @@ function MessagesInner() {
                     const isDossier = typeof m.contenu === "string" && m.contenu.startsWith(DOSSIER_PREFIX)
                     const isDemande = typeof m.contenu === "string" && m.contenu === DEMANDE_DOSSIER_PREFIX
                     const isEdl = typeof m.contenu === "string" && m.contenu.startsWith(EDL_PREFIX)
+                    const isBail = typeof m.contenu === "string" && m.contenu.startsWith(BAIL_PREFIX)
                     return (
                       <div key={m.id} style={{ display: "flex", justifyContent: isMine ? "flex-end" : "flex-start" }}>
                         {isDossier ? (
@@ -930,6 +994,13 @@ function MessagesInner() {
                         ) : isEdl ? (
                           <div>
                             <EdlCard contenu={m.contenu} isMine={isMine} />
+                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        ) : isBail ? (
+                          <div>
+                            <BailCard contenu={m.contenu} isMine={isMine} />
                             <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>

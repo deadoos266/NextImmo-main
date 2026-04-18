@@ -1,6 +1,6 @@
 "use client"
 import { useState, useRef, useEffect } from "react"
-import { CITY_NAMES } from "../../lib/cityCoords"
+import { CITY_NAMES, normalizeCityKey } from "../../lib/cityCoords"
 
 /**
  * Combobox de sélection de ville/commune française.
@@ -34,9 +34,8 @@ interface Suggestion {
   codePostaux: string[]
 }
 
-function normalize(s: string): string {
-  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-}
+// Utilise normalizeCityKey de lib/cityCoords pour cohérence avec le reste du code
+const normalize = normalizeCityKey
 
 function isNumericQuery(q: string): boolean {
   return /^\d+$/.test(q.trim())
@@ -73,9 +72,14 @@ export default function CityAutocomplete({ value, onChange, onSelect, placeholde
   const trimmed = query.trim()
   const qNorm = normalize(trimmed)
 
-  // Plus de suggestions par défaut quand le champ est vide : évite de suggérer
-  // Paris en premier et de donner l'impression qu'il est "sélectionné".
-  const localFallback: Suggestion[] = []
+  // Au focus (champ vide), on propose les plus grandes villes FR en tête pour
+  // guider l'utilisateur sans pour autant "sélectionner" Paris par défaut.
+  // Ces suggestions disparaissent dès qu'il tape un caractère.
+  const TOP_CITIES = [
+    "Paris", "Lyon", "Marseille", "Toulouse", "Nice", "Nantes",
+    "Montpellier", "Strasbourg", "Bordeaux", "Lille", "Rennes", "Reims",
+  ]
+  const localFallback: Suggestion[] = TOP_CITIES.map(nom => ({ nom, codePostaux: [] }))
 
   // Recherche distante : par code postal (numérique) ou par nom
   useEffect(() => {
