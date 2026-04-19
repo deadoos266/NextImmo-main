@@ -222,6 +222,54 @@ export default function MonLogement() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bien?.id])
 
+  async function declarerPaiement(mois: string) {
+    if (!bien || !session?.user?.email) return
+    const montantAttendu = (bien.prix || 0) + (bien.charges || 0)
+    const locataireEmail = session.user.email.toLowerCase()
+    const proprietaireEmail = (bien.proprietaire_email || "").toLowerCase()
+    const now = new Date().toISOString()
+    // Upsert loyer : si existe déjà en "déclaré", on ne l'écrase pas.
+    // Si n'existe pas, on le crée en "déclaré" (attente confirmation proprio).
+    const existant = loyers.find(l => l.mois === mois)
+    if (existant?.statut === "confirmé") {
+      alert("Ce loyer a déjà été confirmé par votre propriétaire.")
+      return
+    }
+    if (!existant) {
+      const { data, error } = await supabase.from("loyers").upsert({
+        annonce_id: bien.id,
+        mois,
+        montant: montantAttendu,
+        statut: "déclaré",
+        locataire_email: locataireEmail,
+        proprietaire_email: proprietaireEmail,
+      }, { onConflict: "annonce_id,mois" }).select().single()
+      if (error) {
+        alert(`Erreur : ${error.message}`)
+        return
+      }
+      if (data) setLoyers(prev => [data, ...prev.filter(l => l.mois !== mois)])
+    }
+    // Message + notif au proprio
+    const moisLabel = new Date(mois + "-01T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
+    if (proprietaireEmail) {
+      await supabase.from("messages").insert([{
+        from_email: locataireEmail,
+        to_email: proprietaireEmail,
+        contenu: `✓ J'ai payé le loyer de ${moisLabel} (${montantAttendu} €). Merci d'envoyer la quittance.`,
+        lu: false,
+        annonce_id: bien.id,
+        created_at: now,
+      }])
+      void fetch("/api/notifications/new-message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: proprietaireEmail, preview: `Loyer ${moisLabel} payé` }),
+      }).catch(() => { /* silent */ })
+    }
+    alert(`✓ Paiement du loyer de ${moisLabel} signalé à votre propriétaire.`)
+  }
+
   async function exportHistoriqueLoyersPDF() {
     if (!bien || loyers.length === 0) return
     setExportingPdf(true)
@@ -491,6 +539,39 @@ export default function MonLogement() {
                   <strong>Retard de paiement</strong> — votre loyer {new Date(retardMax.l.mois + "-01T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })} est en retard de {retardMax.jours} jour{retardMax.jours > 1 ? "s" : ""}. Contactez votre propriétaire dès que possible.
                 </div>
               )}
+
+              {/* Déclarer un paiement — permet au locataire de signaler qu'il
+                  a payé pour le mois en cours (ou un mois non confirmé). */}
+              {(() => {
+                const moisCourant = new Date().toISOString().slice(0, 7)
+                const dejaCree = loyers.find(l => l.mois === moisCourant)
+                const dejaConfirme = dejaCree?.statut === "confirmé"
+                const dejaDeclare = dejaCree?.statut === "déclaré"
+                const moisLabel = new Date(moisCourant + "-01T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
+                if (dejaConfirme) return null
+                return (
+                  <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 12, padding: "12px 16px", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                    <div style={{ flex: 1, minWidth: 160 }}>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: "#1e40af", margin: 0, textTransform: "capitalize" }}>
+                        Loyer de {moisLabel}
+                      </p>
+                      <p style={{ fontSize: 12, color: "#1e40af", margin: "2px 0 0", opacity: 0.85 }}>
+                        {dejaDeclare
+                          ? "Paiement signalé — en attente de confirmation par votre propriétaire."
+                          : "Cliquez pour signaler que vous avez payé ce mois-ci."}
+                      </p>
+                    </div>
+                    {!dejaDeclare && (
+                      <button
+                        onClick={() => declarerPaiement(moisCourant)}
+                        style={{ background: "#1d4ed8", color: "white", border: "none", borderRadius: 999, padding: "9px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                      >
+                        ✓ J&apos;ai payé
+                      </button>
+                    )}
+                  </div>
+                )
+              })()}
               {loyers.length === 0 ? (
                 <p style={{ fontSize: 13, color: "#9ca3af", margin: 0 }}>Aucun loyer enregistré pour l&apos;instant.</p>
               ) : (
