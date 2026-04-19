@@ -427,15 +427,18 @@ export default function Proprietaire() {
   }, [session, status])
 
   async function loadData() {
-    // .ilike() pour être insensible à la casse — certains emails ont été
-    // insérés avec des capitales (ex: Paul.David@gmail.com) et ne matchaient
-    // pas .eq() contre session.email en lowercase.
-    const email = (session!.user!.email!).toLowerCase()
+    // Robustesse casse : on matche l'email dans sa casse d'origine ET sa version
+    // lowercase (certains emails OAuth arrivent en Mixed Case, d'autres en bas de
+    // casse selon le provider). .in() garantit un exact match sans interpréter
+    // de wildcards — contrairement à .ilike() qui peut être surprenant.
+    const eo = session!.user!.email!
+    const el = eo.toLowerCase()
+    const variants = eo === el ? [eo] : [eo, el]
     const [{ data: b }, { data: m }, { data: l }, { data: v, error: ve }] = await Promise.all([
-      supabase.from("annonces").select("*").ilike("proprietaire_email", email).order("created_at", { ascending: false }),
-      supabase.from("messages").select("*").ilike("to_email", email).order("created_at", { ascending: false }),
-      supabase.from("loyers").select("*").ilike("proprietaire_email", email).order("mois", { ascending: false }),
-      supabase.from("visites").select("*").ilike("proprietaire_email", email).order("date_visite", { ascending: true }),
+      supabase.from("annonces").select("*").in("proprietaire_email", variants).order("created_at", { ascending: false }),
+      supabase.from("messages").select("*").in("to_email", variants).order("created_at", { ascending: false }),
+      supabase.from("loyers").select("*").in("proprietaire_email", variants).order("mois", { ascending: false }),
+      supabase.from("visites").select("*").in("proprietaire_email", variants).order("date_visite", { ascending: true }),
     ])
     if (b) {
       setBiens(b)
@@ -742,15 +745,19 @@ export default function Proprietaire() {
           </div>
         )}
 
-        {/* MES LOCATAIRES — biens loués avec locataire_email renseigné */}
+        {/* MES LOCATAIRES — biens avec locataire_email + bail envoyé ou signé */}
         {onglet === "Locataires" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {(() => {
-              const actifs = biens.filter((b: any) => b.statut === "loué" && b.locataire_email)
+              // On inclut aussi les biens "bail_envoye" (en attente signature locataire)
+              // pour que le proprio puisse suivre la progression depuis cet onglet.
+              const actifs = biens.filter((b: any) =>
+                (b.statut === "loué" || b.statut === "bail_envoye") && b.locataire_email,
+              )
               if (actifs.length === 0) return (
                 <EmptyState
                   title="Aucun locataire actif"
-                  description="Dès qu'un bail sera signé sur un de vos biens (génération PDF depuis l'onglet Documents), le locataire apparaîtra ici."
+                  description="Dès qu'un bail sera envoyé ou signé sur l'un de vos biens, le locataire apparaîtra ici."
                 />
               )
               const moisCourant = new Date().toISOString().slice(0, 7) // YYYY-MM
