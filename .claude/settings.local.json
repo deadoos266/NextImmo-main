@@ -34,7 +34,14 @@
       "Bash(curl -s -o /dev/null -w \"health: %{http_code}\\\\n\" http://localhost:3000/)",
       "Bash(curl *)",
       "Bash(cat supabase/migrations/001_create_users.sql supabase/migrations/002_create_carnet_entretien.sql supabase/migrations/003_create_visites.sql supabase/migrations/004_batch26_security_hardening.sql supabase/migrations/005_storage_bucket_policies.sql supabase/migrations/006_gestion_documentaire.sql supabase/migrations/007_profil_dossier_complet.sql supabase/migrations/008_parametres_profil_public.sql supabase/migrations/009_profils_nullable_fields.sql supabase/migrations/010_indexes_performance.sql)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(gh run *)",
+      "Bash(gh repo *)",
+      "WebFetch(domain:github.com)",
+      "Read(//c/Users/Paul/.claude/references/ai-prompts/**)",
+      "Bash(ls \"Anthropic/Claude Code/\")",
+      "Bash(wc -l \"Anthropic\"/*.txt \"Lovable\"/*.txt \"v0 Prompts and Tools\"/*.txt \"Cursor Prompts\"/*.txt)",
+      "Bash(node -e \"console.log\\(require\\('sharp'\\).versions\\)\")"
     ]
   }
 }
