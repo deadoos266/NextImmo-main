@@ -186,6 +186,42 @@ export default function MonLogement() {
     if (b) setBien(b as Bien)
   }
 
+  // Realtime : sync auto annonces + signatures + edls + loyers pour ce bien
+  useEffect(() => {
+    if (!bien?.id) return
+    const channel = supabase.channel(`mon-logement-${bien.id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "annonces" }, (payload) => {
+        const a = payload.new as { id?: number }
+        if (a?.id === bien.id) setBien(prev => prev ? ({ ...prev, ...a } as Bien) : prev)
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "bail_signatures" }, (payload) => {
+        const s = payload.new as { annonce_id?: number }
+        if (s?.annonce_id !== bien.id) return
+        void onSigned()
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "etats_des_lieux" }, (payload) => {
+        const e = payload.new as { annonce_id?: number }
+        if (e?.annonce_id === bien.id) setEdls(prev => [...prev, e])
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "etats_des_lieux" }, (payload) => {
+        const e = payload.new as { id?: string; annonce_id?: number }
+        if (e?.annonce_id !== bien.id) return
+        setEdls(prev => prev.map(x => x.id === e.id ? { ...x, ...e } : x))
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "loyers" }, (payload) => {
+        const l = payload.new as { annonce_id?: number }
+        if (l?.annonce_id === bien.id) setLoyers(prev => [l, ...prev])
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "loyers" }, (payload) => {
+        const l = payload.new as { id?: number; annonce_id?: number }
+        if (l?.annonce_id !== bien.id) return
+        setLoyers(prev => prev.map(x => x.id === l.id ? { ...x, ...l } : x))
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bien?.id])
+
   async function exportHistoriqueLoyersPDF() {
     if (!bien || loyers.length === 0) return
     setExportingPdf(true)

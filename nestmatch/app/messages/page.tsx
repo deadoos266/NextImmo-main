@@ -944,6 +944,20 @@ function MessagesInner() {
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "visites" }, (payload) => {
         if (isMine(payload.new as any)) loadVisitesConv(conv.other, convAnnId)
       })
+      // Realtime annonces : si statut / locataire_email change → maj annonces map
+      // (sert isActiveBail, BailCard, etc.)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "annonces" }, (payload) => {
+        const ann = payload.new as { id?: number }
+        if (!ann?.id || ann.id !== convAnnId) return
+        setAnnonces(prev => ({ ...prev, [ann.id as number]: ann }))
+      })
+      // Realtime bail_signatures : nouvelle signature → reload messages pour
+      // refresh BailCard (qui lit les signatures via signaturesParAnnonce).
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "bail_signatures" }, (payload) => {
+        const sig = payload.new as { annonce_id?: number }
+        if (!sig?.annonce_id || sig.annonce_id !== convAnnId) return
+        if (myEmail) void loadMessages(myEmail, conv.other, convAnnId)
+      })
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
