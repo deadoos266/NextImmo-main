@@ -107,3 +107,22 @@ export function validateDocument(file: File): Promise<ValidationResult> {
     label: "Document",
   })
 }
+
+/**
+ * Vérifie que les premiers octets d'un buffer correspondent au MIME déclaré.
+ * Utilisable **côté serveur** dans les API routes d'upload (avatar, photo
+ * annonce, EDL) — remplace les `checkMagic` dupliqués inline.
+ *
+ * Supporte : image/jpeg, image/png, image/webp. Retourne false sinon
+ * (SVG et autres formats refusés : risque XSS SVG).
+ */
+export function verifyImageMagicBytes(bytes: Uint8Array, declaredMime: string): boolean {
+  if (declaredMime === "image/jpeg") return startsWith(bytes, MAGIC.jpeg)
+  if (declaredMime === "image/png") return startsWith(bytes, MAGIC.png)
+  if (declaredMime === "image/webp") {
+    if (!startsWith(bytes, MAGIC.webp)) return false
+    // Marqueur "WEBP" à offset 8 pour distinguer d'un autre RIFF (WAV, AVI…).
+    return startsWith(bytes, [0x57, 0x45, 0x42, 0x50], 8)
+  }
+  return false
+}

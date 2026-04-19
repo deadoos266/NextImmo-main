@@ -74,10 +74,6 @@ export default function ToastStack() {
           push({ type: "message", title: "Quittance reçue", body: "Ouvrir vos messages", href: "/messages" })
           return
         }
-        if (raw.startsWith("[VISITE_CARD]") || raw.startsWith("[CONTRE_PROPOSITION]")) {
-          push({ type: "visite_nouvelle", title: "Proposition de visite", body: "Ouvrir vos messages", href: "/messages" })
-          return
-        }
         if (raw.startsWith("[CANDIDATURE_RETIREE]")) {
           push({ type: "visite_annulee", title: "Candidature retirée", body: "Le locataire a retiré sa candidature", href: "/messages" })
           return

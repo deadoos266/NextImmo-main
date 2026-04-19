@@ -15,16 +15,10 @@ import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
 import { sanitizeImage } from "@/lib/imageSanitize"
+import { verifyImageMagicBytes } from "@/lib/fileValidation"
 
 const MAX_SIZE = 10 * 1024 * 1024
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"])
-
-function checkMagic(bytes: Uint8Array, mime: string): boolean {
-  if (mime === "image/jpeg") return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff
-  if (mime === "image/png") return bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47
-  if (mime === "image/webp") return bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46
-  return false
-}
 
 // Les chemins Supabase Storage sont sensibles aux caractères exotiques.
 // On whiteliste alnum + dash + underscore pour bienId.
@@ -78,7 +72,7 @@ export async function POST(req: NextRequest) {
   }
 
   const bytes = new Uint8Array(await file.arrayBuffer())
-  if (!checkMagic(bytes, file.type)) {
+  if (!verifyImageMagicBytes(bytes, file.type)) {
     return NextResponse.json({ error: "Contenu du fichier invalide" }, { status: 400 })
   }
 

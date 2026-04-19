@@ -1,0 +1,23 @@
+# ─── Racine NextImmo-main ────────────────────────────────────────────────────
+# Le vrai code est dans nestmatch/, qui a son propre .gitignore. Ce fichier
+# couvre uniquement les artefacts outils/IDE qui polluent la racine.
+
+# ─── Claude Code CLI ─────────────────────────────────────────────────────────
+.claude/settings.local.json
+.claude/worktrees/
+.claude/projects/
+
+# ─── IDE ─────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+
+# ─── OS ──────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Logs divers ─────────────────────────────────────────────────────────────
+*.log
+
+# ─── Dossier de test/reference (clone outil externe, pas code du projet) ────
+everything-claude-code-main/

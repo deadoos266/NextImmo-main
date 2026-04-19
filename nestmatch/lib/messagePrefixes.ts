@@ -18,8 +18,6 @@ export const PREFIXES = {
   CANDIDATURE_RETIREE:  "[CANDIDATURE_RETIREE]",
   RELANCE:              "[RELANCE]",
   LOCATION_ACCEPTEE:    "[LOCATION_ACCEPTEE]",
-  VISITE:               "[VISITE_CARD]",
-  CONTRE_PROPOSITION:   "[CONTRE_PROPOSITION]",
 } as const
 
 export type PrefixKey = keyof typeof PREFIXES
@@ -63,7 +61,5 @@ export function previewLabel(content: string | null | undefined): string | null 
       return "Relance : " + text.slice(0, 60)
     }
     case "LOCATION_ACCEPTEE": return "Location acceptée ✓"
-    case "VISITE": return "Proposition de visite"
-    case "CONTRE_PROPOSITION": return "Contre-proposition de visite"
   }
 }

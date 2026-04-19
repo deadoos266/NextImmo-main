@@ -51,7 +51,7 @@ describe("messagePrefixes", () => {
 
   it("exporte tous les préfixes avec les valeurs attendues", () => {
     expect(PREFIXES.QUITTANCE).toBe("[QUITTANCE_CARD]")
-    expect(PREFIXES.VISITE).toBe("[VISITE_CARD]")
-    expect(PREFIXES.CONTRE_PROPOSITION).toBe("[CONTRE_PROPOSITION]")
+    expect(PREFIXES.BAIL).toBe("[BAIL_CARD]")
+    expect(PREFIXES.LOCATION_ACCEPTEE).toBe("[LOCATION_ACCEPTEE]")
   })
 })

@@ -32,3 +32,14 @@ package-lock.json
 
 # test coverage
 coverage/
+
+# cache TypeScript incremental (regenere a chaque build, pollution repo sinon)
+tsconfig.tsbuildinfo
+
+# cache Vitest
+node_modules/.vite/
+.vitest-cache/
+
+# cache ESLint
+.eslintcache
+
