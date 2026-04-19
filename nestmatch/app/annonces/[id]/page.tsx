@@ -197,9 +197,9 @@ export default async function Annonce({ params }: any) {
 
         {proprioVacances.actif && (
           <div style={{ background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 14, padding: "14px 18px", margin: "16px 0 0", color: "#9a3412" }}>
-            <p style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>Propriétaire momentanément indisponible</p>
+            <p style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>Délai de réponse prolongé</p>
             <p style={{ fontSize: 13, color: "#7c2d12", margin: "6px 0 0", lineHeight: 1.5 }}>
-              {proprioVacances.message || "Vos messages seront traités dès son retour. Vous pouvez toujours candidater — il vous répondra à son retour."}
+              {proprioVacances.message || "Le propriétaire indique un délai de réponse plus long que d'habitude. Vous pouvez quand même postuler."}
             </p>
           </div>
         )}

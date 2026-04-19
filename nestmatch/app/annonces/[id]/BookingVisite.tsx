@@ -2,6 +2,7 @@
 import { useSession } from "next-auth/react"
 import { useState, useEffect } from "react"
 import { supabase } from "../../../lib/supabase"
+import { postNotif } from "../../../lib/notificationsClient"
 
 const HEURES = [
   "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
@@ -90,6 +91,16 @@ export default function BookingVisite({
       created_at: new Date().toISOString(),
     }])
 
+    // Notif cloche proprio pour nouvelle demande de visite
+    void postNotif({
+      userEmail: proprio,
+      type: "visite_proposee",
+      title: "Nouvelle demande de visite",
+      body: `${dateFormat} à ${heure}`,
+      href: "/visites",
+      relatedId: data?.id != null ? String(data.id) : null,
+    })
+
     setExistante(data)
     setOpen(false)
     setSaving(false)
@@ -99,6 +110,18 @@ export default function BookingVisite({
     if (!existante) return
     await supabase.from("visites").update({ statut: "annulée" }).eq("id", existante.id)
     setExistante((prev: any) => ({ ...prev, statut: "annulée" }))
+    // Notif proprio : le locataire a annulé sa propre demande
+    const proprio = (proprietaireEmail || "").toLowerCase()
+    if (proprio) {
+      void postNotif({
+        userEmail: proprio,
+        type: "visite_annulee",
+        title: "Visite annulée",
+        body: "Le locataire a annulé sa demande de visite.",
+        href: "/visites",
+        relatedId: String(existante.id),
+      })
+    }
   }
 
   if (!session || isOwner || loading || !proprietaireEmail) return null

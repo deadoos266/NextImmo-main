@@ -138,9 +138,9 @@ export default function OngletCompte() {
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {proprietaireActive && (
         <section style={{ background: "white", borderRadius: 20, padding: 28 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 4px" }}>Mode vacances</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 4px" }}>Message d&apos;indisponibilité</h2>
           <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px", lineHeight: 1.5 }}>
-            Masque temporairement vos annonces disponibles de la recherche publique. Un bandeau sur vos fiches annonces prévient les locataires intéressés.
+            Affiche un bandeau sur vos fiches annonces pour prévenir les locataires que vos réponses peuvent tarder (congés, forte activité, etc.). Vos annonces restent visibles et les candidatures possibles.
           </p>
           {vacancesLoading ? (
             <p style={{ fontSize: 13, color: "#9ca3af" }}>Chargement…</p>
@@ -154,7 +154,7 @@ export default function OngletCompte() {
                   disabled={vacancesSaving}
                   style={{ width: 18, height: 18, accentColor: "#111", cursor: vacancesSaving ? "wait" : "pointer" }}
                 />
-                <span style={{ fontSize: 14, fontWeight: 700 }}>J&apos;active le mode vacances</span>
+                <span style={{ fontSize: 14, fontWeight: 700 }}>Afficher le bandeau sur mes annonces</span>
               </label>
               {vacancesActif && (
                 <div style={{ marginTop: 14 }}>
@@ -165,7 +165,7 @@ export default function OngletCompte() {
                     value={vacancesMessage}
                     onChange={(e) => setVacancesMessage(e.target.value.slice(0, VACANCES_MAX_LENGTH))}
                     onBlur={() => { if (vacancesActif) sauverVacances(true, vacancesMessage) }}
-                    placeholder="Ex : Je suis en congés jusqu'au 25 août. Je réponds aux messages à mon retour. Merci pour votre patience."
+                    placeholder="Ex : Délai de réponse actuel 3 à 5 jours. Merci pour votre patience."
                     rows={3}
                     maxLength={VACANCES_MAX_LENGTH}
                     style={{ width: "100%", padding: "10px 12px", border: "1.5px solid #e5e7eb", borderRadius: 12, fontSize: 14, fontFamily: "inherit", resize: "vertical", boxSizing: "border-box", outline: "none" }}

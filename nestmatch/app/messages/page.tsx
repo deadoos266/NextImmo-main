@@ -491,6 +491,15 @@ function MessagesInner() {
       setMessages(prev => [...prev, msg])
       setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: msg } : c))
     }
+    // Notif cloche locataire : candidature acceptée ! Gros event UX.
+    void postNotif({
+      userEmail: peerEmail,
+      type: "location_acceptee",
+      title: "Candidature acceptée",
+      body: `Votre dossier a été retenu pour « ${titre} »`,
+      href: "/mon-logement",
+      relatedId: String(annId),
+    })
     setAccepteEnCours(false)
     setAccepterLocationOpen(false)
   }
@@ -962,6 +971,18 @@ function MessagesInner() {
       setMessages(prev => [...prev, msg])
       setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: msg } : c))
     }
+    // Notif cloche à l'autre partie (confirmation ou annulation)
+    if (statut === "confirmée" || statut === "annulée") {
+      const dateStr = visite.date_visite ? new Date(visite.date_visite).toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : ""
+      void postNotif({
+        userEmail: other,
+        type: statut === "confirmée" ? "visite_confirmee" : "visite_annulee",
+        title: statut === "confirmée" ? "Visite confirmée" : "Visite annulée",
+        body: `${dateStr} à ${visite.heure || ""}`,
+        href: "/visites",
+        relatedId: String(id),
+      })
+    }
   }
 
   async function handleAnnulerVisite(motif: string) {
@@ -1022,6 +1043,15 @@ function MessagesInner() {
         setMessages(prev => [...prev, msg])
         setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: msg } : c))
       }
+      // Notif cloche à l'autre partie (proposition ou contre-proposition)
+      void postNotif({
+        userEmail: convActiveData.other,
+        type: "visite_proposee",
+        title: isCounter ? "Contre-proposition de visite" : "Nouvelle demande de visite",
+        body: `${dateFormatee} à ${visiteHeure}`,
+        href: "/visites",
+        relatedId: String(visite.id),
+      })
     }
     setShowVisiteForm(false)
     setCounterTarget(null)

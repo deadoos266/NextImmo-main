@@ -334,23 +334,7 @@ function AnnoncesContent() {
         .from("annonces")
         .select("*")
         .or("statut.is.null,statut.neq.loué")
-      if (a) {
-        // Mode vacances : masque les annonces dont le propriétaire a activé
-        // le toggle. On requête les emails concernés plutôt qu'un join pour
-        // rester compatible sans FK explicite côté Supabase.
-        const proprios = Array.from(new Set(a.map((x: any) => x.proprietaire_email).filter(Boolean)))
-        if (proprios.length > 0) {
-          const { data: pausedProfs } = await supabase
-            .from("profils")
-            .select("email")
-            .in("email", proprios)
-            .eq("vacances_actif", true)
-          const paused = new Set((pausedProfs || []).map((p: any) => String(p.email).toLowerCase()))
-          setAnnonces(paused.size === 0 ? a : a.filter((x: any) => !paused.has(String(x.proprietaire_email || "").toLowerCase())))
-        } else {
-          setAnnonces(a)
-        }
-      }
+      if (a) setAnnonces(a)
       if (session?.user?.email) {
         const { data: p } = await supabase.from("profils").select("*").eq("email", session.user.email).single()
         if (p) {

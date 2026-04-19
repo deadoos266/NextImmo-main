@@ -7,6 +7,7 @@ import { supabase } from "../../../../lib/supabase"
 import { useResponsive } from "../../../hooks/useResponsive"
 import { BRAND } from "../../../../lib/brand"
 import { drawLogoPDF } from "../../../../lib/brandPDF"
+import { postNotif } from "../../../../lib/notificationsClient"
 // jsPDF lazy-loaded pour alleger le bundle initial (voir genererBailPDF)
 
 // ─── Bail PDF Generator (conforme loi ALUR) ────────────────────────────────
@@ -378,6 +379,15 @@ export default function BailPage() {
           annonce_id: bien.id,
           created_at: new Date().toISOString(),
         }])
+        // Notif cloche locataire : bail prêt à signer
+        void postNotif({
+          userEmail: locataireEmail,
+          type: "bail_genere",
+          title: "Bail généré",
+          body: `Votre bail pour « ${bien.titre} » est disponible${dateStr ? ` (début ${dateStr})` : ""}.`,
+          href: "/mon-logement",
+          relatedId: String(bien.id),
+        })
       }
     }
   }

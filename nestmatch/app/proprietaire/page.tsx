@@ -14,6 +14,7 @@ import { joursRetardLoyer, labelRetard } from "../../lib/loyerHelpers"
 import EmptyState from "../components/ui/EmptyState"
 import UndoToast from "../components/ui/UndoToast"
 import { useUndo } from "../components/ui/useUndo"
+import { postNotif } from "../../lib/notificationsClient"
 
 const ONGLETS = ["Tableau de bord", "Mes biens", "Mes locataires", "Performance", "Documents", "Candidatures", "Loyers", "Visites"] as const
 type Onglet = typeof ONGLETS[number]
@@ -35,6 +36,19 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
   async function changerStatut(id: string, statut: string) {
     await supabase.from("visites").update({ statut }).eq("id", id)
     setVisites((prev: any[]) => prev.map(v => v.id === id ? { ...v, statut } : v))
+    // Notif locataire : confirmée ou annulée par le proprio
+    const v = visites.find(x => x.id === id)
+    if (v?.locataire_email && (statut === "confirmée" || statut === "annulée")) {
+      const dateStr = v.date_visite ? new Date(v.date_visite).toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : ""
+      void postNotif({
+        userEmail: v.locataire_email,
+        type: statut === "confirmée" ? "visite_confirmee" : "visite_annulee",
+        title: statut === "confirmée" ? "Visite confirmée" : "Visite annulée",
+        body: `${dateStr} à ${v.heure || ""}`,
+        href: "/visites",
+        relatedId: String(id),
+      })
+    }
   }
 
   async function handleAnnulation(motif: string) {
@@ -70,6 +84,19 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
   async function changerStatutAgenda(id: string, statut: string) {
     await supabase.from("visites").update({ statut }).eq("id", id)
     setVisites((prev: any[]) => prev.map(v => v.id === id ? { ...v, statut } : v))
+    // Même logique notif que changerStatut — duplication assumée (appelé par AgendaVisites)
+    const v = visites.find(x => x.id === id)
+    if (v?.locataire_email && (statut === "confirmée" || statut === "annulée")) {
+      const dateStr = v.date_visite ? new Date(v.date_visite).toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : ""
+      void postNotif({
+        userEmail: v.locataire_email,
+        type: statut === "confirmée" ? "visite_confirmee" : "visite_annulee",
+        title: statut === "confirmée" ? "Visite confirmée" : "Visite annulée",
+        body: `${dateStr} à ${v.heure || ""}`,
+        href: "/visites",
+        relatedId: String(id),
+      })
+    }
   }
 
   return (
@@ -406,6 +433,15 @@ export default function Proprietaire() {
         quittance_message_id: msg.id,
       }).eq("id", id)
     }
+    // Notif cloche locataire : quittance reçue (loyer confirmé)
+    void postNotif({
+      userEmail: locataireEmail,
+      type: "bail_genere",
+      title: "Quittance reçue",
+      body: `Loyer ${loyer.mois} confirmé pour « ${bien.titre } »`,
+      href: "/mon-logement",
+      relatedId: String(id),
+    })
   }
 
   if (status === "loading" || loading) return (
