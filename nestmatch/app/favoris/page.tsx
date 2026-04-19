@@ -6,6 +6,7 @@ import { getFavoris, toggleFavori } from "../../lib/favoris"
 import { getCityCoords } from "../../lib/cityCoords"
 import { useResponsive } from "../hooks/useResponsive"
 import Link from "next/link"
+import EmptyState from "../components/ui/EmptyState"
 
 const MapAnnonces = dynamic(() => import("../components/MapAnnonces"), { ssr: false })
 
@@ -89,13 +90,12 @@ export default function Favoris() {
             ))}
           </div>
         ) : annonces.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "80px 0" }}>
-            <p style={{ fontSize: 16, fontWeight: 600, color: "#374151", marginBottom: 8 }}>Aucun favori</p>
-            <p style={{ fontSize: 14, color: "#9ca3af", marginBottom: 24 }}>Cliquez sur le cœur d&apos;une annonce pour la sauvegarder ici.</p>
-            <Link href="/annonces" style={{ background: "#111", color: "white", padding: "12px 28px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>
-              Voir les annonces
-            </Link>
-          </div>
+          <EmptyState
+            title="Aucun favori"
+            description="Cliquez sur le cœur d'une annonce pour la sauvegarder ici."
+            ctaLabel="Voir les annonces"
+            ctaHref="/annonces"
+          />
         ) : showMap ? (
           // Vue carte : seulement les favoris
           <div style={{ background: "white", borderRadius: 20, overflow: "hidden", height: "70vh", minHeight: 480, border: "1px solid #e5e7eb" }}>

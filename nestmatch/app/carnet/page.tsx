@@ -6,6 +6,7 @@ import Link from "next/link"
 import { supabase } from "../../lib/supabase"
 import { useRole } from "../providers"
 import { useResponsive } from "../hooks/useResponsive"
+import EmptyState from "../components/ui/EmptyState"
 
 type Statut = "planifié" | "en cours" | "terminé"
 type TypeEvent = "chaudière" | "plomberie" | "électricité" | "travaux" | "serrurerie" | "nuisibles" | "autre"
@@ -325,12 +326,10 @@ export default function Carnet() {
 
         {/* Liste */}
         {evenementsFiltres.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "60px 0", background: "white", borderRadius: 20 }}>
-            <p style={{ fontSize: 15, fontWeight: 600, color: "#374151" }}>Aucun événement</p>
-            <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>
-              {proprietaireActive ? "Ajoutez votre premier événement d'entretien" : "Aucune intervention enregistrée pour ce logement"}
-            </p>
-          </div>
+          <EmptyState
+            title="Aucun événement"
+            description={proprietaireActive ? "Ajoutez votre premier événement d'entretien." : "Aucune intervention enregistrée pour ce logement."}
+          />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {evenementsFiltres.map(e => {

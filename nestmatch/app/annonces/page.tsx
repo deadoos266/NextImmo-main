@@ -12,6 +12,7 @@ import { getFavoris, toggleFavori } from "../../lib/favoris"
 import { calculerCompletudeProfil } from "../../lib/profilCompleteness"
 import { useResponsive } from "../hooks/useResponsive"
 import CityAutocomplete from "../components/CityAutocomplete"
+import EmptyState from "../components/ui/EmptyState"
 
 const MapAnnonces = dynamic(() => import("../components/MapAnnonces"), { ssr: false })
 
@@ -896,10 +897,12 @@ function AnnoncesContent() {
               {[1, 2, 3].map(i => <div key={i} style={{ background: "white", borderRadius: 16, height: 110, opacity: 0.4 }} />)}
             </div>
           ) : annoncesTraitees.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "60px 0" }}>
-              <p style={{ fontSize: 15, fontWeight: 600, color: "#374151", marginBottom: 12 }}>Aucun logement trouve</p>
-              {mapBounds && <button onClick={() => setMapBounds(null)} style={{ background: "#111", color: "white", padding: "8px 20px", borderRadius: 999, border: "none", fontFamily: "inherit", fontWeight: 600, cursor: "pointer", fontSize: 13 }}>Elargir la zone</button>}
-            </div>
+            <EmptyState
+              title="Aucun logement trouvé"
+              description={mapBounds ? "Essayez d'élargir la zone de recherche sur la carte." : "Ajustez vos filtres pour voir plus de résultats."}
+              ctaLabel={mapBounds ? "Élargir la zone" : undefined}
+              onCtaClick={mapBounds ? () => setMapBounds(null) : undefined}
+            />
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {annoncesTraitees.map(a => {

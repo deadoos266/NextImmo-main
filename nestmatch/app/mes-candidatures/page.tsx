@@ -6,6 +6,7 @@ import Link from "next/link"
 import { supabase } from "../../lib/supabase"
 import { useResponsive } from "../hooks/useResponsive"
 import { displayName } from "../../lib/privacy"
+import EmptyState from "../components/ui/EmptyState"
 
 /**
  * Historique des candidatures du locataire (annonces contactées).
@@ -208,13 +209,12 @@ export default function MesCandidatures() {
         </p>
 
         {candidatures.length === 0 ? (
-          <div style={{ background: "white", borderRadius: 20, padding: 48, textAlign: "center" }}>
-            <p style={{ fontSize: 16, fontWeight: 600, color: "#374151", marginBottom: 8 }}>Aucune candidature pour le moment</p>
-            <p style={{ fontSize: 14, color: "#9ca3af", marginBottom: 20 }}>Contactez un propriétaire depuis une annonce pour qu&apos;elle apparaisse ici.</p>
-            <Link href="/annonces" style={{ background: "#111", color: "white", padding: "12px 28px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>
-              Voir les annonces
-            </Link>
-          </div>
+          <EmptyState
+            title="Aucune candidature pour le moment"
+            description="Contactez un propriétaire depuis une annonce pour qu'elle apparaisse ici."
+            ctaLabel="Voir les annonces"
+            ctaHref="/annonces"
+          />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {candidatures.map(c => {

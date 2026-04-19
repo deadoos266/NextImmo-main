@@ -11,6 +11,7 @@ import PipelineFunnel from "./PipelineFunnel"
 import { annulerVisite, STATUT_VISITE_STYLE as STATUT_V } from "../../lib/visitesHelpers"
 import { computeScreening } from "../../lib/screening"
 import { joursRetardLoyer, labelRetard } from "../../lib/loyerHelpers"
+import EmptyState from "../components/ui/EmptyState"
 
 const ONGLETS = ["Tableau de bord", "Mes biens", "Mes locataires", "Performance", "Documents", "Candidatures", "Loyers", "Visites"] as const
 type Onglet = typeof ONGLETS[number]
@@ -129,10 +130,10 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
 
       {/* Liste */}
       {filtrées.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "50px 0", background: "white", borderRadius: 20, color: "#9ca3af" }}>
-          <p style={{ fontSize: 15, fontWeight: 600, color: "#374151" }}>Aucune visite{filtre !== "toutes" ? " dans cette catégorie" : ""}</p>
-          {filtre === "toutes" && <p style={{ fontSize: 13, marginTop: 6 }}>Les demandes de visites de vos locataires apparaîtront ici</p>}
-        </div>
+        <EmptyState
+          title={filtre === "toutes" ? "Aucune visite demandée" : "Aucune visite dans cette catégorie"}
+          description={filtre === "toutes" ? "Les demandes de visites de vos locataires apparaîtront ici." : undefined}
+        />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {filtrées.map((v: any) => {
@@ -487,11 +488,12 @@ export default function Proprietaire() {
         {onglet === "Mes biens" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {biens.length === 0 ? (
-              <div style={{ background: "white", borderRadius: 20, padding: 48, textAlign: "center", color: "#9ca3af" }}>
-                <div style={{ fontSize: 48, marginBottom: 16, color: "#d1d5db" }}>—</div>
-                <p style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Aucun bien publié</p>
-                <a href="/proprietaire/ajouter" style={{ background: "#111", color: "white", padding: "12px 28px", borderRadius: 999, textDecoration: "none", fontWeight: 700 }}>Ajouter un bien</a>
-              </div>
+              <EmptyState
+                title="Aucun bien publié"
+                description="Commencez par créer votre première annonce pour recevoir des candidatures."
+                ctaLabel="Ajouter un bien"
+                ctaHref="/proprietaire/ajouter"
+              />
             ) : biens.map(b => (
               <div key={b.id} style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24 }}>
                 {(() => {
@@ -573,12 +575,10 @@ export default function Proprietaire() {
             {(() => {
               const actifs = biens.filter((b: any) => b.statut === "loué" && b.locataire_email)
               if (actifs.length === 0) return (
-                <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 24 : 40, textAlign: "center", color: "#9ca3af" }}>
-                  <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: "#6b7280" }}>Aucun locataire actif</p>
-                  <p style={{ fontSize: 13, lineHeight: 1.6 }}>
-                    Dès qu&apos;un bail sera signé sur un de vos biens (génération PDF depuis l&apos;onglet Documents), le locataire apparaîtra ici.
-                  </p>
-                </div>
+                <EmptyState
+                  title="Aucun locataire actif"
+                  description="Dès qu'un bail sera signé sur un de vos biens (génération PDF depuis l'onglet Documents), le locataire apparaîtra ici."
+                />
               )
               const moisCourant = new Date().toISOString().slice(0, 7) // YYYY-MM
               return actifs.map((b: any) => {
@@ -639,10 +639,12 @@ export default function Proprietaire() {
         {onglet === "Performance" && (
           <div>
             {biens.length === 0 ? (
-              <div style={{ background: "white", borderRadius: 20, padding: 48, textAlign: "center", color: "#9ca3af" }}>
-                <p style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Aucun bien publié</p>
-                <p style={{ fontSize: 13 }}>Ajoutez un bien pour voir vos statistiques.</p>
-              </div>
+              <EmptyState
+                title="Aucun bien publié"
+                description="Ajoutez un bien pour voir vos statistiques."
+                ctaLabel="Ajouter un bien"
+                ctaHref="/proprietaire/ajouter"
+              />
             ) : (
               <>
                 {/* Vue financière globale */}
@@ -808,10 +810,12 @@ export default function Proprietaire() {
         {onglet === "Documents" && (
           <div>
             {biens.length === 0 ? (
-              <div style={{ background: "white", borderRadius: 20, padding: 48, textAlign: "center", color: "#9ca3af" }}>
-                <p style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Aucun bien publié</p>
-                <p style={{ fontSize: 13 }}>Ajoutez un bien pour pouvoir générer ses documents.</p>
-              </div>
+              <EmptyState
+                title="Aucun bien publié"
+                description="Ajoutez un bien pour pouvoir générer ses documents."
+                ctaLabel="Ajouter un bien"
+                ctaHref="/proprietaire/ajouter"
+              />
             ) : (
               <>
                 <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24, marginBottom: 16 }}>

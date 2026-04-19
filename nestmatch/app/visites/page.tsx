@@ -8,6 +8,7 @@ import AgendaVisites from "../components/AgendaVisites"
 import AnnulerVisiteDialog from "../components/AnnulerVisiteDialog"
 import { useResponsive } from "../hooks/useResponsive"
 import { annulerVisite, STATUT_VISITE_STYLE as STATUT, type StatutVisite as Statut } from "../../lib/visitesHelpers"
+import EmptyState from "../components/ui/EmptyState"
 
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
@@ -186,21 +187,12 @@ export default function MesVisites() {
 
         {/* Liste */}
         {filtrées.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "60px 0", background: "white", borderRadius: 20 }}>
-            <p style={{ fontSize: 15, fontWeight: 600, color: "#374151" }}>
-              {filtre === "toutes" ? "Aucune visite demandée" : "Aucune visite dans cette catégorie"}
-            </p>
-            {filtre === "toutes" && (
-              <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>
-                Trouvez un bien et proposez une visite depuis la fiche annonce
-              </p>
-            )}
-            {filtre === "toutes" && (
-              <Link href="/annonces" style={{ display: "inline-block", marginTop: 16, padding: "10px 24px", background: "#111", color: "white", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>
-                Voir les annonces
-              </Link>
-            )}
-          </div>
+          <EmptyState
+            title={filtre === "toutes" ? "Aucune visite demandée" : "Aucune visite dans cette catégorie"}
+            description={filtre === "toutes" ? "Trouvez un bien et proposez une visite depuis la fiche annonce." : undefined}
+            ctaLabel={filtre === "toutes" ? "Voir les annonces" : undefined}
+            ctaHref={filtre === "toutes" ? "/annonces" : undefined}
+          />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {filtrées.map((v: any) => {
