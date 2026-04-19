@@ -13,6 +13,7 @@ import { calculerCompletudeProfil } from "../../lib/profilCompleteness"
 import { useResponsive } from "../hooks/useResponsive"
 import CityAutocomplete from "../components/CityAutocomplete"
 import EmptyState from "../components/ui/EmptyState"
+import AnnonceSkeleton from "../components/ui/AnnonceSkeleton"
 
 const MapAnnonces = dynamic(() => import("../components/MapAnnonces"), { ssr: false })
 
@@ -894,7 +895,7 @@ function AnnoncesContent() {
 
           {loading ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {[1, 2, 3].map(i => <div key={i} style={{ background: "white", borderRadius: 16, height: 110, opacity: 0.4 }} />)}
+              {[1, 2, 3, 4, 5].map(i => <AnnonceSkeleton key={i} />)}
             </div>
           ) : annoncesTraitees.length === 0 ? (
             <EmptyState

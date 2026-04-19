@@ -12,6 +12,7 @@ import { displayName } from "../../lib/privacy"
 import AnnulerVisiteDialog from "../components/AnnulerVisiteDialog"
 import { annulerVisite, STATUT_VISITE_STYLE as STATUT_VISITE } from "../../lib/visitesHelpers"
 import { postNotif } from "../../lib/notificationsClient"
+import MessageSkeleton from "../components/ui/MessageSkeleton"
 
 const DOSSIER_PREFIX = "[DOSSIER_CARD]"
 const BAIL_PREFIX = "[BAIL_CARD]"
@@ -1181,7 +1182,13 @@ function MessagesInner() {
   })
 
   if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif", color: "#6b7280" }}>Chargement...</div>
+    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ maxWidth: 420, margin: "0 auto", padding: "24px 16px" }} aria-busy="true">
+        <div style={{ background: "white", borderRadius: 20, overflow: "hidden", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" }}>
+          {[1, 2, 3, 4, 5, 6].map(i => <MessageSkeleton key={i} />)}
+        </div>
+      </div>
+    </main>
   )
 
   return (

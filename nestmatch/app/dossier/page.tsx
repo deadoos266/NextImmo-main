@@ -11,6 +11,7 @@ import SharePanel from "./SharePanel"
 import AccessLogPanel from "./AccessLogPanel"
 import UndoToast from "../components/ui/UndoToast"
 import { useUndo } from "../components/ui/useUndo"
+import DocRowSkeleton from "../components/ui/DocRowSkeleton"
 
 const SITUATIONS = ["CDI", "CDD", "Intérim", "Indépendant / Freelance", "Fonctionnaire", "Alternance", "Étudiant", "Retraité", "Sans emploi"]
 const TYPES_GARANT = ["Personne physique", "Organisme Visale", "Action Logement", "Caution bancaire", "Aucun garant"]
@@ -418,7 +419,13 @@ export default function Dossier() {
   const scoreColor = score >= 80 ? "#16a34a" : score >= 50 ? "#ea580c" : "#dc2626"
 
   if (status === "loading" || loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif", color: "#6b7280" }}>Chargement...</div>
+    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: isMobile ? "24px 16px" : "32px 48px" }} aria-busy="true">
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {[1, 2, 3, 4, 5, 6].map(i => <DocRowSkeleton key={i} />)}
+        </div>
+      </div>
+    </main>
   )
 
   const F = ({ label, children }: { label: React.ReactNode; children: React.ReactNode }) => (
