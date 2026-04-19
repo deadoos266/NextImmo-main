@@ -8,6 +8,7 @@ import { useResponsive } from "../../../hooks/useResponsive"
 import { BRAND } from "../../../../lib/brand"
 import { drawLogoPDF } from "../../../../lib/brandPDF"
 import { postNotif } from "../../../../lib/notificationsClient"
+import EdlSignatureModal from "../../../components/EdlSignatureModal"
 import Image from "next/image"
 // jsPDF lazy-loaded pour alleger le bundle initial (voir genererEdlPDF)
 
@@ -195,9 +196,44 @@ async function genererEdlPDF(edl: any, bien: any) {
   y += 4
   text(`Les parties declarent que le present etat des lieux a ete etabli contradictoirement et de bonne foi le ${dateLabel}.`)
   y += 10
-  doc.setFontSize(10); doc.setFont("helvetica", "bold")
+
+  // Fetch signatures electroniques (si table edl_signatures + signatures existent)
+  type SigRow = { role: string; nom: string; png: string; signeAt: string; mention?: string | null; ipAddress?: string | null }
+  const signatures: SigRow[] = Array.isArray(edl.__edl_signatures) ? edl.__edl_signatures : []
+  const sigBailleur = signatures.find(s => s.role === "bailleur")
+  const sigLocataire = signatures.find(s => s.role === "locataire")
+
+  doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.setTextColor(0, 0, 0)
   doc.text("Le Bailleur", 50, y, { align: "center" })
   doc.text("Le Locataire", 155, y, { align: "center" })
+  y += 6
+  doc.setFontSize(9); doc.setFont("helvetica", "normal")
+  doc.text(`${edl.prenom_bailleur || ""} ${edl.nom_bailleur || ""}`.trim(), 50, y, { align: "center" })
+  doc.text(`${edl.prenom_locataire || ""} ${edl.nom_locataire || ""}`.trim(), 155, y, { align: "center" })
+  y += 8
+
+  const sigW = 60; const sigH = 24
+  const renderSig = (sig: SigRow | undefined, xCenter: number) => {
+    const xImg = xCenter - sigW / 2
+    if (sig) {
+      doc.setFontSize(8); doc.setFont("helvetica", "italic"); doc.setTextColor(60, 60, 60)
+      doc.text(sig.mention || 'Lu et approuvé, bon pour accord', xCenter, y, { align: "center" })
+      try { doc.addImage(sig.png, "PNG", xImg, y + 5, sigW, sigH) }
+      catch { doc.line(xImg, y + sigH + 5, xImg + sigW, y + sigH + 5) }
+      doc.setFontSize(7); doc.setFont("helvetica", "normal"); doc.setTextColor(21, 128, 61)
+      doc.text(`✓ Signé le ${new Date(sig.signeAt).toLocaleDateString("fr-FR")}`, xCenter, y + sigH + 9, { align: "center" })
+      doc.setTextColor(0, 0, 0)
+    } else {
+      doc.setFontSize(7); doc.setFont("helvetica", "italic"); doc.setTextColor(120, 120, 120)
+      doc.text('(Mention "Lu et approuvé" + signature)', xCenter, y, { align: "center" })
+      doc.setTextColor(0, 0, 0)
+      doc.setDrawColor(180, 180, 180)
+      doc.line(xImg, y + sigH + 5, xImg + sigW, y + sigH + 5)
+    }
+  }
+  renderSig(sigBailleur, 50)
+  renderSig(sigLocataire, 155)
+  y += sigH + 16
 
   doc.setFontSize(7); doc.setTextColor(150, 150, 150)
   doc.text(`Document genere par ${BRAND.name} — ${BRAND.url.replace(/^https?:\/\//, "")}`, 105, 285, { align: "center" })
@@ -222,6 +258,8 @@ export default function ConsulterEdlPage() {
   const [commentaire, setCommentaire] = useState("")
   const [validating, setValidating] = useState(false)
   const [contesting, setContesting] = useState(false)
+  const [signModalOpen, setSignModalOpen] = useState(false)
+  const [signatures, setSignatures] = useState<Array<{ role: string; nom: string; signe_at: string }>>([])
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth")
@@ -241,47 +279,37 @@ export default function ConsulterEdlPage() {
     const { edl: data, bien: bienData } = await res.json()
     setEdl(data)
     if (bienData) setBien(bienData)
+    // Fetch signatures EDL
+    const { data: sigs } = await supabase
+      .from("edl_signatures")
+      .select("signataire_role, signataire_nom, signe_at")
+      .eq("edl_id", edlId)
+    if (sigs) {
+      setSignatures(sigs.map(s => ({ role: s.signataire_role, nom: s.signataire_nom, signe_at: s.signe_at })))
+    }
     setLoading(false)
   }
 
-  async function validerEdl() {
-    if (!edl || !session?.user?.email) return
-    setValidating(true)
-    try {
-      const now = new Date().toISOString()
-      const { data: updated, error } = await supabase
-        .from("etats_des_lieux")
-        .update({ statut: "valide", date_validation: now })
-        .eq("id", edl.id)
-        .select("id")
-      if (error || !updated || updated.length === 0) {
-        alert(`Validation échouée : ${error?.message || "aucune ligne mise à jour"}`)
-        return
-      }
-      const toEmail = (edl.proprietaire_email || "").toLowerCase().trim()
-      if (toEmail) {
-        await supabase.from("messages").insert([{
-          from_email: session.user.email.toLowerCase(),
-          to_email: toEmail,
-          contenu: "L'état des lieux a été validé par le locataire ✓",
-          lu: false,
-          annonce_id: edl.annonce_id || null,
-          created_at: now,
-        }])
-        void postNotif({
-          userEmail: toEmail,
-          type: "edl_envoye",
-          title: "EDL validé",
-          body: `Le locataire a validé l'état des lieux ${edl.type === "entree" ? "d'entrée" : "de sortie"}.`,
-          href: `/edl/consulter/${edl.id}`,
-          relatedId: String(edl.annonce_id || edl.id),
-        })
-      }
-      setEdl({ ...edl, statut: "valide", date_validation: now })
-    } catch (err) {
-      alert(`Erreur : ${err instanceof Error ? err.message : String(err)}`)
-    } finally {
-      setValidating(false)
+  function ouvrirSignatureValidation() {
+    // Passe par la modale de signature au lieu d'un simple clic.
+    // L'API /api/edl/signer valide le rôle + met à jour statut="valide".
+    setSignModalOpen(true)
+  }
+  async function onSignedEdl() {
+    // Refetch EDL + signatures après signature réussie
+    if (!edl) return
+    const { data: sigs } = await supabase
+      .from("edl_signatures")
+      .select("signataire_role, signataire_nom, signe_at")
+      .eq("edl_id", edl.id)
+    if (sigs) {
+      setSignatures(sigs.map(s => ({ role: s.signataire_role, nom: s.signataire_nom, signe_at: s.signe_at })))
+    }
+    // Refetch EDL pour avoir le nouveau statut
+    const res = await fetch(`/api/edl/${encodeURIComponent(edlId as string)}`, { cache: "no-store" })
+    if (res.ok) {
+      const { edl: data } = await res.json()
+      setEdl(data)
     }
   }
 
@@ -515,14 +543,14 @@ export default function ConsulterEdlPage() {
 
             {!showContest ? (
               <div style={{ display: "flex", gap: 12, flexDirection: isMobile ? "column" : "row" }}>
-                <button onClick={validerEdl} disabled={validating}
+                <button onClick={ouvrirSignatureValidation}
                   style={{
                     flex: 1, padding: "16px 32px",
-                    background: validating ? "#9ca3af" : "#16a34a", color: "white",
+                    background: "#15803d", color: "white",
                     border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16,
-                    cursor: validating ? "not-allowed" : "pointer", fontFamily: "inherit",
+                    cursor: "pointer", fontFamily: "inherit",
                   }}>
-                  {validating ? "Validation en cours..." : "Valider l'état des lieux"}
+                  ✍ Signer et valider l&apos;état des lieux
                 </button>
                 <button onClick={() => setShowContest(true)}
                   style={{
@@ -577,7 +605,25 @@ export default function ConsulterEdlPage() {
         {/* Telechargements */}
         {(statut === "valide" || statut === "envoye") && (
           <div style={{ display: "flex", gap: 12, marginTop: statut === "envoye" ? 0 : 0, flexWrap: "wrap" }}>
-            <button onClick={() => genererEdlPDF(edl, bien)}
+            <button onClick={async () => {
+              // Fetch images signatures (full base64) pour les embed dans le PDF
+              const { data: sigsFull } = await supabase
+                .from("edl_signatures")
+                .select("signataire_role, signataire_nom, signature_png, mention, ip_address, signe_at")
+                .eq("edl_id", edl.id)
+              const edlWithSigs = {
+                ...edl,
+                __edl_signatures: (sigsFull || []).map(s => ({
+                  role: s.signataire_role,
+                  nom: s.signataire_nom,
+                  png: s.signature_png,
+                  signeAt: s.signe_at,
+                  mention: s.mention,
+                  ipAddress: s.ip_address,
+                })),
+              }
+              await genererEdlPDF(edlWithSigs, bien)
+            }}
               style={{
                 flex: "1 1 200px", padding: "14px 24px",
                 background: "#111", color: "white",
@@ -598,10 +644,58 @@ export default function ConsulterEdlPage() {
           </div>
         )}
 
+        {/* Statut signatures */}
+        {signatures.length > 0 && (
+          <div style={{ ...cardS, background: "#f0fdf4", border: "1.5px solid #86efac" }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 10px" }}>
+              Signatures électroniques
+            </p>
+            {signatures.map(s => (
+              <p key={`${s.role}-${s.signe_at}`} style={{ fontSize: 13, color: "#15803d", margin: "4px 0", fontWeight: 600 }}>
+                ✓ {s.role === "locataire" ? "Locataire" : "Bailleur"} — {s.nom} — {new Date(s.signe_at).toLocaleDateString("fr-FR")}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {/* Contresignature proprio (après signature locataire) */}
+        {statut === "valide"
+          && (session?.user?.email || "").toLowerCase() === (edl.proprietaire_email || "").toLowerCase()
+          && !signatures.find(s => s.role === "bailleur")
+          && signatures.find(s => s.role === "locataire")
+          && (
+          <div style={{ ...cardS, background: "#fff7ed", border: "1.5px solid #fed7aa" }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: "#9a3412", margin: "0 0 10px" }}>
+              Le locataire a signé cet EDL
+            </p>
+            <p style={{ fontSize: 12, color: "#9a3412", margin: "0 0 14px", lineHeight: 1.6 }}>
+              Vous pouvez contresigner pour officialiser la validation bilatérale.
+            </p>
+            <button onClick={() => setSignModalOpen(true)}
+              style={{ background: "#9a3412", color: "white", border: "none", borderRadius: 999, padding: "10px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+              ✍ Contresigner l&apos;EDL
+            </button>
+          </div>
+        )}
+
         <p style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", marginTop: 20, lineHeight: 1.6 }}>
           Document contradictoire — généré par {BRAND.name}.
         </p>
       </div>
+
+      {signModalOpen && edl && (
+        <EdlSignatureModal
+          open={signModalOpen}
+          onClose={() => setSignModalOpen(false)}
+          onSigned={() => { setSignModalOpen(false); void onSignedEdl() }}
+          edlId={edl.id}
+          role={(session?.user?.email || "").toLowerCase() === (edl.proprietaire_email || "").toLowerCase() ? "bailleur" : "locataire"}
+          typeEdl={edl.type === "sortie" ? "sortie" : "entree"}
+          dateEdl={edl.date_edl || ""}
+          bienTitre={bien?.titre || ""}
+          nomDefaut={session?.user?.name || ""}
+        />
+      )}
     </main>
   )
 }
