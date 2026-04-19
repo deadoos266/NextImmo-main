@@ -433,24 +433,18 @@ export default function Proprietaire() {
     const variants = eo === el ? [eo] : [eo, el]
     const norm = (s: string | null | undefined) => (s || "").toLowerCase().trim()
 
-    console.log("[loadData] session email =", JSON.stringify(eo), "variants =", variants)
-
+    // ORDER BY id : garanti d'exister (PRIMARY KEY). `created_at` peut manquer
+    // dans les DB qui n'ont pas appliqué la migration 000_baseline.
     const [annRes, msgRes, loyRes, visRes] = await Promise.all([
-      supabase.from("annonces").select("*").in("proprietaire_email", variants).order("created_at", { ascending: false }),
-      supabase.from("messages").select("*").in("to_email", variants).order("created_at", { ascending: false }),
-      supabase.from("loyers").select("*").in("proprietaire_email", variants).order("mois", { ascending: false }),
-      supabase.from("visites").select("*").in("proprietaire_email", variants).order("date_visite", { ascending: true }),
+      supabase.from("annonces").select("*").in("proprietaire_email", variants).order("id", { ascending: false }),
+      supabase.from("messages").select("*").in("to_email", variants).order("id", { ascending: false }),
+      supabase.from("loyers").select("*").in("proprietaire_email", variants).order("id", { ascending: false }),
+      supabase.from("visites").select("*").in("proprietaire_email", variants).order("id", { ascending: false }),
     ])
-    console.log("[loadData] .in() annonces count =", annRes.data?.length ?? 0, "error =", annRes.error)
     let b = annRes.data || []
     if (b.length === 0) {
-      const { data: all } = await supabase.from("annonces").select("*").order("created_at", { ascending: false }).limit(500)
-      console.log("[loadData] fallback fetch-all annonces count =", all?.length ?? 0)
-      if (all && all.length > 0) {
-        console.log("[loadData] sample proprietaire_emails =", all.slice(0, 5).map(a => JSON.stringify((a as { proprietaire_email?: string }).proprietaire_email)))
-      }
+      const { data: all } = await supabase.from("annonces").select("*").order("id", { ascending: false }).limit(500)
       b = (all || []).filter(a => norm((a as { proprietaire_email?: string | null }).proprietaire_email) === elTrim)
-      console.log("[loadData] after client filter count =", b.length, "elTrim =", JSON.stringify(elTrim))
     }
     const m = msgRes.data
     const l = loyRes.data
