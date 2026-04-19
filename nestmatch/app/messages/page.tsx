@@ -20,6 +20,7 @@ const EDL_PREFIX = "[EDL_CARD]"
 const RETRAIT_PREFIX = "[CANDIDATURE_RETIREE]"
 const RELANCE_PREFIX = "[RELANCE]"
 const LOCATION_PREFIX = "[LOCATION_ACCEPTEE]"
+const QUITTANCE_PREFIX = "[QUITTANCE_CARD]"
 // Prefix encodé dans contenu pour un message en réponse à un autre.
 // Format : "[REPLY:<id>]\n<texte>". Permet d'implémenter le reply-to sans migration DB.
 const REPLY_REGEX = /^\[REPLY:(\d+)\]\n([\s\S]*)$/
@@ -267,6 +268,49 @@ function LocationAccepteeCard({ contenu, isMine }: { contenu: string; isMine: bo
           Voir mon logement →
         </a>
       )}
+    </div>
+  )
+}
+
+// ─── Quittance Card ──────────────────────────────────────────────────────────
+
+function QuittanceCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any = {}
+  try { data = JSON.parse(contenu.slice(QUITTANCE_PREFIX.length)) } catch { /* ignore */ }
+  const moisLabel = data.mois
+    ? new Date(data.mois + "-01T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
+    : ""
+  const dateConf = data.dateConfirmation
+    ? new Date(data.dateConfirmation).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })
+    : ""
+  const montant = Number(data.montant || 0)
+
+  if (isMine) {
+    return (
+      <div style={{ background: "#1a1a1a", border: "1.5px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 300 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: "#a7f3d0", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>Quittance envoyée</p>
+        <p style={{ fontWeight: 700, fontSize: 14, color: "white", margin: 0 }}>{data.bienTitre || "Bien"}</p>
+        <p style={{ fontSize: 12, color: "#9ca3af", margin: "4px 0 0" }}>
+          {moisLabel}{montant > 0 ? ` · ${montant} €` : ""}
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 320 }}>
+      <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>Quittance reçue</p>
+      <p style={{ fontWeight: 700, fontSize: 14, color: "#111", margin: 0 }}>{data.bienTitre || "Bien"}</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#374151", marginTop: 8 }}>
+        {moisLabel && <div>Mois : <strong>{moisLabel}</strong></div>}
+        {montant > 0 && <div>Loyer : <strong>{montant} €</strong></div>}
+        {dateConf && <div>Confirmé le <strong>{dateConf}</strong></div>}
+      </div>
+      <a href="/mon-logement"
+        style={{ display: "block", marginTop: 12, background: "#15803d", color: "white", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 700, textAlign: "center", textDecoration: "none", fontFamily: "inherit" }}>
+        Voir mes quittances →
+      </a>
     </div>
   )
 }
@@ -1225,6 +1269,7 @@ function MessagesInner() {
                   : rawPreview.startsWith(DEMANDE_DOSSIER_PREFIX) ? "Dossier demandé"
                   : rawPreview.startsWith(EDL_PREFIX) ? "État des lieux envoyé"
                   : rawPreview.startsWith(BAIL_PREFIX) ? "Bail généré"
+                  : rawPreview.startsWith(QUITTANCE_PREFIX) ? "Quittance reçue"
                   : rawPreview.startsWith(RETRAIT_PREFIX) ? "Candidature retirée"
                   : rawPreview.startsWith(RELANCE_PREFIX) ? "Relance : " + rawPreview.slice(RELANCE_PREFIX.length)
                   : rawPreview.startsWith(LOCATION_PREFIX) ? "Location acceptée ✓"
@@ -1525,6 +1570,7 @@ function MessagesInner() {
                     const isDemande = typeof m.contenu === "string" && m.contenu === DEMANDE_DOSSIER_PREFIX
                     const isEdl = typeof m.contenu === "string" && m.contenu.startsWith(EDL_PREFIX)
                     const isBail = typeof m.contenu === "string" && m.contenu.startsWith(BAIL_PREFIX)
+                    const isQuittance = typeof m.contenu === "string" && m.contenu.startsWith(QUITTANCE_PREFIX)
                     const isRetrait = typeof m.contenu === "string" && m.contenu.startsWith(RETRAIT_PREFIX)
                     const isLocation = typeof m.contenu === "string" && m.contenu.startsWith(LOCATION_PREFIX)
                     return (
@@ -1558,6 +1604,13 @@ function MessagesInner() {
                         ) : isBail ? (
                           <div>
                             <BailCard contenu={m.contenu} isMine={isMine} />
+                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        ) : isQuittance ? (
+                          <div>
+                            <QuittanceCard contenu={m.contenu} isMine={isMine} />
                             <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
