@@ -14,6 +14,7 @@ export const PREFIXES = {
   DEMANDE_DOSSIER:      "[DEMANDE_DOSSIER]",
   EDL:                  "[EDL_CARD]",
   BAIL:                 "[BAIL_CARD]",
+  BAIL_SIGNE:           "[BAIL_SIGNE]",
   QUITTANCE:            "[QUITTANCE_CARD]",
   CANDIDATURE_RETIREE:  "[CANDIDATURE_RETIREE]",
   RELANCE:              "[RELANCE]",
@@ -54,6 +55,7 @@ export function previewLabel(content: string | null | undefined): string | null 
     case "DEMANDE_DOSSIER": return "Dossier demandé"
     case "EDL": return "État des lieux envoyé"
     case "BAIL": return "Bail généré"
+    case "BAIL_SIGNE": return "Bail signé ✓"
     case "QUITTANCE": return "Quittance reçue"
     case "CANDIDATURE_RETIREE": return "Candidature retirée"
     case "RELANCE": {

@@ -732,11 +732,7 @@ export default function BailPage() {
         }}
       >
         <button
-          onClick={() => {
-            if (typeof window !== "undefined" && window.history.length > 1)
-              router.back()
-            else router.push("/proprietaire")
-          }}
+          onClick={() => router.push("/proprietaire")}
           style={{
             fontSize: 13,
             color: "#6b7280",
@@ -747,7 +743,7 @@ export default function BailPage() {
             fontFamily: "inherit",
           }}
         >
-          ← Retour
+          ← Retour à l&apos;espace propriétaire
         </button>
 
         <div style={{ marginTop: 16, marginBottom: 24 }}>

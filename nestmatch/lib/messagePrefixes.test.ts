@@ -6,6 +6,7 @@ describe("messagePrefixes", () => {
     it("détecte chaque préfixe connu", () => {
       expect(getPrefix("[DOSSIER_CARD]...")).toBe("DOSSIER")
       expect(getPrefix("[BAIL_CARD]...")).toBe("BAIL")
+      expect(getPrefix("[BAIL_SIGNE]...")).toBe("BAIL_SIGNE")
       expect(getPrefix("[QUITTANCE_CARD]...")).toBe("QUITTANCE")
       expect(getPrefix("[EDL_CARD]...")).toBe("EDL")
       expect(getPrefix("[LOCATION_ACCEPTEE]...")).toBe("LOCATION_ACCEPTEE")
@@ -35,6 +36,7 @@ describe("messagePrefixes", () => {
       expect(previewLabel("[DOSSIER_CARD]x")).toBe("Dossier envoyé")
       expect(previewLabel("[QUITTANCE_CARD]x")).toBe("Quittance reçue")
       expect(previewLabel("[BAIL_CARD]x")).toBe("Bail généré")
+      expect(previewLabel("[BAIL_SIGNE]x")).toBe("Bail signé ✓")
       expect(previewLabel("[EDL_CARD]x")).toBe("État des lieux envoyé")
       expect(previewLabel("[LOCATION_ACCEPTEE]x")).toBe("Location acceptée ✓")
     })

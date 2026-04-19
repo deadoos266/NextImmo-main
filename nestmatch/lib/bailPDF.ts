@@ -124,6 +124,18 @@ export type BailData = {
   ges?: string
   consoEnergetique?: string // kWh/m²/an
   emissionsGes?: string // kgCO2/m²/an
+
+  // ── Signatures (injectées au moment du téléchargement PDF) ────────────
+  signatures?: BailSignatureEntry[]
+}
+
+export type BailSignatureEntry = {
+  role: "bailleur" | "locataire" | "garant"
+  nom: string
+  png: string // data:image/png;base64,...
+  signeAt: string
+  mention?: string
+  ipAddress?: string
 }
 
 // ─── Helpers formatage ────────────────────────────────────────────────────
@@ -538,6 +550,20 @@ export async function genererBailPDF(data: BailData): Promise<void> {
     "Diagnostic électricité et gaz (installations de plus de 15 ans)",
   )
   addBullet(`Surface habitable (loi Boutin) : ${data.surface} m²`)
+
+  // Mentions loi Climat et Résilience (calendrier passoires thermiques)
+  if (data.dpe && ["F", "G"].includes(data.dpe.toUpperCase())) {
+    y += 2
+    addSubsection("Mention obligatoire (loi Climat et Résilience)")
+    addText(
+      `Le logement classé ${data.dpe.toUpperCase()} est considéré comme une passoire énergétique. Depuis la loi Climat et Résilience du 22 août 2021, les logements G+ sont interdits à la location depuis 2023, les G depuis le 1er janvier 2025, et les F le seront à compter du 1er janvier 2028. Le locataire peut exiger des travaux d'amélioration énergétique.`,
+    )
+  }
+  y += 2
+  addSubsection("Décence du logement (décret n°2002-120)")
+  addText(
+    "Le bailleur atteste que le logement répond aux critères de décence : sécurité physique des occupants, absence de risque manifeste pour leur santé, équipements conformes, surface et volume habitables minimaux, performance énergétique minimale (classe F ou mieux).",
+  )
   y += 4
 
   addLine()
@@ -768,15 +794,39 @@ export async function genererBailPDF(data: BailData): Promise<void> {
 
   addLine()
 
+  // ── Médiation (obligatoire depuis 2020) ───────────────────────────────
+  if (y > 250) {
+    doc.addPage()
+    y = 20
+  }
+  addSection("XIV. MÉDIATION ET RÈGLEMENT DES LITIGES")
+  y += 2
+  addText(
+    "En cas de litige sur l'exécution du bail, les parties s'engagent à rechercher une solution amiable avant toute action contentieuse, en saisissant notamment la Commission départementale de conciliation (CDC) compétente (art. 20 de la loi du 6 juillet 1989).",
+  )
+  addText(
+    "À défaut de conciliation, les tribunaux judiciaires sont compétents. Le locataire ne peut renoncer par avance à ses droits.",
+  )
+  y += 4
+
+  addLine()
+
   // ── Signatures ────────────────────────────────────────────────────────
-  if (y > 220) {
+  if (y > 210) {
     doc.addPage()
     y = 20
   }
   addSection("SIGNATURES")
   y += 4
-  addText(`Fait en deux exemplaires, le ${today}.`)
+  addText(`Fait en deux exemplaires originaux, le ${today}.`)
   y += 10
+
+  const sigByRole = (role: "bailleur" | "locataire" | "garant") =>
+    data.signatures?.find(s => s.role === role)
+
+  const sigBailleur = sigByRole("bailleur")
+  const sigLocataire = sigByRole("locataire")
+  const sigGarant = sigByRole("garant")
 
   doc.setFontSize(10)
   doc.setFont("helvetica", "bold")
@@ -788,36 +838,133 @@ export async function genererBailPDF(data: BailData): Promise<void> {
   doc.text(data.nomBailleur, 50, y, { align: "center" })
   doc.text(data.nomLocataire || data.emailLocataire, 155, y, { align: "center" })
   y += 5
-  doc.text('(Signature précédée de "Lu et approuvé")', 50, y + 3, {
-    align: "center",
-  })
-  doc.text('(Signature précédée de "Lu et approuvé")', 155, y + 3, {
-    align: "center",
-  })
-  doc.line(20, y + 20, 85, y + 20)
-  doc.line(120, y + 20, 185, y + 20)
+  doc.setFontSize(7)
+  doc.setTextColor(120, 120, 120)
+  doc.text('Signature précédée de "Lu et approuvé"', 50, y + 2, { align: "center" })
+  doc.text('Signature précédée de "Lu et approuvé"', 155, y + 2, { align: "center" })
+  doc.setTextColor(0, 0, 0)
+
+  // Rendu des images de signature si présentes
+  const sigY = y + 7
+  const sigWidth = 55
+  const sigHeight = 22
+
+  if (sigBailleur) {
+    try {
+      doc.addImage(sigBailleur.png, "PNG", 22, sigY, sigWidth, sigHeight)
+      doc.setFontSize(7)
+      doc.setTextColor(21, 128, 61)
+      doc.text(
+        `✓ Signé électroniquement le ${new Date(sigBailleur.signeAt).toLocaleDateString("fr-FR")}`,
+        50,
+        sigY + sigHeight + 4,
+        { align: "center" },
+      )
+      doc.setTextColor(0, 0, 0)
+    } catch {
+      doc.line(20, sigY + sigHeight, 85, sigY + sigHeight)
+    }
+  } else {
+    doc.line(20, sigY + sigHeight, 85, sigY + sigHeight)
+  }
+
+  if (sigLocataire) {
+    try {
+      doc.addImage(sigLocataire.png, "PNG", 127, sigY, sigWidth, sigHeight)
+      doc.setFontSize(7)
+      doc.setTextColor(21, 128, 61)
+      doc.text(
+        `✓ Signé électroniquement le ${new Date(sigLocataire.signeAt).toLocaleDateString("fr-FR")}`,
+        155,
+        sigY + sigHeight + 4,
+        { align: "center" },
+      )
+      doc.setTextColor(0, 0, 0)
+    } catch {
+      doc.line(120, sigY + sigHeight, 185, sigY + sigHeight)
+    }
+  } else {
+    doc.line(120, sigY + sigHeight, 185, sigY + sigHeight)
+  }
+
+  y = sigY + sigHeight + 10
 
   // Garant signature si actif
   if (data.garantActif && data.nomGarant) {
-    y += 35
+    y += 6
     if (y > 250) {
       doc.addPage()
       y = 20
     }
+    doc.setFontSize(10)
     doc.setFont("helvetica", "bold")
     doc.text("La caution solidaire", 105, y, { align: "center" })
     y += 5
     doc.setFont("helvetica", "normal")
     doc.text(data.nomGarant, 105, y, { align: "center" })
     y += 5
-    doc.setFontSize(8)
+    doc.setFontSize(7)
+    doc.setTextColor(120, 120, 120)
     doc.text(
-      '(Mentions manuscrites + signature précédée de "Lu et approuvé, bon pour caution solidaire")',
+      'Mentions manuscrites + "Lu et approuvé, bon pour caution solidaire"',
       105,
-      y + 3,
+      y + 2,
       { align: "center" },
     )
-    doc.line(60, y + 20, 150, y + 20)
+    doc.setTextColor(0, 0, 0)
+
+    const garantSigY = y + 7
+    if (sigGarant) {
+      try {
+        doc.addImage(sigGarant.png, "PNG", 77, garantSigY, sigWidth, sigHeight)
+        doc.setFontSize(7)
+        doc.setTextColor(21, 128, 61)
+        doc.text(
+          `✓ Signé électroniquement le ${new Date(sigGarant.signeAt).toLocaleDateString("fr-FR")}`,
+          105,
+          garantSigY + sigHeight + 4,
+          { align: "center" },
+        )
+        doc.setTextColor(0, 0, 0)
+      } catch {
+        doc.line(60, garantSigY + sigHeight, 150, garantSigY + sigHeight)
+      }
+    } else {
+      doc.line(60, garantSigY + sigHeight, 150, garantSigY + sigHeight)
+    }
+    y = garantSigY + sigHeight + 10
+  }
+
+  // Audit trail (si signatures électroniques présentes)
+  if (data.signatures && data.signatures.length > 0) {
+    if (y > 250) {
+      doc.addPage()
+      y = 20
+    }
+    y += 6
+    doc.setFontSize(8)
+    doc.setFont("helvetica", "bold")
+    doc.setTextColor(60, 60, 60)
+    doc.text("Traçabilité des signatures électroniques", 20, y)
+    y += 5
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(7)
+    doc.setTextColor(100, 100, 100)
+    const auditLines = [
+      "Signatures électroniques simples conformes à l'article 1366 du Code civil",
+      "et au règlement européen eIDAS (UE n° 910/2014).",
+      "",
+    ]
+    for (const l of auditLines) {
+      doc.text(l, 20, y)
+      y += 3.5
+    }
+    for (const s of data.signatures) {
+      const line = `${s.role.charAt(0).toUpperCase() + s.role.slice(1)} — ${s.nom} — ${new Date(s.signeAt).toLocaleString("fr-FR")}${s.ipAddress ? ` — IP ${s.ipAddress}` : ""}`
+      doc.text(line, 20, y)
+      y += 3.5
+    }
+    doc.setTextColor(0, 0, 0)
   }
 
   // ── Footer ────────────────────────────────────────────────────────────

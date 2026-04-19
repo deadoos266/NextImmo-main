@@ -612,66 +612,39 @@ export default function Proprietaire() {
           })}
         </div>
 
-        {/* TABLEAU DE BORD */}
+        {/* TABLEAU DE BORD — KPIs opérationnels (cliquables pour naviguer) */}
         {onglet === "Statistiques" && (
-          <>
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 12 : 18, marginBottom: 24 }}>
-              {[
-                { label: "Biens disponibles", val: biensDispos, color: "#16a34a", bg: "#f0fdf4", targetOnglet: "Mes biens" as const },
-                { label: "Biens loués",       val: biensLoues, color: "#6b7280", bg: "#f9fafb", targetOnglet: "Locataires" as const },
-                { label: "Loyers à confirmer", val: loyersAttendus, color: "#ea580c", bg: loyersAttendus > 0 ? "#fff7ed" : "white", targetOnglet: "Locataires" as const },
-                { label: "Loyers confirmés",  val: loyersConfirmes, color: "#16a34a", bg: "white", targetOnglet: "Locataires" as const },
-              ].map(s => (
-                <button
-                  key={s.label}
-                  onClick={() => setOnglet(s.targetOnglet)}
-                  style={{
-                    background: s.bg, borderRadius: 20, padding: isMobile ? "18px 20px" : "24px 28px",
-                    border: "1px solid #f3f4f6", textAlign: "left", cursor: "pointer",
-                    fontFamily: "inherit", transition: "transform 0.15s, box-shadow 0.15s",
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.06)" }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "none" }}
-                >
-                  <div style={{ fontSize: isMobile ? 32 : 40, fontWeight: 800, color: s.color, letterSpacing: "-1px", lineHeight: 1 }}>{s.val}</div>
-                  <div style={{ fontSize: 12, color: "#6b7280", marginTop: 8, fontWeight: 600 }}>{s.label}</div>
-                </button>
-              ))}
-            </div>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 12 : 18, marginBottom: 24 }}>
+            {[
+              { label: "Biens disponibles", val: biensDispos, color: "#16a34a", bg: "#f0fdf4", targetOnglet: "Mes biens" as const },
+              { label: "Biens loués",       val: biensLoues, color: "#6b7280", bg: "#f9fafb", targetOnglet: "Locataires" as const },
+              { label: "Loyers à confirmer", val: loyersAttendus, color: "#ea580c", bg: loyersAttendus > 0 ? "#fff7ed" : "white", targetOnglet: "Locataires" as const },
+              { label: "Loyers confirmés",  val: loyersConfirmes, color: "#16a34a", bg: "white", targetOnglet: "Locataires" as const },
+            ].map(s => (
+              <button
+                key={s.label}
+                onClick={() => setOnglet(s.targetOnglet)}
+                style={{
+                  background: s.bg, borderRadius: 20, padding: isMobile ? "18px 20px" : "24px 28px",
+                  border: "1px solid #f3f4f6", textAlign: "left", cursor: "pointer",
+                  fontFamily: "inherit", transition: "transform 0.15s, box-shadow 0.15s",
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.06)" }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "none" }}
+              >
+                <div style={{ fontSize: isMobile ? 32 : 40, fontWeight: 800, color: s.color, letterSpacing: "-1px", lineHeight: 1 }}>{s.val}</div>
+                <div style={{ fontSize: 12, color: "#6b7280", marginTop: 8, fontWeight: 600 }}>{s.label}</div>
+              </button>
+            ))}
+          </div>
+        )}
 
-            {/* Pipeline candidats */}
-            <PipelineFunnel biens={biens} candidatures={candidatures} visites={visites} clicsParBien={clicsParBien} />
-
-            {/* Alertes */}
-            {loyersAttendus > 0 && (
-              <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 14, padding: isMobile ? "12px 16px" : "14px 20px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                <p style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#ea580c" }}>{loyersAttendus} paiement{loyersAttendus > 1 ? "s" : ""} en attente</p>
-                <button onClick={() => setOnglet("Locataires")} style={{ background: "#ea580c", color: "white", border: "none", borderRadius: 999, padding: "6px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Voir</button>
-              </div>
-            )}
-
-            {/* Biens rapides */}
-            <div style={{ background: "white", borderRadius: 20, padding: 24 }}>
-              <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Mes biens</h2>
-              {biens.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "40px 0", color: "#9ca3af" }}>
-                  <div style={{ fontSize: 40, marginBottom: 12 }} />
-                  <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>Aucun bien publié</p>
-                  <a href="/proprietaire/ajouter" style={{ color: "#111", fontWeight: 700, textDecoration: "none" }}>Ajouter votre premier bien →</a>
-                </div>
-              ) : biens.slice(0, 4).map(b => (
-                <div key={b.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
-                  <div>
-                    <p style={{ fontWeight: 700, fontSize: 14 }}>{b.titre}</p>
-                    <p style={{ color: "#6b7280", fontSize: 12, marginTop: 2 }}>{b.ville} · {b.surface} m² · {b.prix} €/mois</p>
-                  </div>
-                  <span style={{ background: statutColor[b.statut || "disponible"]?.bg || "#f3f4f6", color: statutColor[b.statut || "disponible"]?.color || "#6b7280", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
-                    {b.statut || "disponible"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </>
+        {/* Alerte loyers — toujours visible en haut de Statistiques */}
+        {onglet === "Statistiques" && loyersAttendus > 0 && (
+          <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 14, padding: isMobile ? "12px 16px" : "14px 20px", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <p style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#ea580c" }}>{loyersAttendus} paiement{loyersAttendus > 1 ? "s" : ""} en attente</p>
+            <button onClick={() => setOnglet("Locataires")} style={{ background: "#ea580c", color: "white", border: "none", borderRadius: 999, padding: "6px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Voir</button>
+          </div>
         )}
 
         {/* MES BIENS */}
@@ -900,7 +873,7 @@ export default function Proprietaire() {
                 {/* Detail par bien — cliquable, mène aux stats détaillées */}
                 <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 8 }}>
-                    <h2 style={{ fontSize: 16, fontWeight: 800 }}>Performance par bien</h2>
+                    <h2 style={{ fontSize: 16, fontWeight: 800 }}>Détail par bien</h2>
                     <p style={{ fontSize: 12, color: "#6b7280" }}>Cliquez sur un bien pour voir ses statistiques détaillées</p>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
@@ -970,7 +943,7 @@ export default function Proprietaire() {
 
                 {/* Conseils */}
                 <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24, marginTop: 20 }}>
-                  <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Conseils pour améliorer vos performances</h2>
+                  <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Conseils pour améliorer la visibilité</h2>
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {biens.filter((b: any) => !b.photos || (Array.isArray(b.photos) && b.photos.length < 3)).length > 0 && (
                       <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#fff7ed", borderRadius: 12, border: "1px solid #fed7aa" }}>

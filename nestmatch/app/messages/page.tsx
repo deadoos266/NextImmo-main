@@ -13,9 +13,12 @@ import AnnulerVisiteDialog from "../components/AnnulerVisiteDialog"
 import { annulerVisite, STATUT_VISITE_STYLE as STATUT_VISITE } from "../../lib/visitesHelpers"
 import { postNotif } from "../../lib/notificationsClient"
 import MessageSkeleton from "../components/ui/MessageSkeleton"
+import BailSignatureModal from "../components/BailSignatureModal"
+import type { BailData } from "../../lib/bailPDF"
 
 const DOSSIER_PREFIX = "[DOSSIER_CARD]"
 const BAIL_PREFIX = "[BAIL_CARD]"
+const BAIL_SIGNE_PREFIX = "[BAIL_SIGNE]"
 const DEMANDE_DOSSIER_PREFIX = "[DEMANDE_DOSSIER]"
 const EDL_PREFIX = "[EDL_CARD]"
 const RETRAIT_PREFIX = "[CANDIDATURE_RETIREE]"
@@ -203,7 +206,23 @@ function EdlCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
 
 // ─── Bail Card ──────────────────────────────────────────────────────────────
 
-function BailCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
+type BailSignatureSummary = { role: string; nom: string; dateSignature: string }
+
+function BailCard({
+  contenu,
+  isMine,
+  annonceId,
+  signatures,
+  canSignAsRole,
+  onRequestSign,
+}: {
+  contenu: string
+  isMine: boolean
+  annonceId: number | null
+  signatures: BailSignatureSummary[]
+  canSignAsRole: "locataire" | "bailleur" | null
+  onRequestSign: (bail: BailData, role: "locataire" | "bailleur") => void
+}) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let data: any = {}
   try { data = JSON.parse(contenu.slice(BAIL_PREFIX.length)) } catch { /* ignore */ }
@@ -211,41 +230,97 @@ function BailCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
     ? new Date(data.dateDebut).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
     : ""
   const loyer = Number(data.loyerHC || 0) + Number(data.charges || 0)
-  // Le payload récent contient toutes les 23 clés BailData (cf. /proprietaire/bail/[id]).
-  // Les anciens messages n'ont que 6 clés → le téléchargement ne produirait qu'un PDF partiel.
   const canDownload = !!(data.nomBailleur && data.titreBien && data.dateDebut && data.villeBien)
   const [downloading, setDownloading] = useState(false)
+
+  const sigLocataire = signatures.find(s => s.role === "locataire")
+  const sigBailleur = signatures.find(s => s.role === "bailleur")
+  const dejaSigneParMoi = canSignAsRole
+    ? !!signatures.find(s => s.role === canSignAsRole)
+    : false
 
   async function telecharger() {
     if (!canDownload || downloading) return
     setDownloading(true)
     try {
       const { genererBailPDF } = await import("../../lib/bailPDF")
-      await genererBailPDF(data)
+      // Fetch les signatures (PNG complet) depuis Supabase pour les injecter dans le PDF.
+      let signatures: Array<{ role: "bailleur" | "locataire" | "garant"; nom: string; png: string; signeAt: string; mention?: string; ipAddress?: string }> = []
+      if (annonceId) {
+        const { data: sigs } = await supabase
+          .from("bail_signatures")
+          .select("signataire_role, signataire_nom, signature_png, mention, ip_address, signe_at")
+          .eq("annonce_id", annonceId)
+        if (sigs) {
+          signatures = sigs.map(s => ({
+            role: s.signataire_role as "bailleur" | "locataire" | "garant",
+            nom: s.signataire_nom,
+            png: s.signature_png,
+            signeAt: s.signe_at,
+            mention: s.mention,
+            ipAddress: s.ip_address,
+          }))
+        }
+      }
+      await genererBailPDF({ ...data, signatures })
     } finally {
       setDownloading(false)
     }
   }
 
+  function signer() {
+    if (!canSignAsRole || !annonceId) return
+    onRequestSign(data as BailData, canSignAsRole)
+  }
+
+  const signatureBadge = (s: BailSignatureSummary) => {
+    const d = new Date(s.dateSignature).toLocaleDateString("fr-FR", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    })
+    return `✓ Signé par ${s.nom} (${s.role}) le ${d}`
+  }
+
+  // === Variante PROPRIO (isMine = true) ===
   if (isMine) {
     return (
-      <div style={{ background: "#1a1a1a", border: "1.5px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 280 }}>
+      <div style={{ background: "#1a1a1a", border: "1.5px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 320 }}>
         <p style={{ fontSize: 11, fontWeight: 700, color: "#a7f3d0", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>Bail envoyé</p>
         <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0 }}>{data.titreBien || "Bien"} — {data.villeBien}</p>
-        <p style={{ fontSize: 11, color: "#9ca3af", margin: "4px 0 0" }}>Début {dateStr}{loyer > 0 ? ` · ${loyer} €/mois` : ""}</p>
+        <p style={{ fontSize: 11, color: "#9ca3af", margin: "4px 0 8px" }}>Début {dateStr}{loyer > 0 ? ` · ${loyer} €/mois` : ""}</p>
+
+        {sigLocataire && (
+          <p style={{ fontSize: 11, color: "#a7f3d0", margin: "4px 0 0", fontWeight: 600 }}>{signatureBadge(sigLocataire)}</p>
+        )}
+        {sigBailleur && (
+          <p style={{ fontSize: 11, color: "#a7f3d0", margin: "4px 0 0", fontWeight: 600 }}>{signatureBadge(sigBailleur)}</p>
+        )}
+
         {canDownload && (
           <button onClick={telecharger} disabled={downloading}
             style={{ marginTop: 10, width: "100%", background: "white", color: "#111", border: "none", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, cursor: downloading ? "wait" : "pointer", fontFamily: "inherit" }}>
             {downloading ? "Génération…" : "Télécharger le bail (PDF)"}
           </button>
         )}
+
+        {/* Proprio peut contresigner après le locataire */}
+        {canSignAsRole === "bailleur" && !dejaSigneParMoi && sigLocataire && (
+          <button onClick={signer}
+            style={{ marginTop: 8, width: "100%", background: "#15803d", color: "white", border: "none", borderRadius: 8, padding: "9px 12px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+            ✍ Contresigner le bail
+          </button>
+        )}
       </div>
     )
   }
 
+  // === Variante LOCATAIRE (isMine = false) ===
   return (
-    <div style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 300 }}>
-      <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>Bail généré</p>
+    <div style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 320 }}>
+      <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>
+        {dejaSigneParMoi ? "Bail signé" : "Bail à signer"}
+      </p>
       <p style={{ fontWeight: 700, fontSize: 14, color: "#111", margin: 0 }}>{data.titreBien || "Bien"}</p>
       <p style={{ fontSize: 12, color: "#6b7280", margin: "2px 0 10px" }}>{data.villeBien || ""}</p>
       <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#374151" }}>
@@ -253,16 +328,60 @@ function BailCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
         {loyer > 0 && <div>Loyer : <strong>{loyer} €/mois</strong></div>}
         {data.duree && <div>Durée : <strong>{data.duree} mois</strong></div>}
       </div>
+
+      {sigLocataire && (
+        <div style={{ marginTop: 10, padding: "6px 10px", background: "#dcfce7", borderRadius: 8, fontSize: 11, color: "#15803d", fontWeight: 700 }}>
+          {signatureBadge(sigLocataire)}
+        </div>
+      )}
+      {sigBailleur && (
+        <div style={{ marginTop: 6, padding: "6px 10px", background: "#dcfce7", borderRadius: 8, fontSize: 11, color: "#15803d", fontWeight: 700 }}>
+          {signatureBadge(sigBailleur)}
+        </div>
+      )}
+
+      {/* CTA signature — priorité sur tout */}
+      {canSignAsRole === "locataire" && !dejaSigneParMoi && (
+        <button onClick={signer}
+          style={{ display: "block", width: "100%", marginTop: 12, background: "#15803d", color: "white", border: "none", borderRadius: 8, padding: "12px 16px", fontSize: 14, fontWeight: 800, textAlign: "center", cursor: "pointer", fontFamily: "inherit" }}>
+          ✍ Signer le bail
+        </button>
+      )}
+
       {canDownload && (
         <button onClick={telecharger} disabled={downloading}
-          style={{ display: "block", width: "100%", marginTop: 12, background: "#15803d", color: "white", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 700, textAlign: "center", cursor: downloading ? "wait" : "pointer", fontFamily: "inherit" }}>
-          {downloading ? "Génération…" : "Télécharger le bail (PDF)"}
+          style={{ display: "block", width: "100%", marginTop: 8, background: "white", color: "#15803d", border: "1.5px solid #15803d", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, textAlign: "center", cursor: downloading ? "wait" : "pointer", fontFamily: "inherit" }}>
+          {downloading ? "Génération…" : "Télécharger le PDF"}
         </button>
       )}
       <a href="/mon-logement"
-        style={{ display: "block", marginTop: 8, background: "white", color: "#15803d", border: "1.5px solid #15803d", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, textAlign: "center", textDecoration: "none", fontFamily: "inherit" }}>
+        style={{ display: "block", marginTop: 6, background: "white", color: "#6b7280", border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "7px 16px", fontSize: 11, fontWeight: 600, textAlign: "center", textDecoration: "none", fontFamily: "inherit" }}>
         Voir mon logement →
       </a>
+    </div>
+  )
+}
+
+// Carte informative affichée quand quelqu'un vient de signer.
+function BailSigneCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any = {}
+  try { data = JSON.parse(contenu.slice(BAIL_SIGNE_PREFIX.length)) } catch { /* ignore */ }
+  const d = data.dateSignature
+    ? new Date(data.dateSignature).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    : ""
+  const roleLabel = data.role === "locataire" ? "le locataire" : data.role === "bailleur" ? "le bailleur" : "le garant"
+  return (
+    <div style={{ background: "#dcfce7", border: "1.5px solid #86efac", borderRadius: 14, padding: "12px 16px", minWidth: 240, maxWidth: 320 }}>
+      <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 4px" }}>
+        Bail signé ✓
+      </p>
+      <p style={{ fontSize: 13, color: "#111", margin: 0, fontWeight: 600 }}>
+        {isMine ? `Vous avez signé le bail` : `${data.nom || "La partie"} a signé en tant que ${roleLabel}`}
+      </p>
+      {d && (
+        <p style={{ fontSize: 11, color: "#15803d", margin: "4px 0 0" }}>{d}</p>
+      )}
     </div>
   )
 }
@@ -1304,6 +1423,63 @@ function MessagesInner() {
     typeof m.contenu === "string" && m.contenu.startsWith(DOSSIER_PREFIX)
   )
 
+  // Signatures : on scanne tous les [BAIL_SIGNE] messages de la conv pour construire
+  // un index { annonceId → [{role, nom, dateSignature}] }.
+  const signaturesParAnnonce: Record<number, BailSignatureSummary[]> = {}
+  messages.forEach(m => {
+    if (typeof m.contenu === "string" && m.contenu.startsWith(BAIL_SIGNE_PREFIX) && m.annonce_id) {
+      try {
+        const p = JSON.parse(m.contenu.slice(BAIL_SIGNE_PREFIX.length))
+        if (p && typeof p === "object" && p.role) {
+          const arr = signaturesParAnnonce[m.annonce_id] || []
+          // Dédup : on garde la dernière signature par rôle
+          const filtered = arr.filter((s: BailSignatureSummary) => s.role !== p.role)
+          filtered.push({
+            role: String(p.role),
+            nom: String(p.nom || m.from_email || ""),
+            dateSignature: String(p.dateSignature || m.created_at),
+          })
+          signaturesParAnnonce[m.annonce_id] = filtered
+        }
+      } catch { /* ignore */ }
+    }
+  })
+
+  // Déterminer le rôle que l'utilisateur peut jouer pour l'annonce active.
+  function getMyRoleForAnnonce(annonceId: number | null | undefined): "locataire" | "bailleur" | null {
+    if (!annonceId) return null
+    const ann = annonces[annonceId]
+    if (!ann || !myEmail) return null
+    if ((ann.locataire_email || "").toLowerCase() === myEmail) return "locataire"
+    if ((ann.proprietaire_email || "").toLowerCase() === myEmail) return "bailleur"
+    return null
+  }
+
+  // État de la modale de signature
+  const [signatureModal, setSignatureModal] = useState<{
+    open: boolean
+    bailData: BailData | null
+    annonceId: number | null
+    role: "locataire" | "bailleur"
+  }>({ open: false, bailData: null, annonceId: null, role: "locataire" })
+
+  function requestSign(bailData: BailData, role: "locataire" | "bailleur") {
+    const annId = convActiveData?.annonceId || null
+    if (!annId) return
+    setSignatureModal({ open: true, bailData, annonceId: annId, role })
+  }
+
+  function closeSignatureModal() {
+    setSignatureModal(s => ({ ...s, open: false }))
+  }
+
+  async function onBailSigned() {
+    // Recharger les messages pour voir la nouvelle [BAIL_SIGNE] card
+    if (convActiveData && myEmail) {
+      await loadMessages(myEmail, convActiveData.other, convActiveData.annonceId)
+    }
+  }
+
   // Grouper les messages par date
   const messagesAvecSep: Array<{ type: "sep"; label: string } | { type: "msg"; msg: any }> = []
   let lastDate = ""
@@ -1331,6 +1507,17 @@ function MessagesInner() {
         onClose={() => setVisiteCancelTarget(null)}
         onConfirm={handleAnnulerVisite}
       />
+      {signatureModal.open && signatureModal.bailData && signatureModal.annonceId && (
+        <BailSignatureModal
+          open={signatureModal.open}
+          onClose={closeSignatureModal}
+          onSigned={onBailSigned}
+          bailData={signatureModal.bailData}
+          annonceId={signatureModal.annonceId}
+          role={signatureModal.role}
+          nomDefaut={signatureModal.role === "locataire" ? (signatureModal.bailData.nomLocataire || "") : (signatureModal.bailData.nomBailleur || "")}
+        />
+      )}
       <div style={{ maxWidth: isMobile && convActiveData ? "100%" : 1140, margin: "0 auto", padding: isMobile && convActiveData ? 0 : isMobile ? "20px 16px" : "32px 48px" }}>
         {(!isMobile || !convActiveData) && (
           <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 800, marginBottom: isMobile ? 16 : 24, letterSpacing: "-0.5px", padding: isMobile ? 0 : undefined }}>Messages</h1>
@@ -1709,6 +1896,7 @@ function MessagesInner() {
                     const isDemande = typeof m.contenu === "string" && m.contenu === DEMANDE_DOSSIER_PREFIX
                     const isEdl = typeof m.contenu === "string" && m.contenu.startsWith(EDL_PREFIX)
                     const isBail = typeof m.contenu === "string" && m.contenu.startsWith(BAIL_PREFIX)
+                    const isBailSigne = typeof m.contenu === "string" && m.contenu.startsWith(BAIL_SIGNE_PREFIX)
                     const isQuittance = typeof m.contenu === "string" && m.contenu.startsWith(QUITTANCE_PREFIX)
                     const isRetrait = typeof m.contenu === "string" && m.contenu.startsWith(RETRAIT_PREFIX)
                     const isLocation = typeof m.contenu === "string" && m.contenu.startsWith(LOCATION_PREFIX)
@@ -1742,7 +1930,23 @@ function MessagesInner() {
                           </div>
                         ) : isBail ? (
                           <div>
-                            <BailCard contenu={m.contenu} isMine={isMine} />
+                            <BailCard
+                              contenu={m.contenu}
+                              isMine={isMine}
+                              annonceId={m.annonce_id || convActiveData?.annonceId || null}
+                              signatures={
+                                m.annonce_id ? signaturesParAnnonce[m.annonce_id] || [] : []
+                              }
+                              canSignAsRole={getMyRoleForAnnonce(m.annonce_id || convActiveData?.annonceId)}
+                              onRequestSign={requestSign}
+                            />
+                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        ) : isBailSigne ? (
+                          <div>
+                            <BailSigneCard contenu={m.contenu} isMine={isMine} />
                             <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
