@@ -837,7 +837,7 @@ export default function BailPage() {
           </p>
         </div>
 
-        {/* Bail déjà envoyé — garde-fou */}
+        {/* Bail déjà envoyé — garde-fou + bouton téléchargement */}
         {existingBailAt && (
           <div
             style={{
@@ -853,11 +853,69 @@ export default function BailPage() {
                 ? `✓ Bail déjà signé par le locataire`
                 : `⚠ Un bail a déjà été envoyé au locataire`}
             </p>
-            <p style={{ fontSize: 12, color: locataireSigne ? "#15803d" : "#92400e", margin: "4px 0 0", lineHeight: 1.6 }}>
+            <p style={{ fontSize: 12, color: locataireSigne ? "#15803d" : "#92400e", margin: "4px 0 8px", lineHeight: 1.6 }}>
               {locataireSigne
                 ? `Le locataire a signé ce bail. Pour toute modification, un avenant sera nécessaire (fonctionnalité à venir).${bailleurSigne ? " Vous avez également contresigné — le bail est pleinement signé." : ""}`
                 : `Envoyé le ${new Date(existingBailAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}. Si vous générez un nouveau bail, le précédent restera dans la conversation mais le locataire sera invité à signer la nouvelle version.`}
             </p>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  // Récupérer le dernier payload [BAIL_CARD] + signatures
+                  const [{ data: msg }, { data: sigs }] = await Promise.all([
+                    supabase
+                      .from("messages")
+                      .select("contenu")
+                      .eq("annonce_id", bien.id)
+                      .ilike("contenu", "[BAIL_CARD]%")
+                      .order("created_at", { ascending: false })
+                      .limit(1)
+                      .maybeSingle(),
+                    supabase
+                      .from("bail_signatures")
+                      .select("signataire_role, signataire_nom, signature_png, signe_at, mention, ip_address")
+                      .eq("annonce_id", bien.id),
+                  ])
+                  if (!msg?.contenu) {
+                    alert("Aucun bail envoyé récent trouvé.")
+                    return
+                  }
+                  const payload = JSON.parse(
+                    (msg.contenu as string).slice("[BAIL_CARD]".length),
+                  )
+                  const signatures = (sigs || []).map(s => ({
+                    role: s.signataire_role as "bailleur" | "locataire" | "garant",
+                    nom: s.signataire_nom,
+                    png: s.signature_png,
+                    signeAt: s.signe_at,
+                    mention: s.mention,
+                    ipAddress: s.ip_address,
+                  }))
+                  // Si bail externe (URL PDF uploadé), ouvrir directement
+                  if (payload.fichierUrl) {
+                    window.open(String(payload.fichierUrl), "_blank")
+                    return
+                  }
+                  await genererBailPDF({ ...payload, signatures })
+                } catch (err) {
+                  alert(`Erreur téléchargement : ${err instanceof Error ? err.message : String(err)}`)
+                }
+              }}
+              style={{
+                background: locataireSigne ? "#15803d" : "#9a3412",
+                color: "white",
+                border: "none",
+                borderRadius: 10,
+                padding: "10px 18px",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              📄 Télécharger le bail {locataireSigne ? (bailleurSigne ? "signé" : "signé par le locataire") : "envoyé"} (PDF)
+            </button>
           </div>
         )}
 
