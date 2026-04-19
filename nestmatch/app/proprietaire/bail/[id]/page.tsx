@@ -387,6 +387,12 @@ export default function BailPage() {
   const [modalUpload, setModalUpload] = useState(false)
   const [uploadSuccess, setUploadSuccess] = useState(false)
 
+  // État d'un bail déjà envoyé (détecté via annonces.bail_genere_at + bail_signatures)
+  const [existingBailAt, setExistingBailAt] = useState<string | null>(null)
+  const [locataireSigne, setLocataireSigne] = useState(false)
+  const [bailleurSigne, setBailleurSigne] = useState(false)
+  const [confirmRegen, setConfirmRegen] = useState(false)
+
   const storageKey = bienId ? `${STORAGE_KEY_PREFIX}${bienId}` : ""
 
   useEffect(() => {
@@ -412,7 +418,8 @@ export default function BailPage() {
       }
 
       // Tentative de chargement profil proprio + locataire pour préremplissage
-      const [proprioProfil, locataireProfil] = await Promise.all([
+      // + détection d'un bail déjà envoyé (garde-fou contre la regénération par erreur)
+      const [proprioProfil, locataireProfil, signaturesRes] = await Promise.all([
         data.proprietaire_email
           ? supabase
               .from("profils")
@@ -427,7 +434,19 @@ export default function BailPage() {
               .ilike("email", data.locataire_email)
               .maybeSingle()
           : Promise.resolve({ data: null }),
+        supabase
+          .from("bail_signatures")
+          .select("signataire_role")
+          .eq("annonce_id", bienId),
       ])
+
+      // État existing bail
+      if (data.bail_genere_at) setExistingBailAt(data.bail_genere_at)
+      if (signaturesRes.data) {
+        const roles = new Set(signaturesRes.data.map(s => s.signataire_role))
+        setLocataireSigne(roles.has("locataire"))
+        setBailleurSigne(roles.has("bailleur"))
+      }
 
       setBien(data)
 
@@ -612,6 +631,19 @@ export default function BailPage() {
 
   async function generer() {
     if (!bien || !bailData || generating) return
+    // Garde-fou : bail déjà signé par le locataire → bloqué (il faut un avenant)
+    if (locataireSigne) {
+      alert(
+        "Le locataire a déjà signé ce bail. Vous ne pouvez pas le remplacer — un avenant (fonctionnalité à venir) sera nécessaire pour toute modification.",
+      )
+      return
+    }
+    // Garde-fou : bail envoyé mais pas encore signé → confirmation
+    if (existingBailAt && !confirmRegen) {
+      setConfirmRegen(true)
+      return
+    }
+    setConfirmRegen(false)
     setGenerating(true)
     try {
       const locataireEmail = bailData.emailLocataire
@@ -768,6 +800,30 @@ export default function BailPage() {
           </p>
         </div>
 
+        {/* Bail déjà envoyé — garde-fou */}
+        {existingBailAt && (
+          <div
+            style={{
+              background: locataireSigne ? "#dcfce7" : "#fef3c7",
+              border: `1.5px solid ${locataireSigne ? "#86efac" : "#fde68a"}`,
+              borderRadius: 14,
+              padding: "14px 18px",
+              marginBottom: 20,
+            }}
+          >
+            <p style={{ fontWeight: 700, fontSize: 14, margin: 0, color: locataireSigne ? "#15803d" : "#92400e" }}>
+              {locataireSigne
+                ? `✓ Bail déjà signé par le locataire`
+                : `⚠ Un bail a déjà été envoyé au locataire`}
+            </p>
+            <p style={{ fontSize: 12, color: locataireSigne ? "#15803d" : "#92400e", margin: "4px 0 0", lineHeight: 1.6 }}>
+              {locataireSigne
+                ? `Le locataire a signé ce bail. Pour toute modification, un avenant sera nécessaire (fonctionnalité à venir).${bailleurSigne ? " Vous avez également contresigné — le bail est pleinement signé." : ""}`
+                : `Envoyé le ${new Date(existingBailAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}. Si vous générez un nouveau bail, le précédent restera dans la conversation mais le locataire sera invité à signer la nouvelle version.`}
+            </p>
+          </div>
+        )}
+
         {/* Import bail externe — raccourci en haut */}
         <div
           style={{
@@ -792,17 +848,28 @@ export default function BailPage() {
           </div>
           <button
             type="button"
-            onClick={() => setModalUpload(true)}
-            disabled={!(bien.locataire_email || "").trim()}
+            onClick={() => {
+              if (locataireSigne) {
+                alert(
+                  "Le locataire a déjà signé un bail. Un avenant sera nécessaire pour toute modification (fonctionnalité à venir).",
+                )
+                return
+              }
+              if (existingBailAt && !confirm(
+                `Un bail a déjà été envoyé au locataire le ${new Date(existingBailAt).toLocaleDateString("fr-FR")}. L'importation d'un nouveau bail va remplacer celui en attente de signature. Continuer ?`,
+              )) return
+              setModalUpload(true)
+            }}
+            disabled={!(bien.locataire_email || "").trim() || locataireSigne}
             style={{
-              background: (bien.locataire_email || "").trim() ? "#1d4ed8" : "#e5e7eb",
-              color: (bien.locataire_email || "").trim() ? "white" : "#9ca3af",
+              background: (bien.locataire_email || "").trim() && !locataireSigne ? "#1d4ed8" : "#e5e7eb",
+              color: (bien.locataire_email || "").trim() && !locataireSigne ? "white" : "#9ca3af",
               border: "none",
               borderRadius: 999,
               padding: "9px 18px",
               fontWeight: 700,
               fontSize: 13,
-              cursor: (bien.locataire_email || "").trim() ? "pointer" : "not-allowed",
+              cursor: (bien.locataire_email || "").trim() && !locataireSigne ? "pointer" : "not-allowed",
               fontFamily: "inherit",
               flexShrink: 0,
             }}
@@ -1776,25 +1843,39 @@ export default function BailPage() {
         )}
 
         {(() => {
-          const label = locataireKnown
-            ? generating
-              ? "Génération en cours…"
-              : "Générer le bail PDF et envoyer au locataire"
-            : "Générer le bail PDF"
+          const bloque = locataireSigne
+          const label = bloque
+            ? "Bail déjà signé — modification impossible"
+            : locataireKnown
+              ? generating
+                ? "Génération en cours…"
+                : existingBailAt
+                  ? confirmRegen
+                    ? "Confirmer le remplacement"
+                    : "Remplacer le bail envoyé"
+                  : "Générer le bail PDF et envoyer au locataire"
+              : "Générer le bail PDF"
+          const actif = prete && !generating && !bloque
           return (
             <button
               onClick={generer}
-              disabled={!prete || generating}
+              disabled={!actif}
               style={{
                 width: "100%",
                 padding: "18px 32px",
-                background: prete && !generating ? "#111" : "#e5e7eb",
-                color: prete && !generating ? "white" : "#9ca3af",
+                background: bloque
+                  ? "#e5e7eb"
+                  : confirmRegen
+                    ? "#ea580c"
+                    : actif
+                      ? "#111"
+                      : "#e5e7eb",
+                color: actif ? "white" : "#9ca3af",
                 border: "none",
                 borderRadius: 16,
                 fontWeight: 800,
                 fontSize: 16,
-                cursor: prete && !generating ? "pointer" : "not-allowed",
+                cursor: actif ? "pointer" : "not-allowed",
                 fontFamily: "inherit",
               }}
             >
@@ -1802,6 +1883,40 @@ export default function BailPage() {
             </button>
           )
         })()}
+
+        {confirmRegen && !locataireSigne && (
+          <p
+            style={{
+              fontSize: 12,
+              color: "#ea580c",
+              textAlign: "center",
+              marginTop: 10,
+              fontWeight: 600,
+            }}
+          >
+            ⚠ Cliquez une seconde fois pour confirmer le remplacement du bail envoyé le{" "}
+            {existingBailAt
+              ? new Date(existingBailAt).toLocaleDateString("fr-FR")
+              : ""}
+            .{" "}
+            <button
+              type="button"
+              onClick={() => setConfirmRegen(false)}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#6b7280",
+                textDecoration: "underline",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                fontSize: 12,
+                padding: 0,
+              }}
+            >
+              Annuler
+            </button>
+          </p>
+        )}
 
         {locataireKnown && (
           <p
