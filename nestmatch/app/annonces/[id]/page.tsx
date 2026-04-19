@@ -146,33 +146,87 @@ export default async function Annonce({ params }: any) {
       ? { lat: cityCoords[0], lng: cityCoords[1] }
       : { lat: null, lng: null }
 
-  const jsonLd = {
+  // Liste des équipements -> amenityFeature (LocationFeatureSpecification)
+  // Google affiche ça comme "chips" enrichies dans les SERP immo.
+  const amenities: { "@type": "LocationFeatureSpecification"; name: string; value: boolean }[] = []
+  if (typeof annonce.meuble === "boolean") amenities.push({ "@type": "LocationFeatureSpecification", name: "Meublé", value: annonce.meuble })
+  if (typeof annonce.parking === "boolean") amenities.push({ "@type": "LocationFeatureSpecification", name: "Parking", value: annonce.parking })
+  if (typeof annonce.balcon === "boolean") amenities.push({ "@type": "LocationFeatureSpecification", name: "Balcon", value: annonce.balcon })
+  if (typeof annonce.terrasse === "boolean") amenities.push({ "@type": "LocationFeatureSpecification", name: "Terrasse", value: annonce.terrasse })
+  if (typeof annonce.jardin === "boolean") amenities.push({ "@type": "LocationFeatureSpecification", name: "Jardin", value: annonce.jardin })
+  if (typeof annonce.ascenseur === "boolean") amenities.push({ "@type": "LocationFeatureSpecification", name: "Ascenseur", value: annonce.ascenseur })
+
+  // Coords pour geo — si dispo précises sinon cityCoords (mieux que rien)
+  const geoCoords = hasExactCoords
+    ? { lat: annonce.lat as number, lng: annonce.lng as number }
+    : cityCoords
+      ? { lat: cityCoords[0], lng: cityCoords[1] }
+      : null
+
+  const createdAt = annonce.created_at ? new Date(annonce.created_at).toISOString() : undefined
+  const updatedAt = annonce.updated_at ? new Date(annonce.updated_at).toISOString() : undefined
+  // Expiration offre = 90j après création (pratique marché immo FR)
+  const priceValidUntil = annonce.created_at
+    ? new Date(new Date(annonce.created_at).getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    : undefined
+
+  const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "RealEstateListing",
+    "@id": `${BASE_URL}/annonces/${id}`,
     name: annonce.titre,
     description: annonce.description || `${annonce.titre} à ${annonce.ville}`,
     url: `${BASE_URL}/annonces/${id}`,
-    image: photos.length > 0 ? photos : undefined,
+    image: photos.length > 0 ? photos : [`${BASE_URL}/annonces/${id}/opengraph-image`],
+    datePosted: createdAt,
+    dateModified: updatedAt,
     address: {
       "@type": "PostalAddress",
       addressLocality: annonce.ville,
+      addressRegion: annonce.region || undefined,
+      postalCode: annonce.code_postal || undefined,
       addressCountry: "FR",
       streetAddress: annonce.localisation_exacte ? (annonce.adresse || undefined) : undefined,
     },
+    ...(geoCoords
+      ? {
+          geo: {
+            "@type": "GeoCoordinates",
+            latitude: geoCoords.lat,
+            longitude: geoCoords.lng,
+          },
+        }
+      : {}),
     offers: {
       "@type": "Offer",
       price: annonce.prix,
       priceCurrency: "EUR",
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        price: annonce.prix,
+        priceCurrency: "EUR",
+        unitCode: "MON", // MON = Monthly — loyer mensuel
+        unitText: "Mois",
+      },
       availability: annonce.dispo === "Disponible maintenant"
         ? "https://schema.org/InStock"
         : "https://schema.org/PreOrder",
+      validFrom: createdAt,
+      priceValidUntil,
+      url: `${BASE_URL}/annonces/${id}`,
     },
-    floorSize: annonce.surface ? {
-      "@type": "QuantitativeValue",
-      value: annonce.surface,
-      unitCode: "MTK",
-    } : undefined,
+    floorSize: annonce.surface
+      ? {
+          "@type": "QuantitativeValue",
+          value: annonce.surface,
+          unitCode: "MTK", // mètre carré
+        }
+      : undefined,
     numberOfRooms: annonce.pieces || undefined,
+    ...(annonce.chambres ? { numberOfBedrooms: annonce.chambres } : {}),
+    ...(amenities.length > 0 ? { amenityFeature: amenities } : {}),
+    ...(typeof annonce.animaux === "boolean" ? { petsAllowed: annonce.animaux } : {}),
+    ...(annonce.dpe ? { energyEfficiencyScaleMin: annonce.dpe, energyEfficiencyScaleMax: annonce.dpe } : {}),
   }
 
   // BreadcrumbList : aide Google à afficher le fil d'Ariane dans les SERP

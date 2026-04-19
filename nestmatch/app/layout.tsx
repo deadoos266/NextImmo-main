@@ -80,6 +80,47 @@ export const metadata: Metadata = {
   },
 }
 
+// Organization + WebSite schema (global, injecté une seule fois). Aide
+// Google à construire son knowledge graph et à afficher un search box
+// directement dans les SERP.
+const ORG_JSON_LD = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${BASE_URL}/#organization`,
+      name: BRAND.name,
+      url: BASE_URL,
+      description: BRAND.tagline,
+      logo: {
+        "@type": "ImageObject",
+        url: `${BASE_URL}/logo-mark-512.png`,
+        width: 512,
+        height: 512,
+      },
+      email: BRAND.email,
+      sameAs: [],
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${BASE_URL}/#website`,
+      url: BASE_URL,
+      name: BRAND.name,
+      description: BRAND.tagline,
+      publisher: { "@id": `${BASE_URL}/#organization` },
+      inLanguage: "fr-FR",
+      potentialAction: {
+        "@type": "SearchAction",
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate: `${BASE_URL}/annonces?ville={search_term_string}`,
+        },
+        "query-input": "required name=search_term_string",
+      },
+    },
+  ],
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" className={dmSans.variable} suppressHydrationWarning>
@@ -89,6 +130,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             pour respecter un CSP sans 'unsafe-inline'. */}
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script src="/theme-init.js" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(ORG_JSON_LD).replace(/</g, "\\u003c"),
+          }}
+        />
       </head>
       <body style={{ fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif" }}>
         <Providers>
