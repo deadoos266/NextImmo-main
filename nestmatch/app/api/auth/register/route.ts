@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
+import crypto from "node:crypto"
 import { z } from "zod"
 import { supabaseAdmin } from "../../../../lib/supabase-server"
 import { checkRateLimitAsync, getClientIp } from "../../../../lib/rateLimit"
+import { sendEmail } from "../../../../lib/email/resend"
+import { verifyEmailTemplate } from "../../../../lib/email/templates"
 
 const registerSchema = z.object({
   email: z.string().email("Email invalide"),
@@ -69,6 +72,12 @@ export async function POST(request: NextRequest) {
 
   const passwordHash = await bcrypt.hash(password, 12)
 
+  // Token de vérification email : hex random 48 chars, expire 24h.
+  // Si la migration 013 n'est pas encore appliquée, l'update silencieux
+  // échouera côté Supabase — on ne bloque pas le signup pour autant.
+  const verifyToken = crypto.randomBytes(24).toString("hex")
+  const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+
   const { data: user, error } = await supabaseAdmin
     .from("users")
     .insert({
@@ -77,6 +86,8 @@ export async function POST(request: NextRequest) {
       name,
       role,
       email_verified: false,
+      email_verify_token: verifyToken,
+      email_verify_expires: verifyExpires,
     })
     .select("id, email, name, role, is_admin")
     .single()
@@ -87,6 +98,14 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+
+  // Envoi email de vérification (fire-and-forget : si Resend n'est pas
+  // encore configuré ou si l'envoi échoue, le signup reste valide, l'user
+  // peut se reconnecter et demander un nouveau lien plus tard).
+  const base = process.env.NEXT_PUBLIC_URL || "http://localhost:3000"
+  const verifyUrl = `${base}/api/auth/verify-email?token=${verifyToken}`
+  const { subject, html, text } = verifyEmailTemplate({ userName: name, verifyUrl })
+  void sendEmail({ to: email.toLowerCase(), subject, html, text })
 
   return NextResponse.json({ success: true, data: { id: user.id, email: user.email } }, { status: 201 })
 }

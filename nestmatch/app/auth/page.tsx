@@ -113,15 +113,13 @@ function AuthContent() {
     }
     setResetState("sending")
     try {
-      const res = await fetch("/api/contact", {
+      // Nouveau flow automatisé via Resend : si l'email existe, un lien de
+      // reset expirant 1h est envoyé. Anti-enumeration : réponse toujours
+      // 200 même si l'email est inconnu.
+      const res = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nom: "Demande réinitialisation",
-          email,
-          sujet: "reset_password",
-          message: `Demande de réinitialisation de mot de passe pour ${email}. Merci de recontacter l'utilisateur sous 24 h pour lui communiquer un nouveau mot de passe temporaire.`,
-        }),
+        body: JSON.stringify({ email }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || !json.success) {
@@ -253,15 +251,15 @@ function AuthContent() {
               <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 12, padding: 14 }}>
                 {resetState === "sent" ? (
                   <div>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: "#15803d", margin: "0 0 6px" }}>Demande envoyée</p>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: "#15803d", margin: "0 0 6px" }}>Email envoyé</p>
                     <p style={{ fontSize: 12, color: "#4b5563", margin: 0, lineHeight: 1.5 }}>
-                      Notre équipe vous recontactera à <strong>{resetEmail}</strong> sous 24 h pour vous transmettre un nouveau mot de passe temporaire.
+                      Si un compte existe pour <strong>{resetEmail}</strong>, vous allez recevoir un lien de réinitialisation. Le lien est valide 1 heure.
                     </p>
                   </div>
                 ) : (
                   <form onSubmit={envoyerResetPassword} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     <p style={{ fontSize: 12, color: "#4b5563", margin: 0, lineHeight: 1.5 }}>
-                      Indiquez votre adresse e-mail, nous vous recontacterons pour réinitialiser votre mot de passe.
+                      Indiquez votre adresse e-mail, nous vous enverrons un lien pour réinitialiser votre mot de passe.
                     </p>
                     <input
                       type="email"

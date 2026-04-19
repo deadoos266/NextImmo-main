@@ -783,6 +783,16 @@ function MessagesInner() {
         href: "/messages",
         relatedId: data?.id != null ? String(data.id) : null,
       })
+      // Email de notification au destinataire (respecte les préfs + rate-limit)
+      void fetch("/api/notifications/new-message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: conv.other,
+          preview: nouveau.trim(),
+          convUrl: "/messages",
+        }),
+      }).catch(() => { /* silent */ })
     }
     setNouveau("")
     setReplyTo(null)
