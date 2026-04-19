@@ -35,8 +35,16 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
     : `${titre}${ville}${surface}${pieces}${prix}. Contactez directement le propriétaire sur NestMatch, zéro frais d'agence.`
 
   const photo = Array.isArray(annonce.photos) && annonce.photos.length > 0 ? annonce.photos[0] : null
-  const ogImage = photo || '/og-default.png'
   const pageUrl = `${BASE_URL}/annonces/${id}`
+
+  // Stratégie OG image :
+  //   - Annonce avec photo → on utilise la vraie photo (plus attrayant)
+  //   - Sinon → on ne déclare rien ici, Next.js appelle automatiquement
+  //     `opengraph-image.tsx` qui génère une carte NestMatch dynamique
+  //     avec titre + ville + prix.
+  const ogImages = photo
+    ? [{ url: photo, width: 1200, height: 630, alt: titre }]
+    : undefined
 
   return {
     title,
@@ -47,7 +55,7 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
       url: pageUrl,
       title,
       description,
-      images: [{ url: ogImage, width: 1200, height: 630, alt: titre }],
+      ...(ogImages ? { images: ogImages } : {}),
       locale: "fr_FR",
       siteName: "NestMatch",
     },
@@ -55,7 +63,7 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
       card: "summary_large_image",
       title,
       description,
-      images: [ogImage],
+      ...(photo ? { images: [photo] } : {}),
     },
   }
 }
