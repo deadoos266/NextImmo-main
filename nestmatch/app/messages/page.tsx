@@ -1450,15 +1450,15 @@ function MessagesInner() {
   const convActiveData = conversations.find(c => c.key === convActive)
   const annonceActive = convActiveData?.annonceId ? annonces[convActiveData.annonceId] : null
 
-  // Détection "bail actif" pour la conv : annonce liée a un statut loué +
-  // l'autre interlocuteur EST le locataire (côté proprio) OU le proprio
-  // (côté locataire). Sinon c'est une candidature / ancienne conv.
+  // Détection "bail actif" pour la conv : annonce liée a un statut loué ou
+  // bail_envoye (en attente signature) + l'autre interlocuteur EST le
+  // locataire (côté proprio) OU le proprio (côté locataire).
   const me = (myEmail || "").toLowerCase()
   const isActiveBail = (conv: { other: string; annonceId: number | null }) => {
     if (!conv.annonceId) return false
     const ann = annonces[conv.annonceId]
     if (!ann) return false
-    if (ann.statut !== "loué" || !ann.locataire_email) return false
+    if ((ann.statut !== "loué" && ann.statut !== "bail_envoye") || !ann.locataire_email) return false
     const loc = (ann.locataire_email || "").toLowerCase()
     const prop = (ann.proprietaire_email || "").toLowerCase()
     const other = (conv.other || "").toLowerCase()

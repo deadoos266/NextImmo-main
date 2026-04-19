@@ -427,19 +427,29 @@ export default function Proprietaire() {
   }, [session, status])
 
   async function loadData() {
-    // Robustesse casse : on matche l'email dans sa casse d'origine ET sa version
-    // lowercase (certains emails OAuth arrivent en Mixed Case, d'autres en bas de
-    // casse selon le provider). .in() garantit un exact match sans interpréter
-    // de wildcards — contrairement à .ilike() qui peut être surprenant.
+    // Robustesse : pour les annonces, on fetch sans filtre puis on matche
+    // côté client sur email.toLowerCase().trim() (ça attrape les soucis
+    // de casse + whitespace qui faisaient disparaître des biens du dashboard).
+    // Pour messages/loyers/visites : .in() avec variantes de casse suffit,
+    // car ces tables peuvent être bien plus grosses — on évite le fetch all.
     const eo = session!.user!.email!
     const el = eo.toLowerCase()
+    const elTrim = el.trim()
     const variants = eo === el ? [eo] : [eo, el]
-    const [{ data: b }, { data: m }, { data: l }, { data: v, error: ve }] = await Promise.all([
-      supabase.from("annonces").select("*").in("proprietaire_email", variants).order("created_at", { ascending: false }),
+    const norm = (s: string | null | undefined) => (s || "").toLowerCase().trim()
+
+    const [annRes, msgRes, loyRes, visRes] = await Promise.all([
+      // Annonces : fetch all + filter client (défensif contre casse/whitespace).
+      supabase.from("annonces").select("*").order("created_at", { ascending: false }),
       supabase.from("messages").select("*").in("to_email", variants).order("created_at", { ascending: false }),
       supabase.from("loyers").select("*").in("proprietaire_email", variants).order("mois", { ascending: false }),
       supabase.from("visites").select("*").in("proprietaire_email", variants).order("date_visite", { ascending: true }),
     ])
+    const b = (annRes.data || []).filter(a => norm((a as { proprietaire_email?: string | null }).proprietaire_email) === elTrim)
+    const m = msgRes.data
+    const l = loyRes.data
+    const v = visRes.data
+    const ve = visRes.error
     if (b) {
       setBiens(b)
       // Charger les clics uniques par bien

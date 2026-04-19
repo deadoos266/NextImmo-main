@@ -653,12 +653,12 @@ export default function BailPage() {
       if (locataireEmail) {
         const patch: Record<string, unknown> = {
           locataire_email: locataireEmail,
-          // Statut intermédiaire : bail envoyé mais pas encore signé par le locataire.
-          // Le statut passera à "loué" automatiquement quand le locataire signera
-          // (via /api/bail/signer).
-          statut: "bail_envoye",
           bail_genere_at: new Date().toISOString(),
         }
+        // Ne pas dégrader "loué" (déjà accepté via "Louer à ce candidat") vers
+        // "bail_envoye". Si bien était seulement "disponible"/etc, on passe à
+        // "bail_envoye" (attente signature). Le locataire signera → "loué".
+        if (bien.statut !== "loué") patch.statut = "bail_envoye"
         if (form.dateDebut) patch.date_debut_bail = form.dateDebut
         await supabase.from("annonces").update(patch).eq("id", bien.id)
 
@@ -2226,12 +2226,13 @@ export default function BailPage() {
               // Marqueur : ce payload représente un bail externe
               fichierUrl,
             }
-            await supabase.from("annonces").update({
+            const uploadPatch: Record<string, unknown> = {
               locataire_email: locataireEmail,
-              statut: "bail_envoye",
               bail_genere_at: new Date().toISOString(),
               date_debut_bail: dateDebut,
-            }).eq("id", bien.id)
+            }
+            if (bien.statut !== "loué") uploadPatch.statut = "bail_envoye"
+            await supabase.from("annonces").update(uploadPatch).eq("id", bien.id)
 
             await supabase.from("messages").insert([{
               from_email: fromEmail,
