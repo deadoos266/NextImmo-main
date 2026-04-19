@@ -75,7 +75,7 @@ export default function Footer() {
       <div style={{ borderTop: "1px solid #f3f4f6", padding: isMobile ? "16px 20px" : "20px 48px", maxWidth: 1200, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", flexWrap: "wrap", gap: 12, flexDirection: isMobile ? "column" : "row" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <Logo variant="footer" asLink={false} />
-          <span style={{ fontSize: 12, color: "#9ca3af" }}>© {new Date().getFullYear()} — Location entre particuliers</span>
+          <span suppressHydrationWarning style={{ fontSize: 12, color: "#9ca3af" }}>© {new Date().getFullYear()} — Location entre particuliers</span>
         </div>
         <div style={{ display: "flex", gap: isMobile ? 12 : 20, flexWrap: "wrap" }}>
           {[

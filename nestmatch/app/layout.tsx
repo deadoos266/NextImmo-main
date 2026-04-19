@@ -137,7 +137,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body style={{ fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif" }}>
+      <body style={{ fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif" }} suppressHydrationWarning>
         <Providers>
           <AdminBar />
           <Navbar />
