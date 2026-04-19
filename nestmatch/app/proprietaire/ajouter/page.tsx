@@ -184,15 +184,18 @@ export default function AjouterBien() {
 
     // Tentative avec lat/lng. Si colonnes absentes en DB (migration pas lancée),
     // on retire et on retente pour ne pas bloquer la publication.
-    let { error } = await supabase.from("annonces").insert([data])
+    const { data: inserted, error: errIns } = await supabase.from("annonces").insert([data]).select("id")
+    let error = errIns
+    let insertedRows = inserted
     if (error && /lat|lng|column.*does not exist/i.test(error.message || "")) {
       const dataNoCoords = { ...data }
       delete dataNoCoords.lat
       delete dataNoCoords.lng
-      const retry = await supabase.from("annonces").insert([dataNoCoords])
+      const retry = await supabase.from("annonces").insert([dataNoCoords]).select("id")
       error = retry.error
+      insertedRows = retry.data
     }
-    if (!error) {
+    if (!error && insertedRows && insertedRows.length > 0) {
       // Marquer le compte comme propriétaire actif
       await supabase.from("profils").upsert({
         email: session!.user!.email!,
@@ -200,8 +203,15 @@ export default function AjouterBien() {
       }, { onConflict: "email" })
       try { localStorage.removeItem(draftStorageKey(session!.user!.email!)) } catch { /* noop */ }
       router.push("/proprietaire")
+    } else if (error) {
+      console.error("[publier] insert error:", error)
+      alert(`La publication a échoué : ${error.message || "erreur inconnue"}. Code : ${error.code || "?"}`)
     } else {
-      alert("La publication a échoué. Veuillez vérifier les champs et réessayer.")
+      // Cas rare : pas d'erreur mais 0 row insérée (RLS ?). On remonte l'info.
+      alert(
+        "La publication a échoué silencieusement : aucune ligne créée. " +
+          "Contactez le support si le problème persiste.",
+      )
     }
     setSaving(false)
   }

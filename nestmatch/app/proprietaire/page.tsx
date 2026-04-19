@@ -427,11 +427,9 @@ export default function Proprietaire() {
   }, [session, status])
 
   async function loadData() {
-    // Robustesse : pour les annonces, on fetch sans filtre puis on matche
-    // côté client sur email.toLowerCase().trim() (ça attrape les soucis
-    // de casse + whitespace qui faisaient disparaître des biens du dashboard).
-    // Pour messages/loyers/visites : .in() avec variantes de casse suffit,
-    // car ces tables peuvent être bien plus grosses — on évite le fetch all.
+    // Casse : .in() matche l'email en 2 variantes (origine OAuth + lowercase).
+    // Si le résultat est vide mais qu'on soupçonne un souci de casse/whitespace
+    // (ex: emails legacy inconsistents), fallback en fetch-all + filtre client.
     const eo = session!.user!.email!
     const el = eo.toLowerCase()
     const elTrim = el.trim()
@@ -439,13 +437,18 @@ export default function Proprietaire() {
     const norm = (s: string | null | undefined) => (s || "").toLowerCase().trim()
 
     const [annRes, msgRes, loyRes, visRes] = await Promise.all([
-      // Annonces : fetch all + filter client (défensif contre casse/whitespace).
-      supabase.from("annonces").select("*").order("created_at", { ascending: false }),
+      supabase.from("annonces").select("*").in("proprietaire_email", variants).order("created_at", { ascending: false }),
       supabase.from("messages").select("*").in("to_email", variants).order("created_at", { ascending: false }),
       supabase.from("loyers").select("*").in("proprietaire_email", variants).order("mois", { ascending: false }),
       supabase.from("visites").select("*").in("proprietaire_email", variants).order("date_visite", { ascending: true }),
     ])
-    const b = (annRes.data || []).filter(a => norm((a as { proprietaire_email?: string | null }).proprietaire_email) === elTrim)
+    let b = annRes.data || []
+    // Fallback défensif : si .in() n'a rien trouvé, on tente un fetch all + filtre
+    // client (utile si un bien a été inséré avec trailing space ou casse exotique).
+    if (b.length === 0) {
+      const { data: all } = await supabase.from("annonces").select("*").order("created_at", { ascending: false }).limit(500)
+      b = (all || []).filter(a => norm((a as { proprietaire_email?: string | null }).proprietaire_email) === elTrim)
+    }
     const m = msgRes.data
     const l = loyRes.data
     const v = visRes.data
