@@ -21,6 +21,8 @@ const SVG_PATH = path.join(ROOT, "public", "logo-mark.svg")
 const OUT_192 = path.join(ROOT, "public", "logo-mark-192.png")
 const OUT_512 = path.join(ROOT, "public", "logo-mark-512.png")
 const OUT_256 = path.join(ROOT, "public", "logo-mark-256.png")
+const OUT_APPLE = path.join(ROOT, "public", "apple-touch-icon.png")
+const OUT_MASKABLE = path.join(ROOT, "public", "logo-mark-maskable-512.png")
 const TS_OUT = path.join(ROOT, "lib", "brand-logo.ts")
 
 async function main() {
@@ -40,6 +42,28 @@ async function main() {
     .png()
     .toBuffer()
   fs.writeFileSync(OUT_256, buf256)
+
+  // apple-touch-icon : 180x180, fond plein F7F4EF (Apple n'aime pas la
+  // transparence sur les tiles home-screen).
+  await sharp(svg)
+    .resize(150, 150, { fit: "contain", background: { r: 247, g: 244, b: 239, alpha: 1 } })
+    .extend({ top: 15, bottom: 15, left: 15, right: 15, background: { r: 247, g: 244, b: 239, alpha: 1 } })
+    .png()
+    .toFile(OUT_APPLE)
+
+  // Maskable 512 : le glyphe occupe max 80% du canvas, padding sur fond
+  // couleur marque (les mobiles rognent en formes variables).
+  await sharp(svg)
+    .resize(400, 400, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .extend({
+      top: 56,
+      bottom: 56,
+      left: 56,
+      right: 56,
+      background: { r: 247, g: 244, b: 239, alpha: 1 },
+    })
+    .png()
+    .toFile(OUT_MASKABLE)
 
   const base64 = buf256.toString("base64")
   const dataUri = `data:image/png;base64,${base64}`
@@ -65,6 +89,8 @@ export const LOGO_PNG_HEIGHT = 256
   console.log("  ", OUT_192, `(${(fs.statSync(OUT_192).size / 1024).toFixed(1)} Ko)`)
   console.log("  ", OUT_512, `(${(fs.statSync(OUT_512).size / 1024).toFixed(1)} Ko)`)
   console.log("  ", OUT_256, `(${(buf256.length / 1024).toFixed(1)} Ko)`)
+  console.log("  ", OUT_APPLE, `(${(fs.statSync(OUT_APPLE).size / 1024).toFixed(1)} Ko)`)
+  console.log("  ", OUT_MASKABLE, `(${(fs.statSync(OUT_MASKABLE).size / 1024).toFixed(1)} Ko)`)
   console.log("  ", TS_OUT, `(base64 ${(dataUri.length / 1024).toFixed(1)} Ko)`)
 }
 

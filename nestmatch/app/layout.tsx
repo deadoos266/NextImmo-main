@@ -7,6 +7,7 @@ import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import CookieBanner from './components/CookieBanner'
 import ToastStack from './components/ToastStack'
+import ServiceWorkerRegister from './components/ServiceWorkerRegister'
 import { BRAND } from '../lib/brand'
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || BRAND.url
@@ -59,8 +60,23 @@ export const metadata: Metadata = {
     icon: [
       { url: '/icon.svg', type: 'image/svg+xml' },
       { url: '/logo-mark.svg', type: 'image/svg+xml', sizes: 'any' },
+      { url: '/logo-mark-192.png', type: 'image/png', sizes: '192x192' },
+      { url: '/logo-mark-512.png', type: 'image/png', sizes: '512x512' },
     ],
-    apple: '/logo-mark.svg',
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: BRAND.name,
+  },
+  applicationName: BRAND.name,
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'theme-color': '#FF4A1C',
   },
 }
 
@@ -82,6 +98,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Footer />
           <CookieBanner />
           <ToastStack />
+          <ServiceWorkerRegister />
         </Providers>
       </body>
     </html>
