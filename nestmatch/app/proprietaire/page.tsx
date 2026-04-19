@@ -19,10 +19,13 @@ import { computeBailTimeline } from "../../lib/bailTimeline"
 import BailTimeline from "../components/ui/BailTimeline"
 import Image from "next/image"
 
-// 4 onglets produit (refonte 2026-04-19) : moins de friction, regroupement
-// thématique. Chaque onglet agrège les anciens blocs (Mes biens + Documents,
-// Locataires + Loyers, Candidats + Visites, Stats = Tableau de bord + Perf).
-const ONGLETS = ["Mes biens", "Locataires", "Candidats", "Stats"] as const
+// 5 onglets (refonte 2026-04-19 v3 — décision produit finale) :
+// lifecycle naturel Bien → Candidatures → Visites → Locataire → Stats.
+// L'ex-onglet "Documents" (bail/EDL) est fusionné dans "Locataires" car
+// bail+EDL+quittances concernent toujours un locataire actif d'un bien donné.
+// Locataires regroupe aussi les loyers (argent + quittances vont avec qui paie).
+// Stats = ancien Tableau de bord + Performance.
+const ONGLETS = ["Mes biens", "Candidatures", "Visites", "Locataires", "Stats"] as const
 type Onglet = typeof ONGLETS[number]
 
 /**
@@ -600,13 +603,13 @@ export default function Proprietaire() {
           {ONGLETS.map(o => {
             const nbVisitesAttente = visites.filter(v => v.statut === "proposée" && (v.propose_par || "").toLowerCase() !== (myEmail || "").toLowerCase()).length
             return (
-              <button key={o} onClick={() => { setOnglet(o); if (o === "Candidats") reloadVisites() }}
+              <button key={o} onClick={() => { setOnglet(o); if (o === "Visites") reloadVisites() }}
                 style={{ padding: "8px 18px", borderRadius: 10, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13, fontFamily: "inherit", background: onglet === o ? "#111" : "transparent", color: onglet === o ? "white" : "#6b7280", transition: "all 0.15s", whiteSpace: "nowrap", flexShrink: 0 }}>
                 {o}
                 {o === "Locataires" && loyersAttendus > 0 && (
                   <span style={{ marginLeft: 6, background: "#ef4444", color: "white", borderRadius: 999, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{loyersAttendus}</span>
                 )}
-                {o === "Candidats" && nbVisitesAttente > 0 && (
+                {o === "Visites" && nbVisitesAttente > 0 && (
                   <span style={{ marginLeft: 6, background: "#f97316", color: "white", borderRadius: 999, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{nbVisitesAttente}</span>
                 )}
               </button>
@@ -1011,8 +1014,8 @@ export default function Proprietaire() {
           </div>
         )}
 
-        {/* DOCUMENTS — baux et EDL centralisés par bien */}
-        {onglet === "Mes biens" && biens.length > 0 && (
+        {/* DOCUMENTS — baux et EDL contextualisés par bien LOUÉ (au sein de Locataires) */}
+        {onglet === "Locataires" && biens.filter((b: any) => b.statut === "loué" && b.locataire_email).length > 0 && (
           <div>
             {biens.length === 0 ? (
               <EmptyState
@@ -1031,7 +1034,7 @@ export default function Proprietaire() {
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  {biens.map((b: any) => {
+                  {biens.filter((b: any) => b.statut === "loué" && b.locataire_email).map((b: any) => {
                     const hasLocataire = !!b.locataire_email
                     return (
                       <div key={b.id} style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24 }}>
@@ -1110,7 +1113,7 @@ export default function Proprietaire() {
         )}
 
         {/* CANDIDATURES */}
-        {onglet === "Candidats" && (() => {
+        {onglet === "Candidatures" && (() => {
           // Enrichir chaque candidature avec son screening automatique
           // (basé sur le profil pré-chargé + le loyer de l'annonce visée)
           const candidaturesAvecScreening = candidatures.map((c: any) => {
@@ -1293,7 +1296,7 @@ export default function Proprietaire() {
           </div>
         )}
 
-        {onglet === "Candidats" && (
+        {onglet === "Visites" && (
           <VisitesProprio visites={visites} biens={biens} setVisites={setVisites} myEmail={session?.user?.email} />
         )}
       </div>
