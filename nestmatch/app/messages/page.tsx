@@ -639,14 +639,6 @@ function MessagesInner() {
   // Modale annulation visite (inline dans la conv)
   const [visiteCancelTarget, setVisiteCancelTarget] = useState<{ v: any; mode: "refus" | "annulation" } | null>(null)
   const [visitesConv, setVisitesConv] = useState<any[]>([])
-  // Toggle œil : masquer/afficher le panneau des demandes de visite (persist localStorage).
-  const [visitesMasquees, setVisitesMasquees] = useState<boolean>(false)
-  useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem("nm_hide_visites")
-      if (stored === "1") setVisitesMasquees(true)
-    } catch { /* ignore */ }
-  }, [])
   const [showVisiteForm, setShowVisiteForm] = useState(false)
   const [visiteDate, setVisiteDate] = useState("")
   const [visiteHeure, setVisiteHeure] = useState("10:00")
@@ -1319,7 +1311,19 @@ function MessagesInner() {
     if (!myEmail) return
     const visite = visitesConv.find(v => v.id === id)
     if (!visite) return
-    await supabase.from("visites").update({ statut }).eq("id", id)
+    const { data: rows, error } = await supabase
+      .from("visites")
+      .update({ statut })
+      .eq("id", id)
+      .select("id")
+    if (error) {
+      alert(`Erreur : ${error.message}`)
+      return
+    }
+    if (!rows || rows.length === 0) {
+      alert("Aucune visite mise à jour — elle a peut-être déjà été modifiée.")
+      return
+    }
     setVisitesConv(prev => prev.map(v => v.id === id ? { ...v, statut } : v))
     // Poster un message automatique pour informer l'autre partie
     const other = visite.proprietaire_email === myEmail ? visite.locataire_email : visite.proprietaire_email
@@ -1370,6 +1374,10 @@ function MessagesInner() {
         if (conv) loadMessages(myEmail, conv.other, conv.annonceId)
       }
       setVisiteCancelTarget(null)
+    } else {
+      // Erreur visible — avant c'était un échec silencieux qui donnait l'impression
+      // que le bouton ne fonctionnait pas.
+      alert(res.error || "L'annulation a échoué — réessayez.")
     }
   }
 
@@ -2158,56 +2166,12 @@ function MessagesInner() {
                   <div ref={bottomRef} />
                 </div>
 
-                {/* Visites liées à cette conversation — collapsible via œil 👁 */}
+                {/* Visites liées à cette conversation */}
                 {visitesConv.length > 0 && (
                   <div style={{ borderTop: "1px solid #f3f4f6", padding: "12px 20px", background: "#fafafa" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: visitesMasquees ? 0 : 8 }}>
-                      <p style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px", margin: 0 }}>
-                        Demandes de visite ({visitesConv.length})
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const next = !visitesMasquees
-                          setVisitesMasquees(next)
-                          try { window.localStorage.setItem("nm_hide_visites", next ? "1" : "0") } catch { /* ignore */ }
-                        }}
-                        aria-label={visitesMasquees ? "Afficher les demandes de visite" : "Masquer les demandes de visite"}
-                        title={visitesMasquees ? "Afficher les demandes de visite" : "Masquer les demandes de visite"}
-                        style={{
-                          background: "transparent",
-                          border: "none",
-                          cursor: "pointer",
-                          padding: 4,
-                          color: "#6b7280",
-                          fontFamily: "inherit",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 4,
-                          fontSize: 11,
-                          fontWeight: 600,
-                        }}
-                      >
-                        {visitesMasquees ? (
-                          <>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                              <line x1="1" y1="1" x2="23" y2="23"/>
-                            </svg>
-                            Afficher
-                          </>
-                        ) : (
-                          <>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                              <circle cx="12" cy="12" r="3"/>
-                            </svg>
-                            Masquer
-                          </>
-                        )}
-                      </button>
-                    </div>
-                    {!visitesMasquees && (
+                    <p style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
+                      Demandes de visite
+                    </p>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                       {visitesConv.map(v => {
                         const s = STATUT_VISITE[v.statut] ?? STATUT_VISITE["proposée"]
@@ -2292,7 +2256,6 @@ function MessagesInner() {
                         )
                       })}
                     </div>
-                    )}
                   </div>
                 )}
 

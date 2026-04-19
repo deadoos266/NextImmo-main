@@ -46,14 +46,24 @@ export async function annulerVisite({
   motif: string
   statutActuel: "proposée" | "confirmée" | string
 }): Promise<{ ok: boolean; error?: string }> {
-  // 1. Update statut de la visite
-  const { error: updErr } = await supabase
+  // 1. Update statut de la visite — .select() pour obtenir les rows updatées
+  //    et détecter un échec silencieux (RLS, id introuvable…).
+  const { data: rows, error: updErr } = await supabase
     .from("visites")
     .update({ statut: "annulée" })
     .eq("id", visiteId)
+    .select("id")
 
   if (updErr) {
-    return { ok: false, error: "L'annulation a échoué côté base de données." }
+    console.error("[annulerVisite] update error:", updErr)
+    return { ok: false, error: `Erreur DB : ${updErr.message}` }
+  }
+  if (!rows || rows.length === 0) {
+    console.error("[annulerVisite] 0 rows updated for visite", visiteId)
+    return {
+      ok: false,
+      error: "Aucune visite mise à jour (la visite a peut-être déjà été annulée ou supprimée).",
+    }
   }
 
   // 2. Envoi du message auto à l'autre partie
