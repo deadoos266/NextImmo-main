@@ -21,6 +21,108 @@ import BailTimeline from "../components/ui/BailTimeline"
 const ONGLETS = ["Tableau de bord", "Mes biens", "Mes locataires", "Performance", "Documents", "Candidatures", "Loyers", "Visites"] as const
 type Onglet = typeof ONGLETS[number]
 
+/**
+ * Graphique SVG "Revenus encaissés sur les 12 derniers mois".
+ *
+ * Part d'une liste de loyers (table `loyers`, champ `mois` au format YYYY-MM
+ * et `statut` confirmé / déclaré). On groupe par mois civil, somme les
+ * confirmés, puis on dessine des barres.
+ *
+ * Mobile-friendly : overflow horizontal, barres resserrées.
+ */
+function RevenusChart12Mois({ loyers, isMobile }: { loyers: any[]; isMobile: boolean }) {
+  // Les 12 derniers mois (inclus le mois courant), du plus ancien à gauche
+  const now = new Date()
+  const months: { ym: string; label: string }[] = []
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    const label = d.toLocaleDateString("fr-FR", { month: "short" })
+    months.push({ ym, label })
+  }
+  const sums = months.map(m => {
+    const total = loyers
+      .filter((l: any) => l.mois === m.ym && l.statut === "confirmé")
+      .reduce((s: number, l: any) => s + (Number(l.montant) || 0), 0)
+    return { ...m, total }
+  })
+  const maxVal = Math.max(...sums.map(s => s.total), 1)
+  const totalCumule = sums.reduce((s, m) => s + m.total, 0)
+  const H = 140
+  const BAR_W = isMobile ? 24 : 34
+  const GAP = isMobile ? 6 : 10
+  const totalW = sums.length * (BAR_W + GAP)
+
+  return (
+    <section style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24, marginBottom: 24 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>Revenus 12 derniers mois</h2>
+        <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>
+          Total encaissé : <strong style={{ color: "#111" }}>{totalCumule.toLocaleString("fr-FR")} €</strong>
+        </p>
+      </div>
+      {totalCumule === 0 ? (
+        <p style={{ fontSize: 13, color: "#9ca3af", padding: "20px 0" }}>
+          Aucun loyer confirmé sur les 12 derniers mois.
+        </p>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <svg width={Math.max(totalW, 300)} height={H + 36} style={{ display: "block" }} role="img" aria-label="Barres de revenus mensuels">
+            {/* Gridlines horizontaux */}
+            {[0.25, 0.5, 0.75, 1].map(pct => (
+              <line
+                key={pct}
+                x1={0} y1={H - pct * H}
+                x2={totalW} y2={H - pct * H}
+                stroke="#f3f4f6" strokeWidth={1}
+              />
+            ))}
+            {sums.map((m, i) => {
+              const h = Math.round((m.total / maxVal) * (H - 4))
+              const x = i * (BAR_W + GAP)
+              const y = H - h
+              return (
+                <g key={m.ym}>
+                  <rect
+                    x={x}
+                    y={y}
+                    width={BAR_W}
+                    height={h}
+                    fill={m.total > 0 ? "#16a34a" : "#e5e7eb"}
+                    rx={4}
+                  />
+                  {m.total > 0 && (
+                    <text
+                      x={x + BAR_W / 2}
+                      y={y - 4}
+                      textAnchor="middle"
+                      fontSize={9}
+                      fill="#6b7280"
+                      fontFamily="'DM Sans', sans-serif"
+                    >
+                      {m.total >= 1000 ? `${Math.round(m.total / 100) / 10}k` : m.total}
+                    </text>
+                  )}
+                  <text
+                    x={x + BAR_W / 2}
+                    y={H + 16}
+                    textAnchor="middle"
+                    fontSize={10}
+                    fill="#9ca3af"
+                    fontFamily="'DM Sans', sans-serif"
+                  >
+                    {m.label}
+                  </text>
+                </g>
+              )
+            })}
+          </svg>
+        </div>
+      )}
+    </section>
+  )
+}
+
 function jours(d: string) {
   const diff = Math.ceil((new Date(d).getTime() - Date.now()) / 86400000)
   if (diff === 0) return "Aujourd'hui"
@@ -765,6 +867,9 @@ export default function Proprietaire() {
                     </div>
                   )
                 })()}
+
+                {/* Graphique revenus 12 derniers mois */}
+                <RevenusChart12Mois loyers={loyers} isMobile={isMobile} />
 
                 {/* Pipeline candidats (aussi visible ici) */}
                 <PipelineFunnel biens={biens} candidatures={candidatures} visites={visites} clicsParBien={clicsParBien} />
