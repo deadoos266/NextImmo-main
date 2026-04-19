@@ -1879,6 +1879,18 @@ export default function BailPage() {
           </div>
         )}
 
+        {/* Raisons pour lesquelles le bouton est désactivé — visible, pas silencieux */}
+        {!form.dateDebut && (
+          <div style={{ background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 10, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#9a3412" }}>
+            ⚠ <strong>Date de début manquante</strong> — remplissez la section <em>« 6. Durée du bail & dates »</em> pour activer le bouton.
+          </div>
+        )}
+        {!form.nomBailleur && (
+          <div style={{ background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 10, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#9a3412" }}>
+            ⚠ <strong>Nom du bailleur manquant</strong> — remplissez la section <em>« 2. Bailleur »</em>.
+          </div>
+        )}
+
         {(() => {
           const bloque = locataireSigne
           const label = bloque
@@ -1895,8 +1907,17 @@ export default function BailPage() {
           const actif = prete && !generating && !bloque
           return (
             <button
-              onClick={generer}
-              disabled={!actif}
+              onClick={() => {
+                if (!actif && !bloque && !generating) {
+                  const missing: string[] = []
+                  if (!form.dateDebut) missing.push("la date de début")
+                  if (!form.nomBailleur) missing.push("le nom du bailleur")
+                  alert(`Pour générer le bail, remplissez : ${missing.join(" et ")}.`)
+                  return
+                }
+                void generer()
+              }}
+              disabled={bloque || generating}
               style={{
                 width: "100%",
                 padding: "18px 32px",
