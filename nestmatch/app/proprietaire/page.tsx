@@ -19,7 +19,10 @@ import { computeBailTimeline } from "../../lib/bailTimeline"
 import BailTimeline from "../components/ui/BailTimeline"
 import Image from "next/image"
 
-const ONGLETS = ["Tableau de bord", "Mes biens", "Mes locataires", "Performance", "Documents", "Candidatures", "Loyers", "Visites"] as const
+// 4 onglets produit (refonte 2026-04-19) : moins de friction, regroupement
+// thématique. Chaque onglet agrège les anciens blocs (Mes biens + Documents,
+// Locataires + Loyers, Candidats + Visites, Stats = Tableau de bord + Perf).
+const ONGLETS = ["Mes biens", "Locataires", "Candidats", "Stats"] as const
 type Onglet = typeof ONGLETS[number]
 
 /**
@@ -377,7 +380,7 @@ export default function Proprietaire() {
   const router = useRouter()
   const { isMobile } = useResponsive()
   const myEmail = session?.user?.email?.toLowerCase() ?? null
-  const [onglet, setOnglet] = useState<Onglet>("Tableau de bord")
+  const [onglet, setOnglet] = useState<Onglet>("Stats")
   const [biens, setBiens] = useState<any[]>([])
   const [candidatures, setCandidatures] = useState<any[]>([])
   const [loyers, setLoyers] = useState<any[]>([])
@@ -594,29 +597,32 @@ export default function Proprietaire() {
 
         {/* Onglets */}
         <div style={{ display: "flex", gap: 6, marginBottom: 24, background: "white", borderRadius: 14, padding: 6, width: isMobile ? "100%" : "fit-content", overflowX: isMobile ? "auto" : undefined }}>
-          {ONGLETS.map(o => (
-            <button key={o} onClick={() => { setOnglet(o); if (o === "Visites") reloadVisites() }}
-              style={{ padding: "8px 18px", borderRadius: 10, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13, fontFamily: "inherit", background: onglet === o ? "#111" : "transparent", color: onglet === o ? "white" : "#6b7280", transition: "all 0.15s", whiteSpace: "nowrap", flexShrink: 0 }}>
-              {o}
-              {o === "Loyers" && loyersAttendus > 0 && (
-                <span style={{ marginLeft: 6, background: "#ef4444", color: "white", borderRadius: 999, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{loyersAttendus}</span>
-              )}
-              {o === "Visites" && visites.filter(v => v.statut === "proposée" && (v.propose_par || "").toLowerCase() !== (myEmail || "").toLowerCase()).length > 0 && (
-                <span style={{ marginLeft: 6, background: "#f97316", color: "white", borderRadius: 999, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{visites.filter(v => v.statut === "proposée" && (v.propose_par || "").toLowerCase() !== (myEmail || "").toLowerCase()).length}</span>
-              )}
-            </button>
-          ))}
+          {ONGLETS.map(o => {
+            const nbVisitesAttente = visites.filter(v => v.statut === "proposée" && (v.propose_par || "").toLowerCase() !== (myEmail || "").toLowerCase()).length
+            return (
+              <button key={o} onClick={() => { setOnglet(o); if (o === "Candidats") reloadVisites() }}
+                style={{ padding: "8px 18px", borderRadius: 10, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13, fontFamily: "inherit", background: onglet === o ? "#111" : "transparent", color: onglet === o ? "white" : "#6b7280", transition: "all 0.15s", whiteSpace: "nowrap", flexShrink: 0 }}>
+                {o}
+                {o === "Locataires" && loyersAttendus > 0 && (
+                  <span style={{ marginLeft: 6, background: "#ef4444", color: "white", borderRadius: 999, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{loyersAttendus}</span>
+                )}
+                {o === "Candidats" && nbVisitesAttente > 0 && (
+                  <span style={{ marginLeft: 6, background: "#f97316", color: "white", borderRadius: 999, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{nbVisitesAttente}</span>
+                )}
+              </button>
+            )
+          })}
         </div>
 
         {/* TABLEAU DE BORD */}
-        {onglet === "Tableau de bord" && (
+        {onglet === "Stats" && (
           <>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 12 : 18, marginBottom: 24 }}>
               {[
                 { label: "Biens disponibles", val: biensDispos, color: "#16a34a", bg: "#f0fdf4", targetOnglet: "Mes biens" as const },
-                { label: "Biens loués",       val: biensLoues, color: "#6b7280", bg: "#f9fafb", targetOnglet: "Mes locataires" as const },
-                { label: "Loyers à confirmer", val: loyersAttendus, color: "#ea580c", bg: loyersAttendus > 0 ? "#fff7ed" : "white", targetOnglet: "Loyers" as const },
-                { label: "Loyers confirmés",  val: loyersConfirmes, color: "#16a34a", bg: "white", targetOnglet: "Loyers" as const },
+                { label: "Biens loués",       val: biensLoues, color: "#6b7280", bg: "#f9fafb", targetOnglet: "Locataires" as const },
+                { label: "Loyers à confirmer", val: loyersAttendus, color: "#ea580c", bg: loyersAttendus > 0 ? "#fff7ed" : "white", targetOnglet: "Locataires" as const },
+                { label: "Loyers confirmés",  val: loyersConfirmes, color: "#16a34a", bg: "white", targetOnglet: "Locataires" as const },
               ].map(s => (
                 <button
                   key={s.label}
@@ -642,7 +648,7 @@ export default function Proprietaire() {
             {loyersAttendus > 0 && (
               <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 14, padding: isMobile ? "12px 16px" : "14px 20px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                 <p style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#ea580c" }}>{loyersAttendus} paiement{loyersAttendus > 1 ? "s" : ""} en attente</p>
-                <button onClick={() => setOnglet("Loyers")} style={{ background: "#ea580c", color: "white", border: "none", borderRadius: 999, padding: "6px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Voir</button>
+                <button onClick={() => setOnglet("Locataires")} style={{ background: "#ea580c", color: "white", border: "none", borderRadius: 999, padding: "6px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Voir</button>
               </div>
             )}
 
@@ -756,7 +762,7 @@ export default function Proprietaire() {
         )}
 
         {/* MES LOCATAIRES — biens loués avec locataire_email renseigné */}
-        {onglet === "Mes locataires" && (
+        {onglet === "Locataires" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {(() => {
               const actifs = biens.filter((b: any) => b.statut === "loué" && b.locataire_email)
@@ -832,7 +838,7 @@ export default function Proprietaire() {
         )}
 
         {/* PERFORMANCE — vue agrégée + pipeline + détail par bien */}
-        {onglet === "Performance" && (
+        {onglet === "Stats" && biens.length > 0 && (
           <div>
             {biens.length === 0 ? (
               <EmptyState
@@ -1006,7 +1012,7 @@ export default function Proprietaire() {
         )}
 
         {/* DOCUMENTS — baux et EDL centralisés par bien */}
-        {onglet === "Documents" && (
+        {onglet === "Mes biens" && biens.length > 0 && (
           <div>
             {biens.length === 0 ? (
               <EmptyState
@@ -1104,7 +1110,7 @@ export default function Proprietaire() {
         )}
 
         {/* CANDIDATURES */}
-        {onglet === "Candidatures" && (() => {
+        {onglet === "Candidats" && (() => {
           // Enrichir chaque candidature avec son screening automatique
           // (basé sur le profil pré-chargé + le loyer de l'annonce visée)
           const candidaturesAvecScreening = candidatures.map((c: any) => {
@@ -1254,7 +1260,7 @@ export default function Proprietaire() {
         })()}
 
         {/* LOYERS */}
-        {onglet === "Loyers" && (
+        {onglet === "Locataires" && (
           <div style={{ background: "white", borderRadius: 20, padding: 24 }}>
             <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>Suivi des loyers</h2>
             {loyers.length === 0 ? (
@@ -1287,7 +1293,7 @@ export default function Proprietaire() {
           </div>
         )}
 
-        {onglet === "Visites" && (
+        {onglet === "Candidats" && (
           <VisitesProprio visites={visites} biens={biens} setVisites={setVisites} myEmail={session?.user?.email} />
         )}
       </div>
