@@ -211,6 +211,21 @@ function BailCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
     ? new Date(data.dateDebut).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
     : ""
   const loyer = Number(data.loyerHC || 0) + Number(data.charges || 0)
+  // Le payload récent contient toutes les 23 clés BailData (cf. /proprietaire/bail/[id]).
+  // Les anciens messages n'ont que 6 clés → le téléchargement ne produirait qu'un PDF partiel.
+  const canDownload = !!(data.nomBailleur && data.titreBien && data.dateDebut && data.villeBien)
+  const [downloading, setDownloading] = useState(false)
+
+  async function telecharger() {
+    if (!canDownload || downloading) return
+    setDownloading(true)
+    try {
+      const { genererBailPDF } = await import("../../lib/bailPDF")
+      await genererBailPDF(data)
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   if (isMine) {
     return (
@@ -218,6 +233,12 @@ function BailCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
         <p style={{ fontSize: 11, fontWeight: 700, color: "#a7f3d0", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>Bail envoyé</p>
         <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0 }}>{data.titreBien || "Bien"} — {data.villeBien}</p>
         <p style={{ fontSize: 11, color: "#9ca3af", margin: "4px 0 0" }}>Début {dateStr}{loyer > 0 ? ` · ${loyer} €/mois` : ""}</p>
+        {canDownload && (
+          <button onClick={telecharger} disabled={downloading}
+            style={{ marginTop: 10, width: "100%", background: "white", color: "#111", border: "none", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, cursor: downloading ? "wait" : "pointer", fontFamily: "inherit" }}>
+            {downloading ? "Génération…" : "Télécharger le bail (PDF)"}
+          </button>
+        )}
       </div>
     )
   }
@@ -232,8 +253,14 @@ function BailCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
         {loyer > 0 && <div>Loyer : <strong>{loyer} €/mois</strong></div>}
         {data.duree && <div>Durée : <strong>{data.duree} mois</strong></div>}
       </div>
+      {canDownload && (
+        <button onClick={telecharger} disabled={downloading}
+          style={{ display: "block", width: "100%", marginTop: 12, background: "#15803d", color: "white", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 700, textAlign: "center", cursor: downloading ? "wait" : "pointer", fontFamily: "inherit" }}>
+          {downloading ? "Génération…" : "Télécharger le bail (PDF)"}
+        </button>
+      )}
       <a href="/mon-logement"
-        style={{ display: "block", marginTop: 12, background: "#15803d", color: "white", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 700, textAlign: "center", textDecoration: "none", fontFamily: "inherit" }}>
+        style={{ display: "block", marginTop: 8, background: "white", color: "#15803d", border: "1.5px solid #15803d", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, textAlign: "center", textDecoration: "none", fontFamily: "inherit" }}>
         Voir mon logement →
       </a>
     </div>
