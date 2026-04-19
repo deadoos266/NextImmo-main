@@ -545,6 +545,12 @@ function MessagesInner() {
       href: "/mon-logement",
       relatedId: String(annId),
     })
+    // Email aux autres candidats non retenus (fire-and-forget, respectueux)
+    void fetch("/api/notifications/candidats-orphelins", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ annonceId: annId, locataireRetenu: peerEmail }),
+    }).catch(() => { /* silent */ })
     setAccepteEnCours(false)
     setAccepterLocationOpen(false)
   }

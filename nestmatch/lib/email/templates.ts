@@ -248,3 +248,43 @@ Ouvrir la conversation : ${params.convUrl}
 — NestMatch`
   return { subject: `${params.fromName} t'a envoyé un message`, html, text }
 }
+
+export function candidatOrphelinTemplate(params: {
+  bienTitre: string
+  ville?: string | null
+  annoncesUrl: string
+}): { subject: string; html: string; text: string } {
+  const contexte = params.ville
+    ? `${escapeHtml(params.bienTitre)} à ${escapeHtml(params.ville)}`
+    : escapeHtml(params.bienTitre)
+  const body = `
+    <h1 style="font-size:24px;font-weight:800;letter-spacing:-0.5px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      Votre candidature n'a pas été retenue
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Le propriétaire de <strong style="color:${PALETTE.text};">${contexte}</strong> a choisi un autre dossier. Ce n'est pas un jugement sur votre profil — la plupart des proprios doivent trancher entre plusieurs candidats solides.
+    </p>
+    <p style="margin:0 0 20px;color:${PALETTE.textMuted};line-height:1.65;">
+      De nouvelles annonces qui correspondent à vos critères sont publiées chaque jour sur NestMatch. On garde votre dossier complet pour les prochaines candidatures.
+    </p>
+    ${button(params.annoncesUrl, "Voir les annonces du moment")}
+    <p style="margin:26px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
+      Conseil : un dossier à jour avec présentation personnelle et 3+ quittances récentes augmente fortement vos chances sur les prochaines annonces.
+    </p>
+  `
+  const html = wrap("Votre candidature n'a pas été retenue sur NestMatch, voici les prochaines étapes.", body, "orphelin")
+  const text = `Votre candidature n'a pas été retenue
+
+Le propriétaire de ${params.bienTitre}${params.ville ? ` à ${params.ville}` : ""} a choisi un autre dossier. Ce n'est pas un jugement sur votre profil — la plupart des proprios tranchent entre plusieurs candidats solides.
+
+De nouvelles annonces sont publiées chaque jour. Votre dossier reste complet pour les prochaines candidatures.
+
+Voir les annonces : ${params.annoncesUrl}
+
+— L'équipe NestMatch`
+  return {
+    subject: "Votre candidature n'a pas été retenue — on garde votre dossier prêt",
+    html,
+    text,
+  }
+}
