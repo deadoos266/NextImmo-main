@@ -403,6 +403,9 @@ function MessagesInner() {
   const [nouveau, setNouveau] = useState("")
   const [loading, setLoading] = useState(true)
   const [envoi, setEnvoi] = useState(false)
+  // Indicateur "en train d'écrire" — broadcast Supabase Realtime (pas de DB).
+  // peerTyping = l'autre est en train d'écrire (affiché au-dessus de l'input).
+  const [peerTyping, setPeerTyping] = useState(false)
   const [envoyantDossier, setEnvoyantDossier] = useState(false)
   const [recherche, setRecherche] = useState("")
   // Onglet de filtrage des conversations : "actifs" (bail en cours) vs
@@ -446,6 +449,11 @@ function MessagesInner() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  // Refs pour le typing indicator (throttle envoi + timeout reset du peer)
+  const typingLastSentRef = useRef<number>(0)
+  const peerTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const typingChannelRef = useRef<any>(null)
   const myEmail = session?.user?.email?.toLowerCase()
 
   useEffect(() => {
@@ -804,6 +812,60 @@ function MessagesInner() {
       await supabase.from("messages").update({ lu: true }).in("id", unreadIds)
     }
     setConversations(prev => prev.map(c => c.other === other && c.annonceId === (annonceId ?? null) ? { ...c, unread: 0 } : c))
+  }
+
+  /**
+   * Ecoute les events "typing" broadcast sur le channel de la conv active.
+   * Quand un peer broadcast, on set peerTyping=true pour 3s (reset via
+   * timeout a chaque nouveau signal). Channel eject quand convActive change
+   * ou quand le composant demount.
+   */
+  /**
+   * Ecoute les events "typing" broadcast sur le channel de la conv active.
+   * On garde le channel dans typingChannelRef pour que signalTyping puisse
+   * l'utiliser (Supabase Realtime exige un channel subscribed pour envoyer).
+   * Channel eject automatiquement quand convActive change / composant demount.
+   */
+  useEffect(() => {
+    if (!convActive || !myEmail) { setPeerTyping(false); return }
+    const me = myEmail.toLowerCase()
+    const channel = supabase.channel(`typing:${convActive}`, {
+      config: { broadcast: { self: false } },
+    })
+    channel.on("broadcast", { event: "typing" }, (payload) => {
+      const from = (payload.payload as { from?: string } | undefined)?.from
+      if (!from || from === me) return
+      setPeerTyping(true)
+      if (peerTypingTimeoutRef.current) clearTimeout(peerTypingTimeoutRef.current)
+      peerTypingTimeoutRef.current = setTimeout(() => setPeerTyping(false), 3000)
+    })
+    channel.subscribe()
+    typingChannelRef.current = channel
+    return () => {
+      supabase.removeChannel(channel)
+      typingChannelRef.current = null
+      if (peerTypingTimeoutRef.current) clearTimeout(peerTypingTimeoutRef.current)
+      setPeerTyping(false)
+    }
+  }, [convActive, myEmail])
+
+  /**
+   * Broadcast "en train d'écrire" sur le channel de la conv active.
+   * Throttled à 2s pour pas flooder Realtime sur chaque keystroke.
+   * No-op si le channel n'est pas (encore) subscribed.
+   */
+  function signalTyping() {
+    if (!convActive || !myEmail) return
+    const channel = typingChannelRef.current
+    if (!channel) return
+    const now = Date.now()
+    if (now - typingLastSentRef.current < 2000) return
+    typingLastSentRef.current = now
+    channel.send({
+      type: "broadcast",
+      event: "typing",
+      payload: { from: myEmail.toLowerCase(), at: now },
+    }).catch(() => { /* silent */ })
   }
 
   async function envoyer() {
@@ -1933,8 +1995,13 @@ function MessagesInner() {
                       </button>
                     </div>
                   )}
+                  {peerTyping && (
+                    <div aria-live="polite" style={{ fontSize: 11, color: "#9ca3af", marginBottom: 6, fontStyle: "italic", paddingLeft: 4 }}>
+                      En train d&apos;écrire…
+                    </div>
+                  )}
                   <div style={{ display: "flex", gap: 10 }}>
-                    <input ref={inputRef} value={nouveau} onChange={e => setNouveau(e.target.value)}
+                    <input ref={inputRef} value={nouveau} onChange={e => { setNouveau(e.target.value); signalTyping() }}
                       onKeyDown={e => e.key === "Enter" && !e.shiftKey && envoyer()}
                       placeholder={replyTo ? "Votre réponse…" : "Votre message…"}
                       style={{ flex: 1, padding: "11px 16px", border: "1.5px solid #e5e7eb", borderRadius: 999, fontSize: 16, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }} />
