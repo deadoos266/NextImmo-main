@@ -11,6 +11,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Opt-in Node.js 24 pour les actions (avant le switch auto du 2 juin 2026).
+# Supprime le warning de deprecation "Node.js 20 actions are deprecated".
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   quality:
     name: Lint + Types + Tests + Build
