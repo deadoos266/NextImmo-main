@@ -114,16 +114,24 @@ export default function ModifierBien() {
       return
     }
 
-    const ext = file.name.split(".").pop()
-    const path = `${session.user.email}/${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from("annonces-photos").upload(path, file, { upsert: false })
-    if (error) {
+    // Passe par l'API serveur : strip EXIF/GPS + resize + re-encode JPEG.
+    const fd = new FormData()
+    fd.append("file", file)
+    let json: { ok?: boolean; url?: string; error?: string } = {}
+    try {
+      const res = await fetch("/api/proprietaire/photo", { method: "POST", body: fd })
+      json = await res.json()
+      if (!res.ok || !json.ok || !json.url) {
+        setPhotoError(json.error || "L'envoi de la photo a échoué, veuillez réessayer.")
+        setUploadingPhoto(false)
+        return
+      }
+    } catch {
       setPhotoError("L'envoi de la photo a échoué, veuillez réessayer.")
       setUploadingPhoto(false)
       return
     }
-    const { data: urlData } = supabase.storage.from("annonces-photos").getPublicUrl(path)
-    setPhotos(prev => [...prev, urlData.publicUrl])
+    setPhotos(prev => [...prev, json.url!])
     setUploadingPhoto(false)
   }
 

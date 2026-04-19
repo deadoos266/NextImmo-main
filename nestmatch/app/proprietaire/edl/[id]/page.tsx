@@ -374,13 +374,22 @@ export default function EdlPage() {
         rejected.push(`${file.name} : ${check.error}`)
         continue
       }
-      const ext = file.name.split(".").pop()
-      const path = `edl/${session.user.email}/${bienId}/${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`
-      const { error } = await supabase.storage.from("annonces-photos").upload(path, file, { upsert: false })
-      if (error) { continue }
-      const { data: urlData } = supabase.storage.from("annonces-photos").getPublicUrl(path)
+      // Passe par l'API serveur : strip EXIF/GPS + resize + re-encode JPEG.
+      const fd = new FormData()
+      fd.append("file", file)
+      fd.append("bienId", String(bienId))
+      let url: string | null = null
+      try {
+        const res = await fetch("/api/edl/photo", { method: "POST", body: fd })
+        const json = await res.json()
+        if (res.ok && json.ok && json.url) url = json.url
+        else rejected.push(`${file.name} : ${json.error || "upload échoué"}`)
+      } catch {
+        rejected.push(`${file.name} : upload échoué`)
+      }
+      if (!url) continue
       setPieces(prev => prev.map((p, i) =>
-        i === pieceIdx ? { ...p, photos: [...p.photos, urlData.publicUrl] } : p
+        i === pieceIdx ? { ...p, photos: [...p.photos, url!] } : p
       ))
     }
     setUploadingPiece(null)
