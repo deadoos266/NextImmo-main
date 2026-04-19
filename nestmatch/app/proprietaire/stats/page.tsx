@@ -798,37 +798,32 @@ function StatsInner() {
                     fontSize: 13, fontWeight: 700, color: "#6b7280", textDecoration: "none",
                     background: "none", display: "inline-flex", alignItems: "center",
                   }}>
-                  Voir l'annonce
+                  Voir l&apos;annonce
                 </Link>
-                <Link href={`/proprietaire/bail/${bienId}`}
-                  style={{
-                    padding: "9px 18px", border: "1.5px solid #bfdbfe", borderRadius: 999,
-                    fontSize: 13, fontWeight: 700, color: "#1d4ed8", textDecoration: "none",
-                    background: "#eff6ff", display: "inline-flex", alignItems: "center",
+                {/* Statut EDL affiché en read-only quand il existe (info legitime
+                    sur une page stats). La création/gestion se fait depuis
+                    /proprietaire onglet Locataires, plus besoin de dupliquer. */}
+                {edlStatut && (
+                  <span
+                    style={{
+                      padding: "9px 18px", borderRadius: 999,
+                      fontSize: 13, fontWeight: 700,
+                      display: "inline-flex", alignItems: "center", gap: 6,
+                      ...(edlStatut === "valide"
+                        ? { background: "#dcfce7", color: "#16a34a", border: "1.5px solid #bbf7d0" }
+                        : edlStatut === "envoye"
+                        ? { background: "#fff7ed", color: "#ea580c", border: "1.5px solid #fed7aa" }
+                        : edlStatut === "conteste"
+                        ? { background: "#fee2e2", color: "#dc2626", border: "1.5px solid #fecaca" }
+                        : { background: "#eff6ff", color: "#1d4ed8", border: "1.5px solid #bfdbfe" }),
                   }}>
-                  Generer un bail
-                </Link>
-                <Link href={`/proprietaire/edl/${bienId}`}
-                  style={{
-                    padding: "9px 18px", borderRadius: 999,
-                    fontSize: 13, fontWeight: 700, textDecoration: "none",
-                    display: "inline-flex", alignItems: "center", gap: 6,
-                    ...(edlStatut === "valide"
-                      ? { background: "#dcfce7", color: "#16a34a", border: "1.5px solid #bbf7d0" }
-                      : edlStatut === "envoye"
-                      ? { background: "#fff7ed", color: "#ea580c", border: "1.5px solid #fed7aa" }
-                      : edlStatut === "conteste"
-                      ? { background: "#fee2e2", color: "#dc2626", border: "1.5px solid #fecaca" }
-                      : edlStatut === "brouillon"
-                      ? { background: "#eff6ff", color: "#1d4ed8", border: "1.5px solid #bfdbfe" }
-                      : { background: "#eff6ff", color: "#1d4ed8", border: "1.5px solid #bfdbfe" }),
-                  }}>
-                  {edlStatut === "valide" ? "EDL valide ✓"
-                    : edlStatut === "envoye" ? "EDL envoye"
-                    : edlStatut === "conteste" ? "EDL conteste"
-                    : edlStatut === "brouillon" ? "EDL (brouillon)"
-                    : "Creer un EDL"}
-                </Link>
+                    {edlStatut === "valide" ? "EDL validé ✓"
+                      : edlStatut === "envoye" ? "EDL envoyé"
+                      : edlStatut === "conteste" ? "EDL contesté"
+                      : edlStatut === "brouillon" ? "EDL (brouillon)"
+                      : "EDL en attente"}
+                  </span>
+                )}
               </div>
             </div>
 
