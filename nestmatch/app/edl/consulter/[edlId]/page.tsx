@@ -7,6 +7,7 @@ import { supabase } from "../../../../lib/supabase"
 import { useResponsive } from "../../../hooks/useResponsive"
 import { BRAND } from "../../../../lib/brand"
 import { drawLogoPDF } from "../../../../lib/brandPDF"
+import { postNotif } from "../../../../lib/notificationsClient"
 import Image from "next/image"
 // jsPDF lazy-loaded pour alleger le bundle initial (voir genererEdlPDF)
 
@@ -48,7 +49,9 @@ function EtatBadge({ etat }: { etat: Etat }) {
 // ─── ZIP photos — telechargement de toutes les photos de l'EDL ────────────────
 
 async function telechargerPhotosZip(edl: any) {
-  const pieces: PieceData[] = Array.isArray(edl?.pieces) ? edl.pieces : []
+  // Bug fix : le champ DB s'appelle `pieces_data`, pas `pieces`. Avant, le zip
+  // était toujours vide car edl.pieces = undefined → "Aucune photo".
+  const pieces: PieceData[] = Array.isArray(edl?.pieces_data) ? edl.pieces_data : []
   const allPhotos: { url: string; piece: string; idx: number }[] = []
   pieces.forEach(p => {
     if (Array.isArray(p.photos)) {
@@ -244,44 +247,83 @@ export default function ConsulterEdlPage() {
   async function validerEdl() {
     if (!edl || !session?.user?.email) return
     setValidating(true)
-
-    await supabase.from("etats_des_lieux").update({
-      statut: "valide",
-      date_validation: new Date().toISOString(),
-    }).eq("id", edl.id)
-
-    // Send auto message to proprietaire
-    await supabase.from("messages").insert([{
-      from_email: session.user.email,
-      to_email: edl.proprietaire_email,
-      contenu: "L'etat des lieux a ete valide par le locataire",
-      lu: false,
-    }])
-
-    setEdl({ ...edl, statut: "valide", date_validation: new Date().toISOString() })
-    setValidating(false)
+    try {
+      const now = new Date().toISOString()
+      const { data: updated, error } = await supabase
+        .from("etats_des_lieux")
+        .update({ statut: "valide", date_validation: now })
+        .eq("id", edl.id)
+        .select("id")
+      if (error || !updated || updated.length === 0) {
+        alert(`Validation échouée : ${error?.message || "aucune ligne mise à jour"}`)
+        return
+      }
+      const toEmail = (edl.proprietaire_email || "").toLowerCase().trim()
+      if (toEmail) {
+        await supabase.from("messages").insert([{
+          from_email: session.user.email.toLowerCase(),
+          to_email: toEmail,
+          contenu: "L'état des lieux a été validé par le locataire ✓",
+          lu: false,
+          annonce_id: edl.annonce_id || null,
+          created_at: now,
+        }])
+        void postNotif({
+          userEmail: toEmail,
+          type: "edl_envoye",
+          title: "EDL validé",
+          body: `Le locataire a validé l'état des lieux ${edl.type === "entree" ? "d'entrée" : "de sortie"}.`,
+          href: `/edl/consulter/${edl.id}`,
+          relatedId: String(edl.annonce_id || edl.id),
+        })
+      }
+      setEdl({ ...edl, statut: "valide", date_validation: now })
+    } catch (err) {
+      alert(`Erreur : ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setValidating(false)
+    }
   }
 
   async function contesterEdl() {
     if (!edl || !session?.user?.email || !commentaire.trim()) return
     setContesting(true)
-
-    await supabase.from("etats_des_lieux").update({
-      statut: "conteste",
-      commentaire_locataire: commentaire.trim(),
-    }).eq("id", edl.id)
-
-    // Send auto message to proprietaire
-    await supabase.from("messages").insert([{
-      from_email: session.user.email,
-      to_email: edl.proprietaire_email,
-      contenu: `L'etat des lieux a ete conteste par le locataire : "${commentaire.trim()}"`,
-      lu: false,
-    }])
-
-    setEdl({ ...edl, statut: "conteste", commentaire_locataire: commentaire.trim() })
-    setContesting(false)
-    setShowContest(false)
+    try {
+      const { data: updated, error } = await supabase
+        .from("etats_des_lieux")
+        .update({ statut: "conteste", commentaire_locataire: commentaire.trim() })
+        .eq("id", edl.id)
+        .select("id")
+      if (error || !updated || updated.length === 0) {
+        alert(`Contestation échouée : ${error?.message || "aucune ligne mise à jour"}`)
+        return
+      }
+      const toEmail = (edl.proprietaire_email || "").toLowerCase().trim()
+      if (toEmail) {
+        await supabase.from("messages").insert([{
+          from_email: session.user.email.toLowerCase(),
+          to_email: toEmail,
+          contenu: `⚠ État des lieux contesté par le locataire :\n"${commentaire.trim()}"`,
+          lu: false,
+          annonce_id: edl.annonce_id || null,
+          created_at: new Date().toISOString(),
+        }])
+        void postNotif({
+          userEmail: toEmail,
+          type: "edl_envoye",
+          title: "EDL contesté",
+          body: `Le locataire a contesté l'état des lieux. Motif : "${commentaire.trim().slice(0, 80)}"`,
+          href: `/edl/consulter/${edl.id}`,
+          relatedId: String(edl.annonce_id || edl.id),
+        })
+      }
+      setEdl({ ...edl, statut: "conteste", commentaire_locataire: commentaire.trim() })
+      setShowContest(false)
+    } catch (err) {
+      alert(`Erreur : ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setContesting(false)
+    }
   }
 
   if (loading) return (
@@ -452,7 +494,22 @@ export default function ConsulterEdlPage() {
         )}
 
         {/* ─── Actions ─── */}
-        {statut === "envoye" && (
+        {/* Vue proprio : EDL envoyé, on attend le locataire */}
+        {statut === "envoye" && (session?.user?.email || "").toLowerCase() === (edl.proprietaire_email || "").toLowerCase() && (
+          <div style={{ ...cardS, background: "#eff6ff", border: "1.5px solid #bfdbfe" }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: "#1e40af", margin: 0 }}>
+              En attente de la décision du locataire
+            </p>
+            <p style={{ fontSize: 12, color: "#1e40af", margin: "6px 0 0", lineHeight: 1.6 }}>
+              Le locataire a reçu l&apos;état des lieux et peut le valider ou le contester depuis sa messagerie.
+              Vous serez notifié dès sa réponse.
+            </p>
+          </div>
+        )}
+
+        {/* Bloc "Valider / Contester" — uniquement le locataire peut décider.
+            Le proprio visualise l'EDL qu'il a envoyé, il n'est pas juge et partie. */}
+        {statut === "envoye" && (session?.user?.email || "").toLowerCase() === (edl.locataire_email || "").toLowerCase() && (
           <div style={cardS}>
             <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Votre décision</h2>
 

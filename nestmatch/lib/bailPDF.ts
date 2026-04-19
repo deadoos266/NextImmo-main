@@ -828,66 +828,69 @@ export async function genererBailPDF(data: BailData): Promise<void> {
   const sigLocataire = sigByRole("locataire")
   const sigGarant = sigByRole("garant")
 
+  // Headers "Le Bailleur" / "Le Locataire"
   doc.setFontSize(10)
   doc.setFont("helvetica", "bold")
+  doc.setTextColor(0, 0, 0)
   doc.text("Le Bailleur", 50, y, { align: "center" })
   doc.text("Le Locataire", 155, y, { align: "center" })
-  y += 5
+  y += 6
   doc.setFontSize(9)
   doc.setFont("helvetica", "normal")
   doc.text(data.nomBailleur, 50, y, { align: "center" })
   doc.text(data.nomLocataire || data.emailLocataire, 155, y, { align: "center" })
-  y += 5
-  doc.setFontSize(7)
-  doc.setTextColor(120, 120, 120)
-  doc.text('Signature précédée de "Lu et approuvé"', 50, y + 2, { align: "center" })
-  doc.text('Signature précédée de "Lu et approuvé"', 155, y + 2, { align: "center" })
-  doc.setTextColor(0, 0, 0)
+  y += 8
 
-  // Rendu des images de signature si présentes
-  const sigY = y + 7
-  const sigWidth = 55
-  const sigHeight = 22
+  // Signature images + mention "Lu et approuvé" réellement tapée par le signataire
+  const sigWidth = 60
+  const sigHeight = 24
 
-  if (sigBailleur) {
-    try {
-      doc.addImage(sigBailleur.png, "PNG", 22, sigY, sigWidth, sigHeight)
+  const renderSignature = (
+    sig: BailSignatureEntry | undefined,
+    xCenter: number,
+  ) => {
+    const xImg = xCenter - sigWidth / 2
+    if (sig) {
+      // Mention manuscrite du signataire (ex: "Lu et approuvé, bon pour accord")
+      doc.setFontSize(8)
+      doc.setFont("helvetica", "italic")
+      doc.setTextColor(60, 60, 60)
+      const mention = sig.mention || 'Lu et approuvé, bon pour accord'
+      doc.text(mention, xCenter, y, { align: "center" })
+      // Image signature juste en dessous
+      try {
+        doc.addImage(sig.png, "PNG", xImg, y + 2, sigWidth, sigHeight)
+      } catch (err) {
+        console.error("[bailPDF] addImage error:", err)
+        doc.line(xImg, y + sigHeight + 2, xImg + sigWidth, y + sigHeight + 2)
+      }
+      // Marqueur "Signé électroniquement le X"
       doc.setFontSize(7)
+      doc.setFont("helvetica", "normal")
       doc.setTextColor(21, 128, 61)
       doc.text(
-        `✓ Signé électroniquement le ${new Date(sigBailleur.signeAt).toLocaleDateString("fr-FR")}`,
-        50,
-        sigY + sigHeight + 4,
+        `✓ Signé électroniquement le ${new Date(sig.signeAt).toLocaleDateString("fr-FR")}`,
+        xCenter,
+        y + sigHeight + 6,
         { align: "center" },
       )
       doc.setTextColor(0, 0, 0)
-    } catch {
-      doc.line(20, sigY + sigHeight, 85, sigY + sigHeight)
-    }
-  } else {
-    doc.line(20, sigY + sigHeight, 85, sigY + sigHeight)
-  }
-
-  if (sigLocataire) {
-    try {
-      doc.addImage(sigLocataire.png, "PNG", 127, sigY, sigWidth, sigHeight)
+    } else {
+      // Pas signé : caption + trait vide
       doc.setFontSize(7)
-      doc.setTextColor(21, 128, 61)
-      doc.text(
-        `✓ Signé électroniquement le ${new Date(sigLocataire.signeAt).toLocaleDateString("fr-FR")}`,
-        155,
-        sigY + sigHeight + 4,
-        { align: "center" },
-      )
+      doc.setFont("helvetica", "italic")
+      doc.setTextColor(120, 120, 120)
+      doc.text('(Mention manuscrite "Lu et approuvé" + signature)', xCenter, y, { align: "center" })
       doc.setTextColor(0, 0, 0)
-    } catch {
-      doc.line(120, sigY + sigHeight, 185, sigY + sigHeight)
+      doc.setDrawColor(180, 180, 180)
+      doc.line(xImg, y + sigHeight + 2, xImg + sigWidth, y + sigHeight + 2)
     }
-  } else {
-    doc.line(120, sigY + sigHeight, 185, sigY + sigHeight)
   }
 
-  y = sigY + sigHeight + 10
+  renderSignature(sigBailleur, 50)
+  renderSignature(sigLocataire, 155)
+
+  y = y + sigHeight + 12
 
   // Garant signature si actif
   if (data.garantActif && data.nomGarant) {
