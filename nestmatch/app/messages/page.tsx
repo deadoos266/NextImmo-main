@@ -14,6 +14,7 @@ import { annulerVisite, STATUT_VISITE_STYLE as STATUT_VISITE } from "../../lib/v
 import { postNotif } from "../../lib/notificationsClient"
 import MessageSkeleton from "../components/ui/MessageSkeleton"
 import BailSignatureModal from "../components/BailSignatureModal"
+import Modal from "../components/ui/Modal"
 import type { BailData } from "../../lib/bailPDF"
 
 const DOSSIER_PREFIX = "[DOSSIER_CARD]"
@@ -639,6 +640,11 @@ function MessagesInner() {
   // Modale annulation visite (inline dans la conv)
   const [visiteCancelTarget, setVisiteCancelTarget] = useState<{ v: any; mode: "refus" | "annulation" } | null>(null)
   const [visitesConv, setVisitesConv] = useState<any[]>([])
+  // Modale de gestion des visites (ouverte depuis la mini-barre dans la conv).
+  const [visitesModalOpen, setVisitesModalOpen] = useState<boolean>(false)
+  // Historique annulées dans la modale : collapsible local (fermé par défaut).
+  const [historiqueAnnOuvert, setHistoriqueAnnOuvert] = useState<boolean>(false)
+  useEffect(() => { setHistoriqueAnnOuvert(false) }, [convActive])
   const [showVisiteForm, setShowVisiteForm] = useState(false)
   const [visiteDate, setVisiteDate] = useState("")
   const [visiteHeure, setVisiteHeure] = useState("10:00")
@@ -1281,16 +1287,9 @@ function MessagesInner() {
     const { data } = await query
       .in("statut", ["proposée", "confirmée", "annulée"])
       .order("date_visite", { ascending: true })
-    const all = data || []
-    // Toutes les visites actives (proposée/confirmée) + UNIQUEMENT la visite
-    // annulée la plus récente (pour offrir "Proposer un autre créneau" sans
-    // polluer la conv avec tout l'historique).
-    const actives = all.filter(v => v.statut === "proposée" || v.statut === "confirmée")
-    const annuleesSorted = all
-      .filter(v => v.statut === "annulée")
-      .sort((a, b) => new Date(b.created_at || b.date_visite || 0).getTime() - new Date(a.created_at || a.date_visite || 0).getTime())
-    const derniereAnnulee = actives.length === 0 && annuleesSorted.length > 0 ? [annuleesSorted[0]] : []
-    setVisitesConv([...actives, ...derniereAnnulee])
+    // On garde TOUTES les visites de la conv ; le split actives / annulées
+    // est géré au rendu (section historique collapsible).
+    setVisitesConv(data || [])
   }
 
   async function demanderDossier() {
@@ -1590,6 +1589,209 @@ function MessagesInner() {
           nomDefaut={signatureModal.role === "locataire" ? (signatureModal.bailData.nomLocataire || "") : (signatureModal.bailData.nomBailleur || "")}
         />
       )}
+
+      {/* Modale de gestion des visites de la conv active */}
+      <Modal
+        open={visitesModalOpen}
+        onClose={() => setVisitesModalOpen(false)}
+        title="Demandes de visite"
+        maxWidth={640}
+      >
+        {(() => {
+          const actives = visitesConv.filter(v => v.statut === "proposée" || v.statut === "confirmée")
+          const annulees = visitesConv
+            .filter(v => v.statut === "annulée")
+            .sort((a, b) => new Date(b.created_at || b.date_visite || 0).getTime() - new Date(a.created_at || a.date_visite || 0).getTime())
+          const renderVisite = (v: any) => {
+            const s = STATUT_VISITE[v.statut] ?? STATUT_VISITE["proposée"]
+            const isPending = v.statut === "proposée"
+            const parMoi = (v.propose_par || "").toLowerCase() === (myEmail || "").toLowerCase()
+            return (
+              <div key={v.id} style={{ display: "flex", flexDirection: "column", gap: 8, background: "white", borderRadius: 12, padding: "12px 14px", border: `1.5px solid ${s.border}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#111" }}>
+                    {formatVisiteDate(v.date_visite, { weekday: "short", day: "numeric", month: "short", year: "numeric" })} à {v.heure}
+                  </span>
+                  <span style={{ background: s.bg, color: s.color, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, border: `1px solid ${s.border}` }}>
+                    {s.label}
+                  </span>
+                  {isPending && (
+                    <span style={{ fontSize: 10, color: "#6b7280" }}>
+                      {parMoi ? "Proposée par vous" : "Reçue"}
+                    </span>
+                  )}
+                </div>
+                {v.message && (
+                  <p style={{ fontSize: 12, color: "#6b7280", fontStyle: "italic", margin: 0, lineHeight: 1.5 }}>
+                    &ldquo;{v.message}&rdquo;
+                  </p>
+                )}
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {isPending && !parMoi && (
+                    <>
+                      <button
+                        onClick={async () => {
+                          await changerStatutVisite(v.id, "confirmée")
+                        }}
+                        style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "6px 14px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+                      >
+                        ✓ Confirmer
+                      </button>
+                      <button
+                        onClick={() => {
+                          setCounterTarget(v)
+                          setVisiteDate(v.date_visite || "")
+                          setVisiteHeure(v.heure || "10:00")
+                          setVisiteMessage("")
+                          setShowVisiteForm(true)
+                          setVisitesModalOpen(false)
+                        }}
+                        style={{ background: "white", border: "1.5px solid #111", color: "#111", borderRadius: 999, padding: "6px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+                      >
+                        Contre-proposer
+                      </button>
+                      <button
+                        onClick={() => {
+                          setVisiteCancelTarget({ v, mode: "refus" })
+                          setVisitesModalOpen(false)
+                        }}
+                        style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "6px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+                      >
+                        Refuser
+                      </button>
+                    </>
+                  )}
+                  {isPending && parMoi && (
+                    <button
+                      onClick={() => {
+                        setVisiteCancelTarget({ v, mode: "annulation" })
+                        setVisitesModalOpen(false)
+                      }}
+                      style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "6px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+                    >
+                      Annuler ma demande
+                    </button>
+                  )}
+                  {v.statut === "confirmée" && (
+                    <button
+                      onClick={() => {
+                        setVisiteCancelTarget({ v, mode: "annulation" })
+                        setVisitesModalOpen(false)
+                      }}
+                      style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "6px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+                    >
+                      Annuler la visite
+                    </button>
+                  )}
+                  {v.statut === "annulée" && (
+                    <button
+                      onClick={() => {
+                        setCounterTarget(null)
+                        setVisiteDate("")
+                        setVisiteHeure("10:00")
+                        setVisiteMessage("")
+                        setShowVisiteForm(true)
+                        setVisitesModalOpen(false)
+                        setTimeout(() => {
+                          const el = document.getElementById("visite-form-anchor")
+                          if (el) el.scrollIntoView({ behavior: "smooth", block: "center" })
+                        }, 120)
+                      }}
+                      style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "6px 14px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+                    >
+                      Proposer un autre créneau
+                    </button>
+                  )}
+                </div>
+              </div>
+            )
+          }
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              {/* Actives */}
+              <div>
+                <p style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 10px" }}>
+                  Actives ({actives.length})
+                </p>
+                {actives.length === 0 ? (
+                  <div style={{ padding: "20px 14px", background: "#fafafa", borderRadius: 12, textAlign: "center", fontSize: 13, color: "#9ca3af" }}>
+                    Aucune visite active.
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {actives.map(renderVisite)}
+                  </div>
+                )}
+              </div>
+
+              {/* Annulées — collapsible */}
+              {annulees.length > 0 && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setHistoriqueAnnOuvert(o => !o)}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "8px 14px",
+                      background: "#f9fafb",
+                      border: "1.5px solid #e5e7eb",
+                      borderRadius: 10,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "#6b7280",
+                    }}
+                  >
+                    <span>Historique annulées ({annulees.length})</span>
+                    <span style={{ fontSize: 14 }}>{historiqueAnnOuvert ? "▴" : "▾"}</span>
+                  </button>
+                  {historiqueAnnOuvert && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
+                      {annulees.map(renderVisite)}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* CTA proposer une nouvelle visite */}
+              {convActiveData?.annonceId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCounterTarget(null)
+                    setVisiteDate("")
+                    setVisiteHeure("10:00")
+                    setVisiteMessage("")
+                    setShowVisiteForm(true)
+                    setVisitesModalOpen(false)
+                    setTimeout(() => {
+                      const el = document.getElementById("visite-form-anchor")
+                      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" })
+                    }, 120)
+                  }}
+                  style={{
+                    background: "#eff6ff",
+                    border: "1.5px solid #bfdbfe",
+                    color: "#1d4ed8",
+                    borderRadius: 12,
+                    padding: "10px 18px",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  + Proposer une nouvelle visite
+                </button>
+              )}
+            </div>
+          )
+        })()}
+      </Modal>
       <div style={{ maxWidth: isMobile && convActiveData ? "100%" : 1140, margin: "0 auto", padding: isMobile && convActiveData ? 0 : isMobile ? "20px 16px" : "32px 48px" }}>
         {(!isMobile || !convActiveData) && (
           <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 800, marginBottom: isMobile ? 16 : 24, letterSpacing: "-0.5px", padding: isMobile ? 0 : undefined }}>Messages</h1>
@@ -2166,98 +2368,71 @@ function MessagesInner() {
                   <div ref={bottomRef} />
                 </div>
 
-                {/* Visites liées à cette conversation */}
-                {visitesConv.length > 0 && (
-                  <div style={{ borderTop: "1px solid #f3f4f6", padding: "12px 20px", background: "#fafafa" }}>
-                    <p style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
-                      Demandes de visite
-                    </p>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {visitesConv.map(v => {
-                        const s = STATUT_VISITE[v.statut] ?? STATUT_VISITE["proposée"]
-                        const isPending = v.statut === "proposée"
-                        return (
-                          <div key={v.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "white", borderRadius: 12, padding: "10px 14px", border: `1.5px solid ${s.border}` }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                                <span style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>
-                                  {formatVisiteDate(v.date_visite, { weekday: "short", day: "numeric", month: "short", year: "numeric" })} à {v.heure}
-                                </span>
-                                <span style={{ background: s.bg, color: s.color, fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 999, border: `1px solid ${s.border}`, flexShrink: 0 }}>
-                                  {s.label}
-                                </span>
-                              </div>
-                              {v.message && (
-                                <p style={{ fontSize: 11, color: "#6b7280", fontStyle: "italic", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                  "{v.message}"
-                                </p>
-                              )}
-                            </div>
-                            {/* Cas 1 — Demande REÇUE (l'autre partie a proposé, c'est à moi d'agir)
-                                → Confirmer / Contre-proposer / Refuser. Pas d'Annuler. */}
-                            {isPending && (v.propose_par || "").toLowerCase() !== (myEmail || "").toLowerCase() && (
-                              <div style={{ display: "flex", gap: 6, flexShrink: 0, flexWrap: "wrap" }}>
-                                <button onClick={() => changerStatutVisite(v.id, "confirmée")}
-                                  style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "5px 12px", fontWeight: 700, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
-                                  ✓ Confirmer
-                                </button>
-                                <button onClick={() => {
-                                  setCounterTarget(v)
-                                  setVisiteDate(v.date_visite || "")
-                                  setVisiteHeure(v.heure || "10:00")
-                                  setVisiteMessage("")
-                                  setShowVisiteForm(true)
-                                }}
-                                  style={{ background: "white", border: "1.5px solid #111", color: "#111", borderRadius: 999, padding: "5px 10px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
-                                  Contre-proposer
-                                </button>
-                                <button onClick={() => setVisiteCancelTarget({ v, mode: "refus" })}
-                                  style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "5px 10px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
-                                  Refuser
-                                </button>
-                              </div>
-                            )}
-                            {/* Cas 2 — Ma PROPRE proposition en attente (j'attends la réponse)
-                                → Annuler uniquement (retirer ma demande). */}
-                            {isPending && (v.propose_par || "").toLowerCase() === (myEmail || "").toLowerCase() && (
-                              <button onClick={() => setVisiteCancelTarget({ v, mode: "annulation" })}
-                                style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "5px 10px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
-                                Annuler
-                              </button>
-                            )}
-                            {/* Cas 3 — Visite confirmée des 2 côtés
-                                → Annuler (avec motif, message auto posté). */}
-                            {v.statut === "confirmée" && (
-                              <button onClick={() => setVisiteCancelTarget({ v, mode: "annulation" })}
-                                style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "5px 10px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
-                                Annuler
-                              </button>
-                            )}
-                            {/* Cas 4 — Visite annulée : bouton pour reproposer
-                                directement sans avoir à chercher le bouton en bas. */}
-                            {v.statut === "annulée" && (
-                              <button onClick={() => {
-                                setCounterTarget(null)
-                                setVisiteDate("")
-                                setVisiteHeure("10:00")
-                                setVisiteMessage("")
-                                setShowVisiteForm(true)
-                                // Scroll vers le form pour que l'user le voie
-                                setTimeout(() => {
-                                  const el = document.getElementById("visite-form-anchor")
-                                  if (el) el.scrollIntoView({ behavior: "smooth", block: "center" })
-                                }, 80)
-                              }}
-                                style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "5px 12px", fontWeight: 700, fontSize: 11, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
-                                Proposer un autre créneau
-                              </button>
-                            )}
-                          </div>
-                        )
-                      })}
+                {/* Visites : barre résumé compacte + modale de gestion */}
+                {visitesConv.length > 0 && (() => {
+                  const actives = visitesConv.filter(v => v.statut === "proposée" || v.statut === "confirmée")
+                  const annulees = visitesConv.filter(v => v.statut === "annulée")
+                  const enAttente = actives.filter(v => v.statut === "proposée" &&
+                    (v.propose_par || "").toLowerCase() !== (myEmail || "").toLowerCase()).length
+                  const barBg = enAttente > 0 ? "#fff7ed" : actives.length > 0 ? "#f0fdf4" : "#f9fafb"
+                  const barBorder = enAttente > 0 ? "#fed7aa" : actives.length > 0 ? "#bbf7d0" : "#e5e7eb"
+                  return (
+                    <div
+                      style={{
+                        borderTop: "1px solid #f3f4f6",
+                        padding: "10px 20px",
+                        background: barBg,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 12,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 12 }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#374151" }}>
+                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                          <line x1="16" y1="2" x2="16" y2="6"/>
+                          <line x1="8" y1="2" x2="8" y2="6"/>
+                          <line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                        <span style={{ fontWeight: 700, color: "#111" }}>
+                          {actives.length} visite{actives.length !== 1 ? "s" : ""} active{actives.length !== 1 ? "s" : ""}
+                        </span>
+                        {enAttente > 0 && (
+                          <span style={{ background: "#ea580c", color: "white", padding: "1px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700 }}>
+                            {enAttente} à traiter
+                          </span>
+                        )}
+                        {annulees.length > 0 && (
+                          <span style={{ color: "#9ca3af", fontSize: 11 }}>
+                            · {annulees.length} annulée{annulees.length > 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setVisitesModalOpen(true)}
+                        style={{
+                          background: "white",
+                          border: `1.5px solid ${barBorder}`,
+                          color: "#111",
+                          borderRadius: 999,
+                          padding: "6px 14px",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        Gérer les visites →
+                      </button>
                     </div>
-                  </div>
-                )}
+                  )
+                })()}
 
                 {/* Zone saisie */}
                 <div style={{ borderTop: "1px solid #f3f4f6", padding: isMobile ? "10px 12px 12px" : "10px 20px 14px", background: "white" }}>
