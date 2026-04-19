@@ -8,7 +8,7 @@ import { type Theme, getStoredTheme, setStoredTheme, applyTheme } from "../../li
  * `<html data-theme="…">` en direct (sans rechargement).
  */
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("system")
+  const [theme, setTheme] = useState<Theme>("light")
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -36,8 +36,8 @@ export default function ThemeToggle() {
     { value: "system", label: "Système", hint: "Suit les réglages de votre appareil" },
   ]
 
-  // SSR-safe : tant que non monté, on affiche neutre (pas de décalage)
-  const current = mounted ? theme : "system"
+  // SSR-safe : tant que non monté, on affiche le défaut produit "light"
+  const current = mounted ? theme : "light"
 
   return (
     <div>
