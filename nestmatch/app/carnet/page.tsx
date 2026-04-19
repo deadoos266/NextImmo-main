@@ -7,6 +7,7 @@ import { supabase } from "../../lib/supabase"
 import { useRole } from "../providers"
 import { useResponsive } from "../hooks/useResponsive"
 import EmptyState from "../components/ui/EmptyState"
+import Image from "next/image"
 
 type Statut = "planifié" | "en cours" | "terminé"
 type TypeEvent = "chaudière" | "plomberie" | "électricité" | "travaux" | "serrurerie" | "nuisibles" | "autre"
@@ -193,7 +194,7 @@ export default function Carnet() {
             {biens.map(b => (
               <div key={b.id} style={{ background: "white", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid #e5e7eb" }}>
                 {Array.isArray(b.photos) && b.photos[0]
-                  ? <img src={b.photos[0]} alt="" style={{ width: 56, height: 56, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
+                  ? <Image src={b.photos[0]} alt="" width={56} height={56} sizes="56px" style={{ width: 56, height: 56, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
                   : <div style={{ width: 56, height: 56, borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, color: "#6b7280", flexShrink: 0 }}>{(b.titre || "B")[0].toUpperCase()}</div>
                 }
                 <div style={{ flex: 1 }}>

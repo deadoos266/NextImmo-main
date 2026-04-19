@@ -7,6 +7,7 @@ import { supabase } from "../../../../lib/supabase"
 import { useResponsive } from "../../../hooks/useResponsive"
 import { BRAND } from "../../../../lib/brand"
 import { drawLogoPDF } from "../../../../lib/brandPDF"
+import Image from "next/image"
 // jsPDF lazy-loaded pour alleger le bundle initial (voir genererEdlPDF)
 
 // ─── Types & Config ─────────────────────────────────────────────────────────
@@ -432,8 +433,8 @@ export default function ConsulterEdlPage() {
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {piece.photos.map((url: string, photoIdx: number) => (
                     <a key={photoIdx} href={url} target="_blank" rel="noopener noreferrer"
-                      style={{ width: 80, height: 80, borderRadius: 10, overflow: "hidden", border: "1.5px solid #e5e7eb", display: "block", flexShrink: 0 }}>
-                      <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      style={{ position: "relative", width: 80, height: 80, borderRadius: 10, overflow: "hidden", border: "1.5px solid #e5e7eb", display: "block", flexShrink: 0 }}>
+                      <Image src={url} alt="" fill sizes="80px" style={{ objectFit: "cover" }} />
                     </a>
                   ))}
                 </div>
