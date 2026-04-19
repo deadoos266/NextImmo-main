@@ -11,6 +11,7 @@ import { useResponsive } from "../hooks/useResponsive"
 import { displayName } from "../../lib/privacy"
 import AnnulerVisiteDialog from "../components/AnnulerVisiteDialog"
 import { annulerVisite, STATUT_VISITE_STYLE as STATUT_VISITE } from "../../lib/visitesHelpers"
+import { postNotif } from "../../lib/notificationsClient"
 
 const DOSSIER_PREFIX = "[DOSSIER_CARD]"
 const BAIL_PREFIX = "[BAIL_CARD]"
@@ -764,6 +765,15 @@ function MessagesInner() {
     if (data) {
       setMessages(prev => [...prev, data])
       setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: data } : c))
+      // Notif cloche pour le destinataire (n'apparaît pas si lui-même est sur /messages — géré côté UI)
+      void postNotif({
+        userEmail: conv.other,
+        type: "message",
+        title: "Nouveau message",
+        body: nouveau.trim().slice(0, 120),
+        href: "/messages",
+        relatedId: data?.id != null ? String(data.id) : null,
+      })
     }
     setNouveau("")
     setReplyTo(null)

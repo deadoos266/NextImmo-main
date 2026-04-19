@@ -7,6 +7,7 @@ import { useRole } from "../providers"
 import { supabase } from "../../lib/supabase"
 import { useResponsive } from "../hooks/useResponsive"
 import Logo from "./Logo"
+import NotificationBell from "./NotificationBell"
 
 export default function Navbar() {
   const { data: session } = useSession()
@@ -188,6 +189,7 @@ export default function Navbar() {
       {/* Desktop : avatar / auth */}
       {!isSmall && (
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          {session && <NotificationBell />}
           {session ? (
             <div style={{ position: "relative" }}>
               <div onClick={() => setMenuOpen(!menuOpen)}
@@ -261,6 +263,9 @@ export default function Navbar() {
           )}
         </div>
       )}
+
+      {/* Mobile : cloche notifications à droite, avant le burger */}
+      {isSmall && session && <NotificationBell />}
 
       {/* Mobile : burger gauche, circulaire, animation smooth (option A) */}
       {isSmall && (

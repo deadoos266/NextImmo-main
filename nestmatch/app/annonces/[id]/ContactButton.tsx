@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { useRef, useState } from "react"
 import { supabase } from "../../../lib/supabase"
 import { useRole } from "../../providers"
+import { postNotif } from "../../../lib/notificationsClient"
 
 export default function ContactButton({ annonce }: { annonce: any }) {
   const { data: session } = useSession()
@@ -70,6 +71,15 @@ export default function ContactButton({ annonce }: { annonce: any }) {
           type: "candidature",
           created_at: new Date().toISOString(),
         }])
+        // Notif cloche pour le proprio (fire-and-forget, n'affecte pas le flow)
+        void postNotif({
+          userEmail: other,
+          type: "message",
+          title: "Nouvelle candidature",
+          body: `Un locataire est intéressé par « ${annonce.titre} »`,
+          href: "/messages",
+          relatedId: String(annonce.id),
+        })
       }
 
       router.push(`/messages?with=${encodeURIComponent(other)}`)
