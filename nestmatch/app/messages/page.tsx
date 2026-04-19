@@ -454,6 +454,18 @@ function MessagesInner() {
   const peerTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const typingChannelRef = useRef<any>(null)
+  // ID unique du tab/session courant — permet de filtrer nos propres broadcasts
+  // même si on ouvre 2 sessions du même compte (test dev, 2e navigateur).
+  const myTabIdRef = useRef<string>("")
+  if (!myTabIdRef.current && typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    myTabIdRef.current = crypto.randomUUID()
+  } else if (!myTabIdRef.current) {
+    myTabIdRef.current = String(Date.now()) + "-" + Math.random().toString(36).slice(2)
+  }
+  // Index de recherche : clé conv -> concat lowercase des contenus de tous les
+  // messages de la conv (strippés des prefixes systeme). Permet de chercher un
+  // mot dans un message ancien, pas seulement dans le preview du dernier.
+  const [searchIndex, setSearchIndex] = useState<Record<string, string>>({})
   const myEmail = session?.user?.email?.toLowerCase()
 
   useEffect(() => {
@@ -716,6 +728,7 @@ function MessagesInner() {
       .order("created_at", { ascending: false })
 
     const convMap = new Map<string, any>()
+    const searchBuckets = new Map<string, string[]>()
     if (data) {
       data.forEach((m: any) => {
         const other = m.from_email === email ? m.to_email : m.from_email
@@ -726,8 +739,25 @@ function MessagesInner() {
         const key = [email, other].sort().join("|") + `:${annId}`
         if (!convMap.has(key)) convMap.set(key, { key, other, lastMsg: m, unread: 0, annonceId: m.annonce_id || null })
         if (m.to_email === email && !m.lu) convMap.get(key)!.unread++
+        // Index de recherche : on accumule les contenus lowercase, en strippant
+        // les préfixes systèmes ([BAIL_CARD]..., [REPLY:42]...) pour ne matcher
+        // que le texte utilisateur. JSON des cards reste searchable via le nom
+        // de l'annonce déjà filtré ailleurs.
+        const raw = typeof m.contenu === "string" ? m.contenu : ""
+        const plain = raw
+          .replace(/^\[REPLY:\d+\]\n/, "")
+          .replace(/^\[\w+[:\]][^\]]*\]/, "")
+          .toLowerCase()
+        if (plain) {
+          const bucket = searchBuckets.get(key) ?? []
+          bucket.push(plain)
+          searchBuckets.set(key, bucket)
+        }
       })
     }
+    const nextIndex: Record<string, string> = {}
+    for (const [k, arr] of searchBuckets) nextIndex[k] = arr.join(" ")
+    setSearchIndex(nextIndex)
 
     if (withEmail && withEmail !== email) {
       // Arrivée depuis un lien ?with=X sans annonce → conv "libre"
@@ -822,19 +852,19 @@ function MessagesInner() {
    */
   /**
    * Ecoute les events "typing" broadcast sur le channel de la conv active.
-   * On garde le channel dans typingChannelRef pour que signalTyping puisse
-   * l'utiliser (Supabase Realtime exige un channel subscribed pour envoyer).
-   * Channel eject automatiquement quand convActive change / composant demount.
+   * On filtre par tabId (et pas par email) : ca marche meme si l'user ouvre
+   * 2 sessions du meme compte (dev, test). broadcast.self reste false pour
+   * ne pas recevoir un echo immediat de son propre send.
    */
   useEffect(() => {
     if (!convActive || !myEmail) { setPeerTyping(false); return }
-    const me = myEmail.toLowerCase()
+    const myTabId = myTabIdRef.current
     const channel = supabase.channel(`typing:${convActive}`, {
       config: { broadcast: { self: false } },
     })
     channel.on("broadcast", { event: "typing" }, (payload) => {
-      const from = (payload.payload as { from?: string } | undefined)?.from
-      if (!from || from === me) return
+      const tabId = (payload.payload as { tabId?: string } | undefined)?.tabId
+      if (!tabId || tabId === myTabId) return
       setPeerTyping(true)
       if (peerTypingTimeoutRef.current) clearTimeout(peerTypingTimeoutRef.current)
       peerTypingTimeoutRef.current = setTimeout(() => setPeerTyping(false), 3000)
@@ -851,8 +881,8 @@ function MessagesInner() {
 
   /**
    * Broadcast "en train d'écrire" sur le channel de la conv active.
-   * Throttled à 2s pour pas flooder Realtime sur chaque keystroke.
-   * No-op si le channel n'est pas (encore) subscribed.
+   * Throttled à 2s. Envoie tabId (pas email) — les autres tabs du meme
+   * compte recevront et afficheront.
    */
   function signalTyping() {
     if (!convActive || !myEmail) return
@@ -864,7 +894,7 @@ function MessagesInner() {
     channel.send({
       type: "broadcast",
       event: "typing",
-      payload: { from: myEmail.toLowerCase(), at: now },
+      payload: { tabId: myTabIdRef.current, at: now },
     }).catch(() => { /* silent */ })
   }
 
@@ -1216,10 +1246,9 @@ function MessagesInner() {
       // Match classique : email interlocuteur + titre annonce
       if (c.other.toLowerCase().includes(needle)) return true
       if ((annonces[c.annonceId]?.titre || "").toLowerCase().includes(needle)) return true
-      // Match contenu du dernier message preview (strippe les prefixes type [BAIL_CARD])
-      const preview = c.lastMsg?.contenu || ""
-      const plain = preview.replace(/^\[\w+[:\]][^\]]*\]/, "").replace(/^\[REPLY:\d+\]\n/, "")
-      if (plain.toLowerCase().includes(needle)) return true
+      // Match dans TOUS les messages de la conv (pas juste le dernier) via
+      // searchIndex alimenté par loadConversations.
+      if ((searchIndex[c.key] || "").includes(needle)) return true
       return false
     })
     // Tri : conversations non lues en premier, puis par date du dernier message (recent d'abord)
