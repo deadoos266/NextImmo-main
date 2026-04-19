@@ -8,6 +8,7 @@ import { validateImage } from "../../../../lib/fileValidation"
 import { useResponsive } from "../../../hooks/useResponsive"
 import { BRAND } from "../../../../lib/brand"
 import { drawLogoPDF } from "../../../../lib/brandPDF"
+import { postNotif } from "../../../../lib/notificationsClient"
 // jsPDF lazy-loaded pour alleger le bundle initial (voir genererEdlPDF)
 
 // ─── Types & Config ─────────────────────────────────────────────────────────
@@ -267,7 +268,7 @@ export default function EdlPage() {
   async function loadBien() {
     const [{ data }, { data: edl }] = await Promise.all([
       supabase.from("annonces").select("*").eq("id", bienId).single(),
-      supabase.from("etats_des_lieux").select("*").eq("annonce_id", bienId).order("created_at", { ascending: false }).limit(1).single(),
+      supabase.from("etats_des_lieux").select("*").eq("annonce_id", bienId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ])
     if (edl) {
       setEdlExistant(edl)
@@ -439,24 +440,50 @@ export default function EdlPage() {
   async function envoyerAuLocataire() {
     if (!bien || !session?.user?.email || !emailLocataire.trim()) return
     setSending(true)
-    // Save with statut "envoye"
-    await sauvegarderEdl("envoye")
-    // Send message in chat
-    const edlId = edlExistant?.id
-    if (edlId) {
+    try {
+      // Save with statut "envoye"
+      await sauvegarderEdl("envoye")
+      // Send message in chat
+      const edlId = edlExistant?.id
+      if (!edlId) {
+        alert("L'EDL doit être enregistré avant l'envoi. Réessayez dans un instant.")
+        setSending(false)
+        return
+      }
       const cardPayload = JSON.stringify({ edlId, bienTitre: bien.titre, type, dateEdl })
-      await supabase.from("messages").insert([{
-        from_email: (bien.proprietaire_email || session.user.email || "").toLowerCase(),
-        to_email: emailLocataire.trim().toLowerCase(),
+      const fromEmail = (bien.proprietaire_email || session.user.email || "").toLowerCase()
+      const toEmail = emailLocataire.trim().toLowerCase()
+      const { error: msgErr } = await supabase.from("messages").insert([{
+        from_email: fromEmail,
+        to_email: toEmail,
         contenu: "[EDL_CARD]" + cardPayload,
         lu: false,
-        annonce_id: Number(bienId), // rattache le message à la conv du bien
+        annonce_id: Number(bienId),
         created_at: new Date().toISOString(),
       }])
+      if (msgErr) {
+        alert(`Erreur envoi message : ${msgErr.message}`)
+        setSending(false)
+        return
+      }
+      // Notif cloche pour le locataire
+      const typeLabel = type === "entree" ? "d'entrée" : "de sortie"
+      void postNotif({
+        userEmail: toEmail,
+        type: "edl_envoye",
+        title: `État des lieux ${typeLabel} à valider`,
+        body: `Votre propriétaire a partagé l'EDL ${typeLabel} pour « ${bien.titre} ». Consultez-le et validez-le.`,
+        href: `/edl/consulter/${edlId}`,
+        relatedId: String(bienId),
+      })
+      setSent(true)
+      setTimeout(() => setSent(false), 4000)
+    } catch (err) {
+      console.error("[envoyerAuLocataire] error:", err)
+      alert(`Erreur inattendue : ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setSending(false)
     }
-    setSending(false)
-    setSent(true)
-    setTimeout(() => setSent(false), 4000)
   }
 
   async function remettreEnBrouillon() {

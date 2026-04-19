@@ -319,7 +319,7 @@ function StatsInner() {
       supabase.from("annonces").select("*").eq("id", bienId).single(),
       supabase.from("loyers").select("*").eq("annonce_id", bienId).order("mois"),
       supabase.from("carnet_entretien").select("cout").eq("annonce_id", bienId),
-      supabase.from("etats_des_lieux").select("statut").eq("annonce_id", bienId).order("created_at", { ascending: false }).limit(1).single(),
+      supabase.from("etats_des_lieux").select("statut").eq("annonce_id", bienId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ])
     setEdlStatut(edlData?.statut || null)
     if (travaux) setTravauxCout(travaux.reduce((s: number, t: any) => s + (Number(t.cout) || 0), 0))

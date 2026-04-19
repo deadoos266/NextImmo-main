@@ -24,8 +24,8 @@ describe("isNotifType", () => {
 })
 
 describe("NOTIF_TYPES", () => {
-  it("exporte les 10 types attendus", () => {
-    expect(NOTIF_TYPES).toHaveLength(10)
+  it("exporte les 12 types attendus", () => {
+    expect(NOTIF_TYPES).toHaveLength(12)
     expect(NOTIF_TYPES).toContain("message")
     expect(NOTIF_TYPES).toContain("visite_proposee")
     expect(NOTIF_TYPES).toContain("visite_confirmee")
@@ -34,6 +34,8 @@ describe("NOTIF_TYPES", () => {
     expect(NOTIF_TYPES).toContain("location_refusee")
     expect(NOTIF_TYPES).toContain("loyer_retard")
     expect(NOTIF_TYPES).toContain("bail_genere")
+    expect(NOTIF_TYPES).toContain("bail_signe")
+    expect(NOTIF_TYPES).toContain("edl_envoye")
     expect(NOTIF_TYPES).toContain("dossier_consulte")
     expect(NOTIF_TYPES).toContain("candidature_retiree")
   })

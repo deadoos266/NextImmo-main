@@ -298,10 +298,20 @@ function BailCard({
 
   // === Variante PROPRIO (isMine = true) ===
   if (isMine) {
+    const statutLabel = sigLocataire && sigBailleur
+      ? "Bail signé par les 2 parties ✓"
+      : sigLocataire
+        ? "Signé par le locataire — à contresigner"
+        : sigBailleur
+          ? "Signé par vous — en attente du locataire"
+          : isExterne
+            ? "Bail importé — en attente de signature du locataire"
+            : "Bail envoyé — en attente de signature du locataire"
+    const statutColor = sigLocataire && sigBailleur ? "#a7f3d0" : sigLocataire ? "#fcd34d" : "#fde68a"
     return (
       <div style={{ background: "#1a1a1a", border: "1.5px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 320 }}>
-        <p style={{ fontSize: 11, fontWeight: 700, color: "#a7f3d0", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>
-          {isExterne ? "Bail importé & envoyé" : "Bail envoyé"}
+        <p style={{ fontSize: 11, fontWeight: 700, color: statutColor, textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>
+          {statutLabel}
         </p>
         <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0 }}>{data.titreBien || "Bien"} — {data.villeBien}</p>
         <p style={{ fontSize: 11, color: "#9ca3af", margin: "4px 0 8px" }}>Début {dateStr}{loyer > 0 ? ` · ${loyer} €/mois` : ""}</p>
