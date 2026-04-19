@@ -14,14 +14,10 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
+import { sanitizeImage } from "@/lib/imageSanitize"
 
 const MAX_SIZE = 2 * 1024 * 1024 // 2 Mo
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"])
-const ALLOWED_EXT: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-}
 
 // Magic bytes minimaux (3-4 premiers octets) — empêche rename SVG→JPG
 function checkMagic(bytes: Uint8Array, mime: string): boolean {
@@ -70,12 +66,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Contenu du fichier invalide" }, { status: 400 })
   }
 
-  const ext = ALLOWED_EXT[file.type]
+  // Strip EXIF (incl. GPS) + resize 512px + re-encode WebP.
+  // Sans ça, un avatar pris au smartphone leak la géoloc de prise de vue.
+  let sanitized
+  try {
+    sanitized = await sanitizeImage(Buffer.from(bytes), {
+      maxWidth: 512,
+      maxHeight: 512,
+      format: "webp",
+      quality: 90,
+    })
+  } catch (e) {
+    console.error("[avatar sanitize]", e)
+    return NextResponse.json({ error: "Image illisible ou corrompue" }, { status: 400 })
+  }
+
   // On écrase toujours le même path → pas d'accumulation de fichiers orphelins.
-  const path = `${email}/avatar.${ext}`
+  const path = `${email}/avatar.webp`
   const { error: upErr } = await supabaseAdmin.storage
     .from("avatars")
-    .upload(path, bytes, { contentType: file.type, upsert: true })
+    .upload(path, sanitized.bytes, { contentType: sanitized.mime, upsert: true })
   if (upErr) {
     console.error("[avatar upload]", upErr)
     const msg = upErr.message || ""
@@ -95,6 +105,12 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ error: `Upload échoué : ${msg}` }, { status: 500 })
   }
+
+  // Cleanup best-effort des anciennes variantes (pré-migration EXIF : .jpg/.png).
+  // On ignore les erreurs — un fichier absent n'est pas un problème.
+  void supabaseAdmin.storage
+    .from("avatars")
+    .remove([`${email}/avatar.jpg`, `${email}/avatar.png`])
 
   const { data: urlData } = supabaseAdmin.storage.from("avatars").getPublicUrl(path)
   // Ajout d'un bust de cache — sinon le browser sert l'ancienne image.
