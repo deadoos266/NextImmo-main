@@ -625,6 +625,17 @@ function MessagesInner() {
   // "candidats" (visite/dossier en cours). Côté proprio : biens loués vs
   // candidatures. Côté locataire : son logement vs ses candidatures.
   const [messagesTab, setMessagesTab] = useState<"actifs" | "candidats">("actifs")
+  // Filtre par bien (proprio uniquement) — persist localStorage
+  const [bienFilter, setBienFilter] = useState<number | "all">("all")
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem("nm_msg_bien_filter")
+      if (stored && stored !== "all") {
+        const n = Number(stored)
+        if (!Number.isNaN(n)) setBienFilter(n)
+      }
+    } catch { /* ignore */ }
+  }, [])
   // Ajuste automatiquement l'onglet par défaut selon le contexte : si l'user
   // n'a aucun bail actif, on bascule sur "Candidatures" (évite liste vide au load).
   const [tabInitialized, setTabInitialized] = useState(false)
@@ -1482,6 +1493,7 @@ function MessagesInner() {
   const convsFiltrees = conversations
     .filter(c => messagesTab === "actifs" ? isActiveBail(c) : !isActiveBail(c))
     .filter(c => showArchived ? archivedKeys.has(c.key) : !archivedKeys.has(c.key))
+    .filter(c => bienFilter === "all" ? true : c.annonceId === bienFilter)
     .filter(c => {
       if (!recherche) return true
       const needle = recherche.toLowerCase()
@@ -1856,13 +1868,58 @@ function MessagesInner() {
                 )
               })}
             </div>
-            {/* Recherche + toggle archivées */}
+            {/* Recherche + filtre par bien (proprio) + toggle archivées */}
             <div style={{ padding: "10px 16px 12px", borderBottom: "1px solid #f3f4f6", display: "flex", flexDirection: "column", gap: 8 }}>
               <input
                 value={recherche} onChange={e => setRecherche(e.target.value)}
                 placeholder="Rechercher..."
                 style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 13, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
               />
+              {/* Filtre par bien — proprio uniquement, dès 2+ biens dans les convs */}
+              {proprietaireActive && (() => {
+                const biensFromConvs = Array.from(
+                  new Map(
+                    conversations
+                      .filter(c => c.annonceId && annonces[c.annonceId])
+                      .map(c => [c.annonceId, annonces[c.annonceId as number]])
+                  ).entries(),
+                )
+                if (biensFromConvs.length < 2) return null
+                return (
+                  <select
+                    value={String(bienFilter)}
+                    onChange={e => {
+                      const v = e.target.value
+                      const next = v === "all" ? "all" : Number(v)
+                      setBienFilter(next)
+                      try {
+                        window.localStorage.setItem("nm_msg_bien_filter", String(next))
+                      } catch { /* ignore */ }
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px",
+                      border: `1.5px solid ${bienFilter !== "all" ? "#111" : "#e5e7eb"}`,
+                      borderRadius: 10,
+                      fontSize: 13,
+                      fontWeight: bienFilter !== "all" ? 700 : 500,
+                      outline: "none",
+                      fontFamily: "inherit",
+                      boxSizing: "border-box",
+                      background: "white",
+                      color: "#111",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <option value="all">Tous les biens ({biensFromConvs.length})</option>
+                    {biensFromConvs.map(([id, ann]) => (
+                      <option key={id as number} value={id as number}>
+                        {ann.titre}{ann.ville ? ` — ${ann.ville}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                )
+              })()}
               {(countArchived > 0 || showArchived) && (
                 <button
                   type="button"
