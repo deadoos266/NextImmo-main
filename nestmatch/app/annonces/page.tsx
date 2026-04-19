@@ -1,6 +1,7 @@
 "use client"
 import { Suspense, useEffect, useState, useCallback } from "react"
 import dynamic from "next/dynamic"
+import Image from "next/image"
 import { useSearchParams, useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
 import { calculerScore, estExclu, labelScore } from "../../lib/matching"
@@ -82,7 +83,13 @@ function CardPhoto({ annonce, height = 170 }: { annonce: any; height?: number })
     >
       {/* Photo réelle ou gradient */}
       {currentPhoto ? (
-        <img src={currentPhoto} alt={annonce.titre} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        <Image
+          src={currentPhoto}
+          alt={annonce.titre}
+          fill
+          sizes="(max-width: 768px) 100vw, 320px"
+          style={{ objectFit: "cover", display: "block" }}
+        />
       ) : (
         <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(0,0,0,0.25)", fontSize: 12, fontWeight: 500 }}>
           Pas de photo

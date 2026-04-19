@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { createPortal } from "react-dom"
+import Image from "next/image"
 
 export default function PhotoCarousel({ photos }: { photos: string[] }) {
   const [idx, setIdx] = useState(0)
@@ -47,6 +48,9 @@ export default function PhotoCarousel({ photos }: { photos: string[] }) {
       >
         ×
       </button>
+      {/* Lightbox : <img> conservé car max-dimensions CSS incompatibles avec
+          les width/height fixes de next/image. Pas LCP-critical (après clic). */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={photos[idx]}
         alt={`Photo ${idx + 1}`}
@@ -88,10 +92,13 @@ export default function PhotoCarousel({ photos }: { photos: string[] }) {
         onMouseLeave={e => e.currentTarget.querySelectorAll<HTMLButtonElement>(".pnav").forEach(b => (b.style.opacity = "0"))}
         onClick={() => setLightboxOpen(true)}
       >
-        <img
+        <Image
           src={photos[idx]}
           alt={`Photo ${idx + 1}`}
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          fill
+          sizes="(max-width: 1024px) 100vw, 800px"
+          priority={idx === 0}
+          style={{ objectFit: "cover", display: "block" }}
         />
 
         {photos.length > 1 && (

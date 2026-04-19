@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import Image from "next/image"
 import { supabase } from "../../../lib/supabase"
 import { CITY_NAMES, normalizeCityName } from "../../../lib/cityCoords"
 import { BRAND } from "../../../lib/brand"
@@ -273,7 +274,9 @@ export default async function LocationVille({ params }: any) {
                   <Link key={a.id} href={`/annonces/${a.id}`}
                     style={{ background: "white", borderRadius: 18, overflow: "hidden", textDecoration: "none", color: "#111", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
                     {photo ? (
-                      <img src={photo} alt={a.titre} style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }} />
+                      <div style={{ position: "relative", width: "100%", height: 160 }}>
+                        <Image src={photo} alt={a.titre} fill sizes="(max-width: 768px) 100vw, 320px" style={{ objectFit: "cover", display: "block" }} />
+                      </div>
                     ) : (
                       <div style={{ height: 160, background: "#f3f4f6" }} />
                     )}

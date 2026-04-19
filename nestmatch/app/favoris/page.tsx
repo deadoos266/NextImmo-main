@@ -6,6 +6,7 @@ import { getFavoris, toggleFavori } from "../../lib/favoris"
 import { getCityCoords } from "../../lib/cityCoords"
 import { useResponsive } from "../hooks/useResponsive"
 import Link from "next/link"
+import Image from "next/image"
 import EmptyState from "../components/ui/EmptyState"
 
 const MapAnnonces = dynamic(() => import("../components/MapAnnonces"), { ssr: false })
@@ -128,7 +129,7 @@ export default function Favoris() {
                   {/* Photo */}
                   <div style={{ position: "relative", height: 180, background: photo ? "#000" : gradient, overflow: "hidden" }}>
                     {photo
-                      ? <img src={photo} alt={a.titre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ? <Image src={photo} alt={a.titre} fill sizes="(max-width: 768px) 100vw, 280px" style={{ objectFit: "cover" }} />
                       : <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(0,0,0,0.25)", fontSize: 12 }}>Pas de photo</span>
                     }
                     <span style={{ position: "absolute", top: 10, left: 10, background: a.dispo === "Disponible maintenant" ? "#16a34a" : "#ea580c", color: "white", padding: "3px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700 }}>
