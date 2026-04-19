@@ -1210,10 +1210,18 @@ function MessagesInner() {
   const convsFiltrees = conversations
     .filter(c => messagesTab === "actifs" ? isActiveBail(c) : !isActiveBail(c))
     .filter(c => showArchived ? archivedKeys.has(c.key) : !archivedKeys.has(c.key))
-    .filter(c =>
-      !recherche || c.other.toLowerCase().includes(recherche.toLowerCase()) ||
-      (annonces[c.annonceId]?.titre || "").toLowerCase().includes(recherche.toLowerCase())
-    )
+    .filter(c => {
+      if (!recherche) return true
+      const needle = recherche.toLowerCase()
+      // Match classique : email interlocuteur + titre annonce
+      if (c.other.toLowerCase().includes(needle)) return true
+      if ((annonces[c.annonceId]?.titre || "").toLowerCase().includes(needle)) return true
+      // Match contenu du dernier message preview (strippe les prefixes type [BAIL_CARD])
+      const preview = c.lastMsg?.contenu || ""
+      const plain = preview.replace(/^\[\w+[:\]][^\]]*\]/, "").replace(/^\[REPLY:\d+\]\n/, "")
+      if (plain.toLowerCase().includes(needle)) return true
+      return false
+    })
     // Tri : conversations non lues en premier, puis par date du dernier message (recent d'abord)
     .slice()
     .sort((a, b) => {
