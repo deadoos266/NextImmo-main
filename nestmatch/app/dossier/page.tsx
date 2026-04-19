@@ -9,6 +9,8 @@ import Tooltip from "../components/Tooltip"
 import PhoneInput from "../components/PhoneInput"
 import SharePanel from "./SharePanel"
 import AccessLogPanel from "./AccessLogPanel"
+import UndoToast from "../components/ui/UndoToast"
+import { useUndo } from "../components/ui/useUndo"
 
 const SITUATIONS = ["CDI", "CDD", "Intérim", "Indépendant / Freelance", "Fonctionnaire", "Alternance", "Étudiant", "Retraité", "Sans emploi"]
 const TYPES_GARANT = ["Personne physique", "Organisme Visale", "Action Logement", "Caution bancaire", "Aucun garant"]
@@ -116,6 +118,32 @@ export default function Dossier() {
   })
   const [removeTarget, setRemoveTarget] = useState<{ key: DocKey; idx: number } | null>(null)
   const [dragKey, setDragKey] = useState<DocKey | null>(null)
+  // Backup pour restaurer si l'user clique "Annuler" dans le toast undo.
+  const [docsBackup, setDocsBackup] = useState<Record<string, string[]> | null>(null)
+  const [undoLabel, setUndoLabel] = useState<string | null>(null)
+
+  const {
+    pending: pendingDocs,
+    trigger: triggerRemoveDoc,
+    undo: cancelRemoveDoc,
+  } = useUndo<Record<string, string[]>>({
+    onConfirm: async (updated) => {
+      if (!session?.user?.email) return
+      // Timer expiré : on persiste vraiment la suppression en DB.
+      await supabase
+        .from("profils")
+        .upsert({ email: session.user.email.toLowerCase(), dossier_docs: updated }, { onConflict: "email" })
+      setDocsBackup(null)
+      setUndoLabel(null)
+    },
+  })
+
+  function handleUndoRemoveDoc() {
+    cancelRemoveDoc()
+    if (docsBackup) setDocs(docsBackup)
+    setDocsBackup(null)
+    setUndoLabel(null)
+  }
 
   useEffect(() => {
     if (status === "unauthenticated") { router.push("/auth"); return }
@@ -196,10 +224,16 @@ export default function Dossier() {
 
   async function removeDoc(key: DocKey, idx: number) {
     if (!session?.user?.email) return
+    // Snapshot l'état courant pour pouvoir restaurer via undo.
+    // Si un undo est déjà pending, on garde le backup d'origine (l'user peut
+    // enchaîner plusieurs suppressions et annuler la dernière).
+    setDocsBackup(prev => prev ?? docs)
     const updated = { ...docs, [key]: (docs[key] || []).filter((_, i) => i !== idx) }
     if (updated[key].length === 0) delete updated[key]
     setDocs(updated)
-    await supabase.from("profils").upsert({ email: session.user.email, dossier_docs: updated }, { onConflict: "email" })
+    setUndoLabel("Document supprimé")
+    // Commit DB différé 5 sec : laisse le temps d'annuler.
+    triggerRemoveDoc(updated)
   }
 
   async function sauvegarder() {
@@ -507,6 +541,10 @@ export default function Dossier() {
   return (
     <>
       <style>{`@media print { nav, .no-print { display: none !important; } body { background: white !important; } .print-section { page-break-inside: avoid; } }`}</style>
+
+      {pendingDocs !== null && undoLabel && (
+        <UndoToast message={undoLabel} onUndo={handleUndoRemoveDoc} />
+      )}
 
       <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
         <div style={{ maxWidth: 960, margin: "0 auto", padding: isMobile ? "24px 16px" : "32px 48px" }}>

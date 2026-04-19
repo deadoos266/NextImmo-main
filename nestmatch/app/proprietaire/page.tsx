@@ -12,6 +12,8 @@ import { annulerVisite, STATUT_VISITE_STYLE as STATUT_V } from "../../lib/visite
 import { computeScreening } from "../../lib/screening"
 import { joursRetardLoyer, labelRetard } from "../../lib/loyerHelpers"
 import EmptyState from "../components/ui/EmptyState"
+import UndoToast from "../components/ui/UndoToast"
+import { useUndo } from "../components/ui/useUndo"
 
 const ONGLETS = ["Tableau de bord", "Mes biens", "Mes locataires", "Performance", "Documents", "Candidatures", "Loyers", "Visites"] as const
 type Onglet = typeof ONGLETS[number]
@@ -253,6 +255,37 @@ export default function Proprietaire() {
   const [dossierOuvert, setDossierOuvert] = useState<string | null>(null)
   const [dossiers, setDossiers] = useState<Record<string, any>>({})
   const [clicsParBien, setClicsParBien] = useState<Record<number, number>>({})
+  // Corbeille locale : garde le bien supprimé optimistiquement pour pouvoir
+  // le restaurer si l'user clique "Annuler" dans les 5 sec.
+  const [trashBien, setTrashBien] = useState<any | null>(null)
+
+  const {
+    pending: pendingSuppression,
+    trigger: triggerSuppression,
+    undo: cancelSuppression,
+  } = useUndo<number>({
+    onConfirm: async (id) => {
+      // Timer expiré : DELETE réel (cascade visites/messages/carnet/loyers/EDL).
+      const res = await fetch(`/api/annonces/${id}`, { method: "DELETE" })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.success) {
+        alert(`Suppression échouée : ${json.error || res.statusText}`)
+        // Restore depuis le trash puisque le DELETE a foiré
+        setTrashBien(prev => {
+          if (prev && prev.id === id) setBiens(b => [prev, ...b])
+          return null
+        })
+        return
+      }
+      setTrashBien(null)
+    },
+  })
+
+  function handleUndoSuppression() {
+    cancelSuppression()
+    if (trashBien) setBiens(prev => [trashBien, ...prev])
+    setTrashBien(null)
+  }
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth")
@@ -327,15 +360,15 @@ export default function Proprietaire() {
     setBiens(biens.map(b => b.id === id ? { ...b, statut } : b))
   }
 
-  async function supprimerBien(id: number) {
-    const res = await fetch(`/api/annonces/${id}`, { method: "DELETE" })
-    const json = await res.json().catch(() => ({}))
-    if (!res.ok || !json.success) {
-      alert(`Suppression échouée : ${json.error || res.statusText}`)
-      return
-    }
-    setBiens(biens.filter(b => b.id !== id))
+  function supprimerBien(id: number) {
+    // Optimistic : retire de la UI immédiatement, garde le bien au chaud.
+    // Le DELETE API réel est différé 5 sec via useUndo — l'user peut annuler.
+    const bien = biens.find(b => b.id === id)
+    if (!bien) return
+    setBiens(prev => prev.filter(b => b.id !== id))
+    setTrashBien(bien)
     setSupprimerId(null)
+    triggerSuppression(id)
   }
 
   async function confirmerLoyer(id: number) {
@@ -393,6 +426,13 @@ export default function Proprietaire() {
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
+      {pendingSuppression !== null && (
+        <UndoToast
+          message="Annonce supprimée — visites, messages et documents liés seront perdus"
+          onUndo={handleUndoSuppression}
+        />
+      )}
+
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: isMobile ? "24px 16px" : "32px 48px" }}>
 
         {/* Header */}
