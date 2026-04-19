@@ -857,12 +857,17 @@ export async function genererBailPDF(data: BailData): Promise<void> {
       doc.setTextColor(60, 60, 60)
       const mention = sig.mention || 'Lu et approuvé, bon pour accord'
       doc.text(mention, xCenter, y, { align: "center" })
-      // Image signature juste en dessous
+      // Image signature 5mm en dessous du texte
+      const imgY = y + 5
       try {
-        doc.addImage(sig.png, "PNG", xImg, y + 2, sigWidth, sigHeight)
+        doc.addImage(sig.png, "PNG", xImg, imgY, sigWidth, sigHeight)
       } catch (err) {
-        console.error("[bailPDF] addImage error:", err)
-        doc.line(xImg, y + sigHeight + 2, xImg + sigWidth, y + sigHeight + 2)
+        console.error("[bailPDF] addImage error for", sig.role, ":", err)
+        doc.setDrawColor(200, 0, 0)
+        doc.line(xImg, imgY + sigHeight, xImg + sigWidth, imgY + sigHeight)
+        doc.setFontSize(6)
+        doc.setTextColor(200, 0, 0)
+        doc.text("(image signature indisponible)", xCenter, imgY + sigHeight / 2, { align: "center" })
       }
       // Marqueur "Signé électroniquement le X"
       doc.setFontSize(7)
@@ -871,7 +876,7 @@ export async function genererBailPDF(data: BailData): Promise<void> {
       doc.text(
         `✓ Signé électroniquement le ${new Date(sig.signeAt).toLocaleDateString("fr-FR")}`,
         xCenter,
-        y + sigHeight + 6,
+        imgY + sigHeight + 4,
         { align: "center" },
       )
       doc.setTextColor(0, 0, 0)
@@ -883,14 +888,21 @@ export async function genererBailPDF(data: BailData): Promise<void> {
       doc.text('(Mention manuscrite "Lu et approuvé" + signature)', xCenter, y, { align: "center" })
       doc.setTextColor(0, 0, 0)
       doc.setDrawColor(180, 180, 180)
-      doc.line(xImg, y + sigHeight + 2, xImg + sigWidth, y + sigHeight + 2)
+      doc.line(xImg, y + sigHeight + 5, xImg + sigWidth, y + sigHeight + 5)
     }
   }
+
+  console.log("[bailPDF] signatures dans le payload :", {
+    count: data.signatures?.length ?? 0,
+    roles: data.signatures?.map(s => s.role) ?? [],
+    bailleurPngBytes: sigBailleur?.png?.length,
+    locatairePngBytes: sigLocataire?.png?.length,
+  })
 
   renderSignature(sigBailleur, 50)
   renderSignature(sigLocataire, 155)
 
-  y = y + sigHeight + 12
+  y = y + sigHeight + 16
 
   // Garant signature si actif
   if (data.garantActif && data.nomGarant) {

@@ -442,10 +442,17 @@ export default function BailPage() {
 
       // État existing bail
       if (data.bail_genere_at) setExistingBailAt(data.bail_genere_at)
+      console.log("[loadBien] signatures fetch:", {
+        error: signaturesRes.error,
+        count: signaturesRes.data?.length ?? 0,
+        roles: signaturesRes.data?.map(s => s.signataire_role) ?? [],
+      })
       if (signaturesRes.data) {
         const roles = new Set(signaturesRes.data.map(s => s.signataire_role))
         setLocataireSigne(roles.has("locataire"))
         setBailleurSigne(roles.has("bailleur"))
+      } else if (signaturesRes.error) {
+        console.error("[loadBien] bail_signatures error:", signaturesRes.error)
       }
 
       setBien(data)
@@ -862,14 +869,15 @@ export default function BailPage() {
               type="button"
               onClick={async () => {
                 try {
-                  // Récupérer le dernier payload [BAIL_CARD] + signatures
-                  const [{ data: msg }, { data: sigs }] = await Promise.all([
+                  // Récupérer le dernier payload [BAIL_CARD] + signatures.
+                  // Order par id (PRIMARY KEY toujours présent) au lieu de created_at.
+                  const [msgRes, sigsRes] = await Promise.all([
                     supabase
                       .from("messages")
                       .select("contenu")
                       .eq("annonce_id", bien.id)
                       .ilike("contenu", "[BAIL_CARD]%")
-                      .order("created_at", { ascending: false })
+                      .order("id", { ascending: false })
                       .limit(1)
                       .maybeSingle(),
                     supabase
@@ -877,6 +885,13 @@ export default function BailPage() {
                       .select("signataire_role, signataire_nom, signature_png, signe_at, mention, ip_address")
                       .eq("annonce_id", bien.id),
                   ])
+                  console.log("[bail download] msg:", msgRes, "sigs:", sigsRes)
+                  if (msgRes.error) {
+                    alert(`Erreur DB : ${msgRes.error.message} (code ${msgRes.error.code || "?"})`)
+                    return
+                  }
+                  const msg = msgRes.data
+                  const sigs = sigsRes.data
                   if (!msg?.contenu) {
                     alert("Aucun bail envoyé récent trouvé.")
                     return
