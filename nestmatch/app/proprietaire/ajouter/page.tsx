@@ -147,73 +147,100 @@ export default function AjouterBien() {
   }
 
   async function publier() {
-    if (!form.titre || !form.ville || !form.prix) { alert("Remplis au minimum le titre, la ville et le loyer."); return }
-    if (form.titre.length > 120) { alert("Le titre doit faire 120 caractères maximum."); return }
-    if ((form.description || "").length > 10000) { alert("La description doit faire 10 000 caractères maximum."); return }
-    const prix = parseInt(form.prix || "0", 10) || 0
-    if (prix <= 0 || prix > 50000) { alert("Le loyer doit être compris entre 1 et 50 000 €."); return }
-    const surface = parseInt(form.surface || "0", 10) || 0
-    if (surface < 0 || surface > 1000) { alert("La surface doit être comprise entre 0 et 1000 m²."); return }
-    setSaving(true)
+    try {
+      if (!form.titre || !form.ville || !form.prix) {
+        alert("Remplis au minimum le titre, la ville et le loyer.")
+        return
+      }
+      if (form.titre.length > 120) {
+        alert("Le titre doit faire 120 caractères maximum.")
+        return
+      }
+      if ((form.description || "").length > 10000) {
+        alert("La description doit faire 10 000 caractères maximum.")
+        return
+      }
+      const prix = parseInt(form.prix || "0", 10) || 0
+      if (prix <= 0 || prix > 50000) {
+        alert("Le loyer doit être compris entre 1 et 50 000 €.")
+        return
+      }
+      const surface = parseInt(form.surface || "0", 10) || 0
+      if (surface < 0 || surface > 1000) {
+        alert("La surface doit être comprise entre 0 et 1000 m².")
+        return
+      }
+      setSaving(true)
+      console.log("[publier] starting", { titre: form.titre, ville: form.ville, prix: form.prix })
 
-    const data: any = {
-      titre: form.titre, ville: form.ville, adresse: form.adresse,
-      prix: toInt(form.prix), charges: toInt(form.charges), caution: toInt(form.caution),
-      surface: toInt(form.surface), pieces: toInt(form.pieces), chambres: toInt(form.chambres),
-      etage: form.etage, dpe: form.dpe, dispo: form.dispo, statut: form.statut,
-      description: form.description, type_bien: form.type_bien,
-      proprietaire: session?.user?.name, proprietaire_email: session?.user?.email,
-      membre: "Membre depuis " + new Date().getFullYear(), verifie: true,
-      photos: photos.length > 0 ? photos : null,
-      lat: form.lat, lng: form.lng,
-      ...toggles,
-    }
+      const data: Record<string, unknown> = {
+        titre: form.titre, ville: form.ville, adresse: form.adresse,
+        prix: toInt(form.prix), charges: toInt(form.charges), caution: toInt(form.caution),
+        surface: toInt(form.surface), pieces: toInt(form.pieces), chambres: toInt(form.chambres),
+        etage: form.etage, dpe: form.dpe, dispo: form.dispo, statut: form.statut,
+        description: form.description, type_bien: form.type_bien,
+        proprietaire: session?.user?.name, proprietaire_email: session?.user?.email,
+        membre: "Membre depuis " + new Date().getFullYear(), verifie: true,
+        photos: photos.length > 0 ? photos : null,
+        lat: form.lat, lng: form.lng,
+        ...toggles,
+      }
 
-    if (dejaLoue) {
-      data.locataire_email = form.locataire_email ? form.locataire_email.trim().toLowerCase() : null
-      data.date_debut_bail = form.date_debut_bail || null
-      data.mensualite_credit = toInt(form.mensualite_credit)
-      data.valeur_bien = toInt(form.valeur_bien)
-      data.duree_credit = toInt(form.duree_credit)
-      data.taxe_fonciere = toInt(form.taxe_fonciere)
-      data.assurance_pno = toInt(form.assurance_pno)
-      data.charges_copro_annuelles = toInt(form.charges_copro_annuelles)
-    }
+      if (dejaLoue) {
+        data.locataire_email = form.locataire_email ? form.locataire_email.trim().toLowerCase() : null
+        data.date_debut_bail = form.date_debut_bail || null
+        data.mensualite_credit = toInt(form.mensualite_credit)
+        data.valeur_bien = toInt(form.valeur_bien)
+        data.duree_credit = toInt(form.duree_credit)
+        data.taxe_fonciere = toInt(form.taxe_fonciere)
+        data.assurance_pno = toInt(form.assurance_pno)
+        data.charges_copro_annuelles = toInt(form.charges_copro_annuelles)
+      }
 
-    Object.keys(data).forEach(k => { if (data[k] === null || data[k] === "") delete data[k] })
+      Object.keys(data).forEach(k => { if (data[k] === null || data[k] === "") delete data[k] })
 
-    // Tentative avec lat/lng. Si colonnes absentes en DB (migration pas lancée),
-    // on retire et on retente pour ne pas bloquer la publication.
-    const { data: inserted, error: errIns } = await supabase.from("annonces").insert([data]).select("id")
-    let error = errIns
-    let insertedRows = inserted
-    if (error && /lat|lng|column.*does not exist/i.test(error.message || "")) {
-      const dataNoCoords = { ...data }
-      delete dataNoCoords.lat
-      delete dataNoCoords.lng
-      const retry = await supabase.from("annonces").insert([dataNoCoords]).select("id")
-      error = retry.error
-      insertedRows = retry.data
+      console.log("[publier] sending to supabase", data)
+
+      // Tentative avec lat/lng. Si colonnes absentes en DB (migration pas lancée),
+      // on retire et on retente pour ne pas bloquer la publication.
+      const { data: inserted, error: errIns } = await supabase.from("annonces").insert([data]).select("id")
+      let error = errIns
+      let insertedRows = inserted
+      console.log("[publier] supabase response", { error, insertedRows })
+      if (error && /lat|lng|column.*does not exist/i.test(error.message || "")) {
+        const dataNoCoords = { ...data }
+        delete dataNoCoords.lat
+        delete dataNoCoords.lng
+        const retry = await supabase.from("annonces").insert([dataNoCoords]).select("id")
+        error = retry.error
+        insertedRows = retry.data
+        console.log("[publier] retry response", { error, insertedRows })
+      }
+      if (!error && insertedRows && insertedRows.length > 0) {
+        // Marquer le compte comme propriétaire actif
+        await supabase.from("profils").upsert({
+          email: session!.user!.email!,
+          is_proprietaire: true,
+        }, { onConflict: "email" })
+        try { localStorage.removeItem(draftStorageKey(session!.user!.email!)) } catch { /* noop */ }
+        router.push("/proprietaire")
+      } else if (error) {
+        console.error("[publier] insert error:", error)
+        alert(`La publication a échoué : ${error.message || "erreur inconnue"}. Code : ${error.code || "?"}`)
+      } else {
+        alert(
+          "La publication a échoué silencieusement : aucune ligne créée. " +
+            "Contactez le support si le problème persiste.",
+        )
+      }
+    } catch (err) {
+      // Exception inattendue (réseau, CSP, JSON, etc.) — on la montre
+      console.error("[publier] exception:", err)
+      const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+      alert(`Erreur inattendue lors de la publication :\n${msg}`)
+    } finally {
+      setSaving(false)
     }
-    if (!error && insertedRows && insertedRows.length > 0) {
-      // Marquer le compte comme propriétaire actif
-      await supabase.from("profils").upsert({
-        email: session!.user!.email!,
-        is_proprietaire: true,
-      }, { onConflict: "email" })
-      try { localStorage.removeItem(draftStorageKey(session!.user!.email!)) } catch { /* noop */ }
-      router.push("/proprietaire")
-    } else if (error) {
-      console.error("[publier] insert error:", error)
-      alert(`La publication a échoué : ${error.message || "erreur inconnue"}. Code : ${error.code || "?"}`)
-    } else {
-      // Cas rare : pas d'erreur mais 0 row insérée (RLS ?). On remonte l'info.
-      alert(
-        "La publication a échoué silencieusement : aucune ligne créée. " +
-          "Contactez le support si le problème persiste.",
-      )
-    }
-    setSaving(false)
   }
 
   // Checklist de complétude (inspirée SeLoger) — aide le proprio à voir ce qui manque

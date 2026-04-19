@@ -427,14 +427,13 @@ export default function Proprietaire() {
   }, [session, status])
 
   async function loadData() {
-    // Casse : .in() matche l'email en 2 variantes (origine OAuth + lowercase).
-    // Si le résultat est vide mais qu'on soupçonne un souci de casse/whitespace
-    // (ex: emails legacy inconsistents), fallback en fetch-all + filtre client.
     const eo = session!.user!.email!
     const el = eo.toLowerCase()
     const elTrim = el.trim()
     const variants = eo === el ? [eo] : [eo, el]
     const norm = (s: string | null | undefined) => (s || "").toLowerCase().trim()
+
+    console.log("[loadData] session email =", JSON.stringify(eo), "variants =", variants)
 
     const [annRes, msgRes, loyRes, visRes] = await Promise.all([
       supabase.from("annonces").select("*").in("proprietaire_email", variants).order("created_at", { ascending: false }),
@@ -442,12 +441,16 @@ export default function Proprietaire() {
       supabase.from("loyers").select("*").in("proprietaire_email", variants).order("mois", { ascending: false }),
       supabase.from("visites").select("*").in("proprietaire_email", variants).order("date_visite", { ascending: true }),
     ])
+    console.log("[loadData] .in() annonces count =", annRes.data?.length ?? 0, "error =", annRes.error)
     let b = annRes.data || []
-    // Fallback défensif : si .in() n'a rien trouvé, on tente un fetch all + filtre
-    // client (utile si un bien a été inséré avec trailing space ou casse exotique).
     if (b.length === 0) {
       const { data: all } = await supabase.from("annonces").select("*").order("created_at", { ascending: false }).limit(500)
+      console.log("[loadData] fallback fetch-all annonces count =", all?.length ?? 0)
+      if (all && all.length > 0) {
+        console.log("[loadData] sample proprietaire_emails =", all.slice(0, 5).map(a => JSON.stringify((a as { proprietaire_email?: string }).proprietaire_email)))
+      }
       b = (all || []).filter(a => norm((a as { proprietaire_email?: string | null }).proprietaire_email) === elTrim)
+      console.log("[loadData] after client filter count =", b.length, "elTrim =", JSON.stringify(elTrim))
     }
     const m = msgRes.data
     const l = loyRes.data
