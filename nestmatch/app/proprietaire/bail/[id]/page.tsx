@@ -15,6 +15,7 @@ import {
   estZoneTendue,
 } from "../../../../lib/bailDefaults"
 import Modal from "../../../components/ui/Modal"
+import UploadBailModal from "../../../components/UploadBailModal"
 
 // ─── Types form ─────────────────────────────────────────────────────────────
 // Le state du form stocke TOUT en string pour l'input contrôlé (sauf bool/arrays).
@@ -383,6 +384,8 @@ export default function BailPage() {
   const [modalEquipements, setModalEquipements] = useState(false)
   const [modalClauses, setModalClauses] = useState(false)
   const [modalAide, setModalAide] = useState<string | null>(null)
+  const [modalUpload, setModalUpload] = useState(false)
+  const [uploadSuccess, setUploadSuccess] = useState(false)
 
   const storageKey = bienId ? `${STORAGE_KEY_PREFIX}${bienId}` : ""
 
@@ -618,7 +621,10 @@ export default function BailPage() {
       if (locataireEmail) {
         const patch: Record<string, unknown> = {
           locataire_email: locataireEmail,
-          statut: "loué",
+          // Statut intermédiaire : bail envoyé mais pas encore signé par le locataire.
+          // Le statut passera à "loué" automatiquement quand le locataire signera
+          // (via /api/bail/signer).
+          statut: "bail_envoye",
           bail_genere_at: new Date().toISOString(),
         }
         if (form.dateDebut) patch.date_debut_bail = form.dateDebut
@@ -761,6 +767,66 @@ export default function BailPage() {
             {bien.titre} — {bien.ville}
           </p>
         </div>
+
+        {/* Import bail externe — raccourci en haut */}
+        <div
+          style={{
+            background: "#eff6ff",
+            border: "1.5px solid #bfdbfe",
+            borderRadius: 14,
+            padding: "14px 18px",
+            marginBottom: 20,
+            display: "flex",
+            gap: 12,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <p style={{ fontWeight: 700, color: "#1e40af", margin: 0, fontSize: 14 }}>
+              Vous avez déjà votre bail en PDF ?
+            </p>
+            <p style={{ fontSize: 12, color: "#1e40af", margin: "2px 0 0", opacity: 0.85 }}>
+              Avocat, autre application, modèle téléchargé… Importez votre document et passez directement à la signature.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setModalUpload(true)}
+            disabled={!(bien.locataire_email || "").trim()}
+            style={{
+              background: (bien.locataire_email || "").trim() ? "#1d4ed8" : "#e5e7eb",
+              color: (bien.locataire_email || "").trim() ? "white" : "#9ca3af",
+              border: "none",
+              borderRadius: 999,
+              padding: "9px 18px",
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: (bien.locataire_email || "").trim() ? "pointer" : "not-allowed",
+              fontFamily: "inherit",
+              flexShrink: 0,
+            }}
+          >
+            Importer mon bail →
+          </button>
+        </div>
+
+        {uploadSuccess && (
+          <div
+            style={{
+              background: "#dcfce7",
+              border: "1.5px solid #86efac",
+              borderRadius: 14,
+              padding: "14px 18px",
+              marginBottom: 20,
+              fontSize: 13,
+              color: "#15803d",
+              fontWeight: 600,
+            }}
+          >
+            ✓ Bail envoyé au locataire — il va recevoir une carte dans sa messagerie pour signer.
+          </div>
+        )}
 
         {/* Brouillon dispo */}
         {brouillonDispo && !brouillonRestaure && (
@@ -2007,6 +2073,81 @@ export default function BailPage() {
           l&apos;observatoire local des loyers (OLL) ou la préfecture.
         </p>
       </Modal>
+
+      {/* Upload bail externe */}
+      {bien && (
+        <UploadBailModal
+          open={modalUpload}
+          onClose={() => setModalUpload(false)}
+          onUploaded={async ({ fichierUrl, dateDebut, duree, type }) => {
+            const locataireEmail = (bien.locataire_email || "").toLowerCase().trim()
+            const fromEmail = (bien.proprietaire_email || session?.user?.email || "").toLowerCase()
+            if (!locataireEmail || !fromEmail) return
+            // Payload minimal pour une BailCard "bail externe"
+            const payload = {
+              type,
+              titreBien: bien.titre || "",
+              villeBien: bien.ville || "",
+              dateDebut,
+              duree,
+              loyerHC: Number(bien.prix) || 0,
+              charges: Number(bien.charges) || 0,
+              caution: Number(bien.caution) || Number(bien.prix) || 0,
+              surface: Number(bien.surface) || 0,
+              pieces: Number(bien.pieces) || 0,
+              etage: bien.etage || "",
+              description: bien.description || "",
+              meuble: type === "meuble",
+              parking: !!bien.parking,
+              cave: !!bien.cave,
+              nomBailleur: form.nomBailleur || session?.user?.name || "",
+              adresseBailleur: form.adresseBailleur || "",
+              emailBailleur: fromEmail,
+              nomLocataire: form.nomLocataire || "",
+              emailLocataire: locataireEmail,
+              modeReglement: form.modeReglement,
+              dateReglement: form.dateReglement,
+              dpe: bien.dpe || "",
+              // Marqueur : ce payload représente un bail externe
+              fichierUrl,
+            }
+            await supabase.from("annonces").update({
+              locataire_email: locataireEmail,
+              statut: "bail_envoye",
+              bail_genere_at: new Date().toISOString(),
+              date_debut_bail: dateDebut,
+            }).eq("id", bien.id)
+
+            await supabase.from("messages").insert([{
+              from_email: fromEmail,
+              to_email: locataireEmail,
+              contenu: `[BAIL_CARD]${JSON.stringify(payload)}`,
+              lu: false,
+              annonce_id: bien.id,
+              created_at: new Date().toISOString(),
+            }])
+
+            void postNotif({
+              userEmail: locataireEmail,
+              type: "bail_genere",
+              title: "Bail à signer",
+              body: `Votre bailleur a importé le bail pour « ${bien.titre} ». Vous pouvez le télécharger et le signer.`,
+              href: "/mon-logement",
+              relatedId: String(bien.id),
+            })
+
+            setUploadSuccess(true)
+            // Scroll top pour voir le message succès
+            if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" })
+          }}
+          proprioEmail={bien.proprietaire_email || session?.user?.email || ""}
+          locataireEmail={(bien.locataire_email || "").toLowerCase()}
+          annonceId={bien.id}
+          titreBien={bien.titre || ""}
+          villeBien={bien.ville || ""}
+          defaultType={form.type}
+        />
+      )}
     </main>
   )
 }

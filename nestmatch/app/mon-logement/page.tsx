@@ -10,6 +10,8 @@ import { BRAND } from "../../lib/brand"
 import { drawLogoPDF } from "../../lib/brandPDF"
 import { computeBailTimeline } from "../../lib/bailTimeline"
 import BailTimeline from "../components/ui/BailTimeline"
+import BailSignatureModal from "../components/BailSignatureModal"
+import type { BailData, BailSignatureEntry } from "../../lib/bailPDF"
 
 /**
  * Mon logement actuel — vue dédiée locataire après bail signé.
@@ -49,9 +51,15 @@ export default function MonLogement() {
   const [bien, setBien] = useState<Bien | null>(null)
   const [loading, setLoading] = useState(true)
   const [exportingPdf, setExportingPdf] = useState(false)
+  const [downloadingBail, setDownloadingBail] = useState(false)
   const [visitesAVenir, setVisitesAVenir] = useState<number>(0)
   const [edls, setEdls] = useState<Edl[]>([])
   const [loyers, setLoyers] = useState<Loyer[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [bailPayload, setBailPayload] = useState<any | null>(null)
+  const [bailFichierUrl, setBailFichierUrl] = useState<string | null>(null)
+  const [signatures, setSignatures] = useState<BailSignatureEntry[]>([])
+  const [signModalOpen, setSignModalOpen] = useState(false)
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -76,8 +84,8 @@ export default function MonLogement() {
       }
       setBien(b as Bien)
 
-      // Docs du logement
-      const [vRes, edlRes, loyRes] = await Promise.all([
+      // Docs du logement + bail payload + signatures
+      const [vRes, edlRes, loyRes, bailMsgRes, sigRes] = await Promise.all([
         supabase.from("visites").select("id", { count: "exact", head: true })
           .eq("annonce_id", b.id).ilike("locataire_email", email).eq("statut", "confirmée"),
         supabase.from("etats_des_lieux")
@@ -89,14 +97,94 @@ export default function MonLogement() {
           .eq("annonce_id", b.id)
           .order("mois", { ascending: false })
           .limit(24),
+        // Dernier [BAIL_CARD] pour ce bien — source du payload téléchargeable
+        supabase.from("messages")
+          .select("contenu")
+          .eq("annonce_id", b.id)
+          .ilike("contenu", "[BAIL_CARD]%")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        // Signatures pour affichage du statut
+        supabase.from("bail_signatures")
+          .select("signataire_role, signataire_nom, signature_png, signe_at, mention, ip_address")
+          .eq("annonce_id", b.id),
       ])
       setVisitesAVenir(vRes.count ?? 0)
       setEdls(edlRes.data || [])
       setLoyers(loyRes.data || [])
+
+      // Parse bail payload
+      if (bailMsgRes.data?.contenu) {
+        try {
+          const payload = JSON.parse(
+            (bailMsgRes.data.contenu as string).slice("[BAIL_CARD]".length),
+          )
+          setBailPayload(payload)
+          if (payload.fichierUrl) setBailFichierUrl(payload.fichierUrl)
+        } catch {
+          /* ignore */
+        }
+      }
+
+      // Signatures
+      if (sigRes.data) {
+        setSignatures(
+          sigRes.data.map(s => ({
+            role: s.signataire_role as "bailleur" | "locataire" | "garant",
+            nom: s.signataire_nom,
+            png: s.signature_png,
+            signeAt: s.signe_at,
+            mention: s.mention,
+            ipAddress: s.ip_address,
+          })),
+        )
+      }
+
       setLoading(false)
     }
     load()
   }, [session, status, router])
+
+  async function telechargerBail() {
+    if (!bailPayload || downloadingBail) return
+    setDownloadingBail(true)
+    try {
+      // Si bail externe (URL fichier) → téléchargement direct
+      if (bailFichierUrl) {
+        window.open(bailFichierUrl, "_blank")
+        return
+      }
+      const { genererBailPDF } = await import("../../lib/bailPDF")
+      await genererBailPDF({ ...bailPayload, signatures } as BailData)
+    } finally {
+      setDownloadingBail(false)
+    }
+  }
+
+  async function onSigned() {
+    // Recharge les signatures après signing
+    if (!bien) return
+    const { data: sigRes } = await supabase
+      .from("bail_signatures")
+      .select("signataire_role, signataire_nom, signature_png, signe_at, mention, ip_address")
+      .eq("annonce_id", bien.id)
+    if (sigRes) {
+      setSignatures(
+        sigRes.map(s => ({
+          role: s.signataire_role as "bailleur" | "locataire" | "garant",
+          nom: s.signataire_nom,
+          png: s.signature_png,
+          signeAt: s.signe_at,
+          mention: s.mention,
+          ipAddress: s.ip_address,
+        })),
+      )
+    }
+    // Statut mis à jour (bail_envoye → loué) — refetch le bien
+    const { data: b } = await supabase.from("annonces").select("*").eq("id", bien.id).single()
+    if (b) setBien(b as Bien)
+  }
 
   async function exportHistoriqueLoyersPDF() {
     if (!bien || loyers.length === 0) return
@@ -403,18 +491,91 @@ export default function MonLogement() {
         })()}
 
         {/* Bail actif */}
-        {bien.date_debut_bail && (
-          <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 20 : 24, marginBottom: 16 }}>
-            <h2 style={{ fontSize: 17, fontWeight: 800, margin: "0 0 14px", letterSpacing: "-0.3px" }}>Mon bail</h2>
-            <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 8px" }}>
-              Bail actif depuis le {new Date(bien.date_debut_bail).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}.
-            </p>
-            <p style={{ fontSize: 12, color: "#9ca3af", margin: 0 }}>
-              Le PDF du bail a été téléchargé par le propriétaire lors de la génération. Demandez-lui une copie si besoin via la messagerie.
-            </p>
-          </div>
-        )}
+        {bailPayload && (() => {
+          const sigLocataire = signatures.find(s => s.role === "locataire")
+          const sigBailleur = signatures.find(s => s.role === "bailleur")
+          const dejaSigne = !!sigLocataire
+          const doubleSigne = !!sigLocataire && !!sigBailleur
+          return (
+            <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 20 : 24, marginBottom: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 10, flexWrap: "wrap" }}>
+                <h2 style={{ fontSize: 17, fontWeight: 800, margin: 0, letterSpacing: "-0.3px" }}>Mon bail</h2>
+                {doubleSigne ? (
+                  <span style={{ background: "#dcfce7", color: "#15803d", padding: "4px 12px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
+                    Signé par les deux parties ✓
+                  </span>
+                ) : dejaSigne ? (
+                  <span style={{ background: "#dcfce7", color: "#15803d", padding: "4px 12px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
+                    Signé par vous — en attente du propriétaire
+                  </span>
+                ) : (
+                  <span style={{ background: "#fff7ed", color: "#ea580c", padding: "4px 12px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
+                    Action requise : signer
+                  </span>
+                )}
+              </div>
+              {bien.date_debut_bail && (
+                <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 12px" }}>
+                  Bail du {new Date(bien.date_debut_bail).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}{bailFichierUrl ? " — document fourni par votre propriétaire" : " — généré via NestMatch"}.
+                </p>
+              )}
+
+              {/* Résumé signatures */}
+              {signatures.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
+                  {sigLocataire && (
+                    <div style={{ fontSize: 12, color: "#15803d", fontWeight: 600 }}>
+                      ✓ Vous avez signé le {new Date(sigLocataire.signeAt).toLocaleDateString("fr-FR")}
+                    </div>
+                  )}
+                  {sigBailleur && (
+                    <div style={{ fontSize: 12, color: "#15803d", fontWeight: 600 }}>
+                      ✓ Votre propriétaire a signé le {new Date(sigBailleur.signeAt).toLocaleDateString("fr-FR")}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {!dejaSigne && bien && (
+                  <button
+                    onClick={() => setSignModalOpen(true)}
+                    style={{ background: "#15803d", color: "white", border: "none", borderRadius: 999, padding: "10px 22px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
+                  >
+                    ✍ Signer le bail
+                  </button>
+                )}
+                <button
+                  onClick={telechargerBail}
+                  disabled={downloadingBail}
+                  style={{ background: "white", border: "1.5px solid #111", color: "#111", borderRadius: 999, padding: "10px 22px", fontWeight: 700, fontSize: 14, cursor: downloadingBail ? "wait" : "pointer", fontFamily: "inherit" }}
+                >
+                  {downloadingBail ? "Téléchargement…" : "📄 Télécharger le bail (PDF)"}
+                </button>
+              </div>
+
+              {doubleSigne && edls.length === 0 && (
+                <div style={{ marginTop: 16, padding: "12px 14px", background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 12, fontSize: 13, color: "#1e40af", lineHeight: 1.6 }}>
+                  📋 <strong>Prochaine étape :</strong> état des lieux d&apos;entrée avec votre propriétaire.
+                  Vous le retrouverez ici dès qu&apos;il sera créé.
+                </div>
+              )}
+            </div>
+          )
+        })()}
       </div>
+
+      {signModalOpen && bailPayload && bien && (
+        <BailSignatureModal
+          open={signModalOpen}
+          onClose={() => setSignModalOpen(false)}
+          onSigned={() => { setSignModalOpen(false); void onSigned() }}
+          bailData={bailPayload as BailData}
+          annonceId={bien.id}
+          role="locataire"
+          nomDefaut={session?.user?.name || ""}
+        />
+      )}
     </main>
   )
 }

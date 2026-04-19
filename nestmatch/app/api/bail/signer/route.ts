@@ -143,10 +143,76 @@ export async function POST(req: NextRequest) {
   // Update annonces avec timestamp du rôle signataire (raccourci pour les queries)
   const patch: Record<string, string> = {}
   const now = new Date().toISOString()
-  if (role === "locataire") patch.bail_signe_locataire_at = now
+  if (role === "locataire") {
+    patch.bail_signe_locataire_at = now
+    // La signature locataire fait basculer le bien de "bail_envoye" à "loué".
+    // Le bien devient officiellement loué dès l'acceptation du locataire.
+    patch.statut = "loué"
+  }
   if (role === "bailleur") patch.bail_signe_bailleur_at = now
   if (Object.keys(patch).length > 0) {
     await supabaseAdmin.from("annonces").update(patch).eq("id", annonceId)
+  }
+
+  // Détection double-signature (locataire + bailleur) → envoyer message EDL_A_PLANIFIER
+  // pour inviter les deux parties à faire l'état des lieux d'entrée.
+  const { data: allSigs } = await supabaseAdmin
+    .from("bail_signatures")
+    .select("signataire_role")
+    .eq("annonce_id", annonceId)
+  const roles = new Set((allSigs || []).map(s => s.signataire_role))
+  roles.add(role) // inclure la signature qu'on vient d'insérer
+  const doubleSigne = roles.has("locataire") && roles.has("bailleur")
+
+  if (doubleSigne) {
+    // Vérifier qu'on n'a pas déjà envoyé ce message (évite doublons en cas de double-clic)
+    const propEmail = (annonce.proprietaire_email || "").toLowerCase()
+    const locEmail = (annonce.locataire_email || "").toLowerCase()
+    const { data: existingMsg } = await supabaseAdmin
+      .from("messages")
+      .select("id")
+      .eq("annonce_id", annonceId)
+      .ilike("contenu", "[EDL_A_PLANIFIER]%")
+      .limit(1)
+      .maybeSingle()
+
+    if (!existingMsg && propEmail && locEmail) {
+      const payload = JSON.stringify({ annonceId, bienTitre: "", dateSignature: now })
+      // Message envoyé par l'API → from = proprio (pour rester cohérent côté UI)
+      await supabaseAdmin.from("messages").insert([
+        {
+          from_email: propEmail,
+          to_email: locEmail,
+          contenu: `[EDL_A_PLANIFIER]${payload}`,
+          lu: false,
+          annonce_id: annonceId,
+          created_at: now,
+        },
+      ])
+      // Notif cloche pour les deux parties
+      await supabaseAdmin.from("notifications").insert([
+        {
+          user_email: propEmail,
+          type: "bail_signe",
+          title: "Bail pleinement signé",
+          body: "Vous pouvez maintenant créer l'état des lieux d'entrée.",
+          href: `/proprietaire/edl/${annonceId}`,
+          related_id: String(annonceId),
+          lu: false,
+          created_at: now,
+        },
+        {
+          user_email: locEmail,
+          type: "bail_signe",
+          title: "Bail pleinement signé",
+          body: "Prochaine étape : état des lieux d'entrée avec votre bailleur.",
+          href: "/mon-logement",
+          related_id: String(annonceId),
+          lu: false,
+          created_at: now,
+        },
+      ])
+    }
   }
 
   // Notifier l'autre partie (via message système + notif cloche)

@@ -561,14 +561,21 @@ export default function Proprietaire() {
 
   const biensDispos = biens.filter(b => !b.statut || b.statut === "disponible").length
   const biensLoues = biens.filter(b => b.statut === "loué").length
+  const biensAttenteSignature = biens.filter(b => b.statut === "bail_envoye").length
   const loyersAttendus = loyers.filter(l => l.statut === "déclaré").length
   const loyersConfirmes = loyers.filter(l => l.statut === "confirmé").length
 
   const statutColor: any = {
     "disponible": { bg: "#dcfce7", color: "#16a34a" },
+    "bail_envoye": { bg: "#fff7ed", color: "#ea580c" },
     "loué": { bg: "#f3f4f6", color: "#6b7280" },
     "en visite": { bg: "#dbeafe", color: "#2563eb" },
     "réservé": { bg: "#fef9c3", color: "#ca8a04" },
+  }
+
+  // Label affiché pour le statut (surcharge les clés brutes de la DB)
+  const statutLabel: Record<string, string> = {
+    bail_envoye: "En attente signature",
   }
 
   return (
@@ -681,7 +688,7 @@ export default function Proprietaire() {
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
                       <h3 style={{ fontSize: isMobile ? 15 : 17, fontWeight: 800 }}>{b.titre}</h3>
                       <span style={{ background: statutColor[b.statut || "disponible"]?.bg || "#f3f4f6", color: statutColor[b.statut || "disponible"]?.color || "#6b7280", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
-                        {b.statut || "disponible"}
+                        {statutLabel[b.statut || ""] || b.statut || "disponible"}
                       </span>
                     </div>
                     <p style={{ color: "#6b7280", fontSize: 13 }}>{b.adresse} · {b.ville}</p>

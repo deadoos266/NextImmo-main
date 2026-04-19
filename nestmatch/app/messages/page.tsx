@@ -19,6 +19,7 @@ import type { BailData } from "../../lib/bailPDF"
 const DOSSIER_PREFIX = "[DOSSIER_CARD]"
 const BAIL_PREFIX = "[BAIL_CARD]"
 const BAIL_SIGNE_PREFIX = "[BAIL_SIGNE]"
+const EDL_A_PLANIFIER_PREFIX = "[EDL_A_PLANIFIER]"
 const DEMANDE_DOSSIER_PREFIX = "[DEMANDE_DOSSIER]"
 const EDL_PREFIX = "[EDL_CARD]"
 const RETRAIT_PREFIX = "[CANDIDATURE_RETIREE]"
@@ -230,7 +231,11 @@ function BailCard({
     ? new Date(data.dateDebut).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
     : ""
   const loyer = Number(data.loyerHC || 0) + Number(data.charges || 0)
-  const canDownload = !!(data.nomBailleur && data.titreBien && data.dateDebut && data.villeBien)
+  // Download autorisé si le payload a les champs essentiels (ancien ou enrichi)
+  // OU si c'est un bail externe (URL directe vers le PDF uploadé).
+  const canDownload =
+    !!data?.fichierUrl ||
+    !!(data.nomBailleur && data.titreBien && data.dateDebut && data.villeBien)
   const [downloading, setDownloading] = useState(false)
 
   const sigLocataire = signatures.find(s => s.role === "locataire")
@@ -239,20 +244,28 @@ function BailCard({
     ? !!signatures.find(s => s.role === canSignAsRole)
     : false
 
+  const isExterne = !!data?.fichierUrl
+
   async function telecharger() {
-    if (!canDownload || downloading) return
+    if (downloading) return
     setDownloading(true)
     try {
+      // Variant bail externe : ouvrir l'URL du PDF uploadé
+      if (isExterne) {
+        window.open(String(data.fichierUrl), "_blank")
+        return
+      }
+      if (!canDownload) return
       const { genererBailPDF } = await import("../../lib/bailPDF")
       // Fetch les signatures (PNG complet) depuis Supabase pour les injecter dans le PDF.
-      let signatures: Array<{ role: "bailleur" | "locataire" | "garant"; nom: string; png: string; signeAt: string; mention?: string; ipAddress?: string }> = []
+      let sigs: Array<{ role: "bailleur" | "locataire" | "garant"; nom: string; png: string; signeAt: string; mention?: string; ipAddress?: string }> = []
       if (annonceId) {
-        const { data: sigs } = await supabase
+        const { data: raw } = await supabase
           .from("bail_signatures")
           .select("signataire_role, signataire_nom, signature_png, mention, ip_address, signe_at")
           .eq("annonce_id", annonceId)
-        if (sigs) {
-          signatures = sigs.map(s => ({
+        if (raw) {
+          sigs = raw.map(s => ({
             role: s.signataire_role as "bailleur" | "locataire" | "garant",
             nom: s.signataire_nom,
             png: s.signature_png,
@@ -262,7 +275,7 @@ function BailCard({
           }))
         }
       }
-      await genererBailPDF({ ...data, signatures })
+      await genererBailPDF({ ...data, signatures: sigs })
     } finally {
       setDownloading(false)
     }
@@ -286,7 +299,9 @@ function BailCard({
   if (isMine) {
     return (
       <div style={{ background: "#1a1a1a", border: "1.5px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 320 }}>
-        <p style={{ fontSize: 11, fontWeight: 700, color: "#a7f3d0", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>Bail envoyé</p>
+        <p style={{ fontSize: 11, fontWeight: 700, color: "#a7f3d0", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>
+          {isExterne ? "Bail importé & envoyé" : "Bail envoyé"}
+        </p>
         <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0 }}>{data.titreBien || "Bien"} — {data.villeBien}</p>
         <p style={{ fontSize: 11, color: "#9ca3af", margin: "4px 0 8px" }}>Début {dateStr}{loyer > 0 ? ` · ${loyer} €/mois` : ""}</p>
 
@@ -357,6 +372,47 @@ function BailCard({
       <a href="/mon-logement"
         style={{ display: "block", marginTop: 6, background: "white", color: "#6b7280", border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "7px 16px", fontSize: 11, fontWeight: 600, textAlign: "center", textDecoration: "none", fontFamily: "inherit" }}>
         Voir mon logement →
+      </a>
+    </div>
+  )
+}
+
+// Carte CTA "Prochaine étape : EDL" — envoyée automatiquement après double signature.
+function EdlAPlanifierCard({ annonceId, proprietaireActive, isMine }: {
+  annonceId: number | null
+  proprietaireActive: boolean
+  isMine: boolean
+}) {
+  const href = proprietaireActive && annonceId ? `/proprietaire/edl/${annonceId}` : "/mon-logement"
+  const cta = proprietaireActive ? "Créer l'état des lieux" : "Voir mon logement"
+  return (
+    <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 340 }}>
+      <p style={{ fontSize: 11, fontWeight: 700, color: "#1e40af", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>
+        Prochaine étape — État des lieux
+      </p>
+      <p style={{ fontSize: 13, color: "#111", margin: 0, fontWeight: 600, lineHeight: 1.5 }}>
+        Le bail est signé par les deux parties ✓
+      </p>
+      <p style={{ fontSize: 12, color: "#1e40af", margin: "6px 0 10px", lineHeight: 1.5 }}>
+        {proprietaireActive
+          ? "Planifiez l'état des lieux d'entrée avec votre locataire."
+          : "Votre bailleur va maintenant créer l'état des lieux d'entrée — vous serez notifié."}
+      </p>
+      <a
+        href={href}
+        style={{
+          display: "inline-block",
+          background: "#1d4ed8",
+          color: "white",
+          borderRadius: 8,
+          padding: "9px 16px",
+          fontSize: 13,
+          fontWeight: 700,
+          textDecoration: "none",
+          fontFamily: "inherit",
+        }}
+      >
+        {cta} →
       </a>
     </div>
   )
@@ -1897,6 +1953,7 @@ function MessagesInner() {
                     const isEdl = typeof m.contenu === "string" && m.contenu.startsWith(EDL_PREFIX)
                     const isBail = typeof m.contenu === "string" && m.contenu.startsWith(BAIL_PREFIX)
                     const isBailSigne = typeof m.contenu === "string" && m.contenu.startsWith(BAIL_SIGNE_PREFIX)
+                    const isEdlAPlanifier = typeof m.contenu === "string" && m.contenu.startsWith(EDL_A_PLANIFIER_PREFIX)
                     const isQuittance = typeof m.contenu === "string" && m.contenu.startsWith(QUITTANCE_PREFIX)
                     const isRetrait = typeof m.contenu === "string" && m.contenu.startsWith(RETRAIT_PREFIX)
                     const isLocation = typeof m.contenu === "string" && m.contenu.startsWith(LOCATION_PREFIX)
@@ -1947,6 +2004,17 @@ function MessagesInner() {
                         ) : isBailSigne ? (
                           <div>
                             <BailSigneCard contenu={m.contenu} isMine={isMine} />
+                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        ) : isEdlAPlanifier ? (
+                          <div>
+                            <EdlAPlanifierCard
+                              annonceId={m.annonce_id || convActiveData?.annonceId || null}
+                              proprietaireActive={!!proprietaireActive}
+                              isMine={isMine}
+                            />
                             <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
