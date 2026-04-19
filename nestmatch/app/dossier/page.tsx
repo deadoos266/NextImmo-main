@@ -582,7 +582,7 @@ export default function Dossier() {
           {uploadError && (
             <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 12, padding: "12px 16px", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <p style={{ fontSize: 13, color: "#dc2626", fontWeight: 600 }}>{uploadError}</p>
-              <button onClick={() => setUploadError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: 18, fontWeight: 700 }}>×</button>
+              <button type="button" aria-label="Fermer le message d'erreur" onClick={() => setUploadError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: 18, fontWeight: 700 }}>×</button>
             </div>
           )}
 

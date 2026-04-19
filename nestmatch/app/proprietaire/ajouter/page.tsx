@@ -333,7 +333,7 @@ export default function AjouterBien() {
           {photoError && (
             <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <p style={{ fontSize: 13, color: "#dc2626" }}>{photoError}</p>
-              <button onClick={() => setPhotoError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: 18 }}>×</button>
+              <button type="button" aria-label="Fermer le message d'erreur" onClick={() => setPhotoError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: 18 }}>×</button>
             </div>
           )}
 
@@ -514,7 +514,7 @@ function PreviewModal({ form, toggles, photos, onClose }: { form: any; toggles: 
       <div onClick={e => e.stopPropagation()} style={{ background: "white", borderRadius: 20, width: "min(720px, 100%)", maxHeight: "90vh", overflow: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", fontFamily: "'DM Sans', sans-serif" }}>
         <div style={{ position: "sticky", top: 0, background: "white", padding: "18px 24px", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 1 }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", margin: 0 }}>Aperçu de votre annonce</p>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 24, cursor: "pointer", color: "#6b7280", padding: 0, lineHeight: 1 }}>×</button>
+          <button type="button" aria-label="Fermer l'aperçu" onClick={onClose} style={{ background: "none", border: "none", fontSize: 24, cursor: "pointer", color: "#6b7280", padding: 0, lineHeight: 1 }}>×</button>
         </div>
         <div style={{ padding: "20px 24px" }}>
           {photos.length > 0 ? (
