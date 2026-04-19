@@ -17,6 +17,7 @@ import { useUndo } from "../components/ui/useUndo"
 import { postNotif } from "../../lib/notificationsClient"
 import { computeBailTimeline } from "../../lib/bailTimeline"
 import BailTimeline from "../components/ui/BailTimeline"
+import Image from "next/image"
 
 const ONGLETS = ["Tableau de bord", "Mes biens", "Mes locataires", "Performance", "Documents", "Candidatures", "Loyers", "Visites"] as const
 type Onglet = typeof ONGLETS[number]
@@ -279,8 +280,8 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
                 {/* Photo bien */}
                 {!isMobile && (
                   photo ? (
-                    <div style={{ width: 100, flexShrink: 0 }}>
-                      <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <div style={{ position: "relative", width: 100, minHeight: 100, flexShrink: 0 }}>
+                      <Image src={photo} alt="" fill sizes="100px" style={{ objectFit: "cover" }} />
                     </div>
                   ) : (
                     <div style={{ width: 100, flexShrink: 0, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 700, color: "#6b7280" }}>{(bien?.titre || "B")[0].toUpperCase()}</div>

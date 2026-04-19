@@ -7,6 +7,7 @@ import { supabase } from "../../lib/supabase"
 import { useResponsive } from "../hooks/useResponsive"
 import { displayName } from "../../lib/privacy"
 import EmptyState from "../components/ui/EmptyState"
+import Image from "next/image"
 
 /**
  * Historique des candidatures du locataire (annonces contactées).
@@ -224,7 +225,7 @@ export default function MesCandidatures() {
               return (
                 <div key={c.annonce_id} style={{ background: "white", borderRadius: 18, padding: 16, display: "flex", gap: 14, alignItems: "center", flexWrap: isMobile ? "wrap" : "nowrap" }}>
                   {photo ? (
-                    <img src={photo} alt="" style={{ width: 80, height: 80, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
+                    <Image src={photo} alt="" width={80} height={80} sizes="80px" style={{ width: 80, height: 80, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
                   ) : (
                     <div style={{ width: 80, height: 80, borderRadius: 12, background: "#f3f4f6", flexShrink: 0 }} />
                   )}

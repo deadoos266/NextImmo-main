@@ -9,6 +9,7 @@ import AnnulerVisiteDialog from "../components/AnnulerVisiteDialog"
 import { useResponsive } from "../hooks/useResponsive"
 import { annulerVisite, STATUT_VISITE_STYLE as STATUT, type StatutVisite as Statut } from "../../lib/visitesHelpers"
 import EmptyState from "../components/ui/EmptyState"
+import Image from "next/image"
 
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
@@ -204,8 +205,8 @@ export default function MesVisites() {
                 <div key={v.id} style={{ background: "white", borderRadius: 20, overflow: "hidden", display: "flex", flexDirection: isMobile ? "column" : "row", border: `1.5px solid ${v.statut === "confirmée" && future ? "#bbf7d0" : "#e5e7eb"}` }}>
                   {/* Photo */}
                   {photo ? (
-                    <div style={{ width: isMobile ? "100%" : 120, height: isMobile ? 140 : undefined, flexShrink: 0, background: "#f3f4f6" }}>
-                      <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    <div style={{ position: "relative", width: isMobile ? "100%" : 120, height: isMobile ? 140 : "100%", minHeight: isMobile ? 140 : 120, flexShrink: 0, background: "#f3f4f6" }}>
+                      <Image src={photo} alt="" fill sizes="(max-width: 768px) 100vw, 120px" style={{ objectFit: "cover", display: "block" }} />
                     </div>
                   ) : (
                     <div style={{ width: isMobile ? "100%" : 120, height: isMobile ? 80 : undefined, flexShrink: 0, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 700, color: "#6b7280" }}>{(ann?.titre || "B")[0].toUpperCase()}</div>
