@@ -1387,9 +1387,24 @@ function MessagesInner() {
     const propEmail = proprietaireActive ? myEmail : convActiveData.other
     const locEmail  = proprietaireActive ? convActiveData.other : myEmail
 
-    // Si contre-proposition : annuler l'ancienne visite (en base + local)
+    // Si contre-proposition : annuler l'ancienne visite (en base + local).
+    // IMPORTANT : on utilise .select() pour vérifier que l'UPDATE a bien
+    // affecté la row (sinon l'ancienne demande réapparaissait comme "à traiter"
+    // au prochain reload / realtime).
     if (isCounter && counterTarget?.id) {
-      await supabase.from("visites").update({ statut: "annulée" }).eq("id", counterTarget.id)
+      const { data: updated, error: updErr } = await supabase
+        .from("visites")
+        .update({ statut: "annulée" })
+        .eq("id", counterTarget.id)
+        .select("id")
+      if (updErr || !updated || updated.length === 0) {
+        alert(
+          "Impossible d'annuler la demande initiale — la contre-proposition ne peut pas être envoyée. " +
+            (updErr?.message || "Aucune ligne mise à jour."),
+        )
+        setEnvoyantVisite(false)
+        return
+      }
       setVisitesConv(prev => prev.map(v => v.id === counterTarget.id ? { ...v, statut: "annulée" } : v))
     }
 
@@ -2028,7 +2043,11 @@ function MessagesInner() {
                   )}
                   {annonceActive ? (
                     <>
-                      <div style={{ position: "relative", flexShrink: 0 }}>
+                      <Link
+                        href={`/annonces/${convActiveData.annonceId}`}
+                        aria-label="Voir l'annonce"
+                        style={{ position: "relative", flexShrink: 0, display: "block", textDecoration: "none" }}
+                      >
                         {Array.isArray(annonceActive.photos) && annonceActive.photos[0] ? (
                           <img src={annonceActive.photos[0]} alt="" style={{ width: 42, height: 42, borderRadius: 10, objectFit: "cover", display: "block" }} />
                         ) : (
@@ -2038,11 +2057,14 @@ function MessagesInner() {
                         <div style={{ position: "absolute", bottom: -4, right: -4, border: "2px solid white", borderRadius: "50%" }}>
                           <Avatar email={convActiveData.other} image={peerImages[convActiveData.other.toLowerCase()]} size={22} />
                         </div>
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontWeight: 700, fontSize: 14 }}>{annonceActive.titre}</p>
-                        <p style={{ fontSize: 12, color: "#9ca3af" }}>{annonceActive.ville} &middot; {displayName(convActiveData.other, annonceActive.proprietaire)}</p>
-                      </div>
+                      </Link>
+                      <Link
+                        href={`/annonces/${convActiveData.annonceId}`}
+                        style={{ flex: 1, textDecoration: "none", color: "inherit", minWidth: 0 }}
+                      >
+                        <p style={{ fontWeight: 700, fontSize: 14, color: "#111", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{annonceActive.titre}</p>
+                        <p style={{ fontSize: 12, color: "#9ca3af", margin: "2px 0 0" }}>{annonceActive.ville} &middot; {displayName(convActiveData.other, annonceActive.proprietaire)}</p>
+                      </Link>
                       {/* Bouton "Louer à ce candidat" — côté proprio uniquement.
                          Cache si la location est déjà actée pour ce candidat. */}
                       {proprietaireActive && annonceActive && (

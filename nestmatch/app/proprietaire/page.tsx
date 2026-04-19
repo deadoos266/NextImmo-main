@@ -427,12 +427,15 @@ export default function Proprietaire() {
   }, [session, status])
 
   async function loadData() {
-    const email = session!.user!.email!
+    // .ilike() pour être insensible à la casse — certains emails ont été
+    // insérés avec des capitales (ex: Paul.David@gmail.com) et ne matchaient
+    // pas .eq() contre session.email en lowercase.
+    const email = (session!.user!.email!).toLowerCase()
     const [{ data: b }, { data: m }, { data: l }, { data: v, error: ve }] = await Promise.all([
-      supabase.from("annonces").select("*").eq("proprietaire_email", email),
-      supabase.from("messages").select("*").eq("to_email", email).order("created_at", { ascending: false }),
-      supabase.from("loyers").select("*").eq("proprietaire_email", email).order("mois", { ascending: false }),
-      supabase.from("visites").select("*").eq("proprietaire_email", email).order("date_visite", { ascending: true }),
+      supabase.from("annonces").select("*").ilike("proprietaire_email", email).order("created_at", { ascending: false }),
+      supabase.from("messages").select("*").ilike("to_email", email).order("created_at", { ascending: false }),
+      supabase.from("loyers").select("*").ilike("proprietaire_email", email).order("mois", { ascending: false }),
+      supabase.from("visites").select("*").ilike("proprietaire_email", email).order("date_visite", { ascending: true }),
     ])
     if (b) {
       setBiens(b)

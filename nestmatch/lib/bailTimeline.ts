@@ -54,8 +54,12 @@ export function computeBailTimeline({
   loyers,
   role,
 }: BailTimelineInputs): BailStep[] {
-  const accepteeDone = annonce.statut === "loué"
+  // "bail_envoye" est un statut intermédiaire après envoi du bail mais avant
+  // signature du locataire. La location est considérée acceptée dès l'envoi.
+  const accepteeDone =
+    annonce.statut === "loué" || annonce.statut === "bail_envoye"
   const bailDone = !!annonce.bail_genere_at
+  const bailSigneLocataire = annonce.statut === "loué"
   const edlEntree = edls.find(e => e.type === "entree" && e.statut === "valide")
   const edlDone = !!edlEntree
   const premierLoyer = loyers.find(l => l.statut === "confirmé")
@@ -75,12 +79,16 @@ export function computeBailTimeline({
     },
     {
       key: "bail",
-      label: "Bail signé",
-      description: bailDone
-        ? "Contrat de bail généré."
-        : role === "proprietaire"
-          ? "Générez le bail depuis l'onglet Documents."
-          : "Votre propriétaire va générer le contrat.",
+      label: bailSigneLocataire ? "Bail signé" : "Bail envoyé",
+      description: bailSigneLocataire
+        ? "Bail signé par le locataire."
+        : bailDone
+          ? role === "proprietaire"
+            ? "Bail envoyé au locataire — en attente de signature."
+            : "Bail reçu — à signer depuis la messagerie ou /mon-logement."
+          : role === "proprietaire"
+            ? "Générez le bail depuis l'espace propriétaire."
+            : "Votre propriétaire va générer le contrat.",
       done: bailDone,
       date: annonce.bail_genere_at ?? undefined,
       href: !bailDone && role === "proprietaire" ? `/proprietaire/bail/${annonceId}` : undefined,

@@ -162,7 +162,7 @@ export default function AjouterBien() {
       surface: toInt(form.surface), pieces: toInt(form.pieces), chambres: toInt(form.chambres),
       etage: form.etage, dpe: form.dpe, dispo: form.dispo, statut: form.statut,
       description: form.description, type_bien: form.type_bien,
-      proprietaire: session?.user?.name, proprietaire_email: session?.user?.email,
+      proprietaire: session?.user?.name, proprietaire_email: (session?.user?.email || "").toLowerCase().trim(),
       membre: "Membre depuis " + new Date().getFullYear(), verifie: true,
       photos: photos.length > 0 ? photos : null,
       lat: form.lat, lng: form.lng,
