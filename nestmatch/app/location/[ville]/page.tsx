@@ -2,6 +2,24 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { supabase } from "../../../lib/supabase"
 import { CITY_NAMES, normalizeCityName } from "../../../lib/cityCoords"
+import { BRAND } from "../../../lib/brand"
+
+const BRAND_NAME = BRAND.name
+
+/** Petit composant stat réutilisé dans le bloc "Aperçu du marché". */
+function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div>
+      <p style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4, fontWeight: 700 }}>
+        {label}
+      </p>
+      <p style={{ fontSize: 22, fontWeight: 800, color: "#111", letterSpacing: "-0.3px", lineHeight: 1.1 }}>
+        {value}
+        {hint && <span style={{ fontSize: 12, fontWeight: 500, color: "#6b7280", marginLeft: 4 }}>{hint}</span>}
+      </p>
+    </div>
+  )
+}
 
 /**
  * Page SEO par ville : /location/paris, /location/lyon, etc.
@@ -73,7 +91,22 @@ export default async function LocationVille({ params }: any) {
     .limit(24)
 
   const total = (annonces || []).length
-  const prixMedian = computeMedian((annonces || []).map(a => Number(a.prix)).filter(n => !isNaN(n) && n > 0))
+  const prix = (annonces || []).map(a => Number(a.prix)).filter(n => !isNaN(n) && n > 0)
+  const surfaces = (annonces || []).map(a => Number(a.surface)).filter(n => !isNaN(n) && n > 0)
+  const prixMedian = computeMedian(prix)
+  const prixMin = prix.length > 0 ? Math.min(...prix) : 0
+  const prixMax = prix.length > 0 ? Math.max(...prix) : 0
+  const surfaceMoyenne = surfaces.length > 0 ? Math.round(surfaces.reduce((a, b) => a + b, 0) / surfaces.length) : 0
+  const prixM2 = prixMedian > 0 && surfaceMoyenne > 0 ? Math.round(prixMedian / surfaceMoyenne) : 0
+  // Répartition par nombre de pièces (aide les users à se situer : "plus de T2 que de T3 ?")
+  const repartition: Record<number, number> = {}
+  for (const a of annonces || []) {
+    const p = Number(a.pieces)
+    if (!isNaN(p) && p > 0) repartition[p] = (repartition[p] || 0) + 1
+  }
+  const repartitionItems = Object.entries(repartition)
+    .map(([p, n]) => ({ pieces: Number(p), count: n }))
+    .sort((a, b) => a.pieces - b.pieces)
 
   const breadcrumbLd = {
     "@context": "https://schema.org",
@@ -95,6 +128,49 @@ export default async function LocationVille({ params }: any) {
     })),
   }
 
+  // FAQ générique — même squelette par ville, les URL + villes diffèrent.
+  // Google affiche ces FAQs en accordion enrichi dans les SERP.
+  const faqLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: `Comment trouver une location à ${displayCity} sans agence ?`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `Sur NestMatch, toutes les annonces de location à ${displayCity} sont publiées par les propriétaires eux-mêmes. Vous pouvez filtrer par budget, surface, nombre de pièces, DPE et équipements, puis contacter directement le bailleur via la messagerie intégrée — zéro frais d'agence.`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: `Quels documents préparer pour louer à ${displayCity} ?`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `Pour un dossier crédible : pièce d'identité, 3 derniers bulletins de salaire, dernier avis d'imposition, contrat de travail, justificatif de domicile (3 quittances), et éventuellement un garant (personne physique, Visale ou organisme). NestMatch vous guide pour constituer un dossier ALUR complet avant candidature.`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: `Quel est le loyer moyen à ${displayCity} ?`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: prixMedian > 0
+            ? `Le loyer médian affiché actuellement sur NestMatch à ${displayCity} est d'environ ${prixMedian} €/mois${prixM2 > 0 ? `, soit environ ${prixM2} €/m²` : ""}. Les loyers vont de ${prixMin} € à ${prixMax} €/mois selon la surface et les équipements.`
+            : `Les loyers à ${displayCity} varient selon le quartier, la surface et les équipements. Créez votre compte pour voir toutes les annonces disponibles et leurs prix.`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: "NestMatch prend-il des frais sur le loyer ?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Non. L'inscription et l'utilisation sont 100 % gratuites pour les locataires et les propriétaires. Aucune commission n'est prélevée sur les loyers, aucun frais d'agence n'est facturé.",
+        },
+      },
+    ],
+  }
+
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
       <script
@@ -104,6 +180,10 @@ export default async function LocationVille({ params }: any) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListLd).replace(/</g, "\\u003c") }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd).replace(/</g, "\\u003c") }}
       />
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 20px" }}>
 
@@ -130,6 +210,55 @@ export default async function LocationVille({ params }: any) {
             Créer mon dossier locataire
           </Link>
         </div>
+
+        {/* Stats marché — seulement si annonces dispos */}
+        {total >= 3 && prixMedian > 0 && (
+          <section
+            aria-label="Statistiques du marché"
+            style={{ background: "white", borderRadius: 20, padding: "22px 28px", marginBottom: 32 }}
+          >
+            <h2 style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.3px", marginBottom: 14 }}>
+              Aperçu du marché à {displayCity}
+            </h2>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                gap: 18,
+              }}
+            >
+              <Stat label="Loyer médian" value={`${prixMedian} €`} hint="/ mois" />
+              <Stat label="Loyer minimum" value={`${prixMin} €`} hint="/ mois" />
+              <Stat label="Loyer maximum" value={`${prixMax} €`} hint="/ mois" />
+              {surfaceMoyenne > 0 && <Stat label="Surface moyenne" value={`${surfaceMoyenne} m²`} />}
+              {prixM2 > 0 && <Stat label="Loyer par m²" value={`${prixM2} €`} hint="approx." />}
+              <Stat label="Annonces visibles" value={String(total)} hint="actuellement" />
+            </div>
+            {repartitionItems.length > 0 && (
+              <div style={{ marginTop: 18, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {repartitionItems.map(r => (
+                  <span
+                    key={r.pieces}
+                    style={{
+                      fontSize: 12,
+                      color: "#111",
+                      background: "#f9fafb",
+                      border: "1px solid #f3f4f6",
+                      borderRadius: 999,
+                      padding: "4px 12px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {r.count} × T{r.pieces}
+                  </span>
+                ))}
+              </div>
+            )}
+            <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 14, lineHeight: 1.5 }}>
+              Moyennes calculées sur les {total} annonce{total > 1 ? "s" : ""} actuellement publiée{total > 1 ? "s" : ""} à {displayCity} sur {BRAND_NAME}. Donne un ordre de grandeur, pas un indicateur officiel.
+            </p>
+          </section>
+        )}
 
         {/* Grille d'annonces */}
         {total > 0 && (
@@ -175,6 +304,42 @@ export default async function LocationVille({ params }: any) {
             <p>
               La plateforme gère aussi la génération du bail conforme ALUR, l&apos;état des lieux numérique et les quittances de loyer. Tout le cycle de la location, de la candidature à la signature, se fait en ligne.
             </p>
+          </div>
+        </section>
+
+        {/* FAQ visible (matchée avec le JSON-LD FAQPage plus haut — Google
+            valorise les contenus structurés ET affichés à l'utilisateur). */}
+        <section style={{ marginTop: 32, background: "white", borderRadius: 20, padding: "32px 36px" }}>
+          <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.5px", marginBottom: 18 }}>
+            Questions fréquentes sur la location à {displayCity}
+          </h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {faqLd.mainEntity.map((q, i) => (
+              <details
+                key={i}
+                style={{
+                  borderBottom: i < faqLd.mainEntity.length - 1 ? "1px solid #f3f4f6" : "none",
+                  paddingBottom: i < faqLd.mainEntity.length - 1 ? 14 : 0,
+                }}
+              >
+                <summary
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 700,
+                    color: "#111",
+                    cursor: "pointer",
+                    listStyle: "none",
+                    padding: "4px 0",
+                    userSelect: "none",
+                  }}
+                >
+                  {q.name}
+                </summary>
+                <p style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.7, marginTop: 10 }}>
+                  {q.acceptedAnswer.text}
+                </p>
+              </details>
+            ))}
           </div>
         </section>
 
