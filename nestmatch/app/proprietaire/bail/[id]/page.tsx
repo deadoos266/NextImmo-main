@@ -869,8 +869,9 @@ export default function BailPage() {
               type="button"
               onClick={async () => {
                 try {
-                  // Récupérer le dernier payload [BAIL_CARD] + signatures.
-                  // Order par id (PRIMARY KEY toujours présent) au lieu de created_at.
+                  // Fetch signatures + tenter de récupérer le payload [BAIL_CARD] ;
+                  // si pas de message (cas où l'insert avait silencieusement échoué),
+                  // on reconstruit le payload depuis le form + l'annonce.
                   const [msgRes, sigsRes] = await Promise.all([
                     supabase
                       .from("messages")
@@ -886,20 +887,7 @@ export default function BailPage() {
                       .eq("annonce_id", bien.id),
                   ])
                   console.log("[bail download] msg:", msgRes, "sigs:", sigsRes)
-                  if (msgRes.error) {
-                    alert(`Erreur DB : ${msgRes.error.message} (code ${msgRes.error.code || "?"})`)
-                    return
-                  }
-                  const msg = msgRes.data
-                  const sigs = sigsRes.data
-                  if (!msg?.contenu) {
-                    alert("Aucun bail envoyé récent trouvé.")
-                    return
-                  }
-                  const payload = JSON.parse(
-                    (msg.contenu as string).slice("[BAIL_CARD]".length),
-                  )
-                  const signatures = (sigs || []).map(s => ({
+                  const signatures = (sigsRes.data || []).map(s => ({
                     role: s.signataire_role as "bailleur" | "locataire" | "garant",
                     nom: s.signataire_nom,
                     png: s.signature_png,
@@ -907,12 +895,33 @@ export default function BailPage() {
                     mention: s.mention,
                     ipAddress: s.ip_address,
                   }))
+                  // Priorité : payload stocké (contient ce qu'il y avait à l'envoi).
+                  // Fallback : construit depuis le form actuel + annonce (peut différer
+                  // si le proprio a modifié le form depuis l'envoi, mais c'est mieux
+                  // que "Aucun bail envoyé récent").
+                  let payload: Record<string, unknown>
+                  if (msgRes.data?.contenu) {
+                    try {
+                      payload = JSON.parse(
+                        (msgRes.data.contenu as string).slice("[BAIL_CARD]".length),
+                      )
+                    } catch {
+                      payload = bailData as unknown as Record<string, unknown>
+                    }
+                  } else {
+                    console.warn("[bail download] aucun message [BAIL_CARD] en DB, reconstruction depuis le form")
+                    if (!bailData) {
+                      alert("Impossible de construire le bail (formulaire incomplet).")
+                      return
+                    }
+                    payload = bailData as unknown as Record<string, unknown>
+                  }
                   // Si bail externe (URL PDF uploadé), ouvrir directement
                   if (payload.fichierUrl) {
                     window.open(String(payload.fichierUrl), "_blank")
                     return
                   }
-                  await genererBailPDF({ ...payload, signatures })
+                  await genererBailPDF({ ...payload, signatures } as BailData)
                 } catch (err) {
                   alert(`Erreur téléchargement : ${err instanceof Error ? err.message : String(err)}`)
                 }

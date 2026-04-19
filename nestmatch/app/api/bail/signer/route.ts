@@ -229,7 +229,7 @@ export async function POST(req: NextRequest) {
       dateSignature: now,
       annonceId,
     })
-    await supabaseAdmin.from("messages").insert([
+    const { error: bsMsgErr } = await supabaseAdmin.from("messages").insert([
       {
         from_email: signataireEmail,
         to_email: autre,
@@ -239,8 +239,9 @@ export async function POST(req: NextRequest) {
         created_at: now,
       },
     ])
+    if (bsMsgErr) console.error("[bail/signer] insert BAIL_SIGNE message:", bsMsgErr)
     // Notif cloche
-    await supabaseAdmin.from("notifications").insert([
+    const { error: bsNotifErr } = await supabaseAdmin.from("notifications").insert([
       {
         user_email: autre,
         type: "bail_signe",
@@ -252,6 +253,7 @@ export async function POST(req: NextRequest) {
         created_at: now,
       },
     ])
+    if (bsNotifErr) console.error("[bail/signer] insert bail_signe notif:", bsNotifErr)
   }
 
   return NextResponse.json({ ok: true, signedAt: now })
