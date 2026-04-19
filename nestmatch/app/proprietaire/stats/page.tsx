@@ -301,6 +301,10 @@ function StatsInner() {
   const [zoomMois, setZoomMois] = useState<number>(0) // 0 = tout
   const [newLoyerMois, setNewLoyerMois] = useState("")
   const [newLoyerMontant, setNewLoyerMontant] = useState("")
+  // Si coché, le loyer est enregistré directement en "confirmé" (dispense la
+  // double saisie déclaration→confirmation quand le proprio sait déjà qu'il
+  // a reçu le paiement). Déclenche aussi la quittance auto.
+  const [newLoyerConfirme, setNewLoyerConfirme] = useState(false)
   const [savingLoyer, setSavingLoyer] = useState(false)
   const [travauxCout, setTravauxCout] = useState(0)
   const [edlStatut, setEdlStatut] = useState<string | null>(null)
@@ -346,17 +350,44 @@ function StatsInner() {
     const montant = Number(newLoyerMontant)
     const locataireEmail = (bien?.locataire_email || "").toLowerCase() || null
     const proprietaireEmail = (bien?.proprietaire_email || "").toLowerCase() || null
+    const nowIso = new Date().toISOString()
+    const statut = newLoyerConfirme ? "confirmé" : "déclaré"
     const { data } = await supabase.from("loyers").upsert({
       annonce_id: Number(bienId),
       mois: newLoyerMois,
       montant,
-      statut: "déclaré",
+      statut,
+      date_confirmation: newLoyerConfirme ? nowIso : null,
       locataire_email: locataireEmail,
       proprietaire_email: proprietaireEmail,
     }, { onConflict: "annonce_id,mois" }).select().single()
-    if (data) setLoyers(prev => [...prev.filter(l => l.mois !== newLoyerMois), data])
+    if (data) {
+      setLoyers(prev => [...prev.filter(l => l.mois !== newLoyerMois), data])
+      // Si l'user a coche "confirme", on envoie directement la quittance par
+      // messagerie (comme le flow confirmerLoyer existant). Evite la double
+      // action "enregistrer puis confirmer".
+      if (newLoyerConfirme && locataireEmail && proprietaireEmail && bien) {
+        const payload = {
+          loyerId: data.id,
+          bienId: bien.id,
+          bienTitre: bien.titre,
+          mois: newLoyerMois,
+          montant,
+          dateConfirmation: nowIso,
+        }
+        await supabase.from("messages").insert([{
+          from_email: proprietaireEmail,
+          to_email: locataireEmail,
+          contenu: `[QUITTANCE_CARD]${JSON.stringify(payload)}`,
+          lu: false,
+          annonce_id: bien.id,
+          created_at: nowIso,
+        }])
+      }
+    }
     setNewLoyerMois("")
     setNewLoyerMontant("")
+    setNewLoyerConfirme(false)
     setSavingLoyer(false)
   }
 
@@ -1255,14 +1286,27 @@ function StatsInner() {
                 placeholder={String(loyerMensuel)}
                 style={{ padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 13, fontFamily: "inherit", outline: "none", width: 120 }} />
             </div>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#374151", marginBottom: 10 }}>
+              <input
+                type="checkbox"
+                checked={newLoyerConfirme}
+                onChange={e => setNewLoyerConfirme(e.target.checked)}
+                style={{ width: 16, height: 16, accentColor: "#16a34a", cursor: "pointer" }}
+              />
+              <span>Loyer déjà reçu — envoyer directement la quittance au locataire</span>
+            </label>
             <button onClick={ajouterOuMettreAJourLoyer} disabled={!newLoyerMois || !newLoyerMontant || savingLoyer}
               style={{
-                background: newLoyerMois && newLoyerMontant ? "#111" : "#e5e7eb",
+                background: newLoyerMois && newLoyerMontant ? (newLoyerConfirme ? "#16a34a" : "#111") : "#e5e7eb",
                 color: newLoyerMois && newLoyerMontant ? "white" : "#9ca3af",
                 border: "none", borderRadius: 999, padding: "9px 20px",
                 fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit",
               }}>
-              {savingLoyer ? "Sauvegarde..." : "Enregistrer le loyer"}
+              {savingLoyer
+                ? "Sauvegarde..."
+                : newLoyerConfirme
+                  ? "Enregistrer + envoyer la quittance"
+                  : "Enregistrer le loyer (en attente)"}
             </button>
           </div>
 

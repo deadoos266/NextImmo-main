@@ -537,23 +537,39 @@ export default function BailPage() {
           </div>
         </div>
 
-        {/* Bouton generer */}
-        <button onClick={generer}
-          disabled={!form.dateDebut || !form.nomBailleur}
-          style={{
-            width: "100%", padding: "16px 32px",
-            background: form.dateDebut && form.nomBailleur ? "#111" : "#e5e7eb",
-            color: form.dateDebut && form.nomBailleur ? "white" : "#9ca3af",
-            border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16,
-            cursor: form.dateDebut && form.nomBailleur ? "pointer" : "not-allowed",
-            fontFamily: "inherit",
-          }}>
-          Generer le bail PDF
-        </button>
+        {/* Bouton principal */}
+        {(() => {
+          const hasLocataire = !!(bien?.locataire_email || "").trim()
+          const prete = form.dateDebut && form.nomBailleur
+          const label = hasLocataire
+            ? "Générer le bail PDF et envoyer au locataire"
+            : "Générer le bail PDF"
+          return (
+            <button onClick={generer}
+              disabled={!prete}
+              style={{
+                width: "100%", padding: "16px 32px",
+                background: prete ? "#111" : "#e5e7eb",
+                color: prete ? "white" : "#9ca3af",
+                border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16,
+                cursor: prete ? "pointer" : "not-allowed",
+                fontFamily: "inherit",
+              }}>
+              {label}
+            </button>
+          )
+        })()}
+
+        {(bien?.locataire_email || "").trim() && (
+          <p style={{ fontSize: 12, color: "#15803d", textAlign: "center", marginTop: 10, lineHeight: 1.5, fontWeight: 600 }}>
+            📬 Le PDF sera téléchargé sur votre appareil, et votre locataire recevra
+            une carte dans sa messagerie + une notification cloche pour confirmer la bonne réception.
+          </p>
+        )}
 
         <p style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", marginTop: 12, lineHeight: 1.6 }}>
-          Ce document est genere a titre indicatif et ne se substitue pas a un conseil juridique.
-          Il est conforme a la structure prevue par la loi ALUR mais doit etre verifie par un professionnel.
+          Ce document est généré à titre indicatif et ne se substitue pas à un conseil juridique.
+          Il est conforme à la structure prévue par la loi ALUR mais doit être vérifié par un professionnel.
         </p>
       </div>
     </main>
