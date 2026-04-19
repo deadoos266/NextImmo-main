@@ -229,15 +229,30 @@ export default async function Annonce({ params }: any) {
     ...(annonce.dpe ? { energyEfficiencyScaleMin: annonce.dpe, energyEfficiencyScaleMax: annonce.dpe } : {}),
   }
 
-  // BreadcrumbList : aide Google à afficher le fil d'Ariane dans les SERP
+  // BreadcrumbList : aide Google à afficher le fil d'Ariane dans les SERP.
+  // On insère la page ville si dispo (améliore le maillage /location/[ville]).
+  const breadcrumbItems: { "@type": "ListItem"; position: number; name: string; item: string }[] = [
+    { "@type": "ListItem", position: 1, name: "Accueil", item: BASE_URL },
+    { "@type": "ListItem", position: 2, name: "Annonces", item: `${BASE_URL}/annonces` },
+  ]
+  if (annonce.ville) {
+    breadcrumbItems.push({
+      "@type": "ListItem",
+      position: 3,
+      name: `Location ${annonce.ville}`,
+      item: `${BASE_URL}/location/${encodeURIComponent(String(annonce.ville).toLowerCase())}`,
+    })
+  }
+  breadcrumbItems.push({
+    "@type": "ListItem",
+    position: breadcrumbItems.length + 1,
+    name: annonce.titre,
+    item: `${BASE_URL}/annonces/${id}`,
+  })
   const breadcrumbLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Accueil", item: BASE_URL },
-      { "@type": "ListItem", position: 2, name: "Annonces", item: `${BASE_URL}/annonces` },
-      { "@type": "ListItem", position: 3, name: annonce.titre, item: `${BASE_URL}/annonces/${id}` },
-    ],
+    itemListElement: breadcrumbItems,
   }
 
   return (
@@ -255,6 +270,33 @@ export default async function Annonce({ params }: any) {
         }}
       />
       <div className="r-container" style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 48px" }}>
+        {/* Breadcrumbs visibles (reflet du JSON-LD BreadcrumbList). Google
+            affiche ça comme fil d'Ariane enrichi dans les SERP. */}
+        <nav aria-label="Fil d'Ariane" style={{ marginBottom: 14 }}>
+          <ol style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexWrap: "wrap", gap: 6, fontSize: 13, color: "#6b7280" }}>
+            <li>
+              <a href="/" style={{ color: "#6b7280", textDecoration: "none" }}>Accueil</a>
+            </li>
+            <li aria-hidden style={{ color: "#d1d5db" }}>›</li>
+            <li>
+              <a href="/annonces" style={{ color: "#6b7280", textDecoration: "none" }}>Annonces</a>
+            </li>
+            {annonce.ville && (
+              <>
+                <li aria-hidden style={{ color: "#d1d5db" }}>›</li>
+                <li>
+                  <a href={`/location/${encodeURIComponent(String(annonce.ville).toLowerCase())}`} style={{ color: "#6b7280", textDecoration: "none" }}>
+                    Location {annonce.ville}
+                  </a>
+                </li>
+              </>
+            )}
+            <li aria-hidden style={{ color: "#d1d5db" }}>›</li>
+            <li aria-current="page" style={{ color: "#111", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 340 }}>
+              {annonce.titre}
+            </li>
+          </ol>
+        </nav>
         <a href="/annonces" style={{ fontSize: 14, color: "#6b7280", textDecoration: "none" }}>← Retour aux annonces</a>
 
         {proprioVacances.actif && (
