@@ -106,6 +106,21 @@ export default async function Annonce({ params }: any) {
     </main>
   )
 
+  // Mode vacances du propriétaire : récupère l'état pour afficher un bandeau
+  // et indiquer au candidat qu'il peut toujours contacter mais que la réponse
+  // peut tarder.
+  let proprioVacances: { actif: boolean; message: string | null } = { actif: false, message: null }
+  if (annonce.proprietaire_email) {
+    const { data: prop } = await supabase
+      .from("profils")
+      .select("vacances_actif, vacances_message")
+      .eq("email", String(annonce.proprietaire_email).toLowerCase())
+      .maybeSingle()
+    if (prop?.vacances_actif) {
+      proprioVacances = { actif: true, message: prop.vacances_message || null }
+    }
+  }
+
   // Le tracking des clics uniques est gere par le composant ViewTracker (client-side)
 
   const dpeColor: any = { A: "#22c55e", B: "#84cc16", C: "#eab308", D: "#f97316", E: "#ef4444", F: "#dc2626", G: "#991b1b" }
@@ -179,6 +194,15 @@ export default async function Annonce({ params }: any) {
       />
       <div className="r-container" style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 48px" }}>
         <a href="/annonces" style={{ fontSize: 14, color: "#6b7280", textDecoration: "none" }}>← Retour aux annonces</a>
+
+        {proprioVacances.actif && (
+          <div style={{ background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 14, padding: "14px 18px", margin: "16px 0 0", color: "#9a3412" }}>
+            <p style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>Propriétaire momentanément indisponible</p>
+            <p style={{ fontSize: 13, color: "#7c2d12", margin: "6px 0 0", lineHeight: 1.5 }}>
+              {proprioVacances.message || "Vos messages seront traités dès son retour. Vous pouvez toujours candidater — il vous répondra à son retour."}
+            </p>
+          </div>
+        )}
 
         <div className="r-detail-header" style={{ margin: "16px 0 20px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>

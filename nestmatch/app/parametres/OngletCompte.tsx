@@ -2,7 +2,10 @@
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { supabase } from "../../lib/supabase"
+import { useRole } from "../providers"
 import DeleteAccountForm from "./DeleteAccountForm"
+
+const VACANCES_MAX_LENGTH = 400
 
 type NotifPrefs = {
   notif_messages_email: boolean
@@ -27,10 +30,19 @@ const LABELS: { key: keyof NotifPrefs; label: string; desc: string }[] = [
 
 export default function OngletCompte() {
   const { data: session } = useSession()
+  const { proprietaireActive } = useRole()
   const [prefs, setPrefs] = useState<NotifPrefs>(DEFAULT_PREFS)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
+
+  // Mode vacances : actif + message auto-répondeur (affichés proprio only)
+  const [vacancesActif, setVacancesActif] = useState(false)
+  const [vacancesMessage, setVacancesMessage] = useState("")
+  const [vacancesLoading, setVacancesLoading] = useState(true)
+  const [vacancesSaving, setVacancesSaving] = useState(false)
+  const [vacancesSaved, setVacancesSaved] = useState(false)
+  const [vacancesError, setVacancesError] = useState<string | null>(null)
 
   useEffect(() => {
     const email = session?.user?.email
@@ -51,6 +63,49 @@ export default function OngletCompte() {
         setLoading(false)
       })
   }, [session?.user?.email])
+
+  // Charge l'état vacances initial côté proprio uniquement
+  useEffect(() => {
+    if (!proprietaireActive) {
+      setVacancesLoading(false)
+      return
+    }
+    fetch("/api/profil/vacances").then(async (r) => {
+      if (!r.ok) { setVacancesLoading(false); return }
+      const json = await r.json()
+      if (json.ok) {
+        setVacancesActif(!!json.vacances_actif)
+        setVacancesMessage(json.vacances_message ?? "")
+      }
+      setVacancesLoading(false)
+    }).catch(() => setVacancesLoading(false))
+  }, [proprietaireActive])
+
+  async function sauverVacances(nextActif: boolean, nextMessage: string) {
+    setVacancesSaving(true)
+    setVacancesSaved(false)
+    setVacancesError(null)
+    try {
+      const res = await fetch("/api/profil/vacances", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actif: nextActif, message: nextMessage.trim() || null }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.ok) {
+        setVacancesError(json.error || "Erreur d'enregistrement")
+      } else {
+        setVacancesActif(!!json.vacances_actif)
+        setVacancesMessage(json.vacances_message ?? "")
+        setVacancesSaved(true)
+        setTimeout(() => setVacancesSaved(false), 2500)
+      }
+    } catch {
+      setVacancesError("Erreur réseau, réessayez.")
+    } finally {
+      setVacancesSaving(false)
+    }
+  }
 
   async function togglePref(key: keyof NotifPrefs) {
     const email = session?.user?.email
@@ -81,6 +136,50 @@ export default function OngletCompte() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {proprietaireActive && (
+        <section style={{ background: "white", borderRadius: 20, padding: 28 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 4px" }}>Mode vacances</h2>
+          <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px", lineHeight: 1.5 }}>
+            Masque temporairement vos annonces disponibles de la recherche publique. Un bandeau sur vos fiches annonces prévient les locataires intéressés.
+          </p>
+          {vacancesLoading ? (
+            <p style={{ fontSize: 13, color: "#9ca3af" }}>Chargement…</p>
+          ) : (
+            <>
+              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={vacancesActif}
+                  onChange={(e) => sauverVacances(e.target.checked, vacancesMessage)}
+                  disabled={vacancesSaving}
+                  style={{ width: 18, height: 18, accentColor: "#111", cursor: vacancesSaving ? "wait" : "pointer" }}
+                />
+                <span style={{ fontSize: 14, fontWeight: 700 }}>J&apos;active le mode vacances</span>
+              </label>
+              {vacancesActif && (
+                <div style={{ marginTop: 14 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 6 }}>
+                    Message affiché sur vos fiches ({vacancesMessage.length}/{VACANCES_MAX_LENGTH})
+                  </label>
+                  <textarea
+                    value={vacancesMessage}
+                    onChange={(e) => setVacancesMessage(e.target.value.slice(0, VACANCES_MAX_LENGTH))}
+                    onBlur={() => { if (vacancesActif) sauverVacances(true, vacancesMessage) }}
+                    placeholder="Ex : Je suis en congés jusqu'au 25 août. Je réponds aux messages à mon retour. Merci pour votre patience."
+                    rows={3}
+                    maxLength={VACANCES_MAX_LENGTH}
+                    style={{ width: "100%", padding: "10px 12px", border: "1.5px solid #e5e7eb", borderRadius: 12, fontSize: 14, fontFamily: "inherit", resize: "vertical", boxSizing: "border-box", outline: "none" }}
+                  />
+                </div>
+              )}
+              {vacancesSaving && <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 10 }}>Enregistrement…</p>}
+              {vacancesSaved && !vacancesSaving && <p style={{ fontSize: 11, color: "#16a34a", marginTop: 10, fontWeight: 700 }}>Enregistré.</p>}
+              {vacancesError && <p style={{ fontSize: 12, color: "#dc2626", marginTop: 10 }}>{vacancesError}</p>}
+            </>
+          )}
+        </section>
+      )}
+
       <section style={{ background: "white", borderRadius: 20, padding: 28 }}>
         <h2 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 4px" }}>Notifications par e-mail</h2>
         <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 18px", lineHeight: 1.5 }}>
