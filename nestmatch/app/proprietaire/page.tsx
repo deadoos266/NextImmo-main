@@ -19,13 +19,8 @@ import { computeBailTimeline } from "../../lib/bailTimeline"
 import BailTimeline from "../components/ui/BailTimeline"
 import Image from "next/image"
 
-// 5 onglets (refonte 2026-04-19 v3 — décision produit finale) :
-// lifecycle naturel Bien → Candidatures → Visites → Locataire → Stats.
-// L'ex-onglet "Documents" (bail/EDL) est fusionné dans "Locataires" car
-// bail+EDL+quittances concernent toujours un locataire actif d'un bien donné.
-// Locataires regroupe aussi les loyers (argent + quittances vont avec qui paie).
-// Stats = ancien Tableau de bord + Performance.
-const ONGLETS = ["Mes biens", "Candidatures", "Visites", "Locataires", "Stats"] as const
+// 5 onglets (refonte 2026-04-19 v3 finale) : lifecycle propre.
+const ONGLETS = ["Mes biens", "Candidatures", "Visites", "Locataires", "Statistiques"] as const
 type Onglet = typeof ONGLETS[number]
 
 /**
@@ -383,7 +378,7 @@ export default function Proprietaire() {
   const router = useRouter()
   const { isMobile } = useResponsive()
   const myEmail = session?.user?.email?.toLowerCase() ?? null
-  const [onglet, setOnglet] = useState<Onglet>("Stats")
+  const [onglet, setOnglet] = useState<Onglet>("Statistiques")
   const [biens, setBiens] = useState<any[]>([])
   const [candidatures, setCandidatures] = useState<any[]>([])
   const [loyers, setLoyers] = useState<any[]>([])
@@ -618,7 +613,7 @@ export default function Proprietaire() {
         </div>
 
         {/* TABLEAU DE BORD */}
-        {onglet === "Stats" && (
+        {onglet === "Statistiques" && (
           <>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 12 : 18, marginBottom: 24 }}>
               {[
@@ -822,14 +817,16 @@ export default function Proprietaire() {
                           <div><span style={{ color: "#9ca3af" }}>Loyers confirmés : </span><strong>{moisLoyers}</strong></div>
                         </div>
                       </div>
-                      <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: 8, flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: 8, flexWrap: "wrap", minWidth: isMobile ? "auto" : 180 }}>
                         {loyerMoisStatut !== "paye" && (
                           <a href={`/proprietaire/stats?id=${b.id}`} style={{ background: "#111", color: "white", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>
                             {loyerMoisStatut === "declare" ? "Confirmer loyer" : "Déclarer loyer"}
                           </a>
                         )}
                         <a href={`/messages?with=${encodeURIComponent(b.locataire_email)}`} style={{ background: loyerMoisStatut === "paye" ? "#111" : "white", color: loyerMoisStatut === "paye" ? "white" : "#111", border: loyerMoisStatut === "paye" ? "none" : "1.5px solid #e5e7eb", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>Message</a>
-                        <a href={`/proprietaire/edl/${b.id}`} style={{ background: "white", border: "1.5px solid #e5e7eb", color: "#111", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>EDL</a>
+                        <a href={`/proprietaire/bail/${b.id}`} style={{ background: "white", border: "1.5px solid #e5e7eb", color: "#111", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>Bail</a>
+                        <a href={`/proprietaire/edl/${b.id}?type=entree`} style={{ background: "white", border: "1.5px solid #e5e7eb", color: "#111", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>EDL entrée</a>
+                        <a href={`/proprietaire/edl/${b.id}?type=sortie`} style={{ background: "white", border: "1.5px solid #e5e7eb", color: "#111", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>EDL sortie</a>
                       </div>
                     </div>
                     <BailTimeline steps={timelineSteps} />
@@ -841,7 +838,7 @@ export default function Proprietaire() {
         )}
 
         {/* PERFORMANCE — vue agrégée + pipeline + détail par bien */}
-        {onglet === "Stats" && biens.length > 0 && (
+        {onglet === "Statistiques" && biens.length > 0 && (
           <div>
             {biens.length === 0 ? (
               <EmptyState
@@ -1014,8 +1011,11 @@ export default function Proprietaire() {
           </div>
         )}
 
-        {/* DOCUMENTS — baux et EDL contextualisés par bien LOUÉ (au sein de Locataires) */}
-        {onglet === "Locataires" && biens.filter((b: any) => b.statut === "loué" && b.locataire_email).length > 0 && (
+        {/* Ancien bloc DOCUMENTS (désactivé) — les actions bail/EDL sont
+            maintenant directement dans la card de chaque locataire ci-dessus
+            (évite la duplication des annonces 2x). Bloc conservé en
+            `false &&` pour garder l'historique git. A supprimer propre Phase 4. */}
+        {false && onglet === "Locataires" && biens.filter((b: any) => b.statut === "loué" && b.locataire_email).length > 0 && (
           <div>
             {biens.length === 0 ? (
               <EmptyState
