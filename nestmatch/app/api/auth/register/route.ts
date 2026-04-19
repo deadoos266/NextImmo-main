@@ -99,13 +99,18 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Envoi email de vérification (fire-and-forget : si Resend n'est pas
-  // encore configuré ou si l'envoi échoue, le signup reste valide, l'user
-  // peut se reconnecter et demander un nouveau lien plus tard).
+  // Envoi email de vérification — on await pour que la requête HTTP ne
+  // retourne qu'une fois l'email parti (Vercel serverless peut kill la
+  // function avant un fire-and-forget). Try/catch : si Resend plante, le
+  // signup reste valide, l'user peut redemander un lien via /auth.
   const base = process.env.NEXT_PUBLIC_URL || "http://localhost:3000"
   const verifyUrl = `${base}/api/auth/verify-email?token=${verifyToken}`
   const { subject, html, text } = verifyEmailTemplate({ userName: name, verifyUrl })
-  void sendEmail({ to: email.toLowerCase(), subject, html, text })
+  try {
+    await sendEmail({ to: email.toLowerCase(), subject, html, text })
+  } catch (err) {
+    console.error("[register] sendEmail failed", err)
+  }
 
   return NextResponse.json({ success: true, data: { id: user.id, email: user.email } }, { status: 201 })
 }

@@ -81,7 +81,13 @@ export async function POST(req: NextRequest) {
   const base = process.env.NEXT_PUBLIC_URL || "http://localhost:3000"
   const resetUrl = `${base}/auth/reset-password/${token}`
   const { subject, html, text } = resetPasswordTemplate({ resetUrl })
-  void sendEmail({ to: email, subject, html, text })
+  // await : sur Vercel serverless, un void sendEmail peut être kill avant
+  // que l'envoi soit complété (la function termine dès qu'elle retourne).
+  try {
+    await sendEmail({ to: email, subject, html, text })
+  } catch (err) {
+    console.error("[reset-password] sendEmail failed", err)
+  }
 
   return NextResponse.json({ success: true })
 }
