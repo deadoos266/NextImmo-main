@@ -15,11 +15,11 @@ import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { verifyDossierToken } from "@/lib/dossierToken"
 import { hashToken, hashIP } from "@/lib/dossierAccessLog"
-import { checkRateLimit, getClientIp } from "@/lib/rateLimit"
+import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req.headers)
-  const rl = checkRateLimit(`dossier-access-log:${ip}`, { max: 5, windowMs: 60_000 })
+  const rl = await checkRateLimitAsync(`dossier-access-log:${ip}`, { max: 5, windowMs: 60_000 })
   if (!rl.allowed) {
     return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 })
   }

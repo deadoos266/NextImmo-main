@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { generateDossierToken } from "@/lib/dossierToken"
-import { checkRateLimit, getClientIp } from "@/lib/rateLimit"
+import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
 import { supabaseAdmin } from "@/lib/supabase-server"
 
 /**
@@ -20,14 +20,14 @@ export async function POST(req: NextRequest) {
 
   // Anti-farm : 10 tokens max / heure par email + 20 / heure par IP
   const ip = getClientIp(req.headers)
-  const rlEmail = checkRateLimit(`dossier-share:email:${email}`, { max: 10, windowMs: 60 * 60 * 1000 })
+  const rlEmail = await checkRateLimitAsync(`dossier-share:email:${email}`, { max: 10, windowMs: 60 * 60 * 1000 })
   if (!rlEmail.allowed) {
     return NextResponse.json(
       { success: false, error: "Trop de partages récents, réessayez plus tard." },
       { status: 429, headers: { "Retry-After": String(rlEmail.retryAfterSec ?? 3600) } }
     )
   }
-  const rlIp = checkRateLimit(`dossier-share:ip:${ip}`, { max: 20, windowMs: 60 * 60 * 1000 })
+  const rlIp = await checkRateLimitAsync(`dossier-share:ip:${ip}`, { max: 20, windowMs: 60 * 60 * 1000 })
   if (!rlIp.allowed) {
     return NextResponse.json(
       { success: false, error: "Trop de requêtes depuis cette adresse." },

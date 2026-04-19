@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { z } from "zod"
 import { supabaseAdmin } from "../../../../lib/supabase-server"
-import { checkRateLimit, getClientIp } from "../../../../lib/rateLimit"
+import { checkRateLimitAsync, getClientIp } from "../../../../lib/rateLimit"
 
 const registerSchema = z.object({
   email: z.string().email("Email invalide"),
@@ -20,7 +20,7 @@ const EMAIL_LIMIT = { max: 3, windowMs: 60 * 60 * 1000 }
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request.headers)
-  const rlIp = checkRateLimit(`register:ip:${ip}`, IP_LIMIT)
+  const rlIp = await checkRateLimitAsync(`register:ip:${ip}`, IP_LIMIT)
   if (!rlIp.allowed) {
     return NextResponse.json(
       { success: false, error: "Trop de tentatives, réessayez plus tard." },
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
   // Rate-limit par email (anti spray ciblé)
   const emailKey = email.toLowerCase()
-  const rlEmail = checkRateLimit(`register:email:${emailKey}`, EMAIL_LIMIT)
+  const rlEmail = await checkRateLimitAsync(`register:email:${emailKey}`, EMAIL_LIMIT)
   if (!rlEmail.allowed) {
     return NextResponse.json(
       { success: false, error: "Trop de tentatives pour cet email, réessayez plus tard." },

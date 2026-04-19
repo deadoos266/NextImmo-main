@@ -3,7 +3,7 @@ import { z } from "zod"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
-import { checkRateLimit } from "@/lib/rateLimit"
+import { checkRateLimitAsync } from "@/lib/rateLimit"
 
 const schema = z.object({
   confirm: z.literal("SUPPRIMER", { errorMap: () => ({ message: "Tapez SUPPRIMER pour confirmer" }) }),
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Anti-abus : 1 suppression / heure / email (action irréversible, session volée)
-  const rl = checkRateLimit(`account-delete:${email}`, { max: 1, windowMs: 60 * 60 * 1000 })
+  const rl = await checkRateLimitAsync(`account-delete:${email}`, { max: 1, windowMs: 60 * 60 * 1000 })
   if (!rl.allowed) {
     return NextResponse.json(
       { success: false, error: "Demande de suppression déjà en cours." },

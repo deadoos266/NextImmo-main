@@ -66,7 +66,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={dmSans.variable}>
+    <html lang="fr" className={dmSans.variable} suppressHydrationWarning>
       <head>
         {/* Anti-flash thème : doit s'exécuter synchrone AVANT le premier paint
             pour éviter un flash light→dark au chargement. Fichier statique

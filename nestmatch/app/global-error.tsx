@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+import * as Sentry from "@sentry/nextjs"
 
 /**
  * Fallback ultime — déclenché uniquement si error.tsx lui-même échoue ou
@@ -9,7 +10,7 @@ import { useEffect } from "react"
  */
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
-    console.error("[global-error]", error)
+    Sentry.captureException(error)
   }, [error])
 
   return (

@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 
+const { withSentryConfig } = require("@sentry/nextjs")
 const withBundleAnalyzer = require("@next/bundle-analyzer")({
   enabled: process.env.ANALYZE === "true",
 })
@@ -64,4 +65,19 @@ const nextConfig = {
   },
 }
 
-module.exports = withBundleAnalyzer(nextConfig)
+const sentryOpts = {
+  // Silence les logs CLI Sentry sauf en CI
+  silent: !process.env.CI,
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  // Upload source maps (masqués côté client pour pas exposer le code)
+  widenClientFileUpload: true,
+  hideSourceMaps: true,
+  disableLogger: true,
+  // Tunnel Sentry ingest via /monitoring pour contourner les ad-blockers
+  tunnelRoute: "/monitoring",
+  // Désactive les integrations qui nécessitent une configuration avancée
+  automaticVercelMonitors: false,
+}
+
+module.exports = withSentryConfig(withBundleAnalyzer(nextConfig), sentryOpts)

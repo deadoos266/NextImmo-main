@@ -15,8 +15,11 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.89.0",
+    "@sentry/nextjs": "^10.49.0",
     "@supabase/supabase-js": "^2.49.4",
     "@types/leaflet": "^1.9.21",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.37.0",
     "autoprefixer": "^10.4.27",
     "bcryptjs": "^2.4.3",
     "jspdf": "^4.2.1",

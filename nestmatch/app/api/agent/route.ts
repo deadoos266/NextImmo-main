@@ -25,7 +25,7 @@ import {
 } from "@/lib/agentMemory"
 import { runOpus } from "@/lib/agents/opusAgent"
 import { runSonnet } from "@/lib/agents/sonnetAgent"
-import { checkRateLimit, getClientIp } from "@/lib/rateLimit"
+import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
 
 // Rate-limit double : par email (20/10min) ET par IP (30/10min) pour éviter
 // qu'un attaquant multi-comptes cumule les requêtes LLM (coût Anthropic).
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Rate limit par email + IP (anti multi-comptes) ─────────────────────
-    const rlEmail = checkRateLimit(`agent:email:${userEmail}`, EMAIL_LIMIT)
+    const rlEmail = await checkRateLimitAsync(`agent:email:${userEmail}`, EMAIL_LIMIT)
     if (!rlEmail.allowed) {
       return NextResponse.json(
         { error: "Trop de requêtes, réessayez plus tard" },
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       )
     }
     const ip = getClientIp(req.headers)
-    const rlIp = checkRateLimit(`agent:ip:${ip}`, IP_LIMIT)
+    const rlIp = await checkRateLimitAsync(`agent:ip:${ip}`, IP_LIMIT)
     if (!rlIp.allowed) {
       return NextResponse.json(
         { error: "Trop de requêtes depuis cette adresse" },

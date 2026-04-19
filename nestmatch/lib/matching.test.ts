@@ -4,14 +4,12 @@ import { calculerScore, estExclu, labelScore, expliquerScore, type Annonce, type
 describe("calculerScore", () => {
   it("retourne 500 (neutre) quand le profil est null", () => {
     const annonce: Annonce = { ville: "Paris", prix: 1200, surface: 50, pieces: 2 }
-    // @ts-expect-error — on teste explicitement le cas null
     const score = calculerScore(annonce, null)
     expect(score).toBe(500)
   })
 
   it("retourne 500 (neutre) quand le profil est undefined", () => {
     const annonce: Annonce = { ville: "Paris", prix: 1200, surface: 50, pieces: 2 }
-    // @ts-expect-error — on teste explicitement le cas undefined
     const score = calculerScore(annonce, undefined)
     expect(score).toBe(500)
   })
@@ -71,9 +69,7 @@ describe("calculerScore", () => {
 describe("estExclu", () => {
   it("retourne false quand le profil est null/undefined", () => {
     const annonce: Annonce = { ville: "Paris", prix: 5000 }
-    // @ts-expect-error — cas null
     expect(estExclu(annonce, null)).toBe(false)
-    // @ts-expect-error — cas undefined
     expect(estExclu(annonce, undefined)).toBe(false)
   })
 
@@ -128,7 +124,6 @@ describe("labelScore", () => {
 
 describe("expliquerScore", () => {
   it("retourne [] si profil null", () => {
-    // @ts-expect-error — cas null
     expect(expliquerScore({}, null)).toEqual([])
   })
 

@@ -33,6 +33,7 @@ export default function robots(): MetadataRoute.Robots {
           "/connexion",
           "/login",
           "/test",
+          "/monitoring",     // tunnel Sentry
         ],
       },
     ],

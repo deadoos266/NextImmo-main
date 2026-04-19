@@ -23,7 +23,18 @@
       "Bash(xargs grep *)",
       "Bash(xargs sed *)",
       "Bash(npm --version)",
-      "Bash(npm uninstall *)"
+      "Bash(npm uninstall *)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3000/test/sentry)",
+      "Bash(curl -s http://localhost:3000/test/sentry)",
+      "Bash(kill %1)",
+      "Bash(sed -i 's/import { checkRateLimit, getClientIp }/import { checkRateLimitAsync, getClientIp }/g' app/api/account/avatar/route.ts app/api/account/change-password/route.ts app/api/account/delete/route.ts app/api/agent/route.ts app/api/auth/register/route.ts app/api/contact/route.ts app/api/dossier/access-log/route.ts app/api/dossier/share/route.ts)",
+      "Bash(sed -i 's/import { checkRateLimit }/import { checkRateLimitAsync }/g' app/api/account/avatar/route.ts app/api/account/change-password/route.ts app/api/account/delete/route.ts app/api/agent/route.ts app/api/auth/register/route.ts app/api/contact/route.ts app/api/dossier/access-log/route.ts app/api/dossier/share/route.ts)",
+      "Bash(sed -i 's/= checkRateLimit\\(/= await checkRateLimitAsync\\(/g' app/api/account/avatar/route.ts app/api/account/change-password/route.ts app/api/account/delete/route.ts app/api/agent/route.ts app/api/auth/register/route.ts app/api/contact/route.ts app/api/dossier/access-log/route.ts app/api/dossier/share/route.ts)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -X POST http://localhost:3000/api/contact -H \"Content-Type: application/json\" -d '{\"nom\":\"Test\",\"email\":\"test@test.local\",\"sujet\":\"question_generale\",\"message\":\"Message de test pour rate-limit validation.\"}')",
+      "Bash(curl -s -o /dev/null -w \"health: %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(curl *)",
+      "Bash(cat supabase/migrations/001_create_users.sql supabase/migrations/002_create_carnet_entretien.sql supabase/migrations/003_create_visites.sql supabase/migrations/004_batch26_security_hardening.sql supabase/migrations/005_storage_bucket_policies.sql supabase/migrations/006_gestion_documentaire.sql supabase/migrations/007_profil_dossier_complet.sql supabase/migrations/008_parametres_profil_public.sql supabase/migrations/009_profils_nullable_fields.sql supabase/migrations/010_indexes_performance.sql)",
+      "Read(//tmp/**)"
     ]
   }
 }

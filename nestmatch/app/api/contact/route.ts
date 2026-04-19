@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { SUJETS_CONTACT } from "@/lib/contacts"
-import { checkRateLimit, getClientIp } from "@/lib/rateLimit"
+import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
 
 const schema = z.object({
   nom: z.string().min(2).max(120),
@@ -22,7 +22,7 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   // Rate-limit IP (10/h) — anti-spam indépendant de l'email (qu'un spammeur peut changer)
   const ip = getClientIp(req.headers)
-  const rlIp = checkRateLimit(`contact:ip:${ip}`, { max: 10, windowMs: 60 * 60 * 1000 })
+  const rlIp = await checkRateLimitAsync(`contact:ip:${ip}`, { max: 10, windowMs: 60 * 60 * 1000 })
   if (!rlIp.allowed) {
     return NextResponse.json(
       { success: false, error: "Trop de messages récents. Réessayez plus tard." },

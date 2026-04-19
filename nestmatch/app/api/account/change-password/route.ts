@@ -4,7 +4,7 @@ import { z } from "zod"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
-import { checkRateLimit, getClientIp } from "@/lib/rateLimit"
+import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
 
 const schema = z.object({
   currentPassword: z.string().min(1, "Mot de passe actuel requis"),
@@ -23,14 +23,14 @@ export async function POST(req: NextRequest) {
 
   // Anti brute-force sur le mot de passe actuel — 5 tentatives / 15 min / email + IP
   const ip = getClientIp(req.headers)
-  const rlEmail = checkRateLimit(`change-pw:email:${email}`, { max: 5, windowMs: 15 * 60 * 1000 })
+  const rlEmail = await checkRateLimitAsync(`change-pw:email:${email}`, { max: 5, windowMs: 15 * 60 * 1000 })
   if (!rlEmail.allowed) {
     return NextResponse.json(
       { success: false, error: "Trop de tentatives, réessayez plus tard." },
       { status: 429, headers: { "Retry-After": String(rlEmail.retryAfterSec ?? 900) } }
     )
   }
-  const rlIp = checkRateLimit(`change-pw:ip:${ip}`, { max: 15, windowMs: 15 * 60 * 1000 })
+  const rlIp = await checkRateLimitAsync(`change-pw:ip:${ip}`, { max: 15, windowMs: 15 * 60 * 1000 })
   if (!rlIp.allowed) {
     return NextResponse.json(
       { success: false, error: "Trop de tentatives depuis cette adresse." },
