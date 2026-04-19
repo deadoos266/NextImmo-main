@@ -646,21 +646,41 @@ export default function BailPage() {
     setConfirmRegen(false)
     setGenerating(true)
     try {
+      console.log("[generer] starting — bienId:", bien.id, "statut:", bien.statut)
       const locataireEmail = bailData.emailLocataire
 
-      await genererBailPDF(bailData)
+      // PDF client-side (peut échouer si jsPDF plante)
+      try {
+        await genererBailPDF(bailData)
+        console.log("[generer] PDF téléchargé")
+      } catch (pdfErr) {
+        console.error("[generer] PDF error:", pdfErr)
+        alert(`Erreur PDF : ${pdfErr instanceof Error ? pdfErr.message : String(pdfErr)}`)
+        return
+      }
 
       if (locataireEmail) {
         const patch: Record<string, unknown> = {
           locataire_email: locataireEmail,
           bail_genere_at: new Date().toISOString(),
         }
-        // Ne pas dégrader "loué" (déjà accepté via "Louer à ce candidat") vers
-        // "bail_envoye". Si bien était seulement "disponible"/etc, on passe à
-        // "bail_envoye" (attente signature). Le locataire signera → "loué".
         if (bien.statut !== "loué") patch.statut = "bail_envoye"
         if (form.dateDebut) patch.date_debut_bail = form.dateDebut
-        await supabase.from("annonces").update(patch).eq("id", bien.id)
+        console.log("[generer] update annonce patch:", patch)
+        const { data: updData, error: updErr } = await supabase
+          .from("annonces")
+          .update(patch)
+          .eq("id", bien.id)
+          .select("id")
+        console.log("[generer] update annonce result:", { updData, updErr })
+        if (updErr) {
+          alert(`Erreur mise à jour annonce : ${updErr.message} (code ${updErr.code || "?"})`)
+          return
+        }
+        if (!updData || updData.length === 0) {
+          alert("La mise à jour de l'annonce n'a affecté aucune ligne (RLS ?).")
+          return
+        }
 
         const fromEmail = (
           bien.proprietaire_email ||
@@ -676,16 +696,25 @@ export default function BailPage() {
               })
             : ""
           const bailPayload = JSON.stringify(bailData)
-          await supabase.from("messages").insert([
-            {
-              from_email: fromEmail,
-              to_email: locataireEmail,
-              contenu: `[BAIL_CARD]${bailPayload}`,
-              lu: false,
-              annonce_id: bien.id,
-              created_at: new Date().toISOString(),
-            },
-          ])
+          console.log("[generer] insert message [BAIL_CARD] from:", fromEmail, "to:", locataireEmail)
+          const { data: msgData, error: msgErr } = await supabase
+            .from("messages")
+            .insert([
+              {
+                from_email: fromEmail,
+                to_email: locataireEmail,
+                contenu: `[BAIL_CARD]${bailPayload}`,
+                lu: false,
+                annonce_id: bien.id,
+                created_at: new Date().toISOString(),
+              },
+            ])
+            .select("id")
+          console.log("[generer] insert message result:", { msgData, msgErr })
+          if (msgErr) {
+            alert(`Erreur envoi message : ${msgErr.message} (code ${msgErr.code || "?"})`)
+            return
+          }
           void postNotif({
             userEmail: locataireEmail,
             type: "bail_genere",
@@ -694,6 +723,9 @@ export default function BailPage() {
             href: "/mon-logement",
             relatedId: String(bien.id),
           })
+        } else {
+          alert("Email bailleur introuvable — impossible d'envoyer le bail au locataire.")
+          return
         }
       }
 
@@ -705,6 +737,11 @@ export default function BailPage() {
           /* ignore */
         }
       }
+      alert("✓ Bail généré et envoyé au locataire.")
+    } catch (err) {
+      console.error("[generer] exception:", err)
+      const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+      alert(`Erreur inattendue : ${msg}`)
     } finally {
       setGenerating(false)
     }
