@@ -188,6 +188,23 @@ export default async function LocationVille({ params }: any) {
       />
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 20px" }}>
 
+        {/* Fil d'Ariane visible (mirroir du JSON-LD BreadcrumbList) */}
+        <nav aria-label="Fil d'Ariane" style={{ marginBottom: 14 }}>
+          <ol style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexWrap: "wrap", gap: 6, fontSize: 13, color: "#6b7280" }}>
+            <li>
+              <Link href="/" style={{ color: "#6b7280", textDecoration: "none" }}>Accueil</Link>
+            </li>
+            <li aria-hidden style={{ color: "#d1d5db" }}>›</li>
+            <li>
+              <Link href="/annonces" style={{ color: "#6b7280", textDecoration: "none" }}>Annonces</Link>
+            </li>
+            <li aria-hidden style={{ color: "#d1d5db" }}>›</li>
+            <li aria-current="page" style={{ color: "#111", fontWeight: 600 }}>
+              Location {displayCity}
+            </li>
+          </ol>
+        </nav>
+
         <p style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 10 }}>
           Location à {displayCity}
         </p>
