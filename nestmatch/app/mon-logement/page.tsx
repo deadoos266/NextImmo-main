@@ -8,6 +8,8 @@ import { useResponsive } from "../hooks/useResponsive"
 import { joursRetardLoyer } from "../../lib/loyerHelpers"
 import { BRAND } from "../../lib/brand"
 import { drawLogoPDF } from "../../lib/brandPDF"
+import { computeBailTimeline } from "../../lib/bailTimeline"
+import BailTimeline from "../components/ui/BailTimeline"
 
 /**
  * Mon logement actuel — vue dédiée locataire après bail signé.
@@ -29,7 +31,9 @@ type Bien = {
   pieces: number | null
   photos: string[] | null
   proprietaire_email: string
+  statut: string | null
   date_debut_bail: string | null
+  bail_genere_at: string | null
   dpe: string | null
 }
 
@@ -203,6 +207,12 @@ export default function MonLogement() {
 
   const photoPrincipale = Array.isArray(bien.photos) && bien.photos.length > 0 ? bien.photos[0] : null
   const loyerTotal = (bien.prix || 0) + (bien.charges || 0)
+  const timelineSteps = computeBailTimeline({
+    annonce: { id: bien.id, statut: bien.statut, bail_genere_at: bien.bail_genere_at, date_debut_bail: bien.date_debut_bail },
+    edls: edls as any,
+    loyers: loyers as any,
+    role: "locataire",
+  })
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px 24px" }}>
@@ -215,9 +225,13 @@ export default function MonLogement() {
         <h1 style={{ fontSize: isMobile ? 24 : 32, fontWeight: 800, letterSpacing: "-0.5px", marginBottom: 8 }}>
           Mon logement actuel
         </h1>
-        <p style={{ fontSize: 14, color: "#6b7280", marginBottom: 28 }}>
+        <p style={{ fontSize: 14, color: "#6b7280", marginBottom: 20 }}>
           Retrouvez ici votre logement, votre propriétaire, et tous vos documents.
         </p>
+
+        <div style={{ marginBottom: 24 }}>
+          <BailTimeline steps={timelineSteps} />
+        </div>
 
         {/* Carte principale du bien */}
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>

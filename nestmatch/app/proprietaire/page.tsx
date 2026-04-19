@@ -15,6 +15,8 @@ import EmptyState from "../components/ui/EmptyState"
 import UndoToast from "../components/ui/UndoToast"
 import { useUndo } from "../components/ui/useUndo"
 import { postNotif } from "../../lib/notificationsClient"
+import { computeBailTimeline } from "../../lib/bailTimeline"
+import BailTimeline from "../components/ui/BailTimeline"
 
 const ONGLETS = ["Tableau de bord", "Mes biens", "Mes locataires", "Performance", "Documents", "Candidatures", "Loyers", "Visites"] as const
 type Onglet = typeof ONGLETS[number]
@@ -277,6 +279,7 @@ export default function Proprietaire() {
   const [candidatures, setCandidatures] = useState<any[]>([])
   const [loyers, setLoyers] = useState<any[]>([])
   const [visites, setVisites] = useState<any[]>([])
+  const [edls, setEdls] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [supprimerId, setSupprimerId] = useState<number | null>(null)
   const [dossierOuvert, setDossierOuvert] = useState<string | null>(null)
@@ -332,12 +335,16 @@ export default function Proprietaire() {
       // Charger les clics uniques par bien
       const ids = b.map((a: any) => a.id)
       if (ids.length > 0) {
-        const { data: clics } = await supabase.from("clics_annonces").select("annonce_id").in("annonce_id", ids)
+        const [{ data: clics }, { data: edlRows }] = await Promise.all([
+          supabase.from("clics_annonces").select("annonce_id").in("annonce_id", ids),
+          supabase.from("etats_des_lieux").select("annonce_id, type, statut, date_edl, created_at").in("annonce_id", ids),
+        ])
         if (clics) {
           const map: Record<number, number> = {}
           clics.forEach((c: any) => { map[c.annonce_id] = (map[c.annonce_id] || 0) + 1 })
           setClicsParBien(map)
         }
+        setEdls(edlRows || [])
       }
     }
     const candidaturesArr = m ? m.filter((msg: any) => msg.type === "candidature") : []
@@ -674,36 +681,46 @@ export default function Proprietaire() {
                   loyerMoisStatut === "paye"    ? { bg: "#dcfce7", color: "#15803d", label: "Loyer du mois reçu" }
                   : loyerMoisStatut === "declare" ? { bg: "#fff7ed", color: "#c2410c", label: "Loyer du mois en attente" }
                   : { bg: "#fee2e2", color: "#dc2626", label: "Loyer du mois à déclarer" }
+                const edlsBien = edls.filter((e: any) => e.annonce_id === b.id)
+                const timelineSteps = computeBailTimeline({
+                  annonce: { id: b.id, statut: b.statut, bail_genere_at: b.bail_genere_at, date_debut_bail: b.date_debut_bail },
+                  edls: edlsBien,
+                  loyers: loyersBien,
+                  role: "proprietaire",
+                })
                 return (
-                  <div key={b.id} style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24, display: "flex", flexDirection: isMobile ? "column" : "row", gap: 16, alignItems: isMobile ? "stretch" : "center" }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
-                        <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{b.titre}</h3>
-                        <span style={{ background: "#dcfce7", color: "#15803d", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>Bail actif</span>
-                        <span style={{ background: loyerMoisStyle.bg, color: loyerMoisStyle.color, padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>{loyerMoisStyle.label}</span>
-                        {retardPlusAncien && (
-                          <span title={`Loyer de ${new Date(retardPlusAncien.l.mois + "-01T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })} en retard`} style={{ background: "#fef2f2", color: "#b91c1c", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700, border: "1.5px solid #fecaca" }}>
-                            {labelRetard(retardPlusAncien.jours)}{retardsBien.length > 1 ? ` · ${retardsBien.length} mois` : ""}
-                          </span>
+                  <div key={b.id} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24, display: "flex", flexDirection: isMobile ? "column" : "row", gap: 16, alignItems: isMobile ? "stretch" : "center" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
+                          <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{b.titre}</h3>
+                          <span style={{ background: "#dcfce7", color: "#15803d", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>Bail actif</span>
+                          <span style={{ background: loyerMoisStyle.bg, color: loyerMoisStyle.color, padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>{loyerMoisStyle.label}</span>
+                          {retardPlusAncien && (
+                            <span title={`Loyer de ${new Date(retardPlusAncien.l.mois + "-01T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })} en retard`} style={{ background: "#fef2f2", color: "#b91c1c", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700, border: "1.5px solid #fecaca" }}>
+                              {labelRetard(retardPlusAncien.jours)}{retardsBien.length > 1 ? ` · ${retardsBien.length} mois` : ""}
+                            </span>
+                          )}
+                        </div>
+                        <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 10px" }}>{b.adresse ? b.adresse + " · " : ""}{b.ville}</p>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
+                          <div><span style={{ color: "#9ca3af" }}>Locataire : </span><strong>{b.locataire_email}</strong></div>
+                          {b.date_debut_bail && <div><span style={{ color: "#9ca3af" }}>Début du bail : </span><strong>{new Date(b.date_debut_bail).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</strong></div>}
+                          <div><span style={{ color: "#9ca3af" }}>Loyer : </span><strong>{(b.prix || 0) + (b.charges || 0)} €</strong> <span style={{ color: "#6b7280" }}>/ mois</span></div>
+                          <div><span style={{ color: "#9ca3af" }}>Loyers confirmés : </span><strong>{moisLoyers}</strong></div>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: 8, flexWrap: "wrap" }}>
+                        {loyerMoisStatut !== "paye" && (
+                          <a href={`/proprietaire/stats?id=${b.id}`} style={{ background: "#111", color: "white", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>
+                            {loyerMoisStatut === "declare" ? "Confirmer loyer" : "Déclarer loyer"}
+                          </a>
                         )}
-                      </div>
-                      <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 10px" }}>{b.adresse ? b.adresse + " · " : ""}{b.ville}</p>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
-                        <div><span style={{ color: "#9ca3af" }}>Locataire : </span><strong>{b.locataire_email}</strong></div>
-                        {b.date_debut_bail && <div><span style={{ color: "#9ca3af" }}>Début du bail : </span><strong>{new Date(b.date_debut_bail).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</strong></div>}
-                        <div><span style={{ color: "#9ca3af" }}>Loyer : </span><strong>{(b.prix || 0) + (b.charges || 0)} €</strong> <span style={{ color: "#6b7280" }}>/ mois</span></div>
-                        <div><span style={{ color: "#9ca3af" }}>Loyers confirmés : </span><strong>{moisLoyers}</strong></div>
+                        <a href={`/messages?with=${encodeURIComponent(b.locataire_email)}`} style={{ background: loyerMoisStatut === "paye" ? "#111" : "white", color: loyerMoisStatut === "paye" ? "white" : "#111", border: loyerMoisStatut === "paye" ? "none" : "1.5px solid #e5e7eb", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>Message</a>
+                        <a href={`/proprietaire/edl/${b.id}`} style={{ background: "white", border: "1.5px solid #e5e7eb", color: "#111", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>EDL</a>
                       </div>
                     </div>
-                    <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: 8, flexWrap: "wrap" }}>
-                      {loyerMoisStatut !== "paye" && (
-                        <a href={`/proprietaire/stats?id=${b.id}`} style={{ background: "#111", color: "white", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>
-                          {loyerMoisStatut === "declare" ? "Confirmer loyer" : "Déclarer loyer"}
-                        </a>
-                      )}
-                      <a href={`/messages?with=${encodeURIComponent(b.locataire_email)}`} style={{ background: loyerMoisStatut === "paye" ? "#111" : "white", color: loyerMoisStatut === "paye" ? "white" : "#111", border: loyerMoisStatut === "paye" ? "none" : "1.5px solid #e5e7eb", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>Message</a>
-                      <a href={`/proprietaire/edl/${b.id}`} style={{ background: "white", border: "1.5px solid #e5e7eb", color: "#111", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>EDL</a>
-                    </div>
+                    <BailTimeline steps={timelineSteps} />
                   </div>
                 )
               })
