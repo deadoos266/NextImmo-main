@@ -404,11 +404,10 @@ export default function EdlPage() {
   }
 
   async function sauvegarderEdl(statutOverride?: string) {
-    if (!bien || !session?.user?.email) return
+    if (!bien || !session?.user?.email) return null
     setSaving(true)
     const payload: any = {
       annonce_id: Number(bienId),
-      // Source de vérité = le proprietaire_email du BIEN, pas la session (cas co-propriétaire)
       proprietaire_email: (bien?.proprietaire_email || session.user.email || "").toLowerCase(),
       type,
       date_edl: dateEdl,
@@ -425,28 +424,30 @@ export default function EdlPage() {
       pieces_data: pieces,
       statut: statutOverride || edlExistant?.statut || "brouillon",
     }
+    let saved: any = null
     if (edlExistant) {
       const { data } = await supabase.from("etats_des_lieux").update(payload).eq("id", edlExistant.id).select().single()
-      if (data) setEdlExistant(data)
+      if (data) { setEdlExistant(data); saved = data }
     } else {
       const { data } = await supabase.from("etats_des_lieux").insert([payload]).select().single()
-      if (data) setEdlExistant(data)
+      if (data) { setEdlExistant(data); saved = data }
     }
     setSaving(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
+    return saved
   }
 
   async function envoyerAuLocataire() {
     if (!bien || !session?.user?.email || !emailLocataire.trim()) return
     setSending(true)
     try {
-      // Save with statut "envoye"
-      await sauvegarderEdl("envoye")
-      // Send message in chat
-      const edlId = edlExistant?.id
+      // Save with statut "envoye" et récupère la row directement (React state
+      // async — on ne peut pas relire edlExistant tout de suite après setEdlExistant).
+      const saved = await sauvegarderEdl("envoye")
+      const edlId = saved?.id || edlExistant?.id
       if (!edlId) {
-        alert("L'EDL doit être enregistré avant l'envoi. Réessayez dans un instant.")
+        alert("L'EDL n'a pas pu être enregistré. Vérifiez que tous les champs obligatoires sont remplis.")
         setSending(false)
         return
       }
