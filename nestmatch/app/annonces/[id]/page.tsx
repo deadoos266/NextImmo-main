@@ -13,7 +13,7 @@ import SignalerButton from "../../components/SignalerButton"
 import ShareButton from "./ShareButton"
 import Link from "next/link"
 
-const BASE_URL = process.env.NEXT_PUBLIC_URL || 'https://nestmatch.fr'
+const BASE_URL = process.env.NEXT_PUBLIC_URL || 'https://keymatch-immo.fr'
 
 export async function generateMetadata({ params }: any): Promise<Metadata> {
   const { id } = await params

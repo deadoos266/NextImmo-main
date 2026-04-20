@@ -2,7 +2,7 @@ import { MetadataRoute } from "next"
 import { supabase } from "../lib/supabase"
 import { CITY_NAMES } from "../lib/cityCoords"
 
-const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://nestmatch.fr"
+const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://keymatch-immo.fr"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Seulement les annonces disponibles (statut "disponible" OU statut absent)

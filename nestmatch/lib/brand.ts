@@ -12,8 +12,8 @@
 export const BRAND = {
   name: "NestMatch",
   tagline: "La location entre particuliers, sans frais d'agence",
-  url: "https://nestmatch.fr",
-  email: "contact@nestmatch.fr",
+  url: "https://keymatch-immo.fr",
+  email: "contact@keymatch-immo.fr",
   colors: {
     primary: "#111",
     background: "#F7F4EF",

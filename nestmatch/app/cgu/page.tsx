@@ -35,7 +35,7 @@ export default function CGU() {
           <p style={p}>
             Les présentes Conditions Générales d&apos;Utilisation (ci-après « CGU ») ont pour objet de définir les
             modalités d&apos;accès et d&apos;utilisation de la plateforme NestMatch, accessible à l&apos;adresse
-            <strong> nestmatch.fr </strong>(ci-après la « Plateforme »), éditée par la société dont les
+            <strong> keymatch-immo.fr </strong>(ci-après la « Plateforme »), éditée par la société dont les
             coordonnées figurent dans les <Link href="/mentions-legales" style={{ color: "#111", fontWeight: 600 }}>Mentions légales</Link>
             {" "}(ci-après l&apos;« Éditeur »).
           </p>
@@ -48,7 +48,7 @@ export default function CGU() {
         <section style={sectionStyle}>
           <h2 style={h2}>2. Définitions</h2>
           <ul style={{ paddingLeft: 20, margin: "4px 0 0" }}>
-            <li style={li}><strong>Plateforme</strong> : l&apos;ensemble des services accessibles en ligne via nestmatch.fr.</li>
+            <li style={li}><strong>Plateforme</strong> : l&apos;ensemble des services accessibles en ligne via keymatch-immo.fr.</li>
             <li style={li}><strong>Utilisateur</strong> : toute personne physique majeure disposant d&apos;un compte sur la Plateforme.</li>
             <li style={li}><strong>Locataire</strong> : Utilisateur à la recherche d&apos;un logement à louer.</li>
             <li style={li}><strong>Propriétaire</strong> : Utilisateur mettant un bien immobilier à disposition à la location.</li>
@@ -136,7 +136,7 @@ export default function CGU() {
             Plateforme qui serait manifestement illicite, frauduleux ou contraire aux présentes CGU. Tout
             Utilisateur peut signaler un contenu ou un comportement litigieux depuis la Plateforme, via le bouton
             « Signaler » présent sur chaque Annonce, ou par email à{" "}
-            <strong>contact@nestmatch.fr</strong>.
+            <strong>contact@keymatch-immo.fr</strong>.
           </p>
         </section>
 
@@ -234,7 +234,7 @@ export default function CGU() {
           <p style={p}>
             Pour toute question relative aux présentes CGU, vous pouvez nous contacter via le formulaire{" "}
             <Link href="/contact" style={{ color: "#111", fontWeight: 700 }}>Nous contacter</Link>{" "}
-            ou par email à <strong>contact@nestmatch.fr</strong>.
+            ou par email à <strong>contact@keymatch-immo.fr</strong>.
           </p>
         </section>
       </div>

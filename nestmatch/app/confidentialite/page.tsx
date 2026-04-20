@@ -34,7 +34,7 @@ export default function Confidentialite() {
           <h2 style={h2}>1. Préambule</h2>
           <p style={p}>
             La présente Politique de confidentialité décrit comment NestMatch collecte, utilise, conserve et protège
-            les données personnelles des Utilisateurs de la plateforme accessible à l&apos;adresse <strong>nestmatch.fr</strong>.
+            les données personnelles des Utilisateurs de la plateforme accessible à l&apos;adresse <strong>keymatch-immo.fr</strong>.
             Elle s&apos;applique à toute personne inscrite ou simplement en visite sur le site.
           </p>
           <p style={p}>
@@ -52,7 +52,7 @@ export default function Confidentialite() {
           </p>
           <p style={p}>
             Pour toute question relative à vos données personnelles, contactez :{" "}
-            <strong>contact@nestmatch.fr</strong>.
+            <strong>contact@keymatch-immo.fr</strong>.
           </p>
         </section>
 
@@ -177,7 +177,7 @@ export default function Confidentialite() {
           </ul>
           <p style={p}>
             Pour exercer ces droits, adressez votre demande accompagnée d&apos;un justificatif d&apos;identité à :{" "}
-            <strong>contact@nestmatch.fr</strong>. Nous répondons dans un délai d&apos;un mois maximum.
+            <strong>contact@keymatch-immo.fr</strong>. Nous répondons dans un délai d&apos;un mois maximum.
           </p>
           <p style={p}>
             Vous disposez également du droit d&apos;introduire une réclamation auprès de la Commission Nationale de

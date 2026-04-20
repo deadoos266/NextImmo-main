@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"
 import { supabase } from "../../lib/supabase"
 
-const SITE_URL = typeof window !== "undefined" ? window.location.origin : "https://nestmatch.fr"
+const SITE_URL = typeof window !== "undefined" ? window.location.origin : "https://keymatch-immo.fr"
 
 export default function LocataireEmailField({
   value,

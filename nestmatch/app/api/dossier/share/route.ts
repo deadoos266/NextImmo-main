@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   const token = generateDossierToken(email, days)
   // On NE fallback PAS sur le Host header — un attaquant pourrait forger un host
   // pour récupérer l'URL. Obligatoire d'avoir NEXT_PUBLIC_URL configuré.
-  const base = process.env.NEXT_PUBLIC_URL || "https://nestmatch.fr"
+  const base = process.env.NEXT_PUBLIC_URL || "https://keymatch-immo.fr"
   const url = `${base}/dossier-partage/${token}`
 
   return NextResponse.json({

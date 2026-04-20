@@ -16,7 +16,7 @@ import { useResponsive } from "../hooks/useResponsive"
 const ONGLETS = ["Vue d'ensemble", "Signalements", "Contact", "Annonces", "Utilisateurs", "Messages", "SEO", "Activité"] as const
 type Onglet = typeof ONGLETS[number]
 
-const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://nestmatch.fr"
+const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://keymatch-immo.fr"
 
 function seoScore(a: any): { score: number; issues: string[] } {
   const issues: string[] = []

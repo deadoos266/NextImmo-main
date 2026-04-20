@@ -44,7 +44,7 @@ Add JSON-LD to annonce pages:
   "@type": "RealEstateListing",
   "name": annonce.titre,
   "description": annonce.description,
-  "url": `https://nestmatch.fr/annonces/${annonce.id}`,
+  "url": `https://keymatch-immo.fr/annonces/${annonce.id}`,
   "offers": {
     "@type": "Offer",
     "price": annonce.prix,

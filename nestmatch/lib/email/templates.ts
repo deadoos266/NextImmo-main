@@ -58,7 +58,7 @@ function logoSvg(id: string, size = 44): string {
 }
 
 function wrap(preview: string, body: string, templateId: string): string {
-  const base = process.env.NEXT_PUBLIC_URL || BRAND.url || "https://nestmatch.fr"
+  const base = process.env.NEXT_PUBLIC_URL || BRAND.url || "https://keymatch-immo.fr"
   const domain = base.replace(/^https?:\/\//, "").replace(/\/$/, "")
   return `<!doctype html>
 <html lang="fr">

@@ -44,7 +44,7 @@ export default function MentionsLegales() {
         <section style={sectionStyle}>
           <h2 style={h2}>Éditeur du site</h2>
           <p style={p}>
-            Le site <strong>nestmatch.fr</strong> est édité par :
+            Le site <strong>keymatch-immo.fr</strong> est édité par :
           </p>
           <p style={p}>
             <strong>Raison sociale</strong> : <span style={todo}>à renseigner</span><br />
@@ -54,7 +54,7 @@ export default function MentionsLegales() {
             <strong>SIRET</strong> : <span style={todo}>à renseigner</span><br />
             <strong>Numéro de TVA intracommunautaire</strong> : <span style={todo}>à renseigner</span><br />
             <strong>Siège social</strong> : <span style={todo}>adresse postale à renseigner</span><br />
-            <strong>Email de contact</strong> : <strong>contact@nestmatch.fr</strong>
+            <strong>Email de contact</strong> : <strong>contact@keymatch-immo.fr</strong>
           </p>
         </section>
 
@@ -127,7 +127,7 @@ export default function MentionsLegales() {
           </p>
           <ul style={{ paddingLeft: 20, margin: "4px 0 10px" }}>
             <li style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.8 }}>directement depuis la plateforme via le bouton « Signaler » présent sur chaque annonce ou message ;</li>
-            <li style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.8 }}>par email à <strong>contact@nestmatch.fr</strong>.</li>
+            <li style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.8 }}>par email à <strong>contact@keymatch-immo.fr</strong>.</li>
           </ul>
           <p style={p}>
             Pour être pris en compte, le signalement doit comporter : la date, votre identité, la description du

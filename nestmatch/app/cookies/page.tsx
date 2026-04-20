@@ -221,7 +221,7 @@ export default function CookiesPage() {
             </ul>
             <P>
               Pour exercer ces droits, vous pouvez nous contacter à l&apos;adresse suivante :{" "}
-              <strong>contact@nestmatch.fr</strong>
+              <strong>contact@keymatch-immo.fr</strong>
             </P>
             <P>
               Vous pouvez également introduire une réclamation auprès de la CNIL (Commission Nationale de
