@@ -160,7 +160,7 @@ function makeInitialForm(): FormState {
   }
 }
 
-// ─── Styles réutilisables (inline only — règle NestMatch) ──────────────────
+// ─── Styles réutilisables (inline only — règle KeyMatch) ──────────────────
 
 const labelStyle = {
   fontSize: 12,

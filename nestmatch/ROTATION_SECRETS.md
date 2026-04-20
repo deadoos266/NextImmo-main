@@ -27,7 +27,7 @@ Ce secret protege toutes les sessions. S'il est connu, n'importe qui peut forger
 Permet a un attaquant d'usurper le flow OAuth Google.
 
 1. Aller sur https://console.cloud.google.com/apis/credentials
-2. Selectionner le projet NestMatch
+2. Selectionner le projet KeyMatch
 3. Ouvrir le client OAuth 2.0 (ID : 428990672925-p5q0jgttfqn1kb4el3lbdrr4i2d7ae6t...)
 4. Cliquer sur "Add secret" pour generer un nouveau secret
 5. Copier la nouvelle valeur

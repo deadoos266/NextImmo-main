@@ -99,7 +99,7 @@ export default function CookiesPage() {
             </P>
             <P>
               Les cookies peuvent être « de session » (supprimés à la fermeture du navigateur) ou « persistants »
-              (conservés pendant une durée définie). Ils peuvent être déposés par NestMatch (« cookies internes »)
+              (conservés pendant une durée définie). Ils peuvent être déposés par KeyMatch (« cookies internes »)
               ou par des services tiers (« cookies tiers »).
             </P>
           </Section>
@@ -107,7 +107,7 @@ export default function CookiesPage() {
           {/* 2. Les cookies que nous utilisons */}
           <Section title="2. Les cookies que nous utilisons">
             <P>
-              NestMatch utilise un nombre limité de cookies, strictement nécessaires au fonctionnement du service
+              KeyMatch utilise un nombre limité de cookies, strictement nécessaires au fonctionnement du service
               ou soumis à votre consentement préalable.
             </P>
             <div style={{ overflowX: "auto", margin: "16px 0" }}>
@@ -182,7 +182,7 @@ export default function CookiesPage() {
           {/* 4. Cookies tiers */}
           <Section title="4. Cookies tiers">
             <P>
-              Certains services tiers intégrés à NestMatch peuvent déposer leurs propres cookies :
+              Certains services tiers intégrés à KeyMatch peuvent déposer leurs propres cookies :
             </P>
             <ul style={{ paddingLeft: 20, margin: "8px 0 16px" }}>
               <li style={{ fontSize: 14, color: "#374151", lineHeight: 2 }}>
@@ -240,7 +240,7 @@ export default function CookiesPage() {
           {/* 6. Modifications */}
           <Section title="6. Modifications de cette politique">
             <P>
-              NestMatch se réserve le droit de modifier la présente politique de cookies afin de l&apos;adapter
+              KeyMatch se réserve le droit de modifier la présente politique de cookies afin de l&apos;adapter
               aux évolutions réglementaires ou aux changements apportés au site. La date de dernière mise
               à jour est indiquée en haut de cette page. Nous vous invitons à la consulter régulièrement.
             </P>

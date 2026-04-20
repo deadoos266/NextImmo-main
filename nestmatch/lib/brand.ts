@@ -1,5 +1,5 @@
 /**
- * SOURCE DE VÉRITÉ du branding NestMatch.
+ * SOURCE DE VÉRITÉ du branding KeyMatch.
  *
  * Pour remplacer le logo quand le fichier final arrive :
  *   1. Placer les SVG dans /public/logo.svg et /public/logo-mark.svg
@@ -10,7 +10,7 @@
  */
 
 export const BRAND = {
-  name: "NestMatch",
+  name: "KeyMatch",
   tagline: "La location entre particuliers, sans frais d'agence",
   url: "https://keymatch-immo.fr",
   email: "contact@keymatch-immo.fr",

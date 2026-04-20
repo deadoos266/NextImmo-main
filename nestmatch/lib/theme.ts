@@ -1,5 +1,5 @@
 /**
- * Gestion du thème clair / sombre pour NestMatch.
+ * Gestion du thème clair / sombre pour KeyMatch.
  *
  * - Persistance localStorage sous la clé `nestmatch-theme`.
  * - Valeurs : "light" | "dark" | "system" (suit l'OS).

@@ -2,7 +2,7 @@ import Link from "next/link"
 
 export const metadata = {
   title: "Mentions légales",
-  description: "Identité de l'éditeur, hébergeur et contacts juridiques de la plateforme NestMatch.",
+  description: "Identité de l'éditeur, hébergeur et contacts juridiques de la plateforme KeyMatch.",
   // Certaines informations de l'éditeur restent à finaliser avant lancement
   // commercial (SIRET, RCS, capital). Noindex tant que non renseigné.
   robots: { index: false, follow: true },
@@ -88,7 +88,7 @@ export default function MentionsLegales() {
         <section style={sectionStyle}>
           <h2 style={h2}>Propriété intellectuelle</h2>
           <p style={p}>
-            La marque <strong>NestMatch</strong>, le nom de domaine, le contenu éditorial, les textes, graphismes,
+            La marque <strong>KeyMatch</strong>, le nom de domaine, le contenu éditorial, les textes, graphismes,
             logos, icônes, photographies, vidéos, codes sources et logiciels publiés sur la plateforme sont la
             propriété exclusive de l&apos;éditeur ou de ses partenaires, protégés par le Code de la propriété
             intellectuelle et les conventions internationales.
@@ -105,7 +105,7 @@ export default function MentionsLegales() {
         <section style={sectionStyle}>
           <h2 style={h2}>Responsabilité</h2>
           <p style={p}>
-            Les informations accessibles sur NestMatch sont fournies à titre informatif. L&apos;éditeur met tout en
+            Les informations accessibles sur KeyMatch sont fournies à titre informatif. L&apos;éditeur met tout en
             œuvre pour en assurer l&apos;exactitude et la mise à jour mais ne peut garantir l&apos;exhaustivité ou
             l&apos;absence d&apos;erreurs. L&apos;éditeur ne peut être tenu responsable des dommages directs ou
             indirects résultant de l&apos;accès ou de l&apos;utilisation de la plateforme.

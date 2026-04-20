@@ -1,5 +1,5 @@
 /**
- * Logo NestMatch — PNG 256x256 transparent encodé base64.
+ * Logo KeyMatch — PNG 256x256 transparent encodé base64.
  * Généré automatiquement par scripts/generate-logo-assets.js depuis
  * public/logo-mark.svg. Ne pas éditer à la main — relancer le script.
  *

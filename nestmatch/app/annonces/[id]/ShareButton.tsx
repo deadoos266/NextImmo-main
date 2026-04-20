@@ -16,7 +16,7 @@ export default function ShareButton({ title, url }: Props) {
   const [copied, setCopied] = useState(false)
 
   const shareText = `${title} — ${url}`
-  const emailHref = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(shareText + "\n\nVu sur NestMatch.")}`
+  const emailHref = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(shareText + "\n\nVu sur KeyMatch.")}`
   const whatsappHref = `https://wa.me/?text=${encodeURIComponent(shareText)}`
   const smsHref = `sms:?&body=${encodeURIComponent(shareText)}`
 

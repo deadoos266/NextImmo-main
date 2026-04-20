@@ -16,7 +16,7 @@ type DrawOpts = {
 }
 
 /**
- * Dessine le logo NestMatch (icône PNG + nom) dans un PDF jsPDF.
+ * Dessine le logo KeyMatch (icône PNG + nom) dans un PDF jsPDF.
  *
  * Le PNG 256x256 est embarqué en base64 dans `lib/brand-logo.ts` — généré
  * depuis `public/logo-mark.svg` par `scripts/generate-logo-assets.js`. Pour

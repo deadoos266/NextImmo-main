@@ -282,7 +282,7 @@ export default function Admin() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28, flexWrap: "wrap", gap: 16 }}>
           <div>
             <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.5px" }}>Administration</h1>
-            <p style={{ color: "#6b7280", marginTop: 4, fontSize: 13 }}>NestMatch · Connecté : {session.user.email}</p>
+            <p style={{ color: "#6b7280", marginTop: 4, fontSize: 13 }}>KeyMatch · Connecté : {session.user.email}</p>
           </div>
           <button onClick={loadData} style={{ background: "white", border: "1.5px solid #e5e7eb", color: "#111", borderRadius: 999, padding: "8px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
             Rafraîchir

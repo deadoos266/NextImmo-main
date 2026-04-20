@@ -4,7 +4,7 @@ import { CITY_NAMES } from "../../lib/cityCoords"
 
 export const metadata: Metadata = {
   title: "Plan du site",
-  description: "Navigation rapide vers toutes les pages publiques de NestMatch : accueil, annonces, villes, espace proprio et locataire.",
+  description: "Navigation rapide vers toutes les pages publiques de KeyMatch : accueil, annonces, villes, espace proprio et locataire.",
   alternates: { canonical: "/plan-du-site" },
 }
 
@@ -26,7 +26,7 @@ export default function PlanDuSite() {
 
         <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: "-0.5px", margin: "16px 0 6px" }}>Plan du site</h1>
         <p style={{ fontSize: 14, color: "#6b7280", marginBottom: 28 }}>
-          Toutes les pages publiques de NestMatch, en un coup d&apos;œil.
+          Toutes les pages publiques de KeyMatch, en un coup d&apos;œil.
         </p>
 
         <section style={sectionStyle}>

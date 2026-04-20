@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: "Calculez votre budget loyer idéal selon la règle des 3× revenus. Outil gratuit, instantané, sans inscription.",
   keywords: ["budget loyer", "calculer loyer maximum", "règle 3 revenus", "capacité location"],
   openGraph: {
-    title: "Estimateur de budget locataire — NestMatch",
+    title: "Estimateur de budget locataire — KeyMatch",
     description: "Calculez votre budget loyer idéal selon la règle des 3× revenus.",
     type: "website",
   },

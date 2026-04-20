@@ -55,7 +55,7 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
       title,
       description,
       locale: "fr_FR",
-      siteName: "NestMatch",
+      siteName: "KeyMatch",
     },
     twitter: {
       card: "summary_large_image",
@@ -140,7 +140,7 @@ export default async function LocationVille({ params }: any) {
         name: `Comment trouver une location à ${displayCity} sans agence ?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `Sur NestMatch, toutes les annonces de location à ${displayCity} sont publiées par les propriétaires eux-mêmes. Vous pouvez filtrer par budget, surface, nombre de pièces, DPE et équipements, puis contacter directement le bailleur via la messagerie intégrée — zéro frais d'agence.`,
+          text: `Sur KeyMatch, toutes les annonces de location à ${displayCity} sont publiées par les propriétaires eux-mêmes. Vous pouvez filtrer par budget, surface, nombre de pièces, DPE et équipements, puis contacter directement le bailleur via la messagerie intégrée — zéro frais d'agence.`,
         },
       },
       {
@@ -148,7 +148,7 @@ export default async function LocationVille({ params }: any) {
         name: `Quels documents préparer pour louer à ${displayCity} ?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `Pour un dossier crédible : pièce d'identité, 3 derniers bulletins de salaire, dernier avis d'imposition, contrat de travail, justificatif de domicile (3 quittances), et éventuellement un garant (personne physique, Visale ou organisme). NestMatch vous guide pour constituer un dossier ALUR complet avant candidature.`,
+          text: `Pour un dossier crédible : pièce d'identité, 3 derniers bulletins de salaire, dernier avis d'imposition, contrat de travail, justificatif de domicile (3 quittances), et éventuellement un garant (personne physique, Visale ou organisme). KeyMatch vous guide pour constituer un dossier ALUR complet avant candidature.`,
         },
       },
       {
@@ -157,13 +157,13 @@ export default async function LocationVille({ params }: any) {
         acceptedAnswer: {
           "@type": "Answer",
           text: prixMedian > 0
-            ? `Le loyer médian affiché actuellement sur NestMatch à ${displayCity} est d'environ ${prixMedian} €/mois${prixM2 > 0 ? `, soit environ ${prixM2} €/m²` : ""}. Les loyers vont de ${prixMin} € à ${prixMax} €/mois selon la surface et les équipements.`
+            ? `Le loyer médian affiché actuellement sur KeyMatch à ${displayCity} est d'environ ${prixMedian} €/mois${prixM2 > 0 ? `, soit environ ${prixM2} €/m²` : ""}. Les loyers vont de ${prixMin} € à ${prixMax} €/mois selon la surface et les équipements.`
             : `Les loyers à ${displayCity} varient selon le quartier, la surface et les équipements. Créez votre compte pour voir toutes les annonces disponibles et leurs prix.`,
         },
       },
       {
         "@type": "Question",
-        name: "NestMatch prend-il des frais sur le loyer ?",
+        name: "KeyMatch prend-il des frais sur le loyer ?",
         acceptedAnswer: {
           "@type": "Answer",
           text: "Non. L'inscription et l'utilisation sont 100 % gratuites pour les locataires et les propriétaires. Aucune commission n'est prélevée sur les loyers, aucun frais d'agence n'est facturé.",
@@ -214,7 +214,7 @@ export default async function LocationVille({ params }: any) {
         </h1>
 
         <p style={{ fontSize: 16, color: "#6b7280", lineHeight: 1.7, maxWidth: 760, marginBottom: 28 }}>
-          Découvrez {total} annonce{total > 1 ? "s" : ""} de location{total > 1 ? "s" : ""} à {displayCity} publiée{total > 1 ? "s" : ""} directement par les propriétaires, sans frais d&apos;agence. NestMatch calcule votre score de compatibilité et vous met en relation en un clic.
+          Découvrez {total} annonce{total > 1 ? "s" : ""} de location{total > 1 ? "s" : ""} à {displayCity} publiée{total > 1 ? "s" : ""} directement par les propriétaires, sans frais d&apos;agence. KeyMatch calcule votre score de compatibilité et vous met en relation en un clic.
           {prixMedian > 0 && <> Le loyer médian affiché pour {displayCity} est d&apos;environ {prixMedian} €/mois.</>}
         </p>
 
@@ -316,7 +316,7 @@ export default async function LocationVille({ params }: any) {
           </h2>
           <div style={{ fontSize: 15, color: "#4b5563", lineHeight: 1.7 }}>
             <p style={{ marginBottom: 12 }}>
-              Sur NestMatch, toutes les annonces de location à {displayCity} sont publiées par les propriétaires eux-mêmes. Aucune commission, aucun frais d&apos;agence : vous échangez directement avec le bailleur via notre messagerie intégrée.
+              Sur KeyMatch, toutes les annonces de location à {displayCity} sont publiées par les propriétaires eux-mêmes. Aucune commission, aucun frais d&apos;agence : vous échangez directement avec le bailleur via notre messagerie intégrée.
             </p>
             <p style={{ marginBottom: 12 }}>
               Notre algorithme de matching compare votre dossier (budget, surface, équipements, situation professionnelle) aux caractéristiques de chaque bien pour afficher un score de compatibilité sur 100 %. Vous voyez immédiatement les annonces les plus adaptées à votre profil.

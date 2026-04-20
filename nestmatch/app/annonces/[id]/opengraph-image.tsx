@@ -6,13 +6,13 @@ import { supabase } from "../../../lib/supabase"
  *
  * Partagée sur WhatsApp/Messenger/Twitter/LinkedIn, elle remplace la
  * `/public/og-default.png` statique. On met l'essentiel de l'annonce :
- * titre, ville, prix + branding NestMatch (fond dégradé chaleureux).
+ * titre, ville, prix + branding KeyMatch (fond dégradé chaleureux).
  *
  * Next.js appelle automatiquement cette fonction pour générer l'image au
  * build/runtime et l'exposer via `<meta property="og:image">`.
  */
 
-export const alt = "Annonce NestMatch"
+export const alt = "Annonce KeyMatch"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
@@ -49,7 +49,7 @@ export default async function OgImage({ params }: { params: Promise<{ id: string
           fontFamily: "sans-serif",
         }}
       >
-        {/* Header : logo A + NestMatch */}
+        {/* Header : logo A + KeyMatch */}
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           {/* Logo A simplifié (stroke path) */}
           <svg width="64" height="64" viewBox="0 0 400 400">
@@ -62,7 +62,7 @@ export default async function OgImage({ params }: { params: Promise<{ id: string
               <rect x={202} y={252} width={20} height={20} rx={4} />
             </g>
           </svg>
-          <div style={{ fontSize: 40, fontWeight: 800, letterSpacing: -1 }}>NestMatch</div>
+          <div style={{ fontSize: 40, fontWeight: 800, letterSpacing: -1 }}>KeyMatch</div>
         </div>
 
         {/* Titre + infos principales */}

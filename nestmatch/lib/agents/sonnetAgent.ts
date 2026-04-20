@@ -2,7 +2,7 @@
  * Agent Sonnet — Exécuteur
  *
  * Rôle : recevoir le plan d'Opus + la demande originale, utiliser les tools
- * NestMatch disponibles, et produire la réponse finale pour l'utilisateur.
+ * KeyMatch disponibles, et produire la réponse finale pour l'utilisateur.
  */
 
 import Anthropic from "@anthropic-ai/sdk"
@@ -10,12 +10,12 @@ import { supabase } from "@/lib/supabase"
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-// ─── Définition des tools NestMatch ──────────────────────────────────────────
+// ─── Définition des tools KeyMatch ──────────────────────────────────────────
 
 const NESTMATCH_TOOLS: Anthropic.Tool[] = [
   {
     name: "search_annonces",
-    description: "Recherche des annonces NestMatch selon des critères (ville, prix max, surface min, nb pièces, meublé...)",
+    description: "Recherche des annonces KeyMatch selon des critères (ville, prix max, surface min, nb pièces, meublé...)",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -145,9 +145,9 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
 
 // ─── Agent Sonnet principal ───────────────────────────────────────────────────
 
-const SONNET_SYSTEM = `Tu es l'assistant NestMatch, expert en immobilier locatif français.
+const SONNET_SYSTEM = `Tu es l'assistant KeyMatch, expert en immobilier locatif français.
 Tu es précis, bienveillant et concis. Tu réponds en français.
-Tu as accès à la base de données NestMatch en temps réel via tes outils.
+Tu as accès à la base de données KeyMatch en temps réel via tes outils.
 Utilise les outils quand c'est utile, mais ne les appelle pas inutilement.`
 
 export interface SonnetResult {

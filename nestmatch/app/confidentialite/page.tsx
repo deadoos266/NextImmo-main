@@ -2,7 +2,7 @@ import Link from "next/link"
 
 export const metadata = {
   title: "Politique de confidentialité",
-  description: "Traitement des données personnelles sur NestMatch : finalités, base légale, destinataires, durée de conservation, droits RGPD.",
+  description: "Traitement des données personnelles sur KeyMatch : finalités, base légale, destinataires, durée de conservation, droits RGPD.",
   alternates: { canonical: "/confidentialite" },
 }
 
@@ -33,7 +33,7 @@ export default function Confidentialite() {
         <section style={sectionStyle}>
           <h2 style={h2}>1. Préambule</h2>
           <p style={p}>
-            La présente Politique de confidentialité décrit comment NestMatch collecte, utilise, conserve et protège
+            La présente Politique de confidentialité décrit comment KeyMatch collecte, utilise, conserve et protège
             les données personnelles des Utilisateurs de la plateforme accessible à l&apos;adresse <strong>keymatch-immo.fr</strong>.
             Elle s&apos;applique à toute personne inscrite ou simplement en visite sur le site.
           </p>
@@ -46,7 +46,7 @@ export default function Confidentialite() {
         <section style={sectionStyle}>
           <h2 style={h2}>2. Responsable du traitement</h2>
           <p style={p}>
-            Le responsable du traitement des données personnelles collectées via la plateforme NestMatch est la
+            Le responsable du traitement des données personnelles collectées via la plateforme KeyMatch est la
             société éditrice dont les coordonnées figurent dans les{" "}
             <Link href="/mentions-legales" style={{ color: "#111", fontWeight: 700 }}>mentions légales</Link>.
           </p>

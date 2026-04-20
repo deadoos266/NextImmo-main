@@ -2,7 +2,7 @@ import Link from "next/link"
 
 export const metadata = {
   title: "Conditions Générales d'Utilisation",
-  description: "Conditions Générales d'Utilisation de la plateforme NestMatch — règles d'accès, obligations des utilisateurs, responsabilités, propriété intellectuelle.",
+  description: "Conditions Générales d'Utilisation de la plateforme KeyMatch — règles d'accès, obligations des utilisateurs, responsabilités, propriété intellectuelle.",
   alternates: { canonical: "/cgu" },
 }
 
@@ -34,7 +34,7 @@ export default function CGU() {
           <h2 style={h2}>1. Objet</h2>
           <p style={p}>
             Les présentes Conditions Générales d&apos;Utilisation (ci-après « CGU ») ont pour objet de définir les
-            modalités d&apos;accès et d&apos;utilisation de la plateforme NestMatch, accessible à l&apos;adresse
+            modalités d&apos;accès et d&apos;utilisation de la plateforme KeyMatch, accessible à l&apos;adresse
             <strong> keymatch-immo.fr </strong>(ci-après la « Plateforme »), éditée par la société dont les
             coordonnées figurent dans les <Link href="/mentions-legales" style={{ color: "#111", fontWeight: 600 }}>Mentions légales</Link>
             {" "}(ci-après l&apos;« Éditeur »).
@@ -163,7 +163,7 @@ export default function CGU() {
         <section style={sectionStyle}>
           <h2 style={h2}>9. Propriété intellectuelle</h2>
           <p style={p}>
-            La marque NestMatch, le nom de domaine, les textes, graphismes, logos, icônes, photographies, vidéos,
+            La marque KeyMatch, le nom de domaine, les textes, graphismes, logos, icônes, photographies, vidéos,
             codes sources et logiciels de la Plateforme sont la propriété exclusive de l&apos;Éditeur et protégés par
             le Code de la propriété intellectuelle. Toute reproduction, représentation, modification ou adaptation,
             totale ou partielle, par quelque procédé que ce soit, est interdite sans autorisation écrite préalable.

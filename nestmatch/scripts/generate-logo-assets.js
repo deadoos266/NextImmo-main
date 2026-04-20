@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 /**
- * Génère les PNGs du logo NestMatch depuis public/logo-mark.svg :
+ * Génère les PNGs du logo KeyMatch depuis public/logo-mark.svg :
  *   - public/logo-mark-192.png   (PWA, OG, favicon alternatif)
  *   - public/logo-mark-512.png   (PWA maskable)
  *   - public/logo-mark-256.png   (PDF headers)
@@ -69,7 +69,7 @@ async function main() {
   const dataUri = `data:image/png;base64,${base64}`
 
   const ts = `/**
- * Logo NestMatch — PNG 256x256 transparent encodé base64.
+ * Logo KeyMatch — PNG 256x256 transparent encodé base64.
  * Généré automatiquement par scripts/generate-logo-assets.js depuis
  * public/logo-mark.svg. Ne pas éditer à la main — relancer le script.
  *

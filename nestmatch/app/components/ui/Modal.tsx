@@ -19,7 +19,7 @@ interface ModalProps {
 /**
  * Modale réutilisable : backdrop sombre + card blanche centrée + ESC/clic-dehors pour fermer.
  *
- * Design cohérent avec le système NestMatch (radius 20, DM Sans, #111).
+ * Design cohérent avec le système KeyMatch (radius 20, DM Sans, #111).
  * À utiliser pour flux secondaires (sélection équipements, aide contextuelle, confirmation)
  * plutôt que navigation vers une page dédiée.
  */

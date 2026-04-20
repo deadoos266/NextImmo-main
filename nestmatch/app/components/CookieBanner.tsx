@@ -234,7 +234,7 @@ export default function CookieBanner() {
 
           {/* Description */}
           <p style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.6, margin: "0 0 16px" }}>
-            NestMatch utilise des cookies pour assurer le bon fonctionnement du site et améliorer votre expérience.
+            KeyMatch utilise des cookies pour assurer le bon fonctionnement du site et améliorer votre expérience.
             Vous pouvez personnaliser vos choix à tout moment.{" "}
             <Link href="/cookies" style={{ color: "#111", fontWeight: 600, textDecoration: "underline", textUnderlineOffset: 2 }}>
               En savoir plus

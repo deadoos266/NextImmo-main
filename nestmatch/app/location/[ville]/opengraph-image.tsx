@@ -5,12 +5,12 @@ import { CITY_NAMES, normalizeCityName } from "../../../lib/cityCoords"
 /**
  * OG image dynamique pour /location/[ville] (1200×630).
  *
- * Affiche : branding NestMatch + "Location à [Ville]" + nombre d'annonces
+ * Affiche : branding KeyMatch + "Location à [Ville]" + nombre d'annonces
  * disponibles + prix médian si calculable. Partagé sur réseaux sociaux,
  * donne directement le contexte aux prospects.
  */
 
-export const alt = "Location à NestMatch"
+export const alt = "Location à KeyMatch"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
@@ -73,7 +73,7 @@ export default async function OgImage({ params }: { params: Promise<{ ville: str
               <rect x={202} y={252} width={20} height={20} rx={4} />
             </g>
           </svg>
-          <div style={{ fontSize: 40, fontWeight: 800, letterSpacing: -1 }}>NestMatch</div>
+          <div style={{ fontSize: 40, fontWeight: 800, letterSpacing: -1 }}>KeyMatch</div>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

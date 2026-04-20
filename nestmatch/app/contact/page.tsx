@@ -87,7 +87,7 @@ export default function ContactPage() {
           <div style={{ background: "white", borderRadius: 20, padding: isMobile ? "28px 20px" : "40px 32px", textAlign: "center", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
             <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 10, color: "#15803d" }}>Message envoyé</h2>
             <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, marginBottom: 20 }}>
-              Merci pour votre message. Un membre de l'équipe NestMatch vous répondra par email sous 48 heures.
+              Merci pour votre message. Un membre de l'équipe KeyMatch vous répondra par email sous 48 heures.
             </p>
             <button
               onClick={() => setDone(false)}

@@ -701,7 +701,7 @@ export default function MonLogement() {
               </div>
               {bien.date_debut_bail && (
                 <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 12px" }}>
-                  Bail du {new Date(bien.date_debut_bail).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}{bailFichierUrl ? " — document fourni par votre propriétaire" : " — généré via NestMatch"}.
+                  Bail du {new Date(bien.date_debut_bail).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}{bailFichierUrl ? " — document fourni par votre propriétaire" : " — généré via KeyMatch"}.
                 </p>
               )}
 

@@ -1,7 +1,7 @@
 /**
  * Agent Opus — Planificateur avec extended thinking
  *
- * Rôle : analyser la demande, raisonner en profondeur sur le contexte NestMatch,
+ * Rôle : analyser la demande, raisonner en profondeur sur le contexte KeyMatch,
  * et produire un plan structuré que Sonnet va exécuter.
  */
 
@@ -16,9 +16,9 @@ export interface OpusPlan {
   requiredTools: string[]  // tools Sonnet devrait utiliser
 }
 
-const OPUS_SYSTEM = `Tu es le cerveau stratégique de NestMatch, une plateforme de location immobilière française.
+const OPUS_SYSTEM = `Tu es le cerveau stratégique de KeyMatch, une plateforme de location immobilière française.
 
-NestMatch met en relation locataires et propriétaires via un algorithme de matching sur 1000 points.
+KeyMatch met en relation locataires et propriétaires via un algorithme de matching sur 1000 points.
 Tables clés : profils (critères locataires), annonces (biens), messages, loyers.
 
 Ton rôle :

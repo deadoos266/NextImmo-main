@@ -254,7 +254,7 @@ export async function genererBailPDF(data: BailData): Promise<void> {
     y += lines.length * 4.5
   }
 
-  // ── Header brand (logo NestMatch en haut à gauche) ────────────────────
+  // ── Header brand (logo KeyMatch en haut à gauche) ────────────────────
   drawLogoPDF(doc, { x: 20, y: 18, size: "medium" })
   y = 30
 

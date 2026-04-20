@@ -13,7 +13,7 @@ import { Resend } from "resend"
 
 const apiKey = process.env.RESEND_API_KEY
 const from = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev"
-const fromName = process.env.RESEND_FROM_NAME || "NestMatch"
+const fromName = process.env.RESEND_FROM_NAME || "KeyMatch"
 const replyTo = process.env.RESEND_REPLY_TO
 
 const resend = apiKey ? new Resend(apiKey) : null

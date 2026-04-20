@@ -8,6 +8,7 @@ import Footer from './components/Footer'
 import CookieBanner from './components/CookieBanner'
 import ToastStack from './components/ToastStack'
 import ServiceWorkerRegister from './components/ServiceWorkerRegister'
+import BetaBanner from './components/BetaBanner'
 import { BRAND } from '../lib/brand'
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || BRAND.url
@@ -22,6 +23,10 @@ const dmSans = DM_Sans({
 const DEFAULT_TITLE = `${BRAND.name} — Location entre particuliers sans agence`
 const DEFAULT_DESC = `${BRAND.name} connecte propriétaires et locataires directement. Score de matching, gestion du dossier, des visites et des loyers. Zéro frais d'agence.`
 
+// Mode bêta : bloque l'indexation moteurs de recherche (activé via
+// NEXT_PUBLIC_NOINDEX=true dans Vercel env vars). À retirer au lancement.
+const NO_INDEX = process.env.NEXT_PUBLIC_NOINDEX === "true"
+
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
@@ -33,11 +38,17 @@ export const metadata: Metadata = {
   authors: [{ name: BRAND.name }],
   creator: BRAND.name,
   publisher: BRAND.name,
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: { index: true, follow: true },
-  },
+  robots: NO_INDEX
+    ? {
+        index: false,
+        follow: false,
+        googleBot: { index: false, follow: false, noimageindex: true },
+      }
+    : {
+        index: true,
+        follow: true,
+        googleBot: { index: true, follow: true },
+      },
   openGraph: {
     type: 'website',
     locale: 'fr_FR',
@@ -139,6 +150,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body style={{ fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif" }} suppressHydrationWarning>
         <Providers>
+          <BetaBanner />
           <AdminBar />
           <Navbar />
           {children}

@@ -1,5 +1,5 @@
 /**
- * Templates HTML pour les emails transactionnels NestMatch.
+ * Templates HTML pour les emails transactionnels KeyMatch.
  *
  * Pas de dépendance react-email : HTML inline + tables pour compat max
  * (Gmail desktop/mobile, Apple Mail, Outlook web, Yahoo Mail, Thunderbird).
@@ -38,7 +38,7 @@ function escapeHtml(s: string): string {
  */
 function logoSvg(id: string, size = 44): string {
   const gradId = `nm-${id}`
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="${size}" height="${size}" role="img" aria-label="${escapeHtml(BRAND.name || "NestMatch")}" style="display:block;">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="${size}" height="${size}" role="img" aria-label="${escapeHtml(BRAND.name || "KeyMatch")}" style="display:block;">
   <defs>
     <linearGradient id="${gradId}" x1="200" y1="60" x2="200" y2="340" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="${PALETTE.accentStart}"/>
@@ -66,7 +66,7 @@ function wrap(preview: string, body: string, templateId: string): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="x-apple-disable-message-reformatting">
-  <title>${escapeHtml(BRAND.name || "NestMatch")}</title>
+  <title>${escapeHtml(BRAND.name || "KeyMatch")}</title>
 </head>
 <body style="background:${PALETTE.bg};margin:0;padding:0;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;color:${PALETTE.text};-webkit-font-smoothing:antialiased;">
   <!-- Preview text (affiché dans aperçu inbox avant ouverture) -->
@@ -91,7 +91,7 @@ function wrap(preview: string, body: string, templateId: string): string {
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                   <tr>
                     <td valign="middle" style="padding-right:10px;">${logoSvg(templateId, 40)}</td>
-                    <td valign="middle" style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};">${escapeHtml(BRAND.name || "NestMatch")}</td>
+                    <td valign="middle" style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};">${escapeHtml(BRAND.name || "KeyMatch")}</td>
                   </tr>
                 </table>
               </a>
@@ -119,7 +119,7 @@ function wrap(preview: string, body: string, templateId: string): string {
                 Une plateforme locataire–propriétaire sans frais d'agence.
               </p>
               <a href="${base}" target="_blank" style="display:inline-block;color:${PALETTE.text};font-size:13px;font-weight:700;text-decoration:none;padding:9px 20px;border:1.5px solid ${PALETTE.border};border-radius:999px;">
-                Visiter ${escapeHtml(BRAND.name || "NestMatch")}
+                Visiter ${escapeHtml(BRAND.name || "KeyMatch")}
               </a>
               <p style="font-size:11px;color:${PALETTE.textSubtle};margin:18px 0 0;line-height:1.5;">
                 <a href="${base}" target="_blank" style="color:${PALETTE.textSubtle};text-decoration:none;">${escapeHtml(domain)}</a>
@@ -136,7 +136,7 @@ function wrap(preview: string, body: string, templateId: string): string {
           <tr>
             <td align="center" style="padding:0 16px;">
               <p style="font-size:11px;color:${PALETTE.textSubtle};margin:0;line-height:1.5;">
-                Vous recevez cet email car vous avez un compte ${escapeHtml(BRAND.name || "NestMatch")}.
+                Vous recevez cet email car vous avez un compte ${escapeHtml(BRAND.name || "KeyMatch")}.
               </p>
             </td>
           </tr>
@@ -178,17 +178,17 @@ export function verifyEmailTemplate(params: { userName: string | null; verifyUrl
     </p>
     <p style="margin:20px 0 0;font-size:12px;color:${PALETTE.textSubtle};">Si tu n'es pas à l'origine de cette inscription, ignore simplement cet email.</p>
   `
-  const html = wrap("Confirme ton adresse email pour activer ton compte NestMatch.", body, "verify")
+  const html = wrap("Confirme ton adresse email pour activer ton compte KeyMatch.", body, "verify")
   const text = `${greeting} !
 
-Merci d'avoir créé ton compte NestMatch. Confirme ton adresse email en cliquant sur le lien ci-dessous (valide 24h) :
+Merci d'avoir créé ton compte KeyMatch. Confirme ton adresse email en cliquant sur le lien ci-dessous (valide 24h) :
 
 ${params.verifyUrl}
 
 Si tu n'es pas à l'origine de cette inscription, ignore cet email.
 
-— L'équipe NestMatch`
-  return { subject: "Vérifie ton email — NestMatch", html, text }
+— L'équipe KeyMatch`
+  return { subject: "Vérifie ton email — KeyMatch", html, text }
 }
 
 export function resetPasswordTemplate(params: { resetUrl: string }): { subject: string; html: string; text: string } {
@@ -203,8 +203,8 @@ export function resetPasswordTemplate(params: { resetUrl: string }): { subject: 
     </p>
     <p style="margin:20px 0 0;font-size:12px;color:${PALETTE.textSubtle};">Si tu n'es pas à l'origine de cette demande, ignore cet email — ton mot de passe ne sera pas changé.</p>
   `
-  const html = wrap("Un lien pour réinitialiser ton mot de passe NestMatch.", body, "reset")
-  const text = `Réinitialise ton mot de passe NestMatch
+  const html = wrap("Un lien pour réinitialiser ton mot de passe KeyMatch.", body, "reset")
+  const text = `Réinitialise ton mot de passe KeyMatch
 
 Ouvre ce lien (valide 1h) pour définir un nouveau mot de passe :
 
@@ -212,8 +212,8 @@ ${params.resetUrl}
 
 Si tu n'es pas à l'origine de cette demande, ignore cet email — ton mot de passe ne sera pas changé.
 
-— L'équipe NestMatch`
-  return { subject: "Réinitialise ton mot de passe — NestMatch", html, text }
+— L'équipe KeyMatch`
+  return { subject: "Réinitialise ton mot de passe — KeyMatch", html, text }
 }
 
 export function newMessageTemplate(params: { fromName: string; previewText: string; convUrl: string }): { subject: string; html: string; text: string } {
@@ -238,14 +238,14 @@ export function newMessageTemplate(params: { fromName: string; previewText: stri
       <a href="${process.env.NEXT_PUBLIC_URL || BRAND.url}/parametres?tab=compte" target="_blank" style="color:${PALETTE.textSubtle};">préférences de notifications</a>.
     </p>
   `
-  const html = wrap(`${params.fromName} t'a envoyé un message sur NestMatch.`, body, "newmsg")
+  const html = wrap(`${params.fromName} t'a envoyé un message sur KeyMatch.`, body, "newmsg")
   const text = `Nouveau message de ${params.fromName}
 
 ${preview}
 
 Ouvrir la conversation : ${params.convUrl}
 
-— NestMatch`
+— KeyMatch`
   return { subject: `${params.fromName} t'a envoyé un message`, html, text }
 }
 
@@ -265,14 +265,14 @@ export function candidatOrphelinTemplate(params: {
       Le propriétaire de <strong style="color:${PALETTE.text};">${contexte}</strong> a choisi un autre dossier. Ce n'est pas un jugement sur votre profil — la plupart des proprios doivent trancher entre plusieurs candidats solides.
     </p>
     <p style="margin:0 0 20px;color:${PALETTE.textMuted};line-height:1.65;">
-      De nouvelles annonces qui correspondent à vos critères sont publiées chaque jour sur NestMatch. On garde votre dossier complet pour les prochaines candidatures.
+      De nouvelles annonces qui correspondent à vos critères sont publiées chaque jour sur KeyMatch. On garde votre dossier complet pour les prochaines candidatures.
     </p>
     ${button(params.annoncesUrl, "Voir les annonces du moment")}
     <p style="margin:26px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
       Conseil : un dossier à jour avec présentation personnelle et 3+ quittances récentes augmente fortement vos chances sur les prochaines annonces.
     </p>
   `
-  const html = wrap("Votre candidature n'a pas été retenue sur NestMatch, voici les prochaines étapes.", body, "orphelin")
+  const html = wrap("Votre candidature n'a pas été retenue sur KeyMatch, voici les prochaines étapes.", body, "orphelin")
   const text = `Votre candidature n'a pas été retenue
 
 Le propriétaire de ${params.bienTitre}${params.ville ? ` à ${params.ville}` : ""} a choisi un autre dossier. Ce n'est pas un jugement sur votre profil — la plupart des proprios tranchent entre plusieurs candidats solides.
@@ -281,7 +281,7 @@ De nouvelles annonces sont publiées chaque jour. Votre dossier reste complet po
 
 Voir les annonces : ${params.annoncesUrl}
 
-— L'équipe NestMatch`
+— L'équipe KeyMatch`
   return {
     subject: "Votre candidature n'a pas été retenue — on garde votre dossier prêt",
     html,

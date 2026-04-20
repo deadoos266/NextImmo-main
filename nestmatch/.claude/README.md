@@ -1,4 +1,4 @@
-# NestMatch — Configuration Claude Code
+# KeyMatch — Configuration Claude Code
 
 ## Agents disponibles
 
@@ -7,7 +7,7 @@
 | `backend-architect` | Schéma Supabase, API routes, requêtes, RLS |
 | `frontend-developer` | Composants React, inline styles, design system |
 | `search-specialist` | Algorithme de matching, filtres, requêtes Supabase |
-| `qa-reviewer` | Revue de code, rôles, gotchas NestMatch |
+| `qa-reviewer` | Revue de code, rôles, gotchas KeyMatch |
 | `seo-specialist` | Metadata Next.js, structured data, Core Web Vitals |
 
 ## Skill disponible

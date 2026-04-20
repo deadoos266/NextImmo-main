@@ -31,7 +31,7 @@ const SIZES: Record<LogoVariant, {
 }
 
 /**
- * Logo NestMatch : icône SVG (public/logo-mark.svg) + nom optionnel.
+ * Logo KeyMatch : icône SVG (public/logo-mark.svg) + nom optionnel.
  * Montable dans server ET client components (aucun hook).
  *
  * Pour remplacer le visuel : éditer /public/logo-mark.svg. Pour changer la

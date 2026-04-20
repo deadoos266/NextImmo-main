@@ -1,6 +1,6 @@
 {
-  "name": "NestMatch",
-  "short_name": "NestMatch",
+  "name": "KeyMatch",
+  "short_name": "KeyMatch",
   "description": "La location entre particuliers, sans frais d'agence",
   "start_url": "/",
   "display": "standalone",

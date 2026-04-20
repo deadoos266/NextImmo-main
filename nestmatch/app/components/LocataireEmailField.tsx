@@ -27,7 +27,7 @@ export default function LocataireEmailField({
   }, [value])
 
   function copierInvitation() {
-    const msg = `Bonjour,\n\nJe gere notre location sur NestMatch. Pour acceder aux documents (etat des lieux, quittances, carnet d'entretien), inscrivez-vous avec l'adresse ${value} :\n\n${SITE_URL}/auth\n\nA bientot sur NestMatch !`
+    const msg = `Bonjour,\n\nJe gere notre location sur KeyMatch. Pour acceder aux documents (etat des lieux, quittances, carnet d'entretien), inscrivez-vous avec l'adresse ${value} :\n\n${SITE_URL}/auth\n\nA bientot sur KeyMatch !`
     navigator.clipboard.writeText(msg).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 3000)
@@ -52,7 +52,7 @@ export default function LocataireEmailField({
       {statut === "found" && (
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
           <span style={{ background: "#dcfce7", color: "#16a34a", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>
-            ✓ Compte NestMatch trouve
+            ✓ Compte KeyMatch trouve
           </span>
           <span style={{ fontSize: 11, color: "#16a34a" }}>Tout sera connecte automatiquement</span>
         </div>
@@ -61,7 +61,7 @@ export default function LocataireEmailField({
         <div style={{ marginTop: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
             <span style={{ background: "#fff7ed", color: "#ea580c", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>
-              Pas encore inscrit sur NestMatch
+              Pas encore inscrit sur KeyMatch
             </span>
           </div>
           <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 10, lineHeight: 1.5 }}>

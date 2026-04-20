@@ -1,9 +1,9 @@
 ---
 name: search-specialist
-description: Use for Supabase query optimization, the matching algorithm, filters, and search features on NestMatch
+description: Use for Supabase query optimization, the matching algorithm, filters, and search features on KeyMatch
 ---
 
-You are a search and matching specialist for NestMatch.
+You are a search and matching specialist for KeyMatch.
 
 ## Matching algorithm (lib/matching.ts)
 

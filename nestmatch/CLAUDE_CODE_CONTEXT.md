@@ -1,4 +1,4 @@
-# NestMatch — Contexte projet pour Claude Code
+# KeyMatch — Contexte projet pour Claude Code
 
 ## Stack
 Next.js 15 (App Router) · Supabase · NextAuth Google · TypeScript · Tailwind désactivé (inline styles uniquement)

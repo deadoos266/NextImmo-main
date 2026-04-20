@@ -2,7 +2,17 @@ import { MetadataRoute } from "next"
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://keymatch-immo.fr"
 
+// Flag de bêta : tant que NEXT_PUBLIC_NOINDEX=true (env Vercel), on demande aux
+// moteurs de recherche de ne pas indexer le site. Permet de tester sur le
+// vrai domaine sans apparaître dans Google.
+const NO_INDEX = process.env.NEXT_PUBLIC_NOINDEX === "true"
+
 export default function robots(): MetadataRoute.Robots {
+  if (NO_INDEX) {
+    return {
+      rules: [{ userAgent: "*", disallow: "/" }],
+    }
+  }
   return {
     rules: [
       {
@@ -33,7 +43,7 @@ export default function robots(): MetadataRoute.Robots {
           "/connexion",
           "/login",
           "/test",
-          "/monitoring",     // tunnel Sentry
+          "/monitoring",
         ],
       },
     ],

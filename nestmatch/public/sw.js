@@ -1,5 +1,5 @@
 /**
- * Service worker minimal NestMatch.
+ * Service worker minimal KeyMatch.
  *
  * Stratégie :
  *  - Précache les assets statiques (logo, manifest) au premier install.

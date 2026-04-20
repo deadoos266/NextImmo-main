@@ -1,4 +1,4 @@
-# NestMatch — Instructions Claude Code
+# KeyMatch — Instructions Claude Code
 
 ## Stack
 Next.js 15 App Router · Supabase (anon key, RLS désactivée sur visites/carnet) · NextAuth v4 Google · TypeScript · **Pas de Tailwind — inline styles uniquement**
