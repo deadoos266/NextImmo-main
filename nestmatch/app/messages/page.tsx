@@ -158,17 +158,26 @@ function DemandeDossierCard({ isMine, dossierRecu, onEnvoyer, envoyant }: {
 
 // ─── EDL Card ───────────────────────────────────────────────────────────────
 
-function EdlCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
+function EdlCard({ contenu, isMine, signatures }: { contenu: string; isMine: boolean; signatures?: { locataire: boolean; bailleur: boolean } }) {
   let data: any = {}
   try { data = JSON.parse(contenu.slice(EDL_PREFIX.length)) } catch {}
   const typeLabel = data.type === "entree" ? "entree" : "sortie"
   const dateLabel = data.dateEdl ? new Date(data.dateEdl).toLocaleDateString("fr-FR") : ""
 
+  // État de signature pour bandeau statut : "en_attente" | "signe_locataire" | "signe_complet"
+  const sigLoc = signatures?.locataire ?? false
+  const sigBail = signatures?.bailleur ?? false
+  const statutSig = sigLoc && sigBail ? "signe_complet" : sigLoc ? "signe_locataire" : "en_attente"
+
   if (isMine) {
+    // Cote proprio : afficher statut "En attente de confirmation" tant que
+    // locataire n'a pas signe. Paul : "afficher un etat En attente de
+    // confirmation de l'EDL dans la messagerie tant que le locataire n'a
+    // pas confirme."
     return (
-      <div style={{ background: "#1a1a1a", border: "1.5px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 280 }}>
+      <div style={{ background: "#1a1a1a", border: "1.5px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 300 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: data.edlId ? 10 : 0 }}>
-          <div>
+          <div style={{ flex: 1 }}>
             <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0 }}>État des lieux envoyé</p>
             <p style={{ fontSize: 11, color: "#9ca3af", margin: "2px 0 0" }}>
               {data.bienTitre || "Bien"} — {dateLabel}
@@ -176,10 +185,33 @@ function EdlCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
           </div>
         </div>
         {data.edlId && (
-          <a href={`/edl/consulter/${data.edlId}`}
-            style={{ display: "block", background: "white", color: "#111", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, textAlign: "center", textDecoration: "none", fontFamily: "inherit" }}>
-            Consulter l&apos;EDL →
-          </a>
+          <>
+            {/* Statut de confirmation - badge centralisé */}
+            <div style={{
+              marginBottom: 8,
+              padding: "6px 10px",
+              borderRadius: 8,
+              background: statutSig === "signe_complet" ? "#052e16"
+                : statutSig === "signe_locataire" ? "#422006"
+                : "#1f2937",
+              border: `1px solid ${statutSig === "signe_complet" ? "#14532d" : statutSig === "signe_locataire" ? "#78350f" : "#374151"}`,
+              fontSize: 10,
+              fontWeight: 700,
+              color: statutSig === "signe_complet" ? "#4ade80"
+                : statutSig === "signe_locataire" ? "#fbbf24"
+                : "#9ca3af",
+              textAlign: "center",
+              letterSpacing: "0.3px",
+            }}>
+              {statutSig === "signe_complet" && "Signé par les 2 parties"}
+              {statutSig === "signe_locataire" && "Signé par le locataire — à contresigner"}
+              {statutSig === "en_attente" && "En attente de confirmation du locataire…"}
+            </div>
+            <a href={`/edl/consulter/${data.edlId}`}
+              style={{ display: "block", background: "white", color: "#111", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, textAlign: "center", textDecoration: "none", fontFamily: "inherit" }}>
+              {statutSig === "signe_locataire" ? "Contresigner l'EDL →" : "Consulter l'EDL →"}
+            </a>
+          </>
         )}
       </div>
     )
@@ -798,6 +830,10 @@ function MessagesInner() {
   const [peerImages, setPeerImages] = useState<Record<string, string>>({})
   const [convActive, setConvActive] = useState<string | null>(null)
   const [messages, setMessages] = useState<any[]>([])
+  // Signatures EDL : { [edlId]: { locataire: bool, bailleur: bool } }.
+  // Fetch après chaque loadMessages pour que EdlCard cote proprio puisse
+  // afficher "En attente de confirmation" tant que le locataire n'a pas signé.
+  const [edlSignatures, setEdlSignatures] = useState<Record<number, { locataire: boolean; bailleur: boolean }>>({})
   const [nouveau, setNouveau] = useState("")
   const [loading, setLoading] = useState(true)
   const [envoi, setEnvoi] = useState(false)
@@ -1146,6 +1182,16 @@ function MessagesInner() {
         if (!sig?.annonce_id || sig.annonce_id !== convAnnId) return
         if (myEmail) void loadMessages(myEmail, conv.other, convAnnId)
       })
+      // Realtime edl_signatures : idem — permet a EdlCard cote proprio de
+      // passer d'"En attente de confirmation" à "Signé par le locataire".
+      // Avant ce listener il fallait reload la page manuellement.
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "edl_signatures" }, () => {
+        if (myEmail) void loadMessages(myEmail, conv.other, convAnnId)
+      })
+      // Realtime etats_des_lieux : statut "valide" passe -> refresh des cards.
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "etats_des_lieux" }, () => {
+        if (myEmail) void loadMessages(myEmail, conv.other, convAnnId)
+      })
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
@@ -1273,6 +1319,36 @@ function MessagesInner() {
       await supabase.from("messages").update({ lu: true }).in("id", unreadIds)
     }
     setConversations(prev => prev.map(c => c.other === other && c.annonceId === (annonceId ?? null) ? { ...c, unread: 0 } : c))
+
+    // Fetch signatures EDL pour tous les [EDL_CARD] rencontres dans la conv.
+    // Le badge "En attente de confirmation" cote proprio a besoin de savoir
+    // si le locataire a signé. Regroupé en 1 requête pour éviter N round-trips.
+    const edlIds: number[] = []
+    for (const m of data) {
+      if (typeof m.contenu === "string" && m.contenu.startsWith("[EDL_CARD]")) {
+        try {
+          const payload = JSON.parse(m.contenu.slice("[EDL_CARD]".length))
+          if (payload?.edlId) edlIds.push(Number(payload.edlId))
+        } catch { /* ignore */ }
+      }
+    }
+    if (edlIds.length > 0) {
+      const { data: sigs } = await supabase
+        .from("edl_signatures")
+        .select("edl_id, signataire_role")
+        .in("edl_id", edlIds)
+      const map: Record<number, { locataire: boolean; bailleur: boolean }> = {}
+      edlIds.forEach(id => { map[id] = { locataire: false, bailleur: false } })
+      if (sigs) {
+        for (const s of sigs) {
+          const id = Number(s.edl_id)
+          if (!map[id]) map[id] = { locataire: false, bailleur: false }
+          if (s.signataire_role === "locataire") map[id].locataire = true
+          if (s.signataire_role === "bailleur") map[id].bailleur = true
+        }
+      }
+      setEdlSignatures(prev => ({ ...prev, ...map }))
+    }
   }
 
   /**
@@ -2582,7 +2658,16 @@ function MessagesInner() {
                           </div>
                         ) : isEdl ? (
                           <div>
-                            <EdlCard contenu={m.contenu} isMine={isMine} />
+                            <EdlCard
+                              contenu={m.contenu}
+                              isMine={isMine}
+                              signatures={(() => {
+                                try {
+                                  const p = JSON.parse(m.contenu.slice(EDL_PREFIX.length))
+                                  return p?.edlId ? edlSignatures[Number(p.edlId)] : undefined
+                                } catch { return undefined }
+                              })()}
+                            />
                             <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
