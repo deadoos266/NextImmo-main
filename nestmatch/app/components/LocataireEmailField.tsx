@@ -2,7 +2,11 @@
 import { useState, useEffect } from "react"
 import { supabase } from "../../lib/supabase"
 
-const SITE_URL = typeof window !== "undefined" ? window.location.origin : "https://keymatch-immo.fr"
+// IMPORTANT : ne PAS évaluer `typeof window` au module-level. Ça crée une
+// constante différente entre SSR (fallback URL) et CSR (vraie origin), ce qui
+// peut diverger entre les deux rendus. On résout l'URL au moment du clic,
+// handler-side, où c'est systématiquement côté client.
+const SITE_URL_FALLBACK = "https://keymatch-immo.fr"
 
 export default function LocataireEmailField({
   value,
@@ -27,7 +31,8 @@ export default function LocataireEmailField({
   }, [value])
 
   function copierInvitation() {
-    const msg = `Bonjour,\n\nJe gere notre location sur KeyMatch. Pour acceder aux documents (etat des lieux, quittances, carnet d'entretien), inscrivez-vous avec l'adresse ${value} :\n\n${SITE_URL}/auth\n\nA bientot sur KeyMatch !`
+    const siteUrl = typeof window !== "undefined" ? window.location.origin : SITE_URL_FALLBACK
+    const msg = `Bonjour,\n\nJe gere notre location sur KeyMatch. Pour acceder aux documents (etat des lieux, quittances, carnet d'entretien), inscrivez-vous avec l'adresse ${value} :\n\n${siteUrl}/auth\n\nA bientot sur KeyMatch !`
     navigator.clipboard.writeText(msg).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 3000)

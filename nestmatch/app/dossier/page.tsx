@@ -123,6 +123,13 @@ export default function Dossier() {
   const [docsBackup, setDocsBackup] = useState<Record<string, string[]> | null>(null)
   const [undoLabel, setUndoLabel] = useState<string | null>(null)
 
+  // Date "Généré le X" : calculée post-mount pour éviter tout mismatch SSR/CSR
+  // (new Date() dans le render retourne une valeur différente à chaque appel).
+  const [dateGeneration, setDateGeneration] = useState("")
+  useEffect(() => {
+    setDateGeneration(new Date().toLocaleDateString("fr-FR"))
+  }, [])
+
   const {
     pending: pendingDocs,
     trigger: triggerRemoveDoc,
@@ -591,7 +598,7 @@ export default function Dossier() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: 20, paddingBottom: 16, borderBottom: "2px solid #f3f4f6", flexWrap: "wrap", gap: 12 }}>
               <div>
                 <h2 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 900, margin: 0 }}>Dossier locataire</h2>
-                <p style={{ fontSize: 13, color: "#6b7280", marginTop: 2 }}>Généré le {new Date().toLocaleDateString("fr-FR")}</p>
+                <p style={{ fontSize: 13, color: "#6b7280", marginTop: 2 }} suppressHydrationWarning>Généré le {dateGeneration}</p>
               </div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontSize: isMobile ? 20 : 22, fontWeight: 900, color: scoreColor }}>{score}%</div>
