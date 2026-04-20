@@ -6,6 +6,7 @@ import CityAutocomplete from "../CityAutocomplete"
 import GrainBackground from "./GrainBackground"
 import { useTypewriter, useCountUp, useInterval, useReducedMotion } from "./hooks"
 import type { FeaturedListing } from "./useFeaturedListings"
+import { CARD_GRADIENTS } from "../../../lib/cardGradients"
 
 /**
  * Hero plein écran noir, 4 images ken-burns cross-fade, typewriter dans la
@@ -33,9 +34,12 @@ export default function Hero({
 
   // 4 premières photos des listings pour le ken-burns (fallback sobre si vide)
   const heroPhotos = listings.filter(l => l.photos.length > 0).slice(0, 4).map(l => l.photos[0])
+  // Nombre effectif de fonds à cycler : 4 si pas de photo réelle (on cycle
+  // les 4 gradients fallback), sinon le nombre de photos dispo.
+  const bgCount = heroPhotos.length > 0 ? heroPhotos.length : 4
 
   // Cross-fade toutes les 4.5 s — désactivé si reduced-motion
-  useInterval(!reduced && heroPhotos.length > 1, () => setBg(b => (b + 1) % heroPhotos.length), 4500)
+  useInterval(!reduced && bgCount > 1, () => setBg(b => (b + 1) % bgCount), 4500)
 
   // TODO: brancher COUNT Supabase pour ces stats (annonces dispo, users, sat)
   const statA = useCountUp(1247, { duration: 2000 })
@@ -74,7 +78,10 @@ export default function Hero({
         `}</style>
       )}
 
-      {/* Images ken-burns */}
+      {/* Images ken-burns — ou fallback "gradients cardGradients" animés
+          si pas encore assez de vraies annonces avec photos en DB. Le
+          gradient est un dégradé chaud pastel (issue de lib/cardGradients.ts)
+          qui reste immersif + éditorial + sombré via l'overlay suivant. */}
       {heroPhotos.length > 0 ? (
         heroPhotos.map((src, i) => {
           const anim = ["km-ken-a", "km-ken-b", "km-ken-c", "km-ken-d"][i % 4]
@@ -99,17 +106,25 @@ export default function Hero({
           )
         })
       ) : (
-        /* Fallback : fond dégradé sobre noir → charbon si aucune photo dispo */
-        <div style={{
-          position: "absolute", inset: 0,
-          background: "radial-gradient(ellipse at top, #1a1a1a 0%, #000 70%)",
-        }} />
+        /* Fallback : 4 gradients pastels cardGradients qui rotent en cross-fade.
+           Visuellement proche de l'effet voulu (couleurs chaudes sur noir)
+           en attendant que de vraies photos arrivent en DB. */
+        CARD_GRADIENTS.slice(0, 4).map((grad, i) => (
+          <div key={`grad-${i}`} style={{
+            position: "absolute", inset: 0,
+            background: grad,
+            opacity: i === bg ? 1 : 0,
+            transition: "opacity 1600ms ease-in-out",
+          }} />
+        ))
       )}
 
-      {/* Overlay gradient pour lisibilité texte en bas */}
+      {/* Overlay gradient pour lisibilité texte en bas — plus appuyé sans photo */}
       <div style={{
         position: "absolute", inset: 0,
-        background: "linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.85) 100%)",
+        background: heroPhotos.length > 0
+          ? "linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.85) 100%)"
+          : "linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.9) 100%)",
       }} />
       <GrainBackground />
 

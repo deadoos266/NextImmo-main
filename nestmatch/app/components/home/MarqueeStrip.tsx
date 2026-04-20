@@ -32,6 +32,14 @@ export default function MarqueeStrip({ listings }: { listings: FeaturedListing[]
         {row.map((a, i) => {
           const photo = a.photos[0]
           const quartier = a.ville ?? "À découvrir"
+          // Initiale du quartier affichée dans le cercle si pas de photo.
+          // Deux lettres max — ex. "PA" pour Paris, "SD" pour Saint-Denis.
+          const initiales = quartier
+            .split(/[\s-]+/)
+            .map(w => w[0] || "")
+            .join("")
+            .slice(0, 2)
+            .toUpperCase()
           return (
             <div
               key={`${a.id}-${i}`}
@@ -54,9 +62,18 @@ export default function MarqueeStrip({ listings }: { listings: FeaturedListing[]
                 background: a._gradient || "#EAE6DF",
                 overflow: "hidden",
                 flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#111",
+                fontSize: 12,
+                fontWeight: 500,
+                letterSpacing: "-0.2px",
               }}>
-                {photo && (
+                {photo ? (
                   <Image src={photo} alt="" fill sizes="36px" style={{ objectFit: "cover" }} />
+                ) : (
+                  <span aria-hidden>{initiales}</span>
                 )}
               </div>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#111" }}>{quartier}</div>

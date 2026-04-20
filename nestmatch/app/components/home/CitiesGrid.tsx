@@ -1,25 +1,45 @@
 "use client"
+import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { CARD_GRADIENTS } from "../../../lib/cardGradients"
 import { useReducedMotion } from "./hooks"
 
 /**
- * Grille "Par ville" — 6 villes phares. Pas de photos (pas de CDN brand),
- * on utilise des gradients `cardGradients.ts` pour le rendu. Hover : légère
- * élévation du gradient. Clic → /annonces?ville=X.
+ * Grille "Par ville" — 6 villes phares avec photos emblématiques.
+ *
+ * Photos servies depuis `/public/villes/*.jpg` (même domaine → CSP 'self' OK).
+ * En cas de 404 sur l'image (retiré du repo, renommé), fallback automatique
+ * vers un gradient de `lib/cardGradients.ts` via `onError`.
+ *
+ * ─── Crédits photos (Unsplash, licence libre) ────────────────────────────
+ * Ces photos illustrent les villes — elles ne représentent pas des logements
+ * réels. Aucune ressource de propriété n'est associée. Libres de droit
+ * commercial et non-commercial selon la licence Unsplash (unsplash.com/license).
+ *
+ *   paris.jpg     photo-1502602898657-3e91760cbb34  (Tour Eiffel)
+ *   lyon.jpg      photo-1524396309943-e03f5249f002  (vue générale Lyon)
+ *   bordeaux.jpg  photo-1568605114967-8130f3a36994  (architecture Bordeaux)
+ *   marseille.jpg photo-1565689157206-0fddef7589a2  (Vieux-Port)
+ *   nantes.jpg    photo-1610641818989-c2051b5e2cfd  (centre Nantes)
+ *   toulouse.jpg  photo-1600585154340-be6161a56a0c  (architecture méditerranéenne)
+ * ─────────────────────────────────────────────────────────────────────────
  */
 
 const CITIES = [
-  { name: "Paris",     n: 412 },
-  { name: "Lyon",      n: 186 },
-  { name: "Bordeaux",  n: 94 },
-  { name: "Marseille", n: 128 },
-  { name: "Nantes",    n: 72 },
-  { name: "Toulouse",  n: 88 },
+  { name: "Paris",     n: 412, file: "/villes/paris.jpg" },
+  { name: "Lyon",      n: 186, file: "/villes/lyon.jpg" },
+  { name: "Bordeaux",  n: 94,  file: "/villes/bordeaux.jpg" },
+  { name: "Marseille", n: 128, file: "/villes/marseille.jpg" },
+  { name: "Nantes",    n: 72,  file: "/villes/nantes.jpg" },
+  { name: "Toulouse",  n: 88,  file: "/villes/toulouse.jpg" },
 ]
 
 export default function CitiesGrid({ isMobile }: { isMobile: boolean }) {
   const reduced = useReducedMotion()
+  // Set des villes dont l'image a échoué (404 ou erreur) — fallback gradient
+  const [broken, setBroken] = useState<Set<string>>(new Set())
+
   return (
     <section style={{ background: "#fff", padding: isMobile ? "72px 20px" : "120px 32px" }}>
       <div style={{ maxWidth: 1280, margin: "0 auto" }}>
@@ -72,6 +92,7 @@ export default function CitiesGrid({ isMobile }: { isMobile: boolean }) {
         }}>
           {CITIES.map((c, i) => {
             const gradient = CARD_GRADIENTS[i % CARD_GRADIENTS.length]
+            const useGradient = broken.has(c.name)
             return (
               <Link
                 key={c.name}
@@ -84,7 +105,7 @@ export default function CitiesGrid({ isMobile }: { isMobile: boolean }) {
                   textDecoration: "none",
                   color: "#fff",
                   display: "block",
-                  background: gradient,
+                  background: useGradient ? gradient : "#EAE6DF",
                   transition: "transform 300ms ease, box-shadow 300ms ease",
                 }}
                 onMouseEnter={e => {
@@ -97,6 +118,25 @@ export default function CitiesGrid({ isMobile }: { isMobile: boolean }) {
                   e.currentTarget.style.boxShadow = "none"
                 }}
               >
+                {!useGradient && (
+                  <Image
+                    src={c.file}
+                    alt={`Illustration ${c.name}`}
+                    fill
+                    sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 220px"
+                    style={{
+                      objectFit: "cover",
+                      transform: reduced ? "scale(1)" : undefined,
+                      transition: "transform 600ms ease",
+                    }}
+                    onError={() => setBroken(prev => {
+                      if (prev.has(c.name)) return prev
+                      const next = new Set(prev)
+                      next.add(c.name)
+                      return next
+                    })}
+                  />
+                )}
                 <div style={{
                   position: "absolute", inset: 0,
                   background: "linear-gradient(180deg, transparent 30%, rgba(0,0,0,0.6))",
