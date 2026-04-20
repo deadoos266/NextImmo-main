@@ -2,34 +2,32 @@
 import { useState } from "react"
 import Image from "next/image"
 import { useInterval, useReducedMotion } from "./hooks"
-import type { FeaturedListing } from "./useFeaturedListings"
 
 /**
  * "Comment ça marche" — 2 colonnes asymétriques, 3 steps cliquables avec
  * auto-advance 3.5 s + progress bar. Reduced-motion : pas d'auto-advance,
  * pas de progress bar animée, la step active reste la première sans bouger.
+ *
+ * Photos steps servies depuis /public/howitworks/*.jpg (CSP 'self' OK).
+ *
+ * ─── Crédits photos (Unsplash, licence libre) ────────────────────────────
+ *   01-dossier.jpg    photo-1554224155-6726b3ff858f  (documents/bureau)
+ *   02-matching.jpg   photo-1560448204-e02f11c3d0e2  (salon clair)
+ *   03-signature.jpg  photo-1554224155-8d04cb21cd6c  (signature/papiers)
+ * ─────────────────────────────────────────────────────────────────────────
  */
 
 const STEPS = [
-  { t: "Créez votre dossier",       d: "Bulletins, avis d'imposition, garant : tout centralisé." },
-  { t: "Matchez avec un logement",  d: "Score de 0 à 100 % calculé sur vos critères." },
-  { t: "Signez votre bail en ligne",d: "Bail électronique + état des lieux digital." },
+  { t: "Créez votre dossier",       d: "Bulletins, avis d'imposition, garant : tout centralisé.",       img: "/howitworks/01-dossier.jpg" },
+  { t: "Matchez avec un logement",  d: "Score de 0 à 100 % calculé sur vos critères.",                  img: "/howitworks/02-matching.jpg" },
+  { t: "Signez votre bail en ligne",d: "Bail électronique + état des lieux digital.",                   img: "/howitworks/03-signature.jpg" },
 ]
 
-export default function HowItWorks({
-  listings,
-  isMobile,
-}: { listings: FeaturedListing[]; isMobile: boolean }) {
+export default function HowItWorks({ isMobile }: { isMobile: boolean }) {
   const reduced = useReducedMotion()
   const [step, setStep] = useState(0)
 
   useInterval(!reduced, () => setStep(s => (s + 1) % STEPS.length), 3500)
-
-  // 3 photos différentes parmi les listings pour illustrer chaque step
-  const stepPhotos: { src: string | null; gradient?: string }[] = [0, 2, 4].map(i => {
-    const l = listings[i] ?? listings[0]
-    return l?.photos[0] ? { src: l.photos[0] } : { src: null, gradient: l?._gradient || "#EAE6DF" }
-  })
 
   return (
     <section style={{ background: "#F7F4EF", padding: isMobile ? "72px 20px" : "120px 32px" }}>
@@ -123,18 +121,15 @@ export default function HowItWorks({
           boxShadow: "0 30px 60px rgba(0,0,0,0.15)",
           background: "#EAE6DF",
         }}>
-          {stepPhotos.map((p, i) => (
+          {STEPS.map((s, i) => (
             <div key={i} style={{
               position: "absolute",
               inset: 0,
               opacity: step === i ? 1 : 0,
               transition: "opacity 800ms ease",
               transform: step === i ? "scale(1)" : "scale(1.05)",
-              background: p.gradient,
             }}>
-              {p.src && (
-                <Image src={p.src} alt="" fill sizes="(max-width: 768px) 100vw, 50vw" style={{ objectFit: "cover" }} />
-              )}
+              <Image src={s.img} alt="" fill sizes="(max-width: 768px) 100vw, 50vw" style={{ objectFit: "cover" }} />
             </div>
           ))}
           <div style={{

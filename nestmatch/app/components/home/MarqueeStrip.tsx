@@ -1,6 +1,7 @@
 "use client"
 import Image from "next/image"
 import { useReducedMotion } from "./hooks"
+import { CARD_GRADIENTS } from "../../../lib/cardGradients"
 import type { FeaturedListing } from "./useFeaturedListings"
 
 /**
@@ -32,6 +33,7 @@ export default function MarqueeStrip({ listings }: { listings: FeaturedListing[]
         {row.map((a, i) => {
           const photo = a.photos[0]
           const quartier = a.ville ?? "À découvrir"
+          const gradient = CARD_GRADIENTS[((a.id < 0 ? -a.id : a.id) % CARD_GRADIENTS.length)]
           // Initiale du quartier affichée dans le cercle si pas de photo.
           // Deux lettres max — ex. "PA" pour Paris, "SD" pour Saint-Denis.
           const initiales = quartier
@@ -59,7 +61,7 @@ export default function MarqueeStrip({ listings }: { listings: FeaturedListing[]
                 width: 36,
                 height: 36,
                 borderRadius: "50%",
-                background: a._gradient || "#EAE6DF",
+                background: gradient,
                 overflow: "hidden",
                 flexShrink: 0,
                 display: "flex",
@@ -77,15 +79,14 @@ export default function MarqueeStrip({ listings }: { listings: FeaturedListing[]
                 )}
               </div>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#111" }}>{quartier}</div>
-              <div style={{ width: 1, height: 16, background: "#EAE6DF" }} />
-              <div style={{ fontSize: 12, color: "#666" }}>
-                {a.prix != null ? `${a.prix.toLocaleString("fr-FR")} €` : "—"}
-              </div>
-              {a._matchPct != null && (
-                <div style={{ fontSize: 10, fontWeight: 700, color: "#16A34A", letterSpacing: "1px" }}>
-                  {a._matchPct}&nbsp;%
-                </div>
+              {a.prix != null && (
+                <>
+                  <div style={{ width: 1, height: 16, background: "#EAE6DF" }} />
+                  <div style={{ fontSize: 12, color: "#666" }}>{a.prix.toLocaleString("fr-FR")} €</div>
+                </>
               )}
+              {/* Pas de % match ici : calcul matching non disponible tant qu'on
+                  n'a pas le profil du visiteur + annonces réelles en DB. */}
             </div>
           )
         })}

@@ -1,14 +1,17 @@
 "use client"
 import { useEffect, useState } from "react"
 import { supabase } from "../../../lib/supabase"
-import { CARD_GRADIENTS } from "../../../lib/cardGradients"
 
 /**
- * Hook qui fetch les 8 dernières annonces disponibles avec au moins une photo.
- * Si moins de 8 résultats, complète avec des placeholders "gradient fallback"
- * pour que toutes les sections de la Home restent complètes visuellement.
+ * Hook qui fetch les 8 annonces les plus récentes de la DB, **sans inventer
+ * de placeholders**. Si la DB a 3 annonces, on retourne 3. Si elle en a 0,
+ * on retourne [] et les consommateurs gèrent leur propre empty state
+ * (LiveFeed → empty state CTA, Hero → fallback /public/hero/*.jpg, etc.).
  *
- * Aucun impact sur les filtres de /annonces : c'est une lecture read-only.
+ * Paul : "que la sélection du moment soit vraiment indexée sur les
+ * annonces actuelles" + "genre ça prend 8 annonces au hasard du site".
+ * On filtre PAS par statut pour que même les biens déjà loués puissent
+ * servir de vitrine (en attendant de nouvelles publications).
  */
 
 export type FeaturedListing = {
@@ -20,10 +23,8 @@ export type FeaturedListing = {
   surface: number | null
   pieces: number | null
   dpe: string | null
+  statut: string | null
   photos: string[]
-  _placeholder?: boolean // true si fallback gradient (pas une vraie annonce)
-  _gradient?: string     // gradient fallback CSS
-  _matchPct?: number     // score mocké pour affichage (72-92 %)
 }
 
 export function useFeaturedListings(targetCount = 8) {
@@ -36,56 +37,30 @@ export function useFeaturedListings(targetCount = 8) {
       try {
         const { data } = await supabase
           .from("annonces")
-          .select("id, titre, ville, adresse, prix, surface, pieces, dpe, photos, statut, created_at")
-          .or("statut.is.null,statut.neq.loué")
+          .select("id, titre, ville, prix, surface, pieces, dpe, photos, statut, created_at")
           .order("created_at", { ascending: false })
-          .limit(24) // on prend plus large pour filtrer ensuite sur photos
+          .limit(targetCount)
 
         if (!alive) return
 
-        const withPhotos: FeaturedListing[] = (data || [])
-          .filter((a: any) => Array.isArray(a.photos) && a.photos.length > 0)
-          .slice(0, targetCount)
-          .map((a: any, i: number) => ({
-            id: a.id,
-            titre: a.titre,
-            ville: a.ville,
-            quartier: null, // pas stocké en DB, le design l'affiche si dispo
-            prix: a.prix,
-            surface: a.surface,
-            pieces: a.pieces,
-            dpe: a.dpe,
-            photos: a.photos,
-            // Mock score matching : dégressif, stable par id pour éviter
-            // le flash de réhydratation. Les vrais scores restent côté /annonces.
-            _matchPct: 92 - (i * 3) - (a.id % 5),
-          }))
+        const rows: FeaturedListing[] = (data || []).map((a: { id: number; titre: string | null; ville: string | null; prix: number | null; surface: number | null; pieces: number | null; dpe: string | null; photos: string[] | null; statut: string | null }) => ({
+          id: a.id,
+          titre: a.titre,
+          ville: a.ville,
+          quartier: null,
+          prix: a.prix,
+          surface: a.surface,
+          pieces: a.pieces,
+          dpe: a.dpe,
+          statut: a.statut,
+          photos: Array.isArray(a.photos) ? a.photos : [],
+        }))
 
-        // Complète jusqu'à `targetCount` avec des placeholders gradient
-        const missing = targetCount - withPhotos.length
-        const placeholders: FeaturedListing[] = Array.from({ length: Math.max(0, missing) }).map((_, i) => {
-          const idx = withPhotos.length + i
-          return {
-            id: -1000 - idx, // id négatif pour éviter toute collision
-            titre: "Logement à découvrir",
-            ville: null,
-            prix: null,
-            surface: null,
-            pieces: null,
-            dpe: null,
-            photos: [],
-            _placeholder: true,
-            _gradient: CARD_GRADIENTS[idx % CARD_GRADIENTS.length],
-            _matchPct: 70 - i * 2,
-          }
-        })
-
-        setListings([...withPhotos, ...placeholders])
+        setListings(rows)
       } finally {
         if (alive) setLoading(false)
       }
     })()
-    return () => { alive = false }
   }, [targetCount])
 
   return { listings, loading }

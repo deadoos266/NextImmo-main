@@ -15,7 +15,9 @@ export default function FinalCTA({
   isMobile,
 }: { listings: FeaturedListing[]; isMobile: boolean }) {
   const reduced = useReducedMotion()
-  const bgPhoto = listings.find(l => l.photos.length > 0)?.photos[0]
+  // Priorité : 1ère annonce DB avec photo. Fallback : /public/hero/1.jpg
+  // (CSP 'self' OK) pour garder le visuel éditorial même DB vide.
+  const bgPhoto = listings.find(l => l.photos.length > 0)?.photos[0] ?? "/hero/1.jpg"
 
   return (
     <section style={{
@@ -26,11 +28,9 @@ export default function FinalCTA({
       overflow: "hidden",
     }}>
       {/* Background image très atténuée (25 %) */}
-      {bgPhoto && (
-        <div style={{ position: "absolute", inset: 0, opacity: 0.25 }}>
-          <Image src={bgPhoto} alt="" fill sizes="100vw" style={{ objectFit: "cover" }} />
-        </div>
-      )}
+      <div style={{ position: "absolute", inset: 0, opacity: 0.25 }}>
+        <Image src={bgPhoto} alt="" fill sizes="100vw" style={{ objectFit: "cover" }} />
+      </div>
 
       <div style={{ maxWidth: 900, margin: "0 auto", textAlign: "center", position: "relative" }}>
         <h2 style={{

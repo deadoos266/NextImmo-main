@@ -10,20 +10,21 @@ import CitiesGrid from "./components/home/CitiesGrid"
 import FinalCTA from "./components/home/FinalCTA"
 
 /**
- * Home KeyMatch — design system bundle (handoff 2026-04-20).
+ * Home KeyMatch — design system bundle, "no lies mode" + premium.
  *
  * Séquence : Hero → MarqueeStrip → LiveFeed → HowItWorks → Testimonials
  *          → CitiesGrid → FinalCTA
  *
- * Données : useFeaturedListings() fetch 8 dernières annonces disponibles
- * avec photos[] non vide. Fallback gradient si < 8. Utilisé dans Hero
- * (ken-burns + FloatingPill), MarqueeStrip, LiveFeed, HowItWorks (images
- * steps) et FinalCTA (image de fond).
+ * Données : useFeaturedListings() fetch les 8 annonces les plus récentes de
+ * la DB (sans filtre statut, vraies annonces uniquement). Empty state
+ * honnête si 0 résultat.
  *
- * Scope strict respecté : aucune modif hors app/page.tsx + app/components/home/*.
- * Aucune API route touchée. SEO metadata dans app/layout.tsx intact.
- * Accessibilité : `prefers-reduced-motion` respecté sur tous les auto-advance
- * (typewriter, ken-burns, marquee, HowItWorks, Testimonials, card hover).
+ * Testimonials transformés en "Promesses KeyMatch" (3 promesses produit
+ * vérifiables, pas de persona fake).
+ *
+ * Scope strict respecté : aucune modif hors app/page.tsx + app/components/home/*
+ * + /public/{villes,hero,howitworks}/*. Accessibilité `prefers-reduced-motion`
+ * respectée sur tous les auto-advance.
  */
 export default function Home() {
   const { isMobile, isTablet } = useResponsive()
@@ -32,9 +33,9 @@ export default function Home() {
   return (
     <main style={{ fontFamily: "'DM Sans', sans-serif", color: "#111", background: "#F7F4EF" }}>
       <Hero listings={listings} isMobile={isMobile} isTablet={isTablet} />
-      <MarqueeStrip listings={listings} />
+      {listings.length > 0 && <MarqueeStrip listings={listings} />}
       <LiveFeed listings={listings} loading={loading} isMobile={isMobile} isTablet={isTablet} />
-      <HowItWorks listings={listings} isMobile={isMobile} />
+      <HowItWorks isMobile={isMobile} />
       <Testimonials isMobile={isMobile} />
       <CitiesGrid isMobile={isMobile} />
       <FinalCTA listings={listings} isMobile={isMobile} />

@@ -13,26 +13,28 @@ import { useReducedMotion } from "./hooks"
  * vers un gradient de `lib/cardGradients.ts` via `onError`.
  *
  * ─── Crédits photos (Unsplash, licence libre) ────────────────────────────
- * Ces photos illustrent les villes — elles ne représentent pas des logements
- * réels. Aucune ressource de propriété n'est associée. Libres de droit
+ * Ces photos illustrent les villes via un lieu emblématique. Libres de droit
  * commercial et non-commercial selon la licence Unsplash (unsplash.com/license).
  *
  *   paris.jpg     photo-1502602898657-3e91760cbb34  (Tour Eiffel)
- *   lyon.jpg      photo-1524396309943-e03f5249f002  (vue générale Lyon)
- *   bordeaux.jpg  photo-1568605114967-8130f3a36994  (architecture Bordeaux)
- *   marseille.jpg photo-1565689157206-0fddef7589a2  (Vieux-Port)
- *   nantes.jpg    photo-1610641818989-c2051b5e2cfd  (centre Nantes)
- *   toulouse.jpg  photo-1600585154340-be6161a56a0c  (architecture méditerranéenne)
+ *   lyon.jpg      photo-1524396309943-e03f5249f002  (Fourvière / presqu'île)
+ *   bordeaux.jpg  photo-1605731414532-6b26976cc153  (Place de la Bourse / miroir d'eau)
+ *   marseille.jpg photo-1600566752355-35792bedcfea  (Notre-Dame de la Garde)
+ *   nantes.jpg    photo-1579952363873-27f3bade9f55  (Château / patrimoine ligérien)
+ *   toulouse.jpg  photo-1598986646512-9330bcc4c0dc  (Place du Capitole / cité rose)
  * ─────────────────────────────────────────────────────────────────────────
  */
 
+// Note : aucun compteur "X logements" n'est affiché tant que la DB n'a pas
+// vraiment d'annonces dans ces villes. Le design avait prévu un compteur
+// chiffré — retiré en attendant un vrai COUNT Supabase par ville.
 const CITIES = [
-  { name: "Paris",     n: 412, file: "/villes/paris.jpg" },
-  { name: "Lyon",      n: 186, file: "/villes/lyon.jpg" },
-  { name: "Bordeaux",  n: 94,  file: "/villes/bordeaux.jpg" },
-  { name: "Marseille", n: 128, file: "/villes/marseille.jpg" },
-  { name: "Nantes",    n: 72,  file: "/villes/nantes.jpg" },
-  { name: "Toulouse",  n: 88,  file: "/villes/toulouse.jpg" },
+  { name: "Paris",     file: "/villes/paris.jpg" },
+  { name: "Lyon",      file: "/villes/lyon.jpg" },
+  { name: "Bordeaux",  file: "/villes/bordeaux.jpg" },
+  { name: "Marseille", file: "/villes/marseille.jpg" },
+  { name: "Nantes",    file: "/villes/nantes.jpg" },
+  { name: "Toulouse",  file: "/villes/toulouse.jpg" },
 ]
 
 export default function CitiesGrid({ isMobile }: { isMobile: boolean }) {
@@ -152,12 +154,12 @@ export default function CitiesGrid({ isMobile }: { isMobile: boolean }) {
                   </div>
                   <div style={{
                     fontSize: 11,
-                    opacity: 0.85,
+                    opacity: 0.75,
                     textTransform: "uppercase",
                     letterSpacing: "1.2px",
                     marginTop: 4,
                   }}>
-                    {c.n.toLocaleString("fr-FR")} logements
+                    Découvrir →
                   </div>
                 </div>
               </Link>

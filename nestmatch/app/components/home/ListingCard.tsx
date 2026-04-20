@@ -2,13 +2,20 @@
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { CARD_GRADIENTS } from "../../../lib/cardGradients"
 import { useInterval, useReducedMotion } from "./hooks"
 import type { FeaturedListing } from "./useFeaturedListings"
 
 /**
- * Card annonce aspect 4/5 — hover fait défiler les photos (1.2 s) si l'user
- * hover une card avec plusieurs photos. Reduced-motion : pas de rotation.
- * Favoris branchés sur `lib/favoris.ts` via props (hydrate côté parent).
+ * Card annonce aspect 4/5.
+ *
+ * "No lies mode" : aucun badge "% match" ni "NOUVEAU" fake. Les données
+ * affichées viennent toutes de la DB — titre, ville, prix, surface,
+ * pièces, DPE. Si le bien est loué, badge discret "Loué" overlay (état
+ * réel, pas de bluff).
+ *
+ * Hover : rotation des photos (1.2 s) si la card a plusieurs photos.
+ * Reduced-motion : pas de rotation, 1ère photo seulement.
  */
 export default function ListingCard({
   a,
@@ -25,24 +32,20 @@ export default function ListingCard({
   const [idx, setIdx] = useState(0)
   const [hover, setHover] = useState(false)
   const hasMultiplePhotos = a.photos.length > 1
-  const placeholder = a._placeholder
-  const cardHref = placeholder ? "/annonces" : `/annonces/${a.id}`
+  const hasPhoto = a.photos.length > 0
+  const isLoue = a.statut === "loué"
 
   useInterval(hover && hasMultiplePhotos && !reduced, () => setIdx(i => (i + 1) % a.photos.length), 1200)
   useEffect(() => { if (!hover) setIdx(0) }, [hover])
 
-  const currentPhoto = a.photos[idx] ?? a.photos[0]
+  // Gradient fallback stable (basé sur id) quand pas de photo
+  const gradient = CARD_GRADIENTS[((a.id < 0 ? -a.id : a.id) % CARD_GRADIENTS.length)]
+  const titre = a.titre ?? "Logement"
   const ville = a.ville ?? "—"
-  const titre = a.titre ?? "Logement à découvrir"
-  const pct = a._matchPct
-
-  // Flag "nouveau" : annonces avec id positif et parmi les 3 plus récentes
-  // (stable : basé sur l'id modulo pour simulation sans champ explicite).
-  const isNew = !placeholder && a.id > 0 && (a.id % 7 < 3)
 
   return (
     <Link
-      href={cardHref}
+      href={`/annonces/${a.id}`}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
@@ -58,13 +61,13 @@ export default function ListingCard({
         boxShadow: hover && !reduced ? "0 20px 40px rgba(0,0,0,0.12)" : "0 1px 3px rgba(0,0,0,0.04)",
         animation: reduced ? "none" : `km-fade-in 600ms ease-out ${animDelay}ms both`,
         fontFamily: "inherit",
+        opacity: isLoue ? 0.78 : 1,
       }}
     >
       {!reduced && <style>{`@keyframes km-fade-in { from { opacity: 0; transform: translateY(20px) } to { opacity: 1; transform: translateY(0) } }`}</style>}
 
-      <div style={{ position: "relative", aspectRatio: "4 / 5", overflow: "hidden", background: a._gradient || "#EAE6DF" }}>
-        {/* Photos — cross-fade au hover */}
-        {currentPhoto ? (
+      <div style={{ position: "relative", aspectRatio: "4 / 5", overflow: "hidden", background: gradient }}>
+        {hasPhoto ? (
           a.photos.map((p, i) => (
             <div key={p} style={{
               position: "absolute", inset: 0,
@@ -84,28 +87,23 @@ export default function ListingCard({
           <span style={{
             position: "absolute", inset: 0,
             display: "flex", alignItems: "center", justifyContent: "center",
-            color: "rgba(17,17,17,0.25)", fontSize: 12, fontWeight: 500,
+            color: "rgba(17,17,17,0.3)", fontSize: 12, fontWeight: 500,
             letterSpacing: "1px", textTransform: "uppercase",
           }}>
-            À découvrir
+            Photos à venir
           </span>
         )}
 
-        {/* Badges top */}
+        {/* Badges top : favori + éventuel badge "Loué" basé sur DB */}
         <div style={{
           position: "absolute", top: 14, left: 14, right: 14,
           display: "flex", justifyContent: "space-between", alignItems: "flex-start",
           pointerEvents: "none",
         }}>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {isNew && (
-              <span style={{ padding: "5px 10px", background: "#111", color: "#fff", borderRadius: 999, fontSize: 10, fontWeight: 700, letterSpacing: "1px" }}>
-                NOUVEAU
-              </span>
-            )}
-            {pct != null && (
-              <span style={{ padding: "5px 10px", background: "rgba(255,255,255,0.94)", color: "#111", borderRadius: 999, fontSize: 11, fontWeight: 600 }}>
-                {pct}&nbsp;% match
+            {isLoue && (
+              <span style={{ padding: "5px 10px", background: "rgba(17,17,17,0.9)", color: "#fff", borderRadius: 999, fontSize: 10, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase" }}>
+                Loué
               </span>
             )}
           </div>

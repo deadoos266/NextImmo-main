@@ -4,14 +4,28 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import CityAutocomplete from "../CityAutocomplete"
 import GrainBackground from "./GrainBackground"
-import { useTypewriter, useCountUp, useInterval, useReducedMotion } from "./hooks"
+import { useTypewriter, useInterval, useReducedMotion } from "./hooks"
 import type { FeaturedListing } from "./useFeaturedListings"
-import { CARD_GRADIENTS } from "../../../lib/cardGradients"
 
 /**
- * Hero plein écran noir, 4 images ken-burns cross-fade, typewriter dans la
- * search pilule, FloatingMatchPill animée, LiveStats animés.
- * Stats hardcodées — TODO: brancher COUNT Supabase pour plus tard.
+ * Hero plein écran noir — ken-burns cross-fade + typewriter dans la search.
+ *
+ * Principes "no lies" (demande Paul explicite) :
+ *  - Pas de stats chiffrées fake (X logements, X locataires, X % satisfaction)
+ *  - Pas de FloatingMatchPill qui invente un score sur une annonce qui n'existe pas
+ *  - Pas de pill "1 247 logements mis à jour il y a 3 min" si la DB est vide
+ *  - Le texte pill reste honnête : "Beta publique · Inscription gratuite"
+ *
+ * Sources images (priorité descendante) :
+ *  1. Vraies annonces en DB via useFeaturedListings (photos[] non vide)
+ *  2. Fallback : 3 photos d'intérieurs Unsplash dans /public/hero/*.jpg
+ *     (servis depuis 'self', CSP respecté)
+ *
+ * ─── Crédits photos hero (Unsplash, licence libre) ───────────────────────
+ *   /public/hero/1.jpg  photo-1560448204-e02f11c3d0e2  (salon clair)
+ *   /public/hero/2.jpg  photo-1502672260266-1c1ef2d93688 (studio canal)
+ *   /public/hero/3.jpg  photo-1522708323590-d24dbb6b0267 (appart lumineux)
+ * ─────────────────────────────────────────────────────────────────────────
  */
 
 const PROMPTS = [
@@ -20,6 +34,8 @@ const PROMPTS = [
   "Une maison avec jardin à Bordeaux",
   "Un studio meublé à Marseille",
 ]
+
+const HERO_FALLBACK_PHOTOS = ["/hero/1.jpg", "/hero/2.jpg", "/hero/3.jpg"]
 
 export default function Hero({
   listings,
@@ -32,19 +48,13 @@ export default function Hero({
   const [bg, setBg] = useState(0)
   const [ville, setVille] = useState("")
 
-  // 4 premières photos des listings pour le ken-burns (fallback sobre si vide)
-  const heroPhotos = listings.filter(l => l.photos.length > 0).slice(0, 4).map(l => l.photos[0])
-  // Nombre effectif de fonds à cycler : 4 si pas de photo réelle (on cycle
-  // les 4 gradients fallback), sinon le nombre de photos dispo.
-  const bgCount = heroPhotos.length > 0 ? heroPhotos.length : 4
+  // Photos hero : d'abord les vraies annonces, sinon fallback /public/hero/*
+  const realPhotos = listings.filter(l => l.photos.length > 0).slice(0, 4).map(l => l.photos[0])
+  const heroPhotos = realPhotos.length > 0 ? realPhotos : HERO_FALLBACK_PHOTOS
+  const usingFallback = realPhotos.length === 0
 
   // Cross-fade toutes les 4.5 s — désactivé si reduced-motion
-  useInterval(!reduced && bgCount > 1, () => setBg(b => (b + 1) % bgCount), 4500)
-
-  // TODO: brancher COUNT Supabase pour ces stats (annonces dispo, users, sat)
-  const statA = useCountUp(1247, { duration: 2000 })
-  const statB = useCountUp(3418, { duration: 2200, delay: 200 })
-  const statC = useCountUp(96,   { duration: 1800, delay: 400 })
+  useInterval(!reduced && heroPhotos.length > 1, () => setBg(b => (b + 1) % heroPhotos.length), 4500)
 
   function handleSearch(e?: FormEvent) {
     e?.preventDefault()
@@ -53,9 +63,6 @@ export default function Hero({
     const qs = params.toString()
     router.push(qs ? `/annonces?${qs}` : "/annonces")
   }
-
-  // Featured pour la FloatingMatchPill (prend la 1ère annonce avec photo)
-  const featured = listings.find(l => l.photos.length > 0)
 
   return (
     <section style={{
@@ -68,7 +75,6 @@ export default function Hero({
       padding: isMobile ? "0 20px 40px" : "0 32px 56px",
       color: "#fff",
     }}>
-      {/* Ken-burns CSS — skip si reduced-motion */}
       {!reduced && (
         <style>{`
           @keyframes km-ken-a { 0% { transform: scale(1.08) translate(0%, 0%) } 100% { transform: scale(1.28) translate(-3%, -2%) } }
@@ -78,60 +84,36 @@ export default function Hero({
         `}</style>
       )}
 
-      {/* Images ken-burns — ou fallback "gradients cardGradients" animés
-          si pas encore assez de vraies annonces avec photos en DB. Le
-          gradient est un dégradé chaud pastel (issue de lib/cardGradients.ts)
-          qui reste immersif + éditorial + sombré via l'overlay suivant. */}
-      {heroPhotos.length > 0 ? (
-        heroPhotos.map((src, i) => {
-          const anim = ["km-ken-a", "km-ken-b", "km-ken-c", "km-ken-d"][i % 4]
-          return (
-            <div key={`${src}-${i}`} style={{
-              position: "absolute", inset: 0,
-              opacity: i === bg ? 1 : 0,
-              transition: "opacity 1600ms ease-in-out",
-              animation: reduced ? "none" : `${anim} 18000ms ease-in-out infinite alternate`,
-              willChange: reduced ? "auto" : "transform",
-              overflow: "hidden",
-            }}>
-              <Image
-                src={src}
-                alt=""
-                fill
-                priority={i === 0}
-                sizes="100vw"
-                style={{ objectFit: "cover" }}
-              />
-            </div>
-          )
-        })
-      ) : (
-        /* Fallback : 4 gradients pastels cardGradients qui rotent en cross-fade.
-           Visuellement proche de l'effet voulu (couleurs chaudes sur noir)
-           en attendant que de vraies photos arrivent en DB. */
-        CARD_GRADIENTS.slice(0, 4).map((grad, i) => (
-          <div key={`grad-${i}`} style={{
+      {/* Images ken-burns (vraies photos ou fallback) */}
+      {heroPhotos.map((src, i) => {
+        const anim = ["km-ken-a", "km-ken-b", "km-ken-c", "km-ken-d"][i % 4]
+        return (
+          <div key={`${src}-${i}`} style={{
             position: "absolute", inset: 0,
-            background: grad,
             opacity: i === bg ? 1 : 0,
             transition: "opacity 1600ms ease-in-out",
-          }} />
-        ))
-      )}
+            animation: reduced ? "none" : `${anim} 18000ms ease-in-out infinite alternate`,
+            willChange: reduced ? "auto" : "transform",
+            overflow: "hidden",
+          }}>
+            <Image
+              src={src}
+              alt=""
+              fill
+              priority={i === 0}
+              sizes="100vw"
+              style={{ objectFit: "cover" }}
+            />
+          </div>
+        )
+      })}
 
-      {/* Overlay gradient pour lisibilité texte en bas — plus appuyé sans photo */}
+      {/* Overlay gradient pour lisibilité texte */}
       <div style={{
         position: "absolute", inset: 0,
-        background: heroPhotos.length > 0
-          ? "linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.85) 100%)"
-          : "linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.9) 100%)",
+        background: "linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.85) 100%)",
       }} />
       <GrainBackground />
-
-      {/* FloatingMatchPill — visible seulement en desktop */}
-      {!isMobile && !isTablet && featured && (
-        <FloatingMatchPill listing={featured} reduced={reduced} />
-      )}
 
       {/* Contenu */}
       <div style={{
@@ -141,7 +123,8 @@ export default function Hero({
         margin: "0 auto",
         width: "100%",
       }}>
-        {/* Pill "X logements, mis à jour…" */}
+        {/* Pill premium : 3 promesses marque verifiables — pas de stats
+            inventées mais un positionnement accrocheur. */}
         <div style={{
           display: "inline-flex",
           alignItems: "center",
@@ -160,10 +143,9 @@ export default function Hero({
           <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#16A34A", display: "inline-flex", alignItems: "center", justifyContent: "center" }} aria-hidden>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
           </span>
-          1 247 logements disponibles, mis à jour il y a 3 min
+          Zéro agence · Bail signé en ligne · Dossier ALUR
         </div>
 
-        {/* Titre */}
         <h1 style={{
           fontSize: isMobile ? 44 : isTablet ? 64 : 84,
           fontWeight: 500,
@@ -176,57 +158,37 @@ export default function Hero({
           La location,<br />sans intermédiaire.
         </h1>
 
-        {/* Search pilule */}
         <SearchBox typed={typed} ville={ville} setVille={setVille} onSubmit={handleSearch} reduced={reduced} />
 
-        {/* LiveStats */}
-        {!isMobile && (
-          <LiveStats a={statA} b={statB} c={statC} />
+        {/* Baseline premium — appel à l'action doux */}
+        <p style={{
+          fontSize: isMobile ? 14 : 16,
+          color: "rgba(255,255,255,0.82)",
+          margin: 0,
+          marginTop: isMobile ? 2 : 8,
+          fontWeight: 400,
+          letterSpacing: "0.2px",
+          maxWidth: 560,
+          lineHeight: 1.55,
+        }}>
+          Propriétaires et locataires se rencontrent directement. Dossier
+          ALUR en 10 minutes, bail électronique à valeur légale, état des
+          lieux digital. Le tout, gratuit.
+        </p>
+        {usingFallback && (
+          <p aria-hidden style={{
+            fontSize: 9,
+            color: "rgba(255,255,255,0.35)",
+            margin: 0,
+            marginTop: isMobile ? 24 : 40,
+            letterSpacing: "0.6px",
+            textTransform: "uppercase",
+          }}>
+            Visuels d&apos;illustration
+          </p>
         )}
       </div>
     </section>
-  )
-}
-
-function FloatingMatchPill({ listing, reduced }: { listing: FeaturedListing; reduced: boolean }) {
-  const ville = listing.ville || "Ville"
-  const titre = listing.titre || "Logement"
-  const pct = listing._matchPct ?? 92
-  return (
-    <>
-      {!reduced && <style>{`@keyframes km-float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }`}</style>}
-      <div style={{
-        position: "absolute",
-        top: 110,
-        right: 40,
-        zIndex: 3,
-        background: "rgba(255,255,255,0.96)",
-        color: "#111",
-        borderRadius: 18,
-        padding: 14,
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        boxShadow: "0 20px 48px rgba(0,0,0,0.3)",
-        maxWidth: 280,
-        animation: reduced ? "none" : "km-float 6s ease-in-out infinite",
-      }}>
-        <div style={{ position: "relative", width: 44, height: 44, borderRadius: 12, overflow: "hidden", flexShrink: 0, background: listing._gradient || "#eee" }}>
-          {listing.photos[0] && (
-            <Image src={listing.photos[0]} alt="" fill sizes="44px" style={{ objectFit: "cover" }} />
-          )}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: "#16A34A", letterSpacing: "1px" }}>{pct}&nbsp;% MATCH</div>
-          <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: "-0.2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{titre}</div>
-          <div style={{ fontSize: 11, color: "#666" }}>
-            {listing.prix != null ? `${listing.prix.toLocaleString("fr-FR")} €` : "—"}
-            {listing.surface ? ` · ${listing.surface} m²` : ""}
-            {ville ? ` · ${ville}` : ""}
-          </div>
-        </div>
-      </div>
-    </>
   )
 }
 
@@ -235,10 +197,11 @@ function SearchBox({
 }: {
   typed: string; ville: string; setVille: (v: string) => void; onSubmit: (e?: FormEvent) => void; reduced: boolean
 }) {
-  // Le typewriter fait office de placeholder animé tant que l'user n'a pas
-  // écrit. Dès qu'il tape un caractère, CityAutocomplete prend la main
-  // (ses suggestions BAN s'affichent en dropdown natif du composant).
-  const showPlaceholder = ville === ""
+  // CityAutocomplete fait `placeholder || "Ville ou code postal"` donc si on
+  // passe "" il revient au fallback gris qui se superpose au typewriter.
+  // On passe un espace insécable pour neutraliser son placeholder natif
+  // et garder notre overlay typewriter propre.
+  const showTypewriter = ville === ""
   return (
     <form onSubmit={onSubmit} style={{
       display: "flex",
@@ -249,7 +212,7 @@ function SearchBox({
       boxShadow: "0 20px 48px rgba(0,0,0,0.2)",
       maxWidth: 640,
       gap: 18,
-      marginBottom: 44,
+      marginBottom: 20,
       position: "relative",
     }}>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flexShrink: 0 }}>
@@ -258,8 +221,7 @@ function SearchBox({
       </svg>
 
       <div style={{ flex: 1, position: "relative", minHeight: 24 }}>
-        {/* Typewriter placeholder — se cache dès que l'user écrit ou focus */}
-        {showPlaceholder && (
+        {showTypewriter && (
           <div aria-hidden style={{
             position: "absolute",
             inset: 0,
@@ -269,6 +231,7 @@ function SearchBox({
             fontWeight: 500,
             color: "#111",
             pointerEvents: "none",
+            background: "#fff", // cache un éventuel placeholder résiduel
           }}>
             {typed}
             {!reduced && (
@@ -277,11 +240,10 @@ function SearchBox({
             {!reduced && <style>{`@keyframes km-cur { 0%,49% { opacity: 1 } 50%,100% { opacity: 0 } }`}</style>}
           </div>
         )}
-        {/* Vrai input BAN — stylé pour se fondre dans la pilule */}
         <CityAutocomplete
           value={ville}
           onChange={setVille}
-          placeholder=""
+          placeholder={"\u00A0"}
           style={{
             border: "none",
             outline: "none",
@@ -321,25 +283,5 @@ function SearchBox({
         </svg>
       </button>
     </form>
-  )
-}
-
-function LiveStats({ a, b, c }: { a: number; b: number; c: number }) {
-  const stat = (n: number, label: string) => (
-    <div style={{ display: "flex", flexDirection: "column" }}>
-      <span style={{ fontSize: 36, fontWeight: 500, letterSpacing: "-1.5px", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
-        {n.toLocaleString("fr-FR")}
-      </span>
-      <span style={{ fontSize: 11, opacity: 0.7, textTransform: "uppercase", letterSpacing: "1.2px", marginTop: 6, fontWeight: 600 }}>
-        {label}
-      </span>
-    </div>
-  )
-  return (
-    <div style={{ display: "flex", gap: 56, paddingTop: 26, borderTop: "1px solid rgba(255,255,255,0.2)" }}>
-      {stat(a, "Logements disponibles")}
-      {stat(b, "Locataires vérifiés")}
-      {stat(c, "Satisfaction client %")}
-    </div>
   )
 }
