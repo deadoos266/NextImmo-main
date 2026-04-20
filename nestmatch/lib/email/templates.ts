@@ -100,8 +100,17 @@ function wrap(preview: string, body: string, templateId: string): string {
 
           <!-- Contenu -->
           <tr>
-            <td style="padding:8px 40px 32px;font-size:15px;line-height:1.65;color:${PALETTE.text};">
+            <td style="padding:8px 40px 12px;font-size:15px;line-height:1.65;color:${PALETTE.text};">
               ${body}
+            </td>
+          </tr>
+
+          <!-- Signature : visible sur chaque email envoye -->
+          <tr>
+            <td style="padding:8px 40px 24px;font-size:14px;line-height:1.6;color:${PALETTE.text};">
+              <p style="margin:0 0 2px;color:${PALETTE.textMuted};">Cordialement,</p>
+              <p style="margin:0;font-weight:800;letter-spacing:-0.2px;color:${PALETTE.text};">— L'équipe ${escapeHtml(BRAND.name || "KeyMatch")}</p>
+              <p style="margin:4px 0 0;font-size:11px;color:${PALETTE.textSubtle};letter-spacing:0.2px;">Louer, sans intermédiaire.</p>
             </td>
           </tr>
 
