@@ -28,6 +28,7 @@ const RELANCE_PREFIX = "[RELANCE]"
 const LOCATION_PREFIX = "[LOCATION_ACCEPTEE]"
 const QUITTANCE_PREFIX = "[QUITTANCE_CARD]"
 const VISITE_CONFIRMEE_PREFIX = "[VISITE_CONFIRMEE]"
+const VISITE_DEMANDE_PREFIX = "[VISITE_DEMANDE]"
 const AUTO_PAIEMENT_DEMANDE_PREFIX = "[AUTO_PAIEMENT_DEMANDE]"
 // Prefix encodé dans contenu pour un message en réponse à un autre.
 // Format : "[REPLY:<id>]\n<texte>". Permet d'implémenter le reply-to sans migration DB.
@@ -482,6 +483,67 @@ function AutoPaiementDemandeCard({
   )
 }
 
+// Carte "Demande de visite" ou "Contre-proposition" — envoyée quand on propose
+// une visite. Statut dynamique via visitesConv (proposée/confirmée/annulée).
+function VisiteDemandeCard({
+  contenu,
+  isMine,
+  visitesConv,
+  onOuvrirGestion,
+}: {
+  contenu: string
+  isMine: boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  visitesConv: any[]
+  onOuvrirGestion: () => void
+}) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any = {}
+  try { data = JSON.parse(contenu.slice(VISITE_DEMANDE_PREFIX.length)) } catch { /* ignore */ }
+  const dateStr = data.dateFormatee || (data.dateVisite ? formatVisiteDate(data.dateVisite, { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "")
+  // Trouve le statut réel de la visite (si toujours en DB)
+  const visite = data.visiteId ? visitesConv.find(v => v.id === data.visiteId) : null
+  const statut = visite?.statut || "proposée"
+  const title = data.isCounter ? "Contre-proposition" : "Demande de visite"
+  // Palette selon le statut
+  const palette =
+    statut === "confirmée" ? { bg: "#dcfce7", border: "#86efac", accent: "#15803d", badge: "Confirmée" }
+    : statut === "annulée" ? { bg: "#fee2e2", border: "#fecaca", accent: "#dc2626", badge: "Annulée" }
+    : { bg: "#eff6ff", border: "#bfdbfe", accent: "#1d4ed8", badge: "En attente" }
+  return (
+    <div style={{ background: palette.bg, border: `1.5px solid ${palette.border}`, borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 320 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: palette.accent, textTransform: "uppercase", letterSpacing: "0.5px", margin: 0 }}>
+          {title}
+        </p>
+        <span style={{ background: "white", color: palette.accent, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, border: `1px solid ${palette.border}` }}>
+          {palette.badge}
+        </span>
+      </div>
+      <p style={{ fontWeight: 700, fontSize: 14, color: "#111", margin: 0, textTransform: "capitalize" }}>
+        {dateStr}
+      </p>
+      {data.heure && (
+        <p style={{ fontSize: 12, color: "#6b7280", margin: "2px 0 0" }}>à {data.heure}</p>
+      )}
+      {data.message && (
+        <p style={{ fontSize: 12, color: "#374151", margin: "8px 0 0", fontStyle: "italic", lineHeight: 1.5 }}>
+          « {data.message} »
+        </p>
+      )}
+      {statut === "proposée" && (
+        <button
+          type="button"
+          onClick={onOuvrirGestion}
+          style={{ marginTop: 10, width: "100%", background: isMine ? "white" : palette.accent, color: isMine ? palette.accent : "white", border: isMine ? `1.5px solid ${palette.border}` : "none", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+        >
+          {isMine ? "Gérer" : "Répondre"} →
+        </button>
+      )}
+    </div>
+  )
+}
+
 // Carte "Visite confirmée" — remplace le texte brut "Visite confirmée pour le X"
 function VisiteConfirmeeCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -558,6 +620,15 @@ function LocationAccepteeCard({ contenu, isMine }: { contenu: string; isMine: bo
       {!isMine && (
         <a href="/mon-logement" style={{ display: "inline-block", marginTop: 10, background: "#15803d", color: "white", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
           Voir mon logement →
+        </a>
+      )}
+      {/* CTA proprio : générer le bail direct après acceptation */}
+      {isMine && data.annonceId && (
+        <a
+          href={`/proprietaire/bail/${data.annonceId}`}
+          style={{ display: "block", marginTop: 10, background: "#15803d", color: "white", borderRadius: 8, padding: "10px 16px", fontSize: 13, fontWeight: 700, textDecoration: "none", textAlign: "center", fontFamily: "inherit" }}
+        >
+          📄 Générer le bail maintenant →
         </a>
       )}
     </div>
@@ -1571,14 +1642,22 @@ function MessagesInner() {
     if (visite) {
       setVisitesConv(prev => [...prev, visite])
       const dateFormatee = formatVisiteDate(visiteDate, { weekday: "long", day: "numeric", month: "long", year: "numeric" })
-      const prefix = isCounter ? "Contre-proposition" : "Demande de visite"
-      const contenu = `${prefix} : ${dateFormatee} à ${visiteHeure}${visiteMessage.trim() ? ` — "${visiteMessage.trim()}"` : ""}`
+      // Card visuelle plutôt que texte brut — rendu par VisiteDemandeCard
+      const payload = JSON.stringify({
+        visiteId: visite.id,
+        dateVisite: visiteDate,
+        heure: visiteHeure,
+        dateFormatee,
+        message: visiteMessage.trim() || null,
+        isCounter,
+      })
+      const contenu = `${VISITE_DEMANDE_PREFIX}${payload}`
       const { data: msg } = await supabase.from("messages").insert([{
         from_email: myEmail,
         to_email: convActiveData.other,
         contenu,
         lu: false,
-        annonce_id: convActiveData.annonceId, // rattache à la conv du bien (sinon atterrit en "Candidatures" via conv fourre-tout)
+        annonce_id: convActiveData.annonceId,
         created_at: new Date().toISOString(),
       }]).select().single()
       if (msg) {
@@ -2434,6 +2513,7 @@ function MessagesInner() {
                     const isBailSigne = typeof m.contenu === "string" && m.contenu.startsWith(BAIL_SIGNE_PREFIX)
                     const isEdlAPlanifier = typeof m.contenu === "string" && m.contenu.startsWith(EDL_A_PLANIFIER_PREFIX)
                     const isVisiteConfirmee = typeof m.contenu === "string" && m.contenu.startsWith(VISITE_CONFIRMEE_PREFIX)
+                    const isVisiteDemande = typeof m.contenu === "string" && m.contenu.startsWith(VISITE_DEMANDE_PREFIX)
                     const isAutoPaiement = typeof m.contenu === "string" && m.contenu.startsWith(AUTO_PAIEMENT_DEMANDE_PREFIX)
                     const isQuittance = typeof m.contenu === "string" && m.contenu.startsWith(QUITTANCE_PREFIX)
                     const isRetrait = typeof m.contenu === "string" && m.contenu.startsWith(RETRAIT_PREFIX)
@@ -2503,6 +2583,18 @@ function MessagesInner() {
                         ) : isVisiteConfirmee ? (
                           <div>
                             <VisiteConfirmeeCard contenu={m.contenu} isMine={isMine} />
+                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        ) : isVisiteDemande ? (
+                          <div>
+                            <VisiteDemandeCard
+                              contenu={m.contenu}
+                              isMine={isMine}
+                              visitesConv={visitesConv}
+                              onOuvrirGestion={() => setVisitesModalOpen(true)}
+                            />
                             <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
