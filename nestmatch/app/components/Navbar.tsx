@@ -34,7 +34,16 @@ export default function Navbar() {
     padding: "6px 12px",
     borderRadius: 8,
     background: isActive(path) ? "#f3f4f6" : "transparent",
+    transition: "background 200ms ease, color 200ms ease",
   })
+  // Hover handlers : feedback léger uniquement si le lien est inactif.
+  // Sur le lien actif, on laisse le background #f3f4f6 en place (pas d'override).
+  const hoverEnter = (path: string) => (e: React.MouseEvent<HTMLElement>) => {
+    if (!isActive(path)) e.currentTarget.style.background = "#f9fafb"
+  }
+  const hoverLeave = (path: string) => (e: React.MouseEvent<HTMLElement>) => {
+    if (!isActive(path)) e.currentTarget.style.background = "transparent"
+  }
 
   // Charge la photo custom si la migration 008 a posé la colonne.
   useEffect(() => {
@@ -129,8 +138,8 @@ export default function Navbar() {
       {/* Desktop : liens centraux */}
       {!isSmall && (
         <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-          <Link href="/annonces" style={linkStyle("/annonces")}>Annonces</Link>
-          <Link href="/favoris"  style={linkStyle("/favoris")}>Favoris</Link>
+          <Link href="/annonces" style={linkStyle("/annonces")} onMouseEnter={hoverEnter("/annonces")} onMouseLeave={hoverLeave("/annonces")}>Annonces</Link>
+          <Link href="/favoris"  style={linkStyle("/favoris")}  onMouseEnter={hoverEnter("/favoris")}  onMouseLeave={hoverLeave("/favoris")}>Favoris</Link>
 
           {session && (
             <>
@@ -138,6 +147,8 @@ export default function Navbar() {
               <div style={{ position: "relative" }}>
                 <button
                   onClick={() => setEspaceOpen(!espaceOpen)}
+                  onMouseEnter={e => { if (!espaceActif) e.currentTarget.style.background = "#f9fafb" }}
+                  onMouseLeave={e => { if (!espaceActif) e.currentTarget.style.background = "transparent" }}
                   style={{ ...linkStyle("/profil"), background: espaceActif ? "#f3f4f6" : "transparent", color: espaceActif ? "#111" : "#6b7280", fontWeight: espaceActif ? 700 : 500, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit" }}>
                   Mon espace
                   {badgeVisites > 0 && (
@@ -151,10 +162,10 @@ export default function Navbar() {
                 {espaceOpen && (
                   <>
                     <div onClick={() => setEspaceOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 150 }} />
-                    <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, background: "white", borderRadius: 16, border: "1.5px solid #e5e7eb", boxShadow: "0 8px 32px rgba(0,0,0,0.12)", minWidth: 240, zIndex: 200, overflow: "hidden" }}>
+                    <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, background: "white", borderRadius: 16, border: "1px solid #e5e7eb", boxShadow: "0 8px 32px rgba(0,0,0,0.12)", minWidth: 240, zIndex: 200, overflow: "hidden" }}>
                       {espaceLinksAvecBadge.map(item => (
                         <Link key={item.href} href={item.href} onClick={() => setEspaceOpen(false)}
-                          style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", textDecoration: "none", color: "#111", borderBottom: "1px solid #f9fafb" }}
+                          style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", textDecoration: "none", color: "#111", borderBottom: "1px solid #f3f4f6" }}
                           onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
                           onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                           <div style={{ flex: 1 }}>
@@ -174,7 +185,7 @@ export default function Navbar() {
               </div>
 
               <div style={{ position: "relative" }}>
-                <Link href="/messages" style={linkStyle("/messages")}>Messages</Link>
+                <Link href="/messages" style={linkStyle("/messages")} onMouseEnter={hoverEnter("/messages")} onMouseLeave={hoverLeave("/messages")}>Messages</Link>
                 {badgeMessages > 0 && (
                   <span style={{ position: "absolute", top: -4, right: -4, background: "#ef4444", color: "white", borderRadius: 999, fontSize: 9, fontWeight: 800, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", pointerEvents: "none" }}>
                     {badgeMessages > 9 ? "9+" : badgeMessages}
@@ -193,7 +204,7 @@ export default function Navbar() {
           {session ? (
             <div style={{ position: "relative" }}>
               <div onClick={() => setMenuOpen(!menuOpen)}
-                style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "6px 12px", borderRadius: 999, border: "1.5px solid #e5e7eb", background: menuOpen ? "#f3f4f6" : "white" }}>
+                style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "6px 12px", borderRadius: 999, border: "1px solid #e5e7eb", background: menuOpen ? "#f3f4f6" : "white", transition: "background 200ms ease" }}>
                 {avatarSrc
                   ? <img src={avatarSrc} alt="avatar" referrerPolicy="no-referrer" style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }} />
                   : <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 16 }}>{session.user?.name?.[0]}</div>
@@ -205,7 +216,7 @@ export default function Navbar() {
               {menuOpen && (
                 <>
                   <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 150 }} />
-                  <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, background: "white", borderRadius: 16, border: "1.5px solid #e5e7eb", boxShadow: "0 8px 32px rgba(0,0,0,0.12)", minWidth: 220, zIndex: 200, overflow: "hidden" }}>
+                  <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, background: "white", borderRadius: 16, border: "1px solid #e5e7eb", boxShadow: "0 8px 32px rgba(0,0,0,0.12)", minWidth: 220, zIndex: 200, overflow: "hidden" }}>
                     <div style={{ padding: "14px 16px 12px", borderBottom: "1px solid #f3f4f6" }}>
                       <p style={{ fontWeight: 700, fontSize: 14 }}>{session.user?.name}</p>
                       <p style={{ color: "#6b7280", fontSize: 12, marginTop: 2 }}>{session.user?.email}</p>
@@ -276,7 +287,7 @@ export default function Navbar() {
             order: -1,
             position: "relative",
             background: "white",
-            border: "1.5px solid #e5e7eb",
+            border: "1px solid #e5e7eb",
             borderRadius: "50%",
             width: 40,
             height: 40,
