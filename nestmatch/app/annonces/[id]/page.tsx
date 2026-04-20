@@ -114,18 +114,22 @@ export default async function Annonce({ params }: any) {
     </main>
   )
 
-  // Mode vacances du propriétaire : récupère l'état pour afficher un bandeau
-  // et indiquer au candidat qu'il peut toujours contacter mais que la réponse
-  // peut tarder.
+  // Mode vacances du propriétaire + bio publique : tout en 1 requête
+  // pour éviter les aller-retour. La bio rassure le candidat en humanisant
+  // la relation ("C'est quelqu'un, pas juste un email").
   let proprioVacances: { actif: boolean; message: string | null } = { actif: false, message: null }
+  let proprioBio: string | null = null
   if (annonce.proprietaire_email) {
     const { data: prop } = await supabase
       .from("profils")
-      .select("vacances_actif, vacances_message")
+      .select("vacances_actif, vacances_message, bio_publique")
       .eq("email", String(annonce.proprietaire_email).toLowerCase())
       .maybeSingle()
     if (prop?.vacances_actif) {
       proprioVacances = { actif: true, message: prop.vacances_message || null }
+    }
+    if (prop?.bio_publique && String(prop.bio_publique).trim()) {
+      proprioBio = String(prop.bio_publique).trim()
     }
   }
 
@@ -446,17 +450,26 @@ export default async function Annonce({ params }: any) {
               <OwnerActions proprietaireEmail={annonce.proprietaire_email} annonceId={annonce.id} />
               <ViewTracker annonceId={annonce.id} />
 
-              <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 16, display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 44, height: 44, background: "#e5e7eb", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 18, flexShrink: 0 }}>
-                  {annonce.proprietaire?.[0] || "?"}
-                </div>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontWeight: 700, fontSize: 14 }}>{annonce.proprietaire || "Propriétaire"}</span>
-                    {annonce.verifie && <span style={{ color: "#2563eb", fontSize: 12, fontWeight: 700 }}>✓ Vérifié</span>}
+              <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 44, height: 44, background: "#e5e7eb", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 18, flexShrink: 0 }}>
+                    {annonce.proprietaire?.[0] || "?"}
                   </div>
-                  <span style={{ color: "#9ca3af", fontSize: 12 }}>{annonce.membre}</span>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontWeight: 700, fontSize: 14 }}>{annonce.proprietaire || "Propriétaire"}</span>
+                      {annonce.verifie && <span style={{ color: "#2563eb", fontSize: 12, fontWeight: 700 }}>✓ Vérifié</span>}
+                    </div>
+                    <span style={{ color: "#9ca3af", fontSize: 12 }}>{annonce.membre}</span>
+                  </div>
                 </div>
+                {/* Bio publique du propriétaire — affichée aux visiteurs
+                    pour humaniser le contact. Editable depuis /parametres > Profil. */}
+                {proprioBio && (
+                  <blockquote style={{ margin: "12px 0 0", padding: "10px 14px", background: "#F7F4EF", borderLeft: "3px solid #111", borderRadius: "0 10px 10px 0", fontSize: 13, lineHeight: 1.55, color: "#374151", fontStyle: "italic" }}>
+                    &laquo;&nbsp;{proprioBio}&nbsp;&raquo;
+                  </blockquote>
+                )}
               </div>
 
               {/* Signalement (confidentiel, contenu inapproprié, arnaque, etc.) */}
