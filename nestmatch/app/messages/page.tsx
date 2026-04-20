@@ -1588,6 +1588,7 @@ function MessagesInner() {
       heureVisite: v.heure,
       motif,
       statutActuel: v.statut,
+      annonceId: v.annonce_id ?? null,
     })
     if (res.ok) {
       setVisitesConv(prev => prev.map(x => x.id === v.id ? { ...x, statut: "annulée" } : x))

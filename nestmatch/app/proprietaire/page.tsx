@@ -168,6 +168,7 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
       heureVisite: v.heure,
       motif,
       statutActuel: v.statut,
+      annonceId: v.annonce_id ?? null,
     })
     if (res.ok) {
       setVisites((prev: any[]) => prev.map(x => x.id === v.id ? { ...x, statut: "annulée" } : x))

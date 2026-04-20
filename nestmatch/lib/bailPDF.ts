@@ -117,7 +117,15 @@ export type BailData = {
   // ── Clauses particulières + annexes ────────────────────────────────────
   clausesParticulieres?: string // textarea libre
   clausesChoisies?: string[] // titres de clauses cochées dans les modèles
-  annexes?: string[] // liste cochée
+  annexes?: string[] // liste cochée (legacy)
+  // Annexes téléchargées (PDF stockés dans le bucket `baux`)
+  fichiersAnnexes?: {
+    dpe?: { url: string; name: string }
+    erp?: { url: string; name: string }
+    crep?: { url: string; name: string }
+    notice?: { url: string; name: string }
+    autres?: { url: string; name: string }[]
+  }
 
   // ── DPE ────────────────────────────────────────────────────────────────
   dpe: string

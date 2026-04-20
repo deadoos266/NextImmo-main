@@ -76,6 +76,7 @@ export default function MesVisites() {
       heureVisite: v.heure,
       motif,
       statutActuel: v.statut,
+      annonceId: v.annonce_id ?? null,
     })
     if (res.ok) {
       setVisites(prev => prev.map(x => x.id === v.id ? { ...x, statut: "annulée" } : x))

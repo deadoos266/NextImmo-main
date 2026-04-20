@@ -37,6 +37,7 @@ export async function annulerVisite({
   heureVisite,
   motif,
   statutActuel,
+  annonceId,
 }: {
   visiteId: string | number
   fromEmail: string
@@ -45,6 +46,7 @@ export async function annulerVisite({
   heureVisite: string
   motif: string
   statutActuel: "proposée" | "confirmée" | string
+  annonceId?: number | null
 }): Promise<{ ok: boolean; error?: string }> {
   // 1. Update statut de la visite — .select() pour obtenir les rows updatées
   //    et détecter un échec silencieux (RLS, id introuvable…).
@@ -52,7 +54,7 @@ export async function annulerVisite({
     .from("visites")
     .update({ statut: "annulée" })
     .eq("id", visiteId)
-    .select("id")
+    .select("id, annonce_id")
 
   if (updErr) {
     console.error("[annulerVisite] update error:", updErr)
@@ -77,11 +79,16 @@ export async function annulerVisite({
   const verbe = statutActuel === "confirmée" ? "Visite annulée" : "Demande de visite refusée"
   const contenu = `${verbe} — prévue le ${date} à ${heureVisite}.\nMotif : ${motif.trim()}`
 
+  // Rattacher au bien (sinon la conv atterrit en "Candidatures" via conv fourre-tout).
+  // Priorité : annonceId passé en param > rows[0].annonce_id (récupéré via select).
+  const annId = annonceId ?? (rows[0] as { annonce_id?: number | null } | undefined)?.annonce_id ?? null
+
   await supabase.from("messages").insert([{
     from_email: fromEmail,
     to_email: toEmail,
     contenu,
     lu: false,
+    annonce_id: annId,
     created_at: new Date().toISOString(),
   }])
 
