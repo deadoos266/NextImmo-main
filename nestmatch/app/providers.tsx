@@ -29,24 +29,27 @@ export function useRole() { return useContext(RoleContext) }
 
 function RoleProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession()
-  // Lazy init depuis localStorage pour éviter tout flash (AdminBar qui
-  // s'affiche en "Propriétaire" 1 frame avant de corriger en "Locataire").
-  const [role, setRoleState] = useState<Role>(() => {
-    if (typeof window === "undefined") return "locataire"
-    const saved = localStorage.getItem("nestmatch_role")
-    return saved === "proprietaire" ? "proprietaire" : "locataire"
-  })
-  const [isAdmin, setIsAdminState] = useState(() => {
-    if (typeof window === "undefined") return false
-    return localStorage.getItem("nestmatch_admin") === "true"
-  })
-  const [proprietaireActive, setProprietaireActiveState] = useState(() => {
-    if (typeof window === "undefined") return false
-    return localStorage.getItem("nestmatch_proprio_active") === "true"
-  })
+  // IMPORTANT : on ne lit JAMAIS localStorage dans l'init de useState.
+  // Le SSR rend les defaults ("locataire" / false), mais le premier render
+  // client lirait les vraies valeurs de localStorage → divergence HTML → React
+  // error #418 (hydration mismatch) qui fait exploser le tree (Navbar, AdminBar,
+  // ScoreBlock, ContactButton, OwnerActions, Footer se re-génèrent) et donne
+  // l'impression que les annonces "disparaissent" quand on est connecté.
+  // On hydrate depuis localStorage dans un useEffect post-mount. Les
+  // consommateurs qui veulent éviter le flash "Locataire → Propriétaire"
+  // utilisent le flag `mounted` exposé dans le context.
+  const [role, setRoleState] = useState<Role>("locataire")
+  const [isAdmin, setIsAdminState] = useState(false)
+  const [proprietaireActive, setProprietaireActiveState] = useState(false)
   const [mounted, setMounted] = useState(false)
 
-  useEffect(() => { setMounted(true) }, [])
+  useEffect(() => {
+    const savedRole = localStorage.getItem("nestmatch_role")
+    if (savedRole === "proprietaire") setRoleState("proprietaire")
+    if (localStorage.getItem("nestmatch_admin") === "true") setIsAdminState(true)
+    if (localStorage.getItem("nestmatch_proprio_active") === "true") setProprietaireActiveState(true)
+    setMounted(true)
+  }, [])
 
   // Sync role et isAdmin depuis la session authentifiée
   useEffect(() => {
