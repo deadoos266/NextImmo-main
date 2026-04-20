@@ -43,3 +43,6 @@ node_modules/.vite/
 # cache ESLint
 .eslintcache
 
+
+# Dossier temporaire pour sources photos brutes (drop + crop + remplace)
+public/_pending/
