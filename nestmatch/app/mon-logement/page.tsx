@@ -300,13 +300,14 @@ export default function MonLogement() {
       }
       if (data) setLoyers(prev => [data, ...prev.filter(l => l.mois !== mois)])
     }
-    // Message + notif au proprio
+    // Message card + notif au proprio
     const moisLabel = new Date(mois + "-01T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
     if (proprietaireEmail) {
+      const payload = JSON.stringify({ mois, montant: montantAttendu, bienTitre: bien.titre || "" })
       await supabase.from("messages").insert([{
         from_email: locataireEmail,
         to_email: proprietaireEmail,
-        contenu: `✓ J'ai payé le loyer de ${moisLabel} (${montantAttendu} €). Merci d'envoyer la quittance.`,
+        contenu: `[LOYER_PAYE]${payload}`,
         lu: false,
         annonce_id: bien.id,
         created_at: now,

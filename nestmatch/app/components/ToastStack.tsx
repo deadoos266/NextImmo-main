@@ -106,6 +106,10 @@ export default function ToastStack() {
           push({ type: "message", title: "Auto-paiement", body: "Demande ou confirmation de virement automatique", href: "/messages" })
           return
         }
+        if (raw.startsWith("[LOYER_PAYE]")) {
+          push({ type: "message", title: "Loyer payé ✓", body: "Le locataire signale avoir payé le loyer", href: "/messages" })
+          return
+        }
         const preview = raw.replace(/^\[REPLY:\d+\]\n/, "").slice(0, 80)
         push({
           type: "message",

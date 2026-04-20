@@ -30,6 +30,7 @@ const QUITTANCE_PREFIX = "[QUITTANCE_CARD]"
 const VISITE_CONFIRMEE_PREFIX = "[VISITE_CONFIRMEE]"
 const VISITE_DEMANDE_PREFIX = "[VISITE_DEMANDE]"
 const AUTO_PAIEMENT_DEMANDE_PREFIX = "[AUTO_PAIEMENT_DEMANDE]"
+const LOYER_PAYE_PREFIX = "[LOYER_PAYE]"
 // Prefix encodé dans contenu pour un message en réponse à un autre.
 // Format : "[REPLY:<id>]\n<texte>". Permet d'implémenter le reply-to sans migration DB.
 const REPLY_REGEX = /^\[REPLY:(\d+)\]\n([\s\S]*)$/
@@ -479,6 +480,41 @@ function AutoPaiementDemandeCard({
           Les loyers seront automatiquement marqués payés chaque mois. Le proprio peut contester un mois individuellement si nécessaire.
         </p>
       )}
+    </div>
+  )
+}
+
+// Carte "Loyer payé" — envoyée par le locataire via "J'ai payé" sur /mon-logement
+function LoyerPayeCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any = {}
+  try { data = JSON.parse(contenu.slice(LOYER_PAYE_PREFIX.length)) } catch { /* ignore */ }
+  const moisLabel = data.mois
+    ? new Date(data.mois + "-01T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
+    : ""
+  const montant = Number(data.montant || 0)
+  return (
+    <div style={{ background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 320 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M16 12l-4 4-4-4M12 8v8"/>
+        </svg>
+        <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "0.5px", margin: 0 }}>
+          Paiement signalé
+        </p>
+      </div>
+      <p style={{ fontWeight: 700, fontSize: 14, color: "#111", margin: 0, textTransform: "capitalize" }}>
+        Loyer de {moisLabel}
+      </p>
+      <p style={{ fontSize: 13, color: "#15803d", margin: "4px 0 0", fontWeight: 600 }}>
+        {montant.toLocaleString("fr-FR")} € payé{isMine ? "" : "s"}
+      </p>
+      <p style={{ fontSize: 12, color: "#166534", margin: "8px 0 0", lineHeight: 1.5 }}>
+        {isMine
+          ? "En attente de la quittance du propriétaire."
+          : "Le locataire signale avoir payé. Envoyez-lui la quittance depuis l'onglet Statistiques."}
+      </p>
     </div>
   )
 }
@@ -2519,6 +2555,7 @@ function MessagesInner() {
                     const isVisiteConfirmee = typeof m.contenu === "string" && m.contenu.startsWith(VISITE_CONFIRMEE_PREFIX)
                     const isVisiteDemande = typeof m.contenu === "string" && m.contenu.startsWith(VISITE_DEMANDE_PREFIX)
                     const isAutoPaiement = typeof m.contenu === "string" && m.contenu.startsWith(AUTO_PAIEMENT_DEMANDE_PREFIX)
+                    const isLoyerPaye = typeof m.contenu === "string" && m.contenu.startsWith(LOYER_PAYE_PREFIX)
                     const isQuittance = typeof m.contenu === "string" && m.contenu.startsWith(QUITTANCE_PREFIX)
                     const isRetrait = typeof m.contenu === "string" && m.contenu.startsWith(RETRAIT_PREFIX)
                     const isLocation = typeof m.contenu === "string" && m.contenu.startsWith(LOCATION_PREFIX)
@@ -2599,6 +2636,13 @@ function MessagesInner() {
                               visitesConv={visitesConv}
                               onOuvrirGestion={() => setVisitesModalOpen(true)}
                             />
+                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        ) : isLoyerPaye ? (
+                          <div>
+                            <LoyerPayeCard contenu={m.contenu} isMine={isMine} />
                             <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
