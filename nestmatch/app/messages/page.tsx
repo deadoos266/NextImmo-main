@@ -1094,11 +1094,14 @@ function MessagesInner() {
         if (isMine(payload.new as any)) loadVisitesConv(conv.other, convAnnId)
       })
       // Realtime annonces : si statut / locataire_email change → maj annonces map
-      // (sert isActiveBail, BailCard, etc.)
+      // IMPORTANT : merger au lieu de remplacer, car payload.new peut être
+      // partiel (la publication peut ne broadcast que les colonnes modifiées).
+      // Sinon on perd proprietaire_email/titre/photos → isActiveBail retourne false
+      // → la conv bascule en "Candidatures" à tort.
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "annonces" }, (payload) => {
         const ann = payload.new as { id?: number }
         if (!ann?.id || ann.id !== convAnnId) return
-        setAnnonces(prev => ({ ...prev, [ann.id as number]: ann }))
+        setAnnonces(prev => ({ ...prev, [ann.id as number]: { ...(prev[ann.id as number] || {}), ...ann } }))
       })
       // Realtime bail_signatures : nouvelle signature → reload messages pour
       // refresh BailCard (qui lit les signatures via signaturesParAnnonce).
