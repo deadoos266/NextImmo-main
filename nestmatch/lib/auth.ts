@@ -21,7 +21,7 @@ export const authOptions: NextAuthOptions = {
 
         const { data: user } = await supabaseAdmin
           .from("users")
-          .select("id, email, name, image, password_hash, role, is_admin, is_banned")
+          .select("id, email, name, image, password_hash, role, is_admin, is_banned, email_verified")
           .eq("email", credentials.email.toLowerCase())
           .single()
 
@@ -29,13 +29,18 @@ export const authOptions: NextAuthOptions = {
 
         // Compte banni : refuser la connexion
         if (user.is_banned === true) {
-          // Renvoyer null refuse le login. NextAuth affiche "CredentialsSignin" côté client.
-          // L'UI de /auth peut afficher un message plus précis si besoin via une route dédiée.
           return null
         }
 
         const passwordValid = await bcrypt.compare(credentials.password, user.password_hash)
         if (!passwordValid) return null
+
+        // Email pas encore verifie via OTP 6 chiffres : bloquer la connexion.
+        // Throw message specifique que /auth capte pour rediriger vers
+        // /auth/verifier-email automatiquement.
+        if (user.email_verified !== true) {
+          throw new Error("EMAIL_NOT_VERIFIED")
+        }
 
         return {
           id: user.id,

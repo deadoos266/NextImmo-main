@@ -32,6 +32,8 @@ function VerifierEmailForm() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [resending, setResending] = useState(false)
+  const [resendMsg, setResendMsg] = useState<string | null>(null)
 
   useEffect(() => {
     // Focus 1er input digit au mount si email pré-rempli via querystring
@@ -165,10 +167,49 @@ function VerifierEmailForm() {
               </button>
             </form>
 
-            <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 18, textAlign: "center", lineHeight: 1.5 }}>
-              Tu n&apos;as pas reçu le code ? Vérifie tes spams.<br />
-              <a href="/auth" style={{ color: "#111", fontWeight: 700, textDecoration: "underline" }}>Retour à la connexion</a>
-            </p>
+            <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #f3f4f6", textAlign: "center" }}>
+              <p style={{ fontSize: 12, color: "#9ca3af", margin: 0, marginBottom: 8, lineHeight: 1.5 }}>
+                Pas de code reçu ? Vérifie tes spams ou demande un nouvel envoi.
+              </p>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!email.trim()) {
+                    setResendMsg("Entre d'abord ton email.")
+                    return
+                  }
+                  setResending(true)
+                  setResendMsg(null)
+                  try {
+                    const res = await fetch("/api/auth/resend-verify-code", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ email: email.trim() }),
+                    })
+                    if (res.ok) {
+                      setResendMsg("Un nouveau code a été envoyé. Vérifie ta boîte mail.")
+                    } else {
+                      const j = await res.json().catch(() => ({}))
+                      setResendMsg(j.error || "Erreur, réessaie plus tard.")
+                    }
+                  } catch {
+                    setResendMsg("Erreur réseau.")
+                  }
+                  setResending(false)
+                }}
+                disabled={resending}
+                style={{ background: "none", border: "none", color: "#111", fontSize: 13, fontWeight: 700, textDecoration: "underline", cursor: resending ? "not-allowed" : "pointer", fontFamily: "inherit", padding: 0 }}>
+                {resending ? "Envoi…" : "Renvoyer un code"}
+              </button>
+              {resendMsg && (
+                <p style={{ fontSize: 12, color: resendMsg.startsWith("Un nouveau") ? "#15803d" : "#991b1b", marginTop: 8, marginBottom: 0 }}>
+                  {resendMsg}
+                </p>
+              )}
+              <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 14, margin: "14px 0 0" }}>
+                <a href="/auth" style={{ color: "#6b7280", textDecoration: "underline" }}>Retour à la connexion</a>
+              </p>
+            </div>
           </>
         )}
       </div>

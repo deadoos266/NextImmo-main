@@ -76,8 +76,16 @@ function AuthContent() {
           setLoading(false)
           return
         }
+        // Au lieu de connecter automatiquement l'user, on le redirige vers
+        // la page de vérif email (code OTP 6 chiffres). Une fois le code
+        // validé, il revient sur /auth?verified=1 et se connecte normalement.
+        // Cela GATE le site : impossible d'accéder à /annonces / /onboarding
+        // / /proprietaire avant d'avoir validé le code.
+        router.push(`/auth/verifier-email?email=${encodeURIComponent(form.email)}`)
+        return
       }
 
+      // Mode connexion : signIn direct
       const result = await signIn("credentials", {
         email: form.email,
         password: form.password,
@@ -85,17 +93,22 @@ function AuthContent() {
       })
 
       if (result?.error) {
-        setError(mode === "connexion" ? "Email ou mot de passe incorrect" : "Connexion automatique échouée, veuillez vous connecter manuellement")
+        // Le provider credentials renvoie "EMAIL_NOT_VERIFIED" si l'user n'a
+        // pas encore validé son code. On lui repropose la page de vérif.
+        if (result.error === "EMAIL_NOT_VERIFIED") {
+          router.push(`/auth/verifier-email?email=${encodeURIComponent(form.email)}`)
+          return
+        }
+        setError("Email ou mot de passe incorrect")
         setLoading(false)
         return
       }
 
-      // Les nouveaux locataires passent par l'onboarding pour remplir critères essentiels.
-      // Les proprios vont direct au dashboard.
+      // Connexion OK : direction dashboard selon rôle
       if (role === "proprietaire") {
         router.push("/proprietaire")
       } else {
-        router.push(mode === "inscription" ? "/onboarding" : "/annonces")
+        router.push("/annonces")
       }
     } catch {
       setError("Une erreur est survenue. Veuillez réessayer.")
