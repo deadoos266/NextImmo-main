@@ -16,6 +16,7 @@ import {
 } from "../../../../lib/bailDefaults"
 import Modal from "../../../components/ui/Modal"
 import UploadBailModal from "../../../components/UploadBailModal"
+import AnnexeUploader from "../../../components/AnnexeUploader"
 
 // ─── Types form ─────────────────────────────────────────────────────────────
 // Le state du form stocke TOUT en string pour l'input contrôlé (sauf bool/arrays).
@@ -87,6 +88,11 @@ type FormState = {
   clausesChoisies: string[]
   clausesParticulieres: string
   annexes: string[]
+  // Annexes PDF uploadées (URL + nom de fichier)
+  annexeDpe: { url: string; name: string } | null
+  annexeErp: { url: string; name: string } | null
+  annexeCrep: { url: string; name: string } | null
+  annexeNotice: { url: string; name: string } | null
 }
 
 function makeInitialForm(): FormState {
@@ -147,6 +153,10 @@ function makeInitialForm(): FormState {
       "État des lieux d'entrée (établi contradictoirement)",
       "Attestation d'assurance habitation du locataire",
     ],
+    annexeDpe: null,
+    annexeErp: null,
+    annexeCrep: null,
+    annexeNotice: null,
   }
 }
 
@@ -631,6 +641,12 @@ export default function BailPage() {
       clausesChoisies: form.clausesChoisies.length > 0 ? form.clausesChoisies : undefined,
       clausesParticulieres: form.clausesParticulieres || undefined,
       annexes: form.annexes.length > 0 ? form.annexes : undefined,
+      fichiersAnnexes: {
+        dpe: form.annexeDpe || undefined,
+        erp: form.annexeErp || undefined,
+        crep: form.annexeCrep || undefined,
+        notice: form.annexeNotice || undefined,
+      },
       // DPE
       dpe: bien.dpe || "",
     }
@@ -1924,22 +1940,57 @@ export default function BailPage() {
           />
         </div>
 
-        {/* 15. Annexes */}
+        {/* 15. Annexes obligatoires — upload réel PDF */}
         <div style={cardStyle(isMobile)}>
-          <h2 style={h2Style}>15. Annexes au bail</h2>
+          <h2 style={h2Style}>15. Annexes obligatoires</h2>
           <p style={h2SubStyle}>
-            Documents à joindre au PDF (la liste apparaît dans le bail).
+            Téléversez les PDF requis par la loi. Ils seront joints au bail et
+            le locataire pourra les télécharger.
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {ANNEXES_OBLIGATOIRES.map(a => (
-              <FieldCheckbox
-                key={a}
-                label={a}
-                checked={form.annexes.includes(a)}
-                onChange={() => toggleInArray("annexes", a)}
-              />
-            ))}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <AnnexeUploader
+              label="DPE (Diagnostic de Performance Énergétique)"
+              description="Obligatoire — classe énergie + GES"
+              required
+              proprioEmail={bien.proprietaire_email || session?.user?.email || ""}
+              annonceId={bien.id}
+              slotKey="dpe"
+              current={form.annexeDpe || undefined}
+              onChange={v => set("annexeDpe")(v)}
+            />
+            <AnnexeUploader
+              label="ERP (État des Risques et Pollutions)"
+              description="Obligatoire — risques naturels, miniers, technologiques"
+              required
+              proprioEmail={bien.proprietaire_email || session?.user?.email || ""}
+              annonceId={bien.id}
+              slotKey="erp"
+              current={form.annexeErp || undefined}
+              onChange={v => set("annexeErp")(v)}
+            />
+            <AnnexeUploader
+              label="CREP (Constat Risque Exposition Plomb)"
+              description="Obligatoire si immeuble construit avant 1949"
+              proprioEmail={bien.proprietaire_email || session?.user?.email || ""}
+              annonceId={bien.id}
+              slotKey="crep"
+              current={form.annexeCrep || undefined}
+              onChange={v => set("annexeCrep")(v)}
+            />
+            <AnnexeUploader
+              label="Notice d'information locataire"
+              description="Obligatoire — arrêté du 29 mai 2015"
+              required
+              proprioEmail={bien.proprietaire_email || session?.user?.email || ""}
+              annonceId={bien.id}
+              slotKey="notice"
+              current={form.annexeNotice || undefined}
+              onChange={v => set("annexeNotice")(v)}
+            />
           </div>
+          <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 14, lineHeight: 1.6 }}>
+            💡 Besoin de générer un DPE ou un ERP ? Utilisez le service officiel (georisques.gouv.fr pour ERP, diagnostiqueur certifié pour DPE).
+          </p>
         </div>
 
         {/* Génération */}

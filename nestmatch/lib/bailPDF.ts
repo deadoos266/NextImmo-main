@@ -774,8 +774,14 @@ export async function genererBailPDF(data: BailData): Promise<void> {
   }
 
   // ── XII. Annexes ──────────────────────────────────────────────────────
-  if (data.annexes && data.annexes.length > 0) {
-    if (y > 240) {
+  const hasUploaded =
+    data.fichiersAnnexes &&
+    (data.fichiersAnnexes.dpe ||
+      data.fichiersAnnexes.erp ||
+      data.fichiersAnnexes.crep ||
+      data.fichiersAnnexes.notice)
+  if ((data.annexes && data.annexes.length > 0) || hasUploaded) {
+    if (y > 230) {
       doc.addPage()
       y = 20
     }
@@ -783,7 +789,30 @@ export async function genererBailPDF(data: BailData): Promise<void> {
     y += 2
     addText("Les documents suivants sont annexés au présent contrat :")
     y += 2
-    for (const a of data.annexes) addBullet(a)
+
+    // Fichiers PDF effectivement téléversés (priorité, avec URL cliquable)
+    if (data.fichiersAnnexes) {
+      const mk = (label: string, file: { url: string; name: string } | undefined) => {
+        if (!file) return
+        addBullet(`${label} — ${file.name}`)
+        doc.setFontSize(7)
+        doc.setTextColor(29, 78, 216)
+        const urlShort = file.url.length > 80 ? file.url.slice(0, 77) + "…" : file.url
+        doc.textWithLink(`Lien : ${urlShort}`, 25, y, { url: file.url })
+        doc.setTextColor(0, 0, 0)
+        y += 4.5
+      }
+      mk("DPE (Diagnostic de Performance Énergétique)", data.fichiersAnnexes.dpe)
+      mk("ERP (État des Risques et Pollutions)", data.fichiersAnnexes.erp)
+      mk("CREP (Constat Risque Exposition Plomb)", data.fichiersAnnexes.crep)
+      mk("Notice d'information locataire", data.fichiersAnnexes.notice)
+    }
+
+    // Items texte additionnels (non-uploadés, coches legacy)
+    if (data.annexes && data.annexes.length > 0) {
+      y += 2
+      for (const a of data.annexes) addBullet(a)
+    }
     y += 4
     addLine()
   }
