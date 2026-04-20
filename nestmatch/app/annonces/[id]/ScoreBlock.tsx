@@ -70,24 +70,33 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
   const score = calculerScore(annonce, profil)
   const info = labelScore(score)
   const raisons = expliquerScore(annonce, profil)
+  const pct = Math.round(score / 10)
 
+  // Rendu compact "chip" style bundle design — bg vert pâle #DCFCE7 +
+  // color #16A34A si bon score, sinon palette info. Bouton "détails" reste
+  // accessible en dessous pour afficher la liste des raisons ✓/✗.
   return (
-    <div style={{ background: info.bg, borderRadius: 12, padding: "16px", marginBottom: 16, border: `1.5px solid ${info.color}22` }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <div>
-          <p style={{ fontSize: 12, fontWeight: 700, color: info.color, textTransform: "uppercase", letterSpacing: "0.5px" }}>Compatibilité</p>
-          <p style={{ fontSize: 13, fontWeight: 700, color: info.color }}>{info.label}</p>
-        </div>
-        <p style={{ fontSize: 36, fontWeight: 900, color: info.color, lineHeight: 1 }}>{Math.round(score / 10)}%</p>
-      </div>
-      <div style={{ background: "rgba(0,0,0,0.08)", borderRadius: 999, height: 6, marginBottom: 10 }}>
-        <div style={{ background: info.color, borderRadius: 999, height: 6, width: `${Math.round(score / 10)}%`, transition: "width 0.5s" }} />
+    <div style={{ marginBottom: 16 }}>
+      <div style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        background: info.bg,
+        color: info.color,
+        padding: "6px 14px",
+        borderRadius: 999,
+        fontSize: 13,
+        fontWeight: 700,
+        letterSpacing: "0.2px",
+      }}>
+        <span style={{ fontSize: 15, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{pct}&nbsp;%</span>
+        <span>de compatibilité</span>
       </div>
       {raisons.length > 0 && (
         <>
           <button onClick={() => setShowDetails(!showDetails)}
-            style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, color: info.color, padding: 0, fontFamily: "inherit" }}>
-            {showDetails ? "Masquer les détails ↑" : "Voir les détails ↓"}
+            style={{ display: "block", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, color: "#6b7280", padding: 0, fontFamily: "inherit", textDecoration: "underline" }}>
+            {showDetails ? "Masquer les détails" : "Voir le détail du score"}
           </button>
           {showDetails && (
             <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 4 }}>

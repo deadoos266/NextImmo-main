@@ -273,6 +273,20 @@ export default async function Annonce({ params }: any) {
           __html: JSON.stringify(breadcrumbLd).replace(/</g, "\\u003c"),
         }}
       />
+      {/* Responsive H1 + layout : pas de Tailwind, on inline une petite
+          media query dédiée à cette page (zéro fichier CSS externe créé). */}
+      <style>{`
+        @media (max-width: 767px) {
+          .r-detail-h1 { font-size: 28px !important; letter-spacing: -0.8px !important; }
+          .r-container { padding: 20px 16px !important; }
+          .r-detail-layout { flex-direction: column !important; }
+          .r-detail-sidebar { width: 100% !important; }
+        }
+        @media (min-width: 768px) and (max-width: 1023px) {
+          .r-detail-h1 { font-size: 36px !important; letter-spacing: -1.1px !important; }
+          .r-container { padding: 28px 24px !important; }
+        }
+      `}</style>
       <div className="r-container" style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 48px" }}>
         {/* Breadcrumbs visibles (reflet du JSON-LD BreadcrumbList). Google
             affiche ça comme fil d'Ariane enrichi dans les SERP. */}
@@ -312,14 +326,33 @@ export default async function Annonce({ params }: any) {
           </div>
         )}
 
-        <div className="r-detail-header" style={{ margin: "16px 0 20px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div className="r-detail-header" style={{ margin: "16px 0 24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
           <div>
-            <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.5px" }}>{annonce.titre}</h1>
-            <p style={{ color: "#6b7280", marginTop: 4 }}>
+            {/* Eyebrow ville (uppercase letter-spacing 1.8px, design system) */}
+            <p style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: "#666",
+              textTransform: "uppercase",
+              letterSpacing: "1.8px",
+              margin: 0,
+              marginBottom: 10,
+            }}>
               {annonce.localisation_exacte && annonce.adresse ? `${annonce.adresse} · ${annonce.ville}` : annonce.ville}
             </p>
+            {/* H1 — 44px desktop, 36px tablet, 28px mobile, weight 500 */}
+            <h1 className="r-detail-h1" style={{
+              fontSize: 44,
+              fontWeight: 500,
+              lineHeight: 1.08,
+              letterSpacing: "-1.4px",
+              margin: 0,
+              color: "#111",
+            }}>
+              {annonce.titre}
+            </h1>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, marginLeft: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, marginLeft: 16, marginTop: 8 }}>
             <span style={{ background: annonce.dispo === "Disponible maintenant" ? "#dcfce7" : "#fff7ed", color: annonce.dispo === "Disponible maintenant" ? "#16a34a" : "#ea580c", padding: "6px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700, whiteSpace: "nowrap" }}>
               {annonce.dispo}
             </span>
@@ -362,21 +395,21 @@ export default async function Annonce({ params }: any) {
                 { val: annonce.chambres !== null && annonce.chambres !== undefined ? annonce.chambres : "—", label: "chambres" },
                 { val: annonce.etage || "—", label: "étage" },
               ].map(item => (
-                <div key={item.label} style={{ background: "white", borderRadius: 14, padding: "14px 18px", textAlign: "center", flex: 1, minWidth: 70 }}>
-                  <div style={{ fontSize: 20, fontWeight: 800 }}>{item.val}</div>
-                  <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{item.label}</div>
+                <div key={item.label} style={{ background: "white", borderRadius: 16, padding: "18px 20px", textAlign: "center", flex: 1, minWidth: 70, border: "1px solid #EAE6DF" }}>
+                  <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.3px" }}>{item.val}</div>
+                  <div style={{ fontSize: 11, color: "#666", marginTop: 4, fontWeight: 500, letterSpacing: "0.3px" }}>{item.label}</div>
                 </div>
               ))}
               {annonce.dpe && (
-                <div style={{ background: "white", borderRadius: 14, padding: "14px 18px", textAlign: "center", flex: 1, minWidth: 70 }}>
+                <div style={{ background: "white", borderRadius: 16, padding: "14px 18px", textAlign: "center", flex: 1, minWidth: 70, border: "1px solid #EAE6DF" }}>
                   <div style={{ fontSize: 18, fontWeight: 800, color: "white", background: dpeColor[annonce.dpe] || "#6b7280", width: 36, height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>{annonce.dpe}</div>
-                  <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>DPE</div>
+                  <div style={{ fontSize: 11, color: "#666", marginTop: 6, fontWeight: 500, letterSpacing: "0.3px" }}>DPE</div>
                 </div>
               )}
             </div>
 
             <div style={{ background: "white", borderRadius: 20, padding: 24, marginBottom: 20 }}>
-              <h2 style={{ fontSize: 17, fontWeight: 800, marginBottom: 16 }}>Équipements & conditions</h2>
+              <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 16, letterSpacing: "-0.2px" }}>Équipements &amp; conditions</h2>
               <div className="r-detail-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 {[
                   { label: "Meublé", val: annonce.meuble },
@@ -389,8 +422,12 @@ export default async function Annonce({ params }: any) {
                   { label: "Ascenseur", val: annonce.ascenseur },
                 ].map(item => (
                   <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14 }}>
-                    <span style={{ width: 24, height: 24, borderRadius: "50%", background: item.val ? "#dcfce7" : "#f3f4f6", color: item.val ? "#16a34a" : "#9ca3af", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
-                      {item.val ? "✓" : "✗"}
+                    <span aria-hidden style={{ width: 24, height: 24, borderRadius: "50%", background: item.val ? "#dcfce7" : "#f3f4f6", color: item.val ? "#16a34a" : "#9ca3af", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {item.val ? (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                      ) : (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                      )}
                     </span>
                     <span style={{ color: item.val ? "#111" : "#9ca3af" }}>{item.label}</span>
                   </div>
@@ -400,14 +437,14 @@ export default async function Annonce({ params }: any) {
 
             {annonce.description && (
               <div style={{ background: "white", borderRadius: 20, padding: 24, marginBottom: 20 }}>
-                <h2 style={{ fontSize: 17, fontWeight: 800, marginBottom: 12 }}>Description</h2>
+                <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 12, letterSpacing: "-0.2px" }}>Description</h2>
                 <p style={{ color: "#4b5563", lineHeight: 1.7 }}>{annonce.description}</p>
               </div>
             )}
 
             {annonce.ville && (
               <div style={{ background: "white", borderRadius: 20, padding: 24 }}>
-                <h2 style={{ fontSize: 17, fontWeight: 800, marginBottom: 6 }}>Localisation</h2>
+                <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 6, letterSpacing: "-0.2px" }}>Localisation</h2>
                 <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 14 }}>
                   {annonce.localisation_exacte && annonce.adresse
                     ? `${annonce.adresse} · ${annonce.ville}`
@@ -426,9 +463,12 @@ export default async function Annonce({ params }: any) {
           <div className="r-detail-sidebar" style={{ width: 360, flexShrink: 0 }}>
             <div style={{ background: "white", borderRadius: 20, padding: 28, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", position: "sticky", top: 80 }}>
               <div style={{ marginBottom: 16 }}>
-                <span style={{ fontSize: 32, fontWeight: 800 }}>{annonce.prix} €</span>
-                <span style={{ color: "#6b7280", fontSize: 15 }}>/mois</span>
-                {annonce.charges && <p style={{ color: "#6b7280", fontSize: 13, marginTop: 2 }}>+ {annonce.charges} € de charges</p>}
+                <span style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-0.8px" }}>{annonce.prix} €</span>
+                <span style={{ color: "#888", fontSize: 15, marginLeft: 4 }}>/mois</span>
+                <p style={{ color: "#666", fontSize: 13, marginTop: 4 }}>
+                  {annonce.charges ? `Charges ${annonce.charges} € · ` : "Charges comprises · "}
+                  Caution {annonce.caution || annonce.prix} €
+                </p>
               </div>
 
               {annonce.charges && (
@@ -481,18 +521,47 @@ export default async function Annonce({ params }: any) {
         </div>
 
         {similaires.length > 0 && (
-          <section style={{ marginTop: 48 }}>
-            <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 16 }}>Autres biens similaires à {annonce.ville}</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
+          <section style={{ marginTop: 56 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: "#666", textTransform: "uppercase", letterSpacing: "1.8px", margin: 0, marginBottom: 10 }}>
+              Similaires
+            </p>
+            <h2 style={{ fontSize: 28, fontWeight: 500, letterSpacing: "-0.8px", margin: 0, marginBottom: 24, lineHeight: 1.15 }}>
+              Autres biens à {annonce.ville}
+            </h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 20 }}>
               {similaires.map(s => {
                 const firstPhoto = Array.isArray(s.photos) && s.photos.length > 0 ? s.photos[0] : null
                 return (
-                  <Link key={s.id} href={`/annonces/${s.id}`} style={{ textDecoration: "none", color: "inherit", background: "white", borderRadius: 16, overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", display: "flex", flexDirection: "column", transition: "transform .15s ease" }}>
-                    <div style={{ background: "#f3f4f6", height: 140, backgroundImage: firstPhoto ? `url(${firstPhoto})` : undefined, backgroundSize: "cover", backgroundPosition: "center" }} />
-                    <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
-                      <p style={{ fontSize: 14, fontWeight: 800, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.titre}</p>
-                      <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>{s.ville} · {s.surface} m² · {s.pieces} pièces</p>
-                      <p style={{ fontSize: 15, fontWeight: 800, margin: "auto 0 0", color: "#111" }}>{s.prix} €<span style={{ fontSize: 12, color: "#6b7280", fontWeight: 500 }}>/mois</span></p>
+                  <Link
+                    key={s.id}
+                    href={`/annonces/${s.id}`}
+                    style={{
+                      textDecoration: "none",
+                      color: "inherit",
+                      background: "white",
+                      borderRadius: 20,
+                      overflow: "hidden",
+                      border: "1px solid #EAE6DF",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                      display: "flex",
+                      flexDirection: "column",
+                      transition: "transform 300ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.transform = "translateY(-2px)"
+                      e.currentTarget.style.boxShadow = "0 12px 32px rgba(0,0,0,0.08)"
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.transform = "translateY(0)"
+                      e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)"
+                    }}
+                  >
+                    <div style={{ position: "relative", aspectRatio: "4 / 5", background: "#EAE6DF", backgroundImage: firstPhoto ? `url(${firstPhoto})` : undefined, backgroundSize: "cover", backgroundPosition: "center" }} />
+                    <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
+                      <p style={{ fontSize: 11, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0 }}>{s.ville}</p>
+                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, letterSpacing: "-0.2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.titre}</p>
+                      <p style={{ fontSize: 12, color: "#555", margin: 0 }}>{s.surface} m² · {s.pieces} p.</p>
+                      <p style={{ fontSize: 15, fontWeight: 700, margin: "auto 0 0", color: "#111" }}>{s.prix} €<span style={{ fontSize: 12, color: "#888", fontWeight: 400 }}>/mois</span></p>
                     </div>
                   </Link>
                 )
