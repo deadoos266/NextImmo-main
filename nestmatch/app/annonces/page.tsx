@@ -162,7 +162,7 @@ function AnnoncesContent() {
   const [annonces, setAnnonces] = useState<any[]>([])
   const [profil, setProfil] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [tri, setTri] = useState<"match" | "prix_asc" | "prix_desc">("match")
+  const [tri, setTri] = useState<"match" | "prix_asc" | "prix_desc" | "alpha" | "recent">("match")
   const [scoreMin, setScoreMin] = useState(0)
   const [dispoImmediate, setDispoImmediate] = useState(false)
   const [filtreParking, setFiltreParking] = useState(false)
@@ -234,9 +234,13 @@ function AnnoncesContent() {
   const urlPiecesMin = parseInt(searchParams?.get("pieces_min") || "0") || 0
   const urlMotCle = searchParams?.get("q") || ""
 
-  // Si l'URL ne specifie rien, on retombe sur les valeurs du profil locataire
-  const activeVille = urlVille || (!isProprietaire && profil?.ville_souhaitee) || ""
-  const activeBudget = urlBudget || (!isProprietaire && profil?.budget_max) || 0
+  // Les filtres de recherche sont DÉCOUPLÉS de "Mon dossier" — ils ne
+  // viennent QUE de l'URL. Le profil peut servir à suggérer des critères
+  // (via "Resynchroniser profil") mais n'impose rien automatiquement. Ça
+  // évite les surprises type "pourquoi Paris ne donne rien" alors que le
+  // profil visait Lyon. Cf feedback Paul 2026-04-19.
+  const activeVille = urlVille
+  const activeBudget = urlBudget
   const activeType = urlType
 
   function clearUrlFilters() {
@@ -457,10 +461,30 @@ function AnnoncesContent() {
   // ce qui sera passe comme markers a la carte
   const annoncesForMap = annoncesEnrichies
     .filter(a => {
-      if (activeVille && a.ville) {
-        const vA = a.ville.toLowerCase()
-        const vF = activeVille.toLowerCase()
-        if (!vA.includes(vF) && !vF.includes(vA)) return false
+      if (activeVille) {
+        // Matching robuste : accents + casse + code postal (dept → grande ville).
+        // Exemples qui doivent matcher :
+        //   "Lyon" ↔ "lyon"      (casse)
+        //   "Mâcon" ↔ "macon"    (accents via normalizeCityKey)
+        //   "Paris 15" ↔ "Paris" (includes)
+        //   "75015" ↔ "Paris"    (dept 75 → paris)
+        const q = activeVille.trim()
+        const isCP = /^\d{5}$/.test(q)
+        if (isCP) {
+          const depart = q.slice(0, 2)
+          const fallbackVille = depart === "75" ? "paris"
+            : depart === "69" ? "lyon"
+            : depart === "13" ? "marseille"
+            : null
+          if (!fallbackVille) return false // CP inconnu → ne filtre pas, on retourne false pour cacher
+          const villeNorm = normalizeCityKey(a.ville || "")
+          if (!villeNorm.includes(fallbackVille)) return false
+        } else {
+          const vA = normalizeCityKey(a.ville || "")
+          const vF = normalizeCityKey(q)
+          if (!vA || !vF) return false
+          if (!vA.includes(vF) && !vF.includes(vA)) return false
+        }
       }
       if (activeBudget && a.prix && a.prix > activeBudget * 1.20) return false
       if (activeType && a.type_bien) {
@@ -505,6 +529,12 @@ function AnnoncesContent() {
       if (tri === "match") return (b.scoreMatching ?? 0) - (a.scoreMatching ?? 0)
       if (tri === "prix_asc") return (a.prix ?? 0) - (b.prix ?? 0)
       if (tri === "prix_desc") return (b.prix ?? 0) - (a.prix ?? 0)
+      if (tri === "alpha") return (a.titre || "").localeCompare(b.titre || "", "fr", { sensitivity: "base" })
+      if (tri === "recent") {
+        const dA = a.created_at ? new Date(a.created_at).getTime() : 0
+        const dB = b.created_at ? new Date(b.created_at).getTime() : 0
+        return dB - dA
+      }
       return 0
     })
 
@@ -892,12 +922,25 @@ function AnnoncesContent() {
             )
           })()}
 
-          {/* Compteur */}
-          <div style={{ padding: "2px 0 10px", flexShrink: 0 }}>
-            <p style={{ fontSize: 13, color: "#6b7280" }}>
+          {/* Compteur + tri dropdown */}
+          <div style={{ padding: "2px 0 10px", flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+            <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>
               {loading ? "Chargement..." : <><strong style={{ color: "#111" }}>{annoncesTraitees.length}</strong> logement{annoncesTraitees.length > 1 ? "s" : ""}</>}
               {mapBounds && <span style={{ marginLeft: 6, fontSize: 11, color: "#9ca3af" }}>dans la zone</span>}
             </p>
+            <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, color: "#6b7280" }}>
+              <span style={{ fontWeight: 600 }}>Trier&nbsp;:</span>
+              <select
+                value={tri}
+                onChange={e => setTri(e.target.value as typeof tri)}
+                style={{ padding: "6px 28px 6px 10px", border: "1.5px solid #e5e7eb", borderRadius: 999, background: "white", fontSize: 12, fontWeight: 700, color: "#111", cursor: "pointer", fontFamily: "inherit", appearance: "none", backgroundImage: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center" }}>
+                {!isProprietaire && <option value="match">Matching</option>}
+                <option value="recent">Plus récent</option>
+                <option value="alpha">A-Z</option>
+                <option value="prix_asc">Prix croissant</option>
+                <option value="prix_desc">Prix décroissant</option>
+              </select>
+            </label>
           </div>
 
           {loading ? (
