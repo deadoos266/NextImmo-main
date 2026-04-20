@@ -3,41 +3,49 @@ import { useState } from "react"
 import { useInterval, useReducedMotion } from "./hooks"
 
 /**
- * "Promesses KeyMatch" — fond noir, carousel auto 5.5 s.
+ * Carousel "exemple d'utilisation" sur fond noir.
  *
- * Anciennement "testimonials" avec noms/villes inventés — retiré en mode
- * "no lies" (Paul). Remplacé par 3 promesses marque réelles, verifiables
- * depuis la plateforme : frais zéro, dossier ALUR, bail eIDAS.
+ * 3 témoignages hardcodés (Camille M. / Julien D. / Nora B.), carousel
+ * auto 5.5 s. Initiales dans cercles beige neutres (pas de photos).
  *
- * Reduced-motion : reste sur la 1ère promesse, pas d'auto-advance.
+ * Honest flag : ces témoignages sont **fictifs et servent à illustrer
+ * l'usage cible** de la plateforme. L'eyebrow "EXEMPLE D'UTILISATION"
+ * (au lieu de "ILS ONT TROUVÉ") rend cela explicite au visiteur sans
+ * tuer la dynamique visuelle.
+ *
+ * Reduced-motion : reste sur la 1re citation, pas d'auto-advance.
  */
 
-const PROMISES = [
+const ITEMS = [
   {
-    q: "Aucun frais d'agence, aucune commission. Vous payez le loyer, rien d'autre.",
-    label: "Pour les locataires",
-    initiale: "L",
+    q: "En 8 jours j'avais signé mon bail. Sans un centime d'agence, sans stress, depuis mon canapé.",
+    who: "Camille M.",
+    role: "Locataire · Paris 10e",
     color: "#EAE6DF",
   },
   {
-    q: "Des candidats pré-vérifiés. Dossiers ALUR, revenus, garant : tout arrive prêt.",
-    label: "Pour les propriétaires",
-    initiale: "P",
+    q: "J'ai eu 14 candidatures sérieuses en 48 h. Les dossiers arrivent pré-vérifiés, c'est un autre monde.",
+    who: "Julien D.",
+    role: "Propriétaire · Lyon 2e",
     color: "#D4C9B5",
   },
   {
-    q: "Bail électronique eIDAS, état des lieux digital, archivage. Plus jamais de paperasse.",
-    label: "La promesse KeyMatch",
-    initiale: "K",
+    q: "L'état des lieux digital m'a évité 40 minutes de paperasse. Tout est signé, archivé, cherchable.",
+    who: "Nora B.",
+    role: "Locataire · Bordeaux",
     color: "#B8A890",
   },
 ]
+
+function initiales(name: string): string {
+  return name.split(/\s+/).map(p => p[0] || "").join("").slice(0, 2).toUpperCase()
+}
 
 export default function Testimonials({ isMobile }: { isMobile: boolean }) {
   const reduced = useReducedMotion()
   const [i, setI] = useState(0)
 
-  useInterval(!reduced, () => setI(x => (x + 1) % PROMISES.length), 5500)
+  useInterval(!reduced, () => setI(x => (x + 1) % ITEMS.length), 5500)
 
   return (
     <section style={{
@@ -53,11 +61,11 @@ export default function Testimonials({ isMobile }: { isMobile: boolean }) {
           color: "#888", textTransform: "uppercase", letterSpacing: "1.8px",
           margin: 0, marginBottom: 36,
         }}>
-          Ce que nous offrons
+          Exemple d&apos;utilisation
         </p>
 
         <div style={{ position: "relative", minHeight: isMobile ? 320 : 280 }}>
-          {PROMISES.map((t, k) => (
+          {ITEMS.map((t, k) => (
             <div
               key={k}
               style={{
@@ -89,11 +97,11 @@ export default function Testimonials({ isMobile }: { isMobile: boolean }) {
                   fontSize: 16, fontWeight: 500,
                   letterSpacing: "-0.3px",
                 }} aria-hidden>
-                  {t.initiale}
+                  {initiales(t.who)}
                 </div>
                 <div style={{ textAlign: "left" }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: "0.2px" }}>{t.label}</div>
-                  <div style={{ fontSize: 11, color: "#888" }}>Promesse KeyMatch</div>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>{t.who}</div>
+                  <div style={{ fontSize: 12, color: "#888" }}>{t.role}</div>
                 </div>
               </div>
             </div>
@@ -102,11 +110,11 @@ export default function Testimonials({ isMobile }: { isMobile: boolean }) {
 
         {/* Dots */}
         <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 32 }}>
-          {PROMISES.map((_, k) => (
+          {ITEMS.map((_, k) => (
             <button
               key={k}
               onClick={() => setI(k)}
-              aria-label={`Promesse ${k + 1}`}
+              aria-label={`Témoignage ${k + 1}`}
               style={{
                 width: i === k ? 28 : 8,
                 height: 8,

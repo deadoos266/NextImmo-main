@@ -64,7 +64,7 @@ export default function LiveFeed({
               color: "#666", textTransform: "uppercase", letterSpacing: "1.8px",
               margin: 0, marginBottom: 14,
             }}>
-              {hasReal ? "Annonces récentes" : "Bientôt"}
+              {hasReal ? "Annonces récentes" : "Bientôt en ligne"}
             </p>
             <h2 style={{
               fontSize: isMobile ? 30 : 42,
@@ -73,7 +73,7 @@ export default function LiveFeed({
               margin: 0,
               lineHeight: 1.1,
             }}>
-              {hasReal ? "Les dernières publications" : "Les premières annonces arrivent"}
+              {hasReal ? "Les dernières publications" : "Bientôt en ligne"}
             </h2>
           </div>
           {/* Tri visible uniquement si on a de vraies annonces à trier */}
@@ -131,65 +131,43 @@ export default function LiveFeed({
             ))}
           </div>
         ) : (
-          // Empty state honnête : DB sans vraies annonces
+          // Empty state : DB sans annonce dispo. Un seul CTA vers /dossier
+          // pour capter le visiteur avant qu'il ne parte.
           <div style={{
             background: "#F7F4EF",
             borderRadius: 24,
-            padding: isMobile ? "48px 24px" : "80px 48px",
+            padding: isMobile ? "56px 24px" : "88px 48px",
             textAlign: "center",
             border: "1px solid #EAE6DF",
           }}>
             <p style={{
-              fontSize: 13,
-              fontWeight: 700,
-              color: "#666",
-              textTransform: "uppercase",
-              letterSpacing: "1.8px",
-              margin: 0,
-              marginBottom: 16,
-            }}>
-              Plateforme en bêta
-            </p>
-            <h3 style={{
-              fontSize: isMobile ? 22 : 28,
-              fontWeight: 500,
-              letterSpacing: "-0.8px",
-              lineHeight: 1.2,
-              margin: 0,
-              marginBottom: 14,
-              color: "#111",
-            }}>
-              Les premières annonces arriveront très bientôt.
-            </h3>
-            <p style={{
-              fontSize: 14,
+              fontSize: 15,
               color: "#555",
-              lineHeight: 1.6,
-              maxWidth: 480,
-              margin: "0 auto 28px",
+              lineHeight: 1.7,
+              maxWidth: 520,
+              margin: "0 auto 32px",
             }}>
-              Propriétaire ? Publiez votre bien dès maintenant, il sera le premier visible. Locataire ? Créez votre dossier ALUR pour candidater en un clic dès qu&apos;un logement vous plaît.
+              Les premières annonces arrivent. Soyez prévenu dès qu&apos;un logement match votre profil.
             </p>
-            <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-              <Link href="/auth?mode=inscription" style={{
-                background: "#111", color: "#fff",
-                padding: "12px 24px", borderRadius: 999,
-                fontSize: 13, fontWeight: 600,
-                textDecoration: "none",
-                letterSpacing: "0.3px",
+            <Link href="/dossier" style={{
+              display: "inline-block",
+              background: "#111", color: "#fff",
+              padding: "14px 30px", borderRadius: 999,
+              fontSize: 14, fontWeight: 600,
+              textDecoration: "none",
+              letterSpacing: "0.3px",
+              transition: "transform 200ms ease, box-shadow 200ms ease",
+            }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = "translateY(-1px)"
+                e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.18)"
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = "translateY(0)"
+                e.currentTarget.style.boxShadow = "none"
               }}>
-                Publier un bien
-              </Link>
-              <Link href="/auth?mode=inscription" style={{
-                background: "#fff", color: "#111",
-                padding: "12px 24px", borderRadius: 999,
-                fontSize: 13, fontWeight: 500,
-                textDecoration: "none",
-                border: "1px solid #EAE6DF",
-              }}>
-                Créer mon dossier
-              </Link>
-            </div>
+              Créer mon dossier
+            </Link>
           </div>
         )}
       </div>
