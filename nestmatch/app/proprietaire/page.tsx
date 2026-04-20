@@ -826,6 +826,7 @@ export default function Proprietaire() {
                           </a>
                         )}
                         <a href={`/messages?with=${encodeURIComponent(b.locataire_email)}`} style={{ background: loyerMoisStatut === "paye" ? "#111" : "white", color: loyerMoisStatut === "paye" ? "white" : "#111", border: loyerMoisStatut === "paye" ? "none" : "1.5px solid #e5e7eb", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>Message</a>
+                        <a href={`/annonces/${b.id}`} target="_blank" rel="noopener noreferrer" style={{ background: "white", border: "1.5px solid #e5e7eb", color: "#111", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>Voir l&apos;annonce</a>
                         <a href={`/proprietaire/bail/${b.id}`} style={{ background: "white", border: "1.5px solid #e5e7eb", color: "#111", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>Bail</a>
                         <a href={`/proprietaire/edl/${b.id}?type=entree`} style={{ background: "white", border: "1.5px solid #e5e7eb", color: "#111", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>EDL entrée</a>
                         <a href={`/proprietaire/edl/${b.id}?type=sortie`} style={{ background: "white", border: "1.5px solid #e5e7eb", color: "#111", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>EDL sortie</a>
@@ -1239,12 +1240,21 @@ export default function Proprietaire() {
                         <p style={{ color: "#9ca3af", fontSize: 11, marginTop: 6 }}>{new Date(c.created_at).toLocaleDateString("fr-FR")}{c.contenu ? ` · "${c.contenu.slice(0, 50)}${c.contenu.length > 50 ? "…" : ""}"` : ""}</p>
                       </div>
                     </div>
-                    <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                    <div style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
                       <button onClick={() => voirDossier(c.from_email)}
                         style={{ background: isOpen ? "#111" : "white", color: isOpen ? "white" : "#111", border: "1.5px solid #e5e7eb", padding: "7px 14px", borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
                         {isOpen ? "Masquer le dossier" : "Voir le dossier"}
                       </button>
-                      <a href={`/messages?with=${encodeURIComponent(c.from_email)}`} style={{ background: "#111", color: "white", padding: "7px 14px", borderRadius: 999, textDecoration: "none", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>Répondre</a>
+                      {c._bien && (
+                        <a href={`/annonces/${c._bien.id}`} target="_blank" rel="noopener noreferrer"
+                          style={{ background: "white", color: "#111", border: "1.5px solid #e5e7eb", padding: "7px 14px", borderRadius: 999, textDecoration: "none", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>
+                          Voir l&apos;annonce
+                        </a>
+                      )}
+                      <a href={`/messages?with=${encodeURIComponent(c.from_email)}${c.annonce_id ? `&annonce=${c.annonce_id}` : ""}`}
+                        style={{ background: "#111", color: "white", padding: "7px 14px", borderRadius: 999, textDecoration: "none", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>
+                        Répondre
+                      </a>
                     </div>
                   </div>
                   {isOpen && (

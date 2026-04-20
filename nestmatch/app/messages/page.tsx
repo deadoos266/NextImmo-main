@@ -1285,8 +1285,15 @@ function MessagesInner() {
     // On n'auto-sélectionne une conversation QUE si l'URL contient ?with=X
     // (arrivée depuis une annonce / un lien direct). Sinon, au reload normal,
     // l'utilisateur arrive sur la liste sans conv ouverte — il choisit.
+    // Si ?annonce=N est aussi fourni, on cherche la conv scopée a ce bien
+    // (cas proprio qui clique "Repondre" sur une candidature d'un bien donne).
     if (withEmail) {
-      const target = convList.find(c => c.other === withEmail)
+      const annParam = searchParams.get("annonce")
+      const annId = annParam ? Number(annParam) : null
+      const target = (annId != null && !Number.isNaN(annId))
+        ? convList.find(c => c.other === withEmail && c.annonceId === annId)
+          ?? convList.find(c => c.other === withEmail) // fallback si conv scopée pas trouvée
+        : convList.find(c => c.other === withEmail)
       if (target) {
         setConvActive(target.key)
         loadMessages(email, target.other, target.annonceId)
