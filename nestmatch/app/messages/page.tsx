@@ -27,6 +27,7 @@ const RETRAIT_PREFIX = "[CANDIDATURE_RETIREE]"
 const RELANCE_PREFIX = "[RELANCE]"
 const LOCATION_PREFIX = "[LOCATION_ACCEPTEE]"
 const QUITTANCE_PREFIX = "[QUITTANCE_CARD]"
+const VISITE_CONFIRMEE_PREFIX = "[VISITE_CONFIRMEE]"
 // Prefix encodé dans contenu pour un message en réponse à un autre.
 // Format : "[REPLY:<id>]\n<texte>". Permet d'implémenter le reply-to sans migration DB.
 const REPLY_REGEX = /^\[REPLY:(\d+)\]\n([\s\S]*)$/
@@ -430,6 +431,32 @@ function EdlAPlanifierCard({ annonceId, proprietaireActive, isMine }: {
 }
 
 // Carte informative affichée quand quelqu'un vient de signer.
+// Carte "Visite confirmée" — remplace le texte brut "Visite confirmée pour le X"
+function VisiteConfirmeeCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any = {}
+  try { data = JSON.parse(contenu.slice(VISITE_CONFIRMEE_PREFIX.length)) } catch { /* ignore */ }
+  const dateStr = data.dateFormatee || (data.dateVisite ? formatVisiteDate(data.dateVisite, { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "")
+  return (
+    <div style={{ background: "#dcfce7", border: "1.5px solid #86efac", borderRadius: 14, padding: "12px 16px", minWidth: 240, maxWidth: 320 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 6 9 17l-5-5"/>
+        </svg>
+        <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "0.5px", margin: 0 }}>
+          Visite confirmée
+        </p>
+      </div>
+      <p style={{ fontSize: 13, color: "#111", margin: 0, fontWeight: 600, lineHeight: 1.5 }}>
+        {isMine ? "Vous avez confirmé la visite" : "La visite est confirmée"}
+      </p>
+      <p style={{ fontSize: 12, color: "#15803d", margin: "4px 0 0", lineHeight: 1.5 }}>
+        {dateStr}{data.heure ? ` à ${data.heure}` : ""}
+      </p>
+    </div>
+  )
+}
+
 function BailSigneCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let data: any = {}
@@ -1369,12 +1396,22 @@ function MessagesInner() {
     // Poster un message automatique pour informer l'autre partie
     const other = visite.proprietaire_email === myEmail ? visite.locataire_email : visite.proprietaire_email
     const dateFormatee = formatVisiteDate(visite.date_visite, { weekday: "long", day: "numeric", month: "long", year: "numeric" })
-    const contenu = statut === "confirmée"
-      ? `Visite confirmée pour le ${dateFormatee} à ${visite.heure}.`
-      : `Statut de visite mis à jour : ${statut}.`
+    let contenu: string
+    if (statut === "confirmée") {
+      // Card visuelle plutôt que texte brut — rendu via VisiteConfirmeeCard
+      const payload = JSON.stringify({
+        visiteId: id,
+        dateVisite: visite.date_visite,
+        heure: visite.heure,
+        dateFormatee,
+      })
+      contenu = `${VISITE_CONFIRMEE_PREFIX}${payload}`
+    } else {
+      contenu = `Statut de visite mis à jour : ${statut}.`
+    }
     const { data: msg } = await supabase.from("messages").insert([{
       from_email: myEmail, to_email: other, contenu, lu: false,
-      annonce_id: visite.annonce_id ?? null, // rattache au bien (évite la conv fourre-tout)
+      annonce_id: visite.annonce_id ?? null,
       created_at: new Date().toISOString(),
     }]).select().single()
     if (msg) {
@@ -2291,6 +2328,7 @@ function MessagesInner() {
                     const isBail = typeof m.contenu === "string" && m.contenu.startsWith(BAIL_PREFIX)
                     const isBailSigne = typeof m.contenu === "string" && m.contenu.startsWith(BAIL_SIGNE_PREFIX)
                     const isEdlAPlanifier = typeof m.contenu === "string" && m.contenu.startsWith(EDL_A_PLANIFIER_PREFIX)
+                    const isVisiteConfirmee = typeof m.contenu === "string" && m.contenu.startsWith(VISITE_CONFIRMEE_PREFIX)
                     const isQuittance = typeof m.contenu === "string" && m.contenu.startsWith(QUITTANCE_PREFIX)
                     const isRetrait = typeof m.contenu === "string" && m.contenu.startsWith(RETRAIT_PREFIX)
                     const isLocation = typeof m.contenu === "string" && m.contenu.startsWith(LOCATION_PREFIX)
@@ -2352,6 +2390,13 @@ function MessagesInner() {
                               proprietaireActive={!!proprietaireActive}
                               isMine={isMine}
                             />
+                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        ) : isVisiteConfirmee ? (
+                          <div>
+                            <VisiteConfirmeeCard contenu={m.contenu} isMine={isMine} />
                             <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>

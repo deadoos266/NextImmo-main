@@ -16,6 +16,7 @@ export const PREFIXES = {
   BAIL:                 "[BAIL_CARD]",
   BAIL_SIGNE:           "[BAIL_SIGNE]",
   EDL_A_PLANIFIER:      "[EDL_A_PLANIFIER]",
+  VISITE_CONFIRMEE:     "[VISITE_CONFIRMEE]",
   QUITTANCE:            "[QUITTANCE_CARD]",
   CANDIDATURE_RETIREE:  "[CANDIDATURE_RETIREE]",
   RELANCE:              "[RELANCE]",
@@ -58,6 +59,7 @@ export function previewLabel(content: string | null | undefined): string | null 
     case "BAIL": return "Bail généré"
     case "BAIL_SIGNE": return "Bail signé ✓"
     case "EDL_A_PLANIFIER": return "État des lieux à planifier"
+    case "VISITE_CONFIRMEE": return "Visite confirmée ✓"
     case "QUITTANCE": return "Quittance reçue"
     case "CANDIDATURE_RETIREE": return "Candidature retirée"
     case "RELANCE": {

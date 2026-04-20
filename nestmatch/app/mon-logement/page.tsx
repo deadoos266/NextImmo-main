@@ -224,7 +224,7 @@ export default function MonLogement() {
 
   async function declarerPaiement(mois: string) {
     if (!bien || !session?.user?.email) return
-    const montantAttendu = (bien.prix || 0) + (bien.charges || 0)
+    const montantAttendu = (Number(bien.prix) || 0) + (Number(bien.charges) || 0)
     const locataireEmail = session.user.email.toLowerCase()
     const proprietaireEmail = (bien.proprietaire_email || "").toLowerCase()
     const now = new Date().toISOString()
@@ -236,15 +236,18 @@ export default function MonLogement() {
       return
     }
     if (!existant) {
-      const { data, error } = await supabase.from("loyers").upsert({
+      // Pas d'upsert (nécessite un UNIQUE constraint natif en DB que prod n'a pas
+      // forcément). On INSERT direct — si ça conflicte (race), on ignore l'erreur
+      // de duplicate_key, le loyer existe déjà en DB.
+      const { data, error } = await supabase.from("loyers").insert({
         annonce_id: bien.id,
         mois,
         montant: montantAttendu,
         statut: "déclaré",
         locataire_email: locataireEmail,
         proprietaire_email: proprietaireEmail,
-      }, { onConflict: "annonce_id,mois" }).select().single()
-      if (error) {
+      }).select().single()
+      if (error && !/duplicate key|already exists/i.test(error.message || "")) {
         alert(`Erreur : ${error.message}`)
         return
       }
@@ -378,7 +381,7 @@ export default function MonLogement() {
   }
 
   const photoPrincipale = Array.isArray(bien.photos) && bien.photos.length > 0 ? bien.photos[0] : null
-  const loyerTotal = (bien.prix || 0) + (bien.charges || 0)
+  const loyerTotal = (Number(bien.prix) || 0) + (Number(bien.charges) || 0)
   const timelineSteps = computeBailTimeline({
     annonce: { id: bien.id, statut: bien.statut, bail_genere_at: bien.bail_genere_at, date_debut_bail: bien.date_debut_bail },
     edls: edls as any,
