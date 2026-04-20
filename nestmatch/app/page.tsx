@@ -75,10 +75,12 @@ export default function Home() {
               </form>
             )}
 
-            <div style={{ display: "flex", flexWrap: "wrap", gap: isMobile ? 16 : 24, marginTop: 28, fontSize: 12, color: "#6b7280" }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>🔒 Données chiffrées</span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>⚖ Conforme ALUR</span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>🇫🇷 Hébergé en France</span>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: isMobile ? 16 : 24, marginTop: 28, fontSize: 11, color: "#6b7280", fontWeight: 600, letterSpacing: "0.3px", textTransform: "uppercase" }}>
+              <span>Données chiffrées</span>
+              <span style={{ color: "#d1d5db" }}>·</span>
+              <span>Conforme ALUR</span>
+              <span style={{ color: "#d1d5db" }}>·</span>
+              <span>Hébergé en France</span>
             </div>
           </div>
 
@@ -117,7 +119,9 @@ export default function Home() {
               </div>
               <div style={{ position: "absolute", bottom: 40, right: 60, width: 260, background: "white", borderRadius: 20, boxShadow: "0 16px 48px rgba(0,0,0,0.12)", padding: 16, transform: "rotate(-2deg)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                  <span style={{ background: "#dcfce7", color: "#15803d", width: 28, height: 28, borderRadius: 8, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>✓</span>
+                  <span style={{ background: "#dcfce7", color: "#15803d", width: 28, height: 28, borderRadius: 8, display: "inline-flex", alignItems: "center", justifyContent: "center" }} aria-hidden>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                  </span>
                   <div>
                     <p style={{ fontSize: 12, fontWeight: 800, margin: 0 }}>Bail signé</p>
                     <p style={{ fontSize: 10, color: "#9ca3af", margin: 0 }}>Électroniquement · eIDAS</p>
@@ -132,18 +136,17 @@ export default function Home() {
       </section>
 
       {/* ═══ Stats ═══ */}
-      <section style={{ background: "white", borderTop: "1px solid #e5e7eb", borderBottom: "1px solid #e5e7eb", padding: isMobile ? "28px 20px" : "36px 48px" }}>
+      <section style={{ background: "white", borderTop: "1px solid #e5e7eb", borderBottom: "1px solid #e5e7eb", padding: isMobile ? "32px 20px" : "44px 48px" }}>
         <div style={{ maxWidth: 1180, margin: "0 auto", display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: isMobile ? 20 : 24 }}>
           {[
-            { icon: "🏠", val: "0 €", label: "De frais d'agence" },
-            { icon: "⚡", val: "5 min", label: "Pour publier un bien" },
-            { icon: "📄", val: "ALUR", label: "Baux conformes" },
-            { icon: "🔐", val: "eIDAS", label: "Signatures légales" },
+            { val: "0 €", label: "De frais d'agence" },
+            { val: "5 min", label: "Pour publier un bien" },
+            { val: "ALUR", label: "Baux conformes" },
+            { val: "eIDAS", label: "Signatures légales" },
           ].map((s) => (
             <div key={s.label} style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 24, marginBottom: 4 }}>{s.icon}</div>
-              <p style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, letterSpacing: "-0.5px", margin: 0 }}>{s.val}</p>
-              <p style={{ color: "#6b7280", marginTop: 4, fontSize: 12 }}>{s.label}</p>
+              <p style={{ fontSize: isMobile ? 24 : 32, fontWeight: 800, letterSpacing: "-1px", margin: 0, color: "#111" }}>{s.val}</p>
+              <p style={{ color: "#6b7280", marginTop: 6, fontSize: 12, letterSpacing: "0.3px" }}>{s.label}</p>
             </div>
           ))}
         </div>
@@ -177,7 +180,7 @@ export default function Home() {
       <section style={{ maxWidth: 1180, margin: "0 auto", padding: isMobile ? "48px 20px" : "80px 48px" }}>
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 32 : 64, alignItems: "center" }}>
           <div>
-            <p style={{ fontSize: 11, fontWeight: 700, color: "#16a34a", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 14 }}>✨ Pour les locataires</p>
+            <p style={{ fontSize: 11, fontWeight: 700, color: "#16a34a", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 14 }}>Pour les locataires</p>
             <h2 style={{ fontSize: isMobile ? 28 : 40, fontWeight: 800, marginBottom: 18, letterSpacing: "-1px", lineHeight: 1.15 }}>
               Un dossier complet.<br />Toutes vos candidatures.
             </h2>
@@ -186,13 +189,15 @@ export default function Home() {
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 28 }}>
               {[
-                { k: "🎯", t: "Score de compatibilité", d: "Les annonces triées par pertinence — budget, surface, équipements, DPE." },
-                { k: "💬", t: "Messagerie directe", d: "Discutez sans intermédiaire. Visite, dossier, bail : tout dans la conv." },
-                { k: "📄", t: "Dossier certifié", d: "Revenus, garant, pièces d'identité — vérifiés une fois, partagés à tous." },
-                { k: "✍", t: "Signature électronique", d: "Bail + EDL signés en ligne, valeur légale (eIDAS niveau 1)." },
+                { t: "Score de compatibilité", d: "Les annonces triées par pertinence — budget, surface, équipements, DPE." },
+                { t: "Messagerie directe", d: "Discutez sans intermédiaire. Visite, dossier, bail : tout dans la conv." },
+                { t: "Dossier certifié", d: "Revenus, garant, pièces d'identité — vérifiés une fois, partagés à tous." },
+                { t: "Signature électronique", d: "Bail + EDL signés en ligne, valeur légale (eIDAS niveau 1)." },
               ].map(b => (
                 <div key={b.t} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                  <div style={{ width: 40, height: 40, background: "#f0fdf4", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{b.k}</div>
+                  <div style={{ width: 40, height: 40, background: "#f0fdf4", color: "#15803d", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }} aria-hidden>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                  </div>
                   <div>
                     <p style={{ fontSize: 15, fontWeight: 800, margin: 0, marginBottom: 2 }}>{b.t}</p>
                     <p style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.55, margin: 0 }}>{b.d}</p>
@@ -219,7 +224,10 @@ export default function Home() {
               ].map(r => (
                 <div key={r.l} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", background: "white", borderRadius: 8, marginBottom: 6 }}>
                   <span style={{ fontSize: 12, color: "#111" }}>{r.l}</span>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: r.c }}>✓ {r.s}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: r.c, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12" /></svg>
+                    {r.s}
+                  </span>
                 </div>
               ))}
               <div style={{ marginTop: 12, padding: "10px 12px", background: "#dcfce7", border: "1.5px solid #86efac", borderRadius: 10, fontSize: 11, color: "#15803d", fontWeight: 700, textAlign: "center" }}>
@@ -262,7 +270,7 @@ export default function Home() {
           </div>
 
           <div style={{ order: isMobile ? 1 : 2 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 14 }}>🏡 Pour les propriétaires</p>
+            <p style={{ fontSize: 11, fontWeight: 700, color: "#fbbf24", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 14 }}>Pour les propriétaires</p>
             <h2 style={{ fontSize: isMobile ? 28 : 40, fontWeight: 800, marginBottom: 18, letterSpacing: "-1px", lineHeight: 1.15 }}>
               Louez plus vite.<br />Gérez plus simplement.
             </h2>
@@ -277,7 +285,9 @@ export default function Home() {
                 { t: "Suivi des loyers", d: "Auto-paiement mensuel, quittances automatiques, relances." },
               ].map(b => (
                 <div key={b.t} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                  <div style={{ width: 36, height: 36, background: "rgba(251,191,36,0.15)", color: "#fbbf24", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, flexShrink: 0 }}>✓</div>
+                  <div style={{ width: 36, height: 36, background: "rgba(251,191,36,0.15)", color: "#fbbf24", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }} aria-hidden>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                  </div>
                   <div>
                     <p style={{ fontSize: 15, fontWeight: 800, margin: 0, marginBottom: 2, color: "white" }}>{b.t}</p>
                     <p style={{ fontSize: 13, color: "#9ca3af", lineHeight: 1.55, margin: 0 }}>{b.d}</p>
