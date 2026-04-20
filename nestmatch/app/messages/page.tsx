@@ -1332,7 +1332,14 @@ function MessagesInner() {
     setDemandantDossier(true)
     const conv = conversations.find(c => c.key === convActive)
     if (!conv) { setDemandantDossier(false); return }
-    const msg = { from_email: myEmail, to_email: conv.other, contenu: DEMANDE_DOSSIER_PREFIX, lu: false, created_at: new Date().toISOString() }
+    const msg = {
+      from_email: myEmail,
+      to_email: conv.other,
+      contenu: DEMANDE_DOSSIER_PREFIX,
+      lu: false,
+      annonce_id: conv.annonceId ?? null, // rattache au bien
+      created_at: new Date().toISOString(),
+    }
     const { data } = await supabase.from("messages").insert([msg]).select().single()
     if (data) {
       setMessages(prev => [...prev, data])
@@ -1366,7 +1373,9 @@ function MessagesInner() {
       ? `Visite confirmée pour le ${dateFormatee} à ${visite.heure}.`
       : `Statut de visite mis à jour : ${statut}.`
     const { data: msg } = await supabase.from("messages").insert([{
-      from_email: myEmail, to_email: other, contenu, lu: false, created_at: new Date().toISOString()
+      from_email: myEmail, to_email: other, contenu, lu: false,
+      annonce_id: visite.annonce_id ?? null, // rattache au bien (évite la conv fourre-tout)
+      created_at: new Date().toISOString(),
     }]).select().single()
     if (msg) {
       setMessages(prev => [...prev, msg])
@@ -1458,7 +1467,14 @@ function MessagesInner() {
       const dateFormatee = formatVisiteDate(visiteDate, { weekday: "long", day: "numeric", month: "long", year: "numeric" })
       const prefix = isCounter ? "Contre-proposition" : "Demande de visite"
       const contenu = `${prefix} : ${dateFormatee} à ${visiteHeure}${visiteMessage.trim() ? ` — "${visiteMessage.trim()}"` : ""}`
-      const { data: msg } = await supabase.from("messages").insert([{ from_email: myEmail, to_email: convActiveData.other, contenu, lu: false, created_at: new Date().toISOString() }]).select().single()
+      const { data: msg } = await supabase.from("messages").insert([{
+        from_email: myEmail,
+        to_email: convActiveData.other,
+        contenu,
+        lu: false,
+        annonce_id: convActiveData.annonceId, // rattache à la conv du bien (sinon atterrit en "Candidatures" via conv fourre-tout)
+        created_at: new Date().toISOString(),
+      }]).select().single()
       if (msg) {
         setMessages(prev => [...prev, msg])
         setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: msg } : c))
