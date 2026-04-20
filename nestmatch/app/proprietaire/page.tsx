@@ -10,6 +10,7 @@ import { useResponsive } from "../hooks/useResponsive"
 import PipelineFunnel from "./PipelineFunnel"
 import { annulerVisite, STATUT_VISITE_STYLE as STATUT_V } from "../../lib/visitesHelpers"
 import { computeScreening } from "../../lib/screening"
+import { calculerScore } from "../../lib/matching"
 import { joursRetardLoyer, labelRetard } from "../../lib/loyerHelpers"
 import EmptyState from "../components/ui/EmptyState"
 import UndoToast from "../components/ui/UndoToast"
@@ -1121,7 +1122,12 @@ export default function Proprietaire() {
             const bien = biens.find(b => b.id === c.annonce_id)
             const loyer = bien ? (Number(bien.prix || 0) + Number(bien.charges || 0)) : null
             const screening = computeScreening(dossiers[c.from_email] || null, loyer)
-            return { ...c, _screening: screening, _bien: bien }
+            // Compat candidat ↔ bien : calculerScore attend (annonce, profil).
+            // Score /1000 affiché en % via Math.round(score / 10).
+            const profilCandidat = dossiers[c.from_email]
+            const compat = bien && profilCandidat ? calculerScore(bien, profilCandidat) : null
+            const compatPct = compat !== null ? Math.round(compat / 10) : null
+            return { ...c, _screening: screening, _bien: bien, _compatPct: compatPct }
           })
           // Tri par score desc — les meilleurs candidats en haut
           const candidaturesTriees = [...candidaturesAvecScreening].sort((a, b) => b._screening.score - a._screening.score)
@@ -1208,8 +1214,19 @@ export default function Proprietaire() {
                         <p style={{ fontWeight: 700, fontSize: 14 }}>{c.from_email}</p>
                         <p style={{ fontSize: 13, color: "#374151", marginTop: 3, fontWeight: 500 }}>{s.summary}</p>
                         {c._bien && (
-                          <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 3 }}>
-                            Pour : <strong style={{ color: "#6b7280" }}>{c._bien.titre}</strong> · {c._bien.prix} €/mois
+                          <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 3, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                            <span>Pour : <strong style={{ color: "#6b7280" }}>{c._bien.titre}</strong> · {c._bien.prix} €/mois</span>
+                            {/* Compat candidat ↔ logement — vert si >= 70, orange 40-70, rouge < 40 */}
+                            {c._compatPct !== null && (
+                              <span title="Compatibilité entre le candidat et le bien — basée sur budget, surface, pièces, équipements, DPE."
+                                style={{
+                                  background: c._compatPct >= 70 ? "#dcfce7" : c._compatPct >= 40 ? "#fef3c7" : "#fee2e2",
+                                  color: c._compatPct >= 70 ? "#15803d" : c._compatPct >= 40 ? "#92400e" : "#991b1b",
+                                  padding: "1px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, letterSpacing: "0.2px",
+                                }}>
+                                {c._compatPct}% compat
+                              </span>
+                            )}
                           </p>
                         )}
                         {s.flags.length > 0 && (
