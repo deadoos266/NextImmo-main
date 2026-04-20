@@ -86,6 +86,26 @@ export default function ToastStack() {
           push({ type: "visite_confirmee", title: "Candidature acceptée !", body: "Rendez-vous dans « Mon logement »", href: "/mon-logement" })
           return
         }
+        if (raw.startsWith("[VISITE_DEMANDE]")) {
+          push({ type: "visite_nouvelle", title: "Nouvelle demande de visite", body: "Ouvrir vos messages pour répondre", href: "/messages" })
+          return
+        }
+        if (raw.startsWith("[VISITE_CONFIRMEE]")) {
+          push({ type: "visite_confirmee", title: "Visite confirmée", body: "Rendez-vous confirmé pour la visite", href: "/messages" })
+          return
+        }
+        if (raw.startsWith("[BAIL_SIGNE]")) {
+          push({ type: "message", title: "Bail signé ✓", body: "L'autre partie vient de signer le bail", href: "/messages" })
+          return
+        }
+        if (raw.startsWith("[EDL_A_PLANIFIER]")) {
+          push({ type: "message", title: "Bail pleinement signé", body: "Prochaine étape : état des lieux d'entrée", href: "/messages" })
+          return
+        }
+        if (raw.startsWith("[AUTO_PAIEMENT_DEMANDE]")) {
+          push({ type: "message", title: "Auto-paiement", body: "Demande ou confirmation de virement automatique", href: "/messages" })
+          return
+        }
         const preview = raw.replace(/^\[REPLY:\d+\]\n/, "").slice(0, 80)
         push({
           type: "message",
