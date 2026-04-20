@@ -28,6 +28,7 @@ const RELANCE_PREFIX = "[RELANCE]"
 const LOCATION_PREFIX = "[LOCATION_ACCEPTEE]"
 const QUITTANCE_PREFIX = "[QUITTANCE_CARD]"
 const VISITE_CONFIRMEE_PREFIX = "[VISITE_CONFIRMEE]"
+const AUTO_PAIEMENT_DEMANDE_PREFIX = "[AUTO_PAIEMENT_DEMANDE]"
 // Prefix encodé dans contenu pour un message en réponse à un autre.
 // Format : "[REPLY:<id>]\n<texte>". Permet d'implémenter le reply-to sans migration DB.
 const REPLY_REGEX = /^\[REPLY:(\d+)\]\n([\s\S]*)$/
@@ -431,6 +432,56 @@ function EdlAPlanifierCard({ annonceId, proprietaireActive, isMine }: {
 }
 
 // Carte informative affichée quand quelqu'un vient de signer.
+// Carte "Demande d'auto-paiement" — envoyée par le locataire quand il a mis
+// en place un virement auto. Le proprio confirme via cette card.
+function AutoPaiementDemandeCard({
+  contenu,
+  isMine,
+  annonceId,
+  proprietaireActive,
+  onConfirme,
+}: {
+  contenu: string
+  isMine: boolean
+  annonceId: number | null
+  proprietaireActive: boolean
+  onConfirme: (annId: number) => void
+}) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any = {}
+  try { data = JSON.parse(contenu.slice(AUTO_PAIEMENT_DEMANDE_PREFIX.length)) } catch { /* ignore */ }
+  const confirmed = data.confirmedAt
+  return (
+    <div style={{ background: confirmed ? "#dcfce7" : "#eff6ff", border: `1.5px solid ${confirmed ? "#86efac" : "#bfdbfe"}`, borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 340 }}>
+      <p style={{ fontSize: 11, fontWeight: 700, color: confirmed ? "#15803d" : "#1e40af", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>
+        {confirmed ? "Auto-paiement actif ✓" : "Demande d'auto-paiement"}
+      </p>
+      <p style={{ fontSize: 13, color: "#111", margin: 0, fontWeight: 600, lineHeight: 1.5 }}>
+        {isMine
+          ? confirmed
+            ? "Le propriétaire a confirmé votre virement automatique."
+            : "Vous avez signalé avoir mis en place un virement automatique — en attente de confirmation."
+          : confirmed
+            ? "Vous avez confirmé le virement automatique du locataire."
+            : "Le locataire a mis en place un virement automatique mensuel."}
+      </p>
+      {!confirmed && !isMine && proprietaireActive && annonceId && (
+        <button
+          onClick={() => onConfirme(annonceId)}
+          style={{ marginTop: 10, background: "#1d4ed8", color: "white", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+        >
+          ✓ Confirmer l&apos;auto-paiement
+        </button>
+      )}
+      {confirmed && (
+        <p style={{ fontSize: 11, color: "#15803d", margin: "8px 0 0", lineHeight: 1.5 }}>
+          Les loyers seront automatiquement marqués payés chaque mois. Le proprio peut contester un mois individuellement si nécessaire.
+        </p>
+      )}
+    </div>
+  )
+}
+
 // Carte "Visite confirmée" — remplace le texte brut "Visite confirmée pour le X"
 function VisiteConfirmeeCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1673,6 +1724,42 @@ function MessagesInner() {
     }
   }
 
+  async function confirmerAutoPaiement(annId: number) {
+    if (!myEmail || !convActiveData) return
+    const now = new Date().toISOString()
+    // 1. Active sur l'annonce
+    const { error: updErr } = await supabase
+      .from("annonces")
+      .update({ auto_paiement_actif: true, auto_paiement_confirme_at: now })
+      .eq("id", annId)
+    if (updErr) {
+      alert(`Erreur : ${updErr.message}`)
+      return
+    }
+    setAnnonces(prev => ({ ...prev, [annId]: { ...(prev[annId] || {}), auto_paiement_actif: true, auto_paiement_confirme_at: now } }))
+    // 2. Met à jour le message de demande (ajoute confirmedAt au payload)
+    // On trouve le dernier [AUTO_PAIEMENT_DEMANDE] message de cette conv et on met à jour
+    const demandeMsg = messages.find(m => typeof m.contenu === "string" && m.contenu.startsWith(AUTO_PAIEMENT_DEMANDE_PREFIX) && m.annonce_id === annId)
+    if (demandeMsg) {
+      try {
+        const payload = JSON.parse((demandeMsg.contenu as string).slice(AUTO_PAIEMENT_DEMANDE_PREFIX.length))
+        payload.confirmedAt = now
+        const newContenu = `${AUTO_PAIEMENT_DEMANDE_PREFIX}${JSON.stringify(payload)}`
+        await supabase.from("messages").update({ contenu: newContenu }).eq("id", demandeMsg.id)
+        setMessages(prev => prev.map(m => m.id === demandeMsg.id ? { ...m, contenu: newContenu } : m))
+      } catch { /* ignore */ }
+    }
+    // 3. Notif au locataire
+    void postNotif({
+      userEmail: convActiveData.other,
+      type: "loyer_retard", // pas de type spécifique, on recycle
+      title: "Auto-paiement confirmé",
+      body: "Votre propriétaire a confirmé votre virement automatique. Les prochains loyers seront validés automatiquement.",
+      href: "/mon-logement",
+      relatedId: String(annId),
+    })
+  }
+
   // Grouper les messages par date
   const messagesAvecSep: Array<{ type: "sep"; label: string } | { type: "msg"; msg: any }> = []
   let lastDate = ""
@@ -2347,6 +2434,7 @@ function MessagesInner() {
                     const isBailSigne = typeof m.contenu === "string" && m.contenu.startsWith(BAIL_SIGNE_PREFIX)
                     const isEdlAPlanifier = typeof m.contenu === "string" && m.contenu.startsWith(EDL_A_PLANIFIER_PREFIX)
                     const isVisiteConfirmee = typeof m.contenu === "string" && m.contenu.startsWith(VISITE_CONFIRMEE_PREFIX)
+                    const isAutoPaiement = typeof m.contenu === "string" && m.contenu.startsWith(AUTO_PAIEMENT_DEMANDE_PREFIX)
                     const isQuittance = typeof m.contenu === "string" && m.contenu.startsWith(QUITTANCE_PREFIX)
                     const isRetrait = typeof m.contenu === "string" && m.contenu.startsWith(RETRAIT_PREFIX)
                     const isLocation = typeof m.contenu === "string" && m.contenu.startsWith(LOCATION_PREFIX)
@@ -2415,6 +2503,19 @@ function MessagesInner() {
                         ) : isVisiteConfirmee ? (
                           <div>
                             <VisiteConfirmeeCard contenu={m.contenu} isMine={isMine} />
+                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        ) : isAutoPaiement ? (
+                          <div>
+                            <AutoPaiementDemandeCard
+                              contenu={m.contenu}
+                              isMine={isMine}
+                              annonceId={m.annonce_id || convActiveData?.annonceId || null}
+                              proprietaireActive={!!proprietaireActive}
+                              onConfirme={confirmerAutoPaiement}
+                            />
                             <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>

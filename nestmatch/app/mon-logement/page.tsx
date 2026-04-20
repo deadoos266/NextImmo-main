@@ -37,6 +37,8 @@ type Bien = {
   date_debut_bail: string | null
   bail_genere_at: string | null
   dpe: string | null
+  auto_paiement_actif?: boolean | null
+  auto_paiement_confirme_at?: string | null
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -221,6 +223,51 @@ export default function MonLogement() {
     return () => { supabase.removeChannel(channel) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bien?.id])
+
+  async function demanderAutoPaiement() {
+    if (!bien || !session?.user?.email) return
+    const locataireEmail = session.user.email.toLowerCase()
+    const proprietaireEmail = (bien.proprietaire_email || "").toLowerCase()
+    const now = new Date().toISOString()
+    const payload = { annonceId: bien.id, declaredAt: now }
+    const { error } = await supabase.from("messages").insert([{
+      from_email: locataireEmail,
+      to_email: proprietaireEmail,
+      contenu: `[AUTO_PAIEMENT_DEMANDE]${JSON.stringify(payload)}`,
+      lu: false,
+      annonce_id: bien.id,
+      created_at: now,
+    }])
+    if (error) {
+      alert(`Erreur : ${error.message}`)
+      return
+    }
+    alert("✓ Demande d'auto-paiement envoyée au propriétaire. Vous serez notifié à sa confirmation.")
+  }
+
+  // Auto-création du loyer du mois en cours si auto_paiement_actif et pas
+  // encore de loyer pour ce mois. Appelé sur chaque chargement de page.
+  useEffect(() => {
+    if (!bien?.auto_paiement_actif || !bien?.id || !session?.user?.email) return
+    const moisCourant = new Date().toISOString().slice(0, 7)
+    const dejaExiste = loyers.find(l => l.mois === moisCourant)
+    if (dejaExiste) return
+    const montant = (Number(bien.prix) || 0) + (Number(bien.charges) || 0)
+    const now = new Date().toISOString()
+    void supabase.from("loyers").insert({
+      annonce_id: bien.id,
+      mois: moisCourant,
+      montant,
+      statut: "confirmé",
+      date_confirmation: now,
+      locataire_email: session.user.email.toLowerCase(),
+      proprietaire_email: (bien.proprietaire_email || "").toLowerCase(),
+    }).select().single().then(({ data, error }) => {
+      if (!error && data) {
+        setLoyers(prev => [data, ...prev])
+      }
+    })
+  }, [bien, loyers, session?.user?.email])
 
   async function declarerPaiement(mois: string) {
     if (!bien || !session?.user?.email) return
@@ -543,35 +590,52 @@ export default function MonLogement() {
                 </div>
               )}
 
-              {/* Déclarer un paiement — permet au locataire de signaler qu'il
-                  a payé pour le mois en cours (ou un mois non confirmé). */}
+              {/* Auto-paiement actif → badge info */}
+              {bien.auto_paiement_actif && (
+                <div style={{ background: "#dcfce7", border: "1.5px solid #86efac", borderRadius: 12, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#15803d", fontWeight: 600 }}>
+                  ✓ Virement automatique actif — vos loyers sont confirmés automatiquement chaque mois.
+                </div>
+              )}
+
+              {/* Déclarer un paiement / Mettre en place auto-paiement */}
               {(() => {
                 const moisCourant = new Date().toISOString().slice(0, 7)
                 const dejaCree = loyers.find(l => l.mois === moisCourant)
                 const dejaConfirme = dejaCree?.statut === "confirmé"
                 const dejaDeclare = dejaCree?.statut === "déclaré"
                 const moisLabel = new Date(moisCourant + "-01T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
-                if (dejaConfirme) return null
+                // Si auto-paiement actif : rien à afficher, le mois est déjà auto-créé
+                if (bien.auto_paiement_actif || dejaConfirme) return null
                 return (
-                  <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 12, padding: "12px 16px", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                    <div style={{ flex: 1, minWidth: 160 }}>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: "#1e40af", margin: 0, textTransform: "capitalize" }}>
-                        Loyer de {moisLabel}
-                      </p>
-                      <p style={{ fontSize: 12, color: "#1e40af", margin: "2px 0 0", opacity: 0.85 }}>
-                        {dejaDeclare
-                          ? "Paiement signalé — en attente de confirmation par votre propriétaire."
-                          : "Cliquez pour signaler que vous avez payé ce mois-ci."}
-                      </p>
+                  <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 12, padding: "12px 16px", marginBottom: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+                      <div style={{ flex: 1, minWidth: 160 }}>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: "#1e40af", margin: 0, textTransform: "capitalize" }}>
+                          Loyer de {moisLabel}
+                        </p>
+                        <p style={{ fontSize: 12, color: "#1e40af", margin: "2px 0 0", opacity: 0.85 }}>
+                          {dejaDeclare
+                            ? "Paiement signalé — en attente de confirmation par votre propriétaire."
+                            : "Signalez votre paiement."}
+                        </p>
+                      </div>
+                      {!dejaDeclare && (
+                        <button
+                          onClick={() => declarerPaiement(moisCourant)}
+                          style={{ background: "#1d4ed8", color: "white", border: "none", borderRadius: 999, padding: "9px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                        >
+                          ✓ J&apos;ai payé
+                        </button>
+                      )}
                     </div>
-                    {!dejaDeclare && (
+                    <div style={{ borderTop: "1px solid #bfdbfe", paddingTop: 8, marginTop: 4 }}>
                       <button
-                        onClick={() => declarerPaiement(moisCourant)}
-                        style={{ background: "#1d4ed8", color: "white", border: "none", borderRadius: 999, padding: "9px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                        onClick={demanderAutoPaiement}
+                        style={{ background: "none", border: "1.5px dashed #1d4ed8", color: "#1d4ed8", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" }}
                       >
-                        ✓ J&apos;ai payé
+                        🔄 J&apos;ai mis en place un virement automatique
                       </button>
-                    )}
+                    </div>
                   </div>
                 )
               })()}
