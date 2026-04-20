@@ -274,8 +274,10 @@ export default async function Annonce({ params }: any) {
         }}
       />
       {/* Responsive H1 + layout : pas de Tailwind, on inline une petite
-          media query dédiée à cette page (zéro fichier CSS externe créé). */}
-      <style>{`
+          media query dédiée à cette page via dangerouslySetInnerHTML pour
+          éviter tout souci d'hydration React avec des children texte
+          dans un <style>. */}
+      <style dangerouslySetInnerHTML={{ __html: `
         @media (max-width: 767px) {
           .r-detail-h1 { font-size: 28px !important; letter-spacing: -0.8px !important; }
           .r-container { padding: 20px 16px !important; }
@@ -286,7 +288,18 @@ export default async function Annonce({ params }: any) {
           .r-detail-h1 { font-size: 36px !important; letter-spacing: -1.1px !important; }
           .r-container { padding: 28px 24px !important; }
         }
-      `}</style>
+        /* Hover cards similaires : CSS :hover (pas JS handlers) — obligatoire
+           car page.tsx est un server component et ne peut pas passer des
+           event handlers à <Link> qui est client. */
+        .r-similar-card {
+          transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1),
+                      box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .r-similar-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+        }
+      ` }} />
       <div className="r-container" style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 48px" }}>
         {/* Breadcrumbs visibles (reflet du JSON-LD BreadcrumbList). Google
             affiche ça comme fil d'Ariane enrichi dans les SERP. */}
@@ -534,6 +547,7 @@ export default async function Annonce({ params }: any) {
                 return (
                   <Link
                     key={s.id}
+                    className="r-similar-card"
                     href={`/annonces/${s.id}`}
                     style={{
                       textDecoration: "none",
@@ -545,15 +559,6 @@ export default async function Annonce({ params }: any) {
                       boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                       display: "flex",
                       flexDirection: "column",
-                      transition: "transform 300ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1)",
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.transform = "translateY(-2px)"
-                      e.currentTarget.style.boxShadow = "0 12px 32px rgba(0,0,0,0.08)"
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.transform = "translateY(0)"
-                      e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)"
                     }}
                   >
                     <div style={{ position: "relative", aspectRatio: "4 / 5", background: "#EAE6DF", backgroundImage: firstPhoto ? `url(${firstPhoto})` : undefined, backgroundSize: "cover", backgroundPosition: "center" }} />

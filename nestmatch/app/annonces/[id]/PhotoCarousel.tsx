@@ -105,7 +105,13 @@ export default function PhotoCarousel({ photos }: { photos: string[] }) {
   ) : null
 
   // ─── Mode mobile OU fallback <3 photos : carousel classique ──────
-  if (isMobile || photos.length < 3) {
+  // Important : avant mount, `useResponsive` renvoie width=1200 (SSR défaut)
+  // donc isMobile=false. Si on laissait la bascule mobile/desktop piloter
+  // le premier render client, le HTML SSR (qui ne connaît pas le vrai
+  // viewport) différerait du HTML client post-mesure → React error #418.
+  // On force donc le layout carousel classique tant que `mounted` est
+  // false. Après mount, on bascule sur 2/1 si desktop + ≥3 photos.
+  if (!mounted || isMobile || photos.length < 3) {
     return (
       <>
         <div
