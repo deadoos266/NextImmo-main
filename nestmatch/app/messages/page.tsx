@@ -1306,16 +1306,34 @@ function MessagesInner() {
     setSupprimant(key)
     const conv = conversations.find(c => c.key === key)
     if (!conv || !myEmail) { setSupprimant(null); return }
-    await supabase.from("messages")
+    // ⚠ IMPORTANT : ne supprimer QUE les messages de CETTE conversation
+    // (scopée par annonce_id). Avant, le delete étendu nuquait aussi les
+    // convs des autres annonces entre les 2 mêmes emails.
+    let query = supabase.from("messages")
       .delete()
       .or(`and(from_email.eq.${myEmail},to_email.eq.${conv.other}),and(from_email.eq.${conv.other},to_email.eq.${myEmail})`)
+    if (conv.annonceId != null) {
+      query = query.eq("annonce_id", conv.annonceId)
+    } else {
+      query = query.is("annonce_id", null)
+    }
+    const { error } = await query
+    if (error) {
+      alert(`Suppression échouée : ${error.message}`)
+      setSupprimant(null)
+      return
+    }
     setConversations(prev => prev.filter(c => c.key !== key))
     if (convActive === key) { setConvActive(null); setMessages([]) }
     setSupprimant(null)
   }
 
   async function marquerLu(conv: any) {
-    await supabase.from("messages").update({ lu: true }).eq("to_email", myEmail!).eq("from_email", conv.other)
+    // Scope par annonce_id pour ne pas marquer lus les msgs d'autres convs
+    let q = supabase.from("messages").update({ lu: true }).eq("to_email", myEmail!).eq("from_email", conv.other)
+    if (conv.annonceId != null) q = q.eq("annonce_id", conv.annonceId)
+    else q = q.is("annonce_id", null)
+    await q
     setConversations(prev => prev.map(c => c.key === conv.key ? { ...c, unread: 0 } : c))
   }
 
