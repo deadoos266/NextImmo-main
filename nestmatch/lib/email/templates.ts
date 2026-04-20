@@ -174,24 +174,47 @@ function button(href: string, label: string): string {
 
 // ─── Templates ───────────────────────────────────────────────────────────────
 
-export function verifyEmailTemplate(params: { userName: string | null; verifyUrl: string }): { subject: string; html: string; text: string } {
+export function verifyEmailTemplate(params: { userName: string | null; verifyUrl: string; code?: string }): { subject: string; html: string; text: string } {
   const greeting = params.userName ? `Bienvenue ${escapeHtml(params.userName)}` : "Bienvenue"
+  // Code OTP 6 chiffres : si fourni, on l'affiche en gros + lien fallback.
+  const codeBlock = params.code
+    ? `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0 8px;">
+      <tr>
+        <td align="center">
+          <div style="display:inline-block;background:${PALETTE.bg};border:1.5px solid ${PALETTE.border};border-radius:14px;padding:22px 28px;">
+            <p style="margin:0 0 6px;font-size:11px;font-weight:700;color:${PALETTE.textSubtle};text-transform:uppercase;letter-spacing:2px;">Code de vérification</p>
+            <p style="margin:0;font-size:38px;font-weight:800;letter-spacing:8px;color:${PALETTE.text};font-family:'DM Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">${escapeHtml(params.code)}</p>
+            <p style="margin:10px 0 0;font-size:11px;color:${PALETTE.textSubtle};">Valide 15 minutes</p>
+          </div>
+        </td>
+      </tr>
+    </table>
+    `
+    : ""
   const body = `
-    <h1 style="font-size:26px;font-weight:800;letter-spacing:-0.5px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">${greeting} 👋</h1>
+    <h1 style="font-size:26px;font-weight:800;letter-spacing:-0.5px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">${greeting}</h1>
     <p style="margin:0 0 6px;color:${PALETTE.textMuted};">Merci d'avoir créé ton compte. Il ne reste qu'à confirmer ton adresse email pour que tout soit actif.</p>
-    <p style="margin:0 0 16px;color:${PALETTE.textMuted};font-size:13px;">Ce lien est valide <strong>24 heures</strong>.</p>
-    ${button(params.verifyUrl, "Vérifier mon email")}
-    <p style="margin:28px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
+    ${codeBlock}
+    <p style="margin:18px 0 8px;color:${PALETTE.textMuted};font-size:13px;text-align:center;">Saisis ce code sur la page de vérification${params.code ? "" : " ou clique sur le bouton ci-dessous"}.</p>
+    ${button(params.verifyUrl, params.code ? "Vérifier mon email" : "Vérifier mon email")}
+    <p style="margin:20px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
       Si le bouton ne fonctionne pas, copie-colle ce lien dans ton navigateur :<br>
       <a href="${params.verifyUrl}" target="_blank" style="color:${PALETTE.textSubtle};word-break:break-all;">${escapeHtml(params.verifyUrl)}</a>
     </p>
-    <p style="margin:20px 0 0;font-size:12px;color:${PALETTE.textSubtle};">Si tu n'es pas à l'origine de cette inscription, ignore simplement cet email.</p>
+    <p style="margin:16px 0 0;font-size:12px;color:${PALETTE.textSubtle};">Si tu n'es pas à l'origine de cette inscription, ignore simplement cet email.</p>
   `
   const html = wrap("Confirme ton adresse email pour activer ton compte KeyMatch.", body, "verify")
   const text = `${greeting} !
 
-Merci d'avoir créé ton compte KeyMatch. Confirme ton adresse email en cliquant sur le lien ci-dessous (valide 24h) :
+Merci d'avoir créé ton compte KeyMatch.${params.code ? `
 
+Ton code de vérification : ${params.code}
+(valide 15 minutes)
+
+Saisis-le sur : ${params.verifyUrl.replace(/\/api\/auth\/verify-email.*$/, "/auth/verifier-email")}` : ""}
+
+Tu peux aussi cliquer sur ce lien :
 ${params.verifyUrl}
 
 Si tu n'es pas à l'origine de cette inscription, ignore cet email.

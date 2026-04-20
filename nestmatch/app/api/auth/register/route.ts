@@ -72,11 +72,15 @@ export async function POST(request: NextRequest) {
 
   const passwordHash = await bcrypt.hash(password, 12)
 
-  // Token de vérification email : hex random 48 chars, expire 24h.
-  // Si la migration 013 n'est pas encore appliquée, l'update silencieux
-  // échouera côté Supabase — on ne bloque pas le signup pour autant.
-  const verifyToken = crypto.randomBytes(24).toString("hex")
-  const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+  // Code de vérification email : 6 chiffres (OTP), expire 15 min.
+  // Paul : "page confirmation d'email manquante : envoi d'un vrai code
+  // a saisir par l'utilisateur pour acceder au site." Code genere via
+  // crypto.randomInt pour source d'entropie sure.
+  // On reste dans la colonne existante email_verify_token — pas besoin
+  // de migration. Fallback lien clickable /api/auth/verify-email?token=<code>
+  // continue a fonctionner en bonus si l'user prefere cliquer.
+  const verifyToken = String(crypto.randomInt(100000, 1000000))
+  const verifyExpires = new Date(Date.now() + 15 * 60 * 1000).toISOString()
 
   const { data: user, error } = await supabaseAdmin
     .from("users")
@@ -105,7 +109,7 @@ export async function POST(request: NextRequest) {
   // signup reste valide, l'user peut redemander un lien via /auth.
   const base = process.env.NEXT_PUBLIC_URL || "http://localhost:3000"
   const verifyUrl = `${base}/api/auth/verify-email?token=${verifyToken}`
-  const { subject, html, text } = verifyEmailTemplate({ userName: name, verifyUrl })
+  const { subject, html, text } = verifyEmailTemplate({ userName: name, verifyUrl, code: verifyToken })
   try {
     await sendEmail({ to: email.toLowerCase(), subject, html, text })
   } catch (err) {

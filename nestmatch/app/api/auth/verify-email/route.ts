@@ -14,7 +14,9 @@ export async function GET(req: NextRequest) {
   const token = url.searchParams.get("token")
   const base = process.env.NEXT_PUBLIC_URL || url.origin
 
-  if (!token || typeof token !== "string" || token.length < 32) {
+  // Accept both the new 6-digit OTP codes and legacy 48-hex tokens (compat
+  // avec les users qui ont recu un ancien lien avant le switch OTP).
+  if (!token || typeof token !== "string" || (token.length !== 6 && token.length < 32)) {
     return NextResponse.redirect(`${base}/auth?error=verify_failed`)
   }
 
