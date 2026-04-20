@@ -149,15 +149,25 @@ export default function Onboarding() {
             <button onClick={prev} style={{ background: "none", border: "none", color: "#6b7280", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
               ← Retour
             </button>
-          ) : (
-            <a href="/annonces" style={{ background: "none", border: "none", color: "#9ca3af", fontWeight: 500, fontSize: 13, textDecoration: "none" }}>
-              Passer
-            </a>
-          )}
+          ) : <span />}
           <button onClick={next} disabled={saving}
             style={{ background: saving ? "#9ca3af" : "#111", color: "white", border: "none", borderRadius: 999, padding: "12px 32px", fontWeight: 700, fontSize: 15, cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
             {step < STEPS ? "Continuer" : (saving ? "Enregistrement…" : "Voir les annonces")}
           </button>
+        </div>
+
+        {/* Boutons secondaires Ignorer / Mon dossier — visibles sur toutes les etapes.
+            "Ignorer" skip cet onboarding light et va voir les annonces tout de suite.
+            "Mon dossier" va directement sur la page dossier complete ALUR, pour les
+            users qui veulent poser leur dossier immediatement avant de chercher. */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 18, marginTop: 20, paddingTop: 16, borderTop: "1px solid #f3f4f6", flexWrap: "wrap" }}>
+          <a href="/annonces" style={{ color: "#9ca3af", fontSize: 12, fontWeight: 600, textDecoration: "none", letterSpacing: "0.2px" }}>
+            Ignorer cette étape
+          </a>
+          <span style={{ color: "#e5e7eb", fontSize: 12 }}>·</span>
+          <a href="/dossier" style={{ color: "#111", fontSize: 12, fontWeight: 700, textDecoration: "none", letterSpacing: "0.2px", borderBottom: "1.5px solid #111" }}>
+            Remplir mon dossier complet
+          </a>
         </div>
       </div>
     </main>
