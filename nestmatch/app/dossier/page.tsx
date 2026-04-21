@@ -1143,39 +1143,45 @@ export default function Dossier() {
   const [undoLabel, setUndoLabel] = useState<string | null>(null)
   const [activeSection, setActiveSection] = useState<string>("identite")
 
-  // Scroll-spy : observe les sections et met à jour activeSection selon celle
-  // qui est la plus visible. rootMargin resserré (-80px top, -70% bottom) +
-  // threshold binaire [0, 0.5] + debounce 80ms = zone de détection étroite et
-  // stabilité sur transitions rapides, évite le flicker quand 2 sections sont
-  // brièvement intersectantes en même temps.
+  // Scroll-spy basé sur la position : pour chaque section, on regarde si son top
+  // a passé un seuil fixe depuis le haut de la viewport. La section active est
+  // la dernière (par ordre d'apparition) dont le top est passé au-dessus du seuil.
+  //
+  // Monotone par construction : aucune oscillation possible entre 2 sections
+  // voisines, même si elles sont très courtes (ex: présentation vide ou 1 ligne).
+  // IntersectionObserver + ratio flickait dans ce cas car 2 sections pouvaient
+  // être simultanément visibles et l'ordre de tri devenait instable.
   useEffect(() => {
     if (loading) return
     const ids = ["identite", "pro", "logement", "garant", "presentation", "documents"]
-    const elements = ids
-      .map(id => document.getElementById(`sec-${id}`))
-      .filter((el): el is HTMLElement => el !== null)
-    if (elements.length === 0) return
-    let pending: ReturnType<typeof setTimeout> | null = null
-    let lastActive = ""
-    const observer = new IntersectionObserver(
-      entries => {
-        const visible = entries.filter(e => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)
-        if (!visible[0]) return
-        const next = visible[0].target.id.replace(/^sec-/, "")
-        if (next === lastActive) return
-        if (pending) clearTimeout(pending)
-        pending = setTimeout(() => {
-          lastActive = next
-          setActiveSection(next)
-          pending = null
-        }, 80)
-      },
-      { rootMargin: "-80px 0px -70% 0px", threshold: [0, 0.5] }
-    )
-    elements.forEach(el => observer.observe(el))
+
+    function update() {
+      const threshold = 120 // px depuis le top viewport (≈ sous la navbar sticky)
+      let active = ids[0]
+      for (const id of ids) {
+        const el = document.getElementById(`sec-${id}`)
+        if (!el) continue
+        if (el.getBoundingClientRect().top - threshold <= 0) active = id
+      }
+      setActiveSection(prev => prev === active ? prev : active)
+    }
+
+    let raf: number | null = null
+    function onScroll() {
+      if (raf !== null) return
+      raf = requestAnimationFrame(() => {
+        raf = null
+        update()
+      })
+    }
+
+    update()
+    window.addEventListener("scroll", onScroll, { passive: true })
+    window.addEventListener("resize", onScroll, { passive: true })
     return () => {
-      if (pending) clearTimeout(pending)
-      observer.disconnect()
+      window.removeEventListener("scroll", onScroll)
+      window.removeEventListener("resize", onScroll)
+      if (raf !== null) cancelAnimationFrame(raf)
     }
   }, [loading])
 
@@ -1768,12 +1774,15 @@ export default function Dossier() {
             </div>
           )}
 
-          {/* ══════════ GRID 3 COLONNES ══════════ */}
-          <div style={STYLES.layout.grid(isMobile)}>
+          {/* ══════════ GRID 3 COLONNES ══════════
+              En landscape court (iPhone paysage ≤640px haut), on force le
+              layout 1 colonne peu importe la largeur : 240+1fr+380 ne tient
+              pas sur 812px utiles et le contenu passe les uns sur les autres. */}
+          <div style={STYLES.layout.grid(isMobile || isShortViewport)}>
 
-            {/* Sommaire sticky (desktop only, relâché en landscape court) */}
-            {!isMobile && (
-              <aside style={STYLES.summary.wrap(!isShortViewport)} className="no-print">
+            {/* Sommaire sticky (desktop only, masqué en mobile ET landscape court) */}
+            {!isMobile && !isShortViewport && (
+              <aside style={STYLES.summary.wrap(true)} className="no-print">
                 <div style={STYLES.summary.eyebrow}>Sommaire</div>
                 <nav style={STYLES.summary.nav}>
                   {summaryItems.map(item => {
