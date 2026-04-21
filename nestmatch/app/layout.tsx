@@ -14,11 +14,16 @@ import { BRAND } from '../lib/brand'
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || BRAND.url
 
+// adjustFontFallback: false → désactive l'injection d'un <meta name="next-size-adjust">
+// qui causait le React #418 en prod Vercel. Float React 19 déplaçait ce meta du
+// body vers head au SSR, créant un mismatch à l'hydration. Le tradeoff (léger CLS
+// au swap swap→DM Sans) est acceptable vs. un Sentry qui crie sur toutes les pages.
 const dmSans = DM_Sans({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700', '800'],
   display: 'swap',
   variable: '--font-dm-sans',
+  adjustFontFallback: false,
 })
 
 const DEFAULT_TITLE = `${BRAND.name} — Location entre particuliers sans agence`
