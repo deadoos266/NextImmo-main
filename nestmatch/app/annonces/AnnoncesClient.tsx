@@ -15,6 +15,7 @@ import { useResponsive } from "../hooks/useResponsive"
 import CityAutocomplete from "../components/CityAutocomplete"
 import EmptyState from "../components/ui/EmptyState"
 import AnnonceSkeleton from "../components/ui/AnnonceSkeleton"
+import { useInterval, useReducedMotion } from "../components/home/hooks"
 
 // IMPORTANT : pas de `dynamic(..., { ssr: false })` au niveau module.
 // Ça émet `<template data-dgst="BAILOUT_TO_CLIENT_SIDE_RENDERING">` au SSR,
@@ -80,11 +81,19 @@ function highlightMatch(text: string, query: string): React.ReactNode {
   return <>{parts}</>
 }
 
-function CardPhoto({ annonce, height = 170 }: { annonce: any; height?: number }) {
+function CardPhoto({ annonce, aspect = "4 / 5" }: { annonce: any; aspect?: string }) {
   const [idx, setIdx] = useState(0)
+  const [hover, setHover] = useState(false)
+  const reduced = useReducedMotion()
   const realPhotos: string[] = Array.isArray(annonce.photos) && annonce.photos.length > 0 ? annonce.photos : []
   const total = realPhotos.length > 0 ? realPhotos.length : 1
   const base = GRADIENTS[annonce.id % GRADIENTS.length]
+
+  // Rotation auto hover (parité avec home/ListingCard) — tout en gardant les
+  // flèches manuelles pour les users qui veulent contrôler. Désactivé si
+  // reduced-motion ou une seule photo.
+  useInterval(hover && realPhotos.length > 1 && !reduced, () => setIdx(i => (i + 1) % total), 1200)
+  useEffect(() => { if (!hover) setIdx(0) }, [hover])
 
   function prev(e: React.MouseEvent) {
     e.preventDefault()
@@ -100,12 +109,14 @@ function CardPhoto({ annonce, height = 170 }: { annonce: any; height?: number })
   const currentPhoto = realPhotos[idx]
 
   return (
-    <div style={{ position: "relative", height, background: currentPhoto ? "#000" : base, overflow: "hidden", flexShrink: 0 }}
+    <div style={{ position: "relative", aspectRatio: aspect, background: currentPhoto ? "#000" : base, overflow: "hidden", flexShrink: 0 }}
       onMouseEnter={e => {
+        setHover(true)
         const btns = e.currentTarget.querySelectorAll<HTMLButtonElement>(".photo-nav")
         btns.forEach(b => (b.style.opacity = "1"))
       }}
       onMouseLeave={e => {
+        setHover(false)
         const btns = e.currentTarget.querySelectorAll<HTMLButtonElement>(".photo-nav")
         btns.forEach(b => (b.style.opacity = "0"))
       }}
@@ -144,20 +155,14 @@ function CardPhoto({ annonce, height = 170 }: { annonce: any; height?: number })
         </>
       )}
 
-      {/* Dots (seulement si plusieurs photos) */}
+      {/* Dots (seulement si plusieurs photos) — pas de compteur "1/5",
+         l'indicateur de position suffit, parité avec home/ListingCard */}
       {realPhotos.length > 1 && (
-        <div style={{ position: "absolute", bottom: 8, left: 0, right: 0, display: "flex", justifyContent: "center", gap: 4, zIndex: 2 }}>
+        <div style={{ position: "absolute", bottom: 10, left: 0, right: 0, display: "flex", justifyContent: "center", gap: 4, zIndex: 2 }}>
           {realPhotos.map((_, i) => (
             <div key={i} style={{ width: i === idx ? 14 : 5, height: 5, borderRadius: 999, background: i === idx ? "white" : "rgba(255,255,255,0.5)", transition: "all 0.2s" }} />
           ))}
         </div>
-      )}
-
-      {/* Compteur photos (si plusieurs) */}
-      {realPhotos.length > 1 && (
-        <span style={{ position: "absolute", bottom: 8, right: 10, background: "rgba(0,0,0,0.5)", color: "white", fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 999, zIndex: 2 }}>
-          {idx + 1}/{total}
-        </span>
       )}
     </div>
   )
@@ -610,12 +615,71 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 72px)", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", overflow: "hidden" }}>
 
-      {/* H1 SEO visible pour les crawlers — masqué visuellement mais lu par Google */}
+      {/* H1 SEO visible pour les crawlers — masqué visuellement mais lu par Google.
+         Le titre éditorial visible ci-dessous est un h2 (h1 réservé au SEO structuré). */}
       <h1 style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0, 0, 0, 0)", whiteSpace: "nowrap", border: 0 }}>
         {activeVille
           ? `Logements à louer à ${activeVille} — annonces entre particuliers`
           : "Logements à louer — annonces entre particuliers en France"}
       </h1>
+
+      {/* Header éditorial KM — pleine largeur, caché en mobile pour économiser la hauteur */}
+      {!isMobile && (
+        <div style={{ flexShrink: 0, padding: "18px 32px 6px" }}>
+          <p style={{ fontSize: 11, fontWeight: 600, color: "#6B6B6B", textTransform: "uppercase", letterSpacing: "1.6px", margin: 0 }}>
+            Annonces
+          </p>
+          <h2 style={{ fontSize: 40, fontWeight: 500, lineHeight: 1.08, margin: "6px 0 4px", color: "#111", letterSpacing: "-0.5px" }}>
+            {loading
+              ? (activeVille ? `Logements à ${activeVille}` : "Logements à louer")
+              : `${annoncesTraitees.length} logement${annoncesTraitees.length > 1 ? "s" : ""} ${activeVille ? `à ${activeVille}` : "disponible" + (annoncesTraitees.length > 1 ? "s" : "")}`}
+          </h2>
+          <p style={{ fontSize: 13, color: "#6B6B6B", margin: 0 }}>
+            {isProprietaire
+              ? "Mode propriétaire — tri chronologique"
+              : "Mis à jour en direct · tri par compatibilité"}
+          </p>
+
+          {/* Popular city chips — desktop only, cliquables pour setter ville */}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
+            {["Paris", "Lyon", "Marseille", "Bordeaux", "Nantes", "Lille", "Toulouse"].map(city => {
+              const isActive = activeVille?.toLowerCase() === city.toLowerCase()
+              return (
+                <button
+                  key={city}
+                  type="button"
+                  onClick={() => {
+                    const sp = new URLSearchParams()
+                    for (const [k, val] of Object.entries(initialSearchParams || {})) {
+                      if (typeof val === "string") sp.set(k, val)
+                      else if (Array.isArray(val) && val[0]) sp.set(k, val[0])
+                    }
+                    if (isActive) sp.delete("ville")
+                    else sp.set("ville", city)
+                    setMapBounds(null)
+                    const qs = sp.toString()
+                    router.replace(qs ? `/annonces?${qs}` : "/annonces", { scroll: false })
+                  }}
+                  style={{
+                    background: isActive ? "#111" : "white",
+                    color: isActive ? "white" : "#111",
+                    border: `1px solid ${isActive ? "#111" : "#EAE6DF"}`,
+                    borderRadius: 999,
+                    padding: "6px 14px",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {city}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Bandeau compact */}
       <div style={{ flexShrink: 0, padding: isMobile ? "10px 16px" : "10px 32px" }}>
@@ -682,12 +746,12 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
       <div style={{ flex: 1, display: "flex", overflow: "hidden", padding: isMobile ? "0 16px 16px" : "0 12px 12px 24px", gap: 12, flexDirection: isSmall ? "column" : "row" }}>
 
         {/* Sidebar filtres — masquée en mobile/tablette sauf toggle on */}
-        <div style={{ width: isSmall ? "100%" : 200, flexShrink: 0, overflowY: "auto", display: isSmall && !showFilters ? "none" : "block", maxHeight: isSmall ? 300 : undefined }}>
-          <div style={{ background: "white", borderRadius: 18, padding: 18 }}>
-            <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 14, color: "#111" }}>Affiner</p>
+        <div style={{ width: isSmall ? "100%" : 220, flexShrink: 0, overflowY: "auto", display: isSmall && !showFilters ? "none" : "block", maxHeight: isSmall ? 300 : undefined }}>
+          <div style={{ background: "white", borderRadius: 20, border: "1px solid #EAE6DF", padding: 20 }}>
+            <p style={{ fontSize: 11, fontWeight: 600, color: "#6B6B6B", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 16px" }}>Affiner</p>
 
-            <div style={{ marginBottom: 16 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>Ville</p>
+            <div style={{ marginBottom: 18 }}>
+              <p style={{ fontSize: 10, fontWeight: 600, color: "#6B6B6B", marginBottom: 8, textTransform: "uppercase", letterSpacing: "1.2px" }}>Ville</p>
               <CityAutocomplete
                 value={activeVille || ""}
                 onChange={v => {
@@ -707,30 +771,30 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                   router.replace(qs ? `/annonces?${qs}` : "/annonces", { scroll: false })
                 }}
                 placeholder="Ville ou code postal"
-                style={{ fontSize: 12, padding: "8px 12px" }}
+                style={{ fontSize: 12, padding: "9px 12px" }}
               />
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>Rechercher</p>
+            <div style={{ marginBottom: 18 }}>
+              <p style={{ fontSize: 10, fontWeight: 600, color: "#6B6B6B", marginBottom: 8, textTransform: "uppercase", letterSpacing: "1.2px" }}>Rechercher</p>
               <input
                 value={motCle}
                 onChange={e => setMotCle(e.target.value)}
                 placeholder="Mot-clé, quartier..."
-                style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: 12, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                style={{ width: "100%", padding: "9px 12px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 12, outline: "none", boxSizing: "border-box", fontFamily: "inherit", background: "#FAFAF7" }}
               />
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>Trier par</p>
+            <div style={{ marginBottom: 18 }}>
+              <p style={{ fontSize: 10, fontWeight: 600, color: "#6B6B6B", marginBottom: 8, textTransform: "uppercase", letterSpacing: "1.2px" }}>Trier par</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 {[
                   { val: "match", label: "Meilleur match" },
                   { val: "prix_asc", label: "Prix croissant" },
-                  { val: "prix_desc", label: "Prix decroissant" },
+                  { val: "prix_desc", label: "Prix décroissant" },
                 ].map(t => (
                   <button key={t.val} onClick={() => setTri(t.val as any)}
-                    style={{ padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 12, textAlign: "left", fontFamily: "inherit", background: tri === t.val ? "#111" : "#f9fafb", color: tri === t.val ? "white" : "#374151" }}>
+                    style={{ padding: "8px 12px", borderRadius: 10, border: `1px solid ${tri === t.val ? "#111" : "transparent"}`, cursor: "pointer", fontWeight: 600, fontSize: 12, textAlign: "left", fontFamily: "inherit", background: tri === t.val ? "#111" : "#FAFAF7", color: tri === t.val ? "white" : "#374151", transition: "all 0.15s" }}>
                     {t.label}
                   </button>
                 ))}
@@ -738,41 +802,42 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
             </div>
 
             {profil && !isProprietaire && (
-              <div style={{ marginBottom: 16 }}>
-                <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>Score minimum</p>
+              <div style={{ marginBottom: 18 }}>
+                <p style={{ fontSize: 10, fontWeight: 600, color: "#6B6B6B", marginBottom: 8, textTransform: "uppercase", letterSpacing: "1.2px" }}>Score minimum</p>
                 <input type="range" min={0} max={90} step={10} value={scoreMin} onChange={e => setScoreMin(Number(e.target.value))} style={{ width: "100%", accentColor: "#111" }} />
                 <p style={{ fontSize: 12, fontWeight: 700, marginTop: 4, color: "#111" }}>{scoreMin > 0 ? `>= ${scoreMin}%` : "Tous"}</p>
               </div>
             )}
 
             {/* Surface m² */}
-            <div style={{ marginBottom: 16 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>Surface (m²)</p>
+            <div style={{ marginBottom: 18 }}>
+              <p style={{ fontSize: 10, fontWeight: 600, color: "#6B6B6B", marginBottom: 8, textTransform: "uppercase", letterSpacing: "1.2px" }}>Surface (m²)</p>
               <div style={{ display: "flex", gap: 8 }}>
                 <input type="number" min={0} placeholder="Min" value={surfaceMin} onChange={e => setSurfaceMin(e.target.value)}
-                  style={{ width: "50%", padding: "7px 10px", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: 12, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }} />
+                  style={{ width: "50%", padding: "8px 10px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 12, outline: "none", fontFamily: "inherit", boxSizing: "border-box", background: "#FAFAF7" }} />
                 <input type="number" min={0} placeholder="Max" value={surfaceMax} onChange={e => setSurfaceMax(e.target.value)}
-                  style={{ width: "50%", padding: "7px 10px", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: 12, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }} />
+                  style={{ width: "50%", padding: "8px 10px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 12, outline: "none", fontFamily: "inherit", boxSizing: "border-box", background: "#FAFAF7" }} />
               </div>
             </div>
 
             {/* Nombre de pièces minimum */}
-            <div style={{ marginBottom: 16 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>Pièces minimum</p>
+            <div style={{ marginBottom: 18 }}>
+              <p style={{ fontSize: 10, fontWeight: 600, color: "#6B6B6B", marginBottom: 8, textTransform: "uppercase", letterSpacing: "1.2px" }}>Pièces minimum</p>
               <div style={{ display: "flex", gap: 6 }}>
                 {[0, 1, 2, 3, 4, 5].map(n => (
                   <button key={n} onClick={() => setPiecesMin(n)}
                     style={{
                       flex: 1,
-                      padding: "7px 0",
+                      padding: "8px 0",
                       background: piecesMin === n ? "#111" : "white",
                       color: piecesMin === n ? "white" : "#374151",
-                      border: `1.5px solid ${piecesMin === n ? "#111" : "#e5e7eb"}`,
-                      borderRadius: 8,
+                      border: `1px solid ${piecesMin === n ? "#111" : "#EAE6DF"}`,
+                      borderRadius: 10,
                       fontSize: 12,
-                      fontWeight: piecesMin === n ? 800 : 600,
+                      fontWeight: piecesMin === n ? 700 : 500,
                       cursor: "pointer",
                       fontFamily: "inherit",
+                      transition: "all 0.15s",
                     }}
                   >
                     {n === 0 ? "Tous" : `${n}+`}
@@ -782,14 +847,14 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
             </div>
 
             <div>
-              <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.5px" }}>Options</p>
+              <p style={{ fontSize: 10, fontWeight: 600, color: "#6B6B6B", marginBottom: 10, textTransform: "uppercase", letterSpacing: "1.2px" }}>Options</p>
               {[
                 { label: "Dispo immédiate", val: dispoImmediate, set: setDispoImmediate },
                 { label: "Parking", val: filtreParking, set: setFiltreParking },
                 { label: "Extérieur", val: filtreExterieur, set: setFiltreExterieur },
               ].map(opt => (
                 <div key={opt.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                  <span style={{ fontSize: 12, color: "#374151" }}>{opt.label}</span>
+                  <span style={{ fontSize: 13, color: "#374151" }}>{opt.label}</span>
                   <Toggle val={opt.val} set={opt.set} />
                 </div>
               ))}
@@ -797,7 +862,7 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
 
             {mapBounds && (
               <button onClick={() => setMapBounds(null)}
-                style={{ width: "100%", marginTop: 8, padding: "7px 0", background: "#f3f4f6", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: "#374151" }}>
+                style={{ width: "100%", marginTop: 10, padding: "9px 0", background: "#F1EEE8", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: "#374151" }}>
                 Voir toute la France
               </button>
             )}
@@ -1014,28 +1079,38 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                 const isSelected = selectedId === a.id
                 return (
                   <a key={a.id} href={`/annonces/${a.id}`}
-                    onMouseEnter={() => setSelectedId(a.id)}
-                    onMouseLeave={() => setSelectedId(null)}
+                    onMouseEnter={e => {
+                      setSelectedId(a.id)
+                      e.currentTarget.style.transform = "translateY(-2px)"
+                      e.currentTarget.style.boxShadow = "0 10px 28px rgba(0,0,0,0.08)"
+                    }}
+                    onMouseLeave={e => {
+                      setSelectedId(null)
+                      e.currentTarget.style.transform = "none"
+                      e.currentTarget.style.boxShadow = isSelected
+                        ? "0 6px 24px rgba(0,0,0,0.08)"
+                        : "0 1px 2px rgba(0,0,0,0.02)"
+                    }}
                     style={{
                       display: "block", textDecoration: "none", color: "#111",
                       background: "white",
-                      borderRadius: 16,
+                      borderRadius: 20,
+                      border: "1px solid #EAE6DF",
                       overflow: "hidden",
                       boxShadow: isSelected
-                        ? "0 6px 24px rgba(0,0,0,0.10)"
-                        : "0 1px 6px rgba(0,0,0,0.05)",
-                      transition: "box-shadow 0.2s, transform 0.15s",
-                      transform: isSelected ? "translateY(-1px)" : "none",
-                      outline: isSelected ? "2px solid #111" : "2px solid transparent",
+                        ? "0 6px 24px rgba(0,0,0,0.08)"
+                        : "0 1px 2px rgba(0,0,0,0.02)",
+                      transition: "box-shadow 0.25s ease, transform 0.25s ease, border-color 0.2s",
+                      borderColor: isSelected ? "#111" : "#EAE6DF",
                     }}>
-                    {/* Photo carousel */}
+                    {/* Photo carousel — aspect 4/5 + rotation auto hover */}
                     <div style={{ position: "relative" }}>
-                      <CardPhoto annonce={a} height={150} />
+                      <CardPhoto annonce={a} aspect="4 / 5" />
                       <button
                         onClick={e => handleToggleFavori(e, a.id)}
                         aria-label={favoris.includes(a.id) ? "Retirer des favoris" : "Ajouter aux favoris"}
-                        style={{ position: "absolute", top: 10, right: 10, zIndex: 4, background: "white", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.15)", transition: "transform 0.15s" }}
-                        onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.15)")}
+                        style={{ position: "absolute", top: 12, right: 12, zIndex: 4, background: "white", border: "none", borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.12)", transition: "transform 0.15s" }}
+                        onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.12)")}
                         onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill={favoris.includes(a.id) ? "#dc2626" : "none"} stroke={favoris.includes(a.id) ? "#dc2626" : "#6b7280"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                           <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
@@ -1043,28 +1118,35 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                       </button>
                     </div>
 
-                    {/* Infos */}
-                    <div style={{ padding: "12px 14px 14px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 3 }}>
-                        <p style={{ fontWeight: 700, fontSize: 14, flex: 1, marginRight: 8, lineHeight: 1.3 }}>{motCle.trim() ? highlightMatch(a.titre || "", motCle) : a.titre}</p>
+                    {/* Infos — style éditorial KM : eyebrow ville, titre h3, prix séparé */}
+                    <div style={{ padding: "16px 18px 18px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
+                        <p style={{ fontSize: 11, fontWeight: 600, color: "#6B6B6B", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0 }}>
+                          {motCle.trim() ? highlightMatch(a.ville || "", motCle) : a.ville}
+                        </p>
                         {info && (
-                          <span style={{ background: info.bg, color: info.color, padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, flexShrink: 0, marginTop: 2 }}>
+                          <span style={{ background: info.bg, color: info.color, padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
                             {Math.round(score / 10)}%
                           </span>
                         )}
                         {isOwn && (
-                          <span style={{ background: "#f3f4f6", color: "#374151", padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, flexShrink: 0 }}>Votre bien</span>
+                          <span style={{ background: "#F1EEE8", color: "#374151", padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, flexShrink: 0 }}>Votre bien</span>
                         )}
                       </div>
-                      <p style={{ color: "#9ca3af", fontSize: 12, marginBottom: 8 }}>{motCle.trim() ? highlightMatch(a.ville || "", motCle) : a.ville}</p>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div style={{ display: "flex", gap: 10, fontSize: 12, color: "#6b7280" }}>
-                          <span>{a.surface} m²</span>
-                          <span style={{ color: "#d1d5db" }}>·</span>
-                          <span>{a.pieces} p.</span>
-                          {a.meuble && <><span style={{ color: "#d1d5db" }}>·</span><span>Meuble</span></>}
-                        </div>
-                        <span style={{ fontSize: 16, fontWeight: 800, color: "#111" }}>
+                      <h3 style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3, margin: "0 0 10px", color: "#111" }}>
+                        {motCle.trim() ? highlightMatch(a.titre || "", motCle) : a.titre}
+                      </h3>
+                      <div style={{ display: "flex", gap: 10, fontSize: 12, color: "#6b7280", marginBottom: 10 }}>
+                        <span>{a.surface} m²</span>
+                        <span style={{ color: "#d1d5db" }}>·</span>
+                        <span>{a.pieces} p.</span>
+                        {a.meuble && <><span style={{ color: "#d1d5db" }}>·</span><span>Meublé</span></>}
+                      </div>
+                      <div style={{ borderTop: "1px solid #EAE6DF", paddingTop: 10, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "#6B6B6B", textTransform: "uppercase", letterSpacing: "1px" }}>
+                          Loyer
+                        </span>
+                        <span style={{ fontSize: 18, fontWeight: 500, color: "#111" }}>
                           {a.prix} €<span style={{ fontSize: 11, fontWeight: 400, color: "#9ca3af" }}>/mois</span>
                         </span>
                       </div>
@@ -1078,9 +1160,13 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
 
         {/* Carte : lazy-loaded côté client uniquement via useLazyMap (import()
             runtime dans un useEffect). Gate `mounted` pour s'assurer que rien
-            de ce sous-arbre ne suspend au SSR. */}
+            de ce sous-arbre ne suspend au SSR.
+            PROTOCOLE LEAFLET : wrap en position:relative + isolation:isolate +
+            overflow:hidden + border léger. ZÉRO modif de MapAnnonces.tsx /
+            leafletSetup.ts — cf directive Paul 2026-04-22. Pas de z-index ni
+            transform sur ce parent pour ne pas casser le stacking des tiles. */}
         {mounted && (
-          <div style={{ flex: 1, position: "relative", isolation: "isolate", borderRadius: isMobile ? 0 : 18, overflow: "hidden", display: isSmall && !showMap ? "none" : "block" }}>
+          <div style={{ flex: 1, position: "relative", isolation: "isolate", borderRadius: isMobile ? 0 : 20, overflow: "hidden", border: isMobile ? "none" : "1px solid #EAE6DF", display: isSmall && !showMap ? "none" : "block" }}>
             {MapComp ? (
               <MapComp
                 annonces={annoncesForMap}
