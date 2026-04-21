@@ -40,6 +40,17 @@ function useLazyMap() {
 import { CARD_GRADIENTS as GRADIENTS } from "../../lib/cardGradients"
 
 /**
+ * Tri-state bool pour filtres sidebar : retourne true UNIQUEMENT si la valeur
+ * est explicitement fausse (false, 0, "false", "f", "0"). null/undefined =
+ * information absente = neutre (ne doit PAS faire exclure l'annonce du
+ * résultat). Aligné avec `toBool()` de lib/matching.ts qui traite aussi
+ * l'absence d'info comme neutre dans le scoring.
+ */
+function isFalse(v: unknown): boolean {
+  return v === false || v === 0 || v === "false" || v === "f" || v === "0"
+}
+
+/**
  * Highlight d'un terme dans un texte. Retourne un fragment JSX avec
  * les matchs entourés de <mark>. Case-insensitive, accents-insensitive
  * (normalisation NFD sur les 2 côtés pour matcher "ecole" vs "école").
@@ -517,22 +528,31 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
       }
       if (!isProprietaire && scoreMin > 0 && a.scoreMatching !== null && Math.round(a.scoreMatching / 10) < scoreMin) return false
       if (dispoImmediate && a.dispo !== "Disponible maintenant") return false
-      if (filtreParking && !a.parking) return false
-      if (filtreExterieur && !a.balcon && !a.terrasse && !a.jardin) return false
-      if (filtreMeuble && !a.meuble) return false
+      // Filtres booléens — null/undefined = info absente = neutre (on ne doit
+      // pas exclure une annonce dont l'info n'est simplement pas renseignée,
+      // sinon tout un onboarding proprio imparfait rendrait les biens
+      // invisibles à tous les users connectés). On exclut UNIQUEMENT si la
+      // valeur est explicitement fausse. Même philosophie que estExclu() et
+      // calculerScore() dans lib/matching.ts.
+      if (filtreParking && isFalse(a.parking)) return false
+      if (filtreExterieur && isFalse(a.balcon) && isFalse(a.terrasse) && isFalse(a.jardin)) return false
+      if (filtreMeuble && isFalse(a.meuble)) return false
       if (budgetMaxFiltre && a.prix && a.prix > budgetMaxFiltre) return false
       // HARD LOCK animaux — sauf si l'user a demandé explicitement à voir
       // aussi les autres annonces pour cette session (animauxOverride).
-      if (filtreAnimauxLock && !animauxOverride && !a.animaux) return false
+      // Info absente = neutre (sinon on masque des annonces où le proprio
+      // n'a pas renseigné). Seules les annonces marquées explicitement
+      // "animaux: false" sont filtrées.
+      if (filtreAnimauxLock && !animauxOverride && isFalse(a.animaux)) return false
       // DPE : A est meilleur que G. On filtre si dpe > filtreDpeMax.
       if (filtreDpeMax && a.dpe && a.dpe.localeCompare(filtreDpeMax) > 0) return false
-      // Surface min/max (m²)
+      // Surface min/max (m²) — null = info absente = neutre (pas d'exclusion)
       const surfMinN = surfaceMin ? parseInt(surfaceMin, 10) : 0
       const surfMaxN = surfaceMax ? parseInt(surfaceMax, 10) : 0
-      if (surfMinN > 0 && (!a.surface || a.surface < surfMinN)) return false
-      if (surfMaxN > 0 && (!a.surface || a.surface > surfMaxN)) return false
-      // Nombre de pièces minimum
-      if (piecesMin > 0 && (!a.pieces || a.pieces < piecesMin)) return false
+      if (surfMinN > 0 && a.surface != null && a.surface < surfMinN) return false
+      if (surfMaxN > 0 && a.surface != null && a.surface > surfMaxN) return false
+      // Nombre de pièces minimum — null = info absente = neutre
+      if (piecesMin > 0 && a.pieces != null && a.pieces < piecesMin) return false
       // Recherche full-text : titre + description + ville + adresse
       if (motCle.trim()) {
         const q = motCle.toLowerCase().trim()
