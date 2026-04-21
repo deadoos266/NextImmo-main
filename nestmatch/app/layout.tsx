@@ -10,6 +10,7 @@ import ToastStack from './components/ToastStack'
 import ServiceWorkerRegister from './components/ServiceWorkerRegister'
 import BetaBanner from './components/BetaBanner'
 import MountedOnly from './components/MountedOnly'
+import ThemeApplier from './components/ThemeApplier'
 import { BRAND } from '../lib/brand'
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || BRAND.url
@@ -142,11 +143,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr" className={dmSans.variable} suppressHydrationWarning>
       <head>
-        {/* Anti-flash thème : doit s'exécuter synchrone AVANT le premier paint
-            pour éviter un flash light→dark au chargement. Fichier statique
-            pour respecter un CSP sans 'unsafe-inline'. */}
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script src="/theme-init.js" />
+        {/* theme-init.js RETIRÉ (cause confirmée de React #418 args HTML) :
+            il faisait documentElement.setAttribute('data-theme', ...) AVANT
+            hydration, ce que React 19 voit comme un mismatch structural sur
+            <html> malgré suppressHydrationWarning. Thème appliqué maintenant
+            post-mount par ThemeApplier. Tradeoff : brève flash light→dark au
+            premier render pour les utilisateurs en mode sombre. */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -156,6 +158,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body style={{ fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif" }} suppressHydrationWarning>
         <Providers>
+          <ThemeApplier />
           <BetaBanner />
           <AdminBar />
           {/* Navbar/Footer wrappés dans MountedOnly pour éliminer toute
