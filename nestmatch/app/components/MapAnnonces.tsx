@@ -141,13 +141,7 @@ function CenterOnHint({ centerHint }: { centerHint?: [number, number] | null }) 
   return null
 }
 
-export default function MapAnnonces({
-  annonces,
-  selectedId,
-  onSelect,
-  onBoundsChange,
-  centerHint,
-}: {
+export interface MapAnnoncesProps {
   annonces: any[]
   selectedId: number | null
   onSelect: (id: number) => void
@@ -155,7 +149,15 @@ export default function MapAnnonces({
   // userDriven=false au moveend initial (ne doit pas clear les filtres URL)
   onBoundsChange: (bounds: L.LatLngBounds, userDriven: boolean) => void
   centerHint?: [number, number] | null
-}) {
+}
+
+export default function MapAnnonces({
+  annonces,
+  selectedId,
+  onSelect,
+  onBoundsChange,
+  centerHint,
+}: MapAnnoncesProps) {
   useEffect(() => { fixLeafletIcons() }, [])
   const [mapType, setMapType] = useState<MapType>("plan")
   const [pendingBounds, setPendingBounds] = useState<L.LatLngBounds | null>(null)

@@ -1,8 +1,8 @@
 "use client"
-import { Suspense, useEffect, useState, useCallback } from "react"
-import dynamic from "next/dynamic"
+import { useEffect, useState, useCallback, type ComponentType } from "react"
 import Image from "next/image"
-import { useSearchParams, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
+import type { MapAnnoncesProps } from "../components/MapAnnonces"
 import { supabase } from "../../lib/supabase"
 import { calculerScore, estExclu, labelScore } from "../../lib/matching"
 import { useSession } from "next-auth/react"
@@ -16,7 +16,25 @@ import CityAutocomplete from "../components/CityAutocomplete"
 import EmptyState from "../components/ui/EmptyState"
 import AnnonceSkeleton from "../components/ui/AnnonceSkeleton"
 
-const MapAnnonces = dynamic(() => import("../components/MapAnnonces"), { ssr: false })
+// IMPORTANT : pas de `dynamic(..., { ssr: false })` au niveau module.
+// Ça émet `<template data-dgst="BAILOUT_TO_CLIENT_SIDE_RENDERING">` au SSR,
+// que React attrape à l'hydratation et lève comme minified error #418
+// (hydration mismatch). À la place, on charge MapAnnonces via un
+// `import()` runtime dans un useEffect post-mount (voir useLazyMap ci-dessous).
+// MapAnnonces dépend de Leaflet qui accède à window → pas importable au SSR.
+// Avec useLazyMap, l'import est ordonné dans un effet client-only, sans
+// passer par le pipeline Suspense/dynamic de Next.
+function useLazyMap() {
+  const [Comp, setComp] = useState<ComponentType<MapAnnoncesProps> | null>(null)
+  useEffect(() => {
+    let alive = true
+    import("../components/MapAnnonces").then((mod) => {
+      if (alive) setComp(() => mod.default)
+    })
+    return () => { alive = false }
+  }, [])
+  return Comp
+}
 
 // Gradients placeholder partagés dans lib/cardGradients.ts
 import { CARD_GRADIENTS as GRADIENTS } from "../../lib/cardGradients"
@@ -140,25 +158,27 @@ const Toggle = ({ val, set }: { val: boolean; set: (v: boolean) => void }) => (
   </div>
 )
 
-export default function AnnoncesClient() {
-  return (
-    <Suspense fallback={<AnnoncesFallback />}>
-      <AnnoncesContent />
-    </Suspense>
-  )
+type SP = Record<string, string | string[] | undefined>
+
+// Helper pour extraire une valeur string d'un param qui peut être
+// string | string[] | undefined (API Next 15 searchParams).
+function spGet(sp: SP | undefined, key: string): string {
+  const v = sp?.[key]
+  if (Array.isArray(v)) return v[0] ?? ""
+  return v ?? ""
 }
 
-function AnnoncesFallback() {
-  return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "calc(100vh - 72px)", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", color: "#6b7280" }}>
-      Chargement des annonces...
-    </div>
-  )
+export default function AnnoncesClient({ initialSearchParams }: { initialSearchParams?: SP } = {}) {
+  // Plus de <Suspense> wrapper — AnnoncesContent ne suspend plus puisque
+  // useSearchParams() a été retiré au profit d'un prop initialSearchParams.
+  return <AnnoncesContent initialSearchParams={initialSearchParams} />
 }
 
-function AnnoncesContent() {
-  const searchParams = useSearchParams()
+function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) {
   const router = useRouter()
+  const MapComp = useLazyMap()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
   const [annonces, setAnnonces] = useState<any[]>([])
   const [profil, setProfil] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -224,15 +244,20 @@ function AnnoncesContent() {
   const { isMobile, isTablet } = useResponsive()
   const isSmall = isMobile || isTablet
 
-  // Filtres pre-remplis depuis l'URL (barre de recherche home) ou depuis le profil locataire
-  const urlVille = searchParams?.get("ville") || ""
-  const urlBudget = parseInt(searchParams?.get("budget_max") || "0") || 0
-  const urlType = searchParams?.get("type") || ""
-  // Nouveaux filtres persistés en URL (batch 34)
-  const urlSurfaceMin = searchParams?.get("surface_min") || ""
-  const urlSurfaceMax = searchParams?.get("surface_max") || ""
-  const urlPiecesMin = parseInt(searchParams?.get("pieces_min") || "0") || 0
-  const urlMotCle = searchParams?.get("q") || ""
+  // Filtres pre-remplis depuis l'URL (barre de recherche home) ou depuis le profil locataire.
+  // Lus depuis la prop `initialSearchParams` passée par le server component parent.
+  // ⚠️ Ces valeurs ne se rafraîchissent PAS automatiquement quand l'URL change
+  // post-mount (ex. user qui change de ville via clic sur un chip) — la mise à jour
+  // est gérée explicitement par les handlers qui font `router.replace()` ET mettent
+  // à jour le state local des filtres en parallèle. Trade-off pour éliminer
+  // useSearchParams() qui causait un bailout SSR → React #418.
+  const urlVille = spGet(initialSearchParams, "ville")
+  const urlBudget = parseInt(spGet(initialSearchParams, "budget_max") || "0") || 0
+  const urlType = spGet(initialSearchParams, "type")
+  const urlSurfaceMin = spGet(initialSearchParams, "surface_min")
+  const urlSurfaceMax = spGet(initialSearchParams, "surface_max")
+  const urlPiecesMin = parseInt(spGet(initialSearchParams, "pieces_min") || "0") || 0
+  const urlMotCle = spGet(initialSearchParams, "q")
 
   // Les filtres de recherche sont DÉCOUPLÉS de "Mon dossier" — ils ne
   // viennent QUE de l'URL. Le profil peut servir à suggérer des critères
@@ -646,8 +671,14 @@ function AnnoncesContent() {
               <CityAutocomplete
                 value={activeVille || ""}
                 onChange={v => {
-                  // Met à jour l'URL → active la recherche sur cette ville
-                  const sp = new URLSearchParams(searchParams?.toString() || "")
+                  // Met à jour l'URL → active la recherche sur cette ville.
+                  // On repart des params initiaux puis on override — acceptable
+                  // car seul "ville" peut changer ici.
+                  const sp = new URLSearchParams()
+                  for (const [k, val] of Object.entries(initialSearchParams || {})) {
+                    if (typeof val === "string") sp.set(k, val)
+                    else if (Array.isArray(val) && val[0]) sp.set(k, val[0])
+                  }
                   if (v.trim()) sp.set("ville", v.trim())
                   else sp.delete("ville")
                   // Reset la zone carte pour voir la nouvelle ville
@@ -1025,16 +1056,22 @@ function AnnoncesContent() {
           )}
         </div>
 
-        {/* Carte — isolation: isolate pour que Leaflet reste sous la navbar */}
-        <div style={{ flex: 1, position: "relative", isolation: "isolate", borderRadius: isMobile ? 0 : 18, overflow: "hidden", display: isSmall && !showMap ? "none" : "block" }}>
-          <MapAnnonces
-            annonces={annoncesForMap}
-            selectedId={selectedId}
-            onSelect={id => setSelectedId(id)}
-            onBoundsChange={handleBoundsChange}
-            centerHint={centerCity ? [centerCity[0], centerCity[1]] : null}
-          />
-        </div>
+        {/* Carte : lazy-loaded côté client uniquement via useLazyMap (import()
+            runtime dans un useEffect). Gate `mounted` pour s'assurer que rien
+            de ce sous-arbre ne suspend au SSR. */}
+        {mounted && (
+          <div style={{ flex: 1, position: "relative", isolation: "isolate", borderRadius: isMobile ? 0 : 18, overflow: "hidden", display: isSmall && !showMap ? "none" : "block" }}>
+            {MapComp ? (
+              <MapComp
+                annonces={annoncesForMap}
+                selectedId={selectedId}
+                onSelect={id => setSelectedId(id)}
+                onBoundsChange={handleBoundsChange}
+                centerHint={centerCity ? [centerCity[0], centerCity[1]] : null}
+              />
+            ) : null}
+          </div>
+        )}
       </div>
     </div>
   )
