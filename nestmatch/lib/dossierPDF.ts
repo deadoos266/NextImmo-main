@@ -39,6 +39,8 @@ export type DossierData = {
   budgetMax?: number | null
   score: number
   docs: DossierDocEntry[]
+  // Pièces complémentaires libres — uniquement les labels, le binaire est dans le ZIP.
+  docsLibres?: { label: string }[]
 }
 
 function fmtDate(s?: string): string {
@@ -215,6 +217,18 @@ function renderDossier(doc: JsPDFDoc, data: DossierData): void {
       const marker = d.count > 0 ? "[x]" : "[ ]"
       const countStr = d.count > 1 ? ` (${d.count} fichiers)` : ""
       doc.text(`${marker}  ${d.label}${countStr}`, margin, y)
+      y += 5
+    }
+  }
+
+  // Section Pièces complémentaires libres (si fournies)
+  if (data.docsLibres && data.docsLibres.length > 0) {
+    y += 5
+    sectionTitle("Pièces complémentaires")
+    doc.setFontSize(9); doc.setFont("helvetica", "normal")
+    for (const d of data.docsLibres) {
+      check(6)
+      doc.text(`[x]  ${d.label}`, margin, y)
       y += 5
     }
   }

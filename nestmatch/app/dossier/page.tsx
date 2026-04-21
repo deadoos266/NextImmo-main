@@ -73,6 +73,27 @@ function toArray(val: unknown): string[] {
   return [val as string]
 }
 
+// Pièces complémentaires libres (attestation hébergement, lettre de recommandation…)
+// Stockées dans profils.dossier_docs_libres (JSONB) — format [{url, label, uploaded_at}].
+// Max 5. Colonne dédiée (migration 022) pour isoler le format enrichi sans toucher
+// au schéma existant dossier_docs (qui reste Record<string, string[]>).
+const DOC_LIBRE_MAX = 5
+const LABEL_LIBRE_MIN = 2
+const LABEL_LIBRE_MAX = 80
+type DocLibre = { url: string; label: string; uploaded_at: string }
+
+function toDocLibres(val: unknown): DocLibre[] {
+  if (!Array.isArray(val)) return []
+  return val
+    .filter((x): x is DocLibre =>
+      typeof x === "object" && x !== null
+      && typeof (x as DocLibre).url === "string"
+      && typeof (x as DocLibre).label === "string"
+      && typeof (x as DocLibre).uploaded_at === "string"
+    )
+    .slice(0, DOC_LIBRE_MAX)
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // STYLES éditoriaux — centralisés pour révision visuelle simplifiée.
 // Palette KM canonique (components.jsx:4-9). Zéro Fraunces : italique
@@ -595,23 +616,6 @@ function LockBadge({ mailto }: { mailto: string }) {
   )
 }
 
-function SelectField({
-  value, options, onChange, isMobile, emptyLabel = "— Sélectionner —",
-}: {
-  value: string
-  options: readonly string[]
-  onChange: (v: string) => void
-  isMobile: boolean
-  emptyLabel?: string
-}) {
-  return (
-    <select value={value} onChange={e => onChange(e.target.value)} style={STYLES.field.input(isMobile)}>
-      <option value="">{emptyLabel}</option>
-      {options.map(o => <option key={o} value={o}>{o}</option>)}
-    </select>
-  )
-}
-
 // Autocomplete nationalités : combobox ARIA-compliant (listbox + activedescendant).
 // Navigation clavier complète : ↑/↓ parcourt les options, Enter valide, Escape
 // ferme, Tab ferme sans sélection. Filtre accent-insensible.
@@ -930,6 +934,136 @@ function DocGroup({
   )
 }
 
+// ─── FreeDocsSection (pièces complémentaires libres) ────────────────
+// Affiche la liste des pièces libres + formulaire d'ajout (label + file).
+// Chaque pièce a un label éditable inline (debounced côté parent).
+function FreeDocsSection({
+  docsLibres, uploading, onUpload, onRename, onRemove, fileRef, isMobile, schemaReady,
+}: {
+  docsLibres: DocLibre[]
+  uploading: boolean
+  onUpload: (files: FileList, label: string) => void
+  onRename: (idx: number, label: string) => void
+  onRemove: (idx: number) => void
+  fileRef: React.MutableRefObject<HTMLInputElement | null>
+  isMobile: boolean
+  schemaReady: boolean
+}) {
+  const [newLabel, setNewLabel] = useState("")
+  const [confirmingIdx, setConfirmingIdx] = useState<number | null>(null)
+  const canAdd = docsLibres.length < DOC_LIBRE_MAX && schemaReady
+  const labelValid = newLabel.trim().length >= LABEL_LIBRE_MIN && newLabel.trim().length <= LABEL_LIBRE_MAX
+
+  function triggerFile() {
+    if (!canAdd || !labelValid) return
+    fileRef.current?.click()
+  }
+
+  return (
+    <div style={STYLES.doc.group}>
+      <div style={STYLES.doc.groupHead}>
+        <span style={STYLES.doc.groupTitle}>Complémentaires</span>
+        <span style={STYLES.doc.groupRule} />
+      </div>
+      <p style={{ fontSize: 13, color: T.meta, margin: "0 0 14px", lineHeight: 1.55 }}>
+        Ajoutez tout document supplémentaire pouvant appuyer votre dossier : attestation d&apos;hébergement, lettre de recommandation, justificatifs complémentaires de revenus, etc. ({docsLibres.length}/{DOC_LIBRE_MAX})
+      </p>
+
+      {!schemaReady && (
+        <div style={{ background: "#FFF8E6", border: `1px solid #E9D89B`, color: "#8A6B00", borderRadius: 12, padding: "10px 14px", fontSize: 12, marginBottom: 12 }}>
+          La migration DB n&apos;est pas encore appliquée — cette section sera disponible dès que l&apos;administrateur aura exécuté la migration 022.
+        </div>
+      )}
+
+      {/* Liste des pièces existantes */}
+      {docsLibres.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
+          {docsLibres.map((d, idx) => {
+            const confirming = confirmingIdx === idx
+            return (
+              <div key={idx} style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center", gap: 10, padding: 12, border: `1px solid ${T.line}`, borderRadius: 12, background: "#fff" }}>
+                <input
+                  type="text"
+                  value={d.label}
+                  onChange={e => onRename(idx, e.target.value)}
+                  placeholder="Nom de la pièce"
+                  maxLength={LABEL_LIBRE_MAX}
+                  aria-label={`Nom de la pièce ${idx + 1}`}
+                  style={{ flex: 1, padding: "8px 12px", border: `1px solid ${T.line}`, borderRadius: 8, fontSize: 14, fontFamily: "inherit", background: "#fff", color: T.ink, outline: "none", minWidth: 0 }}
+                />
+                <a
+                  href={d.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: 12, color: T.meta, textDecoration: "underline", whiteSpace: "nowrap" }}
+                >
+                  Voir le fichier
+                </a>
+                {confirming ? (
+                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                    <button type="button" onClick={() => { onRemove(idx); setConfirmingIdx(null) }} style={{ background: T.danger, color: "#fff", border: "none", borderRadius: 999, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                      Confirmer
+                    </button>
+                    <button type="button" onClick={() => setConfirmingIdx(null)} style={{ background: "#fff", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 999, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                      Annuler
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setConfirmingIdx(idx)} title="Supprimer" aria-label="Supprimer cette pièce" style={{ background: "transparent", border: `1px solid ${T.line}`, borderRadius: 999, padding: "6px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: T.danger, flexShrink: 0 }}>
+                    ✕
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Formulaire d'ajout */}
+      {canAdd && (
+        <div style={{ background: T.mutedBg, borderRadius: 12, padding: 14, border: `1px dashed ${T.line}` }}>
+          <label htmlFor="libre-label-input" style={{ display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: T.soft, marginBottom: 8 }}>
+            Nom de la nouvelle pièce
+          </label>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <input
+              id="libre-label-input"
+              type="text"
+              value={newLabel}
+              onChange={e => setNewLabel(e.target.value)}
+              placeholder={`Ex : Attestation d'hébergement (${LABEL_LIBRE_MIN}–${LABEL_LIBRE_MAX} caractères)`}
+              maxLength={LABEL_LIBRE_MAX}
+              disabled={uploading}
+              style={{ flex: 1, minWidth: 220, padding: "9px 12px", border: `1px solid ${T.line}`, borderRadius: 8, fontSize: 14, fontFamily: "inherit", background: "#fff", color: T.ink, outline: "none" }}
+            />
+            <input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              ref={fileRef}
+              style={{ display: "none" }}
+              onChange={e => {
+                if (e.target.files?.length) {
+                  onUpload(e.target.files, newLabel)
+                  setNewLabel("")
+                }
+                e.target.value = ""
+              }}
+            />
+            <button
+              type="button"
+              onClick={triggerFile}
+              disabled={uploading || !labelValid}
+              style={{ background: T.ink, color: "#fff", border: "none", borderRadius: 999, padding: "10px 20px", fontWeight: 600, fontSize: 13, cursor: (uploading || !labelValid) ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: (uploading || !labelValid) ? 0.5 : 1, letterSpacing: "0.3px", whiteSpace: "nowrap" }}
+            >
+              {uploading ? "Envoi…" : "+ Ajouter une pièce"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // Composant principal
 // ═══════════════════════════════════════════════════════════════════
@@ -952,6 +1086,15 @@ export default function Dossier() {
   const [uploading, setUploading] = useState<DocKey | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [docs, setDocs] = useState<Record<string, string[]>>({})
+  // Pièces complémentaires libres (voir DOC_LIBRE_MAX). Séparé de `docs` car
+  // format enrichi (label éditable) et colonne DB distincte.
+  const [docsLibres, setDocsLibres] = useState<DocLibre[]>([])
+  const [uploadingLibre, setUploadingLibre] = useState(false)
+  const [docsLibresBackup, setDocsLibresBackup] = useState<DocLibre[] | null>(null)
+  const libreFileRef = useRef<HTMLInputElement | null>(null)
+  // Si la migration 022 n'est pas appliquée, la colonne dossier_docs_libres
+  // n'existe pas : on détecte via code erreur 42703 et on masque la section.
+  const [libresSchemaReady, setLibresSchemaReady] = useState(true)
   const { isMobile } = useResponsive()
   // isShortViewport : écrans courts (mobile landscape, ~400px de haut) où un
   // sticky TOC/SharePanel prend tout le viewport et le contenu scrolle derrière.
@@ -1115,6 +1258,10 @@ export default function Dossier() {
         Object.entries(data.dossier_docs).forEach(([k, v]) => { normalized[k] = toArray(v) })
         setDocs(normalized)
       }
+      // Pièces libres — undefined si colonne absente (migration 022 non appliquée).
+      if ("dossier_docs_libres" in data) {
+        setDocsLibres(toDocLibres(data.dossier_docs_libres))
+      }
     }
     setLoading(false)
   }
@@ -1166,6 +1313,101 @@ export default function Dossier() {
     setUndoLabel("Document supprimé")
     // Commit DB différé 5 sec : laisse le temps d'annuler.
     triggerRemoveDoc(updated)
+  }
+
+  async function uploadDocLibre(files: FileList, label: string) {
+    if (!session?.user?.email) return
+    const trimmed = label.trim()
+    if (trimmed.length < LABEL_LIBRE_MIN || trimmed.length > LABEL_LIBRE_MAX) {
+      setUploadError(`Le nom de la pièce doit faire entre ${LABEL_LIBRE_MIN} et ${LABEL_LIBRE_MAX} caractères.`)
+      return
+    }
+    if (docsLibres.length >= DOC_LIBRE_MAX) {
+      setUploadError(`Maximum ${DOC_LIBRE_MAX} pièces complémentaires.`)
+      return
+    }
+    const file = files[0]
+    if (!file) return
+    const check = await validateDocument(file)
+    if (!check.ok) {
+      setUploadError(check.error)
+      return
+    }
+    setUploadingLibre(true)
+    setUploadError(null)
+    const ext = file.name.split(".").pop()
+    const path = `${session.user.email}/libres_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+    const { error } = await supabase.storage.from("dossiers").upload(path, file, { upsert: false })
+    if (error) {
+      setUploadError("L'envoi du fichier a échoué, veuillez réessayer.")
+      setUploadingLibre(false)
+      return
+    }
+    const { data: urlData } = supabase.storage.from("dossiers").getPublicUrl(path)
+    const entry: DocLibre = {
+      url: urlData.publicUrl,
+      label: trimmed,
+      uploaded_at: new Date().toISOString(),
+    }
+    const updated = [...docsLibres, entry]
+    setDocsLibres(updated)
+    const { error: upsertErr } = await supabase
+      .from("profils")
+      .upsert({ email: session.user.email.toLowerCase(), dossier_docs_libres: updated }, { onConflict: "email" })
+    if (upsertErr) {
+      if (upsertErr.code === "42703" || /dossier_docs_libres/i.test(upsertErr.message || "")) {
+        setLibresSchemaReady(false)
+        setUploadError("La pièce a été envoyée mais la migration DB 022 n'est pas encore appliquée. Contactez l'administrateur.")
+      } else {
+        setUploadError("L'enregistrement a échoué, veuillez réessayer.")
+      }
+    }
+    setUploadingLibre(false)
+  }
+
+  async function renameDocLibreLabel(idx: number, label: string) {
+    if (!session?.user?.email) return
+    const trimmed = label.slice(0, LABEL_LIBRE_MAX)
+    const updated = docsLibres.map((d, i) => i === idx ? { ...d, label: trimmed } : d)
+    setDocsLibres(updated)
+    // Persistance différée : on sauvegarde uniquement si le label est valide
+    // pour éviter d'écraser la DB à chaque frappe.
+    if (trimmed.trim().length >= LABEL_LIBRE_MIN) {
+      const { error } = await supabase
+        .from("profils")
+        .upsert({ email: session.user.email.toLowerCase(), dossier_docs_libres: updated }, { onConflict: "email" })
+      if (error?.code === "42703") setLibresSchemaReady(false)
+    }
+  }
+
+  // Suppression d'une pièce libre : backup + commit différé 5s via useUndo.
+  const {
+    trigger: triggerRemoveDocLibre,
+    undo: cancelRemoveDocLibre,
+  } = useUndo<DocLibre[]>({
+    onConfirm: async (next) => {
+      if (!session?.user?.email) return
+      await supabase
+        .from("profils")
+        .upsert({ email: session.user.email.toLowerCase(), dossier_docs_libres: next }, { onConflict: "email" })
+      setDocsLibresBackup(null)
+      setUndoLabel(null)
+    },
+  })
+
+  function removeDocLibre(idx: number) {
+    setDocsLibresBackup(prev => prev ?? docsLibres)
+    const updated = docsLibres.filter((_, i) => i !== idx)
+    setDocsLibres(updated)
+    setUndoLabel("Pièce complémentaire supprimée")
+    triggerRemoveDocLibre(updated)
+  }
+
+  function handleUndoRemoveDocLibre() {
+    cancelRemoveDocLibre()
+    if (docsLibresBackup) setDocsLibres(docsLibresBackup)
+    setDocsLibresBackup(null)
+    setUndoLabel(null)
   }
 
   async function sauvegarder() {
@@ -1234,6 +1476,7 @@ export default function Dossier() {
       budgetMax: profil?.budget_max ?? null,
       score,
       docs: allDocs.map(d => ({ key: d.key, label: d.label, count: (docs[d.key] || []).length })),
+      docsLibres: docsLibres.map(d => ({ label: d.label })),
     }
   }
 
@@ -1299,6 +1542,28 @@ export default function Dossier() {
             }
           })())
         })
+      }
+
+      // Pièces complémentaires libres — sous-dossier `autres/` avec filename = label sanitizé.
+      if (docsLibres.length > 0) {
+        const autresFolder = rootFolder.folder("autres")
+        if (autresFolder) {
+          docsLibres.forEach((d, i) => {
+            tasks.push((async () => {
+              try {
+                const res = await fetch(d.url)
+                if (!res.ok) throw new Error(`HTTP ${res.status}`)
+                const blob = await res.blob()
+                const cleanPath = d.url.split("?")[0]
+                const ext = (cleanPath.split(".").pop() || "bin").slice(0, 6).toLowerCase()
+                const safeLabel = toFolderName(d.label) || `piece_${i + 1}`
+                autresFolder.file(`${String(i + 1).padStart(2, "0")}_${safeLabel}.${ext}`, blob)
+              } catch {
+                failed.push(`Complémentaire — ${d.label}`)
+              }
+            })())
+          })
+        }
       }
       await Promise.all(tasks)
 
@@ -1404,8 +1669,11 @@ export default function Dossier() {
     <>
       <style>{`@media print { nav, .no-print { display: none !important; } body { background: white !important; } .print-section { page-break-inside: avoid; } }`}</style>
 
-      {pendingDocs !== null && undoLabel && (
-        <UndoToast message={undoLabel} onUndo={handleUndoRemoveDoc} />
+      {undoLabel && (pendingDocs !== null || docsLibresBackup !== null) && (
+        <UndoToast
+          message={undoLabel}
+          onUndo={docsLibresBackup ? handleUndoRemoveDocLibre : handleUndoRemoveDoc}
+        />
       )}
 
       <main style={STYLES.main}>
@@ -1719,6 +1987,16 @@ export default function Dossier() {
                 {form.garant === true && (
                   <DocGroup title="Documents du garant" items={DOCS_GARANT} shared={docCardShared} />
                 )}
+                <FreeDocsSection
+                  docsLibres={docsLibres}
+                  uploading={uploadingLibre}
+                  onUpload={uploadDocLibre}
+                  onRename={renameDocLibreLabel}
+                  onRemove={removeDocLibre}
+                  fileRef={libreFileRef}
+                  isMobile={isMobile}
+                  schemaReady={libresSchemaReady}
+                />
               </Section>
 
               <button

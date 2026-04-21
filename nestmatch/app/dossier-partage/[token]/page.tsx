@@ -91,6 +91,17 @@ export default async function DossierPartage({ params }: { params: Promise<{ tok
   const docs = (profil.dossier_docs || {}) as Record<string, string[] | string>
   const expiresFull = new Date(valid.exp).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
 
+  // Pièces complémentaires libres (graceful si colonne absente).
+  type LibreEntry = { url: string; label: string; uploaded_at?: string }
+  const docsLibresRaw: unknown = profil.dossier_docs_libres
+  const docsLibres: LibreEntry[] = Array.isArray(docsLibresRaw)
+    ? (docsLibresRaw as unknown[]).filter((x): x is LibreEntry =>
+        typeof x === "object" && x !== null
+        && typeof (x as LibreEntry).url === "string"
+        && typeof (x as LibreEntry).label === "string"
+      ).slice(0, 5)
+    : []
+
   const section: React.CSSProperties = {
     background: T.white,
     borderRadius: 20,
@@ -315,6 +326,58 @@ export default async function DossierPartage({ params }: { params: Promise<{ tok
             })}
           </div>
         </div>
+
+        {/* Pièces complémentaires libres (si fournies) */}
+        {docsLibres.length > 0 && (
+          <div style={section}>
+            <div style={eyebrow}>
+              <span>Pièces complémentaires</span>
+              <div style={eyebrowBar} />
+              <span style={{ letterSpacing: "1.5px" }}>{profil.presentation ? "08" : "07"}</span>
+            </div>
+            <h2 style={h2}>Justificatifs additionnels fournis par le candidat</h2>
+            <p style={{ fontSize: 12, color: T.meta, margin: "0 0 16px", lineHeight: 1.6 }}>
+              Documents nommés et fournis librement par le candidat (attestation d&apos;hébergement, lettre de recommandation, etc.).
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
+              {docsLibres.map((d, idx) => {
+                const fname = filenameFromUrl(d.url)
+                const isImg = IMG_EXT.test(fname)
+                const isPdf = PDF_EXT.test(fname)
+                const viewHref = `/api/dossier-partage/${token}/file/libres/${idx}`
+                return (
+                  <div key={idx} style={{ border: `1px solid ${T.line}`, borderRadius: 14, background: T.white, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                    <div style={{ aspectRatio: "16 / 10", background: T.mutedBg, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", borderBottom: `1px solid ${T.hairline}` }}>
+                      {isImg ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={d.url} alt={d.label} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <svg width="44" height="56" viewBox="0 0 44 56" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                          <path d="M4 4h22l14 14v34a0 0 0 0 1 0 0H4V4z" stroke={T.soft} strokeWidth="1.5" fill="#fff"/>
+                          <path d="M26 4v14h14" stroke={T.soft} strokeWidth="1.5" fill="none"/>
+                          <text x="22" y="44" textAnchor="middle" fontFamily="DM Sans" fontSize="9" fontWeight="600" fill={T.ink}>{isPdf ? "PDF" : "DOC"}</text>
+                        </svg>
+                      )}
+                    </div>
+                    <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
+                      <p style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 1.4, color: T.soft, margin: 0, fontWeight: 700 }}>Complémentaire</p>
+                      <p style={{ fontSize: 13, color: T.ink, margin: 0, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.label}</p>
+                      <p style={{ fontSize: 11, color: T.meta, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fname}</p>
+                      <div style={{ display: "flex", gap: 8, marginTop: "auto", paddingTop: 4 }}>
+                        <a href={viewHref} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textAlign: "center", fontSize: 12, fontWeight: 600, padding: "8px 10px", borderRadius: 999, background: T.ink, color: T.white, textDecoration: "none", letterSpacing: "0.3px" }}>
+                          Voir
+                        </a>
+                        <a href={viewHref} download={fname} style={{ flex: 1, textAlign: "center", fontSize: 12, fontWeight: 600, padding: "8px 10px", borderRadius: 999, background: T.white, color: T.ink, border: `1px solid ${T.line}`, textDecoration: "none", letterSpacing: "0.3px" }}>
+                          Télécharger
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         <p style={{ fontSize: 11, color: T.soft, textAlign: "center", marginTop: 24, lineHeight: 1.6 }}>
           Lien de partage sécurisé · <Link href="/" style={{ color: T.meta, textDecoration: "none", borderBottom: `1px solid ${T.hairline}` }}>{BRAND.name}</Link>

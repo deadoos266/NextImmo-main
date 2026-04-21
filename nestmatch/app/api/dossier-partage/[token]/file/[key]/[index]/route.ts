@@ -60,20 +60,39 @@ export async function GET(
   }
 
   // 3. Récupère le profil + la pièce demandée
+  //    key="libres" pointe vers profils.dossier_docs_libres (pièces complémentaires),
+  //    toutes les autres clés pointent vers profils.dossier_docs (format historique).
   const { data: profil } = await supabaseAdmin
     .from("profils")
-    .select("dossier_docs")
+    .select("dossier_docs, dossier_docs_libres")
     .eq("email", valid.email.toLowerCase())
     .single()
 
-  if (!profil?.dossier_docs) {
+  if (!profil) {
     return NextResponse.json({ error: "Dossier vide" }, { status: 404 })
   }
 
-  const docs = profil.dossier_docs as Record<string, string[] | string>
-  const val = docs[key]
-  const urls = Array.isArray(val) ? val : val ? [val] : []
-  const url = urls[idx]
+  let url: string | undefined
+  if (key === "libres") {
+    type LibreEntry = { url: string; label: string }
+    const libres: unknown = profil.dossier_docs_libres
+    const arr = Array.isArray(libres)
+      ? (libres as unknown[]).filter((x): x is LibreEntry =>
+          typeof x === "object" && x !== null
+          && typeof (x as LibreEntry).url === "string"
+          && typeof (x as LibreEntry).label === "string"
+        )
+      : []
+    url = arr[idx]?.url
+  } else {
+    if (!profil.dossier_docs) {
+      return NextResponse.json({ error: "Dossier vide" }, { status: 404 })
+    }
+    const docs = profil.dossier_docs as Record<string, string[] | string>
+    const val = docs[key]
+    const urls = Array.isArray(val) ? val : val ? [val] : []
+    url = urls[idx]
+  }
   if (!url) {
     return NextResponse.json({ error: "Pièce non trouvée" }, { status: 404 })
   }

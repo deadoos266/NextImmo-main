@@ -123,6 +123,17 @@ export async function GET(
     return { key, label: DOC_LABELS[key], count }
   })
 
+  // Pièces libres (graceful si colonne absente)
+  type LibreEntry = { url: string; label: string; uploaded_at?: string }
+  const docsLibresRaw: unknown = profil.dossier_docs_libres
+  const docsLibres: LibreEntry[] = Array.isArray(docsLibresRaw)
+    ? (docsLibresRaw as unknown[]).filter((x): x is LibreEntry =>
+        typeof x === "object" && x !== null
+        && typeof (x as LibreEntry).url === "string"
+        && typeof (x as LibreEntry).label === "string"
+      ).slice(0, 5)
+    : []
+
   const pdfData: DossierData = {
     nom,
     email: valid.email,
@@ -147,6 +158,7 @@ export async function GET(
     budgetMax: profil.budget_max ?? null,
     score,
     docs: docEntries,
+    docsLibres: docsLibres.map(d => ({ label: d.label })),
   }
 
   // 6. JSZip dynamique (lib lourde)
@@ -201,6 +213,27 @@ export async function GET(
       })())
     })
   }
+
+  // 6c. Pièces libres — sous-dossier `autres/` avec filename = `{idx+1}_{label_sanitizé}.ext`
+  docsLibres.forEach((d, idx) => {
+    jobs.push((async (): Promise<Job> => {
+      const match = d.url.match(/\/object\/(?:public|sign)\/dossiers\/([^?]+)/)
+      const filename = filenameFromUrl(d.url)
+      const ext = filename.split(".").pop()?.toLowerCase() || "bin"
+      const safeLabel = safeSegment(d.label) || `piece_${idx + 1}`
+      const safeFilename = `${String(idx + 1).padStart(2, "0")}_${safeLabel}.${ext}`
+      if (!match) {
+        return { ok: false, folder: "autres", filename: safeFilename, reason: "URL inconnue" }
+      }
+      const path = decodeURIComponent(match[1])
+      const { data, error } = await supabaseAdmin.storage.from("dossiers").download(path)
+      if (error || !data) {
+        return { ok: false, folder: "autres", filename: safeFilename, reason: error?.message || "Introuvable" }
+      }
+      const buf = Buffer.from(await data.arrayBuffer())
+      return { ok: true, folder: "autres", filename: safeFilename, buf }
+    })())
+  })
 
   const results = await Promise.all(jobs)
   const manifestLines: string[] = []
