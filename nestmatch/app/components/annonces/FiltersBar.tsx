@@ -1,5 +1,4 @@
 "use client"
-import { type ReactNode } from "react"
 import FilterPopover from "../ui/FilterPopover"
 import CityAutocomplete from "../CityAutocomplete"
 
@@ -7,11 +6,14 @@ import CityAutocomplete from "../CityAutocomplete"
  * Barre horizontale sticky sous le header éditorial de /annonces.
  *
  * Desktop (≥1024) :
- *   [Ville ▾] [Budget ▾] [Pièces ▾]  ·  [⊟ Filtres (n)]  ·  [Tri ▾] [☰/▦] N résultats
+ *   [Ville ▾] [Budget ▾] [Compatibilité ▾]  ·  [⊟ Filtres (n)]      [Tri ▾] [☰/▦] N résultats
  *
  * Tablette (768-1023) : même agencement mais scroll-x si overflow.
  * Mobile (<768) : uniquement [Filtres] [Tri ▾] + compteur ; les popovers
  * rapides sont masqués (tout passe dans la modal).
+ *
+ * Groupe droit : Tri + ViewToggle + compteur sont compactés (gap:8) et
+ * collés côte à côte pour éviter la sensation « Tri isolé à l'extrême droite ».
  *
  * Z-index 6000 : au-dessus du contenu et du header éditorial, en-dessous
  * de la Navbar (7000) et de FiltersModal (7500). background semi-translucide
@@ -36,9 +38,10 @@ export interface FiltersBarProps {
   budgetMaxFiltre: number | null
   setBudgetMaxFiltre: (v: number | null) => void
 
-  // Pièces popover
-  piecesMin: number
-  setPiecesMin: (n: number) => void
+  // Compatibilité popover (slider 0-90 step 10) — remplace Pièces en quick chip
+  scoreMin: number
+  setScoreMin: (n: number) => void
+  showScoreMin: boolean // masqué pour proprio ou si pas de profil
 
   // Bouton Filtres (modal)
   onOpenModal: () => void
@@ -56,6 +59,11 @@ export interface FiltersBarProps {
   // Compteur
   resultCount: number
   loading: boolean
+
+  // Top sticky : 0 quand la FiltersBar est dans un container scrollable
+  // isolé (scroll liste = scroll parent custom). 72 quand le scroll est le
+  // document (mode grille, mobile) et qu'il faut rester sous la Navbar.
+  stickyTop?: number
 }
 
 function IconFilters() {
@@ -103,8 +111,9 @@ export default function FiltersBar(props: FiltersBarProps) {
     onChangeVille,
     budgetMaxFiltre,
     setBudgetMaxFiltre,
-    piecesMin,
-    setPiecesMin,
+    scoreMin,
+    setScoreMin,
+    showScoreMin,
     onOpenModal,
     activeFilterCount,
     tri,
@@ -114,28 +123,29 @@ export default function FiltersBar(props: FiltersBarProps) {
     setView,
     resultCount,
     loading,
+    stickyTop = 0,
   } = props
 
   const showInlinePopovers = !isMobile // desktop + tablette
 
   return (
     <div
+      className="km-filters-bar-fallback"
       style={{
         position: "sticky",
-        top: 72,
+        top: stickyTop,
         zIndex: 6000,
         // Fond semi-translucide + fallback opaque si backdrop-filter non supporté
         background: "rgba(247,244,239,0.92)",
         WebkitBackdropFilter: "blur(10px)",
         backdropFilter: "blur(10px)",
         borderBottom: "1px solid #EAE6DF",
-        padding: isMobile ? "10px 16px" : "12px 32px",
+        padding: isMobile ? "10px 0" : "12px 0",
         display: "flex",
         alignItems: "center",
         gap: 10,
         flexShrink: 0,
         overflowX: isTablet ? "auto" : "visible",
-        // Safari fallback : sans blur, on augmente l'opacité
       }}
     >
       <style>{`
@@ -218,44 +228,43 @@ export default function FiltersBar(props: FiltersBarProps) {
             </div>
           </FilterPopover>
 
-          {/* Pièces popover */}
-          <FilterPopover
-            label="Pièces"
-            value={piecesMin > 0 ? `${piecesMin}+` : null}
-            active={piecesMin > 0}
-            width={260}
-            onClear={() => setPiecesMin(0)}
-          >
-            <p style={{ fontSize: 11, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 10px" }}>Nombre minimum</p>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {[0, 1, 2, 3, 4, 5].map(n => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setPiecesMin(n)}
-                  style={{
-                    flex: "1 1 auto",
-                    padding: "8px 12px",
-                    background: piecesMin === n ? "#111" : "white",
-                    color: piecesMin === n ? "white" : "#666",
-                    border: `1px solid ${piecesMin === n ? "#111" : "#EAE6DF"}`,
-                    borderRadius: 999,
-                    fontSize: 13,
-                    fontWeight: piecesMin === n ? 600 : 500,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    minWidth: 42,
-                  }}
-                >
-                  {n === 0 ? "Tous" : `${n}+`}
-                </button>
-              ))}
-            </div>
-          </FilterPopover>
+          {/* Compatibilité popover — slider 0-90 step 10 */}
+          {showScoreMin && (
+            <FilterPopover
+              label="Compatibilité"
+              value={scoreMin > 0 ? `${scoreMin}% min` : null}
+              active={scoreMin > 0}
+              width={280}
+              onClear={() => setScoreMin(0)}
+            >
+              <p style={{ fontSize: 11, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 10px" }}>Score minimum</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+                <input
+                  type="range"
+                  min={0}
+                  max={90}
+                  step={10}
+                  value={scoreMin}
+                  onChange={e => setScoreMin(Number(e.target.value))}
+                  aria-label="Compatibilité minimum"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={scoreMin}
+                  style={{ flex: 1, accentColor: "#111" }}
+                />
+                <span style={{ fontSize: 13, fontWeight: 600, color: "#111", minWidth: 52, textAlign: "right" }}>
+                  {scoreMin > 0 ? `≥ ${scoreMin}%` : "Tous"}
+                </span>
+              </div>
+              <p style={{ fontSize: 11, color: "#888", fontStyle: "italic", margin: "6px 0 0" }}>
+                Les annonces en dessous de ce seuil sont masquées.
+              </p>
+            </FilterPopover>
+          )}
         </>
       )}
 
-      {/* Bouton Filtres (centre) */}
+      {/* Bouton Filtres (centre gauche) */}
       <button
         type="button"
         onClick={onOpenModal}
@@ -302,105 +311,107 @@ export default function FiltersBar(props: FiltersBarProps) {
         )}
       </button>
 
-      {/* Espace flex */}
+      {/* Espace flex — pousse le groupe droit */}
       <div style={{ flex: 1 }} />
 
-      {/* Droite : Tri + View toggle + compteur */}
-      <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#666" }}>
-        <span style={{ fontWeight: 500, whiteSpace: "nowrap" }}>Trier&nbsp;:</span>
-        <select
-          value={tri}
-          onChange={e => setTri(e.target.value as TriKey)}
-          style={{
-            padding: "7px 28px 7px 12px",
-            border: "1px solid #EAE6DF",
-            borderRadius: 999,
-            background: "white",
-            fontSize: 12,
-            fontWeight: 600,
-            color: "#111",
-            cursor: "pointer",
-            fontFamily: "inherit",
-            appearance: "none",
-            backgroundImage:
-              "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>\")",
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: "right 10px center",
-          }}
-        >
-          {showMatchOption && <option value="match">Matching</option>}
-          <option value="recent">Plus récent</option>
-          <option value="alpha">A-Z</option>
-          <option value="prix_asc">Prix croissant</option>
-          <option value="prix_desc">Prix décroissant</option>
-        </select>
-      </label>
-
-      {!isMobile && (
-        <div
-          role="group"
-          aria-label="Affichage liste ou grille"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            background: "white",
-            border: "1px solid #EAE6DF",
-            borderRadius: 999,
-            padding: 3,
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => setView("list")}
-            aria-label="Vue liste"
-            aria-pressed={view === "list"}
+      {/* GROUPE DROIT : Tri + ViewToggle + compteur collés (gap:8) */}
+      <div style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#666" }}>
+          <span style={{ fontWeight: 500, whiteSpace: "nowrap" }}>Trier&nbsp;:</span>
+          <select
+            value={tri}
+            onChange={e => setTri(e.target.value as TriKey)}
             style={{
-              width: 32,
-              height: 28,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: view === "list" ? "#111" : "transparent",
-              color: view === "list" ? "white" : "#666",
-              border: "none",
+              padding: "7px 28px 7px 12px",
+              border: "1px solid #EAE6DF",
               borderRadius: 999,
+              background: "white",
+              fontSize: 12,
+              fontWeight: 600,
+              color: "#111",
               cursor: "pointer",
               fontFamily: "inherit",
-              transition: "all 150ms",
+              appearance: "none",
+              backgroundImage:
+                "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>\")",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "right 10px center",
             }}
           >
-            <IconList />
-          </button>
-          <button
-            type="button"
-            onClick={() => setView("grid")}
-            aria-label="Vue grille"
-            aria-pressed={view === "grid"}
-            style={{
-              width: 32,
-              height: 28,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: view === "grid" ? "#111" : "transparent",
-              color: view === "grid" ? "white" : "#666",
-              border: "none",
-              borderRadius: 999,
-              cursor: "pointer",
-              fontFamily: "inherit",
-              transition: "all 150ms",
-            }}
-          >
-            <IconGrid />
-          </button>
-        </div>
-      )}
+            {showMatchOption && <option value="match">Matching</option>}
+            <option value="recent">Plus récent</option>
+            <option value="alpha">A-Z</option>
+            <option value="prix_asc">Prix croissant</option>
+            <option value="prix_desc">Prix décroissant</option>
+          </select>
+        </label>
 
-      {!isMobile && (
-        <span style={{ fontSize: 12, color: "#666", whiteSpace: "nowrap", fontWeight: 500 }}>
-          {loading ? "Chargement…" : `${resultCount} résultat${resultCount > 1 ? "s" : ""}`}
-        </span>
-      )}
+        {!isMobile && (
+          <div
+            role="group"
+            aria-label="Affichage liste ou grille"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              background: "white",
+              border: "1px solid #EAE6DF",
+              borderRadius: 999,
+              padding: 3,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setView("list")}
+              aria-label="Vue liste"
+              aria-pressed={view === "list"}
+              style={{
+                width: 32,
+                height: 28,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: view === "list" ? "#111" : "transparent",
+                color: view === "list" ? "white" : "#666",
+                border: "none",
+                borderRadius: 999,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                transition: "all 150ms",
+              }}
+            >
+              <IconList />
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("grid")}
+              aria-label="Vue grille"
+              aria-pressed={view === "grid"}
+              style={{
+                width: 32,
+                height: 28,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: view === "grid" ? "#111" : "transparent",
+                color: view === "grid" ? "white" : "#666",
+                border: "none",
+                borderRadius: 999,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                transition: "all 150ms",
+              }}
+            >
+              <IconGrid />
+            </button>
+          </div>
+        )}
+
+        {!isMobile && (
+          <span style={{ fontSize: 12, color: "#666", whiteSpace: "nowrap", fontWeight: 500 }}>
+            {loading ? "Chargement…" : `${resultCount} résultat${resultCount > 1 ? "s" : ""}`}
+          </span>
+        )}
+      </div>
     </div>
   )
 }

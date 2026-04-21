@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useRef, type ReactNode } from "react"
+import CityAutocomplete from "../CityAutocomplete"
 
 /**
  * Modal plein écran pour l'ensemble des filtres avancés de /annonces.
@@ -9,8 +10,12 @@ import { useEffect, useRef, type ReactNode } from "react"
  *  - Desktop : panneau centré max-width 720, max-height 85vh, radius 20.
  *  - Mobile  : panneau plein écran, slide-up 320ms.
  *  - Header sticky (72px) avec titre + bouton fermer + compteur live.
- *  - Body scrollable, 7 sections espacées 32px.
+ *  - Body scrollable, 9 sections espacées 32px (parité totale avec FiltersBar).
  *  - Footer sticky (80px) avec reset + CTA « Voir les N résultats ».
+ *
+ * Parité totale avec FiltersBar : Ville / Budget / Compatibilité / Pièces
+ * sont également présents dans la modal — les popovers de la FiltersBar
+ * sont de simples raccourcis. Chaque filtre est réglable ici.
  *
  * Interaction live : chaque changement met à jour immédiatement l'état
  * parent — le compteur du footer reflète le nombre d'annonces après filtre
@@ -19,6 +24,10 @@ import { useEffect, useRef, type ReactNode } from "react"
  *
  * Accessibilité : role dialog + aria-modal, ESC ferme, body overflow hidden
  * pendant modal open, focus trap léger sur la première action focusable.
+ *
+ * Les recherches sauvegardées NE SONT PAS dans cette modal — elles sont
+ * gérées via le SavedSearchesPopover attaché au lien « Sauvegarder cette
+ * recherche » du header éditorial.
  */
 
 type MeubleTri = "oui" | "non" | null
@@ -35,7 +44,15 @@ export interface FiltersModalProps {
   motCle: string
   setMotCle: (v: string) => void
 
-  // Pièces (miroir popover desktop, présent aussi modal pour mobile)
+  // Ville (parité avec FiltersBar)
+  activeVille: string
+  onChangeVille: (v: string) => void
+
+  // Budget (parité avec FiltersBar)
+  budgetMaxFiltre: number | null
+  setBudgetMaxFiltre: (v: number | null) => void
+
+  // Pièces
   piecesMin: number
   setPiecesMin: (n: number) => void
 
@@ -82,11 +99,6 @@ export interface FiltersModalProps {
   // DPE max
   filtreDpeMax: string
   setFiltreDpeMax: (v: string) => void
-
-  // Recherches sauvegardées (optionnel)
-  savedSearches?: Array<{ id: string; name: string; savedAt: string }>
-  onApplySaved?: (id: string) => void
-  onDeleteSaved?: (id: string) => void
 
   // Reset global
   onResetAll: () => void
@@ -147,6 +159,10 @@ export default function FiltersModal(props: FiltersModalProps) {
     resultCount,
     motCle,
     setMotCle,
+    activeVille,
+    onChangeVille,
+    budgetMaxFiltre,
+    setBudgetMaxFiltre,
     piecesMin,
     setPiecesMin,
     surfaceMin,
@@ -181,9 +197,6 @@ export default function FiltersModal(props: FiltersModalProps) {
     setAnimauxOverride,
     filtreDpeMax,
     setFiltreDpeMax,
-    savedSearches,
-    onApplySaved,
-    onDeleteSaved,
     onResetAll,
     isMobile,
   } = props
@@ -338,7 +351,52 @@ export default function FiltersModal(props: FiltersModalProps) {
             />
           </div>
 
-          {/* Section 1 — Pièces (parité avec popover desktop pour mobile) */}
+          {/* Section Ville (parité avec popover FiltersBar) */}
+          <div style={sectionBox}>
+            <p style={eyebrow}>Ville ou code postal</p>
+            <CityAutocomplete
+              value={activeVille}
+              onChange={onChangeVille}
+              placeholder="Ville ou code postal"
+              style={{ fontSize: 14, padding: "12px 14px", background: "#FAFAF7" }}
+            />
+          </div>
+
+          {/* Section Budget (parité avec popover FiltersBar) */}
+          <div style={sectionBox}>
+            <p style={eyebrow}>Budget maximum</p>
+            <input
+              type="number"
+              min={0}
+              value={budgetMaxFiltre ?? ""}
+              onChange={e => {
+                const n = e.target.value.trim() ? Number(e.target.value) : null
+                setBudgetMaxFiltre(n && Number.isFinite(n) && n > 0 ? n : null)
+              }}
+              placeholder="Ex. 1200"
+              style={{
+                width: "100%",
+                padding: "12px 14px",
+                border: "1px solid #EAE6DF",
+                borderRadius: 12,
+                fontSize: 14,
+                outline: "none",
+                boxSizing: "border-box",
+                fontFamily: "inherit",
+                background: "#FAFAF7",
+                marginBottom: 10,
+              }}
+            />
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {[800, 1000, 1500, 2000, 2500].map(v => (
+                <ChipToggle key={v} active={budgetMaxFiltre === v} onClick={() => setBudgetMaxFiltre(budgetMaxFiltre === v ? null : v)}>
+                  ≤ {v.toLocaleString("fr-FR")} €
+                </ChipToggle>
+              ))}
+            </div>
+          </div>
+
+          {/* Section Pièces (parité avec FiltersBar) */}
           <div style={sectionBox}>
             <p style={eyebrow}>Pièces minimum</p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -560,64 +618,6 @@ export default function FiltersModal(props: FiltersModalProps) {
             </p>
           </div>
 
-          {/* Section 8 — Mes recherches (si connecté + au moins une) */}
-          {savedSearches && savedSearches.length > 0 && (
-            <div style={sectionBox}>
-              <p style={eyebrow}>Mes recherches sauvegardées</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {savedSearches.map(s => (
-                  <div
-                    key={s.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      padding: "12px 14px",
-                      border: "1px solid #EAE6DF",
-                      borderRadius: 12,
-                      background: "#FAFAF7",
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => onApplySaved?.(s.id)}
-                      style={{
-                        flex: 1,
-                        textAlign: "left",
-                        background: "transparent",
-                        border: "none",
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                        padding: 0,
-                        minWidth: 0,
-                      }}
-                    >
-                      <p style={{ fontSize: 14, fontWeight: 600, color: "#111", margin: 0 }}>{s.name}</p>
-                      <p style={{ fontSize: 11, color: "#9ca3af", margin: "2px 0 0" }}>
-                        {new Date(s.savedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
-                      </p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onDeleteSaved?.(s.id)}
-                      aria-label="Supprimer cette recherche"
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        color: "#dc2626",
-                        fontSize: 16,
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                        padding: 6,
-                      }}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Footer sticky */}

@@ -6,15 +6,16 @@ import "leaflet/dist/leaflet.css"
 
 type MapType = "plan" | "satellite" | "standard"
 
-// Tuiles par défaut = CartoDB Positron (style minimaliste gris clair,
-// utilisé par SeLoger / Leboncoin / PAP / la plupart des sites immo).
-// Les labels viennent des données OSM : en France, les noms de villes/rues
-// sont en français. L'attribution reste anglaise (contrainte de licence).
-// Mode "Détaillé" = OSM France en fallback pour zoomer sur les rues.
+// Tuiles par défaut = IGN Plan V2 (cartographie officielle française,
+// gratuite, sans clé API, rendu premium avec labels en français natifs).
+// https://geoservices.ign.fr/documentation/services/utilisation-web/tutoriel-leaflet
+// Mode "Détaillé" = OSM France (labels FR, plus dense au zoom street-level).
+// Satellite = Esri World Imagery (pas d'alternative française gratuite
+// équivalente sans clé API).
 const TILES: Record<MapType, { url: string; attribution: string; label: string; soft?: boolean }> = {
   plan: {
-    url: "https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png",
-    attribution: '&copy; <a href="https://carto.com/">CARTO</a> &middot; &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    url: "https://data.geopf.fr/wmts?layer=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&style=normal&tilematrixset=PM&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image/png&TileMatrix={z}&TileCol={x}&TileRow={y}",
+    attribution: '&copy; <a href="https://www.ign.fr/">IGN</a> &middot; <a href="https://geoservices.ign.fr/">Géoplateforme</a>',
     label: "Plan",
   },
   satellite: {

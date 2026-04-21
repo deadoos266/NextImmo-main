@@ -16,6 +16,8 @@ import AnnonceSkeleton from "../components/ui/AnnonceSkeleton"
 import FiltersBar from "../components/annonces/FiltersBar"
 import FiltersModal from "../components/annonces/FiltersModal"
 import ListingCardSearch from "../components/annonces/ListingCardSearch"
+import SavedSearchesPopover from "../components/annonces/SavedSearchesPopover"
+import BandeauDossier from "../components/annonces/BandeauDossier"
 
 // IMPORTANT : pas de `dynamic(..., { ssr: false })` au niveau module.
 // Ça émet `<template data-dgst="BAILOUT_TO_CLIENT_SIDE_RENDERING">` au SSR,
@@ -33,6 +35,26 @@ function useLazyMap() {
     return () => { alive = false }
   }, [])
   return Comp
+}
+
+/**
+ * Hook léger : mesure la largeur du viewport pour décider du layout.
+ * - ≥ 1280 : ratio 27/73 cards horizontales dans la liste
+ * - 1024-1279 : ratio 27/73 mais cards en variant="grid" (colonne trop
+ *   étroite pour horizontal)
+ * - < 1024 : stack vertical mobile/tablette (géré par useResponsive)
+ *
+ * SSR safe : la valeur initiale est 1440 pour éviter tout mismatch.
+ */
+function useViewportWidth() {
+  const [w, setW] = useState(1440)
+  useEffect(() => {
+    function onResize() { setW(window.innerWidth) }
+    setW(window.innerWidth)
+    window.addEventListener("resize", onResize)
+    return () => window.removeEventListener("resize", onResize)
+  }, [])
+  return w
 }
 
 /**
@@ -107,6 +129,16 @@ interface SavedSearch {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+// Constantes layout (centralisées pour le scroll isolé)
+// ═══════════════════════════════════════════════════════════════════════
+const NAVBAR_HEIGHT = 72
+const FILTERS_BAR_HEIGHT = 64
+const CONTAINER_MAX_WIDTH = 1440
+// Breakpoint : sous cette largeur, la colonne liste (27%) devient trop
+// étroite pour des cards horizontales → bascule auto en variant="grid"
+const HORIZONTAL_LIST_MIN_VIEWPORT = 1280
+
+// ═══════════════════════════════════════════════════════════════════════
 // Entry — délégation server→client sans Suspense (prop initialSearchParams)
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -121,6 +153,7 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   const MapComp = useLazyMap()
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
+  const viewportW = useViewportWidth()
 
   const [annonces, setAnnonces] = useState<any[]>([])
   const [profil, setProfil] = useState<any>(null)
@@ -229,7 +262,8 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
     try { localStorage.setItem(`nestmatch:savedSearches:${email}`, JSON.stringify(list)) } catch { /* noop */ }
   }
 
-  function sauverRecherche() {
+  // Nom auto-proposé dans le SavedSearchesPopover (résumé des filtres)
+  function buildDefaultSearchName(): string {
     const parts: string[] = []
     if (activeVille) parts.push(activeVille)
     if (budgetMaxFiltre) parts.push(`≤ ${budgetMaxFiltre} €`)
@@ -238,9 +272,10 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
     if (filtreMeubleTri === "oui") parts.push("Meublé")
     if (filtreMeubleTri === "non") parts.push("Vide")
     if (filtreParking) parts.push("Parking")
-    const nameAuto = parts.length > 0 ? parts.join(" · ") : "Toutes les annonces"
-    const name = window.prompt("Nom de la recherche :", nameAuto)
-    if (!name || !name.trim()) return
+    return parts.length > 0 ? parts.join(" · ") : "Toutes les annonces"
+  }
+
+  function sauverRecherche(name: string) {
     const search: SavedSearch = {
       id: Date.now().toString(36),
       name: name.trim().slice(0, 60),
@@ -584,15 +619,57 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
 
   const showMatchOption = !isProprietaire && profil !== null
 
-  // Grille : 1 col mobile, 2 col sinon (puisque colonne réduite à 60% en desktop)
-  const gridCols = isMobile ? "1fr" : "1fr 1fr"
+  // ── Layout paddings latéraux (mobile 16, tablette 24, desktop 32)
+  const padH = isMobile ? 16 : isTablet ? 24 : 32
+
+  // ── Completude profil (pour bandeau incitatif)
+  const completudeProfil =
+    !isProprietaire && status === "authenticated" && profil
+      ? calculerCompletudeProfil(profil).score
+      : null
+  const showBandeauDossier =
+    completudeProfil !== null && completudeProfil < 80
+
+  // ── Card variant auto selon largeur viewport (mode Liste desktop)
+  //   ≥ 1280 : cards horizontales (colonne ≈ 27% ≥ 340px)
+  //   < 1280 : fallback grid 1 col (colonne trop étroite)
+  const listCardVariant: "horizontal" | "grid" =
+    isSmall ? "grid" : viewportW >= HORIZONTAL_LIST_MIN_VIEWPORT ? "horizontal" : "grid"
 
   // ═══════════════════════════════════════════════════════════════════════
-  // Render
+  // Render — Scroll isolé :
+  //   outer : overflow:auto + height calc(100vh - NAVBAR)
+  //   ↳ header éditorial : scrolle avec la page (non sticky)
+  //   ↳ bandeau dossier  : scrolle avec la page (non sticky)
+  //   ↳ FiltersBar        : sticky top:0 (DANS l'outer scrollable)
+  //   ↳ zone liste+carte  : height = calc(100vh - NAVBAR - FILTERS_BAR)
+  //       ↳ liste  : overflow-y:auto (scroll interne)
+  //       ↳ carte  : height:100% (reste fixe, jamais hors écran)
+  //
+  //   En mode grid : carte masquée, liste pleine largeur, grid 4 cols max,
+  //                  scroll unifié (la grille scrolle avec la page).
   // ═══════════════════════════════════════════════════════════════════════
+
+  // Hauteur zone liste+carte (desktop uniquement ; mobile = contenu fluide)
+  const zoneLCHeight = `calc(100vh - ${NAVBAR_HEIGHT + FILTERS_BAR_HEIGHT}px)`
+  const outerHeight = `calc(100vh - ${NAVBAR_HEIGHT}px)`
+
+  // Mode grille : le scroll isolé est désactivé (toute la page scrolle)
+  //   → carte masquée, grid max 4 cols centré, comportement "magazine".
+  const gridMode = view === "grid"
 
   return (
-    <div style={{ background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", minHeight: "calc(100vh - 72px)" }}>
+    <div
+      style={{
+        background: "#F7F4EF",
+        fontFamily: "'DM Sans', sans-serif",
+        // Outer viewport pour scroll isolé (mode liste desktop)
+        // En mode grid ou mobile : on laisse scroller naturellement.
+        height: !gridMode && !isSmall ? outerHeight : undefined,
+        minHeight: gridMode || isSmall ? outerHeight : undefined,
+        overflowY: !gridMode && !isSmall ? "auto" : "visible",
+      }}
+    >
       {/* H1 SEO visible uniquement pour les crawlers */}
       <h1 style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0, 0, 0, 0)", whiteSpace: "nowrap", border: 0 }}>
         {activeVille
@@ -600,266 +677,254 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           : "Logements à louer — annonces entre particuliers en France"}
       </h1>
 
-      {/* ── Header éditorial — scroll normal (pas sticky) ────────────── */}
-      {!isMobile && (
-        <div style={{ padding: "24px 32px 6px" }}>
-          <p style={{ fontSize: 11, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: "1.6px", margin: 0 }}>
-            Annonces
-          </p>
-          <h2 style={{ fontSize: 40, fontWeight: 500, lineHeight: 1.08, margin: "6px 0 4px", color: "#111", letterSpacing: "-0.5px" }}>
-            {loading
-              ? (activeVille ? `Logements à ${activeVille}` : "Logements à louer")
-              : `${annoncesTraitees.length} logement${annoncesTraitees.length > 1 ? "s" : ""} ${activeVille ? `à ${activeVille}` : "disponible" + (annoncesTraitees.length > 1 ? "s" : "")}`}
-          </h2>
-          <p style={{ fontSize: 13, color: "#666", margin: 0 }}>
-            {isProprietaire
-              ? "Mode propriétaire — tri chronologique"
-              : "Mis à jour en direct · tri par compatibilité"}
-          </p>
+      {/* Container principal : max-width 1440, centré, padding latéral */}
+      <div style={{ maxWidth: CONTAINER_MAX_WIDTH, margin: "0 auto", paddingLeft: padH, paddingRight: padH }}>
 
-          {/* Popular city chips desktop only */}
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14, alignItems: "center" }}>
-            {["Paris", "Lyon", "Marseille", "Bordeaux", "Nantes", "Lille", "Toulouse"].map(city => {
-              const isActive = activeVille?.toLowerCase() === city.toLowerCase()
-              return (
-                <button
-                  key={city}
-                  type="button"
-                  onClick={() => onChangeVille(isActive ? "" : city)}
-                  style={{
-                    background: isActive ? "#111" : "white",
-                    color: isActive ? "white" : "#111",
-                    border: `1px solid ${isActive ? "#111" : "#EAE6DF"}`,
-                    borderRadius: 999,
-                    padding: "6px 14px",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    transition: "all 0.15s",
-                  }}
-                >
-                  {city}
-                </button>
-              )
-            })}
-            {/* Lien de sauvegarde — visible uniquement connecté + locataire */}
+        {/* ── Header éditorial — scroll normal (pas sticky) ────────────── */}
+        {!isMobile && (
+          <div style={{ padding: "24px 0 6px" }}>
+            <p style={{ fontSize: 11, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: "1.6px", margin: 0 }}>
+              Annonces
+            </p>
+            <h2 style={{ fontSize: 40, fontWeight: 500, lineHeight: 1.08, margin: "6px 0 4px", color: "#111", letterSpacing: "-0.5px" }}>
+              {loading
+                ? (activeVille ? `Logements à ${activeVille}` : "Logements à louer")
+                : `${annoncesTraitees.length} logement${annoncesTraitees.length > 1 ? "s" : ""} ${activeVille ? `à ${activeVille}` : "disponible" + (annoncesTraitees.length > 1 ? "s" : "")}`}
+            </h2>
+            <p style={{ fontSize: 13, color: "#666", margin: 0 }}>
+              {isProprietaire
+                ? "Mode propriétaire — tri chronologique"
+                : "Mis à jour en direct · tri par compatibilité"}
+            </p>
+
+            {/* Lien de sauvegarde — popover attaché */}
             {!isProprietaire && session?.user?.email && (
-              <button
-                type="button"
-                onClick={sauverRecherche}
-                title="Sauvegarder ces filtres"
-                style={{
-                  marginLeft: 8,
-                  background: "transparent",
-                  border: "none",
-                  color: "#666",
-                  fontSize: 12,
-                  fontWeight: 500,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  textDecoration: "underline",
-                  padding: "6px 4px",
-                }}
-              >
-                Sauvegarder cette recherche
-              </button>
+              <div style={{ marginTop: 10 }}>
+                <SavedSearchesPopover
+                  savedSearches={savedSearches.map(s => ({ id: s.id, name: s.name, savedAt: s.savedAt }))}
+                  onSave={sauverRecherche}
+                  onApply={appliquerRecherche}
+                  onDelete={supprimerRecherche}
+                  defaultName={buildDefaultSearchName()}
+                  label="Sauvegarder cette recherche"
+                />
+              </div>
             )}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ── Bandeau status compact (completude profil ou connexion) ──── */}
-      <div style={{ padding: isMobile ? "10px 16px" : "16px 32px 6px" }}>
-        {isProprietaire ? (
-          <div style={{ background: "white", borderRadius: 16, padding: isMobile ? "10px 14px" : "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid #EAE6DF", gap: 10 }}>
-            <span style={{ fontSize: isMobile ? 12 : 13, color: "#666" }}>
-              <strong style={{ color: "#111" }}>Mode propriétaire</strong>{!isMobile && " — scores de compatibilité non applicables"}
-            </span>
-            <a href="/proprietaire" style={{ fontSize: 12, fontWeight: 700, color: "#111", textDecoration: "none", padding: "5px 14px", border: "1px solid #EAE6DF", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0 }}>Mes biens</a>
+        {/* ── Bandeau dossier incitatif (card premium) ─────────────────── */}
+        {showBandeauDossier && completudeProfil !== null && (
+          <div style={{ padding: isMobile ? "10px 0" : "14px 0 6px" }}>
+            <BandeauDossier completude={completudeProfil} isMobile={isMobile} />
           </div>
-        ) : status === "authenticated" && profil ? (() => {
-          const { score: completude } = calculerCompletudeProfil(profil)
-          if (completude >= 100) return null
-          const completudeColor = completude >= 80 ? "#16a34a" : completude >= 50 ? "#ea580c" : "#dc2626"
-          return (
-            <a href="/profil" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "white", border: `1px solid ${completudeColor}33`, borderRadius: 16, padding: isMobile ? "10px 14px" : "12px 20px", textDecoration: "none", gap: 10 }}>
-              <span style={{ fontSize: isMobile ? 12 : 13, color: "#111", fontWeight: 500 }}>
-                Dossier complété à <strong style={{ color: completudeColor }}>{completude}%</strong> — <span style={{ color: "#666" }}>améliorez-le pour des scores plus précis</span>
-              </span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: completudeColor, whiteSpace: "nowrap" }}>Compléter →</span>
-            </a>
-          )
-        })() : status === "unauthenticated" ? (
-          <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 16, padding: isMobile ? "10px 14px" : "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-            <span style={{ fontSize: isMobile ? 12 : 13, fontWeight: 500, color: "#92400e" }}>
-              {isMobile ? "Connectez-vous pour le matching" : "Connectez-vous pour activer le score de compatibilité"}
-            </span>
-            <a href="/auth" style={{ background: "#111", color: "white", padding: "6px 16px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 12, flexShrink: 0 }}>Connexion</a>
+        )}
+
+        {/* ── Bandeau statut compact (connexion / proprio) ─────────────── */}
+        {(isProprietaire || status === "unauthenticated") && (
+          <div style={{ padding: isMobile ? "10px 0" : "8px 0" }}>
+            {isProprietaire ? (
+              <div style={{ background: "white", borderRadius: 16, padding: isMobile ? "10px 14px" : "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid #EAE6DF", gap: 10 }}>
+                <span style={{ fontSize: isMobile ? 12 : 13, color: "#666" }}>
+                  <strong style={{ color: "#111" }}>Mode propriétaire</strong>{!isMobile && " — scores de compatibilité non applicables"}
+                </span>
+                <a href="/proprietaire" style={{ fontSize: 12, fontWeight: 700, color: "#111", textDecoration: "none", padding: "5px 14px", border: "1px solid #EAE6DF", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0 }}>Mes biens</a>
+              </div>
+            ) : (
+              <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 16, padding: isMobile ? "10px 14px" : "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                <span style={{ fontSize: isMobile ? 12 : 13, fontWeight: 500, color: "#92400e" }}>
+                  {isMobile ? "Connectez-vous pour le matching" : "Connectez-vous pour activer le score de compatibilité"}
+                </span>
+                <a href="/auth" style={{ background: "#111", color: "white", padding: "6px 16px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 12, flexShrink: 0 }}>Connexion</a>
+              </div>
+            )}
           </div>
-        ) : null}
-      </div>
+        )}
 
-      {/* ── FiltersBar sticky ─────────────────────────────────────────── */}
-      <FiltersBar
-        isMobile={isMobile}
-        isTablet={isTablet}
-        activeVille={activeVille}
-        onChangeVille={onChangeVille}
-        budgetMaxFiltre={budgetMaxFiltre}
-        setBudgetMaxFiltre={setBudgetMaxFiltre}
-        piecesMin={piecesMin}
-        setPiecesMin={setPiecesMin}
-        onOpenModal={() => setModalOpen(true)}
-        activeFilterCount={activeFilterCount}
-        tri={tri}
-        setTri={setTri}
-        showMatchOption={showMatchOption}
-        view={view}
-        setView={setView}
-        resultCount={annoncesTraitees.length}
-        loading={loading}
-      />
+        {/* ── FiltersBar sticky — top dynamique selon mode scroll ─────
+            Mode liste desktop : scroll isolé dans outer (overflow:auto),
+              sticky top:0 → colle au top de l'outer (qui est sous Navbar).
+            Mode grille / mobile : scroll document,
+              sticky top:NAVBAR_HEIGHT → colle sous la Navbar du viewport. */}
+        <FiltersBar
+          isMobile={isMobile}
+          isTablet={isTablet}
+          activeVille={activeVille}
+          onChangeVille={onChangeVille}
+          budgetMaxFiltre={budgetMaxFiltre}
+          setBudgetMaxFiltre={setBudgetMaxFiltre}
+          scoreMin={scoreMin}
+          setScoreMin={setScoreMin}
+          showScoreMin={showMatchOption}
+          onOpenModal={() => setModalOpen(true)}
+          activeFilterCount={activeFilterCount}
+          tri={tri}
+          setTri={setTri}
+          showMatchOption={showMatchOption}
+          view={view}
+          setView={setView}
+          resultCount={annoncesTraitees.length}
+          loading={loading}
+          stickyTop={!gridMode && !isSmall ? 0 : NAVBAR_HEIGHT}
+        />
 
-      {/* ── Toggle Liste/Carte mobile+tablette ────────────────────────── */}
-      {isSmall && (
-        <div style={{ display: "flex", gap: 8, padding: "12px 16px 0", flexShrink: 0 }}>
-          <button onClick={() => setShowMap(false)}
-            style={{ flex: 1, padding: "9px 14px", background: !showMap ? "#111" : "white", color: !showMap ? "white" : "#666", border: `1px solid ${!showMap ? "#111" : "#EAE6DF"}`, borderRadius: 999, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
-            Liste
-          </button>
-          <button onClick={() => setShowMap(true)}
-            style={{ flex: 1, padding: "9px 14px", background: showMap ? "#111" : "white", color: showMap ? "white" : "#666", border: `1px solid ${showMap ? "#111" : "#EAE6DF"}`, borderRadius: 999, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
-            Carte
-          </button>
-        </div>
-      )}
+        {/* ── Toggle Liste/Carte mobile+tablette ──────────────────────── */}
+        {isSmall && !gridMode && (
+          <div style={{ display: "flex", gap: 8, padding: "12px 0 0", flexShrink: 0 }}>
+            <button onClick={() => setShowMap(false)}
+              style={{ flex: 1, padding: "9px 14px", background: !showMap ? "#111" : "white", color: !showMap ? "white" : "#666", border: `1px solid ${!showMap ? "#111" : "#EAE6DF"}`, borderRadius: 999, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+              Liste
+            </button>
+            <button onClick={() => setShowMap(true)}
+              style={{ flex: 1, padding: "9px 14px", background: showMap ? "#111" : "white", color: showMap ? "white" : "#666", border: `1px solid ${showMap ? "#111" : "#EAE6DF"}`, borderRadius: 999, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+              Carte
+            </button>
+          </div>
+        )}
 
-      {/* ── Corps — flex 60/40 desktop, stack mobile/tablette ─────────── */}
-      <div
-        style={{
-          display: "flex",
-          gap: isSmall ? 0 : 16,
-          padding: isMobile ? "12px 16px 24px" : "16px 32px 32px",
-          flexDirection: isSmall ? "column" : "row",
-          alignItems: "flex-start",
-        }}
-      >
-        {/* Liste — 60% desktop, 100% sinon. Sélection masquée si showMap en mobile. */}
-        <div
-          style={{
-            flex: isSmall ? 1 : "0 0 calc(60% - 8px)",
-            minWidth: 0,
-            width: isSmall ? "100%" : undefined,
-            display: isSmall && showMap ? "none" : "block",
-          }}
-        >
-          {loading ? (
-            <div style={{ display: view === "grid" ? "grid" : "flex", gridTemplateColumns: view === "grid" ? gridCols : undefined, flexDirection: view === "grid" ? undefined : "column", gap: 12 }}>
-              {[1, 2, 3, 4, 5].map(i => <AnnonceSkeleton key={i} />)}
-            </div>
-          ) : annoncesTraitees.length === 0 ? (
-            <EmptyState
-              title="Aucun logement trouvé"
-              description={mapBounds ? "Essayez d'élargir la zone de recherche sur la carte." : "Ajustez vos filtres pour voir plus de résultats."}
-              ctaLabel={mapBounds ? "Élargir la zone" : activeFilterCount > 0 ? "Réinitialiser les filtres" : undefined}
-              onCtaClick={mapBounds ? () => setMapBounds(null) : activeFilterCount > 0 ? onResetAll : undefined}
-            />
-          ) : view === "grid" ? (
-            <div style={{ display: "grid", gridTemplateColumns: gridCols, gap: 14 }}>
-              {annoncesTraitees.map(a => {
-                const score = a.scoreMatching
-                const info = !isProprietaire && score !== null ? labelScore(score) : null
-                const isOwn = isProprietaire && a.proprietaire_email === session?.user?.email
-                const isSelected = selectedId === a.id
-                return (
-                  <ListingCardSearch
-                    key={a.id}
-                    annonce={a}
-                    score={score}
-                    info={info}
-                    isOwn={isOwn}
-                    isSelected={isSelected}
-                    favori={favoris.includes(a.id)}
-                    onToggleFavori={e => handleToggleFavori(e, a.id)}
-                    onMouseEnter={() => setSelectedId(a.id)}
-                    onMouseLeave={() => setSelectedId(null)}
-                    motCle={motCle}
-                    variant="grid"
-                  />
-                )
-              })}
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {annoncesTraitees.map(a => {
-                const score = a.scoreMatching
-                const info = !isProprietaire && score !== null ? labelScore(score) : null
-                const isOwn = isProprietaire && a.proprietaire_email === session?.user?.email
-                const isSelected = selectedId === a.id
-                // Horizontal = cards horizontales desktop ; sur mobile on garde grid car plus lisible.
-                const cardVariant = isMobile ? "grid" : "horizontal"
-                return (
-                  <ListingCardSearch
-                    key={a.id}
-                    annonce={a}
-                    score={score}
-                    info={info}
-                    isOwn={isOwn}
-                    isSelected={isSelected}
-                    favori={favoris.includes(a.id)}
-                    onToggleFavori={e => handleToggleFavori(e, a.id)}
-                    onMouseEnter={() => setSelectedId(a.id)}
-                    onMouseLeave={() => setSelectedId(null)}
-                    motCle={motCle}
-                    variant={cardVariant}
-                  />
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Carte — sticky sur desktop (reste visible au scroll de la liste). */}
-        {mounted && (
+        {/* ═══ MODE GRILLE : carte masquée, grille max 4 cols centrée ═══ */}
+        {gridMode ? (
+          <div style={{ padding: isMobile ? "12px 0 24px" : "16px 0 32px" }}>
+            {loading ? (
+              <GridContainer>{[1, 2, 3, 4, 5, 6, 7, 8].map(i => <AnnonceSkeleton key={i} />)}</GridContainer>
+            ) : annoncesTraitees.length === 0 ? (
+              <EmptyState
+                title="Aucun logement trouvé"
+                description="Ajustez vos filtres pour voir plus de résultats."
+                ctaLabel={activeFilterCount > 0 ? "Réinitialiser les filtres" : undefined}
+                onCtaClick={activeFilterCount > 0 ? onResetAll : undefined}
+              />
+            ) : (
+              <GridContainer>
+                {annoncesTraitees.map(a => {
+                  const score = a.scoreMatching
+                  const info = !isProprietaire && score !== null ? labelScore(score) : null
+                  const isOwn = isProprietaire && a.proprietaire_email === session?.user?.email
+                  const isSelected = selectedId === a.id
+                  return (
+                    <ListingCardSearch
+                      key={a.id}
+                      annonce={a}
+                      score={score}
+                      info={info}
+                      isOwn={isOwn}
+                      isSelected={isSelected}
+                      favori={favoris.includes(a.id)}
+                      onToggleFavori={e => handleToggleFavori(e, a.id)}
+                      onMouseEnter={() => setSelectedId(a.id)}
+                      onMouseLeave={() => setSelectedId(null)}
+                      motCle={motCle}
+                      variant="grid"
+                    />
+                  )
+                })}
+              </GridContainer>
+            )}
+          </div>
+        ) : (
+          /* ═══ MODE LISTE : scroll isolé, ratio 27/73 ═══ */
           <div
             style={{
-              flex: isSmall ? 1 : "0 0 calc(40% - 8px)",
-              width: isSmall ? "100%" : undefined,
-              display: isSmall && !showMap ? "none" : "block",
-              // Sticky desktop : top = navbar(72) + filtersbar(64) + padding(16) = 152
-              position: isSmall ? "relative" : "sticky",
-              top: isSmall ? undefined : 152,
-              height: isSmall ? "calc(100vh - 200px)" : "calc(100vh - 172px)",
-              alignSelf: "flex-start",
+              display: "flex",
+              gap: isSmall ? 0 : 16,
+              padding: isMobile ? "12px 0 24px" : "16px 0 0",
+              flexDirection: isSmall ? "column" : "row",
+              alignItems: "flex-start",
+              // Desktop : hauteur fixe = viewport - navbar - filtersbar
+              // pour permettre le scroll isolé à l'intérieur.
+              height: isSmall ? undefined : zoneLCHeight,
             }}
           >
-            {/* Wrap Leaflet — PROTOCOLE STRICT :
-                - position:relative + isolation:isolate + overflow:hidden
-                - ZÉRO modif de MapAnnonces.tsx / leafletSetup.ts
-                - Pas de z-index ni transform sur parent (stacking tiles intact)
-                - Radius 20 + border #EAE6DF (desktop uniquement) */}
+            {/* ── Colonne Liste — 27% desktop, 100% mobile/tablet ──────── */}
             <div
               style={{
-                position: "relative",
-                isolation: "isolate",
-                height: "100%",
-                width: "100%",
-                borderRadius: isMobile ? 0 : 20,
-                overflow: "hidden",
-                border: isMobile ? "none" : "1px solid #EAE6DF",
+                flex: isSmall ? 1 : "0 0 calc(27% - 8px)",
+                minWidth: 0,
+                width: isSmall ? "100%" : undefined,
+                display: isSmall && showMap ? "none" : "block",
+                // Scroll interne uniquement sur desktop
+                height: isSmall ? undefined : "100%",
+                overflowY: isSmall ? "visible" : "auto",
+                // Padding pour éviter que le scroll mange les bords des cards
+                paddingRight: isSmall ? 0 : 4,
               }}
             >
-              {MapComp ? (
-                <MapComp
-                  annonces={annoncesTraitees}
-                  selectedId={selectedId}
-                  onSelect={id => setSelectedId(id)}
-                  onBoundsChange={handleBoundsChange}
-                  centerHint={centerCity ? [centerCity[0], centerCity[1]] : null}
+              {loading ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {[1, 2, 3, 4, 5].map(i => <AnnonceSkeleton key={i} />)}
+                </div>
+              ) : annoncesTraitees.length === 0 ? (
+                <EmptyState
+                  title="Aucun logement trouvé"
+                  description={mapBounds ? "Essayez d'élargir la zone de recherche sur la carte." : "Ajustez vos filtres pour voir plus de résultats."}
+                  ctaLabel={mapBounds ? "Élargir la zone" : activeFilterCount > 0 ? "Réinitialiser les filtres" : undefined}
+                  onCtaClick={mapBounds ? () => setMapBounds(null) : activeFilterCount > 0 ? onResetAll : undefined}
                 />
-              ) : null}
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {annoncesTraitees.map(a => {
+                    const score = a.scoreMatching
+                    const info = !isProprietaire && score !== null ? labelScore(score) : null
+                    const isOwn = isProprietaire && a.proprietaire_email === session?.user?.email
+                    const isSelected = selectedId === a.id
+                    return (
+                      <ListingCardSearch
+                        key={a.id}
+                        annonce={a}
+                        score={score}
+                        info={info}
+                        isOwn={isOwn}
+                        isSelected={isSelected}
+                        favori={favoris.includes(a.id)}
+                        onToggleFavori={e => handleToggleFavori(e, a.id)}
+                        onMouseEnter={() => setSelectedId(a.id)}
+                        onMouseLeave={() => setSelectedId(null)}
+                        motCle={motCle}
+                        variant={listCardVariant}
+                      />
+                    )
+                  })}
+                </div>
+              )}
             </div>
+
+            {/* ── Colonne Carte — 73% desktop, 100% si showMap mobile ──── */}
+            {mounted && (
+              <div
+                style={{
+                  flex: isSmall ? 1 : "0 0 calc(73% - 8px)",
+                  width: isSmall ? "100%" : undefined,
+                  display: isSmall && !showMap ? "none" : "block",
+                  height: isSmall ? "calc(100vh - 200px)" : "100%",
+                }}
+              >
+                {/* Wrap Leaflet — PROTOCOLE STRICT :
+                    - position:relative + isolation:isolate + overflow:hidden
+                    - Pas de z-index ni transform sur parent (stacking tiles intact)
+                    - Radius 20 + border #EAE6DF (desktop uniquement) */}
+                <div
+                  style={{
+                    position: "relative",
+                    isolation: "isolate",
+                    height: "100%",
+                    width: "100%",
+                    borderRadius: isMobile ? 0 : 20,
+                    overflow: "hidden",
+                    border: isMobile ? "none" : "1px solid #EAE6DF",
+                  }}
+                >
+                  {MapComp ? (
+                    <MapComp
+                      annonces={annoncesTraitees}
+                      selectedId={selectedId}
+                      onSelect={id => setSelectedId(id)}
+                      onBoundsChange={handleBoundsChange}
+                      centerHint={centerCity ? [centerCity[0], centerCity[1]] : null}
+                    />
+                  ) : null}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -871,6 +936,10 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
         resultCount={annoncesTraitees.length}
         motCle={motCle}
         setMotCle={setMotCle}
+        activeVille={activeVille}
+        onChangeVille={onChangeVille}
+        budgetMaxFiltre={budgetMaxFiltre}
+        setBudgetMaxFiltre={setBudgetMaxFiltre}
         piecesMin={piecesMin}
         setPiecesMin={setPiecesMin}
         surfaceMin={surfaceMin}
@@ -905,12 +974,32 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
         setAnimauxOverride={setAnimauxOverride}
         filtreDpeMax={filtreDpeMax}
         setFiltreDpeMax={setFiltreDpeMax}
-        savedSearches={savedSearches.map(s => ({ id: s.id, name: s.name, savedAt: s.savedAt }))}
-        onApplySaved={appliquerRecherche}
-        onDeleteSaved={supprimerRecherche}
         onResetAll={onResetAll}
         isMobile={isMobile}
       />
+    </div>
+  )
+}
+
+/**
+ * Container de la vue Grille.
+ *  - grid auto-fit minmax(280, 1fr)
+ *  - Capé à 4 colonnes via max-width (4 × 280 + 3 × 20 gap = 1180 → 1200)
+ *  - Centré (margin auto)
+ *  - Responsive natif : 4 cols ≥1200, 3 cols 900-1199, 2 cols 600-899, 1 col <600
+ */
+function GridContainer({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
+        gap: 20,
+        maxWidth: 1200,
+        margin: "0 auto",
+      }}
+    >
+      {children}
     </div>
   )
 }
