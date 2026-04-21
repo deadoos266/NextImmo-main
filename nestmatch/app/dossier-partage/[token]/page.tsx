@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { verifyDossierToken } from "../../../lib/dossierToken"
-import { supabase } from "../../../lib/supabase"
+import { supabaseAdmin } from "../../../lib/supabase-server"
 import { displayName } from "../../../lib/privacy"
 import { BRAND } from "../../../lib/brand"
 import { formatNomComplet } from "../../../lib/profilHelpers"
@@ -21,6 +21,35 @@ const DOC_LABELS: Record<string, string> = {
   identite_garant: "Pièce d'identité du garant",
   bulletins_garant: "Bulletins de salaire du garant",
   avis_garant: "Avis d'imposition du garant",
+  certificat_scolarite: "Certificat de scolarité",
+  attestation_caf: "Attestation CAF",
+  attestation_assurance: "Attestation d'assurance habitation",
+  attestation_employeur: "Attestation employeur",
+}
+
+const T = {
+  bg: "#F7F4EF",
+  white: "#fff",
+  ink: "#111",
+  line: "#EAE6DF",
+  hairline: "#F0EAE0",
+  meta: "#666",
+  soft: "#8a8477",
+  mutedBg: "#FAF8F3",
+  muted: "#9a958a",
+}
+
+const IMG_EXT = /\.(jpe?g|png|webp|gif|avif|heic)$/i
+const PDF_EXT = /\.pdf$/i
+
+function filenameFromUrl(url: string): string {
+  try {
+    const u = new URL(url)
+    const last = u.pathname.split("/").pop() || "fichier"
+    return decodeURIComponent(last)
+  } catch {
+    return "fichier"
+  }
 }
 
 export default async function DossierPartage({ params }: { params: Promise<{ token: string }> }) {
@@ -28,108 +57,221 @@ export default async function DossierPartage({ params }: { params: Promise<{ tok
   const valid = verifyDossierToken(token)
   if (!valid) return notFound()
 
-  const { data: profil } = await supabase.from("profils").select("*").eq("email", valid.email).single()
+  const { data: profil } = await supabaseAdmin
+    .from("profils")
+    .select("*")
+    .eq("email", valid.email.toLowerCase())
+    .single()
   if (!profil) return notFound()
 
   const name = displayName(valid.email, formatNomComplet(profil) || profil.nom)
   const docs = (profil.dossier_docs || {}) as Record<string, string[] | string>
-  const expires = new Date(valid.exp).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+  const expiresFull = new Date(valid.exp).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
 
-  const sectionStyle: React.CSSProperties = {
-    background: "white",
+  const section: React.CSSProperties = {
+    background: T.white,
     borderRadius: 20,
-    padding: "24px 28px",
-    marginBottom: 14,
+    padding: 28,
+    marginBottom: 16,
+    border: `1px solid ${T.line}`,
   }
-  const rowStyle: React.CSSProperties = {
+  const eyebrow: React.CSSProperties = {
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: "1.8px",
+    textTransform: "uppercase",
+    color: T.soft,
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
+  }
+  const eyebrowBar: React.CSSProperties = { flex: 1, height: 1, background: T.hairline }
+  const h2: React.CSSProperties = {
+    fontSize: 22,
+    fontWeight: 500,
+    fontStyle: "italic",
+    letterSpacing: "-0.4px",
+    margin: "0 0 14px",
+    color: T.ink,
+    lineHeight: 1.15,
+  }
+  const row: React.CSSProperties = {
     display: "flex",
     justifyContent: "space-between",
-    padding: "8px 0",
+    alignItems: "baseline",
+    padding: "10px 0",
     fontSize: 14,
-    borderBottom: "1px solid #f3f4f6",
+    borderBottom: `1px solid ${T.hairline}`,
+    gap: 16,
   }
+  const rowLabel: React.CSSProperties = { color: T.meta, fontSize: 13 }
+  const rowValue: React.CSSProperties = { fontWeight: 500, color: T.ink, textAlign: "right" }
 
   return (
-    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: "40px 20px" }}>
-      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+    <main style={{ minHeight: "100vh", background: T.bg, fontFamily: "'DM Sans', sans-serif", padding: "40px 20px" }}>
+      <div style={{ maxWidth: 780, margin: "0 auto" }}>
 
-        <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 14, padding: "12px 16px", marginBottom: 20, fontSize: 13, color: "#9a3412", lineHeight: 1.5 }}>
-          <strong>Dossier locataire partagé.</strong> Lien valide jusqu&apos;au {expires}. Accès en lecture seule.
+        {/* Bandeau expiration + lecture seule */}
+        <div style={{ background: T.white, border: `1px solid ${T.line}`, borderRadius: 14, padding: "12px 16px", marginBottom: 20, fontSize: 12, color: T.meta, lineHeight: 1.55, display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: T.ink }} />
+          <span><strong style={{ color: T.ink, fontWeight: 600 }}>Dossier locataire partagé.</strong> Lien valide jusqu&apos;au {expiresFull}. Accès en lecture seule, conforme RGPD (logs anonymisés, purgés à 90 jours).</span>
         </div>
 
-        <div style={sectionStyle}>
-          <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.5px", marginBottom: 4 }}>{name}</h1>
-          <p style={{ fontSize: 13, color: "#6b7280" }}>Dossier locataire</p>
+        {/* Hero */}
+        <div style={{ ...section, padding: "36px 32px" }}>
+          <div style={eyebrow}>
+            <span>Dossier locataire</span>
+            <div style={eyebrowBar} />
+            <span style={{ letterSpacing: "1.5px" }}>01</span>
+          </div>
+          <h1 style={{ fontSize: 44, fontWeight: 500, fontStyle: "italic", letterSpacing: "-0.8px", margin: 0, color: T.ink, lineHeight: 1.05 }}>{name}</h1>
+          <p style={{ fontSize: 13, color: T.meta, margin: "14px 0 0", lineHeight: 1.6 }}>
+            Les informations ci-dessous correspondent strictement aux pièces autorisées par le décret n° 2015-1437 et l&apos;article 22-2 de la loi n° 89-462.
+          </p>
         </div>
 
         <AccessLogPing token={token} />
 
-        <div style={sectionStyle}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>Identité & situation</h2>
-          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Date de naissance</span><span style={{ fontWeight: 600 }}>{profil.date_naissance ? new Date(profil.date_naissance).toLocaleDateString("fr-FR") : "—"}</span></div>
-          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Nationalité</span><span style={{ fontWeight: 600 }}>{profil.nationalite || "—"}</span></div>
-          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Situation familiale</span><span style={{ fontWeight: 600 }}>{profil.situation_familiale || "—"}</span></div>
-          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Enfants à charge</span><span style={{ fontWeight: 600 }}>{profil.nb_enfants ?? 0}</span></div>
-          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Nombre d&apos;occupants prévus</span><span style={{ fontWeight: 600 }}>{profil.nb_occupants || "—"}</span></div>
-          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Profil</span><span style={{ fontWeight: 600 }}>{profil.profil_locataire || "—"}</span></div>
+        {/* 02 — Identité */}
+        <div style={section}>
+          <div style={eyebrow}>
+            <span>Identité &amp; situation</span>
+            <div style={eyebrowBar} />
+            <span style={{ letterSpacing: "1.5px" }}>02</span>
+          </div>
+          <h2 style={h2}>Qui est le candidat</h2>
+          <div style={row}><span style={rowLabel}>Date de naissance</span><span style={rowValue}>{profil.date_naissance ? new Date(profil.date_naissance).toLocaleDateString("fr-FR") : "—"}</span></div>
+          <div style={row}><span style={rowLabel}>Nationalité</span><span style={rowValue}>{profil.nationalite || "—"}</span></div>
+          <div style={row}><span style={rowLabel}>Situation familiale</span><span style={rowValue}>{profil.situation_familiale || "—"}</span></div>
+          <div style={row}><span style={rowLabel}>Enfants à charge</span><span style={rowValue}>{profil.nb_enfants ?? 0}</span></div>
+          <div style={row}><span style={rowLabel}>Nombre d&apos;occupants prévus</span><span style={rowValue}>{profil.nb_occupants || "—"}</span></div>
+          <div style={{ ...row, borderBottom: "none" }}><span style={rowLabel}>Profil</span><span style={rowValue}>{profil.profil_locataire || "—"}</span></div>
         </div>
 
-        <div style={sectionStyle}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>Situation professionnelle</h2>
-          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Statut</span><span style={{ fontWeight: 600 }}>{profil.situation_pro || "—"}</span></div>
-          {profil.employeur_nom && <div style={rowStyle}><span style={{ color: "#6b7280" }}>Employeur</span><span style={{ fontWeight: 600 }}>{profil.employeur_nom}</span></div>}
-          {profil.date_embauche && <div style={rowStyle}><span style={{ color: "#6b7280" }}>Date d&apos;embauche</span><span style={{ fontWeight: 600 }}>{new Date(profil.date_embauche).toLocaleDateString("fr-FR")}</span></div>}
-          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Revenus mensuels nets</span><span style={{ fontWeight: 600 }}>{profil.revenus_mensuels ? `${Number(profil.revenus_mensuels).toLocaleString("fr-FR")} €` : "—"}</span></div>
+        {/* 03 — Pro */}
+        <div style={section}>
+          <div style={eyebrow}>
+            <span>Situation professionnelle</span>
+            <div style={eyebrowBar} />
+            <span style={{ letterSpacing: "1.5px" }}>03</span>
+          </div>
+          <h2 style={h2}>Revenus et employeur</h2>
+          <div style={row}><span style={rowLabel}>Statut</span><span style={rowValue}>{profil.situation_pro || "—"}</span></div>
+          {profil.employeur_nom && <div style={row}><span style={rowLabel}>Employeur</span><span style={rowValue}>{profil.employeur_nom}</span></div>}
+          {profil.date_embauche && <div style={row}><span style={rowLabel}>Date d&apos;embauche</span><span style={rowValue}>{new Date(profil.date_embauche).toLocaleDateString("fr-FR")}</span></div>}
+          <div style={{ ...row, borderBottom: "none" }}><span style={rowLabel}>Revenus mensuels nets</span><span style={rowValue}>{profil.revenus_mensuels ? `${Number(profil.revenus_mensuels).toLocaleString("fr-FR")} €` : "—"}</span></div>
         </div>
 
-        <div style={sectionStyle}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>Logement actuel & garanties</h2>
-          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Statut</span><span style={{ fontWeight: 600 }}>{profil.logement_actuel_type || "—"}</span></div>
-          {profil.logement_actuel_ville && <div style={rowStyle}><span style={{ color: "#6b7280" }}>Ville actuelle</span><span style={{ fontWeight: 600 }}>{profil.logement_actuel_ville}</span></div>}
-          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Garant</span><span style={{ fontWeight: 600 }}>{profil.garant ? (profil.type_garant || "Oui") : "Non"}</span></div>
-          <div style={rowStyle}><span style={{ color: "#6b7280" }}>APL</span><span style={{ fontWeight: 600 }}>{profil.a_apl ? "Oui" : "Non"}</span></div>
-          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Mobilité pro (Visale)</span><span style={{ fontWeight: 600 }}>{profil.mobilite_pro ? "Oui" : "Non"}</span></div>
+        {/* 04 — Logement & garanties */}
+        <div style={section}>
+          <div style={eyebrow}>
+            <span>Logement &amp; garanties</span>
+            <div style={eyebrowBar} />
+            <span style={{ letterSpacing: "1.5px" }}>04</span>
+          </div>
+          <h2 style={h2}>Contexte et garants</h2>
+          <div style={row}><span style={rowLabel}>Statut actuel</span><span style={rowValue}>{profil.logement_actuel_type || "—"}</span></div>
+          {profil.logement_actuel_ville && <div style={row}><span style={rowLabel}>Ville actuelle</span><span style={rowValue}>{profil.logement_actuel_ville}</span></div>}
+          <div style={row}><span style={rowLabel}>Garant</span><span style={rowValue}>{profil.garant ? (profil.type_garant || "Oui") : "Non"}</span></div>
+          <div style={row}><span style={rowLabel}>APL</span><span style={rowValue}>{profil.a_apl ? "Oui" : "Non"}</span></div>
+          <div style={{ ...row, borderBottom: "none" }}><span style={rowLabel}>Mobilité pro (Visale)</span><span style={rowValue}>{profil.mobilite_pro ? "Oui" : "Non"}</span></div>
         </div>
 
+        {/* 05 — Présentation (si renseignée) */}
         {profil.presentation && (
-          <div style={sectionStyle}>
-            <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>Présentation du candidat</h2>
-            <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>{profil.presentation}</p>
+          <div style={section}>
+            <div style={eyebrow}>
+              <span>Le mot du candidat</span>
+              <div style={eyebrowBar} />
+              <span style={{ letterSpacing: "1.5px" }}>05</span>
+            </div>
+            <h2 style={h2}>Présentation</h2>
+            <p style={{ fontSize: 15, color: T.ink, lineHeight: 1.7, margin: 0, whiteSpace: "pre-wrap", fontWeight: 400 }}>{profil.presentation}</p>
           </div>
         )}
 
-        <div style={sectionStyle}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>Critères de recherche</h2>
-          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Ville souhaitée</span><span style={{ fontWeight: 600 }}>{profil.ville_souhaitee || "—"}</span></div>
-          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Budget max</span><span style={{ fontWeight: 600 }}>{profil.budget_max ? `${profil.budget_max} €/mois` : "—"}</span></div>
-          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Surface min</span><span style={{ fontWeight: 600 }}>{profil.surface_min ? `${profil.surface_min} m²` : "—"}</span></div>
-          <div style={rowStyle}><span style={{ color: "#6b7280" }}>Pièces min</span><span style={{ fontWeight: 600 }}>{profil.pieces_min || "—"}</span></div>
+        {/* Critères de recherche */}
+        <div style={section}>
+          <div style={eyebrow}>
+            <span>Critères de recherche</span>
+            <div style={eyebrowBar} />
+            <span style={{ letterSpacing: "1.5px" }}>{profil.presentation ? "06" : "05"}</span>
+          </div>
+          <h2 style={h2}>Ce que le candidat cherche</h2>
+          <div style={row}><span style={rowLabel}>Ville souhaitée</span><span style={rowValue}>{profil.ville_souhaitee || "—"}</span></div>
+          <div style={row}><span style={rowLabel}>Budget max</span><span style={rowValue}>{profil.budget_max ? `${profil.budget_max} €/mois` : "—"}</span></div>
+          <div style={row}><span style={rowLabel}>Surface min</span><span style={rowValue}>{profil.surface_min ? `${profil.surface_min} m²` : "—"}</span></div>
+          <div style={{ ...row, borderBottom: "none" }}><span style={rowLabel}>Pièces min</span><span style={rowValue}>{profil.pieces_min || "—"}</span></div>
         </div>
 
-        <div style={sectionStyle}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>Documents déposés</h2>
-          {Object.keys(DOC_LABELS).map(key => {
-            const val = docs[key]
-            const urls = Array.isArray(val) ? val : (val ? [val as string] : [])
-            return (
-              <div key={key} style={{ ...rowStyle, alignItems: "flex-start" }}>
-                <span style={{ color: "#6b7280" }}>{DOC_LABELS[key]}</span>
-                <span style={{ fontWeight: 600, textAlign: "right" }}>
-                  {urls.length === 0 ? (
-                    <span style={{ color: "#9ca3af" }}>Non fourni</span>
-                  ) : urls.map((u, i) => (
-                    <a key={i} href={u} target="_blank" rel="noopener noreferrer" style={{ display: "block", color: "#1d4ed8", textDecoration: "underline" }}>
-                      Document {i + 1}
-                    </a>
-                  ))}
-                </span>
-              </div>
-            )
-          })}
+        {/* Documents déposés */}
+        <div style={section}>
+          <div style={eyebrow}>
+            <span>Pièces justificatives</span>
+            <div style={eyebrowBar} />
+            <span style={{ letterSpacing: "1.5px" }}>{profil.presentation ? "07" : "06"}</span>
+          </div>
+          <h2 style={h2}>Documents déposés</h2>
+          <p style={{ fontSize: 12, color: T.meta, margin: "0 0 16px", lineHeight: 1.6 }}>
+            Chaque pièce est servie via une URL signée à durée limitée, alignée sur l&apos;expiration de ce lien. Les liens ne peuvent pas être réutilisés hors de cette page.
+          </p>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
+            {Object.keys(DOC_LABELS).map(key => {
+              const val = docs[key]
+              const urls = Array.isArray(val) ? val : (val ? [val as string] : [])
+              if (urls.length === 0) {
+                return (
+                  <div key={key} style={{ padding: 16, border: `1px solid ${T.hairline}`, borderRadius: 14, background: T.mutedBg, opacity: 0.6 }}>
+                    <p style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1.2, color: T.soft, margin: 0, fontWeight: 600 }}>{DOC_LABELS[key]}</p>
+                    <p style={{ fontSize: 13, color: T.muted, margin: "6px 0 0", fontStyle: "italic" }}>Non fourni</p>
+                  </div>
+                )
+              }
+              return urls.map((u, idx) => {
+                const fname = filenameFromUrl(u)
+                const isImg = IMG_EXT.test(fname)
+                const isPdf = PDF_EXT.test(fname)
+                const viewHref = `/api/dossier-partage/${token}/file/${key}/${idx}`
+                return (
+                  <div key={`${key}-${idx}`} style={{ border: `1px solid ${T.line}`, borderRadius: 14, background: T.white, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                    <div style={{ aspectRatio: "16 / 10", background: T.mutedBg, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", borderBottom: `1px solid ${T.hairline}` }}>
+                      {isImg ? (
+                        // Les thumbnails passent par l'URL publique Supabase (lecture seule, bucket non confidentiel pour aperçu).
+                        // L'ouverture "Voir" repasse obligatoirement par le handler HMAC qui émet une signed URL TTL bornée.
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={u} alt={DOC_LABELS[key]} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <svg width="44" height="56" viewBox="0 0 44 56" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                          <path d="M4 4h22l14 14v34a0 0 0 0 1 0 0H4V4z" stroke={T.soft} strokeWidth="1.5" fill="#fff"/>
+                          <path d="M26 4v14h14" stroke={T.soft} strokeWidth="1.5" fill="none"/>
+                          <text x="22" y="44" textAnchor="middle" fontFamily="DM Sans" fontSize="9" fontWeight="600" fill={T.ink}>{isPdf ? "PDF" : "DOC"}</text>
+                        </svg>
+                      )}
+                    </div>
+                    <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
+                      <p style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 1.4, color: T.soft, margin: 0, fontWeight: 700 }}>{DOC_LABELS[key]}</p>
+                      <p style={{ fontSize: 13, color: T.ink, margin: 0, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fname}</p>
+                      {urls.length > 1 && <p style={{ fontSize: 11, color: T.meta, margin: 0 }}>Pièce {idx + 1} / {urls.length}</p>}
+                      <div style={{ display: "flex", gap: 8, marginTop: "auto", paddingTop: 4 }}>
+                        <a href={viewHref} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textAlign: "center", fontSize: 12, fontWeight: 600, padding: "8px 10px", borderRadius: 999, background: T.ink, color: T.white, textDecoration: "none", letterSpacing: "0.3px" }}>
+                          Voir
+                        </a>
+                        <a href={viewHref} download={fname} style={{ flex: 1, textAlign: "center", fontSize: 12, fontWeight: 600, padding: "8px 10px", borderRadius: 999, background: T.white, color: T.ink, border: `1px solid ${T.line}`, textDecoration: "none", letterSpacing: "0.3px" }}>
+                          Télécharger
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+            })}
+          </div>
         </div>
 
-        <p style={{ fontSize: 11, color: "#9ca3af", textAlign: "center", marginTop: 20 }}>
-          Lien de partage sécurisé · <Link href="/" style={{ color: "#6b7280" }}>{BRAND.name}</Link>
+        <p style={{ fontSize: 11, color: T.soft, textAlign: "center", marginTop: 24, lineHeight: 1.6 }}>
+          Lien de partage sécurisé · <Link href="/" style={{ color: T.meta, textDecoration: "none", borderBottom: `1px solid ${T.hairline}` }}>{BRAND.name}</Link>
         </p>
       </div>
     </main>

@@ -7,6 +7,22 @@ type AccessLog = {
   ip_hash: string | null
   user_agent: string | null
   accessed_at: string
+  document_key: string | null
+}
+
+const DOC_KEY_LABELS: Record<string, string> = {
+  identite: "Pièce d'identité",
+  bulletins: "Bulletins de salaire",
+  avis_imposition: "Avis d'imposition",
+  contrat: "Contrat de travail",
+  quittances: "Quittances",
+  identite_garant: "Identité garant",
+  bulletins_garant: "Bulletins garant",
+  avis_garant: "Avis garant",
+  certificat_scolarite: "Certificat scolarité",
+  attestation_caf: "Attestation CAF",
+  attestation_assurance: "Attestation assurance",
+  attestation_employeur: "Attestation employeur",
 }
 
 const T = {
@@ -36,11 +52,13 @@ export default function AccessLogPanel() {
   }, [])
 
   // Groupage par token_hash — garde la dernière visite de chaque session
-  const grouped: Record<string, { log: AccessLog; count: number }> = {}
+  // + collecte les docs consultés pour afficher un résumé dans le bloc.
+  const grouped: Record<string, { log: AccessLog; count: number; docs: Set<string> }> = {}
   for (const l of logs) {
     const k = l.token_hash
-    if (!grouped[k]) grouped[k] = { log: l, count: 1 }
+    if (!grouped[k]) grouped[k] = { log: l, count: 1, docs: new Set() }
     else grouped[k].count++
+    if (l.document_key) grouped[k].docs.add(l.document_key)
   }
   const sessions = Object.values(grouped).sort((a, b) =>
     new Date(b.log.accessed_at).getTime() - new Date(a.log.accessed_at).getTime()
@@ -74,6 +92,11 @@ export default function AccessLogPanel() {
                 <p style={{ fontSize: 11, color: T.soft, margin: "3px 0 0", fontVariantNumeric: "tabular-nums" }}>
                   Lien #{s.log.token_hash.slice(0, 6)} · {s.count} {s.count > 1 ? "visites" : "visite"}
                 </p>
+                {s.docs.size > 0 && (
+                  <p style={{ fontSize: 11, color: T.meta, margin: "3px 0 0", fontStyle: "italic" }}>
+                    Pièces ouvertes : {Array.from(s.docs).map(k => DOC_KEY_LABELS[k] || k).join(", ")}
+                  </p>
+                )}
               </div>
               <span style={{ fontSize: 11, color: T.meta, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
                 {new Date(s.log.accessed_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}

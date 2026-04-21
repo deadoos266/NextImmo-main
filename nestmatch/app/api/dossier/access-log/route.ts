@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Trop de requêtes" }, { status: 429 })
   }
 
-  let body: { token?: string; userAgent?: string }
+  let body: { token?: string; userAgent?: string; documentKey?: string }
   try {
     body = await req.json()
   } catch {
@@ -38,12 +38,17 @@ export async function POST(req: NextRequest) {
   if (!payload) return NextResponse.json({ error: "Token invalide" }, { status: 401 })
 
   const userAgent = typeof body.userAgent === "string" ? body.userAgent.slice(0, 200) : null
+  // document_key : optionnel, max 50 chars (garde-fou vs injection).
+  const documentKey = typeof body.documentKey === "string" && body.documentKey.length <= 50
+    ? body.documentKey
+    : null
 
   const { error } = await supabaseAdmin.from("dossier_access_log").insert({
     email: payload.email.toLowerCase(),
     token_hash: hashToken(token),
     ip_hash: hashIP(ip || "unknown"),
     user_agent: userAgent,
+    document_key: documentKey,
   })
 
   if (error) {
@@ -63,7 +68,7 @@ export async function GET(_req: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from("dossier_access_log")
-    .select("token_hash, ip_hash, user_agent, accessed_at")
+    .select("token_hash, ip_hash, user_agent, accessed_at, document_key")
     .eq("email", email)
     .order("accessed_at", { ascending: false })
     .limit(50)
