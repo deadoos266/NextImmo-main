@@ -1504,7 +1504,7 @@ function MessagesInner() {
       if (profil.situation_pro) score += 15
       if (profil.revenus_mensuels) score += 20
       if (profil.dossier_docs) {
-        const keys = ["identite", "bulletins", "avis_imposition", "contrat", "rib"]
+        const keys = ["identite", "bulletins", "avis_imposition", "contrat", "quittances"]
         const filled = keys.filter(k => { const v = (profil.dossier_docs as any)[k]; return Array.isArray(v) ? v.length > 0 : !!v })
         score += Math.round((filled.length / keys.length) * 50)
       }

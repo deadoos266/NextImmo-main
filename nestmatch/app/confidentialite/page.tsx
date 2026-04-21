@@ -63,7 +63,7 @@ export default function Confidentialite() {
             <li style={li}><strong>Données d&apos;identification</strong> : nom, prénom, adresse email, mot de passe (stocké sous forme hachée bcrypt), photo de profil éventuelle.</li>
             <li style={li}><strong>Données de contact</strong> : numéro de téléphone (facultatif), adresse postale éventuelle.</li>
             <li style={li}><strong>Données du profil locataire</strong> : préférences de logement (ville, surface, budget, type de bien, équipements, DPE, meublé/non meublé, animaux, etc.).</li>
-            <li style={li}><strong>Données du dossier locataire</strong> : situation professionnelle, revenus mensuels, type de contrat (CDI, CDD, etc.), présence d&apos;un garant, justificatifs téléversés (pièce d&apos;identité, bulletins de salaire, avis d&apos;imposition, quittances de loyer, RIB).</li>
+            <li style={li}><strong>Données du dossier locataire</strong> : situation professionnelle, revenus mensuels, type de contrat (CDI, CDD, etc.), présence d&apos;un garant, justificatifs téléversés conformes au décret n°&nbsp;2015-1437 (pièce d&apos;identité, bulletins de salaire, avis d&apos;imposition, contrat de travail, quittances de loyer).</li>
             <li style={li}><strong>Données des annonces</strong> : photos, description, prix, charges, caution, surface, pièces, localisation (GPS précis ou zone approximative selon choix du propriétaire), équipements, DPE.</li>
             <li style={li}><strong>Données d&apos;interaction</strong> : messages échangés entre Utilisateurs, demandes de visite, favoris, candidatures, signalements.</li>
             <li style={li}><strong>Documents contractuels</strong> : baux, états des lieux, quittances de loyer générés via la Plateforme.</li>

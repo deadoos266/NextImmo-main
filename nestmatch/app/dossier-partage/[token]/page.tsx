@@ -17,7 +17,6 @@ const DOC_LABELS: Record<string, string> = {
   avis_imposition: "Avis d'imposition",
   contrat: "Contrat de travail",
   quittances: "Quittances de loyer",
-  rib: "RIB",
   identite_garant: "Pièce d'identité du garant",
   bulletins_garant: "Bulletins de salaire du garant",
   avis_garant: "Avis d'imposition du garant",

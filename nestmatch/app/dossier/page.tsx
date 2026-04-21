@@ -21,18 +21,19 @@ const LOGEMENT_TYPES = ["Locataire", "Propriétaire", "Hébergé", "Foyer / rés
 const NATIONALITES_COURANTES = ["Française", "Belge", "Suisse", "Européenne (UE)", "Hors UE"]
 
 type DocKey =
-  | "identite" | "bulletins" | "avis_imposition" | "contrat" | "quittances" | "rib"
+  | "identite" | "bulletins" | "avis_imposition" | "contrat" | "quittances"
   | "identite_garant" | "bulletins_garant" | "avis_garant"
   | "certificat_scolarite" | "attestation_caf" | "attestation_assurance" | "attestation_employeur"
 
 // Nombre max de fichiers par catégorie
+// RIB retiré : interdit par le décret 2015-1437 (ALUR) — ne figure pas dans la
+// liste limitative des pièces exigibles d'un candidat locataire.
 const DOC_MAX: Record<DocKey, number> = {
   identite: 2, // recto + verso
   bulletins: 6, // extensible pour les CDI longs
   avis_imposition: 2, // année N et N-1
   contrat: 1,
   quittances: 3,
-  rib: 1,
   identite_garant: 2,
   bulletins_garant: 3,
   avis_garant: 1,
@@ -48,7 +49,6 @@ const DOCS_REQUIS: { key: DocKey; label: string; desc: string; hint?: string }[]
   { key: "avis_imposition", label: "Avis d'imposition", desc: "Dernier avis (année N-1). Idéalement aussi l'année précédente si disponible.", hint: "Téléchargeable sur impots.gouv.fr → Mes documents." },
   { key: "contrat", label: "Contrat de travail", desc: "Contrat signé OU attestation employeur récente (< 3 mois).", hint: "Pour les CDD / alternance, ajoutez la date de fin de contrat." },
   { key: "quittances", label: "3 dernières quittances de loyer", desc: "Preuves que vous payez actuellement votre loyer.", hint: "Si vous êtes hébergé ou propriétaire, laissez vide et précisez-le dans votre présentation." },
-  { key: "rib", label: "RIB", desc: "Relevé d'identité bancaire à votre nom.", hint: "Permet au proprio de vérifier l'identité du titulaire du compte." },
 ]
 
 const DOCS_OPTIONNELS: { key: DocKey; label: string; desc: string; conditionel?: string }[] = [
@@ -1052,10 +1052,14 @@ export default function Dossier() {
   const allDocs = [...DOCS_REQUIS, ...docsOptionnelsPertinents, ...(form.garant ? DOCS_GARANT : [])]
   // Compte le nombre de catégories avec au moins 1 fichier
   const docsCount = allDocs.filter(d => (docs[d.key] || []).length > 0).length
+  // scoreInfo ne compte QUE les champs légalement exigibles (décret 2015-1437).
+  // Les champs facultatifs (date de naissance, nationalité, situation familiale,
+  // nb enfants) ne peuvent pas être utilisés pour sélectionner un locataire —
+  // les exclure du score évite de pénaliser un candidat conforme à la loi.
   const champs = [
     !!form.nom, !!form.telephone, !!form.situation_pro, !!form.revenus_mensuels,
     form.garant !== undefined, !!profil?.ville_souhaitee, !!profil?.budget_max,
-    !!form.date_naissance, !!form.situation_familiale, !!form.logement_actuel_type, !!form.nationalite,
+    !!form.logement_actuel_type,
   ]
   const scoreInfo = Math.round((champs.filter(Boolean).length / champs.length) * 100)
   const scoreDoc = allDocs.length > 0 ? Math.round((docsCount / allDocs.length) * 100) : 0
@@ -1091,7 +1095,7 @@ export default function Dossier() {
 
   // Sommaire numéroté — état "done" dérivé du form / docs courants.
   const summaryItems: { id: string; num: string; label: string; done: boolean }[] = [
-    { id: "identite", num: "01", label: "Identité", done: !!form.nom && !!form.telephone && !!form.date_naissance && !!form.nationalite && !!form.situation_familiale },
+    { id: "identite", num: "01", label: "Identité", done: !!form.nom && !!form.telephone },
     { id: "pro", num: "02", label: "Situation pro", done: !!form.situation_pro && !!form.revenus_mensuels },
     { id: "logement", num: "03", label: "Logement actuel", done: !!form.logement_actuel_type },
     { id: "garant", num: "04", label: "Garant", done: !form.garant || !!form.type_garant },
@@ -1249,6 +1253,15 @@ export default function Dossier() {
 
               {/* ─── 01 Identité ─── */}
               <Section id="identite" num="01" kicker="Qui êtes-vous" title="Identité" isMobile={isMobile}>
+                {/* Bannière transparence ALUR — décret 2015-1437 + article 22-2
+                    loi 89-462. Les champs marqués "facultatif" ci-dessous ne
+                    peuvent pas être exigés pour l'attribution d'un logement. */}
+                <div style={{ background: T.mutedBg, border: `1px solid ${T.line}`, borderLeft: `3px solid ${T.ink}`, borderRadius: 12, padding: "14px 16px", marginBottom: 22 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: T.soft, marginBottom: 4 }}>Vos droits</div>
+                  <p style={{ fontSize: 13, color: "#333", lineHeight: 1.55, margin: 0, fontStyle: "italic" }}>
+                    Aucune pièce non listée par le décret n° 2015-1437 ne peut vous être exigée. Les champs marqués « facultatif » sont à votre discrétion — loi ALUR (2014-366) et article 22-2 de la loi du 6 juillet 1989 (89-462).
+                  </p>
+                </div>
                 <Row2 isMobile={isMobile}>
                   <Field label="Nom complet">
                     <TextInput value={form.nom} onChange={v => setForm(f => ({ ...f, nom: v }))} placeholder="Jean Dupont" isMobile={isMobile} />
@@ -1261,18 +1274,18 @@ export default function Dossier() {
                   <TextInput value={session?.user?.email || ""} disabled isMobile={isMobile} />
                 </Field>
                 <Row2 isMobile={isMobile}>
-                  <Field label="Date de naissance">
+                  <Field label={<>Date de naissance <span style={{ fontWeight: 400, color: T.soft, textTransform: "none", letterSpacing: 0 }}>(facultatif)</span></>}>
                     <TextInput type="date" value={form.date_naissance} onChange={v => setForm(f => ({ ...f, date_naissance: v }))} isMobile={isMobile} />
                   </Field>
-                  <Field label="Nationalité">
+                  <Field label={<>Nationalité <span style={{ fontWeight: 400, color: T.soft, textTransform: "none", letterSpacing: 0 }}>(facultatif)</span></>}>
                     <SelectField value={form.nationalite} options={NATIONALITES_COURANTES} onChange={v => setForm(f => ({ ...f, nationalite: v }))} isMobile={isMobile} />
                   </Field>
                 </Row2>
-                <Field label="Situation familiale">
+                <Field label={<>Situation familiale <span style={{ fontWeight: 400, color: T.soft, textTransform: "none", letterSpacing: 0 }}>(facultatif)</span></>}>
                   <ChipGroup value={form.situation_familiale} options={SITUATIONS_FAMILIALES} onChange={v => setForm(f => ({ ...f, situation_familiale: v }))} />
                 </Field>
                 <Row2 isMobile={isMobile}>
-                  <Field label="Nombre d'enfants à charge">
+                  <Field label={<>Nombre d&apos;enfants à charge <span style={{ fontWeight: 400, color: T.soft, textTransform: "none", letterSpacing: 0 }}>(facultatif)</span></>}>
                     <TextInput type="number" min={0} max={15} value={form.nb_enfants} onChange={v => setForm(f => ({ ...f, nb_enfants: Math.max(0, Math.min(15, Number(v) || 0)) }))} isMobile={isMobile} />
                   </Field>
                   <Field label="Nombre d'occupants">
@@ -1333,6 +1346,9 @@ export default function Dossier() {
                     checked={form.mobilite_pro}
                     onChange={v => setForm(f => ({ ...f, mobilite_pro: v }))}
                   />
+                  <p style={{ fontSize: 12, color: T.soft, margin: "4px 2px 0", lineHeight: 1.5 }}>
+                    Ces informations sont facultatives (article 22-2 de la loi du 6 juillet 1989).
+                  </p>
                 </div>
               </Section>
 

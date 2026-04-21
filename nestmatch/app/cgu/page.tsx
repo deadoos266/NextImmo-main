@@ -119,8 +119,11 @@ export default function CGU() {
           <p style={p}>
             <strong>Obligations spécifiques des Propriétaires :</strong> publier uniquement des Annonces pour des biens
             dont ils disposent légalement (propriété, mandat de gestion, colocation, etc.) ; respecter les règles
-            applicables en matière de location (loi ALUR, diagnostics, décence du logement, encadrement des loyers
-            le cas échéant).
+            applicables en matière de location (loi ALUR n°&nbsp;2014-366, diagnostics, décence du logement, encadrement
+            des loyers le cas échéant) ; ne pas solliciter auprès d&apos;un candidat locataire de pièces autres que
+            celles figurant dans la liste limitative du décret n°&nbsp;2015-1437 du 5 novembre 2015, pris en application
+            de l&apos;article 22-2 de la loi n°&nbsp;89-462 du 6 juillet 1989 (notamment : aucun RIB, aucune pièce
+            révélant la situation de famille, la nationalité ou les convictions ne peuvent être exigés).
           </p>
           <p style={p}>
             <strong>Obligations spécifiques des Locataires :</strong> fournir des informations et justificatifs exacts
