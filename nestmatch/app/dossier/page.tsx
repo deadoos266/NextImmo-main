@@ -109,7 +109,6 @@ const STYLES = {
     title: (isMobile: boolean): React.CSSProperties => ({ fontSize: isMobile ? 40 : 64, fontWeight: 300, lineHeight: 0.98, letterSpacing: "-1.5px", margin: 0, color: T.ink }),
     titleAccent: { fontStyle: "italic", fontWeight: 300, color: T.meta } as React.CSSProperties,
     subtitle: { fontSize: 15, color: T.meta, lineHeight: 1.6, maxWidth: 520, marginTop: 22, marginBottom: 0 } as React.CSSProperties,
-    carnetLink: { display: "inline-block", marginTop: 18, fontSize: 13, fontWeight: 600, color: T.ink, textDecoration: "none", borderBottom: `1px solid ${T.ink}`, paddingBottom: 2 } as React.CSSProperties,
     recap: (isMobile: boolean): React.CSSProperties => ({
       marginTop: isMobile ? 20 : 28,
       paddingTop: 16,
@@ -162,7 +161,18 @@ const STYLES = {
   },
 
   summary: {
-    wrap: { position: "sticky", top: 90 } as React.CSSProperties,
+    // Sticky TOC : alignSelf flex-start + maxHeight + overflowY pour que le
+    // sommaire reste visible pendant le scroll sans dépasser la fenêtre.
+    // top: 24 (la Navbar est dans un MountedOnly fixed-height de 72px — on
+    // aligne le sommaire à ~24px du haut de la colonne, le parent grid a
+    // déjà son padding).
+    wrap: {
+      position: "sticky",
+      top: 24,
+      alignSelf: "flex-start",
+      maxHeight: "calc(100vh - 48px)",
+      overflowY: "auto",
+    } as React.CSSProperties,
     eyebrow: { fontSize: 10, fontWeight: 700, letterSpacing: "1.8px", textTransform: "uppercase", color: T.soft, marginBottom: 14 } as React.CSSProperties,
     nav: { display: "flex", flexDirection: "column", gap: 2 } as React.CSSProperties,
     item: (active: boolean): React.CSSProperties => ({
@@ -1221,9 +1231,6 @@ export default function Dossier() {
                   Un dossier bien tenu, c&apos;est jusqu&apos;à quatre fois plus de réponses. Complétez ce qui manque, déposez vos justificatifs, puis partagez en un lien sécurisé valable 7 jours.
                   <Tooltip text="Votre dossier réunit tous les justificatifs demandés par les propriétaires (identité, revenus, garant). Il est partagé uniquement avec les propriétaires que vous contactez, à votre initiative." />
                 </p>
-                <a href="/carnet" className="no-print" style={STYLES.hero.carnetLink}>
-                  Accéder au carnet d&apos;entretien →
-                </a>
               </div>
 
               {/* Score Card */}
