@@ -16,15 +16,14 @@ import type { FeaturedListing } from "./useFeaturedListings"
  *  - Pas de pill "1 247 logements mis à jour il y a 3 min" si la DB est vide
  *  - Le texte pill reste honnête : "Beta publique · Inscription gratuite"
  *
- * Sources images (priorité descendante) :
- *  1. Vraies annonces en DB via useFeaturedListings (photos[] non vide)
- *  2. Fallback : 3 photos d'intérieurs Unsplash dans /public/hero/*.jpg
- *     (servis depuis 'self', CSP respecté)
+ * ─── Photos hero (décision 2026-04-21) ──────────────────────────────────
+ * Les 4 photos de /public/hero/1..4.jpg sont la signature visuelle de
+ * la marque — elles restent identiques MÊME quand des vraies annonces
+ * sont disponibles en DB. Validé Paul : "ces photos sont parfaites,
+ * même avec des annonces la bannière ne doit pas changer".
  *
- * ─── Crédits photos hero (Unsplash, licence libre) ───────────────────────
- *   /public/hero/1.jpg  photo-1560448204-e02f11c3d0e2  (salon clair)
- *   /public/hero/2.jpg  photo-1502672260266-1c1ef2d93688 (studio canal)
- *   /public/hero/3.jpg  photo-1522708323590-d24dbb6b0267 (appart lumineux)
+ * Le prop `listings` est conservé dans la signature pour compatibilité
+ * avec le parent (app/page.tsx), mais n'est plus utilisé pour le hero.
  * ─────────────────────────────────────────────────────────────────────────
  */
 
@@ -35,7 +34,7 @@ const PROMPTS = [
   "Un studio meublé à Marseille",
 ]
 
-const HERO_FALLBACK_PHOTOS = ["/hero/1.jpg", "/hero/2.jpg", "/hero/3.jpg"]
+const HERO_PHOTOS = ["/hero/1.jpg", "/hero/2.jpg", "/hero/3.jpg", "/hero/4.jpg"]
 
 export default function Hero({
   listings,
@@ -48,10 +47,11 @@ export default function Hero({
   const [bg, setBg] = useState(0)
   const [ville, setVille] = useState("")
 
-  // Photos hero : d'abord les vraies annonces, sinon fallback /public/hero/*
-  const realPhotos = listings.filter(l => l.photos.length > 0).slice(0, 4).map(l => l.photos[0])
-  const heroPhotos = realPhotos.length > 0 ? realPhotos : HERO_FALLBACK_PHOTOS
-  const usingFallback = realPhotos.length === 0
+  // Photos hero : signature de marque, identiques même quand des vraies
+  // annonces existent en DB (décision Paul 2026-04-21). Le prop `listings`
+  // reste dans la signature pour compatibilité mais n'est plus lu.
+  void listings
+  const heroPhotos = HERO_PHOTOS
 
   // Cross-fade toutes les 4.5 s — désactivé si reduced-motion
   useInterval(!reduced && heroPhotos.length > 1, () => setBg(b => (b + 1) % heroPhotos.length), 4500)
@@ -175,18 +175,6 @@ export default function Hero({
           ALUR en 10 minutes, bail électronique à valeur légale, état des
           lieux digital. Le tout, gratuit.
         </p>
-        {usingFallback && (
-          <p aria-hidden style={{
-            fontSize: 9,
-            color: "rgba(255,255,255,0.35)",
-            margin: 0,
-            marginTop: isMobile ? 24 : 40,
-            letterSpacing: "0.6px",
-            textTransform: "uppercase",
-          }}>
-            Visuels d&apos;illustration
-          </p>
-        )}
       </div>
     </section>
   )

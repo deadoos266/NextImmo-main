@@ -1,31 +1,45 @@
-import AnnoncesClient from "./AnnoncesClient"
+"use client"
+import dynamic from "next/dynamic"
 
 /**
- * Server component fin pour /annonces.
+ * Page /annonces — SSR complètement désactivé (ssr: false).
  *
- * Pourquoi ce wrapping :
- *   Le vrai composant (AnnoncesClient) utilise `useSearchParams()` pour
- *   lire `?ville=Paris` etc. Dans Next.js 15, un `useSearchParams()` dans
- *   un composant "use client" sur une route pré-rendue statiquement force
- *   Next à émettre un template `<template data-dgst="BAILOUT_TO_CLIENT_SIDE_RENDERING">`
- *   au SSR. Côté client, React attrape ce bailout à l'hydratation et le
- *   log comme **minified error #418** (même famille que "hydration
- *   mismatch"), ce qui détruit visuellement le sous-arbre.
+ * Pourquoi cette nucléaire :
+ *   Après 5 fixes ciblés (RoleProvider lazy init, useResponsive, SW purge,
+ *   MountedOnly Navbar/Footer, force-dynamic server wrapper), le React
+ *   error #418 persistait encore sur /annonces?ville=Paris. La source
+ *   exacte du mismatch SSR/CSR reste non identifiée dans un fichier de
+ *   1041 lignes avec des dizaines de hooks.
  *
- *   `export const dynamic = "force-dynamic"` sur ce server component dit
- *   à Next : "cette route est 100% dynamique, ne tente même pas de la
- *   pré-rendre au build". Le HTML SSR généré pour chaque requête
- *   contient directement le composant client avec ses searchParams, pas
- *   de bailout template, plus d'erreur #418.
+ *   Avec `dynamic(() => import(...), { ssr: false })`, Next.js ne rend
+ *   RIEN côté serveur pour ce composant — juste le fallback. Le serveur
+ *   envoie un squelette vide, le client charge AnnoncesClient, monte et
+ *   rend. Pas de HTML SSR à matcher, pas de mismatch possible,
+ *   GARANTI zéro #418.
  *
- *   Coût : pas de cache ISR pour /annonces. Mais c'est logique : la liste
- *   dépend du locataire connecté, des filtres URL et de la DB — rien
- *   qu'on veut servir en cache de toute façon.
+ *   Coût : 1 frame de loading avant que la page apparaisse. Comparé à
+ *   "annonces qui disparaissent en cascade #418", c'est un cadeau.
  *
- *   Pour préserver le SEO : la page reste accessible aux crawlers via le
- *   rendu dynamique (Next attend le render avant de servir le HTML).
+ *   À réactiver plus tard : quand on aura isolé le vrai fautif (via
+ *   React dev build déployé temporairement pour lire l'erreur non
+ *   minifiée), on pourra rebasculer en SSR normal.
  */
-export const dynamic = "force-dynamic"
+const AnnoncesClient = dynamic(() => import("./AnnoncesClient"), {
+  ssr: false,
+  loading: () => (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "calc(100vh - 72px)",
+      background: "#F7F4EF",
+      fontFamily: "'DM Sans', sans-serif",
+      color: "#6b7280",
+    }}>
+      Chargement des annonces...
+    </div>
+  ),
+})
 
 export default function AnnoncesPage() {
   return <AnnoncesClient />
