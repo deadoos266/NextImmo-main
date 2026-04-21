@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
 import { validateDocument } from "../../lib/fileValidation"
-import { useResponsive } from "../hooks/useResponsive"
 import Tooltip from "../components/Tooltip"
 import PhoneInput from "../components/PhoneInput"
 import SharePanel from "./SharePanel"
@@ -1095,19 +1094,37 @@ export default function Dossier() {
   // Si la migration 022 n'est pas appliquée, la colonne dossier_docs_libres
   // n'existe pas : on détecte via code erreur 42703 et on masque la section.
   const [libresSchemaReady, setLibresSchemaReady] = useState(true)
-  const { isMobile } = useResponsive()
-  // isShortViewport : écrans courts (mobile landscape, ~400px de haut) où un
-  // sticky TOC/SharePanel prend tout le viewport et le contenu scrolle derrière.
-  // On désactive le sticky dans ce cas pour laisser la sidebar flow linéaire.
-  const [isShortViewport, setIsShortViewport] = useState(false)
+  // Viewport unifié : une seule source de vérité pour isMobile + isShortViewport.
+  // On calcule les deux à chaque mesure (w, h) pour éviter toute race condition
+  // entre `resize` (useResponsive) et `matchMedia change` (ancien hook) — sur iOS
+  // les deux events arrivent avec un léger délai lors d'une rotation, ce qui
+  // produisait un render intermédiaire où `isMobile=false ET isShortViewport=false`
+  // → grid 3 colonnes sur 390px de large → tout s'empilait. On écoute aussi
+  // `orientationchange` et `visualViewport.resize` car `resize` seul est instable
+  // sur Safari iOS au moment de la rotation.
+  const [viewport, setViewport] = useState<{ w: number; h: number }>({ w: 1200, h: 800 })
   useEffect(() => {
     if (typeof window === "undefined") return
-    const mq = window.matchMedia("(max-height: 640px) and (orientation: landscape)")
-    const update = () => setIsShortViewport(mq.matches)
+    const update = () => setViewport({ w: window.innerWidth, h: window.innerHeight })
     update()
-    mq.addEventListener("change", update)
-    return () => mq.removeEventListener("change", update)
+    window.addEventListener("resize", update)
+    window.addEventListener("orientationchange", update)
+    const vv = window.visualViewport
+    vv?.addEventListener("resize", update)
+    return () => {
+      window.removeEventListener("resize", update)
+      window.removeEventListener("orientationchange", update)
+      vv?.removeEventListener("resize", update)
+    }
   }, [])
+  const isMobile = viewport.w < 640
+  // isShortViewport : écrans courts (mobile landscape, ~400px de haut).
+  const isShortViewport = viewport.h <= 640 && viewport.w > viewport.h
+  // isCompactLayout : largeur insuffisante pour le grid 3 colonnes
+  // (240 + 1fr + 380 = 620 + gaps = ~720 min, confortable à partir de 960).
+  // Entre 640 et 960, les composants s'écrasent ou débordent → on force
+  // le layout 1 colonne. isMobile reste utilisé pour la typo/padding.
+  const isCompactLayout = viewport.w < 960 || isShortViewport
   const [generatingPDF, setGeneratingPDF] = useState(false)
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
@@ -1775,13 +1792,13 @@ export default function Dossier() {
           )}
 
           {/* ══════════ GRID 3 COLONNES ══════════
-              En landscape court (iPhone paysage ≤640px haut), on force le
-              layout 1 colonne peu importe la largeur : 240+1fr+380 ne tient
-              pas sur 812px utiles et le contenu passe les uns sur les autres. */}
-          <div style={STYLES.layout.grid(isMobile || isShortViewport)}>
+              Le layout 3 colonnes (240+1fr+380) nécessite ~960px pour respirer.
+              En dessous (mobile, tablette, landscape court), on force 1 colonne
+              pour éviter les composants qui s'empilent ou débordent. */}
+          <div style={STYLES.layout.grid(isCompactLayout)}>
 
-            {/* Sommaire sticky (desktop only, masqué en mobile ET landscape court) */}
-            {!isMobile && !isShortViewport && (
+            {/* Sommaire sticky (uniquement quand le layout 3 colonnes tient) */}
+            {!isCompactLayout && (
               <aside style={STYLES.summary.wrap(true)} className="no-print">
                 <div style={STYLES.summary.eyebrow}>Sommaire</div>
                 <nav style={STYLES.summary.nav}>
@@ -2020,7 +2037,7 @@ export default function Dossier() {
             </div>
 
             {/* Sidebar droite — partage + accès + download */}
-            <aside style={STYLES.layout.sidebar(!isMobile && !isShortViewport)} className="no-print">
+            <aside style={STYLES.layout.sidebar(!isCompactLayout)} className="no-print">
               <SharePanel />
               <AccessLogPanel />
               {/* DownloadCard */}
