@@ -23,6 +23,7 @@ const DOC_KEY_LABELS: Record<string, string> = {
   attestation_caf: "Attestation CAF",
   attestation_assurance: "Attestation assurance",
   attestation_employeur: "Attestation employeur",
+  zip: "Dossier ZIP complet",
 }
 
 const T = {

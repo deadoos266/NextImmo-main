@@ -161,16 +161,14 @@ const STYLES = {
   },
 
   summary: {
-    // Sticky TOC : alignSelf flex-start + maxHeight + overflowY pour que le
-    // sommaire reste visible pendant le scroll sans dépasser la fenêtre.
-    // top: 24 (la Navbar est dans un MountedOnly fixed-height de 72px — on
-    // aligne le sommaire à ~24px du haut de la colonne, le parent grid a
-    // déjà son padding).
+    // Sticky TOC : top: 90 pour passer SOUS la Navbar sticky (72px + 18px gap).
+    // maxHeight clampé à la hauteur viewport - offset pour un scroll interne
+    // si beaucoup de sections.
     wrap: {
       position: "sticky",
-      top: 24,
+      top: 90,
       alignSelf: "flex-start",
-      maxHeight: "calc(100vh - 48px)",
+      maxHeight: "calc(100vh - 110px)",
       overflowY: "auto",
     } as React.CSSProperties,
     eyebrow: { fontSize: 10, fontWeight: 700, letterSpacing: "1.8px", textTransform: "uppercase", color: T.soft, marginBottom: 14 } as React.CSSProperties,
@@ -180,17 +178,21 @@ const STYLES = {
       gridTemplateColumns: "auto 1fr auto",
       alignItems: "center",
       gap: 10,
-      padding: "10px 12px",
+      padding: active ? "12px 16px" : "10px 12px",
       borderRadius: 10,
-      background: active ? T.white : "transparent",
-      border: active ? `1px solid ${T.line}` : "1px solid transparent",
+      background: active ? T.ink : "transparent",
+      color: active ? T.white : "inherit",
+      border: "1px solid transparent",
+      borderLeft: active ? `2px solid ${T.ink}` : "2px solid transparent",
+      marginLeft: active ? -2 : 0,
       cursor: "pointer",
       textAlign: "left",
       fontFamily: "inherit",
+      transition: "background 200ms ease, color 200ms ease, padding 200ms ease",
     }),
-    num: (active: boolean): React.CSSProperties => ({ fontSize: 13, fontStyle: "italic", color: active ? T.ink : T.soft, fontVariantNumeric: "tabular-nums", fontWeight: 400 }),
-    label: (active: boolean): React.CSSProperties => ({ fontSize: 14, fontWeight: active ? 700 : 500, color: active ? T.ink : T.meta }),
-    dot: (done: boolean): React.CSSProperties => ({ width: 8, height: 8, borderRadius: "50%", background: done ? T.success : T.line }),
+    num: (active: boolean): React.CSSProperties => ({ fontSize: 13, fontStyle: "italic", color: active ? T.white : T.soft, fontVariantNumeric: "tabular-nums", fontWeight: 400 }),
+    label: (active: boolean): React.CSSProperties => ({ fontSize: 14, fontWeight: active ? 700 : 500, color: active ? T.white : T.meta }),
+    dot: (done: boolean, active: boolean): React.CSSProperties => ({ width: 8, height: 8, borderRadius: "50%", background: active ? T.white : (done ? T.success : T.line) }),
     tip: { marginTop: 22, padding: "14px 14px", background: T.white, borderRadius: 14, border: `1px solid ${T.line}` } as React.CSSProperties,
     tipLabel: { fontSize: 11, fontWeight: 700, color: T.soft, textTransform: "uppercase", letterSpacing: "1.2px", marginBottom: 6 } as React.CSSProperties,
     tipBody: { fontSize: 12.5, color: "#333", lineHeight: 1.5 } as React.CSSProperties,
@@ -835,8 +837,9 @@ export default function Dossier() {
     logement_actuel_ville: "",
     a_apl: false,
     mobilite_pro: false,
-    // Garant
-    garant: false, type_garant: "",
+    // Garant (null = pas encore répondu, false = Non, true = Oui). Forcer un
+    // choix explicite au locataire : un pré-coché "Non" masque la vraie réponse.
+    garant: null as boolean | null, type_garant: "",
     // Présentation
     presentation: "",
   })
@@ -846,6 +849,40 @@ export default function Dossier() {
   const [docsBackup, setDocsBackup] = useState<Record<string, string[]> | null>(null)
   const [undoLabel, setUndoLabel] = useState<string | null>(null)
   const [activeSection, setActiveSection] = useState<string>("identite")
+
+  // Scroll-spy : observe les sections et met à jour activeSection selon celle
+  // qui est la plus visible au centre du viewport. rootMargin déplace la zone
+  // de détection (100px sous le haut, 60% restant en bas → déclenche dès qu'une
+  // section entre dans le tiers supérieur).
+  useEffect(() => {
+    if (loading) return
+    // Les <Section> rendent un <section id="sec-${id}"> — on observe ces nœuds
+    // et on retire le préfixe pour matcher l'id logique utilisé par summaryItems.
+    const ids = ["identite", "pro", "logement", "garant", "presentation", "documents"]
+    const elements = ids
+      .map(id => document.getElementById(`sec-${id}`))
+      .filter((el): el is HTMLElement => el !== null)
+    if (elements.length === 0) return
+    const observer = new IntersectionObserver(
+      entries => {
+        const visible = entries.filter(e => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)
+        if (visible[0]) setActiveSection(visible[0].target.id.replace(/^sec-/, ""))
+      },
+      { rootMargin: "-100px 0px -60% 0px", threshold: [0, 0.25, 0.5, 1] }
+    )
+    elements.forEach(el => observer.observe(el))
+    return () => observer.disconnect()
+  }, [loading])
+
+  // Auto-scroll du sommaire pour garder l'item actif visible dans le TOC sticky.
+  // Respecte prefers-reduced-motion.
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const active = document.querySelector<HTMLElement>(`[data-toc-active="true"]`)
+    if (!active) return
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    active.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "nearest", inline: "nearest" })
+  }, [activeSection])
 
   // Date "Mis à jour X" : calculée post-mount pour éviter tout mismatch SSR/CSR
   // (new Date() dans le render retourne une valeur différente à chaque appel).
@@ -906,7 +943,7 @@ export default function Dossier() {
         logement_actuel_ville: data.logement_actuel_ville || "",
         a_apl: !!data.a_apl,
         mobilite_pro: !!data.mobilite_pro,
-        garant: data.garant || false,
+        garant: data.garant === true ? true : data.garant === false ? false : null,
         type_garant: data.type_garant || "",
         presentation: data.presentation || "",
       })
@@ -1137,16 +1174,17 @@ export default function Dossier() {
     if (d.conditionel === "toujours") return false // "assurance" toujours visible mais non comptée comme obligatoire
     return false
   })
-  const allDocs = [...DOCS_REQUIS, ...docsOptionnelsPertinents, ...(form.garant ? DOCS_GARANT : [])]
+  const allDocs = [...DOCS_REQUIS, ...docsOptionnelsPertinents, ...(form.garant === true ? DOCS_GARANT : [])]
   // Compte le nombre de catégories avec au moins 1 fichier
   const docsCount = allDocs.filter(d => (docs[d.key] || []).length > 0).length
   // scoreInfo ne compte QUE les champs légalement exigibles (décret 2015-1437).
-  // Les champs facultatifs (date de naissance, nationalité, situation familiale,
-  // nb enfants) ne peuvent pas être utilisés pour sélectionner un locataire —
-  // les exclure du score évite de pénaliser un candidat conforme à la loi.
+  // Date de naissance incluse : elle conditionne la majorité (capacité juridique
+  // à signer un bail) — légitime au sens du décret.
+  // Nationalité / situation familiale / nb enfants restent exclus (discriminants).
   const champs = [
-    !!(form.prenom || form.nom), !!form.telephone, !!form.situation_pro, !!form.revenus_mensuels,
-    form.garant !== undefined, !!profil?.ville_souhaitee, !!profil?.budget_max,
+    !!(form.prenom || form.nom), !!form.telephone, !!form.date_naissance,
+    !!form.situation_pro, !!form.revenus_mensuels,
+    form.garant !== null, !!profil?.ville_souhaitee, !!profil?.budget_max,
     !!form.logement_actuel_type,
   ]
   const scoreInfo = Math.round((champs.filter(Boolean).length / champs.length) * 100)
@@ -1186,7 +1224,7 @@ export default function Dossier() {
     { id: "identite", num: "01", label: "Identité", done: !!(form.prenom || form.nom) && !!form.telephone },
     { id: "pro", num: "02", label: "Situation pro", done: !!form.situation_pro && !!form.revenus_mensuels },
     { id: "logement", num: "03", label: "Logement actuel", done: !!form.logement_actuel_type },
-    { id: "garant", num: "04", label: "Garant", done: !form.garant || !!form.type_garant },
+    { id: "garant", num: "04", label: "Garant", done: form.garant !== null && (form.garant === false || !!form.type_garant) },
     { id: "presentation", num: "05", label: "Présentation", done: form.presentation.length > 40 },
     { id: "documents", num: "06", label: "Pièces jointes", done: docsCount === allDocs.length && allDocs.length > 0 },
   ]
@@ -1315,11 +1353,13 @@ export default function Dossier() {
                         key={item.id}
                         type="button"
                         onClick={() => scrollToSection(item.id)}
+                        aria-current={active ? "location" : undefined}
+                        data-toc-active={active ? "true" : undefined}
                         style={STYLES.summary.item(active)}
                       >
                         <span style={STYLES.summary.num(active)}>{item.num}</span>
                         <span style={STYLES.summary.label(active)}>{item.label}</span>
-                        <span style={STYLES.summary.dot(item.done)} aria-hidden />
+                        <span style={STYLES.summary.dot(item.done, active)} aria-hidden />
                       </button>
                     )
                   })}
@@ -1362,18 +1402,18 @@ export default function Dossier() {
                   <TextInput value={session?.user?.email || ""} disabled isMobile={isMobile} />
                 </Field>
                 <Row2 isMobile={isMobile}>
-                  <Field label={<>Date de naissance <span style={{ fontWeight: 400, color: T.soft, textTransform: "none", letterSpacing: 0 }}>(facultatif)</span></>}>
+                  <Field label={<>Date de naissance <Tooltip text="Obligatoire car elle conditionne la capacité juridique à signer un bail (majorité). C'est la seule donnée d'état civil que le propriétaire peut légitimement demander." /></>}>
                     <TextInput type="date" value={form.date_naissance} onChange={v => setForm(f => ({ ...f, date_naissance: v }))} isMobile={isMobile} />
                   </Field>
-                  <Field label={<>Nationalité <span style={{ fontWeight: 400, color: T.soft, textTransform: "none", letterSpacing: 0 }}>(facultatif)</span></>}>
+                  <Field label={<>Nationalité <span style={{ fontWeight: 400, color: T.soft, textTransform: "none", letterSpacing: 0 }}>(facultatif)</span> <Tooltip text="La loi interdit à un propriétaire de vous refuser un logement à cause de votre origine (article 225-1 du Code pénal, loi n° 2017-86). Vous n'avez aucune obligation de répondre." /></>}>
                     <SelectField value={form.nationalite} options={NATIONALITES_COURANTES} onChange={v => setForm(f => ({ ...f, nationalite: v }))} isMobile={isMobile} />
                   </Field>
                 </Row2>
-                <Field label={<>Situation familiale <span style={{ fontWeight: 400, color: T.soft, textTransform: "none", letterSpacing: 0 }}>(facultatif)</span></>}>
+                <Field label={<>Situation familiale <span style={{ fontWeight: 400, color: T.soft, textTransform: "none", letterSpacing: 0 }}>(facultatif)</span> <Tooltip text="La loi interdit à un propriétaire de vous refuser un logement à cause de votre situation familiale (article 225-1 du Code pénal). Vous n'avez aucune obligation de répondre." /></>}>
                   <ChipGroup value={form.situation_familiale} options={SITUATIONS_FAMILIALES} onChange={v => setForm(f => ({ ...f, situation_familiale: v }))} />
                 </Field>
                 <Row2 isMobile={isMobile}>
-                  <Field label={<>Nombre d&apos;enfants à charge <span style={{ fontWeight: 400, color: T.soft, textTransform: "none", letterSpacing: 0 }}>(facultatif)</span></>}>
+                  <Field label={<>Nombre d&apos;enfants à charge <span style={{ fontWeight: 400, color: T.soft, textTransform: "none", letterSpacing: 0 }}>(facultatif)</span> <Tooltip text="La loi interdit à un propriétaire de vous refuser un logement à cause de votre situation de famille (article 225-1 du Code pénal). Vous n'avez aucune obligation de répondre." /></>}>
                     <TextInput type="number" min={0} max={15} value={form.nb_enfants} onChange={v => setForm(f => ({ ...f, nb_enfants: Math.max(0, Math.min(15, Number(v) || 0)) }))} isMobile={isMobile} />
                   </Field>
                   <Field label="Nombre d'occupants">
@@ -1391,12 +1431,20 @@ export default function Dossier() {
                   <Field label={<>Revenus mensuels nets (€) <Tooltip text="Vos revenus nets après impôts et cotisations. La règle courante : les propriétaires attendent un revenu d'environ 3 fois le loyer. Ex : pour un loyer de 800 €, visez au moins 2400 € de revenus nets mensuels." /></>}>
                     <TextInput type="number" value={form.revenus_mensuels} onChange={v => setForm(f => ({ ...f, revenus_mensuels: v }))} placeholder="2 500" isMobile={isMobile} />
                   </Field>
-                  <Field label="Loyer max recommandé">
+                  <Field label={<>Loyer max recommandé <Tooltip text="Règle des 33% (ou règle du tiers) : on considère qu'un locataire est solvable si son loyer charges comprises ne dépasse pas 33 % de ses revenus nets. C'est une pratique du marché, pas une obligation légale." /></>}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 14px", background: T.mutedBg, borderRadius: 10, fontSize: 14, fontWeight: 600, color: T.ink, border: `1.5px solid ${T.line}`, boxSizing: "border-box" }}>
-                      <span style={{ fontSize: 18, fontWeight: 400, color: T.success, fontVariantNumeric: "tabular-nums" }}>
-                        {Math.round((Number(form.revenus_mensuels) || 0) / 3).toLocaleString("fr-FR")} €
-                      </span>
-                      <span style={{ fontSize: 11, color: T.soft }}>pour {form.nb_occupants} occupant{form.nb_occupants > 1 ? "s" : ""}</span>
+                      {Number(form.revenus_mensuels) > 0 ? (
+                        <>
+                          <span style={{ fontSize: 18, fontWeight: 400, color: T.success, fontVariantNumeric: "tabular-nums" }}>
+                            {Math.round(Number(form.revenus_mensuels) * 0.33).toLocaleString("fr-FR")} €
+                          </span>
+                          <span style={{ fontSize: 11, color: T.soft }}>33 % de vos revenus nets</span>
+                        </>
+                      ) : (
+                        <span style={{ fontSize: 13, fontWeight: 400, color: T.soft, fontStyle: "italic" }}>
+                          Renseignez vos revenus pour calculer
+                        </span>
+                      )}
                     </div>
                   </Field>
                 </Row2>
@@ -1424,7 +1472,7 @@ export default function Dossier() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 6 }}>
                   <Toggle
                     label="Je bénéficie des APL"
-                    sub="Aide personnalisée au logement — renforce votre solvabilité"
+                    sub="Le propriétaire ne peut pas refuser votre candidature au motif que vous percevez des aides au logement (loi n° 89-462, article 1). Information utilisée pour calculer votre solvabilité."
                     checked={form.a_apl}
                     onChange={v => setForm(f => ({ ...f, a_apl: v }))}
                   />
@@ -1467,7 +1515,7 @@ export default function Dossier() {
                     ))}
                   </div>
                 </Field>
-                {form.garant && (
+                {form.garant === true && (
                   <Field label={<>Type de garant <Tooltip text="Personnel : un proche (parent, etc.) se porte caution sur ses revenus. Organisme Visale : garantie gratuite d'Action Logement (si éligible), très appréciée des proprios. Caution bancaire : somme bloquée en banque équivalente à plusieurs loyers." /></>}>
                     <ChipGroup value={form.type_garant} options={TYPES_GARANT} onChange={v => setForm(f => ({ ...f, type_garant: v }))} />
                   </Field>
@@ -1507,7 +1555,7 @@ export default function Dossier() {
                 {docsOptionnelsVisibles.length > 0 && (
                   <DocGroup title="Recommandé selon votre situation" items={docsOptionnelsVisibles} shared={docCardShared} />
                 )}
-                {form.garant && (
+                {form.garant === true && (
                   <DocGroup title="Documents du garant" items={DOCS_GARANT} shared={docCardShared} />
                 )}
               </Section>

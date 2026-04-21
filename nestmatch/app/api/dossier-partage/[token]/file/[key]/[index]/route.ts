@@ -38,6 +38,20 @@ export async function GET(
     return NextResponse.json({ error: "Lien expiré ou invalide" }, { status: 404 })
   }
 
+  // 1b. Check révocation côté DB (graceful si migration 021 pas encore appliquée)
+  const { data: shareRow, error: shareErr } = await supabaseAdmin
+    .from("dossier_share_tokens")
+    .select("revoked_at")
+    .eq("token_hash", hashToken(token))
+    .maybeSingle()
+  if (shareErr && shareErr.code !== "42P01") {
+    // Log mais ne bloque pas — le JWT reste la source de vérité si la DB pète
+    console.error("[dossier-partage/file] revoked check error:", shareErr.message)
+  }
+  if (shareRow?.revoked_at) {
+    return NextResponse.json({ error: "Lien révoqué" }, { status: 404 })
+  }
+
   // 2. Rate-limit par IP
   const ip = getClientIp(req.headers)
   const rl = await checkRateLimitAsync(`dossier-file:${ip}`, { max: 60, windowMs: 60_000 })

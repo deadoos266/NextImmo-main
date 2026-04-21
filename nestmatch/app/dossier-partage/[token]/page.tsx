@@ -5,6 +5,7 @@ import { supabaseAdmin } from "../../../lib/supabase-server"
 import { displayName } from "../../../lib/privacy"
 import { BRAND } from "../../../lib/brand"
 import { formatNomComplet } from "../../../lib/profilHelpers"
+import { hashToken } from "../../../lib/dossierAccessLog"
 import AccessLogPing from "./AccessLogPing"
 
 export const metadata = {
@@ -56,6 +57,28 @@ export default async function DossierPartage({ params }: { params: Promise<{ tok
   const { token } = await params
   const valid = verifyDossierToken(token)
   if (!valid) return notFound()
+
+  // Check révocation en DB (graceful si migration 021 pas encore appliquée) + bump consultation_count
+  const th = hashToken(token)
+  const { data: shareRow, error: shareErr } = await supabaseAdmin
+    .from("dossier_share_tokens")
+    .select("id, revoked_at, consultation_count")
+    .eq("token_hash", th)
+    .maybeSingle()
+  if (shareErr && shareErr.code !== "42P01") {
+    console.error("[dossier-partage/page] revoked check error:", shareErr.message)
+  }
+  if (shareRow?.revoked_at) return notFound()
+  if (shareRow?.id) {
+    // fire-and-forget : bump consultation_count à chaque rendu (le page load compte comme une consultation)
+    void supabaseAdmin
+      .from("dossier_share_tokens")
+      .update({
+        consultation_count: (shareRow.consultation_count ?? 0) + 1,
+        last_consulted_at: new Date().toISOString(),
+      })
+      .eq("id", shareRow.id)
+  }
 
   const { data: profil } = await supabaseAdmin
     .from("profils")
@@ -203,6 +226,29 @@ export default async function DossierPartage({ params }: { params: Promise<{ tok
           <div style={row}><span style={rowLabel}>Budget max</span><span style={rowValue}>{profil.budget_max ? `${profil.budget_max} €/mois` : "—"}</span></div>
           <div style={row}><span style={rowLabel}>Surface min</span><span style={rowValue}>{profil.surface_min ? `${profil.surface_min} m²` : "—"}</span></div>
           <div style={{ ...row, borderBottom: "none" }}><span style={rowLabel}>Pièces min</span><span style={rowValue}>{profil.pieces_min || "—"}</span></div>
+        </div>
+
+        {/* Dossier complet ZIP */}
+        <div style={{ background: T.ink, color: T.white, borderRadius: 20, padding: 28, marginBottom: 16, border: `1px solid ${T.ink}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.8px", textTransform: "uppercase", color: "#B8B4AC" }}>
+              Dossier complet
+            </span>
+            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.15)" }} />
+          </div>
+          <h2 style={{ fontSize: 22, fontWeight: 500, fontStyle: "italic", letterSpacing: "-0.4px", margin: "0 0 10px", color: T.white, lineHeight: 1.15 }}>
+            Télécharger le dossier en un clic
+          </h2>
+          <p style={{ fontSize: 13, color: "#D8D4CC", lineHeight: 1.6, margin: "0 0 18px" }}>
+            Archive .zip contenant le récapitulatif en PDF et l&apos;ensemble des pièces justificatives organisées par catégorie.
+          </p>
+          <a
+            href={`/api/dossier-partage/${token}/zip`}
+            download
+            style={{ display: "inline-block", background: T.white, color: T.ink, border: "none", borderRadius: 999, padding: "11px 22px", fontWeight: 600, fontSize: 13, textDecoration: "none", letterSpacing: "0.3px", fontFamily: "inherit" }}
+          >
+            Télécharger le dossier (.zip)
+          </a>
         </div>
 
         {/* Documents déposés */}
