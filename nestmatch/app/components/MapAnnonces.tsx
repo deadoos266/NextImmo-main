@@ -6,16 +6,17 @@ import "leaflet/dist/leaflet.css"
 
 type MapType = "plan" | "satellite" | "standard"
 
-// Tuiles par défaut = IGN Plan V2 (cartographie officielle française,
-// gratuite, sans clé API, rendu premium avec labels en français natifs).
-// https://geoservices.ign.fr/documentation/services/utilisation-web/tutoriel-leaflet
+// Tuiles par défaut = Stadia Maps Alidade Smooth (rendu sobre gris clair premium,
+// style proche SeLoger/Airbnb, gratuit jusqu'à 200k req/mois sans clé API,
+// labels via OSM donc en français natif).
+// https://docs.stadiamaps.com/map-styles/alidade-smooth/
 // Mode "Détaillé" = OSM France (labels FR, plus dense au zoom street-level).
 // Satellite = Esri World Imagery (pas d'alternative française gratuite
 // équivalente sans clé API).
 const TILES: Record<MapType, { url: string; attribution: string; label: string; soft?: boolean }> = {
   plan: {
-    url: "https://data.geopf.fr/wmts?layer=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&style=normal&tilematrixset=PM&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image/png&TileMatrix={z}&TileCol={x}&TileRow={y}",
-    attribution: '&copy; <a href="https://www.ign.fr/">IGN</a> &middot; <a href="https://geoservices.ign.fr/">Géoplateforme</a>',
+    url: "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png",
+    attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &middot; &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     label: "Plan",
   },
   satellite: {

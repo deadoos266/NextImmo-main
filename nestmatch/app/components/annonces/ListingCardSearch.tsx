@@ -1,28 +1,28 @@
 "use client"
-import { useEffect, useState, type ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import Image from "next/image"
 import { CARD_GRADIENTS as GRADIENTS } from "../../../lib/cardGradients"
-import { useInterval, useReducedMotion } from "../home/hooks"
 import { highlightMatch } from "./highlight"
 
 /**
  * Card annonce pour la page /annonces avec 2 variantes :
- *  - variant="grid" : aspect 4/5 vertical, parité home/ListingCard.
- *  - variant="horizontal" : image à gauche (aspect 4/5 fixée 220px),
- *    meta à droite, utilisée en mode liste sur desktop.
+ *  - variant="grid"    : aspect 4/5 vertical, width ~280px, mode grille
+ *                        magazine (cards fixes alignées).
+ *  - variant="compact" : vertical compact style SeLoger, photo 16/10
+ *                        (~180px haut), contenu texte dense en dessous,
+ *                        pour le mode Liste+Carte (colonne étroite ~450px).
  *
  * Photos :
- *  - Rotation auto au hover (1.2 s) si plusieurs photos + pas reduced-motion.
+ *  - PAS d'auto-rotation (retirée v4, trop agressif selon feedback user).
  *  - Flèches manuelles visibles au hover (parité avec fiche détail).
- *  - Reset à l'idx 0 quand on quitte la card.
+ *  - Dots cliquables indicateurs (tap pour navigation directe).
  *
  * Accessibilité :
  *  - Le wrapper est un <a> cliquable → href annonce.
- *  - Boutons internes (favori, flèches) stoppent la propagation.
- *  - Rotation désactivée si prefers-reduced-motion.
+ *  - Boutons internes (favori, flèches, dots) stoppent la propagation.
  */
 
-type Variant = "grid" | "horizontal"
+type Variant = "grid" | "compact"
 
 interface Props {
   annonce: any
@@ -42,23 +42,14 @@ interface Props {
 function CardPhoto({
   annonce,
   aspect = "4 / 5",
-  fixedWidth,
 }: {
   annonce: any
   aspect?: string
-  fixedWidth?: number
 }) {
   const [idx, setIdx] = useState(0)
-  const [hover, setHover] = useState(false)
-  const reduced = useReducedMotion()
   const realPhotos: string[] = Array.isArray(annonce.photos) && annonce.photos.length > 0 ? annonce.photos : []
   const total = realPhotos.length > 0 ? realPhotos.length : 1
   const base = GRADIENTS[annonce.id % GRADIENTS.length]
-
-  useInterval(hover && realPhotos.length > 1 && !reduced, () => setIdx(i => (i + 1) % total), 1200)
-  useEffect(() => {
-    if (!hover) setIdx(0)
-  }, [hover])
 
   function prev(e: React.MouseEvent) {
     e.preventDefault()
@@ -70,6 +61,11 @@ function CardPhoto({
     e.stopPropagation()
     setIdx(i => (i + 1) % total)
   }
+  function goto(e: React.MouseEvent, i: number) {
+    e.preventDefault()
+    e.stopPropagation()
+    setIdx(i)
+  }
 
   const currentPhoto = realPhotos[idx]
 
@@ -77,20 +73,17 @@ function CardPhoto({
     <div
       style={{
         position: "relative",
-        aspectRatio: fixedWidth ? undefined : aspect,
-        width: fixedWidth ? fixedWidth : "100%",
-        height: fixedWidth ? "100%" : undefined,
+        aspectRatio: aspect,
+        width: "100%",
         background: currentPhoto ? "#000" : base,
         overflow: "hidden",
         flexShrink: 0,
       }}
       onMouseEnter={e => {
-        setHover(true)
         const btns = e.currentTarget.querySelectorAll<HTMLButtonElement>(".photo-nav")
         btns.forEach(b => (b.style.opacity = "1"))
       }}
       onMouseLeave={e => {
-        setHover(false)
         const btns = e.currentTarget.querySelectorAll<HTMLButtonElement>(".photo-nav")
         btns.forEach(b => (b.style.opacity = "0"))
       }}
@@ -212,14 +205,20 @@ function CardPhoto({
           }}
         >
           {realPhotos.map((_, i) => (
-            <div
+            <button
               key={i}
+              type="button"
+              onClick={e => goto(e, i)}
+              aria-label={`Aller à la photo ${i + 1}`}
               style={{
-                width: i === idx ? 14 : 5,
-                height: 5,
+                width: i === idx ? 14 : 6,
+                height: 6,
                 borderRadius: 999,
                 background: i === idx ? "white" : "rgba(255,255,255,0.5)",
                 transition: "all 0.2s",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
               }}
             />
           ))}
@@ -272,14 +271,14 @@ function FavoriButton({ favori, onClick }: { favori: boolean; onClick: (e: React
   )
 }
 
-// ─── Meta block (interne) ──────────────────────────────────────────────
-function MetaBlock({
+// ─── Meta block grid variant (interne) ─────────────────────────────────
+function MetaBlockGrid({
   annonce,
   score,
   info,
   isOwn,
   motCle,
-}: Pick<Props, "annonce" | "score" | "info" | "isOwn" | "motCle"> & { padding?: string }) {
+}: Pick<Props, "annonce" | "score" | "info" | "isOwn" | "motCle">) {
   const titre: ReactNode = motCle.trim() ? highlightMatch(annonce.titre || "", motCle) : annonce.titre
   const ville: ReactNode = motCle.trim() ? highlightMatch(annonce.ville || "", motCle) : annonce.ville
 
@@ -380,6 +379,135 @@ function MetaBlock({
   )
 }
 
+// ─── Meta block compact variant (interne) ──────────────────────────────
+// Style SeLoger : prix en gros en haut, specs inline, quartier, DPE si dispo.
+function MetaBlockCompact({
+  annonce,
+  score,
+  info,
+  isOwn,
+  motCle,
+}: Pick<Props, "annonce" | "score" | "info" | "isOwn" | "motCle">) {
+  const titre: ReactNode = motCle.trim() ? highlightMatch(annonce.titre || "", motCle) : annonce.titre
+  const ville: ReactNode = motCle.trim() ? highlightMatch(annonce.ville || "", motCle) : annonce.ville
+
+  const dpeColor = (letter: string): string => {
+    const map: Record<string, string> = {
+      A: "#16a34a", B: "#65a30d", C: "#eab308",
+      D: "#f59e0b", E: "#ea580c", F: "#dc2626", G: "#7f1d1d",
+    }
+    return map[letter?.toUpperCase?.()] || "#6b7280"
+  }
+
+  return (
+    <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 6 }}>
+      {/* Prix gros + badges */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+        <span style={{ fontSize: 20, fontWeight: 600, color: "#111", lineHeight: 1 }}>
+          {annonce.prix?.toLocaleString("fr-FR") ?? "—"} €
+          <span style={{ fontSize: 12, fontWeight: 400, color: "#9ca3af" }}>&nbsp;/mois</span>
+        </span>
+        {info && score !== null && (
+          <span
+            style={{
+              background: info.bg,
+              color: info.color,
+              padding: "3px 9px",
+              borderRadius: 999,
+              fontSize: 10,
+              fontWeight: 700,
+              flexShrink: 0,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {Math.round(score / 10)}%
+          </span>
+        )}
+        {isOwn && (
+          <span
+            style={{
+              background: "#F1EEE8",
+              color: "#374151",
+              padding: "3px 9px",
+              borderRadius: 999,
+              fontSize: 10,
+              fontWeight: 700,
+              flexShrink: 0,
+            }}
+          >
+            Votre bien
+          </span>
+        )}
+      </div>
+
+      {/* Specs inline */}
+      <div style={{ display: "flex", gap: 6, fontSize: 13, color: "#374151", flexWrap: "wrap", alignItems: "center" }}>
+        {annonce.pieces != null && (
+          <span style={{ fontWeight: 500 }}>{annonce.pieces} pièce{annonce.pieces > 1 ? "s" : ""}</span>
+        )}
+        {annonce.pieces != null && annonce.surface != null && <span style={{ color: "#d1d5db" }}>·</span>}
+        {annonce.surface != null && <span>{annonce.surface} m²</span>}
+        {annonce.etage != null && (
+          <>
+            <span style={{ color: "#d1d5db" }}>·</span>
+            <span>{annonce.etage === 0 ? "RDC" : `${annonce.etage}${annonce.etage === 1 ? "er" : "e"} ét.`}</span>
+          </>
+        )}
+        {annonce.meuble === true && (
+          <>
+            <span style={{ color: "#d1d5db" }}>·</span>
+            <span>Meublé</span>
+          </>
+        )}
+      </div>
+
+      {/* Titre compact */}
+      <h3 style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.35, margin: "2px 0 0", color: "#111",
+        overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box",
+        WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+        {titre}
+      </h3>
+
+      {/* Quartier + DPE */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 2 }}>
+        <p style={{
+          fontSize: 12,
+          color: "#6B6B6B",
+          margin: 0,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          minWidth: 0,
+          flex: 1,
+        }}>
+          {ville}
+          {annonce.quartier && <span style={{ color: "#9ca3af" }}> · {annonce.quartier}</span>}
+        </p>
+        {annonce.dpe && (
+          <span
+            title={`DPE ${annonce.dpe}`}
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: 6,
+              background: dpeColor(annonce.dpe),
+              color: "white",
+              fontSize: 11,
+              fontWeight: 700,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            {annonce.dpe.toUpperCase()}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── ListingCardSearch (export principal) ──────────────────────────────
 export default function ListingCardSearch({
   annonce,
@@ -395,18 +523,20 @@ export default function ListingCardSearch({
   variant,
 }: Props) {
   const baseStyle: React.CSSProperties = {
-    display: variant === "horizontal" ? "flex" : "block",
+    display: "block",
     textDecoration: "none",
     color: "#111",
     background: "white",
-    borderRadius: 20,
+    borderRadius: 16,
     border: `1px solid ${isSelected ? "#111" : "#EAE6DF"}`,
     overflow: "hidden",
     boxShadow: isSelected ? "0 6px 24px rgba(0,0,0,0.08)" : "0 1px 2px rgba(0,0,0,0.02)",
     transition: "box-shadow 0.25s ease, transform 0.25s ease, border-color 0.2s",
   }
 
-  if (variant === "horizontal") {
+  if (variant === "compact") {
+    // Style SeLoger : photo 16/10 en haut + bloc texte dense dessous.
+    // Utilisé en mode Liste+Carte où la colonne fait ~400-480px.
     return (
       <a
         href={`/annonces/${annonce.id}`}
@@ -424,27 +554,16 @@ export default function ListingCardSearch({
         }}
         style={baseStyle}
       >
-        <div style={{ position: "relative", width: 220, flexShrink: 0 }}>
-          <CardPhoto annonce={annonce} fixedWidth={220} />
+        <div style={{ position: "relative" }}>
+          <CardPhoto annonce={annonce} aspect="16 / 10" />
           <FavoriButton favori={favori} onClick={onToggleFavori} />
         </div>
-        <div
-          style={{
-            flex: 1,
-            padding: "20px 24px",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-            minWidth: 0,
-          }}
-        >
-          <MetaBlock annonce={annonce} score={score} info={info} isOwn={isOwn} motCle={motCle} />
-        </div>
+        <MetaBlockCompact annonce={annonce} score={score} info={info} isOwn={isOwn} motCle={motCle} />
       </a>
     )
   }
 
-  // variant="grid"
+  // variant="grid" — Mode Grille magazine, cards fixes alignées.
   return (
     <a
       href={`/annonces/${annonce.id}`}
@@ -467,7 +586,7 @@ export default function ListingCardSearch({
         <FavoriButton favori={favori} onClick={onToggleFavori} />
       </div>
       <div style={{ padding: "16px 18px 18px" }}>
-        <MetaBlock annonce={annonce} score={score} info={info} isOwn={isOwn} motCle={motCle} />
+        <MetaBlockGrid annonce={annonce} score={score} info={info} isOwn={isOwn} motCle={motCle} />
       </div>
     </a>
   )

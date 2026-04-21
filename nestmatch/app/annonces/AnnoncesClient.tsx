@@ -39,9 +39,7 @@ function useLazyMap() {
 
 /**
  * Hook léger : mesure la largeur du viewport pour décider du layout.
- * - ≥ 1280 : ratio 27/73 cards horizontales dans la liste
- * - 1024-1279 : ratio 27/73 mais cards en variant="grid" (colonne trop
- *   étroite pour horizontal)
+ * - ratio 35/65 Liste/Carte, fallback variant grid si colonne liste < 380px
  * - < 1024 : stack vertical mobile/tablette (géré par useResponsive)
  *
  * SSR safe : la valeur initiale est 1440 pour éviter tout mismatch.
@@ -133,10 +131,13 @@ interface SavedSearch {
 // ═══════════════════════════════════════════════════════════════════════
 const NAVBAR_HEIGHT = 72
 const FILTERS_BAR_HEIGHT = 64
+// Largeur max mode Grille (SeLoger-like : mise en page magazine centrée)
 const CONTAINER_MAX_WIDTH = 1440
-// Breakpoint : sous cette largeur, la colonne liste (27%) devient trop
-// étroite pour des cards horizontales → bascule auto en variant="grid"
-const HORIZONTAL_LIST_MIN_VIEWPORT = 1280
+// Mode Liste+Carte : la colonne liste prend ~35% du viewport (65% carte).
+// Si cette largeur tombe sous 380px → fallback variant="grid" car l'anatomie
+// compact SeLoger (prix + specs + titre + ville) devient illisible.
+const LIST_COLUMN_RATIO = 0.35
+const COMPACT_LIST_MIN_COL = 380
 
 // ═══════════════════════════════════════════════════════════════════════
 // Entry — délégation server→client sans Suspense (prop initialSearchParams)
@@ -631,10 +632,12 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
     completudeProfil !== null && completudeProfil < 80
 
   // ── Card variant auto selon largeur viewport (mode Liste desktop)
-  //   ≥ 1280 : cards horizontales (colonne ≈ 27% ≥ 340px)
-  //   < 1280 : fallback grid 1 col (colonne trop étroite)
-  const listCardVariant: "horizontal" | "grid" =
-    isSmall ? "grid" : viewportW >= HORIZONTAL_LIST_MIN_VIEWPORT ? "horizontal" : "grid"
+  //   colonne liste = viewportW × 0.35
+  //   si colonne ≥ 380px → cards verticales compactes (SeLoger-style)
+  //   sinon (viewport < ~1086) → fallback variant="grid" (trop étroit)
+  const listColumnWidth = viewportW * LIST_COLUMN_RATIO
+  const listCardVariant: "compact" | "grid" =
+    isSmall ? "grid" : listColumnWidth >= COMPACT_LIST_MIN_COL ? "compact" : "grid"
 
   // ═══════════════════════════════════════════════════════════════════════
   // Render — Scroll isolé :
@@ -658,6 +661,32 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   //   → carte masquée, grid max 4 cols centré, comportement "magazine".
   const gridMode = view === "grid"
 
+  // ── Scroll isolé STRICT en mode Liste+Carte desktop ───────────────────
+  //   body/html overflow:hidden pour que la zone liste+carte gère seule
+  //   son scroll interne (évite double barre + pied de page parasite).
+  //   En mode Grille ou mobile : scroll naturel du document.
+  //   Cleanup au unmount ET sur changement de view → pas de fuite hors /annonces.
+  useEffect(() => {
+    if (gridMode || isSmall) return
+    const prevBody = document.body.style.overflow
+    const prevHtml = document.documentElement.style.overflow
+    document.body.style.overflow = "hidden"
+    document.documentElement.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = prevBody
+      document.documentElement.style.overflow = prevHtml
+    }
+  }, [gridMode, isSmall])
+
+  // ── Container conditionnel — full-width en Liste+Carte, max-1440 en Grille
+  //   Liste+Carte desktop : edge-to-edge (padding 16) pour donner un max
+  //     d'espace à la carte (immersif SeLoger-style).
+  //   Grille ou mobile    : max-width 1440 centré, padding padH normal.
+  const useFullWidth = !gridMode && !isSmall
+  const containerMaxWidth = useFullWidth ? "100%" : CONTAINER_MAX_WIDTH
+  const containerMargin = useFullWidth ? "0" : "0 auto"
+  const containerPadH = useFullWidth ? 16 : padH
+
   return (
     <div
       style={{
@@ -677,8 +706,8 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           : "Logements à louer — annonces entre particuliers en France"}
       </h1>
 
-      {/* Container principal : max-width 1440, centré, padding latéral */}
-      <div style={{ maxWidth: CONTAINER_MAX_WIDTH, margin: "0 auto", paddingLeft: padH, paddingRight: padH }}>
+      {/* Container principal : full-width en Liste+Carte, max-1440 en Grille */}
+      <div style={{ maxWidth: containerMaxWidth, margin: containerMargin, paddingLeft: containerPadH, paddingRight: containerPadH }}>
 
         {/* ── Header éditorial — scroll normal (pas sticky) ────────────── */}
         {!isMobile && (
@@ -835,10 +864,10 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
               height: isSmall ? undefined : zoneLCHeight,
             }}
           >
-            {/* ── Colonne Liste — 27% desktop, 100% mobile/tablet ──────── */}
+            {/* ── Colonne Liste — 35% desktop, 100% mobile/tablet ──────── */}
             <div
               style={{
-                flex: isSmall ? 1 : "0 0 calc(27% - 8px)",
+                flex: isSmall ? 1 : "0 0 calc(35% - 8px)",
                 minWidth: 0,
                 width: isSmall ? "100%" : undefined,
                 display: isSmall && showMap ? "none" : "block",
@@ -888,11 +917,11 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
               )}
             </div>
 
-            {/* ── Colonne Carte — 73% desktop, 100% si showMap mobile ──── */}
+            {/* ── Colonne Carte — 65% desktop, 100% si showMap mobile ──── */}
             {mounted && (
               <div
                 style={{
-                  flex: isSmall ? 1 : "0 0 calc(73% - 8px)",
+                  flex: isSmall ? 1 : "0 0 calc(65% - 8px)",
                   width: isSmall ? "100%" : undefined,
                   display: isSmall && !showMap ? "none" : "block",
                   height: isSmall ? "calc(100vh - 200px)" : "100%",
@@ -983,19 +1012,22 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
 
 /**
  * Container de la vue Grille.
- *  - grid auto-fit minmax(280, 1fr)
- *  - Capé à 4 colonnes via max-width (4 × 280 + 3 × 20 gap = 1180 → 1200)
- *  - Centré (margin auto)
- *  - Responsive natif : 4 cols ≥1200, 3 cols 900-1199, 2 cols 600-899, 1 col <600
+ *  - grid `auto-fill` 280px FIXE (pas `auto-fit` qui stretcherait).
+ *    Cards gardent taille constante quel que soit le nombre d'annonces :
+ *    2 cards = 2×280 centré, 8 cards = 4×280 par rangée centré.
+ *  - `justify-content: center` pour centrer dans le container parent.
+ *  - Max 4 cols à 1440 (4 × 280 + 3 × 20 gap = 1180 → tient largement).
+ *  - Responsive : 4 cols ≥1200, 3 cols 900-1199, 2 cols 600-899, 1 col <600.
  */
 function GridContainer({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
+        gridTemplateColumns: "repeat(auto-fill, 280px)",
+        justifyContent: "center",
         gap: 20,
-        maxWidth: 1200,
+        width: "100%",
         margin: "0 auto",
       }}
     >
