@@ -121,9 +121,12 @@ export const authOptions: NextAuthOptions = {
       }
 
       // identiteVerrouillee : source de vérité = profils.identite_verrouillee.
-      // On lookup à chaque JWT refresh quand la valeur est absente (init) OU
-      // quand le client appelle update() après /onboarding/identite submit.
-      if (token.email && (typeof token.identiteVerrouillee === "undefined" || trigger === "update")) {
+      // Self-healing : tant que le flag n'est pas `true` dans le JWT, on re-query
+      // la DB à chaque refresh. Une fois verrouillé (true), on early-exit et on
+      // arrête d'interroger (verrou définitif côté DB). Évite les JWT stale qui
+      // bouclent entre /dossier et /onboarding/identite quand le user s'est
+      // verrouillé après émission du JWT.
+      if (token.email && (token.identiteVerrouillee !== true || trigger === "update")) {
         const { data } = await supabaseAdmin
           .from("profils")
           .select("identite_verrouillee")

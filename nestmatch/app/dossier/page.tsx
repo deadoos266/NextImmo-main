@@ -14,12 +14,12 @@ import { useUndo } from "../components/ui/useUndo"
 import DocRowSkeleton from "../components/ui/DocRowSkeleton"
 import { useRole } from "../providers"
 import { formatNomComplet, buildMailtoModifIdentite } from "../../lib/profilHelpers"
+import { filterNationalites } from "../../lib/nationalites"
 
 const SITUATIONS = ["CDI", "CDD", "Intérim", "Indépendant / Freelance", "Fonctionnaire", "Alternance", "Étudiant", "Retraité", "Sans emploi"]
 const TYPES_GARANT = ["Personne physique", "Organisme Visale", "Action Logement", "Caution bancaire", "Aucun garant"]
 const SITUATIONS_FAMILIALES = ["Célibataire", "En couple", "Marié·e", "PACS", "Divorcé·e", "Veuf·ve"]
 const LOGEMENT_TYPES = ["Locataire", "Propriétaire", "Hébergé", "Foyer / résidence", "Colocation", "Chez mes parents", "Autre"]
-const NATIONALITES_COURANTES = ["Française", "Belge", "Suisse", "Européenne (UE)", "Hors UE"]
 
 type DocKey =
   | "identite" | "bulletins" | "avis_imposition" | "contrat" | "quittances"
@@ -163,14 +163,17 @@ const STYLES = {
   summary: {
     // Sticky TOC : top: 90 pour passer SOUS la Navbar sticky (72px + 18px gap).
     // maxHeight clampé à la hauteur viewport - offset pour un scroll interne
-    // si beaucoup de sections.
-    wrap: {
+    // si beaucoup de sections. En landscape mobile (écran court), on relâche
+    // le sticky pour éviter que la sidebar ne prenne tout le viewport.
+    wrap: (isSticky: boolean): React.CSSProperties => (isSticky ? {
       position: "sticky",
       top: 90,
       alignSelf: "flex-start",
       maxHeight: "calc(100vh - 110px)",
       overflowY: "auto",
-    } as React.CSSProperties,
+    } : {
+      position: "static",
+    }),
     eyebrow: { fontSize: 10, fontWeight: 700, letterSpacing: "1.8px", textTransform: "uppercase", color: T.soft, marginBottom: 14 } as React.CSSProperties,
     nav: { display: "flex", flexDirection: "column", gap: 2 } as React.CSSProperties,
     item: (active: boolean): React.CSSProperties => ({
@@ -609,6 +612,141 @@ function SelectField({
   )
 }
 
+// Autocomplete nationalités : combobox ARIA-compliant (listbox + activedescendant).
+// Navigation clavier complète : ↑/↓ parcourt les options, Enter valide, Escape
+// ferme, Tab ferme sans sélection. Filtre accent-insensible.
+function NationaliteAutocomplete({
+  value, onChange, isMobile,
+}: {
+  value: string
+  onChange: (v: string) => void
+  isMobile: boolean
+}) {
+  const [query, setQuery] = useState(value)
+  const [open, setOpen] = useState(false)
+  const [highlight, setHighlight] = useState(0)
+  const listId = "nationalite-listbox"
+  const containerRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLUListElement>(null)
+
+  // Sync lorsque le parent change externement (reset, load initial).
+  useEffect(() => { setQuery(value) }, [value])
+
+  // Ferme au clic extérieur.
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!containerRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener("mousedown", onDocClick)
+    return () => document.removeEventListener("mousedown", onDocClick)
+  }, [])
+
+  const options = open ? filterNationalites(query, 60) : []
+
+  // Garde l'option highlightée visible dans la liste scrollable.
+  useEffect(() => {
+    if (!open) return
+    const el = listRef.current?.querySelector<HTMLLIElement>(`[data-idx="${highlight}"]`)
+    el?.scrollIntoView({ block: "nearest" })
+  }, [highlight, open])
+
+  function commit(v: string) {
+    setQuery(v)
+    onChange(v)
+    setOpen(false)
+  }
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "ArrowDown") {
+      e.preventDefault()
+      if (!open) { setOpen(true); setHighlight(0); return }
+      setHighlight(h => Math.min(options.length - 1, h + 1))
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault()
+      if (!open) return
+      setHighlight(h => Math.max(0, h - 1))
+    } else if (e.key === "Enter") {
+      if (open && options[highlight]) {
+        e.preventDefault()
+        commit(options[highlight])
+      }
+    } else if (e.key === "Escape") {
+      setOpen(false)
+    } else if (e.key === "Tab") {
+      setOpen(false)
+    }
+  }
+
+  return (
+    <div ref={containerRef} style={{ position: "relative" }}>
+      <input
+        type="text"
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-autocomplete="list"
+        aria-activedescendant={open && options[highlight] ? `nat-opt-${highlight}` : undefined}
+        value={query}
+        onChange={e => { setQuery(e.target.value); setOpen(true); setHighlight(0) }}
+        onFocus={() => setOpen(true)}
+        onKeyDown={onKeyDown}
+        placeholder="Tapez votre nationalité…"
+        autoComplete="off"
+        spellCheck={false}
+        style={STYLES.field.input(isMobile)}
+      />
+      {open && options.length > 0 && (
+        <ul
+          id={listId}
+          ref={listRef}
+          role="listbox"
+          style={{
+            position: "absolute",
+            top: "calc(100% + 4px)",
+            left: 0,
+            right: 0,
+            zIndex: 20,
+            background: "#fff",
+            border: `1px solid ${T.line}`,
+            borderRadius: 10,
+            maxHeight: 240,
+            overflowY: "auto",
+            margin: 0,
+            padding: 4,
+            listStyle: "none",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+          }}
+        >
+          {options.map((opt, idx) => {
+            const active = idx === highlight
+            return (
+              <li
+                key={opt}
+                id={`nat-opt-${idx}`}
+                data-idx={idx}
+                role="option"
+                aria-selected={active}
+                onMouseDown={e => { e.preventDefault(); commit(opt) }}
+                onMouseEnter={() => setHighlight(idx)}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 6,
+                  background: active ? T.ink : "transparent",
+                  color: active ? "#fff" : T.ink,
+                  fontSize: 14,
+                  cursor: "pointer",
+                }}
+              >
+                {opt}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 function ChipGroup({
   value, options, onChange,
 }: {
@@ -635,7 +773,7 @@ function ChipGroup({
 function Toggle({
   label, sub, checked, onChange,
 }: {
-  label: string
+  label: React.ReactNode
   sub?: string
   checked: boolean
   onChange: (v: boolean) => void
@@ -815,6 +953,18 @@ export default function Dossier() {
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [docs, setDocs] = useState<Record<string, string[]>>({})
   const { isMobile } = useResponsive()
+  // isShortViewport : écrans courts (mobile landscape, ~400px de haut) où un
+  // sticky TOC/SharePanel prend tout le viewport et le contenu scrolle derrière.
+  // On désactive le sticky dans ce cas pour laisser la sidebar flow linéaire.
+  const [isShortViewport, setIsShortViewport] = useState(false)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const mq = window.matchMedia("(max-height: 640px) and (orientation: landscape)")
+    const update = () => setIsShortViewport(mq.matches)
+    update()
+    mq.addEventListener("change", update)
+    return () => mq.removeEventListener("change", update)
+  }, [])
   const [generatingPDF, setGeneratingPDF] = useState(false)
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
@@ -851,27 +1001,39 @@ export default function Dossier() {
   const [activeSection, setActiveSection] = useState<string>("identite")
 
   // Scroll-spy : observe les sections et met à jour activeSection selon celle
-  // qui est la plus visible au centre du viewport. rootMargin déplace la zone
-  // de détection (100px sous le haut, 60% restant en bas → déclenche dès qu'une
-  // section entre dans le tiers supérieur).
+  // qui est la plus visible. rootMargin resserré (-80px top, -70% bottom) +
+  // threshold binaire [0, 0.5] + debounce 80ms = zone de détection étroite et
+  // stabilité sur transitions rapides, évite le flicker quand 2 sections sont
+  // brièvement intersectantes en même temps.
   useEffect(() => {
     if (loading) return
-    // Les <Section> rendent un <section id="sec-${id}"> — on observe ces nœuds
-    // et on retire le préfixe pour matcher l'id logique utilisé par summaryItems.
     const ids = ["identite", "pro", "logement", "garant", "presentation", "documents"]
     const elements = ids
       .map(id => document.getElementById(`sec-${id}`))
       .filter((el): el is HTMLElement => el !== null)
     if (elements.length === 0) return
+    let pending: ReturnType<typeof setTimeout> | null = null
+    let lastActive = ""
     const observer = new IntersectionObserver(
       entries => {
         const visible = entries.filter(e => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)
-        if (visible[0]) setActiveSection(visible[0].target.id.replace(/^sec-/, ""))
+        if (!visible[0]) return
+        const next = visible[0].target.id.replace(/^sec-/, "")
+        if (next === lastActive) return
+        if (pending) clearTimeout(pending)
+        pending = setTimeout(() => {
+          lastActive = next
+          setActiveSection(next)
+          pending = null
+        }, 80)
       },
-      { rootMargin: "-100px 0px -60% 0px", threshold: [0, 0.25, 0.5, 1] }
+      { rootMargin: "-80px 0px -70% 0px", threshold: [0, 0.5] }
     )
     elements.forEach(el => observer.observe(el))
-    return () => observer.disconnect()
+    return () => {
+      if (pending) clearTimeout(pending)
+      observer.disconnect()
+    }
   }, [loading])
 
   // Auto-scroll du sommaire pour garder l'item actif visible dans le TOC sticky.
@@ -1341,9 +1503,9 @@ export default function Dossier() {
           {/* ══════════ GRID 3 COLONNES ══════════ */}
           <div style={STYLES.layout.grid(isMobile)}>
 
-            {/* Sommaire sticky (desktop only) */}
+            {/* Sommaire sticky (desktop only, relâché en landscape court) */}
             {!isMobile && (
-              <aside style={STYLES.summary.wrap} className="no-print">
+              <aside style={STYLES.summary.wrap(!isShortViewport)} className="no-print">
                 <div style={STYLES.summary.eyebrow}>Sommaire</div>
                 <nav style={STYLES.summary.nav}>
                   {summaryItems.map(item => {
@@ -1406,7 +1568,7 @@ export default function Dossier() {
                     <TextInput type="date" value={form.date_naissance} onChange={v => setForm(f => ({ ...f, date_naissance: v }))} isMobile={isMobile} />
                   </Field>
                   <Field label={<>Nationalité <span style={{ fontWeight: 400, color: T.soft, textTransform: "none", letterSpacing: 0 }}>(facultatif)</span> <Tooltip text="La loi interdit à un propriétaire de vous refuser un logement à cause de votre origine (article 225-1 du Code pénal, loi n° 2017-86). Vous n'avez aucune obligation de répondre." /></>}>
-                    <SelectField value={form.nationalite} options={NATIONALITES_COURANTES} onChange={v => setForm(f => ({ ...f, nationalite: v }))} isMobile={isMobile} />
+                    <NationaliteAutocomplete value={form.nationalite} onChange={v => setForm(f => ({ ...f, nationalite: v }))} isMobile={isMobile} />
                   </Field>
                 </Row2>
                 <Field label={<>Situation familiale <span style={{ fontWeight: 400, color: T.soft, textTransform: "none", letterSpacing: 0 }}>(facultatif)</span> <Tooltip text="La loi interdit à un propriétaire de vous refuser un logement à cause de votre situation familiale (article 225-1 du Code pénal). Vous n'avez aucune obligation de répondre." /></>}>
@@ -1471,8 +1633,7 @@ export default function Dossier() {
                 </Field>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 6 }}>
                   <Toggle
-                    label="Je bénéficie des APL"
-                    sub="Le propriétaire ne peut pas refuser votre candidature au motif que vous percevez des aides au logement (loi n° 89-462, article 1). Information utilisée pour calculer votre solvabilité."
+                    label={<>Je bénéficie des APL <Tooltip text="Le propriétaire ne peut pas refuser votre candidature au motif que vous percevez des aides au logement (loi n° 89-462, article 1). Information utilisée pour calculer votre solvabilité." /></>}
                     checked={form.a_apl}
                     onChange={v => setForm(f => ({ ...f, a_apl: v }))}
                   />
@@ -1572,7 +1733,7 @@ export default function Dossier() {
             </div>
 
             {/* Sidebar droite — partage + accès + download */}
-            <aside style={STYLES.layout.sidebar(!isMobile)} className="no-print">
+            <aside style={STYLES.layout.sidebar(!isMobile && !isShortViewport)} className="no-print">
               <SharePanel />
               <AccessLogPanel />
               {/* DownloadCard */}
