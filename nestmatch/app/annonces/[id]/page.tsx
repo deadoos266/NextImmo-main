@@ -12,6 +12,7 @@ import MapBienWrapper from "./MapBienWrapper"
 import SignalerButton from "../../components/SignalerButton"
 import ShareButton from "./ShareButton"
 import Link from "next/link"
+import Image from "next/image"
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || 'https://keymatch-immo.fr'
 
@@ -561,7 +562,11 @@ export default async function Annonce({ params }: any) {
                       flexDirection: "column",
                     }}
                   >
-                    <div style={{ position: "relative", aspectRatio: "4 / 5", background: "#EAE6DF", backgroundImage: firstPhoto ? `url(${firstPhoto})` : undefined, backgroundSize: "cover", backgroundPosition: "center" }} />
+                    <div style={{ position: "relative", aspectRatio: "4 / 5", background: "#EAE6DF" }}>
+                      {firstPhoto && (
+                        <Image src={firstPhoto} alt={s.titre} fill sizes="240px" style={{ objectFit: "cover" }} />
+                      )}
+                    </div>
                     <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
                       <p style={{ fontSize: 11, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0 }}>{s.ville}</p>
                       <p style={{ fontSize: 15, fontWeight: 500, margin: 0, letterSpacing: "-0.2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.titre}</p>
