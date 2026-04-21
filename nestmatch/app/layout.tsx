@@ -9,6 +9,7 @@ import CookieBanner from './components/CookieBanner'
 import ToastStack from './components/ToastStack'
 import ServiceWorkerRegister from './components/ServiceWorkerRegister'
 import BetaBanner from './components/BetaBanner'
+import MountedOnly from './components/MountedOnly'
 import { BRAND } from '../lib/brand'
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || BRAND.url
@@ -152,9 +153,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           <BetaBanner />
           <AdminBar />
-          <Navbar />
+          {/* Navbar/Footer wrappés dans MountedOnly pour éliminer toute
+              possibilité de hydration mismatch (React #418) causée par
+              leurs dépendances client (useSession, useRole, useResponsive).
+              Le fallback préserve la hauteur pour éviter le CLS au mount.
+              Voir investigation /annonces?ville=Paris 2026-04-21. */}
+          <MountedOnly fallback={<div style={{ height: 72, background: "white", borderBottom: "1px solid #e5e7eb" }} aria-hidden />}>
+            <Navbar />
+          </MountedOnly>
           {children}
-          <Footer />
+          <MountedOnly>
+            <Footer />
+          </MountedOnly>
           <CookieBanner />
           <ToastStack />
           <ServiceWorkerRegister />
