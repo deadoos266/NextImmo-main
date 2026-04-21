@@ -17,6 +17,7 @@ import {
 import Modal from "../../../components/ui/Modal"
 import UploadBailModal from "../../../components/UploadBailModal"
 import AnnexeUploader from "../../../components/AnnexeUploader"
+import { formatNomComplet } from "../../../../lib/profilHelpers"
 
 // ─── Types form ─────────────────────────────────────────────────────────────
 // Le state du form stocke TOUT en string pour l'input contrôlé (sauf bool/arrays).
@@ -433,14 +434,14 @@ export default function BailPage() {
         data.proprietaire_email
           ? supabase
               .from("profils")
-              .select("nom, telephone")
+              .select("prenom, nom, telephone")
               .ilike("email", data.proprietaire_email)
               .maybeSingle()
           : Promise.resolve({ data: null }),
         data.locataire_email
           ? supabase
               .from("profils")
-              .select("nom, telephone, situation_pro")
+              .select("prenom, nom, telephone, situation_pro")
               .ilike("email", data.locataire_email)
               .maybeSingle()
           : Promise.resolve({ data: null }),
@@ -484,7 +485,7 @@ export default function BailPage() {
         ...makeInitialForm(),
         type: data.meuble ? "meuble" : "vide",
         nomBailleur:
-          (proprioProfil.data as { nom?: string } | null)?.nom ||
+          formatNomComplet(proprioProfil.data as { prenom?: string | null; nom?: string | null } | null) ||
           data.proprietaire ||
           session?.user?.name ||
           "",
@@ -492,7 +493,7 @@ export default function BailPage() {
         telBailleur:
           (proprioProfil.data as { telephone?: string } | null)?.telephone || "",
         nomLocataire:
-          (locataireProfil.data as { nom?: string } | null)?.nom || "",
+          formatNomComplet(locataireProfil.data as { prenom?: string | null; nom?: string | null } | null) || "",
         telLocataire:
           (locataireProfil.data as { telephone?: string } | null)?.telephone || "",
         professionLocataire:

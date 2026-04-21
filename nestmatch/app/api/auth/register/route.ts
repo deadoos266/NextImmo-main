@@ -6,6 +6,7 @@ import { supabaseAdmin } from "../../../../lib/supabase-server"
 import { checkRateLimitAsync, getClientIp } from "../../../../lib/rateLimit"
 import { sendEmail } from "../../../../lib/email/resend"
 import { verifyEmailTemplate } from "../../../../lib/email/templates"
+import { IDENTITE_PATTERN } from "../../../../lib/profilHelpers"
 
 const registerSchema = z.object({
   email: z.string().email("Email invalide"),
@@ -13,11 +14,24 @@ const registerSchema = z.object({
     .string()
     .min(8, "Le mot de passe doit contenir au moins 8 caractères")
     .max(128, "Le mot de passe est trop long"),
-  name: z.string().min(1, "Le nom est requis").max(100, "Le nom est trop long").trim(),
+  // Identité : 2 champs séparés, regex Unicode (lettres + accents + CJK +
+  // tirets + apostrophes + espaces + points). Verrouillage définitif après
+  // validation OTP — cf. /api/auth/verify-code.
+  prenom: z
+    .string()
+    .trim()
+    .min(1, "Le prénom est requis")
+    .max(80, "Le prénom est trop long")
+    .regex(IDENTITE_PATTERN, "Le prénom contient des caractères invalides"),
+  nom: z
+    .string()
+    .trim()
+    .min(1, "Le nom de famille est requis")
+    .max(80, "Le nom de famille est trop long")
+    .regex(IDENTITE_PATTERN, "Le nom de famille contient des caractères invalides"),
   role: z.enum(["locataire", "proprietaire"]).default("locataire"),
 })
 
-// Rate-limit : 10 inscriptions / IP / heure + 3 tentatives / email / heure
 const IP_LIMIT = { max: 10, windowMs: 60 * 60 * 1000 }
 const EMAIL_LIMIT = { max: 3, windowMs: 60 * 60 * 1000 }
 
@@ -44,9 +58,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: firstError }, { status: 422 })
   }
 
-  const { email, password, name, role } = parsed.data
+  const { email, password, prenom, nom, role } = parsed.data
+  const fullName = `${prenom} ${nom}`.trim()
 
-  // Rate-limit par email (anti spray ciblé)
   const emailKey = email.toLowerCase()
   const rlEmail = await checkRateLimitAsync(`register:email:${emailKey}`, EMAIL_LIMIT)
   if (!rlEmail.allowed) {
@@ -56,7 +70,6 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Check for existing user — return a generic message to avoid email enumeration
   const { data: existing } = await supabaseAdmin
     .from("users")
     .select("id")
@@ -72,13 +85,6 @@ export async function POST(request: NextRequest) {
 
   const passwordHash = await bcrypt.hash(password, 12)
 
-  // Code de vérification email : 6 chiffres (OTP), expire 15 min.
-  // Paul : "page confirmation d'email manquante : envoi d'un vrai code
-  // a saisir par l'utilisateur pour acceder au site." Code genere via
-  // crypto.randomInt pour source d'entropie sure.
-  // On reste dans la colonne existante email_verify_token — pas besoin
-  // de migration. Fallback lien clickable /api/auth/verify-email?token=<code>
-  // continue a fonctionner en bonus si l'user prefere cliquer.
   const verifyToken = String(crypto.randomInt(100000, 1000000))
   const verifyExpires = new Date(Date.now() + 15 * 60 * 1000).toISOString()
 
@@ -87,7 +93,7 @@ export async function POST(request: NextRequest) {
     .insert({
       email: email.toLowerCase(),
       password_hash: passwordHash,
-      name,
+      name: fullName,
       role,
       email_verified: false,
       email_verify_token: verifyToken,
@@ -103,13 +109,27 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Envoi email de vérification — on await pour que la requête HTTP ne
-  // retourne qu'une fois l'email parti (Vercel serverless peut kill la
-  // function avant un fire-and-forget). Try/catch : si Resend plante, le
-  // signup reste valide, l'user peut redemander un lien via /auth.
+  // Crée le row profils avec prenom + nom séparés + identite_verrouillee=false.
+  // Le verrouillage définitif a lieu dans /api/auth/verify-code dès validation
+  // du code OTP — à ce moment le user a officiellement certifié son identité.
+  const { error: profilErr } = await supabaseAdmin.from("profils").upsert(
+    {
+      email: email.toLowerCase(),
+      prenom,
+      nom,
+      identite_verrouillee: false,
+    },
+    { onConflict: "email" },
+  )
+  if (profilErr) {
+    // Non-bloquant : le signup reste valide, le row profils sera créé
+    // au premier UPSERT depuis /dossier ou /profil. On log quand même.
+    console.error("[register] profils upsert failed", profilErr)
+  }
+
   const base = process.env.NEXT_PUBLIC_URL || "http://localhost:3000"
   const verifyUrl = `${base}/api/auth/verify-email?token=${verifyToken}`
-  const { subject, html, text } = verifyEmailTemplate({ userName: name, verifyUrl, code: verifyToken })
+  const { subject, html, text } = verifyEmailTemplate({ userName: fullName, verifyUrl, code: verifyToken })
   try {
     await sendEmail({ to: email.toLowerCase(), subject, html, text })
   } catch (err) {

@@ -95,7 +95,6 @@ export default function Profil() {
     const toInt = (v: string) => v ? parseInt(v) : null
     const data: any = {
       email: session?.user?.email,
-      nom: session?.user?.name,
       ville_souhaitee: form.ville_souhaitee,
       mode_localisation: form.mode_localisation,
       type_quartier: form.type_quartier,
@@ -118,7 +117,8 @@ export default function Profil() {
     if (error) {
       const { error: insertErr } = await supabase.from("profils").insert(data)
       if (insertErr) {
-        const { email, nom, ...updateData } = data
+        const { email: _email, ...updateData } = data
+        void _email
         const { error: updateErr } = await supabase.from("profils").update(updateData).eq("email", session?.user?.email!)
         if (updateErr) { setErreur("Erreur: " + updateErr.message); setSaving(false); return }
       }

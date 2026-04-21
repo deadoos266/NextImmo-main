@@ -39,7 +39,6 @@ export default function Onboarding() {
     setSaving(true)
     const payload = {
       email: session.user.email,
-      nom: session.user.name,
       ville_souhaitee: ville || null,
       budget_max: budgetMax ? parseInt(budgetMax) : null,
       pieces_min: pieces,

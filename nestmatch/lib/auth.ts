@@ -27,7 +27,6 @@ export const authOptions: NextAuthOptions = {
 
         if (!user || !user.password_hash) return null
 
-        // Compte banni : refuser la connexion
         if (user.is_banned === true) {
           return null
         }
@@ -35,9 +34,6 @@ export const authOptions: NextAuthOptions = {
         const passwordValid = await bcrypt.compare(credentials.password, user.password_hash)
         if (!passwordValid) return null
 
-        // Email pas encore verifie via OTP 6 chiffres : bloquer la connexion.
-        // Throw message specifique que /auth capte pour rediriger vers
-        // /auth/verifier-email automatiquement.
         if (user.email_verified !== true) {
           throw new Error("EMAIL_NOT_VERIFIED")
         }
@@ -63,7 +59,7 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
       if (account?.provider === "google" && user.email) {
         const { data: existing } = await supabaseAdmin
           .from("users")
@@ -80,8 +76,20 @@ export const authOptions: NextAuthOptions = {
             role: "locataire",
             is_admin: false,
           })
+          // Pré-remplit profils avec given_name/family_name de Google. Le
+          // user passera ensuite par /onboarding/identite pour confirmer
+          // (verrouillage définitif à ce moment).
+          const googleProfile = profile as { given_name?: string; family_name?: string } | undefined
+          await supabaseAdmin.from("profils").upsert(
+            {
+              email: user.email.toLowerCase(),
+              prenom: googleProfile?.given_name || null,
+              nom: googleProfile?.family_name || null,
+              identite_verrouillee: false,
+            },
+            { onConflict: "email" },
+          )
         } else {
-          // Compte banni : refuser le login Google
           if (existing.is_banned === true) return false
           user.id = existing.id
           user.role = existing.role as "locataire" | "proprietaire"
@@ -91,7 +99,7 @@ export const authOptions: NextAuthOptions = {
       return true
     },
 
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger }) {
       if (user) {
         token.id = user.id
         token.role = user.role ?? "locataire"
@@ -112,6 +120,18 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
+      // identiteVerrouillee : source de vérité = profils.identite_verrouillee.
+      // On lookup à chaque JWT refresh quand la valeur est absente (init) OU
+      // quand le client appelle update() après /onboarding/identite submit.
+      if (token.email && (typeof token.identiteVerrouillee === "undefined" || trigger === "update")) {
+        const { data } = await supabaseAdmin
+          .from("profils")
+          .select("identite_verrouillee")
+          .eq("email", (token.email as string).toLowerCase())
+          .maybeSingle()
+        token.identiteVerrouillee = data?.identite_verrouillee === true
+      }
+
       return token
     },
 
@@ -119,6 +139,7 @@ export const authOptions: NextAuthOptions = {
       session.user.id = token.id
       session.user.role = token.role
       session.user.isAdmin = token.isAdmin
+      session.user.identiteVerrouillee = token.identiteVerrouillee === true
       return session
     },
   },

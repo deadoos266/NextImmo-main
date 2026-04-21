@@ -9,6 +9,7 @@ import { useRole } from "../providers"
 import { Suspense } from "react"
 import { useResponsive } from "../hooks/useResponsive"
 import { displayName } from "../../lib/privacy"
+import { formatNomComplet } from "../../lib/profilHelpers"
 import AnnulerVisiteDialog from "../components/AnnulerVisiteDialog"
 import { annulerVisite, STATUT_VISITE_STYLE as STATUT_VISITE } from "../../lib/visitesHelpers"
 import { postNotif } from "../../lib/notificationsClient"
@@ -1495,12 +1496,12 @@ function MessagesInner() {
     if (!conv) { setEnvoyantDossier(false); return }
 
     const { data: profil } = await supabase.from("profils")
-      .select("nom,situation_pro,revenus_mensuels,garant,type_garant,nb_occupants,dossier_docs")
+      .select("prenom,nom,situation_pro,revenus_mensuels,garant,type_garant,nb_occupants,dossier_docs")
       .eq("email", myEmail).single()
 
     let score = 0
     if (profil) {
-      if (profil.nom) score += 15
+      if (profil.prenom || profil.nom) score += 15
       if (profil.situation_pro) score += 15
       if (profil.revenus_mensuels) score += 20
       if (profil.dossier_docs) {
@@ -1521,7 +1522,7 @@ function MessagesInner() {
 
     const payload = {
       email: myEmail,
-      nom: profil?.nom || session?.user?.name || "",
+      nom: formatNomComplet(profil) || session?.user?.name || "",
       situation_pro: profil?.situation_pro || "",
       revenus_mensuels: profil?.revenus_mensuels || "",
       garant: profil?.garant || false,

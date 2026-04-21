@@ -174,7 +174,7 @@ export default function OngletProfil() {
 
       <section style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 16, padding: 18 }}>
         <p style={{ fontSize: 13, color: "#374151", margin: 0, lineHeight: 1.5 }}>
-          <strong>Nom, téléphone et autres informations</strong> sont éditables dans votre dossier locataire pour garantir la cohérence avec les pièces justificatives.
+          <strong>Prénom et nom</strong> sont verrouillés après confirmation pour garantir la cohérence avec votre pièce d&apos;identité et vos documents officiels (dossier, bail, état des lieux). <strong>Téléphone et autres informations</strong> restent éditables dans votre dossier locataire.
           {" "}
           <a href="/dossier" style={{ color: "#111", fontWeight: 700 }}>Gérer mon dossier →</a>
         </p>

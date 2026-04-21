@@ -81,5 +81,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 })
   }
 
+  // Verrouille l'identité : au signup email le user a saisi prenom+nom
+  // séparés (cf. /api/auth/register) et vient de certifier la possession
+  // de la boîte mail. Identité figée + audit timestamp.
+  const { error: lockErr } = await supabaseAdmin
+    .from("profils")
+    .update({
+      identite_verrouillee: true,
+      identite_confirmee_le: new Date().toISOString(),
+    })
+    .eq("email", email)
+  if (lockErr) {
+    // Non-fatal : l'OTP est validé, le compte accessible. Le verrouillage
+    // sera rejoué via /onboarding/identite si le profils row n'existe pas
+    // encore (cas improbable mais on garde une safety net).
+    console.error("[verify-code] lock identite failed", lockErr)
+  }
+
   return NextResponse.json({ success: true })
 }

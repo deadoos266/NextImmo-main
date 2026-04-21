@@ -8,6 +8,7 @@ import { useRole } from "../providers"
 import { useResponsive } from "../hooks/useResponsive"
 import EmptyState from "../components/ui/EmptyState"
 import Image from "next/image"
+import { formatNomComplet } from "../../lib/profilHelpers"
 
 type Statut = "planifié" | "en cours" | "terminé"
 type TypeEvent = "chaudière" | "plomberie" | "électricité" | "travaux" | "serrurerie" | "nuisibles" | "autre"
@@ -71,7 +72,7 @@ export default function Carnet() {
       // Charger les profils des locataires qui ont signalé des entrées
       const locEmails = [...new Set(evts.filter(ev => ev.locataire_email).map(ev => ev.locataire_email))]
       if (locEmails.length > 0) {
-        const { data: profils } = await supabase.from("profils").select("email, nom").in("email", locEmails)
+        const { data: profils } = await supabase.from("profils").select("email, prenom, nom").in("email", locEmails)
         if (profils) {
           const map: Record<string, any> = {}
           profils.forEach((p: any) => { map[p.email] = p })
@@ -350,7 +351,7 @@ export default function Carnet() {
                           {isLocataireEntry && (
                             <span style={{ background: "#fef3c7", color: "#92400e", fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 999, border: "1px solid #fde68a" }}>
                               {proprietaireActive
-                                ? `Signalé par ${locataireProfil?.nom || e.locataire_email}`
+                                ? `Signalé par ${formatNomComplet(locataireProfil) || e.locataire_email}`
                                 : "Votre signalement"}
                             </span>
                           )}

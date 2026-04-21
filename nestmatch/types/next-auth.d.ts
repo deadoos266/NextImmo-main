@@ -6,6 +6,7 @@ declare module "next-auth" {
       id: string
       role: "locataire" | "proprietaire"
       isAdmin: boolean
+      identiteVerrouillee: boolean
     } & DefaultSession["user"]
   }
 
@@ -13,6 +14,7 @@ declare module "next-auth" {
     id: string
     role: "locataire" | "proprietaire"
     isAdmin: boolean
+    identiteVerrouillee?: boolean
   }
 }
 
@@ -21,5 +23,6 @@ declare module "next-auth/jwt" {
     id: string
     role: "locataire" | "proprietaire"
     isAdmin: boolean
+    identiteVerrouillee?: boolean
   }
 }

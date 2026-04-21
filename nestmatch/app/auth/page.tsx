@@ -10,7 +10,8 @@ type Mode = "connexion" | "inscription"
 type Role = "locataire" | "proprietaire"
 
 interface FormState {
-  name: string
+  prenom: string
+  nom: string
   email: string
   password: string
 }
@@ -37,7 +38,7 @@ function AuthContent() {
   const initialMode: Mode = searchParams?.get("mode") === "inscription" ? "inscription" : "connexion"
   const [mode, setMode] = useState<Mode>(initialMode)
   const [role, setRole] = useState<Role>("locataire")
-  const [form, setForm] = useState<FormState>({ name: "", email: "", password: "" })
+  const [form, setForm] = useState<FormState>({ prenom: "", nom: "", email: "", password: "" })
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
@@ -55,7 +56,7 @@ function AuthContent() {
   function switchMode(m: Mode) {
     setMode(m)
     setError("")
-    setForm({ name: "", email: "", password: "" })
+    setForm({ prenom: "", nom: "", email: "", password: "" })
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -68,7 +69,7 @@ function AuthContent() {
         const res = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: form.email, password: form.password, name: form.name, role }),
+          body: JSON.stringify({ email: form.email, password: form.password, prenom: form.prenom, nom: form.nom, role }),
         })
         const json = await res.json()
         if (!res.ok) {
@@ -215,17 +216,41 @@ function AuthContent() {
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {mode === "inscription" && (
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "block", color: "#6b7280" }}>Prénom et nom</label>
-                <input
-                  type="text"
-                  placeholder="Jean Dupont"
-                  value={form.name}
-                  onChange={handleChange("name")}
-                  required
-                  style={{ width: "100%", padding: "12px 16px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
-                />
-              </div>
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div>
+                    <label htmlFor="signup-prenom" style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "block", color: "#6b7280" }}>Prénom</label>
+                    <input
+                      id="signup-prenom"
+                      type="text"
+                      autoComplete="given-name"
+                      placeholder="Jean"
+                      value={form.prenom}
+                      onChange={handleChange("prenom")}
+                      maxLength={80}
+                      required
+                      style={{ width: "100%", padding: "12px 16px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="signup-nom" style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "block", color: "#6b7280" }}>Nom de famille</label>
+                    <input
+                      id="signup-nom"
+                      type="text"
+                      autoComplete="family-name"
+                      placeholder="Dupont"
+                      value={form.nom}
+                      onChange={handleChange("nom")}
+                      maxLength={80}
+                      required
+                      style={{ width: "100%", padding: "12px 16px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                    />
+                  </div>
+                </div>
+                <p style={{ fontSize: 12, color: "#666", margin: "-4px 0 0", fontStyle: "italic", lineHeight: 1.5 }}>
+                  Vos prénom et nom apparaîtront sur votre dossier locataire et sur le bail. Ils ne pourront plus être modifiés ensuite (sauf demande au support). Saisissez-les exactement comme sur votre carte d&apos;identité.
+                </p>
+              </>
             )}
             <div>
               <label style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "block", color: "#6b7280" }}>Email</label>

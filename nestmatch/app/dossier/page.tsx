@@ -13,6 +13,7 @@ import UndoToast from "../components/ui/UndoToast"
 import { useUndo } from "../components/ui/useUndo"
 import DocRowSkeleton from "../components/ui/DocRowSkeleton"
 import { useRole } from "../providers"
+import { formatNomComplet, buildMailtoModifIdentite } from "../../lib/profilHelpers"
 
 const SITUATIONS = ["CDI", "CDD", "Intérim", "Indépendant / Freelance", "Fonctionnaire", "Alternance", "Étudiant", "Retraité", "Sans emploi"]
 const TYPES_GARANT = ["Personne physique", "Organisme Visale", "Action Logement", "Caution bancaire", "Aucun garant"]
@@ -503,6 +504,82 @@ function TextInput({
   )
 }
 
+// Input en lecture seule pour les champs verrouillés (prenom/nom après
+// /onboarding/identite). Cadenas SVG inline dans le champ, fond grisé.
+function LockedInput({ value }: { value: string }) {
+  return (
+    <div style={{ position: "relative" }}>
+      <input
+        type="text"
+        value={value}
+        readOnly
+        aria-readonly="true"
+        style={{
+          width: "100%",
+          padding: "11px 40px 11px 14px",
+          background: T.mutedBg,
+          border: `1.5px solid ${T.line}`,
+          borderRadius: 10,
+          fontSize: 15,
+          color: T.ink,
+          fontFamily: "inherit",
+          boxSizing: "border-box",
+          cursor: "not-allowed",
+        }}
+      />
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke={T.soft}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}
+        aria-hidden
+      >
+        <rect x="3" y="11" width="18" height="11" rx="2" />
+        <path d="M7 11V7a5 5 0 0110 0v4" />
+      </svg>
+    </div>
+  )
+}
+
+// Badge cadenas cliquable (mailto) à côté du label d'un champ verrouillé.
+function LockBadge({ mailto }: { mailto: string }) {
+  return (
+    <a
+      href={mailto}
+      title="Champ verrouillé — cliquez pour demander une modification au support avec justificatif"
+      aria-label="Champ verrouillé — contacter le support pour modifier"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        marginLeft: 8,
+        padding: "2px 8px",
+        background: T.mutedBg,
+        border: `1px solid ${T.line}`,
+        borderRadius: 999,
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: "0.8px",
+        color: T.soft,
+        textTransform: "uppercase",
+        textDecoration: "none",
+        verticalAlign: "middle",
+      }}
+    >
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <rect x="3" y="11" width="18" height="11" rx="2" />
+        <path d="M7 11V7a5 5 0 0110 0v4" />
+      </svg>
+      Verrouillé
+    </a>
+  )
+}
+
 function SelectField({
   value, options, onChange, isMobile, emptyLabel = "— Sélectionner —",
 }: {
@@ -731,7 +808,8 @@ export default function Dossier() {
 
   const [form, setForm] = useState({
     // Identité
-    nom: "", telephone: "",
+    prenom: "", nom: "", telephone: "",
+    identite_verrouillee: false,
     date_naissance: "",
     nationalite: "",
     situation_familiale: "",
@@ -801,7 +879,9 @@ export default function Dossier() {
     if (data) {
       setProfil(data)
       setForm({
-        nom: data.nom || session?.user?.name || "",
+        prenom: data.prenom || "",
+        nom: data.nom || "",
+        identite_verrouillee: data.identite_verrouillee === true,
         telephone: data.telephone || "",
         date_naissance: data.date_naissance || "",
         nationalite: data.nationalite || "",
@@ -826,8 +906,6 @@ export default function Dossier() {
         Object.entries(data.dossier_docs).forEach(([k, v]) => { normalized[k] = toArray(v) })
         setDocs(normalized)
       }
-    } else {
-      setForm(f => ({ ...f, nom: session?.user?.name || "" }))
     }
     setLoading(false)
   }
@@ -890,7 +968,7 @@ export default function Dossier() {
     const email = session.user.email.toLowerCase()
     const { error } = await supabase.from("profils").upsert({
       email,
-      nom: form.nom, telephone: form.telephone, situation_pro: form.situation_pro,
+      telephone: form.telephone, situation_pro: form.situation_pro,
       revenus_mensuels: form.revenus_mensuels ? Number(form.revenus_mensuels) : null,
       garant: form.garant, type_garant: form.type_garant, nb_occupants: form.nb_occupants,
       date_naissance: form.date_naissance || null,
@@ -924,7 +1002,7 @@ export default function Dossier() {
 
   function buildDossierData() {
     return {
-      nom: form.nom,
+      nom: formatNomComplet({ prenom: form.prenom, nom: form.nom }),
       email: session?.user?.email || "",
       telephone: form.telephone,
       dateNaissance: form.date_naissance,
@@ -972,7 +1050,7 @@ export default function Dossier() {
         import("jszip"),
       ])
       const zip = new JSZip()
-      const safeName = (form.nom || "locataire").replace(/[^a-zA-Z0-9-_]+/g, "_").slice(0, 40) || "locataire"
+      const safeName = (formatNomComplet({ prenom: form.prenom, nom: form.nom }) || "locataire").replace(/[^a-zA-Z0-9-_]+/g, "_").slice(0, 40) || "locataire"
       const rootFolder = zip.folder(`dossier_${safeName}`)
       if (!rootFolder) throw new Error("Impossible de créer le dossier zip")
 
@@ -1057,7 +1135,7 @@ export default function Dossier() {
   // nb enfants) ne peuvent pas être utilisés pour sélectionner un locataire —
   // les exclure du score évite de pénaliser un candidat conforme à la loi.
   const champs = [
-    !!form.nom, !!form.telephone, !!form.situation_pro, !!form.revenus_mensuels,
+    !!(form.prenom || form.nom), !!form.telephone, !!form.situation_pro, !!form.revenus_mensuels,
     form.garant !== undefined, !!profil?.ville_souhaitee, !!profil?.budget_max,
     !!form.logement_actuel_type,
   ]
@@ -1095,7 +1173,7 @@ export default function Dossier() {
 
   // Sommaire numéroté — état "done" dérivé du form / docs courants.
   const summaryItems: { id: string; num: string; label: string; done: boolean }[] = [
-    { id: "identite", num: "01", label: "Identité", done: !!form.nom && !!form.telephone },
+    { id: "identite", num: "01", label: "Identité", done: !!(form.prenom || form.nom) && !!form.telephone },
     { id: "pro", num: "02", label: "Situation pro", done: !!form.situation_pro && !!form.revenus_mensuels },
     { id: "logement", num: "03", label: "Logement actuel", done: !!form.logement_actuel_type },
     { id: "garant", num: "04", label: "Garant", done: !form.garant || !!form.type_garant },
@@ -1174,9 +1252,9 @@ export default function Dossier() {
             </div>
 
             {/* Récap hairline (remplace le bandeau dark du bundle) */}
-            {(form.nom || form.situation_pro || form.revenus_mensuels) && (
+            {(form.prenom || form.nom || form.situation_pro || form.revenus_mensuels) && (
               <div style={STYLES.hero.recap(isMobile)}>
-                {form.nom && <span style={STYLES.hero.recapStrong}>{form.nom}</span>}
+                {(form.prenom || form.nom) && <span style={STYLES.hero.recapStrong}>{formatNomComplet({ prenom: form.prenom, nom: form.nom })}</span>}
                 {form.situation_pro && (
                   <>
                     <span style={STYLES.hero.recapDot} aria-hidden />
@@ -1263,13 +1341,16 @@ export default function Dossier() {
                   </p>
                 </div>
                 <Row2 isMobile={isMobile}>
-                  <Field label="Nom complet">
-                    <TextInput value={form.nom} onChange={v => setForm(f => ({ ...f, nom: v }))} placeholder="Jean Dupont" isMobile={isMobile} />
+                  <Field label={<>Prénom <LockBadge mailto={buildMailtoModifIdentite(session?.user?.email || "", form.prenom, form.nom)} /></>}>
+                    <LockedInput value={form.prenom} />
                   </Field>
-                  <Field label="Téléphone">
-                    <PhoneInput value={form.telephone} onChange={v => setForm(f => ({ ...f, telephone: v }))} placeholder="6 12 34 56 78" />
+                  <Field label={<>Nom de famille <LockBadge mailto={buildMailtoModifIdentite(session?.user?.email || "", form.prenom, form.nom)} /></>}>
+                    <LockedInput value={form.nom} />
                   </Field>
                 </Row2>
+                <Field label="Téléphone">
+                  <PhoneInput value={form.telephone} onChange={v => setForm(f => ({ ...f, telephone: v }))} placeholder="6 12 34 56 78" />
+                </Field>
                 <Field label="Email">
                   <TextInput value={session?.user?.email || ""} disabled isMobile={isMobile} />
                 </Field>

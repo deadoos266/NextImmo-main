@@ -20,6 +20,7 @@ export interface ScreeningProfil {
   situation_pro?: string | null
   garant?: boolean | null
   type_garant?: string | null
+  prenom?: string | null
   nom?: string | null
   telephone?: string | null
   ville_souhaitee?: string | null
@@ -157,7 +158,7 @@ export function computeScreening(profil: ScreeningProfil | null | undefined, loy
 
   // ─── Complétude du profil (0-10) ────────────────────────
   const champs = [
-    profil.nom,
+    profil.prenom || profil.nom,
     profil.telephone,
     profil.ville_souhaitee,
     profil.budget_max,

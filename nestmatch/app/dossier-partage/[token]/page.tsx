@@ -4,6 +4,7 @@ import { verifyDossierToken } from "../../../lib/dossierToken"
 import { supabase } from "../../../lib/supabase"
 import { displayName } from "../../../lib/privacy"
 import { BRAND } from "../../../lib/brand"
+import { formatNomComplet } from "../../../lib/profilHelpers"
 import AccessLogPing from "./AccessLogPing"
 
 export const metadata = {
@@ -30,7 +31,7 @@ export default async function DossierPartage({ params }: { params: Promise<{ tok
   const { data: profil } = await supabase.from("profils").select("*").eq("email", valid.email).single()
   if (!profil) return notFound()
 
-  const name = displayName(valid.email, profil.nom)
+  const name = displayName(valid.email, formatNomComplet(profil) || profil.nom)
   const docs = (profil.dossier_docs || {}) as Record<string, string[] | string>
   const expires = new Date(valid.exp).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
 
