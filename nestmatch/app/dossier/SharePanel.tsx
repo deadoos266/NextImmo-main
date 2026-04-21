@@ -5,6 +5,19 @@ import { useState } from "react"
  * Panneau de partage : génère un lien sécurisé (7 jours) du dossier locataire.
  * Lien en lecture seule, sans authentification, stateless (HMAC).
  */
+
+const T = {
+  white: "#fff",
+  ink: "#111",
+  line: "#EAE6DF",
+  hairline: "#F0EAE0",
+  meta: "#666",
+  soft: "#8a8477",
+  mutedBg: "#FAF8F3",
+  success: "#16a34a",
+  danger: "#dc2626",
+}
+
 export default function SharePanel() {
   const [loading, setLoading] = useState(false)
   const [url, setUrl] = useState<string | null>(null)
@@ -47,39 +60,48 @@ export default function SharePanel() {
   const exp = expiresAt ? new Date(expiresAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : null
 
   return (
-    <div style={{ background: "white", borderRadius: 20, padding: 24, marginBottom: 16 }}>
-      <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>Partager mon dossier</h3>
-      <p style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5, marginBottom: 14 }}>
+    <div style={{ background: T.white, borderRadius: 20, padding: 28, marginBottom: 16, border: `1px solid ${T.line}` }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.8px", textTransform: "uppercase", color: T.soft }}>
+          Partage
+        </span>
+        <div style={{ flex: 1, height: 1, background: T.hairline }} />
+      </div>
+
+      <h3 style={{ fontSize: 22, fontWeight: 500, fontStyle: "italic", letterSpacing: "-0.4px", margin: "0 0 10px", color: T.ink, lineHeight: 1.15 }}>
+        Partager mon dossier
+      </h3>
+      <p style={{ fontSize: 13, color: T.meta, lineHeight: 1.6, marginBottom: 18 }}>
         Génère un lien unique valable 7 jours. Toute personne ayant ce lien pourra consulter votre dossier en lecture seule, sans compte nécessaire.
       </p>
 
       {!url ? (
         <button onClick={generate} disabled={loading}
-          style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "10px 20px", fontWeight: 700, fontSize: 13, cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: loading ? 0.6 : 1 }}>
+          style={{ background: T.ink, color: T.white, border: "none", borderRadius: 999, padding: "11px 22px", fontWeight: 600, fontSize: 13, cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: loading ? 0.6 : 1, letterSpacing: "0.3px" }}>
           {loading ? "Génération…" : "Générer un lien de partage"}
         </button>
       ) : (
         <>
-          <div style={{ background: "#f9fafb", borderRadius: 10, padding: "10px 14px", display: "flex", gap: 8, alignItems: "center", border: "1px solid #e5e7eb" }}>
+          <div style={{ background: T.mutedBg, borderRadius: 12, padding: "10px 14px", display: "flex", gap: 8, alignItems: "center", border: `1px solid ${T.hairline}` }}>
             <input readOnly value={url}
               onFocus={e => e.currentTarget.select()}
-              style={{ flex: 1, border: "none", background: "transparent", fontSize: 12, color: "#111", outline: "none", fontFamily: "inherit", minWidth: 0 }} />
+              style={{ flex: 1, border: "none", background: "transparent", fontSize: 12, color: T.ink, outline: "none", fontFamily: "inherit", minWidth: 0 }} />
             <button onClick={copy}
-              style={{ background: copied ? "#16a34a" : "#111", color: "white", border: "none", borderRadius: 999, padding: "6px 14px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+              style={{ background: copied ? T.success : T.ink, color: T.white, border: "none", borderRadius: 999, padding: "6px 14px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
               {copied ? "Copié" : "Copier"}
             </button>
           </div>
-          <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 8 }}>
+          <p style={{ fontSize: 11, color: T.soft, marginTop: 10, lineHeight: 1.5 }}>
             Expire le {exp}. Générer un nouveau lien invalidera celui-ci uniquement après son expiration.
           </p>
           <button onClick={() => { setUrl(null); setExpiresAt(null) }}
-            style={{ background: "none", border: "none", color: "#6b7280", fontSize: 12, fontWeight: 600, cursor: "pointer", marginTop: 8, padding: 0, textDecoration: "underline", fontFamily: "inherit" }}>
+            style={{ background: "none", border: "none", color: T.meta, fontSize: 12, fontWeight: 500, cursor: "pointer", marginTop: 4, padding: 0, textDecoration: "underline", fontFamily: "inherit" }}>
             Générer un autre lien
           </button>
         </>
       )}
 
-      {error && <p style={{ color: "#dc2626", fontSize: 12, marginTop: 8 }}>{error}</p>}
+      {error && <p style={{ color: T.danger, fontSize: 12, marginTop: 10 }}>{error}</p>}
     </div>
   )
 }
