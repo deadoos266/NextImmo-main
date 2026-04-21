@@ -36,8 +36,8 @@ const nextConfig = {
 
   images: {
     remotePatterns: [
-      // Supabase Storage (ajuster le hostname si le projet change)
-      { protocol: "https", hostname: "wzzibgdupycysvtwsqxo.supabase.co" },
+      // Supabase Storage — wildcard couvre prod + staging
+      { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" },
       // Avatars Google (NextAuth)
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
     ],

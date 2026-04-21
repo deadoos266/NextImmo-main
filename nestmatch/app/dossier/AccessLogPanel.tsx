@@ -9,6 +9,16 @@ type AccessLog = {
   accessed_at: string
 }
 
+const T = {
+  white: "#fff",
+  ink: "#111",
+  line: "#EAE6DF",
+  hairline: "#F0EAE0",
+  meta: "#666",
+  soft: "#8a8477",
+  mutedBg: "#FAF8F3",
+}
+
 /**
  * Affiche les accès récents au dossier partagé du locataire.
  * Groupe par token_hash pour dédupliquer les refresh/visite multiple d'un même lien.
@@ -37,26 +47,35 @@ export default function AccessLogPanel() {
   )
 
   return (
-    <div style={{ background: "white", borderRadius: 20, padding: 24, marginBottom: 20 }}>
-      <h3 style={{ fontSize: 15, fontWeight: 800, margin: "0 0 4px" }}>Qui a consulté votre dossier</h3>
-      <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 14px", lineHeight: 1.5 }}>
+    <div style={{ background: T.white, borderRadius: 20, padding: 28, marginBottom: 20, border: `1px solid ${T.line}` }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.8px", textTransform: "uppercase", color: T.soft }}>
+          Consultations
+        </span>
+        <div style={{ flex: 1, height: 1, background: T.hairline }} />
+      </div>
+
+      <h3 style={{ fontSize: 22, fontWeight: 500, fontStyle: "italic", letterSpacing: "-0.4px", margin: "0 0 10px", color: T.ink, lineHeight: 1.15 }}>
+        Qui a consulté votre dossier
+      </h3>
+      <p style={{ fontSize: 12, color: T.meta, margin: "0 0 18px", lineHeight: 1.6 }}>
         Liste des accès récents aux liens de partage. Les données sont anonymisées (conforme RGPD) et purgées après 90 jours.
       </p>
       {loading ? (
-        <p style={{ fontSize: 12, color: "#9ca3af" }}>Chargement…</p>
+        <p style={{ fontSize: 12, color: T.soft, fontStyle: "italic" }}>Chargement…</p>
       ) : sessions.length === 0 ? (
-        <p style={{ fontSize: 12, color: "#9ca3af" }}>Aucune consultation enregistrée pour l&apos;instant.</p>
+        <p style={{ fontSize: 12, color: T.soft, fontStyle: "italic" }}>Aucune consultation enregistrée pour l&apos;instant.</p>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {sessions.slice(0, 10).map((s, idx) => (
-            <div key={s.log.token_hash + idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", border: "1px solid #f3f4f6", borderRadius: 10, background: "#fafafa" }}>
+            <div key={s.log.token_hash + idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", border: `1px solid ${T.hairline}`, borderRadius: 12, background: T.mutedBg }}>
               <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: 12, fontWeight: 700, margin: 0 }}>{parseUserAgent(s.log.user_agent || "")}</p>
-                <p style={{ fontSize: 11, color: "#9ca3af", margin: "2px 0 0" }}>
+                <p style={{ fontSize: 12, fontWeight: 600, margin: 0, color: T.ink }}>{parseUserAgent(s.log.user_agent || "")}</p>
+                <p style={{ fontSize: 11, color: T.soft, margin: "3px 0 0", fontVariantNumeric: "tabular-nums" }}>
                   Lien #{s.log.token_hash.slice(0, 6)} · {s.count} {s.count > 1 ? "visites" : "visite"}
                 </p>
               </div>
-              <span style={{ fontSize: 11, color: "#6b7280", whiteSpace: "nowrap" }}>
+              <span style={{ fontSize: 11, color: T.meta, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
                 {new Date(s.log.accessed_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
               </span>
             </div>

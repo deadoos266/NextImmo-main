@@ -12,6 +12,7 @@ import AccessLogPanel from "./AccessLogPanel"
 import UndoToast from "../components/ui/UndoToast"
 import { useUndo } from "../components/ui/useUndo"
 import DocRowSkeleton from "../components/ui/DocRowSkeleton"
+import { useRole } from "../providers"
 
 const SITUATIONS = ["CDI", "CDD", "Intérim", "Indépendant / Freelance", "Fonctionnaire", "Alternance", "Étudiant", "Retraité", "Sans emploi"]
 const TYPES_GARANT = ["Personne physique", "Organisme Visale", "Action Logement", "Caution bancaire", "Aucun garant"]
@@ -65,13 +66,646 @@ const DOCS_GARANT: { key: DocKey; label: string; desc?: string }[] = [
 
 // dossier_docs stocke { key: string[] } (tableau d'URLs par catégorie)
 // Compatibilité avec l'ancien format { key: string }
-function toArray(val: any): string[] {
+function toArray(val: unknown): string[] {
   if (!val) return []
-  if (Array.isArray(val)) return val
-  return [val]
+  if (Array.isArray(val)) return val as string[]
+  return [val as string]
 }
 
-import { useRole } from "../providers"
+// ═══════════════════════════════════════════════════════════════════
+// STYLES éditoriaux — centralisés pour révision visuelle simplifiée.
+// Palette KM canonique (components.jsx:4-9). Zéro Fraunces : italique
+// sur DM Sans uniquement (layout.tsx charge style: ['normal', 'italic']).
+// ═══════════════════════════════════════════════════════════════════
+const T = {
+  bg: "#F7F4EF",
+  ink: "#111",
+  white: "#fff",
+  line: "#EAE6DF",
+  hairline: "#F0EAE0",
+  meta: "#666",
+  soft: "#8a8477",
+  mutedBg: "#FAF8F3",
+  success: "#16a34a",
+  warning: "#ea580c",
+  danger: "#dc2626",
+  successBg: "#F0FDF4",
+  successLine: "#bbf7d0",
+  warningBg: "#FFF8F1",
+} as const
+
+const STYLES = {
+  main: { minHeight: "100vh", background: T.bg, fontFamily: "'DM Sans', sans-serif", paddingBottom: 48 } as React.CSSProperties,
+  container: (isMobile: boolean): React.CSSProperties => ({ maxWidth: 1240, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 40px" }),
+
+  hero: {
+    wrap: (isMobile: boolean): React.CSSProperties => ({ padding: isMobile ? "8px 0 12px" : "0 0 16px" }),
+    eyebrowRow: { display: "flex", alignItems: "center", gap: 10, marginBottom: 18, flexWrap: "wrap" } as React.CSSProperties,
+    eyebrow: { fontSize: 11, fontWeight: 700, letterSpacing: "2.2px", textTransform: "uppercase", color: T.meta } as React.CSSProperties,
+    rule: { flex: 1, height: 1, background: T.line, maxWidth: 220, minWidth: 40 } as React.CSSProperties,
+    metaRight: { fontSize: 11, color: T.soft, fontVariantNumeric: "tabular-nums" } as React.CSSProperties,
+    grid: (isMobile: boolean): React.CSSProperties => ({ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.4fr 1fr", gap: isMobile ? 28 : 40, alignItems: "end" }),
+    title: (isMobile: boolean): React.CSSProperties => ({ fontSize: isMobile ? 40 : 64, fontWeight: 300, lineHeight: 0.98, letterSpacing: "-1.5px", margin: 0, color: T.ink }),
+    titleAccent: { fontStyle: "italic", fontWeight: 300, color: T.meta } as React.CSSProperties,
+    subtitle: { fontSize: 15, color: T.meta, lineHeight: 1.6, maxWidth: 520, marginTop: 22, marginBottom: 0 } as React.CSSProperties,
+    carnetLink: { display: "inline-block", marginTop: 18, fontSize: 13, fontWeight: 600, color: T.ink, textDecoration: "none", borderBottom: `1px solid ${T.ink}`, paddingBottom: 2 } as React.CSSProperties,
+    recap: (isMobile: boolean): React.CSSProperties => ({
+      marginTop: isMobile ? 20 : 28,
+      paddingTop: 16,
+      borderTop: `1px solid ${T.line}`,
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      flexWrap: "wrap",
+      fontSize: 13,
+      color: T.meta,
+    }),
+    recapStrong: { color: T.ink, fontWeight: 600 } as React.CSSProperties,
+    recapDot: { width: 3, height: 3, borderRadius: "50%", background: T.soft, display: "inline-block" } as React.CSSProperties,
+  },
+
+  scoreCard: {
+    wrap: (isMobile: boolean): React.CSSProperties => ({
+      position: "relative",
+      background: T.white,
+      borderRadius: 24,
+      padding: isMobile ? "22px 22px" : "28px 32px",
+      boxShadow: "0 1px 0 #ebe4d6, 0 30px 60px -30px rgba(0,0,0,0.10)",
+    }),
+    topRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 20 } as React.CSSProperties,
+    eyebrow: { fontSize: 10, fontWeight: 700, letterSpacing: "1.6px", textTransform: "uppercase", color: T.soft, marginBottom: 4 } as React.CSSProperties,
+    number: { fontSize: 60, fontWeight: 300, lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-2px" } as React.CSSProperties,
+    percent: { fontSize: 28, marginLeft: 2 } as React.CSSProperties,
+    label: { fontSize: 13, color: T.ink, marginTop: 6, fontWeight: 600 } as React.CSSProperties,
+    divider: { marginTop: 18, paddingTop: 16, borderTop: `1px solid ${T.hairline}`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } as React.CSSProperties,
+    alert: { marginTop: 16, padding: "10px 12px", background: T.warningBg, borderRadius: 12 } as React.CSSProperties,
+    alertLabel: { fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px" } as React.CSSProperties,
+    alertBody: { fontSize: 13, color: "#333", marginTop: 2 } as React.CSSProperties,
+  },
+
+  mini: {
+    label: { fontSize: 10, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: T.soft } as React.CSSProperties,
+    value: { fontSize: 20, fontWeight: 400, color: T.ink, marginTop: 2, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.3px" } as React.CSSProperties,
+  },
+
+  layout: {
+    grid: (isMobile: boolean): React.CSSProperties => ({
+      display: "grid",
+      gridTemplateColumns: isMobile ? "1fr" : "240px 1fr 380px",
+      gap: isMobile ? 20 : 32,
+      alignItems: "flex-start",
+      marginTop: isMobile ? 24 : 40,
+    }),
+    body: { display: "flex", flexDirection: "column", gap: 20, minWidth: 0 } as React.CSSProperties,
+    sidebar: (isSticky: boolean): React.CSSProperties => ({ display: "flex", flexDirection: "column", gap: 16, ...(isSticky ? { position: "sticky", top: 90 } : {}) }),
+  },
+
+  summary: {
+    wrap: { position: "sticky", top: 90 } as React.CSSProperties,
+    eyebrow: { fontSize: 10, fontWeight: 700, letterSpacing: "1.8px", textTransform: "uppercase", color: T.soft, marginBottom: 14 } as React.CSSProperties,
+    nav: { display: "flex", flexDirection: "column", gap: 2 } as React.CSSProperties,
+    item: (active: boolean): React.CSSProperties => ({
+      display: "grid",
+      gridTemplateColumns: "auto 1fr auto",
+      alignItems: "center",
+      gap: 10,
+      padding: "10px 12px",
+      borderRadius: 10,
+      background: active ? T.white : "transparent",
+      border: active ? `1px solid ${T.line}` : "1px solid transparent",
+      cursor: "pointer",
+      textAlign: "left",
+      fontFamily: "inherit",
+    }),
+    num: (active: boolean): React.CSSProperties => ({ fontSize: 13, fontStyle: "italic", color: active ? T.ink : T.soft, fontVariantNumeric: "tabular-nums", fontWeight: 400 }),
+    label: (active: boolean): React.CSSProperties => ({ fontSize: 14, fontWeight: active ? 700 : 500, color: active ? T.ink : T.meta }),
+    dot: (done: boolean): React.CSSProperties => ({ width: 8, height: 8, borderRadius: "50%", background: done ? T.success : T.line }),
+    tip: { marginTop: 22, padding: "14px 14px", background: T.white, borderRadius: 14, border: `1px solid ${T.line}` } as React.CSSProperties,
+    tipLabel: { fontSize: 11, fontWeight: 700, color: T.soft, textTransform: "uppercase", letterSpacing: "1.2px", marginBottom: 6 } as React.CSSProperties,
+    tipBody: { fontSize: 12.5, color: "#333", lineHeight: 1.5 } as React.CSSProperties,
+  },
+
+  section: {
+    wrap: (isMobile: boolean): React.CSSProperties => ({
+      background: T.white,
+      borderRadius: 24,
+      padding: isMobile ? "22px 20px 24px" : "30px 32px 32px",
+      boxShadow: "0 1px 0 #ebe4d6",
+    }),
+    head: { display: "flex", alignItems: "baseline", gap: 16, marginBottom: 4, flexWrap: "wrap" as const } as React.CSSProperties,
+    num: { fontSize: 16, fontStyle: "italic", color: T.soft, fontVariantNumeric: "tabular-nums", fontWeight: 400 } as React.CSSProperties,
+    kicker: { fontSize: 11, fontWeight: 700, letterSpacing: "1.8px", textTransform: "uppercase", color: T.soft } as React.CSSProperties,
+    rule: { flex: 1, height: 1, background: T.hairline, minWidth: 20 } as React.CSSProperties,
+    subtitle: { fontSize: 11.5, color: T.soft } as React.CSSProperties,
+    h2: (isMobile: boolean): React.CSSProperties => ({ fontSize: isMobile ? 24 : 28, fontWeight: 500, margin: "0 0 22px", color: T.ink, letterSpacing: "-0.4px" }),
+  },
+
+  row2: (isMobile: boolean): React.CSSProperties => ({ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }),
+
+  field: {
+    wrap: { marginBottom: 18 } as React.CSSProperties,
+    label: { display: "block", fontSize: 11, fontWeight: 700, color: T.soft, marginBottom: 8, textTransform: "uppercase", letterSpacing: "1.4px" } as React.CSSProperties,
+    input: (isMobile: boolean): React.CSSProperties => ({ width: "100%", padding: "11px 14px", border: `1.5px solid ${T.line}`, borderRadius: 10, fontSize: isMobile ? 16 : 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box", background: T.white, color: T.ink, fontVariantNumeric: "tabular-nums" }),
+    inputDisabled: { background: T.mutedBg, color: T.soft } as React.CSSProperties,
+    textarea: (isMobile: boolean): React.CSSProperties => ({ width: "100%", padding: "14px 16px", border: `1.5px solid ${T.line}`, borderRadius: 14, fontSize: isMobile ? 16 : 14.5, fontFamily: "'DM Sans', sans-serif", fontStyle: "italic", fontWeight: 400, outline: "none", resize: "vertical", boxSizing: "border-box", lineHeight: 1.55, color: "#222", background: T.mutedBg }),
+  },
+
+  chip: {
+    wrap: { display: "flex", gap: 8, flexWrap: "wrap" as const } as React.CSSProperties,
+    base: (active: boolean): React.CSSProperties => ({
+      padding: "8px 14px",
+      borderRadius: 999,
+      border: "1.5px solid",
+      cursor: "pointer",
+      fontFamily: "inherit",
+      fontSize: 13,
+      fontWeight: 600,
+      background: active ? T.ink : T.mutedBg,
+      color: active ? T.white : "#333",
+      borderColor: active ? T.ink : T.line,
+      transition: "all 0.15s",
+    }),
+  },
+
+  toggle: {
+    wrap: (checked: boolean): React.CSSProperties => ({
+      display: "flex",
+      alignItems: "flex-start",
+      gap: 14,
+      cursor: "pointer",
+      padding: "12px 14px",
+      background: checked ? T.successBg : T.mutedBg,
+      borderRadius: 12,
+      border: `1.5px solid ${checked ? T.successLine : T.hairline}`,
+      transition: "all 0.15s",
+    }),
+    track: (checked: boolean): React.CSSProperties => ({
+      position: "relative",
+      width: 36,
+      height: 22,
+      background: checked ? T.success : "#D9D2C4",
+      borderRadius: 999,
+      flexShrink: 0,
+      marginTop: 1,
+      transition: "background 0.2s",
+    }),
+    knob: (checked: boolean): React.CSSProperties => ({
+      position: "absolute",
+      top: 2,
+      left: checked ? 16 : 2,
+      width: 18,
+      height: 18,
+      background: T.white,
+      borderRadius: "50%",
+      transition: "left 0.2s",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+    }),
+    input: { position: "absolute", opacity: 0, width: "100%", height: "100%", cursor: "pointer", top: 0, left: 0, margin: 0 } as React.CSSProperties,
+    labelText: { fontSize: 13.5, color: T.ink, fontWeight: 600 } as React.CSSProperties,
+    subText: { fontSize: 11.5, color: T.soft, marginTop: 2 } as React.CSSProperties,
+  },
+
+  doc: {
+    group: { marginBottom: 16 } as React.CSSProperties,
+    groupHead: { display: "flex", alignItems: "center", gap: 10, marginBottom: 10 } as React.CSSProperties,
+    groupTitle: { fontSize: 11, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: T.soft } as React.CSSProperties,
+    groupRule: { flex: 1, height: 1, background: T.hairline } as React.CSSProperties,
+    grid: (isMobile: boolean): React.CSSProperties => ({ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10 }),
+    card: (done: boolean, drag: boolean): React.CSSProperties => ({
+      padding: 14,
+      borderRadius: 14,
+      background: drag ? "#eff6ff" : done ? T.successBg : T.mutedBg,
+      border: `1.5px solid ${drag ? T.ink : done ? T.successLine : T.line}`,
+      outline: drag ? `1.5px dashed ${T.ink}` : "none",
+      outlineOffset: drag ? -4 : 0,
+      display: "flex",
+      flexDirection: "column",
+      gap: 8,
+      transition: "background 0.12s, border-color 0.12s",
+    }),
+    cardHead: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 } as React.CSSProperties,
+    cardLabel: { fontSize: 13, fontWeight: 700, color: T.ink } as React.CSSProperties,
+    cardDesc: { fontSize: 11.5, color: T.meta, lineHeight: 1.4, marginTop: 2 } as React.CSSProperties,
+    cardHint: { fontSize: 10.5, color: T.soft, lineHeight: 1.4, marginTop: 3, fontStyle: "italic" } as React.CSSProperties,
+    statusBadge: (done: boolean): React.CSSProperties => ({
+      width: 28,
+      height: 28,
+      borderRadius: "50%",
+      background: done ? T.success : T.white,
+      color: done ? T.white : T.soft,
+      border: done ? "none" : `1.5px solid ${T.line}`,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+      fontSize: 14,
+      fontWeight: 700,
+    }),
+    fileChipsWrap: { display: "flex", flexDirection: "column", gap: 4 } as React.CSSProperties,
+    fileChip: (confirming: boolean): React.CSSProperties => ({
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      background: confirming ? "#fee2e2" : "#dcfce7",
+      borderRadius: 8,
+      padding: "5px 10px",
+      border: confirming ? "1px solid #fca5a5" : "1px solid transparent",
+      transition: "all 0.15s",
+    }),
+    fileLink: (confirming: boolean): React.CSSProperties => ({
+      fontSize: 12,
+      fontWeight: 600,
+      color: confirming ? "#991b1b" : "#166534",
+      textDecoration: "none",
+      flex: 1,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+    }),
+    cardFoot: { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "auto", paddingTop: 4 } as React.CSSProperties,
+    countText: { fontSize: 11, color: T.soft, fontVariantNumeric: "tabular-nums" } as React.CSSProperties,
+    addBtn: (disabled: boolean): React.CSSProperties => ({
+      fontSize: 11.5,
+      fontWeight: 700,
+      color: T.ink,
+      background: "transparent",
+      border: "none",
+      cursor: disabled ? "not-allowed" : "pointer",
+      fontFamily: "inherit",
+      textDecoration: "underline",
+      padding: 0,
+      opacity: disabled ? 0.5 : 1,
+    }),
+    removeBtn: { fontSize: 11, fontWeight: 700, color: T.danger, background: "none", border: "none", cursor: "pointer", padding: "0 4px", fontFamily: "inherit" } as React.CSSProperties,
+    confirmBtn: { fontSize: 11, fontWeight: 700, color: T.white, background: T.danger, border: "none", borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontFamily: "inherit" } as React.CSSProperties,
+    cancelBtn: { fontSize: 11, fontWeight: 600, color: T.ink, background: T.white, border: `1px solid ${T.line}`, borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontFamily: "inherit" } as React.CSSProperties,
+  },
+
+  docsPanel: {
+    wrap: (isMobile: boolean): React.CSSProperties => ({ background: T.white, borderRadius: 20, padding: isMobile ? 20 : 24 }),
+    head: { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 } as React.CSSProperties,
+    title: { fontSize: 20, fontWeight: 500, margin: 0, color: T.ink, letterSpacing: "-0.3px" } as React.CSSProperties,
+    count: (color: string): React.CSSProperties => ({ fontSize: 12, fontWeight: 700, color, fontVariantNumeric: "tabular-nums" }),
+    hint: { fontSize: 12, color: T.meta, marginBottom: 16, marginTop: 4, lineHeight: 1.5 } as React.CSSProperties,
+  },
+
+  saveBtn: (state: "idle" | "saving" | "saved"): React.CSSProperties => ({
+    background: state === "saving" ? "#9ca3af" : state === "saved" ? T.success : T.ink,
+    color: T.white,
+    border: "none",
+    borderRadius: 999,
+    padding: "16px 0",
+    fontWeight: 700,
+    fontSize: 15,
+    cursor: state === "saving" ? "not-allowed" : "pointer",
+    fontFamily: "inherit",
+    transition: "background 0.2s",
+    letterSpacing: 0.2,
+  }),
+
+  errorBanner: { background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 12, padding: "12px 16px", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" } as React.CSSProperties,
+
+  download: {
+    wrap: (isMobile: boolean): React.CSSProperties => ({ background: T.ink, color: T.white, borderRadius: 20, padding: isMobile ? 20 : 22, position: "relative", overflow: "hidden" }),
+    ghostWord: { position: "absolute", top: -14, right: -10, fontSize: 96, fontStyle: "italic", fontWeight: 300, color: "rgba(255,255,255,0.06)", lineHeight: 1, letterSpacing: "-3px", pointerEvents: "none" } as React.CSSProperties,
+    eyebrow: { fontSize: 10, fontWeight: 700, letterSpacing: "1.8px", textTransform: "uppercase", color: "rgba(255,255,255,0.6)", marginBottom: 4, position: "relative" } as React.CSSProperties,
+    title: { fontSize: 22, fontWeight: 500, margin: "0 0 10px", color: T.white, letterSpacing: "-0.4px", position: "relative" } as React.CSSProperties,
+    titleAccent: { fontStyle: "italic", fontWeight: 400, color: "rgba(255,255,255,0.85)" } as React.CSSProperties,
+    desc: { fontSize: 12.5, color: "rgba(255,255,255,0.7)", lineHeight: 1.55, margin: "0 0 14px", position: "relative" } as React.CSSProperties,
+    btnPrimary: (disabled: boolean): React.CSSProperties => ({
+      width: "100%",
+      background: disabled ? "#6b7280" : T.white,
+      color: T.ink,
+      border: "none",
+      borderRadius: 999,
+      padding: "12px 18px",
+      fontWeight: 800,
+      fontSize: 13,
+      cursor: disabled ? "wait" : "pointer",
+      fontFamily: "inherit",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      position: "relative",
+    }),
+    btnSecondary: (disabled: boolean): React.CSSProperties => ({
+      width: "100%",
+      background: "transparent",
+      color: T.white,
+      border: "1px solid rgba(255,255,255,0.25)",
+      borderRadius: 999,
+      padding: "10px 18px",
+      fontWeight: 700,
+      fontSize: 12,
+      cursor: disabled ? "wait" : "pointer",
+      fontFamily: "inherit",
+      marginTop: 8,
+      position: "relative",
+    }),
+  },
+} as const
+
+// ═══════════════════════════════════════════════════════════════════
+// Helpers éditoriaux — tous extraits HORS de Dossier() pour préserver
+// le focus des inputs (CLAUDE.md : helpers inline dans un composant React
+// recréent les refs à chaque render → perte de focus sur chaque frappe).
+// ═══════════════════════════════════════════════════════════════════
+
+function ScoreRing({ value, color }: { value: number; color: string }) {
+  const R = 36
+  const C = 2 * Math.PI * R
+  const dash = (value / 100) * C
+  return (
+    <svg width="88" height="88" viewBox="0 0 88 88" aria-hidden>
+      <circle cx="44" cy="44" r={R} fill="none" stroke={T.hairline} strokeWidth="6" />
+      <circle
+        cx="44" cy="44" r={R} fill="none"
+        stroke={color} strokeWidth="6" strokeLinecap="round"
+        strokeDasharray={`${dash} ${C - dash}`}
+        transform="rotate(-90 44 44)"
+        style={{ transition: "stroke-dasharray 0.6s ease" }}
+      />
+    </svg>
+  )
+}
+
+function Mini({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div style={STYLES.mini.label}>{label}</div>
+      <div style={STYLES.mini.value}>{value}</div>
+    </div>
+  )
+}
+
+function Section({
+  id, num, kicker, title, subtitle, isMobile, children,
+}: {
+  id: string
+  num: string
+  kicker: string
+  title: string
+  subtitle?: string
+  isMobile: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <section id={`sec-${id}`} className="print-section" style={STYLES.section.wrap(isMobile)}>
+      <div style={STYLES.section.head}>
+        <span style={STYLES.section.num}>{num}</span>
+        <span style={STYLES.section.kicker}>{kicker}</span>
+        <span style={STYLES.section.rule} />
+        {subtitle && <span style={STYLES.section.subtitle}>{subtitle}</span>}
+      </div>
+      <h2 style={STYLES.section.h2(isMobile)}>{title}</h2>
+      {children}
+    </section>
+  )
+}
+
+function Row2({ isMobile, children }: { isMobile: boolean; children: React.ReactNode }) {
+  return <div style={STYLES.row2(isMobile)}>{children}</div>
+}
+
+function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div style={STYLES.field.wrap}>
+      <label style={STYLES.field.label}>{label}</label>
+      {children}
+    </div>
+  )
+}
+
+function TextInput({
+  value, onChange, type = "text", placeholder, disabled, isMobile, min, max,
+}: {
+  value: string | number
+  onChange?: (v: string) => void
+  type?: string
+  placeholder?: string
+  disabled?: boolean
+  isMobile: boolean
+  min?: number
+  max?: number
+}) {
+  return (
+    <input
+      type={type}
+      value={value}
+      disabled={disabled}
+      placeholder={placeholder}
+      min={min}
+      max={max}
+      onChange={e => onChange && onChange(e.target.value)}
+      style={{ ...STYLES.field.input(isMobile), ...(disabled ? STYLES.field.inputDisabled : {}) }}
+    />
+  )
+}
+
+function SelectField({
+  value, options, onChange, isMobile, emptyLabel = "— Sélectionner —",
+}: {
+  value: string
+  options: readonly string[]
+  onChange: (v: string) => void
+  isMobile: boolean
+  emptyLabel?: string
+}) {
+  return (
+    <select value={value} onChange={e => onChange(e.target.value)} style={STYLES.field.input(isMobile)}>
+      <option value="">{emptyLabel}</option>
+      {options.map(o => <option key={o} value={o}>{o}</option>)}
+    </select>
+  )
+}
+
+function ChipGroup({
+  value, options, onChange,
+}: {
+  value: string
+  options: readonly string[]
+  onChange: (v: string) => void
+}) {
+  return (
+    <div style={STYLES.chip.wrap}>
+      {options.map(o => (
+        <button
+          key={o}
+          type="button"
+          onClick={() => onChange(o)}
+          style={STYLES.chip.base(value === o)}
+        >
+          {o}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function Toggle({
+  label, sub, checked, onChange,
+}: {
+  label: string
+  sub?: string
+  checked: boolean
+  onChange: (v: boolean) => void
+}) {
+  return (
+    <label style={STYLES.toggle.wrap(checked)}>
+      <div style={STYLES.toggle.track(checked)}>
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={e => onChange(e.target.checked)}
+          style={STYLES.toggle.input}
+        />
+        <span style={STYLES.toggle.knob(checked)} />
+      </div>
+      <div>
+        <div style={STYLES.toggle.labelText}>{label}</div>
+        {sub && <div style={STYLES.toggle.subText}>{sub}</div>}
+      </div>
+    </label>
+  )
+}
+
+// ─── DocCard (ex-DocRow, sorti du composant parent) ─────────────────
+// Conserve 100% de la logique : drag&drop, upload, remove avec confirm,
+// outline dashed #111, count {uploaded}/{max}, chips par fichier.
+type DocCardSharedProps = {
+  docs: Record<string, string[]>
+  uploading: DocKey | null
+  dragKey: DocKey | null
+  setDragKey: (k: DocKey | null) => void
+  removeTarget: { key: DocKey; idx: number } | null
+  setRemoveTarget: (v: { key: DocKey; idx: number } | null) => void
+  uploadDoc: (k: DocKey, f: FileList) => void
+  removeDoc: (k: DocKey, i: number) => void
+  fileRefs: React.MutableRefObject<Record<string, HTMLInputElement | null>>
+  isMobile: boolean
+}
+
+function DocCard({
+  docKey, label, desc, hint, shared,
+}: {
+  docKey: DocKey
+  label: string
+  desc?: string
+  hint?: string
+  shared: DocCardSharedProps
+}) {
+  const { docs, uploading, dragKey, setDragKey, removeTarget, setRemoveTarget, uploadDoc, removeDoc, fileRefs } = shared
+  const uploaded = docs[docKey] || []
+  const max = DOC_MAX[docKey]
+  const isUploading = uploading === docKey
+  const canAdd = uploaded.length < max
+  const isDragActive = dragKey === docKey
+  const done = uploaded.length > 0
+
+  return (
+    <div
+      onDragOver={e => { if (canAdd) { e.preventDefault(); setDragKey(docKey) } }}
+      onDragLeave={() => { if (dragKey === docKey) setDragKey(null) }}
+      onDrop={e => {
+        e.preventDefault()
+        setDragKey(null)
+        if (!canAdd) return
+        if (e.dataTransfer.files?.length) uploadDoc(docKey, e.dataTransfer.files)
+      }}
+      style={STYLES.doc.card(done, isDragActive)}
+    >
+      <div style={STYLES.doc.cardHead}>
+        <div style={{ minWidth: 0 }}>
+          <div style={STYLES.doc.cardLabel}>{label}</div>
+          {desc && <div style={STYLES.doc.cardDesc}>{desc}</div>}
+          {hint && <div style={STYLES.doc.cardHint}>{hint}</div>}
+        </div>
+        <div style={STYLES.doc.statusBadge(done)}>{done ? "✓" : "+"}</div>
+      </div>
+
+      {uploaded.length > 0 && (
+        <div style={STYLES.doc.fileChipsWrap}>
+          {uploaded.map((url, i) => {
+            const confirming = removeTarget?.key === docKey && removeTarget?.idx === i
+            return (
+              <div key={i} style={STYLES.doc.fileChip(confirming)}>
+                <a href={url} target="_blank" rel="noopener" style={STYLES.doc.fileLink(confirming)}>
+                  Fichier {i + 1}
+                </a>
+                {confirming ? (
+                  <>
+                    <button type="button" onClick={() => { removeDoc(docKey, i); setRemoveTarget(null) }} style={STYLES.doc.confirmBtn}>
+                      Confirmer
+                    </button>
+                    <button type="button" onClick={() => setRemoveTarget(null)} style={STYLES.doc.cancelBtn}>
+                      Annuler
+                    </button>
+                  </>
+                ) : (
+                  <button type="button" onClick={() => setRemoveTarget({ key: docKey, idx: i })} title="Supprimer ce fichier" style={STYLES.doc.removeBtn}>
+                    ✕
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <div style={STYLES.doc.cardFoot}>
+        <span style={STYLES.doc.countText}>{uploaded.length}/{max}</span>
+        {canAdd && (
+          <>
+            <input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              multiple={max > 1}
+              style={{ display: "none" }}
+              ref={el => { fileRefs.current[docKey] = el }}
+              onChange={e => { if (e.target.files?.length) uploadDoc(docKey, e.target.files); e.target.value = "" }}
+            />
+            <button
+              type="button"
+              onClick={() => fileRefs.current[docKey]?.click()}
+              disabled={isUploading}
+              title="Ajouter ou glisser-déposer un fichier ici"
+              style={STYLES.doc.addBtn(isUploading)}
+            >
+              {isUploading ? "Upload…" : done ? `+ ajouter (${uploaded.length}/${max})` : "déposer"}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function DocGroup({
+  title, items, shared,
+}: {
+  title: string
+  items: { key: DocKey; label: string; desc?: string; hint?: string }[]
+  shared: DocCardSharedProps
+}) {
+  return (
+    <div style={STYLES.doc.group}>
+      <div style={STYLES.doc.groupHead}>
+        <span style={STYLES.doc.groupTitle}>{title}</span>
+        <span style={STYLES.doc.groupRule} />
+      </div>
+      <div style={STYLES.doc.grid(shared.isMobile)}>
+        {items.map(d => (
+          <DocCard key={d.key} docKey={d.key} label={d.label} desc={d.desc} hint={d.hint} shared={shared} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Composant principal
+// ═══════════════════════════════════════════════════════════════════
 
 export default function Dossier() {
   const { data: session, status } = useSession()
@@ -83,7 +717,8 @@ export default function Dossier() {
   useEffect(() => {
     if (proprietaireActive) router.replace("/proprietaire")
   }, [proprietaireActive, router])
-  const [profil, setProfil] = useState<any>(null)
+
+  const [profil, setProfil] = useState<{ ville_souhaitee?: string; budget_max?: number | null } | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -122,12 +757,13 @@ export default function Dossier() {
   // Backup pour restaurer si l'user clique "Annuler" dans le toast undo.
   const [docsBackup, setDocsBackup] = useState<Record<string, string[]> | null>(null)
   const [undoLabel, setUndoLabel] = useState<string | null>(null)
+  const [activeSection, setActiveSection] = useState<string>("identite")
 
-  // Date "Généré le X" : calculée post-mount pour éviter tout mismatch SSR/CSR
+  // Date "Mis à jour X" : calculée post-mount pour éviter tout mismatch SSR/CSR
   // (new Date() dans le render retourne une valeur différente à chaque appel).
   const [dateGeneration, setDateGeneration] = useState("")
   useEffect(() => {
-    setDateGeneration(new Date().toLocaleDateString("fr-FR"))
+    setDateGeneration(new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long" }))
   }, [])
 
   const {
@@ -156,6 +792,7 @@ export default function Dossier() {
   useEffect(() => {
     if (status === "unauthenticated") { router.push("/auth"); return }
     if (session?.user?.email) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status])
 
   async function load() {
@@ -423,125 +1060,9 @@ export default function Dossier() {
   const scoreInfo = Math.round((champs.filter(Boolean).length / champs.length) * 100)
   const scoreDoc = allDocs.length > 0 ? Math.round((docsCount / allDocs.length) * 100) : 0
   const score = Math.round((scoreInfo + scoreDoc) / 2)
-  const scoreColor = score >= 80 ? "#16a34a" : score >= 50 ? "#ea580c" : "#dc2626"
-
-  if (status === "loading" || loading) return (
-    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ maxWidth: 960, margin: "0 auto", padding: isMobile ? "24px 16px" : "32px 48px" }} aria-busy="true">
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {[1, 2, 3, 4, 5, 6].map(i => <DocRowSkeleton key={i} />)}
-        </div>
-      </div>
-    </main>
-  )
-
-  const F = ({ label, children }: { label: React.ReactNode; children: React.ReactNode }) => (
-    <div style={{ marginBottom: 18 }}>
-      <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6b7280", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</label>
-      {children}
-    </div>
-  )
-
-  const inputStyle: any = { width: "100%", padding: "10px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: isMobile ? 16 : 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box", background: "white", color: "#111" }
-
-  function DocRow({ docKey, label, desc, hint }: { docKey: DocKey; label: string; desc?: string; hint?: string }) {
-    const uploaded = docs[docKey] || []
-    const max = DOC_MAX[docKey]
-    const isUploading = uploading === docKey
-    const canAdd = uploaded.length < max
-    const isDragActive = dragKey === docKey
-
-    return (
-      <div
-        onDragOver={e => { if (canAdd) { e.preventDefault(); setDragKey(docKey) } }}
-        onDragLeave={() => { if (dragKey === docKey) setDragKey(null) }}
-        onDrop={e => {
-          e.preventDefault()
-          setDragKey(null)
-          if (!canAdd) return
-          if (e.dataTransfer.files?.length) uploadDoc(docKey, e.dataTransfer.files)
-        }}
-        style={{
-          padding: "12px 0",
-          borderBottom: "1px solid #f3f4f6",
-          background: isDragActive ? "#eff6ff" : "transparent",
-          borderRadius: isDragActive ? 10 : 0,
-          outline: isDragActive ? "1.5px dashed #111" : "none",
-          outlineOffset: isDragActive ? -4 : 0,
-          transition: "background 0.12s",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: uploaded.length > 0 ? 8 : 0, gap: 8, flexWrap: "wrap" }}>
-          <div style={{ flex: "1 1 180px", minWidth: 0 }}>
-            <p style={{ fontSize: 13, fontWeight: 700 }}>{label}</p>
-            {desc && <p style={{ fontSize: 11, color: "#6b7280", lineHeight: 1.4, marginTop: 2 }}>{desc}</p>}
-            {hint && <p style={{ fontSize: 10, color: "#9ca3af", lineHeight: 1.4, marginTop: 3, fontStyle: "italic" }}>{hint}</p>}
-          </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
-            {canAdd && (
-              <>
-                <input
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  multiple={max > 1}
-                  style={{ display: "none" }}
-                  ref={el => { fileRefs.current[docKey] = el }}
-                  onChange={e => { if (e.target.files?.length) uploadDoc(docKey, e.target.files); e.target.value = "" }}
-                />
-                <button
-                  type="button"
-                  onClick={() => fileRefs.current[docKey]?.click()}
-                  disabled={isUploading}
-                  title="Ajouter ou glisser-déposer un fichier ici"
-                  style={{ fontSize: 12, fontWeight: 700, color: "#111", background: "none", border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "5px 12px", cursor: isUploading ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: isUploading ? 0.6 : 1 }}>
-                  {isUploading ? "Upload..." : uploaded.length > 0 ? `+ Ajouter (${uploaded.length}/${max})` : "Ajouter"}
-                </button>
-              </>
-            )}
-            {uploaded.length > 0 && (
-              <span style={{ fontSize: 11, color: "#16a34a", fontWeight: 700 }}>✓ {uploaded.length}/{max}</span>
-            )}
-          </div>
-        </div>
-
-        {/* Liste des fichiers uploadés */}
-        {uploaded.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {uploaded.map((url, i) => {
-              const confirming = removeTarget?.key === docKey && removeTarget?.idx === i
-              return (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, background: confirming ? "#fee2e2" : "#f0fdf4", borderRadius: 8, padding: "5px 10px", border: confirming ? "1px solid #fca5a5" : "1px solid transparent", transition: "all 0.15s" }}>
-                  <span style={{ fontSize: 11, color: confirming ? "#b91c1c" : "#16a34a", fontWeight: 700 }}>•</span>
-                  <a href={url} target="_blank" rel="noopener"
-                    style={{ fontSize: 12, fontWeight: 600, color: confirming ? "#991b1b" : "#166534", textDecoration: "none", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    Fichier {i + 1}
-                  </a>
-                  {confirming ? (
-                    <>
-                      <button type="button" onClick={() => { removeDoc(docKey, i); setRemoveTarget(null) }}
-                        style={{ fontSize: 11, fontWeight: 700, color: "white", background: "#dc2626", border: "none", borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontFamily: "inherit" }}>
-                        Confirmer
-                      </button>
-                      <button type="button" onClick={() => setRemoveTarget(null)}
-                        style={{ fontSize: 11, fontWeight: 600, color: "#111", background: "white", border: "1px solid #e5e7eb", borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontFamily: "inherit" }}>
-                        Annuler
-                      </button>
-                    </>
-                  ) : (
-                    <button type="button" onClick={() => setRemoveTarget({ key: docKey, idx: i })}
-                      title="Supprimer ce fichier"
-                      style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", background: "none", border: "none", cursor: "pointer", padding: "0 4px", fontFamily: "inherit" }}>
-                      ✕
-                    </button>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-    )
-  }
+  const scoreColor = score >= 80 ? T.success : score >= 50 ? T.warning : T.danger
+  const scoreLabel = score >= 80 ? "Excellent" : score >= 50 ? "Bon, quelques pièces à compléter" : "Dossier à compléter"
+  const missingDocs = allDocs.filter(d => (docs[d.key] || []).length === 0)
 
   // Décide quels documents optionnels afficher selon le profil courant.
   const docsOptionnelsVisibles = DOCS_OPTIONNELS.filter(d => {
@@ -552,6 +1073,41 @@ export default function Dossier() {
     return false
   })
 
+  if (status === "loading" || loading) return (
+    <main style={STYLES.main}>
+      <div style={STYLES.container(isMobile)} aria-busy="true">
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {[1, 2, 3, 4, 5, 6].map(i => <DocRowSkeleton key={i} />)}
+        </div>
+      </div>
+    </main>
+  )
+
+  // Shared props pour DocCard (évite de répéter 8 props par appel).
+  const docCardShared: DocCardSharedProps = {
+    docs, uploading, dragKey, setDragKey, removeTarget, setRemoveTarget,
+    uploadDoc, removeDoc, fileRefs, isMobile,
+  }
+
+  // Sommaire numéroté — état "done" dérivé du form / docs courants.
+  const summaryItems: { id: string; num: string; label: string; done: boolean }[] = [
+    { id: "identite", num: "01", label: "Identité", done: !!form.nom && !!form.telephone && !!form.date_naissance && !!form.nationalite && !!form.situation_familiale },
+    { id: "pro", num: "02", label: "Situation pro", done: !!form.situation_pro && !!form.revenus_mensuels },
+    { id: "logement", num: "03", label: "Logement actuel", done: !!form.logement_actuel_type },
+    { id: "garant", num: "04", label: "Garant", done: !form.garant || !!form.type_garant },
+    { id: "presentation", num: "05", label: "Présentation", done: form.presentation.length > 40 },
+    { id: "documents", num: "06", label: "Pièces jointes", done: docsCount === allDocs.length && allDocs.length > 0 },
+  ]
+
+  function scrollToSection(id: string) {
+    setActiveSection(id)
+    if (typeof document !== "undefined") {
+      document.getElementById(`sec-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })
+    }
+  }
+
+  const missingLabels = missingDocs.slice(0, 2).map(d => d.label).join(", ") + (missingDocs.length > 2 ? ` +${missingDocs.length - 2}` : "")
+
   return (
     <>
       <style>{`@media print { nav, .no-print { display: none !important; } body { background: white !important; } .print-section { page-break-inside: avoid; } }`}</style>
@@ -560,320 +1116,347 @@ export default function Dossier() {
         <UndoToast message={undoLabel} onUndo={handleUndoRemoveDoc} />
       )}
 
-      <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
-        <div style={{ maxWidth: 960, margin: "0 auto", padding: isMobile ? "24px 16px" : "32px 48px" }}>
+      <main style={STYLES.main}>
+        <div style={STYLES.container(isMobile)}>
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: isMobile ? 20 : 28, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 14 : 0 }}>
-            <div style={{ width: isMobile ? "100%" : undefined, minWidth: 0 }}>
-              <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 800, letterSpacing: "-0.5px", display: "flex", alignItems: "center", margin: 0 }}>
-                Mon dossier locataire
-                <Tooltip text="Votre dossier réunit tous les justificatifs demandés par les propriétaires (identité, revenus, garant). Plus il est complet, plus votre candidature est crédible. Il est partagé uniquement avec les propriétaires que vous contactez, à votre initiative." />
-              </h1>
-              <p style={{ color: "#6b7280", fontSize: isMobile ? 13 : 14, marginTop: 4, lineHeight: 1.5 }}>Complétez vos informations et déposez vos documents pour maximiser vos chances.</p>
+          {/* ══════════ HERO ÉDITORIAL ══════════ */}
+          <section style={STYLES.hero.wrap(isMobile)}>
+            <div style={STYLES.hero.eyebrowRow}>
+              <span style={STYLES.hero.eyebrow}>Dossier locataire</span>
+              <span style={STYLES.hero.rule} />
+              <span style={STYLES.hero.metaRight} suppressHydrationWarning>
+                Mis à jour {dateGeneration || "—"}
+              </span>
             </div>
-            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", width: isMobile ? "100%" : undefined, justifyContent: isMobile ? "flex-start" : "flex-end" }}>
-              <div style={{ background: "white", borderRadius: 16, padding: isMobile ? "8px 12px" : "14px 18px", textAlign: "center", border: `2px solid ${scoreColor}`, flexShrink: 0 }}>
-                <div style={{ fontSize: isMobile ? 20 : 26, fontWeight: 900, color: scoreColor, lineHeight: 1 }}>{score}%</div>
-                <div style={{ fontSize: 10, color: "#6b7280", fontWeight: 700, textTransform: "uppercase", marginTop: 2 }}>Complétude</div>
-                <div style={{ background: "#f3f4f6", borderRadius: 999, height: 3, marginTop: 6, width: isMobile ? 56 : 70 }}>
-                  <div style={{ background: scoreColor, borderRadius: 999, height: 3, width: `${score}%`, transition: "width 0.4s" }} />
-                </div>
-              </div>
-              <a href="/carnet" className="no-print"
-                style={{ padding: isMobile ? "9px 14px" : "12px 20px", background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 12, fontWeight: 700, fontSize: isMobile ? 13 : 14, textDecoration: "none", display: "inline-flex", alignItems: "center", whiteSpace: "nowrap", flex: isMobile ? "1 1 auto" : undefined, justifyContent: "center" }}>
-                Carnet d'entretien
-              </a>
-            </div>
-          </div>
 
-          {uploadError && (
-            <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 12, padding: "12px 16px", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <p style={{ fontSize: 13, color: "#dc2626", fontWeight: 600 }}>{uploadError}</p>
-              <button type="button" aria-label="Fermer le message d'erreur" onClick={() => setUploadError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: 18, fontWeight: 700 }}>×</button>
-            </div>
-          )}
-
-          {/* Contenu PDF */}
-          <div id="dossier-pdf-content" style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 32, marginBottom: 20 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: 20, paddingBottom: 16, borderBottom: "2px solid #f3f4f6", flexWrap: "wrap", gap: 12 }}>
+            <div style={STYLES.hero.grid(isMobile)}>
               <div>
-                <h2 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 900, margin: 0 }}>Dossier locataire</h2>
-                <p style={{ fontSize: 13, color: "#6b7280", marginTop: 2 }} suppressHydrationWarning>Généré le {dateGeneration}</p>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: isMobile ? 20 : 22, fontWeight: 900, color: scoreColor }}>{score}%</div>
-                <div style={{ fontSize: 10, color: "#6b7280", fontWeight: 700, textTransform: "uppercase" }}>Complétude</div>
-              </div>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginBottom: 20 }}>
-              {[
-                { label: "Nom", value: form.nom },
-                { label: "Téléphone", value: form.telephone },
-                { label: "Email", value: session?.user?.email },
-                { label: "Statut pro", value: form.situation_pro },
-                { label: "Revenus nets/mois", value: form.revenus_mensuels ? `${Number(form.revenus_mensuels).toLocaleString("fr-FR")} €` : "" },
-                { label: "Garant", value: form.garant ? (form.type_garant || "Oui") : "Non" },
-              ].map(f => (
-                <div key={f.label} style={{ background: "#f9fafb", borderRadius: 10, padding: "10px 14px", minWidth: 0 }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", marginBottom: 4 }}>{f.label}</p>
-                  <p style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis" }}>{f.value || "—"}</p>
-                </div>
-              ))}
-            </div>
-            <h3 style={{ fontSize: 12, fontWeight: 800, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>
-              Pièces justificatives ({docsCount}/{allDocs.length} catégories)
-            </h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 8 }}>
-              {allDocs.map(doc => {
-                const files = docs[doc.key] || []
-                return (
-                  <div key={doc.key} style={{ display: "flex", alignItems: "center", gap: 8, background: files.length > 0 ? "#f0fdf4" : "#f9fafb", borderRadius: 8, padding: "8px 12px", border: `1px solid ${files.length > 0 ? "#bbf7d0" : "#e5e7eb"}` }}>
-                    <span style={{ fontSize: 14, color: files.length > 0 ? "#16a34a" : "#d1d5db" }}>{files.length > 0 ? "✓" : "○"}</span>
-                    <p style={{ fontSize: 11, fontWeight: 600, color: files.length > 0 ? "#166534" : "#6b7280" }}>
-                      {doc.label} {files.length > 1 ? `(${files.length})` : ""}
-                    </p>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* ─── Présentation (juste sous le récap complétude) ─── */}
-          <div className="print-section" style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24, marginBottom: 20 }}>
-            <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 6, display: "flex", alignItems: "center" }}>
-              Présentation
-              <Tooltip text="Une lettre de présentation courte humanise votre dossier. Expliquez votre projet (pourquoi ce logement, pourquoi cette ville, contexte pro), et ce que le proprio doit savoir sur vous. 500 caractères max." />
-            </h2>
-            <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 12, lineHeight: 1.5 }}>
-              Quelques lignes pour vous présenter au propriétaire — facultatif mais très apprécié. Pensez à cliquer sur « Sauvegarder mon dossier » en bas pour conserver vos modifications.
-            </p>
-            <textarea
-              value={form.presentation}
-              onChange={e => setForm(f => ({ ...f, presentation: e.target.value.slice(0, 500) }))}
-              placeholder="Ex : Bonjour, je suis ingénieur en CDI depuis 3 ans. Je cherche un logement proche de mon nouveau bureau à partir du 1er septembre. Très soigneux, non fumeur, sans animaux."
-              rows={4}
-              style={{ width: "100%", padding: "12px 14px", border: "1.5px solid #e5e7eb", borderRadius: 12, fontSize: isMobile ? 16 : 14, fontFamily: "inherit", outline: "none", resize: "vertical", boxSizing: "border-box", lineHeight: 1.5 }}
-            />
-            <p style={{ fontSize: 11, color: "#9ca3af", margin: "6px 0 0", textAlign: "right" }}>{form.presentation.length}/500</p>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 380px", gap: isMobile ? 16 : 24, alignItems: "flex-start" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-
-              <div className="print-section" style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24 }}>
-                <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>Identité</h2>
-                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
-                  <F label="Nom complet">
-                    <input value={form.nom} onChange={e => setForm(f => ({ ...f, nom: e.target.value }))} placeholder="Jean Dupont" style={inputStyle} />
-                  </F>
-                  <F label="Téléphone">
-                    <PhoneInput value={form.telephone} onChange={v => setForm(f => ({ ...f, telephone: v }))} placeholder="6 12 34 56 78" />
-                  </F>
-                </div>
-                <F label="Email">
-                  <input value={session?.user?.email || ""} disabled style={{ ...inputStyle, background: "#f9fafb", color: "#9ca3af" }} />
-                </F>
-                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
-                  <F label="Date de naissance">
-                    <input type="date" value={form.date_naissance} onChange={e => setForm(f => ({ ...f, date_naissance: e.target.value }))} style={inputStyle} />
-                  </F>
-                  <F label="Nationalité">
-                    <select value={form.nationalite} onChange={e => setForm(f => ({ ...f, nationalite: e.target.value }))} style={{ ...inputStyle, background: "white" }}>
-                      <option value="">— Sélectionner —</option>
-                      {NATIONALITES_COURANTES.map(n => <option key={n} value={n}>{n}</option>)}
-                    </select>
-                  </F>
-                </div>
-                <F label="Situation familiale">
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {SITUATIONS_FAMILIALES.map(s => (
-                      <button key={s} type="button" onClick={() => setForm(f => ({ ...f, situation_familiale: s }))}
-                        style={{ padding: "7px 14px", borderRadius: 999, border: "1.5px solid", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600,
-                          background: form.situation_familiale === s ? "#111" : "white",
-                          color: form.situation_familiale === s ? "white" : "#111",
-                          borderColor: form.situation_familiale === s ? "#111" : "#e5e7eb" }}>
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                </F>
-                <F label="Nombre d'enfants à charge">
-                  <input type="number" min={0} max={15} value={form.nb_enfants} onChange={e => setForm(f => ({ ...f, nb_enfants: Math.max(0, Math.min(15, Number(e.target.value) || 0)) }))} style={inputStyle} />
-                </F>
+                <h1 style={STYLES.hero.title(isMobile)}>
+                  Votre dossier,<br />
+                  <span style={STYLES.hero.titleAccent}>prêt à candidater.</span>
+                </h1>
+                <p style={STYLES.hero.subtitle}>
+                  Un dossier bien tenu, c&apos;est jusqu&apos;à quatre fois plus de réponses. Complétez ce qui manque, déposez vos justificatifs, puis partagez en un lien sécurisé valable 7 jours.
+                  <Tooltip text="Votre dossier réunit tous les justificatifs demandés par les propriétaires (identité, revenus, garant). Il est partagé uniquement avec les propriétaires que vous contactez, à votre initiative." />
+                </p>
+                <a href="/carnet" className="no-print" style={STYLES.hero.carnetLink}>
+                  Accéder au carnet d&apos;entretien →
+                </a>
               </div>
 
-              <div className="print-section" style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24 }}>
-                <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>Situation professionnelle</h2>
-                <F label="Statut">
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {SITUATIONS.map(s => (
-                      <button key={s} onClick={() => setForm(f => ({ ...f, situation_pro: s }))}
-                        style={{ padding: "7px 14px", borderRadius: 999, border: "1.5px solid", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, transition: "all 0.15s",
-                          background: form.situation_pro === s ? "#111" : "white",
-                          color: form.situation_pro === s ? "white" : "#111",
-                          borderColor: form.situation_pro === s ? "#111" : "#e5e7eb" }}>
-                        {s}
-                      </button>
-                    ))}
+              {/* Score Card */}
+              <div style={STYLES.scoreCard.wrap(isMobile)}>
+                <div style={STYLES.scoreCard.topRow}>
+                  <div>
+                    <div style={STYLES.scoreCard.eyebrow}>Complétude</div>
+                    <div style={{ ...STYLES.scoreCard.number, color: scoreColor }}>
+                      {score}<span style={STYLES.scoreCard.percent}>%</span>
+                    </div>
+                    <div style={STYLES.scoreCard.label}>{scoreLabel}</div>
                   </div>
-                </F>
-                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginTop: 4 }}>
-                  <F label={<>Revenus mensuels nets (€) <Tooltip text="Vos revenus nets après impôts et cotisations. La règle courante : les propriétaires attendent un revenu d'environ 3 fois le loyer. Ex : pour un loyer de 800 €, visez au moins 2400 € de revenus nets mensuels." /></>}>
-                    <input type="number" value={form.revenus_mensuels} onChange={e => setForm(f => ({ ...f, revenus_mensuels: e.target.value }))} placeholder="2 500" style={inputStyle} />
-                  </F>
-                  <F label="Nombre d'occupants">
-                    <input type="number" min={1} max={10} value={form.nb_occupants} onChange={e => setForm(f => ({ ...f, nb_occupants: Number(e.target.value) }))} style={inputStyle} />
-                  </F>
+                  <ScoreRing value={score} color={scoreColor} />
                 </div>
-                {/* Employeur + date embauche : uniquement pour les situations salariées */}
-                {["CDI", "CDD", "Intérim", "Fonctionnaire", "Alternance"].includes(form.situation_pro) && (
-                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
-                    <F label="Employeur">
-                      <input value={form.employeur_nom} onChange={e => setForm(f => ({ ...f, employeur_nom: e.target.value }))} placeholder="Nom de votre employeur" style={inputStyle} />
-                    </F>
-                    <F label={<>Date d&apos;embauche <Tooltip text="L'ancienneté rassure les propriétaires. Un CDI de plus de 12 mois est un signal très positif." /></>}>
-                      <input type="date" value={form.date_embauche} onChange={e => setForm(f => ({ ...f, date_embauche: e.target.value }))} style={inputStyle} />
-                    </F>
+                <div style={STYLES.scoreCard.divider}>
+                  <Mini label="Infos" value={`${scoreInfo}%`} />
+                  <Mini label="Pièces" value={`${docsCount}/${allDocs.length}`} />
+                </div>
+                {missingDocs.length > 0 && (
+                  <div style={{ ...STYLES.scoreCard.alert, borderLeft: `3px solid ${scoreColor}` }}>
+                    <div style={{ ...STYLES.scoreCard.alertLabel, color: scoreColor }}>Il manque</div>
+                    <div style={STYLES.scoreCard.alertBody}>{missingLabels}</div>
                   </div>
                 )}
               </div>
+            </div>
 
-              {/* ─── Logement actuel ─── */}
-              <div className="print-section" style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24 }}>
-                <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>Logement actuel</h2>
-                <F label="Statut">
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {LOGEMENT_TYPES.map(l => (
-                      <button key={l} type="button" onClick={() => setForm(f => ({ ...f, logement_actuel_type: l }))}
-                        style={{ padding: "7px 14px", borderRadius: 999, border: "1.5px solid", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600,
-                          background: form.logement_actuel_type === l ? "#111" : "white",
-                          color: form.logement_actuel_type === l ? "white" : "#111",
-                          borderColor: form.logement_actuel_type === l ? "#111" : "#e5e7eb" }}>
-                        {l}
-                      </button>
-                    ))}
-                  </div>
-                </F>
-                <F label="Ville actuelle">
-                  <input value={form.logement_actuel_ville} onChange={e => setForm(f => ({ ...f, logement_actuel_ville: e.target.value }))} placeholder="Ex : Paris" style={inputStyle} />
-                </F>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-                    <input type="checkbox" checked={form.a_apl} onChange={e => setForm(f => ({ ...f, a_apl: e.target.checked }))} style={{ width: 18, height: 18, accentColor: "#111", cursor: "pointer" }} />
-                    <span style={{ fontSize: 14, color: "#111" }}>Je bénéficie des APL (aide au logement)</span>
-                  </label>
-                  <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-                    <input type="checkbox" checked={form.mobilite_pro} onChange={e => setForm(f => ({ ...f, mobilite_pro: e.target.checked }))} style={{ width: 18, height: 18, accentColor: "#111", cursor: "pointer" }} />
-                    <span style={{ fontSize: 14, color: "#111" }}>Je déménage pour raison professionnelle (éligible Visale)</span>
-                  </label>
-                </div>
+            {/* Récap hairline (remplace le bandeau dark du bundle) */}
+            {(form.nom || form.situation_pro || form.revenus_mensuels) && (
+              <div style={STYLES.hero.recap(isMobile)}>
+                {form.nom && <span style={STYLES.hero.recapStrong}>{form.nom}</span>}
+                {form.situation_pro && (
+                  <>
+                    <span style={STYLES.hero.recapDot} aria-hidden />
+                    <span>{form.situation_pro}{form.employeur_nom ? ` · ${form.employeur_nom}` : ""}</span>
+                  </>
+                )}
+                {form.revenus_mensuels && (
+                  <>
+                    <span style={STYLES.hero.recapDot} aria-hidden />
+                    <span style={{ fontVariantNumeric: "tabular-nums" }}>
+                      {Number(form.revenus_mensuels).toLocaleString("fr-FR")} €/mois nets
+                    </span>
+                  </>
+                )}
+                {form.logement_actuel_ville && (
+                  <>
+                    <span style={STYLES.hero.recapDot} aria-hidden />
+                    <span>{form.logement_actuel_ville}</span>
+                  </>
+                )}
               </div>
+            )}
+          </section>
 
-              <div className="print-section" style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24 }}>
-                <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20, display: "flex", alignItems: "center" }}>
-                  Garant
-                  <Tooltip text="Un garant est une personne ou un organisme qui s'engage à payer votre loyer si vous ne pouvez plus le faire. Avoir un garant rassure le propriétaire et multiplie vos chances d'obtenir un logement." />
-                </h2>
-                <F label="Avez-vous un garant ?">
+          {uploadError && (
+            <div style={STYLES.errorBanner}>
+              <p style={{ fontSize: 13, color: T.danger, fontWeight: 600, margin: 0 }}>{uploadError}</p>
+              <button
+                type="button"
+                aria-label="Fermer le message d'erreur"
+                onClick={() => setUploadError(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: T.danger, fontSize: 18, fontWeight: 700 }}
+              >
+                ×
+              </button>
+            </div>
+          )}
+
+          {/* ══════════ GRID 3 COLONNES ══════════ */}
+          <div style={STYLES.layout.grid(isMobile)}>
+
+            {/* Sommaire sticky (desktop only) */}
+            {!isMobile && (
+              <aside style={STYLES.summary.wrap} className="no-print">
+                <div style={STYLES.summary.eyebrow}>Sommaire</div>
+                <nav style={STYLES.summary.nav}>
+                  {summaryItems.map(item => {
+                    const active = activeSection === item.id
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => scrollToSection(item.id)}
+                        style={STYLES.summary.item(active)}
+                      >
+                        <span style={STYLES.summary.num(active)}>{item.num}</span>
+                        <span style={STYLES.summary.label(active)}>{item.label}</span>
+                        <span style={STYLES.summary.dot(item.done)} aria-hidden />
+                      </button>
+                    )
+                  })}
+                </nav>
+                <div style={STYLES.summary.tip}>
+                  <div style={STYLES.summary.tipLabel}>Astuce</div>
+                  <div style={STYLES.summary.tipBody}>
+                    Les bulletins sur 3 mois et un garant Visale suffisent pour la plupart des propriétaires en Île-de-France.
+                  </div>
+                </div>
+              </aside>
+            )}
+
+            {/* Corps — sections éditoriales numérotées */}
+            <div style={STYLES.layout.body}>
+
+              {/* ─── 01 Identité ─── */}
+              <Section id="identite" num="01" kicker="Qui êtes-vous" title="Identité" isMobile={isMobile}>
+                <Row2 isMobile={isMobile}>
+                  <Field label="Nom complet">
+                    <TextInput value={form.nom} onChange={v => setForm(f => ({ ...f, nom: v }))} placeholder="Jean Dupont" isMobile={isMobile} />
+                  </Field>
+                  <Field label="Téléphone">
+                    <PhoneInput value={form.telephone} onChange={v => setForm(f => ({ ...f, telephone: v }))} placeholder="6 12 34 56 78" />
+                  </Field>
+                </Row2>
+                <Field label="Email">
+                  <TextInput value={session?.user?.email || ""} disabled isMobile={isMobile} />
+                </Field>
+                <Row2 isMobile={isMobile}>
+                  <Field label="Date de naissance">
+                    <TextInput type="date" value={form.date_naissance} onChange={v => setForm(f => ({ ...f, date_naissance: v }))} isMobile={isMobile} />
+                  </Field>
+                  <Field label="Nationalité">
+                    <SelectField value={form.nationalite} options={NATIONALITES_COURANTES} onChange={v => setForm(f => ({ ...f, nationalite: v }))} isMobile={isMobile} />
+                  </Field>
+                </Row2>
+                <Field label="Situation familiale">
+                  <ChipGroup value={form.situation_familiale} options={SITUATIONS_FAMILIALES} onChange={v => setForm(f => ({ ...f, situation_familiale: v }))} />
+                </Field>
+                <Row2 isMobile={isMobile}>
+                  <Field label="Nombre d'enfants à charge">
+                    <TextInput type="number" min={0} max={15} value={form.nb_enfants} onChange={v => setForm(f => ({ ...f, nb_enfants: Math.max(0, Math.min(15, Number(v) || 0)) }))} isMobile={isMobile} />
+                  </Field>
+                  <Field label="Nombre d'occupants">
+                    <TextInput type="number" min={1} max={10} value={form.nb_occupants} onChange={v => setForm(f => ({ ...f, nb_occupants: Number(v) || 1 }))} isMobile={isMobile} />
+                  </Field>
+                </Row2>
+              </Section>
+
+              {/* ─── 02 Situation pro ─── */}
+              <Section id="pro" num="02" kicker="Ce que vous faites" title="Situation professionnelle" isMobile={isMobile}>
+                <Field label="Statut">
+                  <ChipGroup value={form.situation_pro} options={SITUATIONS} onChange={v => setForm(f => ({ ...f, situation_pro: v }))} />
+                </Field>
+                <Row2 isMobile={isMobile}>
+                  <Field label={<>Revenus mensuels nets (€) <Tooltip text="Vos revenus nets après impôts et cotisations. La règle courante : les propriétaires attendent un revenu d'environ 3 fois le loyer. Ex : pour un loyer de 800 €, visez au moins 2400 € de revenus nets mensuels." /></>}>
+                    <TextInput type="number" value={form.revenus_mensuels} onChange={v => setForm(f => ({ ...f, revenus_mensuels: v }))} placeholder="2 500" isMobile={isMobile} />
+                  </Field>
+                  <Field label="Loyer max recommandé">
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 14px", background: T.mutedBg, borderRadius: 10, fontSize: 14, fontWeight: 600, color: T.ink, border: `1.5px solid ${T.line}`, boxSizing: "border-box" }}>
+                      <span style={{ fontSize: 18, fontWeight: 400, color: T.success, fontVariantNumeric: "tabular-nums" }}>
+                        {Math.round((Number(form.revenus_mensuels) || 0) / 3).toLocaleString("fr-FR")} €
+                      </span>
+                      <span style={{ fontSize: 11, color: T.soft }}>pour {form.nb_occupants} occupant{form.nb_occupants > 1 ? "s" : ""}</span>
+                    </div>
+                  </Field>
+                </Row2>
+                {/* Employeur + date embauche : uniquement pour les situations salariées */}
+                {["CDI", "CDD", "Intérim", "Fonctionnaire", "Alternance"].includes(form.situation_pro) && (
+                  <Row2 isMobile={isMobile}>
+                    <Field label="Employeur">
+                      <TextInput value={form.employeur_nom} onChange={v => setForm(f => ({ ...f, employeur_nom: v }))} placeholder="Nom de votre employeur" isMobile={isMobile} />
+                    </Field>
+                    <Field label={<>Date d&apos;embauche <Tooltip text="L'ancienneté rassure les propriétaires. Un CDI de plus de 12 mois est un signal très positif." /></>}>
+                      <TextInput type="date" value={form.date_embauche} onChange={v => setForm(f => ({ ...f, date_embauche: v }))} isMobile={isMobile} />
+                    </Field>
+                  </Row2>
+                )}
+              </Section>
+
+              {/* ─── 03 Logement actuel ─── */}
+              <Section id="logement" num="03" kicker="D'où vous venez" title="Logement actuel" isMobile={isMobile}>
+                <Field label="Statut">
+                  <ChipGroup value={form.logement_actuel_type} options={LOGEMENT_TYPES} onChange={v => setForm(f => ({ ...f, logement_actuel_type: v }))} />
+                </Field>
+                <Field label="Ville actuelle">
+                  <TextInput value={form.logement_actuel_ville} onChange={v => setForm(f => ({ ...f, logement_actuel_ville: v }))} placeholder="Ex : Paris" isMobile={isMobile} />
+                </Field>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 6 }}>
+                  <Toggle
+                    label="Je bénéficie des APL"
+                    sub="Aide personnalisée au logement — renforce votre solvabilité"
+                    checked={form.a_apl}
+                    onChange={v => setForm(f => ({ ...f, a_apl: v }))}
+                  />
+                  <Toggle
+                    label="Mobilité professionnelle"
+                    sub="Je déménage pour raison pro — éligible à la garantie Visale gratuite d'Action Logement"
+                    checked={form.mobilite_pro}
+                    onChange={v => setForm(f => ({ ...f, mobilite_pro: v }))}
+                  />
+                </div>
+              </Section>
+
+              {/* ─── 04 Garant ─── */}
+              <Section id="garant" num="04" kicker="Votre filet de sécurité" title="Garant" isMobile={isMobile}>
+                <Field label={<>Avez-vous un garant ? <Tooltip text="Un garant est une personne ou un organisme qui s'engage à payer votre loyer si vous ne pouvez plus le faire. Avoir un garant rassure le propriétaire et multiplie vos chances d'obtenir un logement." /></>}>
                   <div style={{ display: "flex", gap: 10 }}>
                     {[{ val: true, label: "Oui" }, { val: false, label: "Non" }].map(opt => (
-                      <button key={String(opt.val)} onClick={() => setForm(f => ({ ...f, garant: opt.val }))}
-                        style={{ padding: "8px 24px", borderRadius: 999, border: "1.5px solid", cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 600,
-                          background: form.garant === opt.val ? "#111" : "white",
-                          color: form.garant === opt.val ? "white" : "#111",
-                          borderColor: form.garant === opt.val ? "#111" : "#e5e7eb" }}>
+                      <button
+                        key={String(opt.val)}
+                        type="button"
+                        onClick={() => setForm(f => ({ ...f, garant: opt.val }))}
+                        style={{
+                          padding: "10px 22px",
+                          borderRadius: 999,
+                          border: "1.5px solid",
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          fontSize: 14,
+                          fontWeight: 600,
+                          background: form.garant === opt.val ? T.ink : T.white,
+                          color: form.garant === opt.val ? T.white : T.ink,
+                          borderColor: form.garant === opt.val ? T.ink : T.line,
+                        }}
+                      >
                         {opt.label}
                       </button>
                     ))}
                   </div>
-                </F>
+                </Field>
                 {form.garant && (
-                  <F label={<>Type de garant <Tooltip text="Personnel : un proche (parent, etc.) se porte caution sur ses revenus. Organisme Visale : garantie gratuite d'Action Logement (si éligible), très appréciée des proprios. Caution bancaire : somme bloquée en banque équivalente à plusieurs loyers." /></>}>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      {TYPES_GARANT.map(t => (
-                        <button key={t} onClick={() => setForm(f => ({ ...f, type_garant: t }))}
-                          style={{ padding: "7px 14px", borderRadius: 999, border: "1.5px solid", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600,
-                            background: form.type_garant === t ? "#111" : "white",
-                            color: form.type_garant === t ? "white" : "#111",
-                            borderColor: form.type_garant === t ? "#111" : "#e5e7eb" }}>
-                          {t}
-                        </button>
-                      ))}
-                    </div>
-                  </F>
+                  <Field label={<>Type de garant <Tooltip text="Personnel : un proche (parent, etc.) se porte caution sur ses revenus. Organisme Visale : garantie gratuite d'Action Logement (si éligible), très appréciée des proprios. Caution bancaire : somme bloquée en banque équivalente à plusieurs loyers." /></>}>
+                    <ChipGroup value={form.type_garant} options={TYPES_GARANT} onChange={v => setForm(f => ({ ...f, type_garant: v }))} />
+                  </Field>
                 )}
-              </div>
+              </Section>
 
-              <button onClick={sauvegarder} disabled={saving} className="no-print"
-                style={{ background: saving ? "#9ca3af" : saved ? "#16a34a" : "#111", color: "white", border: "none", borderRadius: 999, padding: "14px 0", fontWeight: 700, fontSize: 15, cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit", transition: "background 0.2s" }}>
-                {saving ? "Sauvegarde..." : saved ? "Dossier sauvegardé ✓" : "Sauvegarder mon dossier"}
+              {/* ─── 05 Présentation ─── */}
+              <Section id="presentation" num="05" kicker="Votre voix" title="Présentation" isMobile={isMobile}>
+                <p style={{ fontSize: 13.5, color: T.meta, lineHeight: 1.6, marginTop: -14, marginBottom: 14 }}>
+                  Quelques lignes pour vous présenter au propriétaire — <span style={{ fontStyle: "italic" }}>facultatif mais très apprécié</span>. Votre projet, votre contexte, ce qui vous rend crédible. Pensez à cliquer sur « Sauvegarder mon dossier » en bas pour conserver vos modifications.
+                </p>
+                <textarea
+                  value={form.presentation}
+                  onChange={e => setForm(f => ({ ...f, presentation: e.target.value.slice(0, 500) }))}
+                  placeholder="Ex : Bonjour, je suis ingénieur en CDI depuis 3 ans. Je cherche un logement proche de mon nouveau bureau à partir du 1er septembre. Très soigneux, non fumeur, sans animaux."
+                  rows={5}
+                  style={STYLES.field.textarea(isMobile)}
+                />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+                  <span style={{ fontSize: 11, color: T.soft }}>Votre ton · lu en 10 secondes · maximum 500 caractères</span>
+                  <span style={{ fontSize: 11, color: form.presentation.length > 480 ? T.warning : T.soft, fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>
+                    {form.presentation.length}/500
+                  </span>
+                </div>
+              </Section>
+
+              {/* ─── 06 Pièces jointes ─── */}
+              <Section
+                id="documents"
+                num="06"
+                kicker="Les preuves"
+                title="Pièces jointes"
+                subtitle={`${docsCount} sur ${allDocs.length} catégories · PDF, JPG ou PNG`}
+                isMobile={isMobile}
+              >
+                <DocGroup title="Requis" items={DOCS_REQUIS} shared={docCardShared} />
+                {docsOptionnelsVisibles.length > 0 && (
+                  <DocGroup title="Recommandé selon votre situation" items={docsOptionnelsVisibles} shared={docCardShared} />
+                )}
+                {form.garant && (
+                  <DocGroup title="Documents du garant" items={DOCS_GARANT} shared={docCardShared} />
+                )}
+              </Section>
+
+              <button
+                type="button"
+                onClick={sauvegarder}
+                disabled={saving}
+                className="no-print"
+                style={STYLES.saveBtn(saving ? "saving" : saved ? "saved" : "idle")}
+              >
+                {saving ? "Sauvegarde…" : saved ? "Dossier sauvegardé ✓" : "Sauvegarder mon dossier"}
               </button>
             </div>
 
-            {/* Sidebar documents */}
-            <div>
+            {/* Sidebar droite — partage + accès + download */}
+            <aside style={STYLES.layout.sidebar(!isMobile)} className="no-print">
               <SharePanel />
               <AccessLogPanel />
-              <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                  <h3 style={{ fontSize: 15, fontWeight: 800 }}>Documents</h3>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: scoreColor }}>{docsCount}/{allDocs.length} catégories</span>
-                </div>
-                <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 16 }}>PDF, JPG ou PNG. Plusieurs fichiers possibles pour les bulletins et quittances.</p>
-
-                {DOCS_REQUIS.map(doc => (
-                  <DocRow key={doc.key} docKey={doc.key} label={doc.label} desc={doc.desc} hint={doc.hint} />
-                ))}
-
-                {docsOptionnelsVisibles.length > 0 && (
-                  <>
-                    <div style={{ borderTop: "1px solid #f3f4f6", margin: "16px 0 12px" }}>
-                      <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 12 }}>Recommandé selon votre situation</p>
-                    </div>
-                    {docsOptionnelsVisibles.map(doc => (
-                      <DocRow key={doc.key} docKey={doc.key} label={doc.label} desc={doc.desc} />
-                    ))}
-                  </>
-                )}
-
-                {form.garant && (
-                  <>
-                    <div style={{ borderTop: "1px solid #f3f4f6", margin: "16px 0 12px" }}>
-                      <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 12 }}>Documents garant</p>
-                    </div>
-                    {DOCS_GARANT.map(doc => (
-                      <DocRow key={doc.key} docKey={doc.key} label={doc.label} desc={doc.desc} />
-                    ))}
-                  </>
-                )}
-
-              </div>
-
-              {/* ─── Card Téléchargement dossier (sous toutes les pièces) ─── */}
-              <div className="no-print" style={{ background: "linear-gradient(135deg, #111 0%, #1f2937 100%)", borderRadius: 20, padding: isMobile ? 20 : 24, marginTop: 16, color: "white" }}>
-                <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 6px", color: "white" }}>Télécharger mon dossier</h3>
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", margin: "0 0 16px", lineHeight: 1.5 }}>
-                  Le récapitulatif PDF + toutes vos pièces justificatives (identité, bulletins, quittances, garant…) regroupés en un seul fichier zip organisé par catégorie.
+              {/* DownloadCard */}
+              <div style={STYLES.download.wrap(isMobile)}>
+                <span style={STYLES.download.ghostWord} aria-hidden>ZIP</span>
+                <div style={STYLES.download.eyebrow}>Export complet</div>
+                <h3 style={STYLES.download.title}>
+                  Tout votre dossier,<br />
+                  <span style={STYLES.download.titleAccent}>en un fichier.</span>
+                </h3>
+                <p style={STYLES.download.desc}>
+                  Récapitulatif PDF + toutes vos pièces classées par catégorie.
                 </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <button
-                    type="button"
-                    onClick={telechargerDossierZip}
-                    disabled={generatingPDF}
-                    style={{ width: "100%", background: generatingPDF ? "#6b7280" : "white", color: "#111", border: "none", borderRadius: 12, padding: "14px 18px", fontWeight: 800, fontSize: 14, cursor: generatingPDF ? "wait" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    {generatingPDF ? "Préparation…" : "Dossier complet (.zip)"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={genererDossierPDFClick}
-                    disabled={generatingPDF}
-                    style={{ width: "100%", background: "transparent", color: "white", border: "1.5px solid rgba(255,255,255,0.3)", borderRadius: 12, padding: "10px 16px", fontWeight: 700, fontSize: 12, cursor: generatingPDF ? "wait" : "pointer", fontFamily: "inherit" }}>
-                    PDF récap seul
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={telechargerDossierZip}
+                  disabled={generatingPDF}
+                  style={STYLES.download.btnPrimary(generatingPDF)}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  {generatingPDF ? "Préparation…" : "Télécharger (ZIP)"}
+                </button>
+                <button
+                  type="button"
+                  onClick={genererDossierPDFClick}
+                  disabled={generatingPDF}
+                  style={STYLES.download.btnSecondary(generatingPDF)}
+                >
+                  Récap PDF seul
+                </button>
               </div>
-            </div>
+            </aside>
           </div>
         </div>
       </main>
