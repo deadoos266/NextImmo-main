@@ -659,8 +659,8 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   //                  scroll unifié (la grille scrolle avec la page).
   // ═══════════════════════════════════════════════════════════════════════
 
-  // Hauteur zone liste+carte (desktop uniquement ; mobile = contenu fluide)
-  const zoneLCHeight = `calc(100vh - ${NAVBAR_HEIGHT + FILTERS_BAR_HEIGHT}px)`
+  // v5.3 : la zone liste+carte prend flex:1 dans le flex column outer,
+  // plus besoin de zoneLCHeight fixe (hauteur naturelle = viewport restant).
   const outerHeight = `calc(100vh - ${NAVBAR_HEIGHT}px)`
 
   // Mode grille : le scroll isolé est désactivé (toute la page scrolle)
@@ -703,16 +703,24 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   const containerMargin = useFullWidth ? "0" : "0 auto"
   const containerPadH = useFullWidth ? 16 : padH
 
+  // v5.3 : en mode Liste+Carte desktop, on utilise un layout FLEX COLUMN
+  // pour que la zone liste+carte prenne exactement l'espace restant dans
+  // le viewport (plus de scroll parasite, carte jamais hors écran).
+  const isDesktopListCarte = !gridMode && !isSmall && !isMobileV5
+
   return (
     <div
       style={{
         background: "#F7F4EF",
         fontFamily: "'DM Sans', sans-serif",
-        // Outer viewport pour scroll isolé (mode liste desktop uniquement).
-        // En mode grid, tablette, ou mobile (<768) : scroll naturel document.
-        height: !gridMode && !isSmall && !isMobileV5 ? outerHeight : undefined,
-        minHeight: gridMode || isSmall || isMobileV5 ? outerHeight : undefined,
-        overflowY: !gridMode && !isSmall && !isMobileV5 ? "auto" : "visible",
+        // Mode Liste+Carte desktop : outer = flex column height viewport-navbar,
+        // overflow hidden → la zone LC prend l'espace restant via flex:1.
+        // Mode grid/tablette/mobile : scroll document naturel.
+        height: isDesktopListCarte ? outerHeight : undefined,
+        minHeight: !isDesktopListCarte ? outerHeight : undefined,
+        overflow: isDesktopListCarte ? "hidden" : "visible",
+        display: isDesktopListCarte ? "flex" : undefined,
+        flexDirection: isDesktopListCarte ? "column" : undefined,
       }}
     >
       {/* H1 SEO visible uniquement pour les crawlers */}
@@ -723,7 +731,18 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
       </h1>
 
       {/* Container principal : full-width en Liste+Carte, max-1440 en Grille */}
-      <div style={{ maxWidth: containerMaxWidth, margin: containerMargin, paddingLeft: containerPadH, paddingRight: containerPadH }}>
+      <div style={{
+        maxWidth: containerMaxWidth,
+        margin: containerMargin,
+        paddingLeft: containerPadH,
+        paddingRight: containerPadH,
+        // Mode Liste+Carte desktop : flex column pour propager flex:1 à la zone LC
+        flex: isDesktopListCarte ? 1 : undefined,
+        minHeight: isDesktopListCarte ? 0 : undefined,
+        display: isDesktopListCarte ? "flex" : undefined,
+        flexDirection: isDesktopListCarte ? "column" : undefined,
+        width: isDesktopListCarte ? "100%" : undefined,
+      }}>
 
         {/* ── Header éditorial — scroll normal (pas sticky) ────────────── */}
         {isMobileV5 ? (
@@ -887,9 +906,12 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
               padding: isMobile ? "12px 0 24px" : "16px 0 0",
               flexDirection: isSmall ? "column" : "row",
               alignItems: "flex-start",
-              // Desktop : hauteur fixe = viewport - navbar - filtersbar
-              // pour permettre le scroll isolé à l'intérieur.
-              height: isSmall ? undefined : zoneLCHeight,
+              // v5.3 : Desktop = flex:1 dans le flex column parent
+              //   → prend exactement l'espace viewport restant, carte jamais hors écran.
+              // Mobile/tablette : hauteur naturelle contenu.
+              flex: isDesktopListCarte ? 1 : undefined,
+              minHeight: isDesktopListCarte ? 0 : undefined,
+              width: isDesktopListCarte ? "100%" : undefined,
             }}
           >
             {/* ── Colonne Liste — 35% desktop, 100% mobile/tablet ──────── */}
