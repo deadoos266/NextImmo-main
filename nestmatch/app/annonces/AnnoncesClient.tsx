@@ -1147,20 +1147,20 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
 }
 
 /**
- * Container de la vue Grille v5.
- *  - Cards 300px FIXE (auto-fill, pas auto-fit → zéro stretch).
- *  - Gap 24px.
+ * Container de la vue Grille v5.2 — cards rectangulaires ZOOMÉES.
+ *  - Cards 520px FIXE rectangulaire (photo landscape 16/10).
+ *  - Gap 24px, auto-fill (pas auto-fit → zéro stretch).
  *  - `justify-content: center` pour centrer dans le container parent.
- *  - Max 5 cols à 1700 (5 × 300 + 4 × 24 gap = 1596 → tient largement).
- *  - Responsive : ≥1620 = 5 cols, 1296-1619 = 4 cols, 972-1295 = 3 cols,
- *    648-971 = 2 cols, <648 = 1 col.
+ *  - Max 3 cols à 1700 (3 × 520 + 2 × 24 = 1608 → tient largement).
+ *  - Responsive : ≥1632 = 3 cols, 1088-1631 = 2 cols, <1088 = 1 col.
+ *  - Objectif : cards plus grosses, pas 4-5 cards serrées par rangée.
  */
 function GridContainer({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, 300px)",
+        gridTemplateColumns: "repeat(auto-fill, 520px)",
         justifyContent: "center",
         gap: 24,
         width: "100%",

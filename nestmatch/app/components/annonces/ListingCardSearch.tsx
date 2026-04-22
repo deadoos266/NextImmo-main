@@ -336,10 +336,10 @@ function MetaBlockGrid({
           </span>
         )}
       </div>
-      <h3 style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3, margin: "0 0 10px", color: "#111" }}>
+      <h3 style={{ fontSize: 18, fontWeight: 500, lineHeight: 1.3, margin: "0 0 12px", color: "#111" }}>
         {titre}
       </h3>
-      <div style={{ display: "flex", gap: 10, fontSize: 12, color: "#6b7280", marginBottom: 10, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 12, fontSize: 13, color: "#6b7280", marginBottom: 12, flexWrap: "wrap" }}>
         {annonce.surface != null && <span>{annonce.surface} m²</span>}
         {annonce.surface != null && annonce.pieces != null && <span style={{ color: "#d1d5db" }}>·</span>}
         {annonce.pieces != null && <span>{annonce.pieces} p.</span>}
@@ -353,7 +353,7 @@ function MetaBlockGrid({
       <div
         style={{
           borderTop: "1px solid #EAE6DF",
-          paddingTop: 10,
+          paddingTop: 12,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "baseline",
@@ -370,9 +370,9 @@ function MetaBlockGrid({
         >
           Loyer
         </span>
-        <span style={{ fontSize: 18, fontWeight: 500, color: "#111" }}>
+        <span style={{ fontSize: 22, fontWeight: 500, color: "#111" }}>
           {annonce.prix} €
-          <span style={{ fontSize: 11, fontWeight: 400, color: "#9ca3af" }}>/mois</span>
+          <span style={{ fontSize: 12, fontWeight: 400, color: "#9ca3af" }}>/mois</span>
         </span>
       </div>
     </>
@@ -603,10 +603,12 @@ export default function ListingCardSearch({
       style={baseStyle}
     >
       <div style={{ position: "relative" }}>
-        <CardPhoto annonce={annonce} aspect="4 / 5" />
+        {/* v5.2 : aspect 16/10 landscape (rectangle) — cards zoomées plus
+            grosses (520px large) pour une meilleure lisibilité des photos */}
+        <CardPhoto annonce={annonce} aspect="16 / 10" />
         <FavoriButton favori={favori} onClick={onToggleFavori} />
       </div>
-      <div style={{ padding: "16px 18px 18px" }}>
+      <div style={{ padding: "18px 22px 22px" }}>
         <MetaBlockGrid annonce={annonce} score={score} info={info} isOwn={isOwn} motCle={motCle} />
       </div>
     </a>
