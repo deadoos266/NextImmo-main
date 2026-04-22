@@ -280,8 +280,10 @@ export default function MapAnnonces({
         </button>
       )}
 
-      {/* Legende compatibilite */}
-      <div style={{ position: "absolute", bottom: 24, left: 12, zIndex: 1000, background: "white", borderRadius: 10, boxShadow: "0 2px 12px rgba(0,0,0,0.15)", padding: "8px 12px", border: "1px solid #e5e7eb", display: "flex", flexDirection: "column", gap: 4 }}>
+      {/* v5.4 : Légende compatibilité déplacée en haut (top-right, sous le
+          selecteur de type de carte) — plus accessible, évite d'être hors
+          viewport quand la carte occupe toute la hauteur dispo. */}
+      <div style={{ position: "absolute", top: 64, right: 12, zIndex: 1000, background: "white", borderRadius: 10, boxShadow: "0 2px 12px rgba(0,0,0,0.15)", padding: "8px 12px", border: "1px solid #e5e7eb", display: "flex", flexDirection: "column", gap: 4 }}>
         <p style={{ fontSize: 10, fontWeight: 700, color: "#111", marginBottom: 2, textTransform: "uppercase", letterSpacing: "0.5px" }}>Compatibilit&eacute;</p>
         {[
           { color: "#16a34a", label: "80% +" },
@@ -297,9 +299,10 @@ export default function MapAnnonces({
         ))}
       </div>
 
-      {/* Selecteur de type de carte */}
+      {/* v5.4 : Sélecteur Plan/Satellite/Détaillé déplacé en haut (top-right).
+          Le bouton "Rechercher dans cette zone" reste top-center quand actif. */}
       <div style={{
-        position: "absolute", bottom: 24, right: 12, zIndex: 1000,
+        position: "absolute", top: 16, right: 12, zIndex: 1000,
         background: "white", borderRadius: 10, boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
         display: "flex", overflow: "hidden", border: "1px solid #e5e7eb"
       }}>

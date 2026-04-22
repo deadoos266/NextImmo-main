@@ -403,96 +403,23 @@ function MetaBlockCompact({
     return map[letter?.toUpperCase?.()] || "#6b7280"
   }
 
+  // Amenities (jusqu'à 3 pills) — on priorise Meublé / Balcon / Terrasse /
+  // Ascenseur / Parking (les plus différenciants pour un locataire).
+  const amenityPills: string[] = []
+  if (annonce.meuble === true) amenityPills.push("Meublé")
+  if (annonce.balcon === true) amenityPills.push("Balcon")
+  if (annonce.terrasse === true) amenityPills.push("Terrasse")
+  if (annonce.ascenseur === true) amenityPills.push("Ascenseur")
+  if (annonce.parking === true) amenityPills.push("Parking")
+  if (annonce.jardin === true) amenityPills.push("Jardin")
+  const pills = amenityPills.slice(0, 3)
+
   return (
-    <div style={{ padding: "18px 22px", display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
-      {/* Prix + badges */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-        <span style={{ fontSize: 22, fontWeight: 600, color: "#111", lineHeight: 1 }}>
-          {annonce.prix?.toLocaleString("fr-FR") ?? "—"} €
-          <span style={{ fontSize: 13, fontWeight: 400, color: "#9ca3af" }}>&nbsp;/mois</span>
-        </span>
-        {info && score !== null && (
-          <span
-            style={{
-              background: info.bg,
-              color: info.color,
-              padding: "3px 9px",
-              borderRadius: 999,
-              fontSize: 11,
-              fontWeight: 700,
-              flexShrink: 0,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {Math.round(score / 10)}%
-          </span>
-        )}
-        {isOwn && (
-          <span
-            style={{
-              background: "#F1EEE8",
-              color: "#374151",
-              padding: "3px 9px",
-              borderRadius: 999,
-              fontSize: 11,
-              fontWeight: 700,
-              flexShrink: 0,
-            }}
-          >
-            Votre bien
-          </span>
-        )}
-      </div>
-
-      {/* Specs inline — une seule ligne, ellipsis */}
-      <div style={{
-        display: "flex",
-        gap: 6,
-        fontSize: 14,
-        color: "#374151",
-        alignItems: "center",
-        overflow: "hidden",
-        whiteSpace: "nowrap",
-        textOverflow: "ellipsis",
-      }}>
-        {annonce.pieces != null && (
-          <span style={{ fontWeight: 500 }}>{annonce.pieces} p.</span>
-        )}
-        {annonce.pieces != null && annonce.surface != null && <span style={{ color: "#d1d5db" }}>·</span>}
-        {annonce.surface != null && <span>{annonce.surface} m²</span>}
-        {annonce.etage != null && (
-          <>
-            <span style={{ color: "#d1d5db" }}>·</span>
-            <span>{annonce.etage === 0 ? "RDC" : `${annonce.etage}${annonce.etage === 1 ? "er" : "e"} ét.`}</span>
-          </>
-        )}
-        {annonce.meuble === true && (
-          <>
-            <span style={{ color: "#d1d5db" }}>·</span>
-            <span>Meublé</span>
-          </>
-        )}
-      </div>
-
-      {/* Titre — 2 lignes max avec ellipsis */}
-      <h3 style={{
-        fontSize: 17,
-        fontWeight: 500,
-        lineHeight: 1.3,
-        margin: 0,
-        color: "#111",
-        display: "-webkit-box",
-        WebkitLineClamp: 2,
-        WebkitBoxOrient: "vertical",
-        overflow: "hidden",
-      }}>
-        {titre}
-      </h3>
-
-      {/* Ville eyebrow + DPE */}
+    <div style={{ padding: "16px 20px 14px", display: "flex", flexDirection: "column", gap: 6, width: "100%", height: "100%", boxSizing: "border-box" }}>
+      {/* Row 1 : Ville eyebrow (gauche) + match badge (droite, rond vert) */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <p style={{
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: 600,
           color: "#6B6B6B",
           textTransform: "uppercase",
@@ -507,26 +434,192 @@ function MetaBlockCompact({
           {ville}
           {annonce.quartier && <span style={{ color: "#9ca3af", textTransform: "none", letterSpacing: "normal" }}> · {annonce.quartier}</span>}
         </p>
-        {annonce.dpe && (
+        {info && score !== null && (
           <span
-            title={`DPE ${annonce.dpe}`}
             style={{
-              width: 22,
-              height: 22,
-              borderRadius: 6,
-              background: dpeColor(annonce.dpe),
-              color: "white",
-              fontSize: 12,
+              background: info.bg,
+              color: info.color,
+              padding: "3px 10px",
+              borderRadius: 999,
+              fontSize: 11,
               fontWeight: 700,
+              flexShrink: 0,
+              whiteSpace: "nowrap",
               display: "inline-flex",
               alignItems: "center",
-              justifyContent: "center",
+              gap: 5,
+            }}
+          >
+            <span style={{ width: 6, height: 6, borderRadius: 999, background: "currentColor" }} />
+            {Math.round(score / 10)}% match
+          </span>
+        )}
+        {isOwn && (
+          <span
+            style={{
+              background: "#F1EEE8",
+              color: "#374151",
+              padding: "3px 10px",
+              borderRadius: 999,
+              fontSize: 11,
+              fontWeight: 700,
               flexShrink: 0,
             }}
           >
-            {annonce.dpe.toUpperCase()}
+            Votre bien
           </span>
         )}
+      </div>
+
+      {/* Row 2 : Titre (gauche, 1 ligne) + Prix (droite, gros) */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+        <h3 style={{
+          fontSize: 16,
+          fontWeight: 500,
+          lineHeight: 1.25,
+          margin: 0,
+          color: "#111",
+          flex: 1,
+          minWidth: 0,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}>
+          {titre}
+        </h3>
+        <span style={{ fontSize: 20, fontWeight: 600, color: "#111", lineHeight: 1.1, flexShrink: 0, whiteSpace: "nowrap" }}>
+          {annonce.prix?.toLocaleString("fr-FR") ?? "—"} €
+          <span style={{ fontSize: 12, fontWeight: 400, color: "#9ca3af" }}>&nbsp;/mois</span>
+        </span>
+      </div>
+
+      {/* Row 3 : Specs (gauche) + DPE (droite). Charges comprises si pertinent. */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <div style={{
+          display: "flex",
+          gap: 6,
+          fontSize: 13,
+          color: "#374151",
+          alignItems: "center",
+          overflow: "hidden",
+          whiteSpace: "nowrap",
+          textOverflow: "ellipsis",
+          flex: 1,
+          minWidth: 0,
+        }}>
+          {annonce.surface != null && <span>{annonce.surface} m²</span>}
+          {annonce.surface != null && annonce.pieces != null && <span style={{ color: "#d1d5db" }}>·</span>}
+          {annonce.pieces != null && <span>{annonce.pieces} {annonce.pieces > 1 ? "pièces" : "pièce"}</span>}
+          {annonce.etage != null && (
+            <>
+              <span style={{ color: "#d1d5db" }}>·</span>
+              <span>Ét. {annonce.etage === 0 ? "RDC" : annonce.etage}</span>
+            </>
+          )}
+          {annonce.dpe && (
+            <>
+              <span style={{ color: "#d1d5db" }}>·</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                DPE
+                <span
+                  title={`DPE ${annonce.dpe}`}
+                  style={{
+                    minWidth: 18,
+                    height: 18,
+                    padding: "0 5px",
+                    borderRadius: 4,
+                    background: dpeColor(annonce.dpe),
+                    color: "white",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {annonce.dpe.toUpperCase()}
+                </span>
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Row 4 : Amenities pills (jusqu'à 3) — auto-hidden si aucun */}
+      {pills.length > 0 && (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
+          {pills.map(p => (
+            <span
+              key={p}
+              style={{
+                background: "#F1EEE8",
+                color: "#374151",
+                padding: "4px 12px",
+                borderRadius: 999,
+                fontSize: 11,
+                fontWeight: 500,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {p}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Spacer élastique — pousse la ligne d'actions tout en bas de la card */}
+      <div style={{ flex: 1 }} />
+
+      {/* Row 5 : Actions — chat icon (gauche) + Candidater (droite, CTA noir).
+          Pas de stopPropagation pour Candidater → navigue comme le <a> parent
+          (même URL /annonces/[id]). Chat → /messages?annonce={id}. */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginTop: 2 }}>
+        <button
+          type="button"
+          aria-label="Envoyer un message"
+          onClick={e => {
+            e.preventDefault()
+            e.stopPropagation()
+            window.location.href = `/messages?annonce=${annonce.id}`
+          }}
+          style={{
+            background: "white",
+            border: "1px solid #EAE6DF",
+            borderRadius: "50%",
+            width: 36,
+            height: 36,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            color: "#374151",
+            fontFamily: "inherit",
+            flexShrink: 0,
+            transition: "background 0.15s, border-color 0.15s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = "#F7F4EF" }}
+          onMouseLeave={e => { e.currentTarget.style.background = "white" }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+        </button>
+        {/* Candidater → même URL que le <a> wrapper, donc pas besoin de handler :
+            on laisse le clic bubbler naturellement. */}
+        <span
+          style={{
+            background: "#111",
+            color: "white",
+            padding: "9px 20px",
+            borderRadius: 999,
+            fontSize: 13,
+            fontWeight: 600,
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+          }}
+        >
+          Candidater
+        </span>
       </div>
     </div>
   )
@@ -588,16 +681,18 @@ export default function ListingCardSearch({
         }}
         style={compactStyle}
       >
-        {/* Photo gauche — min(390px, 58%) wide, aspect 13/10 (~390×300) */}
+        {/* Photo gauche — min(390px, 58%) wide, aspect 13/10 (~390×300).
+            Favori en overlay top-right DE LA PHOTO (pas de la card) pour ne
+            pas entrer en collision avec le badge "92% match" côté meta. */}
         <div style={{ width: "min(390px, 58%)", flexShrink: 0, position: "relative" }}>
           <CardPhoto annonce={annonce} aspect="13 / 10" />
+          <FavoriButton favori={favori} onClick={onToggleFavori} />
         </div>
-        {/* Bloc meta droite — flex:1, centré verticalement */}
-        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center" }}>
+        {/* Bloc meta droite — flex:1, stretch pour que MetaBlockCompact
+            fill la hauteur complète (actions row collée au bas de la card) */}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "stretch" }}>
           <MetaBlockCompact annonce={annonce} score={score} info={info} isOwn={isOwn} motCle={motCle} />
         </div>
-        {/* Favori en overlay sur toute la card (top-right) */}
-        <FavoriButton favori={favori} onClick={onToggleFavori} />
       </a>
     )
   }
