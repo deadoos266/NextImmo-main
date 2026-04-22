@@ -676,6 +676,10 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
     if (gridMode || isSmall || isMobileV5) return
     const prevBody = document.body.style.overflow
     const prevHtml = document.documentElement.style.overflow
+    // v5.4 : reset scroll à 0 AVANT lock — sinon le browser peut restaurer
+    // une scroll position (ex. footer bas de page au refresh) puis lock →
+    // l'user se retrouve bloqué en bas sans pouvoir scroller.
+    window.scrollTo(0, 0)
     document.body.style.overflow = "hidden"
     document.documentElement.style.overflow = "hidden"
     return () => {

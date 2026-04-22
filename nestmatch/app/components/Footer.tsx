@@ -1,4 +1,5 @@
 "use client"
+import { usePathname } from "next/navigation"
 import { useResponsive } from "../hooks/useResponsive"
 import { useRole } from "../providers"
 import Logo from "./Logo"
@@ -12,10 +13,18 @@ import Logo from "./Logo"
  *  - la condition `proprietaireActive` colonne 3
  *  - le composant <Logo variant="footer" asLink={false} />
  *  - `suppressHydrationWarning` sur le year (évite mismatch SSR/CSR)
+ *
+ * v5.4 : Footer masqué sur /annonces (mode Liste+Carte plein viewport) —
+ * le scroll isolé body:overflow-hidden causait un blocage au refresh si le
+ * browser restaurait une scroll position non-nulle sur le footer.
  */
 export default function Footer() {
+  const pathname = usePathname()
   const { isMobile, isTablet } = useResponsive()
   const { proprietaireActive } = useRole()
+
+  // Masqué sur /annonces (scroll isolé, layout plein viewport)
+  if (pathname === "/annonces" || pathname?.startsWith("/annonces?")) return null
   // isTablet destructuré mais non utilisé — volontairement laissé pour stabilité
   // (évite un churn si on ajoute un comportement tablette plus tard).
   void isTablet
