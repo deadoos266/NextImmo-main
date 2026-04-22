@@ -406,11 +406,13 @@ export default function FiltersBar(props: FiltersBarProps) {
           </div>
         )}
 
-        {!isMobile && (
-          <span style={{ fontSize: 12, color: "#666", whiteSpace: "nowrap", fontWeight: 500 }}>
-            {loading ? "Chargement…" : `${resultCount} résultat${resultCount > 1 ? "s" : ""}`}
-          </span>
-        )}
+        <span style={{ fontSize: 12, color: "#666", whiteSpace: "nowrap", fontWeight: 500 }}>
+          {loading
+            ? (isMobile ? "…" : "Chargement…")
+            : isMobile
+              ? `${resultCount} rés.`
+              : `${resultCount} résultat${resultCount > 1 ? "s" : ""}`}
+        </span>
       </div>
     </div>
   )

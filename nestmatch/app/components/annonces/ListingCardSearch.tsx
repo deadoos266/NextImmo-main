@@ -380,7 +380,9 @@ function MetaBlockGrid({
 }
 
 // ─── Meta block compact variant (interne) ──────────────────────────────
-// Style SeLoger : prix en gros en haut, specs inline, quartier, DPE si dispo.
+// v5 : drastiquement compacté pour voir 2-3 cards en même temps dans la
+// viewport disponible en mode Liste+Carte. Anatomie SeLoger dense :
+//   Prix 17 · 1 ligne specs · Titre clamp 1 · Ville + DPE 18
 function MetaBlockCompact({
   annonce,
   score,
@@ -400,19 +402,19 @@ function MetaBlockCompact({
   }
 
   return (
-    <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 6 }}>
-      {/* Prix gros + badges */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-        <span style={{ fontSize: 20, fontWeight: 600, color: "#111", lineHeight: 1 }}>
+    <div style={{ padding: "10px 12px 12px", display: "flex", flexDirection: "column", gap: 4 }}>
+      {/* Prix + badges */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 6 }}>
+        <span style={{ fontSize: 17, fontWeight: 600, color: "#111", lineHeight: 1 }}>
           {annonce.prix?.toLocaleString("fr-FR") ?? "—"} €
-          <span style={{ fontSize: 12, fontWeight: 400, color: "#9ca3af" }}>&nbsp;/mois</span>
+          <span style={{ fontSize: 11, fontWeight: 400, color: "#9ca3af" }}>&nbsp;/mois</span>
         </span>
         {info && score !== null && (
           <span
             style={{
               background: info.bg,
               color: info.color,
-              padding: "3px 9px",
+              padding: "2px 7px",
               borderRadius: 999,
               fontSize: 10,
               fontWeight: 700,
@@ -428,7 +430,7 @@ function MetaBlockCompact({
             style={{
               background: "#F1EEE8",
               color: "#374151",
-              padding: "3px 9px",
+              padding: "2px 7px",
               borderRadius: 999,
               fontSize: 10,
               fontWeight: 700,
@@ -440,10 +442,19 @@ function MetaBlockCompact({
         )}
       </div>
 
-      {/* Specs inline */}
-      <div style={{ display: "flex", gap: 6, fontSize: 13, color: "#374151", flexWrap: "wrap", alignItems: "center" }}>
+      {/* Specs inline — une seule ligne, ellipsis */}
+      <div style={{
+        display: "flex",
+        gap: 5,
+        fontSize: 12,
+        color: "#374151",
+        alignItems: "center",
+        overflow: "hidden",
+        whiteSpace: "nowrap",
+        textOverflow: "ellipsis",
+      }}>
         {annonce.pieces != null && (
-          <span style={{ fontWeight: 500 }}>{annonce.pieces} pièce{annonce.pieces > 1 ? "s" : ""}</span>
+          <span style={{ fontWeight: 500 }}>{annonce.pieces} p.</span>
         )}
         {annonce.pieces != null && annonce.surface != null && <span style={{ color: "#d1d5db" }}>·</span>}
         {annonce.surface != null && <span>{annonce.surface} m²</span>}
@@ -461,18 +472,28 @@ function MetaBlockCompact({
         )}
       </div>
 
-      {/* Titre compact */}
-      <h3 style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.35, margin: "2px 0 0", color: "#111",
-        overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box",
-        WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+      {/* Titre compact — 1 ligne seulement */}
+      <h3 style={{
+        fontSize: 14,
+        fontWeight: 500,
+        lineHeight: 1.3,
+        margin: 0,
+        color: "#111",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+      }}>
         {titre}
       </h3>
 
-      {/* Quartier + DPE */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 2 }}>
+      {/* Ville eyebrow + DPE */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
         <p style={{
-          fontSize: 12,
+          fontSize: 10,
+          fontWeight: 600,
           color: "#6B6B6B",
+          textTransform: "uppercase",
+          letterSpacing: "0.8px",
           margin: 0,
           overflow: "hidden",
           textOverflow: "ellipsis",
@@ -481,18 +502,18 @@ function MetaBlockCompact({
           flex: 1,
         }}>
           {ville}
-          {annonce.quartier && <span style={{ color: "#9ca3af" }}> · {annonce.quartier}</span>}
+          {annonce.quartier && <span style={{ color: "#9ca3af", textTransform: "none", letterSpacing: "normal" }}> · {annonce.quartier}</span>}
         </p>
         {annonce.dpe && (
           <span
             title={`DPE ${annonce.dpe}`}
             style={{
-              width: 22,
-              height: 22,
-              borderRadius: 6,
+              width: 18,
+              height: 18,
+              borderRadius: 5,
               background: dpeColor(annonce.dpe),
               color: "white",
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: 700,
               display: "inline-flex",
               alignItems: "center",
@@ -555,7 +576,7 @@ export default function ListingCardSearch({
         style={baseStyle}
       >
         <div style={{ position: "relative" }}>
-          <CardPhoto annonce={annonce} aspect="16 / 10" />
+          <CardPhoto annonce={annonce} aspect="2 / 1" />
           <FavoriButton favori={favori} onClick={onToggleFavori} />
         </div>
         <MetaBlockCompact annonce={annonce} score={score} info={info} isOwn={isOwn} motCle={motCle} />

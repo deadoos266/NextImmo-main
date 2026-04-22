@@ -131,13 +131,16 @@ interface SavedSearch {
 // ═══════════════════════════════════════════════════════════════════════
 const NAVBAR_HEIGHT = 72
 const FILTERS_BAR_HEIGHT = 64
-// Largeur max mode Grille (SeLoger-like : mise en page magazine centrée)
-const CONTAINER_MAX_WIDTH = 1440
+// Largeur max mode Grille v5 : élargi 1440→1700 pour remplir mieux les
+// grands écrans tout en gardant des marges latérales (pas edge-to-edge).
+const GRID_MAX_WIDTH = 1700
 // Mode Liste+Carte : la colonne liste prend ~35% du viewport (65% carte).
 // Si cette largeur tombe sous 380px → fallback variant="grid" car l'anatomie
 // compact SeLoger (prix + specs + titre + ville) devient illisible.
 const LIST_COLUMN_RATIO = 0.35
 const COMPACT_LIST_MIN_COL = 380
+// Breakpoint mobile strict v5 — modale carte + filtres plein écran.
+const MOBILE_BREAKPOINT = 768
 
 // ═══════════════════════════════════════════════════════════════════════
 // Entry — délégation server→client sans Suspense (prop initialSearchParams)
@@ -206,6 +209,9 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   const { role } = useRole()
   const isProprietaire = role === "proprietaire"
   const { isMobile, isTablet } = useResponsive()
+  // v5 : breakpoint mobile strict 768 (au-dessus de useResponsive isMobile=640).
+  // Utilisé pour modale carte plein écran, header simplifié, FAB flottant.
+  const isMobileV5 = viewportW < MOBILE_BREAKPOINT
   const isSmall = isMobile || isTablet
 
   // ── URL-derived filters (voir commentaire historique React #418 fix)
@@ -664,10 +670,10 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   // ── Scroll isolé STRICT en mode Liste+Carte desktop ───────────────────
   //   body/html overflow:hidden pour que la zone liste+carte gère seule
   //   son scroll interne (évite double barre + pied de page parasite).
-  //   En mode Grille ou mobile : scroll naturel du document.
+  //   En mode Grille OU mobile (<768) : scroll naturel du document.
   //   Cleanup au unmount ET sur changement de view → pas de fuite hors /annonces.
   useEffect(() => {
-    if (gridMode || isSmall) return
+    if (gridMode || isSmall || isMobileV5) return
     const prevBody = document.body.style.overflow
     const prevHtml = document.documentElement.style.overflow
     document.body.style.overflow = "hidden"
@@ -676,14 +682,24 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
       document.body.style.overflow = prevBody
       document.documentElement.style.overflow = prevHtml
     }
-  }, [gridMode, isSmall])
+  }, [gridMode, isSmall, isMobileV5])
 
-  // ── Container conditionnel — full-width en Liste+Carte, max-1440 en Grille
+  // ── Scroll lock dédié modale carte mobile (plein écran) ───────────────
+  //   Évite le scroll du body derrière la modale sur mobile.
+  //   Cleanup au close ET à l'unmount → safe navigation.
+  useEffect(() => {
+    if (!(isMobileV5 && showMap && !gridMode)) return
+    const prevBody = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => { document.body.style.overflow = prevBody }
+  }, [isMobileV5, showMap, gridMode])
+
+  // ── Container conditionnel — full-width en Liste+Carte, max-1700 en Grille
   //   Liste+Carte desktop : edge-to-edge (padding 16) pour donner un max
   //     d'espace à la carte (immersif SeLoger-style).
-  //   Grille ou mobile    : max-width 1440 centré, padding padH normal.
+  //   Grille ou mobile    : max-width 1700 centré, padding padH normal.
   const useFullWidth = !gridMode && !isSmall
-  const containerMaxWidth = useFullWidth ? "100%" : CONTAINER_MAX_WIDTH
+  const containerMaxWidth = useFullWidth ? "100%" : GRID_MAX_WIDTH
   const containerMargin = useFullWidth ? "0" : "0 auto"
   const containerPadH = useFullWidth ? 16 : padH
 
@@ -692,11 +708,11 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
       style={{
         background: "#F7F4EF",
         fontFamily: "'DM Sans', sans-serif",
-        // Outer viewport pour scroll isolé (mode liste desktop)
-        // En mode grid ou mobile : on laisse scroller naturellement.
-        height: !gridMode && !isSmall ? outerHeight : undefined,
-        minHeight: gridMode || isSmall ? outerHeight : undefined,
-        overflowY: !gridMode && !isSmall ? "auto" : "visible",
+        // Outer viewport pour scroll isolé (mode liste desktop uniquement).
+        // En mode grid, tablette, ou mobile (<768) : scroll naturel document.
+        height: !gridMode && !isSmall && !isMobileV5 ? outerHeight : undefined,
+        minHeight: gridMode || isSmall || isMobileV5 ? outerHeight : undefined,
+        overflowY: !gridMode && !isSmall && !isMobileV5 ? "auto" : "visible",
       }}
     >
       {/* H1 SEO visible uniquement pour les crawlers */}
@@ -710,7 +726,19 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
       <div style={{ maxWidth: containerMaxWidth, margin: containerMargin, paddingLeft: containerPadH, paddingRight: containerPadH }}>
 
         {/* ── Header éditorial — scroll normal (pas sticky) ────────────── */}
-        {!isMobile && (
+        {isMobileV5 ? (
+          /* Mobile simplifié : h1 24 + sous-titre 12, sans eyebrow ni popover */
+          <div style={{ padding: "16px 0 4px" }}>
+            <h2 style={{ fontSize: 24, fontWeight: 500, lineHeight: 1.12, margin: 0, color: "#111", letterSpacing: "-0.3px" }}>
+              {loading
+                ? (activeVille ? `Logements à ${activeVille}` : "Logements à louer")
+                : `${annoncesTraitees.length} logement${annoncesTraitees.length > 1 ? "s" : ""} ${activeVille ? `à ${activeVille}` : ""}`.trim()}
+            </h2>
+            <p style={{ fontSize: 12, color: "#666", margin: "3px 0 0" }}>
+              {isProprietaire ? "Mode propriétaire" : "Tri par compatibilité"}
+            </p>
+          </div>
+        ) : (
           <div style={{ padding: "24px 0 6px" }}>
             <p style={{ fontSize: 11, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: "1.6px", margin: 0 }}>
               Annonces
@@ -776,8 +804,8 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
             Mode grille / mobile : scroll document,
               sticky top:NAVBAR_HEIGHT → colle sous la Navbar du viewport. */}
         <FiltersBar
-          isMobile={isMobile}
-          isTablet={isTablet}
+          isMobile={isMobileV5}
+          isTablet={isTablet && !isMobileV5}
           activeVille={activeVille}
           onChangeVille={onChangeVille}
           budgetMaxFiltre={budgetMaxFiltre}
@@ -797,8 +825,8 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           stickyTop={!gridMode && !isSmall ? 0 : NAVBAR_HEIGHT}
         />
 
-        {/* ── Toggle Liste/Carte mobile+tablette ──────────────────────── */}
-        {isSmall && !gridMode && (
+        {/* ── Toggle Liste/Carte tablette (640-767) — mobile <768 utilise FAB */}
+        {isSmall && !isMobileV5 && !gridMode && (
           <div style={{ display: "flex", gap: 8, padding: "12px 0 0", flexShrink: 0 }}>
             <button onClick={() => setShowMap(false)}
               style={{ flex: 1, padding: "9px 14px", background: !showMap ? "#111" : "white", color: !showMap ? "white" : "#666", border: `1px solid ${!showMap ? "#111" : "#EAE6DF"}`, borderRadius: 999, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
@@ -870,12 +898,16 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                 flex: isSmall ? 1 : "0 0 calc(35% - 8px)",
                 minWidth: 0,
                 width: isSmall ? "100%" : undefined,
-                display: isSmall && showMap ? "none" : "block",
+                // Mobile v5 : liste toujours visible (carte = modale plein écran).
+                // Tablette : liste cachée si showMap (inline toggle).
+                display: isMobileV5 ? "block" : (isSmall && showMap ? "none" : "block"),
                 // Scroll interne uniquement sur desktop
                 height: isSmall ? undefined : "100%",
                 overflowY: isSmall ? "visible" : "auto",
                 // Padding pour éviter que le scroll mange les bords des cards
                 paddingRight: isSmall ? 0 : 4,
+                // Mobile : padding-bottom pour ne pas cacher dernière card sous FAB
+                paddingBottom: isMobileV5 ? 80 : undefined,
               }}
             >
               {loading ? (
@@ -917,8 +949,9 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
               )}
             </div>
 
-            {/* ── Colonne Carte — 65% desktop, 100% si showMap mobile ──── */}
-            {mounted && (
+            {/* ── Colonne Carte — 65% desktop, 100% si showMap tablette ──
+                Mobile v5 : carte absente inline (rendue en modale plein écran) */}
+            {mounted && !isMobileV5 && (
               <div
                 style={{
                   flex: isSmall ? 1 : "0 0 calc(65% - 8px)",
@@ -957,6 +990,109 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           </div>
         )}
       </div>
+
+      {/* ── Mobile FAB "Voir sur la carte" (<768, mode Liste, modale fermée) */}
+      {isMobileV5 && !gridMode && !showMap && (
+        <button
+          type="button"
+          onClick={() => setShowMap(true)}
+          aria-label="Voir les annonces sur la carte"
+          style={{
+            position: "fixed",
+            bottom: 20,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 7200,
+            background: "#111",
+            color: "white",
+            border: "none",
+            borderRadius: 999,
+            padding: "12px 22px",
+            fontSize: 14,
+            fontWeight: 600,
+            fontFamily: "inherit",
+            cursor: "pointer",
+            boxShadow: "0 6px 20px rgba(0,0,0,0.25)",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+            <line x1="8" y1="2" x2="8" y2="18" />
+            <line x1="16" y1="6" x2="16" y2="22" />
+          </svg>
+          Voir sur la carte
+        </button>
+      )}
+
+      {/* ── Mobile Map Modal plein écran (<768, showMap=true) ─────────── */}
+      {isMobileV5 && !gridMode && showMap && mounted && MapComp && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Carte des annonces"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 7400,
+            background: "#F7F4EF",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          {/* Bouton retour Liste (top sticky) */}
+          <div style={{
+            flexShrink: 0,
+            padding: "14px 16px",
+            background: "white",
+            borderBottom: "1px solid #EAE6DF",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+          }}>
+            <button
+              type="button"
+              onClick={() => setShowMap(false)}
+              aria-label="Retour à la liste"
+              style={{
+                background: "white",
+                color: "#111",
+                border: "1px solid #EAE6DF",
+                borderRadius: 999,
+                padding: "8px 16px",
+                fontSize: 13,
+                fontWeight: 600,
+                fontFamily: "inherit",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+              Liste
+            </button>
+            <span style={{ fontSize: 12, color: "#666", fontWeight: 500 }}>
+              {annoncesTraitees.length} annonce{annoncesTraitees.length > 1 ? "s" : ""}
+            </span>
+          </div>
+          {/* Carte plein écran */}
+          <div style={{ flex: 1, position: "relative", isolation: "isolate", overflow: "hidden" }}>
+            <MapComp
+              annonces={annoncesTraitees}
+              selectedId={selectedId}
+              onSelect={id => setSelectedId(id)}
+              onBoundsChange={handleBoundsChange}
+              centerHint={centerCity ? [centerCity[0], centerCity[1]] : null}
+            />
+          </div>
+        </div>
+      )}
 
       {/* ── Modal filtres ─────────────────────────────────────────────── */}
       <FiltersModal
@@ -1004,29 +1140,29 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
         filtreDpeMax={filtreDpeMax}
         setFiltreDpeMax={setFiltreDpeMax}
         onResetAll={onResetAll}
-        isMobile={isMobile}
+        isMobile={isMobileV5}
       />
     </div>
   )
 }
 
 /**
- * Container de la vue Grille.
- *  - grid `auto-fill` 280px FIXE (pas `auto-fit` qui stretcherait).
- *    Cards gardent taille constante quel que soit le nombre d'annonces :
- *    2 cards = 2×280 centré, 8 cards = 4×280 par rangée centré.
+ * Container de la vue Grille v5.
+ *  - Cards 300px FIXE (auto-fill, pas auto-fit → zéro stretch).
+ *  - Gap 24px.
  *  - `justify-content: center` pour centrer dans le container parent.
- *  - Max 4 cols à 1440 (4 × 280 + 3 × 20 gap = 1180 → tient largement).
- *  - Responsive : 4 cols ≥1200, 3 cols 900-1199, 2 cols 600-899, 1 col <600.
+ *  - Max 5 cols à 1700 (5 × 300 + 4 × 24 gap = 1596 → tient largement).
+ *  - Responsive : ≥1620 = 5 cols, 1296-1619 = 4 cols, 972-1295 = 3 cols,
+ *    648-971 = 2 cols, <648 = 1 col.
  */
 function GridContainer({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, 280px)",
+        gridTemplateColumns: "repeat(auto-fill, 300px)",
         justifyContent: "center",
-        gap: 20,
+        gap: 24,
         width: "100%",
         margin: "0 auto",
       }}
