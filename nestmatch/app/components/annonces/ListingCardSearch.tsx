@@ -6,11 +6,13 @@ import { highlightMatch } from "./highlight"
 
 /**
  * Card annonce pour la page /annonces avec 2 variantes :
- *  - variant="grid"    : aspect 4/5 vertical, width ~280px, mode grille
+ *  - variant="grid"    : aspect 16/10 landscape, width ~520px, mode grille
  *                        magazine (cards fixes alignées).
- *  - variant="compact" : vertical compact style SeLoger, photo 16/10
- *                        (~180px haut), contenu texte dense en dessous,
- *                        pour le mode Liste+Carte (colonne étroite ~450px).
+ *  - variant="compact" : LAYOUT HORIZONTAL style SeLoger classique —
+ *                        photo à gauche (largeur fixe ~200px, aspect 4/3),
+ *                        bloc texte dense à droite (flex:1). Hauteur totale
+ *                        ~150px → permet de voir 4-5 cards dans la viewport
+ *                        en mode Liste+Carte (colonne étroite ~450px).
  *
  * Photos :
  *  - PAS d'auto-rotation (retirée v4, trop agressif selon feedback user).
@@ -402,7 +404,7 @@ function MetaBlockCompact({
   }
 
   return (
-    <div style={{ padding: "10px 12px 12px", display: "flex", flexDirection: "column", gap: 4 }}>
+    <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 4, width: "100%" }}>
       {/* Prix + badges */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 6 }}>
         <span style={{ fontSize: 17, fontWeight: 600, color: "#111", lineHeight: 1 }}>
@@ -556,8 +558,16 @@ export default function ListingCardSearch({
   }
 
   if (variant === "compact") {
-    // Style SeLoger : photo 16/10 en haut + bloc texte dense dessous.
-    // Utilisé en mode Liste+Carte où la colonne fait ~400-480px.
+    // v5.3 : LAYOUT HORIZONTAL — photo gauche fixe + meta droite flex.
+    // Style SeLoger classique, cards 2× plus petites en hauteur (~150px
+    // vs ~400px en layout vertical) → on voit 4-5 cards simultanément.
+    const compactStyle: React.CSSProperties = {
+      ...baseStyle,
+      display: "flex",
+      flexDirection: "row",
+      position: "relative",
+      alignItems: "stretch",
+    }
     return (
       <a
         href={`/annonces/${annonce.id}`}
@@ -573,13 +583,18 @@ export default function ListingCardSearch({
             ? "0 6px 24px rgba(0,0,0,0.08)"
             : "0 1px 2px rgba(0,0,0,0.02)"
         }}
-        style={baseStyle}
+        style={compactStyle}
       >
-        <div style={{ position: "relative" }}>
-          <CardPhoto annonce={annonce} aspect="2 / 1" />
-          <FavoriButton favori={favori} onClick={onToggleFavori} />
+        {/* Photo gauche — largeur fixe 200px, aspect 4/3 → hauteur ~150px */}
+        <div style={{ width: 200, flexShrink: 0, position: "relative" }}>
+          <CardPhoto annonce={annonce} aspect="4 / 3" />
         </div>
-        <MetaBlockCompact annonce={annonce} score={score} info={info} isOwn={isOwn} motCle={motCle} />
+        {/* Bloc meta droite — flex:1, padding resserré */}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center" }}>
+          <MetaBlockCompact annonce={annonce} score={score} info={info} isOwn={isOwn} motCle={motCle} />
+        </div>
+        {/* Favori en overlay sur toute la card (top-right) */}
+        <FavoriButton favori={favori} onClick={onToggleFavori} />
       </a>
     )
   }
