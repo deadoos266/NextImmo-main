@@ -758,33 +758,32 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
             </p>
           </div>
         ) : (
-          <div style={{ padding: "24px 0 6px" }}>
-            <p style={{ fontSize: 11, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: "1.6px", margin: 0 }}>
-              Annonces
-            </p>
-            <h2 style={{ fontSize: 40, fontWeight: 500, lineHeight: 1.08, margin: "6px 0 4px", color: "#111", letterSpacing: "-0.5px" }}>
+          /* v5.3 : header compact 1 ligne — h2 compact à gauche, lien sauvegarde
+             à droite. Eyebrow "Annonces" et sous-titre "Mis à jour en direct"
+             retirés pour gagner de la verticale (gain ~100px). */
+          <div style={{
+            padding: "10px 0 4px",
+            display: "flex",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            gap: 16,
+            flexWrap: "wrap",
+          }}>
+            <h2 style={{ fontSize: 22, fontWeight: 500, lineHeight: 1.2, margin: 0, color: "#111", letterSpacing: "-0.3px" }}>
               {loading
                 ? (activeVille ? `Logements à ${activeVille}` : "Logements à louer")
                 : `${annoncesTraitees.length} logement${annoncesTraitees.length > 1 ? "s" : ""} ${activeVille ? `à ${activeVille}` : "disponible" + (annoncesTraitees.length > 1 ? "s" : "")}`}
             </h2>
-            <p style={{ fontSize: 13, color: "#666", margin: 0 }}>
-              {isProprietaire
-                ? "Mode propriétaire — tri chronologique"
-                : "Mis à jour en direct · tri par compatibilité"}
-            </p>
-
-            {/* Lien de sauvegarde — popover attaché */}
+            {/* Lien de sauvegarde — popover attaché, inline à droite */}
             {!isProprietaire && session?.user?.email && (
-              <div style={{ marginTop: 10 }}>
-                <SavedSearchesPopover
-                  savedSearches={savedSearches.map(s => ({ id: s.id, name: s.name, savedAt: s.savedAt }))}
-                  onSave={sauverRecherche}
-                  onApply={appliquerRecherche}
-                  onDelete={supprimerRecherche}
-                  defaultName={buildDefaultSearchName()}
-                  label="Sauvegarder cette recherche"
-                />
-              </div>
+              <SavedSearchesPopover
+                savedSearches={savedSearches.map(s => ({ id: s.id, name: s.name, savedAt: s.savedAt }))}
+                onSave={sauverRecherche}
+                onApply={appliquerRecherche}
+                onDelete={supprimerRecherche}
+                defaultName={buildDefaultSearchName()}
+                label="Sauvegarder cette recherche"
+              />
             )}
           </div>
         )}

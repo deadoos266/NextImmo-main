@@ -45,6 +45,8 @@ export default function SavedSearchesPopover({
 }: Props) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState(defaultName)
+  // v5.4 : confirmation inline après save (popup reste ouvert)
+  const [justSavedName, setJustSavedName] = useState<string | null>(null)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
@@ -68,13 +70,25 @@ export default function SavedSearchesPopover({
     }
   }, [open])
 
+  // Reset confirmation à la fermeture
+  useEffect(() => { if (!open) setJustSavedName(null) }, [open])
+
+  // Auto-clear confirmation après 3s (mais popup reste ouvert)
+  useEffect(() => {
+    if (!justSavedName) return
+    const t = window.setTimeout(() => setJustSavedName(null), 3000)
+    return () => window.clearTimeout(t)
+  }, [justSavedName])
+
   function handleSave() {
     const trimmed = name.trim()
     if (!trimmed) return
-    onSave(trimmed.slice(0, 60))
+    const saved = trimmed.slice(0, 60)
+    onSave(saved)
+    setJustSavedName(saved)
     setName("")
-    setOpen(false)
-    triggerRef.current?.focus()
+    // v5.4 : popup reste ouvert → l'user voit la confirmation "Enregistré ✓"
+    // + la nouvelle recherche dans la liste en dessous. Close manuel (ESC / click-outside).
   }
 
   return (
@@ -132,6 +146,30 @@ export default function SavedSearchesPopover({
                 to   { opacity: 1; transform: translateY(0) }
               }
             `}</style>
+
+            {/* Confirmation visible après save (auto-clear 3s) */}
+            {justSavedName && (
+              <div style={{
+                background: "#ECFDF5",
+                border: "1px solid #A7F3D0",
+                color: "#065F46",
+                borderRadius: 10,
+                padding: "8px 12px",
+                fontSize: 12,
+                fontWeight: 600,
+                marginBottom: 12,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>
+                  Enregistré : {justSavedName}
+                </span>
+              </div>
+            )}
 
             <p style={{ fontSize: 11, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 10px" }}>
               Nom de cette recherche

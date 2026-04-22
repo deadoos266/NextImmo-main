@@ -404,21 +404,21 @@ function MetaBlockCompact({
   }
 
   return (
-    <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 4, width: "100%" }}>
+    <div style={{ padding: "18px 22px", display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
       {/* Prix + badges */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 6 }}>
-        <span style={{ fontSize: 17, fontWeight: 600, color: "#111", lineHeight: 1 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+        <span style={{ fontSize: 22, fontWeight: 600, color: "#111", lineHeight: 1 }}>
           {annonce.prix?.toLocaleString("fr-FR") ?? "—"} €
-          <span style={{ fontSize: 11, fontWeight: 400, color: "#9ca3af" }}>&nbsp;/mois</span>
+          <span style={{ fontSize: 13, fontWeight: 400, color: "#9ca3af" }}>&nbsp;/mois</span>
         </span>
         {info && score !== null && (
           <span
             style={{
               background: info.bg,
               color: info.color,
-              padding: "2px 7px",
+              padding: "3px 9px",
               borderRadius: 999,
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: 700,
               flexShrink: 0,
               whiteSpace: "nowrap",
@@ -432,9 +432,9 @@ function MetaBlockCompact({
             style={{
               background: "#F1EEE8",
               color: "#374151",
-              padding: "2px 7px",
+              padding: "3px 9px",
               borderRadius: 999,
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: 700,
               flexShrink: 0,
             }}
@@ -447,8 +447,8 @@ function MetaBlockCompact({
       {/* Specs inline — une seule ligne, ellipsis */}
       <div style={{
         display: "flex",
-        gap: 5,
-        fontSize: 12,
+        gap: 6,
+        fontSize: 14,
         color: "#374151",
         alignItems: "center",
         overflow: "hidden",
@@ -474,24 +474,25 @@ function MetaBlockCompact({
         )}
       </div>
 
-      {/* Titre compact — 1 ligne seulement */}
+      {/* Titre — 2 lignes max avec ellipsis */}
       <h3 style={{
-        fontSize: 14,
+        fontSize: 17,
         fontWeight: 500,
         lineHeight: 1.3,
         margin: 0,
         color: "#111",
+        display: "-webkit-box",
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: "vertical",
         overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
       }}>
         {titre}
       </h3>
 
       {/* Ville eyebrow + DPE */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <p style={{
-          fontSize: 10,
+          fontSize: 12,
           fontWeight: 600,
           color: "#6B6B6B",
           textTransform: "uppercase",
@@ -510,12 +511,12 @@ function MetaBlockCompact({
           <span
             title={`DPE ${annonce.dpe}`}
             style={{
-              width: 18,
-              height: 18,
-              borderRadius: 5,
+              width: 22,
+              height: 22,
+              borderRadius: 6,
               background: dpeColor(annonce.dpe),
               color: "white",
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 700,
               display: "inline-flex",
               alignItems: "center",
@@ -558,9 +559,11 @@ export default function ListingCardSearch({
   }
 
   if (variant === "compact") {
-    // v5.3 : LAYOUT HORIZONTAL — photo gauche fixe + meta droite flex.
-    // Style SeLoger classique, cards 2× plus petites en hauteur (~150px
-    // vs ~400px en layout vertical) → on voit 4-5 cards simultanément.
+    // v5.4 : LAYOUT HORIZONTAL — photo gauche grande + meta droite flex.
+    // Photo cible 390×300px (aspect 13/10), responsive via min(390px, 58%) :
+    //   - card 672px (viewport 1920) : photo 390×300 → meta 282px
+    //   - card 504px (viewport 1440) : photo 292×225 → meta 212px
+    // Moins de blanc dans le rectangle car la photo occupe ~58% visuellement.
     const compactStyle: React.CSSProperties = {
       ...baseStyle,
       display: "flex",
@@ -585,11 +588,11 @@ export default function ListingCardSearch({
         }}
         style={compactStyle}
       >
-        {/* Photo gauche — largeur fixe 200px, aspect 4/3 → hauteur ~150px */}
-        <div style={{ width: 200, flexShrink: 0, position: "relative" }}>
-          <CardPhoto annonce={annonce} aspect="4 / 3" />
+        {/* Photo gauche — min(390px, 58%) wide, aspect 13/10 (~390×300) */}
+        <div style={{ width: "min(390px, 58%)", flexShrink: 0, position: "relative" }}>
+          <CardPhoto annonce={annonce} aspect="13 / 10" />
         </div>
-        {/* Bloc meta droite — flex:1, padding resserré */}
+        {/* Bloc meta droite — flex:1, centré verticalement */}
         <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center" }}>
           <MetaBlockCompact annonce={annonce} score={score} info={info} isOwn={isOwn} motCle={motCle} />
         </div>
