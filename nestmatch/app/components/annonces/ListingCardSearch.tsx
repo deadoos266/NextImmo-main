@@ -8,11 +8,15 @@ import { highlightMatch } from "./highlight"
  * Card annonce pour la page /annonces avec 2 variantes :
  *  - variant="grid"    : aspect 16/10 landscape, width ~520px, mode grille
  *                        magazine (cards fixes alignées).
- *  - variant="compact" : LAYOUT HORIZONTAL style SeLoger classique —
- *                        photo à gauche (largeur fixe ~200px, aspect 4/3),
- *                        bloc texte dense à droite (flex:1). Hauteur totale
- *                        ~150px → permet de voir 4-5 cards dans la viewport
- *                        en mode Liste+Carte (colonne étroite ~450px).
+ *  - variant="compact" : LAYOUT 3 COLONNES style Claude Design handoff —
+ *                        col 1 photo fixe 200px (aspect 4/5) avec NOUVEAU
+ *                        badge + favori, col 2 info riche flex:1 (eyebrow
+ *                        localisation + titre clamp 1 + specs inline + chips
+ *                        amenities + "Voir sur la carte"), col 3 prix+CTA
+ *                        fixe 180px (ScoreMatchDonut + prix 22/700 + chat +
+ *                        Candidater). Hauteur dérivée de la photo (~250px).
+ *                        Requiert colonne liste ≥ 530px (voir
+ *                        COMPACT_LIST_MIN_COL dans AnnoncesClient).
  *
  * Photos :
  *  - PAS d'auto-rotation (retirée v4, trop agressif selon feedback user).
@@ -21,7 +25,8 @@ import { highlightMatch } from "./highlight"
  *
  * Accessibilité :
  *  - Le wrapper est un <a> cliquable → href annonce.
- *  - Boutons internes (favori, flèches, dots) stoppent la propagation.
+ *  - Boutons internes (favori, flèches, dots, chat, carte) stoppent la
+ *    propagation. Candidater = span qui bubble naturellement vers le <a>.
  */
 
 type Variant = "grid" | "compact"
@@ -40,13 +45,131 @@ interface Props {
   variant: Variant
 }
 
+// ─── Helpers exportables (DpeBadge, ScoreMatchDonut…) ──────────────────
+// Hors du composant = pas de re-render inutile, pas de perte de focus.
+
+function dpeColorFor(letter: string): string {
+  const L = letter?.toUpperCase?.() || ""
+  const map: Record<string, string> = {
+    A: "#16A34A", B: "#65A30D", C: "#EAB308",
+    D: "#F59E0B", E: "#EA580C", F: "#DC2626", G: "#7F1D1D",
+  }
+  return map[L] || "#6b7280"
+}
+
+/**
+ * Pastille DPE (A…G) aux couleurs officielles handoff Claude.
+ * Null-safe : retourne null si letter vide/absent.
+ */
+function DpeBadge({ letter }: { letter: string | null | undefined }) {
+  if (!letter) return null
+  return (
+    <span
+      title={`DPE ${letter.toUpperCase()}`}
+      style={{
+        minWidth: 20,
+        height: 20,
+        padding: "0 6px",
+        borderRadius: 4,
+        background: dpeColorFor(letter),
+        color: "white",
+        fontSize: 11,
+        fontWeight: 700,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        lineHeight: 1,
+      }}
+    >
+      {letter.toUpperCase()}
+    </span>
+  )
+}
+
+function scoreColorFor(pct: number): string {
+  if (pct >= 80) return "#16A34A"
+  if (pct >= 65) return "#65A30D"
+  if (pct >= 50) return "#EAB308"
+  if (pct >= 30) return "#EA580C"
+  return "#DC2626"
+}
+
+/**
+ * Donut SVG de score match — pct sur 100. Ring #EAE6DF, progress coloré
+ * selon les seuils (≥80 vert, 65-79 olive, 50-64 jaune, 30-49 orange, <30
+ * rouge). Pourcentage rendu au centre en noir. Taille 52×52 par défaut.
+ */
+function ScoreMatchDonut({ score }: { score: number }) {
+  const pct = Math.max(0, Math.min(100, Math.round(score / 10)))
+  const color = scoreColorFor(pct)
+  const size = 52
+  const stroke = 4
+  const radius = (size - stroke) / 2
+  const circumference = 2 * Math.PI * radius
+  const offset = circumference - (pct / 100) * circumference
+  return (
+    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#EAE6DF" strokeWidth={stroke} />
+        <circle
+          cx={size / 2} cy={size / 2} r={radius}
+          fill="none" stroke={color} strokeWidth={stroke}
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      </svg>
+      <div
+        style={{
+          position: "absolute", inset: 0,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 12, fontWeight: 700, color: "#111",
+          letterSpacing: "-0.2px",
+        }}
+        aria-label={`${pct}% de compatibilité`}
+      >
+        {pct}%
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Formatte "VILLE · Quartier" pour l'eyebrow carte 3 cols. Fallback
+ * "VILLE" si quartier absent. Vide si ville absente.
+ */
+function formatLocalisationFull(annonce: any): string {
+  const ville = (annonce.ville || "").toString().trim()
+  const quartier = (annonce.quartier || "").toString().trim()
+  if (ville && quartier) return `${ville.toUpperCase()} · ${quartier}`
+  if (ville) return ville.toUpperCase()
+  return ""
+}
+
+/**
+ * true si created_at < 7 jours (badge NOUVEAU). Null-safe.
+ */
+function isNewAnnonce(createdAt: string | null | undefined): boolean {
+  if (!createdAt) return false
+  const t = new Date(createdAt).getTime()
+  if (Number.isNaN(t)) return false
+  const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000
+  return Date.now() - t < SEVEN_DAYS
+}
+
 // ─── CardPhoto (interne) ───────────────────────────────────────────────
 function CardPhoto({
   annonce,
   aspect = "4 / 5",
+  hideDispoBadge = false,
 }: {
   annonce: any
   aspect?: string
+  // Le variant compact 3 cols utilise son propre badge NOUVEAU à la place
+  // du dispo badge (spec handoff). Grid variant garde le dispo badge.
+  hideDispoBadge?: boolean
 }) {
   const [idx, setIdx] = useState(0)
   const realPhotos: string[] = Array.isArray(annonce.photos) && annonce.photos.length > 0 ? annonce.photos : []
@@ -77,6 +200,7 @@ function CardPhoto({
         position: "relative",
         aspectRatio: aspect,
         width: "100%",
+        height: "100%",
         background: currentPhoto ? "#000" : base,
         overflow: "hidden",
         flexShrink: 0,
@@ -115,22 +239,24 @@ function CardPhoto({
         </span>
       )}
 
-      <span
-        style={{
-          position: "absolute",
-          top: 10,
-          left: 10,
-          background: annonce.dispo === "Disponible maintenant" ? "#16a34a" : "#ea580c",
-          color: "white",
-          padding: "3px 9px",
-          borderRadius: 999,
-          fontSize: 10,
-          fontWeight: 700,
-          zIndex: 2,
-        }}
-      >
-        {annonce.dispo}
-      </span>
+      {!hideDispoBadge && (
+        <span
+          style={{
+            position: "absolute",
+            top: 10,
+            left: 10,
+            background: annonce.dispo === "Disponible maintenant" ? "#16a34a" : "#ea580c",
+            color: "white",
+            padding: "3px 9px",
+            borderRadius: 999,
+            fontSize: 10,
+            fontWeight: 700,
+            zIndex: 2,
+          }}
+        >
+          {annonce.dispo}
+        </span>
+      )}
 
       {realPhotos.length > 1 && (
         <>
@@ -381,250 +507,6 @@ function MetaBlockGrid({
   )
 }
 
-// ─── Meta block compact variant (interne) ──────────────────────────────
-// v5 : drastiquement compacté pour voir 2-3 cards en même temps dans la
-// viewport disponible en mode Liste+Carte. Anatomie SeLoger dense :
-//   Prix 17 · 1 ligne specs · Titre clamp 1 · Ville + DPE 18
-function MetaBlockCompact({
-  annonce,
-  score,
-  info,
-  isOwn,
-  motCle,
-}: Pick<Props, "annonce" | "score" | "info" | "isOwn" | "motCle">) {
-  const titre: ReactNode = motCle.trim() ? highlightMatch(annonce.titre || "", motCle) : annonce.titre
-  const ville: ReactNode = motCle.trim() ? highlightMatch(annonce.ville || "", motCle) : annonce.ville
-
-  const dpeColor = (letter: string): string => {
-    const map: Record<string, string> = {
-      A: "#16a34a", B: "#65a30d", C: "#eab308",
-      D: "#f59e0b", E: "#ea580c", F: "#dc2626", G: "#7f1d1d",
-    }
-    return map[letter?.toUpperCase?.()] || "#6b7280"
-  }
-
-  // Amenities (jusqu'à 3 pills) — on priorise Meublé / Balcon / Terrasse /
-  // Ascenseur / Parking (les plus différenciants pour un locataire).
-  const amenityPills: string[] = []
-  if (annonce.meuble === true) amenityPills.push("Meublé")
-  if (annonce.balcon === true) amenityPills.push("Balcon")
-  if (annonce.terrasse === true) amenityPills.push("Terrasse")
-  if (annonce.ascenseur === true) amenityPills.push("Ascenseur")
-  if (annonce.parking === true) amenityPills.push("Parking")
-  if (annonce.jardin === true) amenityPills.push("Jardin")
-  const pills = amenityPills.slice(0, 3)
-
-  return (
-    <div style={{ padding: "16px 20px 14px", display: "flex", flexDirection: "column", gap: 6, width: "100%", height: "100%", boxSizing: "border-box" }}>
-      {/* Row 1 : Ville eyebrow (gauche) + match badge (droite, rond vert) */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-        <p style={{
-          fontSize: 11,
-          fontWeight: 600,
-          color: "#6B6B6B",
-          textTransform: "uppercase",
-          letterSpacing: "0.8px",
-          margin: 0,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          minWidth: 0,
-          flex: 1,
-        }}>
-          {ville}
-          {annonce.quartier && <span style={{ color: "#9ca3af", textTransform: "none", letterSpacing: "normal" }}> · {annonce.quartier}</span>}
-        </p>
-        {info && score !== null && (
-          <span
-            style={{
-              background: info.bg,
-              color: info.color,
-              padding: "3px 10px",
-              borderRadius: 999,
-              fontSize: 11,
-              fontWeight: 700,
-              flexShrink: 0,
-              whiteSpace: "nowrap",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 5,
-            }}
-          >
-            <span style={{ width: 6, height: 6, borderRadius: 999, background: "currentColor" }} />
-            {Math.round(score / 10)}% match
-          </span>
-        )}
-        {isOwn && (
-          <span
-            style={{
-              background: "#F1EEE8",
-              color: "#374151",
-              padding: "3px 10px",
-              borderRadius: 999,
-              fontSize: 11,
-              fontWeight: 700,
-              flexShrink: 0,
-            }}
-          >
-            Votre bien
-          </span>
-        )}
-      </div>
-
-      {/* Row 2 : Titre (gauche, 1 ligne) + Prix (droite, gros) */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-        <h3 style={{
-          fontSize: 16,
-          fontWeight: 500,
-          lineHeight: 1.25,
-          margin: 0,
-          color: "#111",
-          flex: 1,
-          minWidth: 0,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}>
-          {titre}
-        </h3>
-        <span style={{ fontSize: 20, fontWeight: 600, color: "#111", lineHeight: 1.1, flexShrink: 0, whiteSpace: "nowrap" }}>
-          {annonce.prix?.toLocaleString("fr-FR") ?? "—"} €
-          <span style={{ fontSize: 12, fontWeight: 400, color: "#9ca3af" }}>&nbsp;/mois</span>
-        </span>
-      </div>
-
-      {/* Row 3 : Specs (gauche) + DPE (droite). Charges comprises si pertinent. */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-        <div style={{
-          display: "flex",
-          gap: 6,
-          fontSize: 13,
-          color: "#374151",
-          alignItems: "center",
-          overflow: "hidden",
-          whiteSpace: "nowrap",
-          textOverflow: "ellipsis",
-          flex: 1,
-          minWidth: 0,
-        }}>
-          {annonce.surface != null && <span>{annonce.surface} m²</span>}
-          {annonce.surface != null && annonce.pieces != null && <span style={{ color: "#d1d5db" }}>·</span>}
-          {annonce.pieces != null && <span>{annonce.pieces} {annonce.pieces > 1 ? "pièces" : "pièce"}</span>}
-          {annonce.etage != null && (
-            <>
-              <span style={{ color: "#d1d5db" }}>·</span>
-              <span>Ét. {annonce.etage === 0 ? "RDC" : annonce.etage}</span>
-            </>
-          )}
-          {annonce.dpe && (
-            <>
-              <span style={{ color: "#d1d5db" }}>·</span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                DPE
-                <span
-                  title={`DPE ${annonce.dpe}`}
-                  style={{
-                    minWidth: 18,
-                    height: 18,
-                    padding: "0 5px",
-                    borderRadius: 4,
-                    background: dpeColor(annonce.dpe),
-                    color: "white",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {annonce.dpe.toUpperCase()}
-                </span>
-              </span>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Row 4 : Amenities pills (jusqu'à 3) — auto-hidden si aucun */}
-      {pills.length > 0 && (
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
-          {pills.map(p => (
-            <span
-              key={p}
-              style={{
-                background: "#F1EEE8",
-                color: "#374151",
-                padding: "4px 12px",
-                borderRadius: 999,
-                fontSize: 11,
-                fontWeight: 500,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {p}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Spacer élastique — pousse la ligne d'actions tout en bas de la card */}
-      <div style={{ flex: 1 }} />
-
-      {/* Row 5 : Actions — chat icon (gauche) + Candidater (droite, CTA noir).
-          Pas de stopPropagation pour Candidater → navigue comme le <a> parent
-          (même URL /annonces/[id]). Chat → /messages?annonce={id}. */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginTop: 2 }}>
-        <button
-          type="button"
-          aria-label="Envoyer un message"
-          onClick={e => {
-            e.preventDefault()
-            e.stopPropagation()
-            window.location.href = `/messages?annonce=${annonce.id}`
-          }}
-          style={{
-            background: "white",
-            border: "1px solid #EAE6DF",
-            borderRadius: "50%",
-            width: 36,
-            height: 36,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            color: "#374151",
-            fontFamily: "inherit",
-            flexShrink: 0,
-            transition: "background 0.15s, border-color 0.15s",
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = "#F7F4EF" }}
-          onMouseLeave={e => { e.currentTarget.style.background = "white" }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-        </button>
-        {/* Candidater → même URL que le <a> wrapper, donc pas besoin de handler :
-            on laisse le clic bubbler naturellement. */}
-        <span
-          style={{
-            background: "#111",
-            color: "white",
-            padding: "9px 20px",
-            borderRadius: 999,
-            fontSize: 13,
-            fontWeight: 600,
-            whiteSpace: "nowrap",
-            flexShrink: 0,
-          }}
-        >
-          Candidater
-        </span>
-      </div>
-    </div>
-  )
-}
-
 // ─── ListingCardSearch (export principal) ──────────────────────────────
 export default function ListingCardSearch({
   annonce,
@@ -652,18 +534,48 @@ export default function ListingCardSearch({
   }
 
   if (variant === "compact") {
-    // v5.4 : LAYOUT HORIZONTAL — photo gauche grande + meta droite flex.
-    // Photo cible 390×300px (aspect 13/10), responsive via min(390px, 58%) :
-    //   - card 672px (viewport 1920) : photo 390×300 → meta 282px
-    //   - card 504px (viewport 1440) : photo 292×225 → meta 212px
-    // Moins de blanc dans le rectangle car la photo occupe ~58% visuellement.
+    // v5.5 : LAYOUT 3 COLONNES handoff Claude Design —
+    //   Col 1 (200×stretch) : Photo aspect 4/5 + NOUVEAU badge + favori overlay
+    //   Col 2 (flex 1)      : Eyebrow pin + loc · quartier, titre clamp 1,
+    //                         specs + DPE inline, chips amenities (4 max)
+    //                         + "Voir sur la carte" (hover sync markers)
+    //   Col 3 (180×stretch) : ScoreMatchDonut top, prix 22/700 + charges,
+    //                         chat button + Candidater CTA noir full-width
+    //
+    // Hauteur naturelle ~250px (photo 200×250). Les 3 colonnes stretchent
+    // via alignItems:"stretch" → border-left col 3 descend full height.
+    const loc = formatLocalisationFull(annonce)
+    const locHighlighted: ReactNode = motCle.trim() ? highlightMatch(loc, motCle) : loc
+    const titre: ReactNode = motCle.trim() ? highlightMatch(annonce.titre || "", motCle) : annonce.titre
+    const showNew = isNewAnnonce(annonce.created_at)
+
+    // Jusqu'à 4 amenities, prioritisés par désirabilité locataire.
+    const amenities: string[] = []
+    if (annonce.meuble === true) amenities.push("Meublé")
+    if (annonce.balcon === true) amenities.push("Balcon")
+    if (annonce.terrasse === true) amenities.push("Terrasse")
+    if (annonce.jardin === true) amenities.push("Jardin")
+    if (annonce.ascenseur === true) amenities.push("Ascenseur")
+    if (annonce.parking === true) amenities.push("Parking")
+    if (annonce.fibre === true) amenities.push("Fibre")
+    if (annonce.cave === true) amenities.push("Cave")
+    const pills = amenities.slice(0, 4)
+
+    // Charges : null ou 0 → "Charges comprises", sinon "Charges X €"
+    const chargesLabel =
+      annonce.charges == null || annonce.charges === 0
+        ? "Charges comprises"
+        : `+ ${annonce.charges.toLocaleString("fr-FR")} € charges`
+
     const compactStyle: React.CSSProperties = {
       ...baseStyle,
       display: "flex",
       flexDirection: "row",
       position: "relative",
       alignItems: "stretch",
+      minHeight: 180,
     }
+
     return (
       <a
         href={`/annonces/${annonce.id}`}
@@ -681,23 +593,333 @@ export default function ListingCardSearch({
         }}
         style={compactStyle}
       >
-        {/* Photo gauche — min(390px, 58%) wide, aspect 13/10 (~390×300).
-            Favori en overlay top-right DE LA PHOTO (pas de la card) pour ne
-            pas entrer en collision avec le badge "92% match" côté meta. */}
-        <div style={{ width: "min(390px, 58%)", flexShrink: 0, position: "relative" }}>
-          <CardPhoto annonce={annonce} aspect="13 / 10" />
+        {/* ═══ Col 1 — Photo 200 wide, aspect 4/5, badge NOUVEAU + favori ═══ */}
+        <div style={{ width: 200, flexShrink: 0, position: "relative", alignSelf: "stretch" }}>
+          <CardPhoto annonce={annonce} aspect="4 / 5" hideDispoBadge />
+          {showNew && (
+            <span
+              style={{
+                position: "absolute",
+                top: 10,
+                left: 10,
+                background: "#111",
+                color: "white",
+                padding: "3px 9px",
+                borderRadius: 999,
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "0.6px",
+                zIndex: 2,
+              }}
+            >
+              NOUVEAU
+            </span>
+          )}
           <FavoriButton favori={favori} onClick={onToggleFavori} />
         </div>
-        {/* Bloc meta droite — flex:1, stretch pour que MetaBlockCompact
-            fill la hauteur complète (actions row collée au bas de la card) */}
-        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "stretch" }}>
-          <MetaBlockCompact annonce={annonce} score={score} info={info} isOwn={isOwn} motCle={motCle} />
+
+        {/* ═══ Col 2 — Info riche, flex:1 centré vertical ═══ */}
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            padding: "18px 20px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            gap: 8,
+          }}
+        >
+          {/* Eyebrow pin + localisation "VILLE · Quartier" */}
+          {loc && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                color: "#6B6B6B",
+                minWidth: 0,
+              }}
+            >
+              <svg
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                style={{ flexShrink: 0 }}
+              >
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "1px",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  minWidth: 0,
+                  flex: 1,
+                }}
+              >
+                {locHighlighted}
+              </span>
+              {isOwn && (
+                <span
+                  style={{
+                    background: "#F1EEE8",
+                    color: "#374151",
+                    padding: "2px 8px",
+                    borderRadius: 999,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    flexShrink: 0,
+                    textTransform: "none",
+                    letterSpacing: "normal",
+                  }}
+                >
+                  Votre bien
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Titre — clamp 1 ligne */}
+          <h3
+            style={{
+              fontSize: 17,
+              fontWeight: 600,
+              lineHeight: 1.25,
+              margin: 0,
+              color: "#111",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {titre}
+          </h3>
+
+          {/* Specs inline — surface · pièces · étage + DPE pastille */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 13,
+              color: "#374151",
+              flexWrap: "wrap",
+            }}
+          >
+            {annonce.surface != null && <span>{annonce.surface} m²</span>}
+            {annonce.surface != null && annonce.pieces != null && <span style={{ color: "#d1d5db" }}>·</span>}
+            {annonce.pieces != null && <span>{annonce.pieces} {annonce.pieces > 1 ? "pièces" : "pièce"}</span>}
+            {annonce.etage != null && (
+              <>
+                <span style={{ color: "#d1d5db" }}>·</span>
+                <span>Ét. {annonce.etage === 0 ? "RDC" : annonce.etage}</span>
+              </>
+            )}
+            {annonce.dpe && (
+              <>
+                <span style={{ color: "#d1d5db" }}>·</span>
+                <DpeBadge letter={annonce.dpe} />
+              </>
+            )}
+          </div>
+
+          {/* Chips amenities + bouton "Voir sur la carte" (hover sync) */}
+          {(pills.length > 0 || true) && (
+            <div
+              style={{
+                display: "flex",
+                gap: 6,
+                flexWrap: "wrap",
+                alignItems: "center",
+                marginTop: 2,
+              }}
+            >
+              {pills.map(p => (
+                <span
+                  key={p}
+                  style={{
+                    background: "#F1EEE8",
+                    color: "#374151",
+                    padding: "4px 11px",
+                    borderRadius: 999,
+                    fontSize: 11,
+                    fontWeight: 500,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {p}
+                </span>
+              ))}
+              {/* "Voir sur la carte" : click = focus marker (via onMouseEnter prop
+                  qui est déjà connecté à setSelectedId dans AnnoncesClient). */}
+              <button
+                type="button"
+                onClick={e => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onMouseEnter()
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = "#F1EEE8"
+                  onMouseEnter()
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = "white"
+                }}
+                aria-label="Voir sur la carte"
+                style={{
+                  background: "white",
+                  color: "#374151",
+                  border: "1px solid #EAE6DF",
+                  padding: "4px 11px",
+                  borderRadius: 999,
+                  fontSize: 11,
+                  fontWeight: 500,
+                  whiteSpace: "nowrap",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  transition: "background 0.15s",
+                }}
+              >
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+                  <line x1="8" y1="2" x2="8" y2="18" />
+                  <line x1="16" y1="6" x2="16" y2="22" />
+                </svg>
+                Voir sur la carte
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ═══ Col 3 — Prix + CTA, 180 fixe, border-left hairline ═══ */}
+        <div
+          style={{
+            width: 180,
+            flexShrink: 0,
+            padding: "16px 16px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            borderLeft: "1px solid #EAE6DF",
+            alignSelf: "stretch",
+            boxSizing: "border-box",
+          }}
+        >
+          {/* ScoreMatchDonut — uniquement si score non null et pas proprio */}
+          {score !== null && !isOwn && <ScoreMatchDonut score={score} />}
+
+          {/* Prix + charges */}
+          <div style={{ textAlign: "center", lineHeight: 1.15 }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "#111", letterSpacing: "-0.3px" }}>
+              {annonce.prix?.toLocaleString("fr-FR") ?? "—"} €
+              <span style={{ fontSize: 11, fontWeight: 400, color: "#9ca3af" }}> /mois</span>
+            </div>
+            <div style={{ fontSize: 11, color: "#6B6B6B", marginTop: 3 }}>{chargesLabel}</div>
+          </div>
+
+          {/* Actions — chat rond + Candidater full-width noir */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", alignItems: "center" }}>
+            <button
+              type="button"
+              aria-label="Envoyer un message"
+              onClick={e => {
+                e.preventDefault()
+                e.stopPropagation()
+                window.location.href = `/messages?annonce=${annonce.id}`
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = "#F7F4EF"
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = "white"
+              }}
+              style={{
+                background: "white",
+                border: "1px solid #EAE6DF",
+                borderRadius: "50%",
+                width: 34,
+                height: 34,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                color: "#374151",
+                fontFamily: "inherit",
+                flexShrink: 0,
+                transition: "background 0.15s",
+              }}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+            </button>
+            {/* Candidater = span (pas <button>) car on laisse le clic bubbler
+                vers le <a> parent → navigue vers /annonces/[id]. */}
+            <span
+              style={{
+                background: "#111",
+                color: "white",
+                padding: "9px 14px",
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+                textAlign: "center",
+                width: "100%",
+                display: "inline-flex",
+                justifyContent: "center",
+                alignItems: "center",
+                boxSizing: "border-box",
+                letterSpacing: "0.2px",
+              }}
+            >
+              Candidater
+            </span>
+          </div>
         </div>
       </a>
     )
   }
 
-  // variant="grid" — Mode Grille magazine, cards fixes alignées.
+  // variant="grid" — Mode Grille magazine, cards fixes alignées (inchangé).
   return (
     <a
       href={`/annonces/${annonce.id}`}

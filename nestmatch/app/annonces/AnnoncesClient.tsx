@@ -134,11 +134,13 @@ const FILTERS_BAR_HEIGHT = 64
 // Largeur max mode Grille v5 : élargi 1440→1700 pour remplir mieux les
 // grands écrans tout en gardant des marges latérales (pas edge-to-edge).
 const GRID_MAX_WIDTH = 1700
-// Mode Liste+Carte : la colonne liste prend ~35% du viewport (65% carte).
-// Si cette largeur tombe sous 380px → fallback variant="grid" car l'anatomie
-// compact SeLoger (prix + specs + titre + ville) devient illisible.
-const LIST_COLUMN_RATIO = 0.35
-const COMPACT_LIST_MIN_COL = 380
+// Mode Liste+Carte v5.5 : la colonne liste prend ~40% du viewport (60% carte).
+// Bump 35→40 pour permettre l'anatomie 3 colonnes (photo 200 + flex centre +
+// prix 180 = ~530px minimum). Sous 530px → fallback variant="grid" (sinon
+// le centre flex devient trop étroit pour titre + chips + "Voir carte").
+// Équivalences : 1920→768, 1440→576, 1280→512 (fallback grid), 1024→stack.
+const LIST_COLUMN_RATIO = 0.40
+const COMPACT_LIST_MIN_COL = 530
 // Breakpoint mobile strict v5 — modale carte + filtres plein écran.
 const MOBILE_BREAKPOINT = 768
 
@@ -638,9 +640,10 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
     completudeProfil !== null && completudeProfil < 80
 
   // ── Card variant auto selon largeur viewport (mode Liste desktop)
-  //   colonne liste = viewportW × 0.35
-  //   si colonne ≥ 380px → cards verticales compactes (SeLoger-style)
-  //   sinon (viewport < ~1086) → fallback variant="grid" (trop étroit)
+  //   colonne liste = viewportW × 0.40
+  //   si colonne ≥ 530px → cards horizontales 3 colonnes (photo + info + prix)
+  //   sinon (viewport < ~1325) → fallback variant="grid" (centre flex trop étroit
+  //   pour 3 colonnes avec titre + chips amenities)
   const listColumnWidth = viewportW * LIST_COLUMN_RATIO
   const listCardVariant: "compact" | "grid" =
     isSmall ? "grid" : listColumnWidth >= COMPACT_LIST_MIN_COL ? "compact" : "grid"
@@ -917,10 +920,10 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
               width: isDesktopListCarte ? "100%" : undefined,
             }}
           >
-            {/* ── Colonne Liste — 35% desktop, 100% mobile/tablet ──────── */}
+            {/* ── Colonne Liste — 40% desktop, 100% mobile/tablet ──────── */}
             <div
               style={{
-                flex: isSmall ? 1 : "0 0 calc(35% - 8px)",
+                flex: isSmall ? 1 : "0 0 calc(40% - 8px)",
                 minWidth: 0,
                 width: isSmall ? "100%" : undefined,
                 // Mobile v5 : liste toujours visible (carte = modale plein écran).
@@ -974,12 +977,12 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
               )}
             </div>
 
-            {/* ── Colonne Carte — 65% desktop, 100% si showMap tablette ──
+            {/* ── Colonne Carte — 60% desktop, 100% si showMap tablette ──
                 Mobile v5 : carte absente inline (rendue en modale plein écran) */}
             {mounted && !isMobileV5 && (
               <div
                 style={{
-                  flex: isSmall ? 1 : "0 0 calc(65% - 8px)",
+                  flex: isSmall ? 1 : "0 0 calc(60% - 8px)",
                   width: isSmall ? "100%" : undefined,
                   display: isSmall && !showMap ? "none" : "block",
                   height: isSmall ? "calc(100vh - 200px)" : "100%",
