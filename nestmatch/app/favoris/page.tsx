@@ -68,27 +68,33 @@ export default function Favoris() {
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px 48px" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,500&display=swap');`}</style>
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
 
-        <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
+        <div style={{ marginBottom: 28, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
           <div>
-            <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.5px" }}>Mes favoris</h1>
-            <p style={{ color: "#6b7280", marginTop: 4, fontSize: 14 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 10px" }}>
+              Locataire
+            </p>
+            <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: isMobile ? 32 : 40, lineHeight: 1.1, letterSpacing: "-0.6px", color: "#111", margin: 0 }}>
+              Mes favoris
+            </h1>
+            <p style={{ color: "#8a8477", marginTop: 8, fontSize: 14 }}>
               {favoris.length === 0 ? "Aucun favori pour l'instant" : `${favoris.length} logement${favoris.length > 1 ? "s" : ""} sauvegardé${favoris.length > 1 ? "s" : ""}`}
             </p>
           </div>
 
           {/* Toggle Liste / Carte, visible seulement s'il y a des favoris géolocalisés */}
           {annoncesAvecGeo.length > 0 && (
-            <div style={{ display: "flex", background: "white", borderRadius: 12, padding: 4, gap: 2, border: "1px solid #e5e7eb" }}>
+            <div style={{ display: "flex", background: "#fff", borderRadius: 999, padding: 4, gap: 2, border: "1px solid #EAE6DF", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
               <button onClick={() => setShowMap(false)}
-                style={{ padding: "7px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600,
-                  background: !showMap ? "#111" : "transparent", color: !showMap ? "white" : "#6b7280" }}>
+                style={{ padding: "8px 18px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.3px",
+                  background: !showMap ? "#111" : "transparent", color: !showMap ? "#fff" : "#8a8477" }}>
                 Liste
               </button>
               <button onClick={() => setShowMap(true)}
-                style={{ padding: "7px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600,
-                  background: showMap ? "#111" : "transparent", color: showMap ? "white" : "#6b7280" }}>
+                style={{ padding: "8px 18px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.3px",
+                  background: showMap ? "#111" : "transparent", color: showMap ? "#fff" : "#8a8477" }}>
                 Carte
               </button>
             </div>
@@ -98,7 +104,7 @@ export default function Favoris() {
         {loading ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 17 }}>
             {[1, 2, 3].map(i => (
-              <div key={i} style={{ background: "white", borderRadius: 20, height: 240, opacity: 0.4 }} />
+              <div key={i} style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 20, height: 240, opacity: 0.4 }} />
             ))}
           </div>
         ) : annonces.length === 0 ? (
@@ -110,7 +116,7 @@ export default function Favoris() {
           />
         ) : showMap ? (
           // Vue carte : seulement les favoris
-          <div style={{ background: "white", borderRadius: 20, overflow: "hidden", height: "70vh", minHeight: 480, border: "1px solid #e5e7eb" }}>
+          <div style={{ background: "#fff", borderRadius: 20, overflow: "hidden", height: "70vh", minHeight: 480, border: "1px solid #EAE6DF", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
             {annoncesAvecGeo.length > 0 ? (
               <MapAnnonces
                 annonces={annoncesAvecCoords}
@@ -123,8 +129,8 @@ export default function Favoris() {
               />
             ) : (
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", flexDirection: "column", padding: 40, textAlign: "center" }}>
-                <p style={{ fontSize: 15, fontWeight: 600, color: "#374151", marginBottom: 8 }}>Aucune localisation disponible</p>
-                <p style={{ fontSize: 13, color: "#9ca3af" }}>Les villes de vos favoris ne sont pas dans notre référentiel géographique.</p>
+                <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, color: "#111", marginBottom: 8 }}>Aucune localisation disponible</p>
+                <p style={{ fontSize: 13, color: "#8a8477" }}>Les villes de vos favoris ne sont pas dans notre référentiel géographique.</p>
               </div>
             )}
           </div>
@@ -134,18 +140,19 @@ export default function Favoris() {
             {annonces.map(a => {
               const photo = Array.isArray(a.photos) && a.photos.length > 0 ? a.photos[0] : null
               const gradient = GRADIENTS[a.id % GRADIENTS.length]
+              const dispoIsNow = a.dispo === "Disponible maintenant"
               return (
-                <Link key={a.id} href={`/annonces/${a.id}`} style={{ textDecoration: "none", color: "#111", display: "block", background: "white", borderRadius: 20, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", transition: "box-shadow 0.2s, transform 0.15s" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 6px 24px rgba(0,0,0,0.10)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)" }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 12px rgba(0,0,0,0.06)"; (e.currentTarget as HTMLElement).style.transform = "none" }}>
+                <Link key={a.id} href={`/annonces/${a.id}`} style={{ textDecoration: "none", color: "#111", display: "block", background: "#fff", border: "1px solid #EAE6DF", borderRadius: 20, overflow: "hidden", boxShadow: "0 1px 2px rgba(0,0,0,0.02)", transition: "box-shadow 0.2s, transform 0.15s" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 10px 30px rgba(17,17,17,0.08)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)" }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 1px 2px rgba(0,0,0,0.02)"; (e.currentTarget as HTMLElement).style.transform = "none" }}>
 
                   {/* Photo */}
                   <div style={{ position: "relative", height: 154, background: photo ? "#000" : gradient, overflow: "hidden" }}>
                     {photo
                       ? <Image src={photo} alt={a.titre} fill sizes="(max-width: 768px) 100vw, 240px" style={{ objectFit: "cover" }} />
-                      : <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(0,0,0,0.25)", fontSize: 12 }}>Pas de photo</span>
+                      : <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(17,17,17,0.3)", fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontSize: 16 }}>Pas de photo</span>
                     }
-                    <span style={{ position: "absolute", top: 10, left: 10, background: a.dispo === "Disponible maintenant" ? "#16a34a" : "#ea580c", color: "white", padding: "3px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700 }}>
+                    <span style={{ position: "absolute", top: 10, left: 10, background: dispoIsNow ? "#F0FAEE" : "#FBF6EA", color: dispoIsNow ? "#15803d" : "#a16207", border: `1px solid ${dispoIsNow ? "#C6E9C0" : "#EADFC6"}`, padding: "4px 10px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
                       {a.dispo}
                     </span>
                     {/* Bouton retirer */}
@@ -153,24 +160,24 @@ export default function Favoris() {
                       onClick={e => handleRetirer(e, a.id)}
                       title="Retirer des favoris"
                       aria-label="Retirer des favoris"
-                      style={{ position: "absolute", top: 10, right: 10, background: "white", border: "none", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.15)", color: "#dc2626" }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-7-11a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 6.5-7 11-7 11z"/></svg>
+                      style={{ position: "absolute", top: 10, right: 10, background: "#fff", border: "1px solid #EAE6DF", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 1px 2px rgba(0,0,0,0.04)", color: "#b91c1c" }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-7-11a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 6.5-7 11-7 11z"/></svg>
                     </button>
                   </div>
 
                   {/* Infos */}
-                  <div style={{ padding: "14px 16px 16px" }}>
-                    <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 3, lineHeight: 1.3 }}>{a.titre}</p>
-                    <p style={{ color: "#9ca3af", fontSize: 13, marginBottom: 10 }}>{a.ville}</p>
+                  <div style={{ padding: "16px 18px 18px" }}>
+                    <p style={{ fontWeight: 600, fontSize: 15, marginBottom: 3, lineHeight: 1.3, color: "#111", letterSpacing: "-0.2px" }}>{a.titre}</p>
+                    <p style={{ color: "#8a8477", fontSize: 13, marginBottom: 12 }}>{a.ville}</p>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div style={{ display: "flex", gap: 10, fontSize: 12, color: "#6b7280" }}>
+                      <div style={{ display: "flex", gap: 8, fontSize: 12, color: "#8a8477" }}>
                         <span>{a.surface} m²</span>
-                        <span style={{ color: "#d1d5db" }}>·</span>
+                        <span style={{ color: "#EAE6DF" }}>·</span>
                         <span>{a.pieces} p.</span>
-                        {a.meuble && <><span style={{ color: "#d1d5db" }}>·</span><span>Meublé</span></>}
+                        {a.meuble && <><span style={{ color: "#EAE6DF" }}>·</span><span>Meublé</span></>}
                       </div>
-                      <span style={{ fontSize: 17, fontWeight: 800 }}>
-                        {a.prix} €<span style={{ fontSize: 11, fontWeight: 400, color: "#9ca3af" }}>/mois</span>
+                      <span style={{ fontSize: 17, fontWeight: 700, color: "#111", letterSpacing: "-0.3px" }}>
+                        {a.prix} €<span style={{ fontSize: 11, fontWeight: 400, color: "#8a8477" }}>/mois</span>
                       </span>
                     </div>
                   </div>
