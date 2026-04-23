@@ -596,8 +596,25 @@ export default function Proprietaire() {
     bail_envoye: "En attente signature",
   }
 
+  // Prénom pour l'accent italique Fraunces du titre (calque dashboard.jsx L74-77)
+  // session.user.name est typiquement "Prénom Nom" — on garde juste le premier mot.
+  // Fallback sur local-part de l'email si name absent.
+  const ownerFirstName = (() => {
+    const name = session?.user?.name?.trim() || ""
+    if (name) return name.split(/\s+/)[0]
+    const email = session?.user?.email || ""
+    const local = email.split("@")[0] || ""
+    return local ? local.charAt(0).toUpperCase() + local.slice(1) : ""
+  })()
+  const biensActifs = biens.filter((b: any) => b.statut !== "loué" && b.statut !== "retire").length
+
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&display=swap');
+        .km-serif { font-family: 'Fraunces', Georgia, serif; font-feature-settings: 'ss01'; }
+      `}</style>
+
       {pendingSuppression !== null && (
         <UndoToast
           message="Annonce supprimée — visites, messages et documents liés seront perdus"
@@ -607,13 +624,35 @@ export default function Proprietaire() {
 
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: isMobile ? "24px 16px" : "32px 48px" }}>
 
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: 28, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 14 : 0 }}>
-          <div>
-            <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, letterSpacing: "-0.5px" }}>Espace propriétaire</h1>
-            <p style={{ color: "#6b7280", marginTop: 4, fontSize: 14 }}>{session?.user?.name} · {biens.length} bien{biens.length > 1 ? "s" : ""} en gestion</p>
+        {/* Header éditorial — calque handoff dashboard.jsx L70-96
+            Eyebrow uppercase + titre magazine avec accent italique Fraunces
+            sur le prénom du propriétaire. CTA "Publier" à droite.           */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "flex-end", marginBottom: 28, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 14 : 16, flexWrap: "wrap" }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "2.2px", textTransform: "uppercase", color: "#666", marginBottom: 8 }}>
+              Espace propriétaire
+            </div>
+            <h1 style={{ fontSize: isMobile ? 30 : 44, fontWeight: 500, letterSpacing: "-1.2px", margin: 0, lineHeight: 1.05, color: "#111" }}>
+              Tableau de bord
+              {ownerFirstName && (
+                <>
+                  {" "}
+                  <span
+                    className="km-serif"
+                    style={{ fontStyle: "italic", fontWeight: 400, color: "#8a8477" }}
+                  >
+                    {ownerFirstName}
+                  </span>
+                </>
+              )}
+            </h1>
+            <p style={{ fontSize: 13, color: "#666", margin: "6px 0 0" }}>
+              {biens.length === 0
+                ? "Aucun bien en gestion pour le moment."
+                : `${biens.length} annonce${biens.length > 1 ? "s" : ""} · ${biensActifs} active${biensActifs > 1 ? "s" : ""}${loyersAttendus > 0 ? ` · ${loyersAttendus} loyer${loyersAttendus > 1 ? "s" : ""} à confirmer` : ""}`}
+            </p>
           </div>
-          <a href="/proprietaire/ajouter" style={{ background: "#111", color: "white", padding: "11px 22px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>
+          <a href="/proprietaire/ajouter" style={{ background: "#111", color: "white", padding: "11px 22px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14, whiteSpace: "nowrap" }}>
             + Ajouter un bien
           </a>
         </div>
