@@ -2531,12 +2531,21 @@ function MessagesInner() {
               })}
             </div>
             {/* Recherche + filtre par bien (proprio) + toggle archivées */}
-            <div style={{ padding: "10px 16px 12px", borderBottom: "1px solid #f3f4f6", display: "flex", flexDirection: "column", gap: 8 }}>
-              <input
-                value={recherche} onChange={e => setRecherche(e.target.value)}
-                placeholder="Rechercher..."
-                style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 13, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
-              />
+            <div style={{ padding: "12px 16px 14px", borderBottom: "1px solid #EAE6DF", display: "flex", flexDirection: "column", gap: 10 }}>
+              {/* Input recherche avec icône loupe — palette beige handoff */}
+              <div style={{ position: "relative" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a8477" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.3-4.3" />
+                </svg>
+                <input
+                  value={recherche} onChange={e => setRecherche(e.target.value)}
+                  placeholder="Rechercher une conversation"
+                  onFocus={e => { e.currentTarget.style.borderColor = "#111"; e.currentTarget.style.background = "#fff" }}
+                  onBlur={e => { e.currentTarget.style.borderColor = "#EAE6DF"; e.currentTarget.style.background = "#F7F4EF" }}
+                  style={{ width: "100%", padding: "9px 12px 9px 34px", border: "1px solid #EAE6DF", background: "#F7F4EF", color: "#111", borderRadius: 999, fontSize: 13, outline: "none", fontFamily: "inherit", boxSizing: "border-box", transition: "border-color 160ms ease, background 160ms ease" }}
+                />
+              </div>
               {/* Filtre par statut — 6 pills (handoff messages.jsx L154-179) */}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {([
@@ -2559,9 +2568,9 @@ function MessagesInner() {
                         padding: "5px 10px", borderRadius: 999,
                         fontSize: 11, fontWeight: 600, fontFamily: "inherit",
                         letterSpacing: "0.2px", cursor: "pointer",
-                        background: sel ? (s ? s.color : "#111") : "transparent",
-                        color: sel ? "#fff" : (s ? s.color : "#6b7280"),
-                        border: `1px solid ${sel ? (s ? s.color : "#111") : (s ? `${s.color}33` : "#e5e7eb")}`,
+                        background: sel ? (s ? s.color : "#111") : "#fff",
+                        color: sel ? "#fff" : (s ? s.color : "#8a8477"),
+                        border: `1px solid ${sel ? (s ? s.color : "#111") : (s ? `${s.color}33` : "#EAE6DF")}`,
                         display: "inline-flex", alignItems: "center", gap: 5,
                       }}
                     >
@@ -2597,15 +2606,15 @@ function MessagesInner() {
                     }}
                     style={{
                       width: "100%",
-                      padding: "8px 12px",
-                      border: `1.5px solid ${bienFilter !== "all" ? "#111" : "#e5e7eb"}`,
-                      borderRadius: 10,
+                      padding: "9px 12px",
+                      border: `1px solid ${bienFilter !== "all" ? "#111" : "#EAE6DF"}`,
+                      borderRadius: 999,
                       fontSize: 13,
                       fontWeight: bienFilter !== "all" ? 700 : 500,
                       outline: "none",
                       fontFamily: "inherit",
                       boxSizing: "border-box",
-                      background: "white",
+                      background: bienFilter !== "all" ? "#F7F4EF" : "white",
                       color: "#111",
                       cursor: "pointer",
                     }}
@@ -2623,7 +2632,7 @@ function MessagesInner() {
                 <button
                   type="button"
                   onClick={() => setShowArchived(v => !v)}
-                  style={{ background: showArchived ? "#111" : "white", color: showArchived ? "white" : "#374151", border: `1.5px solid ${showArchived ? "#111" : "#e5e7eb"}`, borderRadius: 8, padding: "6px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textAlign: "center" }}>
+                  style={{ background: showArchived ? "#111" : "white", color: showArchived ? "white" : "#111", border: `1px solid ${showArchived ? "#111" : "#EAE6DF"}`, borderRadius: 999, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textAlign: "center" }}>
                   {showArchived ? "← Retour" : `Archivées (${countArchived})`}
                 </button>
               )}
@@ -2631,13 +2640,13 @@ function MessagesInner() {
 
             <div style={{ flex: 1, overflowY: "auto" }}>
               {convsFiltrees.length === 0 ? (
-                <div style={{ padding: "32px 20px", textAlign: "center", color: "#9ca3af" }}>
-                  <p style={{ fontSize: 13, fontWeight: 600 }}>{recherche ? "Aucun résultat" : "Aucun message"}</p>
+                <div style={{ padding: "36px 20px", textAlign: "center", color: "#8a8477" }}>
+                  <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontSize: 16, fontWeight: 500, color: "#111", margin: 0, letterSpacing: "-0.2px" }}>{recherche ? "Aucun résultat" : "Aucune conversation"}</p>
                   {!recherche && (
-                    <p style={{ fontSize: 12, marginTop: 4, textAlign: "center", lineHeight: 1.5 }}>
+                    <p style={{ fontSize: 12, marginTop: 6, textAlign: "center", lineHeight: 1.6, color: "#8a8477" }}>
                       {proprietaireActive
-                        ? "Les locataires vous contacteront depuis vos annonces"
-                        : "Contactez un propriétaire depuis une annonce"}
+                        ? "Les locataires vous contacteront depuis vos annonces."
+                        : "Contactez un propriétaire depuis une annonce."}
                     </p>
                   )}
                 </div>
@@ -2931,7 +2940,9 @@ function MessagesInner() {
                             href={`tel:${peerPhone.replace(/\s/g, "")}`}
                             title={`Appeler ${displayName(convActiveData.other, annonceActive.proprietaire)}`}
                             aria-label="Appeler"
-                            style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: "#111", textDecoration: "none", background: "#f3f4f6", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "6px 12px", whiteSpace: "nowrap", fontFamily: "inherit" }}>
+                            onMouseEnter={e => { e.currentTarget.style.background = "#F2EEE6" }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "#F7F4EF" }}
+                            style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: "#111", textDecoration: "none", background: "#F7F4EF", border: "1px solid #EAE6DF", borderRadius: 999, padding: "7px 13px", whiteSpace: "nowrap", fontFamily: "inherit", transition: "background 160ms ease" }}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                               <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
                             </svg>
@@ -2940,7 +2951,9 @@ function MessagesInner() {
                         )
                       })()}
                       <Link href={`/annonces/${convActiveData.annonceId}`}
-                        style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "6px 14px", whiteSpace: "nowrap" }}>
+                        onMouseEnter={e => { e.currentTarget.style.background = "#F7F4EF" }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "#fff" }}
+                        style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", background: "#fff", border: "1px solid #EAE6DF", borderRadius: 999, padding: "7px 14px", whiteSpace: "nowrap", transition: "background 160ms ease" }}>
                         Voir l&apos;annonce
                       </Link>
                     </>
