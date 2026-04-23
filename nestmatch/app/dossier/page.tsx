@@ -109,12 +109,12 @@ const T = {
   meta: "#666",
   soft: "#8a8477",
   mutedBg: "#FAF8F3",
-  success: "#16a34a",
-  warning: "#ea580c",
-  danger: "#dc2626",
-  successBg: "#F0FDF4",
-  successLine: "#bbf7d0",
-  warningBg: "#FFF8F1",
+  success: "#15803d",
+  warning: "#a16207",
+  danger: "#b91c1c",
+  successBg: "#F0FAEE",
+  successLine: "#C6E9C0",
+  warningBg: "#FBF6EA",
 } as const
 
 const STYLES = {
@@ -352,7 +352,7 @@ const STYLES = {
     card: (done: boolean, drag: boolean): React.CSSProperties => ({
       padding: 14,
       borderRadius: 14,
-      background: drag ? "#eff6ff" : done ? T.successBg : T.mutedBg,
+      background: drag ? "#EEF3FB" : done ? T.successBg : T.mutedBg,
       border: `1.5px solid ${drag ? T.ink : done ? T.successLine : T.line}`,
       outline: drag ? `1.5px dashed ${T.ink}` : "none",
       outlineOffset: drag ? -4 : 0,
@@ -384,16 +384,16 @@ const STYLES = {
       display: "flex",
       alignItems: "center",
       gap: 8,
-      background: confirming ? "#fee2e2" : "#dcfce7",
+      background: confirming ? "#FEECEC" : "#F0FAEE",
       borderRadius: 8,
       padding: "5px 10px",
-      border: confirming ? "1px solid #fca5a5" : "1px solid transparent",
+      border: confirming ? "1px solid #F4C9C9" : "1px solid #C6E9C0",
       transition: "all 0.15s",
     }),
     fileLink: (confirming: boolean): React.CSSProperties => ({
       fontSize: 12,
       fontWeight: 600,
-      color: confirming ? "#991b1b" : "#166534",
+      color: confirming ? "#b91c1c" : "#15803d",
       textDecoration: "none",
       flex: 1,
       overflow: "hidden",
@@ -428,7 +428,7 @@ const STYLES = {
   },
 
   saveBtn: (state: "idle" | "saving" | "saved"): React.CSSProperties => ({
-    background: state === "saving" ? "#9ca3af" : state === "saved" ? T.success : T.ink,
+    background: state === "saving" ? "#8a8477" : state === "saved" ? T.success : T.ink,
     color: T.white,
     border: "none",
     borderRadius: 999,
@@ -441,7 +441,7 @@ const STYLES = {
     letterSpacing: 0.2,
   }),
 
-  errorBanner: { background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 12, padding: "12px 16px", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" } as React.CSSProperties,
+  errorBanner: { background: "#FEECEC", border: "1px solid #F4C9C9", borderRadius: 14, padding: "12px 16px", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", color: "#b91c1c" } as React.CSSProperties,
 
   download: {
     wrap: (isMobile: boolean): React.CSSProperties => ({ background: T.ink, color: T.white, borderRadius: 20, padding: isMobile ? 20 : 22, position: "relative", overflow: "hidden" }),
@@ -452,7 +452,7 @@ const STYLES = {
     desc: { fontSize: 12.5, color: "rgba(255,255,255,0.7)", lineHeight: 1.55, margin: "0 0 14px", position: "relative" } as React.CSSProperties,
     btnPrimary: (disabled: boolean): React.CSSProperties => ({
       width: "100%",
-      background: disabled ? "#6b7280" : T.white,
+      background: disabled ? "#8a8477" : T.white,
       color: T.ink,
       border: "none",
       borderRadius: 999,
