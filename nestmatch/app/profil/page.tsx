@@ -86,7 +86,7 @@ export default function Profil() {
 
   // Source unique de vérité : lib/profilCompleteness (aussi utilisé sur /annonces)
   const { score: scoreCompletion, manquants: manquantsLabels } = calculerCompletudeProfil(form)
-  const scoreColor = scoreCompletion >= 80 ? "#16a34a" : scoreCompletion >= 50 ? "#f59e0b" : "#ef4444"
+  const scoreColor = scoreCompletion >= 80 ? "#15803d" : scoreCompletion >= 50 ? "#a16207" : "#b91c1c"
   const manquants = manquantsLabels.map(label => ({ label }))
 
   async function sauvegarder() {
@@ -129,47 +129,52 @@ export default function Profil() {
   }
 
   if (status === "loading" || !dataLoaded) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif", color: "#6b7280" }}>Chargement...</div>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "'DM Sans', sans-serif", color: "#8a8477" }}>Chargement...</div>
   )
   if (!session) return null
 
-  const inp: any = { width: "100%", padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 16, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }
+  const inp: any = { width: "100%", padding: "11px 14px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 16, outline: "none", boxSizing: "border-box", fontFamily: "inherit", background: "#fff" }
   const sel: any = { ...inp, background: "white" }
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,500&display=swap');`}</style>
 
       <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 16px" : "48px" }}>
 
-        <div style={{ background: "white", borderRadius: 24, padding: isMobile ? "20px 18px" : 32, marginBottom: 20, display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "space-between", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 16 : 0 }}>
+        <div style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, padding: isMobile ? "20px 18px" : 32, marginBottom: 20, display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "space-between", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 16 : 0, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 14 : 24 }}>
             {(photoCustom || session.user?.image)
               ? <img src={photoCustom || session.user?.image || ""} alt="p" referrerPolicy="no-referrer" style={{ width: isMobile ? 52 : 72, height: isMobile ? 52 : 72, borderRadius: "50%", objectFit: "cover" }} />
-              : <div style={{ width: isMobile ? 52 : 72, height: isMobile ? 52 : 72, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? 20 : 28, color: "white", fontWeight: 800 }}>{session.user?.name?.[0]}</div>
+              : <div style={{ width: isMobile ? 52 : 72, height: isMobile ? 52 : 72, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? 20 : 28, color: "white", fontWeight: 600, fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic" }}>{session.user?.name?.[0]}</div>
             }
             <div>
-              <h1 style={{ fontSize: isMobile ? 20 : 26, fontWeight: 800, letterSpacing: "-0.5px" }}>{session.user?.name}</h1>
-              <p style={{ color: "#6b7280", marginTop: 2, fontSize: isMobile ? 13 : 14 }}>{session.user?.email}</p>
-              <span style={{ background: "#dcfce7", color: "#16a34a", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700, marginTop: 8, display: "inline-block" }}>✓ Compte vérifié</span>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 6px" }}>Mon profil</p>
+              <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: isMobile ? 24 : 32, letterSpacing: "-0.5px", color: "#111", margin: 0 }}>{session.user?.name}</h1>
+              <p style={{ color: "#8a8477", marginTop: 4, fontSize: isMobile ? 13 : 14 }}>{session.user?.email}</p>
+              <span style={{ background: "#F0FAEE", color: "#15803d", border: "1px solid #C6E9C0", padding: "4px 12px", borderRadius: 999, fontSize: 10, fontWeight: 700, marginTop: 10, display: "inline-flex", alignItems: "center", gap: 6, textTransform: "uppercase", letterSpacing: "1.2px" }}>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
+                Compte vérifié
+              </span>
             </div>
           </div>
-          <a href={proprietaireActive ? "/proprietaire" : "/annonces"} style={{ background: "#111", color: "white", padding: "12px 24px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14, textAlign: "center" }}>
+          <a href={proprietaireActive ? "/proprietaire" : "/annonces"} style={{ background: "#111", color: "white", padding: "10px 22px", borderRadius: 999, textDecoration: "none", fontWeight: 600, fontSize: 11, textAlign: "center", textTransform: "uppercase", letterSpacing: "0.3px" }}>
             {proprietaireActive ? "Mes biens →" : "Voir les annonces →"}
           </a>
         </div>
 
         {/* Proprio : message d'accueil simple */}
         {proprietaireActive && (
-          <div style={{ background: "white", borderRadius: 20, padding: 24, marginBottom: 20 }}>
-            <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>Espace proprietaire</h2>
-            <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.6, marginBottom: 16 }}>
-              En tant que proprietaire, votre profil contient vos informations personnelles. Les criteres de recherche et le dossier locataire ne vous concernent pas.
+          <div style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, padding: 26, marginBottom: 20, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+            <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, letterSpacing: "-0.3px", color: "#111", margin: "0 0 10px" }}>Espace propriétaire</h2>
+            <p style={{ fontSize: 14, color: "#8a8477", lineHeight: 1.6, marginBottom: 16 }}>
+              En tant que propriétaire, votre profil contient vos informations personnelles. Les critères de recherche et le dossier locataire ne vous concernent pas.
             </p>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <a href="/proprietaire" style={{ padding: "10px 20px", background: "#111", color: "white", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
-                Dashboard proprietaire
+              <a href="/proprietaire" style={{ padding: "10px 22px", background: "#111", color: "white", borderRadius: 999, textDecoration: "none", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.3px" }}>
+                Dashboard propriétaire
               </a>
-              <a href="/proprietaire/ajouter" style={{ padding: "10px 20px", background: "#f3f4f6", color: "#111", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 13 }}>
+              <a href="/proprietaire/ajouter" style={{ padding: "10px 22px", background: "#F7F4EF", border: "1px solid #EAE6DF", color: "#111", borderRadius: 999, textDecoration: "none", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.3px" }}>
                 Publier un bien
               </a>
             </div>
@@ -178,28 +183,28 @@ export default function Profil() {
 
         {/* Locataire : Score de complétion */}
         {!proprietaireActive && (
-          <div style={{ background: "white", borderRadius: 20, padding: 24, marginBottom: 20 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, padding: 26, marginBottom: 20, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 16 }}>
               <div>
-                <h2 style={{ fontSize: 16, fontWeight: 800 }}>Completion du dossier</h2>
-                <p style={{ fontSize: 13, color: "#6b7280", marginTop: 2 }}>
+                <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, letterSpacing: "-0.3px", color: "#111", margin: 0 }}>Complétion du dossier</h2>
+                <p style={{ fontSize: 13, color: "#8a8477", marginTop: 4 }}>
                   {scoreCompletion === 100 ? "Dossier complet — vous maximisez vos chances !" : `Remplissez les champs manquants pour booster votre profil`}
                 </p>
               </div>
-              <span style={{ fontSize: 32, fontWeight: 800, color: scoreColor }}>{scoreCompletion}%</span>
+              <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontSize: 32, fontWeight: 500, color: scoreColor, letterSpacing: "-0.5px" }}>{scoreCompletion}%</span>
             </div>
 
             {/* Barre de progression */}
-            <div style={{ background: "#f3f4f6", borderRadius: 999, height: 10, marginBottom: 16 }}>
-              <div style={{ background: scoreColor, borderRadius: 999, height: 10, width: `${scoreCompletion}%`, transition: "width 0.4s ease" }} />
+            <div style={{ background: "#F7F4EF", border: "1px solid #EAE6DF", borderRadius: 999, height: 10, marginBottom: 16, overflow: "hidden" }}>
+              <div style={{ background: scoreColor, borderRadius: 999, height: "100%", width: `${scoreCompletion}%`, transition: "width 0.4s ease" }} />
             </div>
 
             {/* Champs manquants */}
             {manquants.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {manquants.map(c => (
-                  <span key={c.label} style={{ background: "#fff7ed", color: "#ea580c", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600 }}>
-                    + {c.label}
+                  <span key={c.label} style={{ background: "#FBF6EA", color: "#a16207", border: "1px solid #EADFC6", padding: "4px 12px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
+                    {c.label}
                   </span>
                 ))}
               </div>
@@ -294,35 +299,40 @@ export default function Profil() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginTop: 8 }}>
             <Toggle label="Fumeur" k="fumeur" toggles={toggles} setToggles={setToggles} />
           </div>
-          <p style={{ fontSize: 12, color: "#6b7280", marginTop: 16, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 12, color: "#8a8477", marginTop: 16, lineHeight: 1.6 }}>
             Le champ <strong>Profil</strong> (notamment l'option &quot;couple&quot;) est utilisé uniquement pour améliorer la pertinence du matching et l&apos;évaluation de votre dossier. Il n&apos;est jamais partagé sans votre accord, conformément au RGPD.
           </p>
         </Sec>
 
-        {erreur && <div style={{ background: "#fee2e2", color: "#dc2626", padding: "12px 20px", borderRadius: 12, marginBottom: 16, fontSize: 14 }}>{erreur}</div>}
+        {erreur && <div style={{ background: "#FEECEC", color: "#b91c1c", border: "1px solid #F4C9C9", padding: "12px 20px", borderRadius: 14, marginBottom: 16, fontSize: 14 }}>{erreur}</div>}
 
-        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 16 }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
           {saved && (
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              <span style={{ color: "#16a34a", fontWeight: 600, fontSize: 14 }}>✓ Sauvegardé !</span>
-              <a href="/annonces" style={{ background: "#16a34a", color: "white", padding: "10px 20px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#15803d", fontWeight: 600, fontSize: 13 }}>
+                <span aria-hidden style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "#DCF5E4", border: "1px solid #C6E9C0", color: "#15803d" }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </span>
+                Sauvegardé !
+              </span>
+              <a href="/annonces" style={{ background: "#111", color: "white", padding: "10px 22px", borderRadius: 999, textDecoration: "none", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.3px" }}>
                 Voir les annonces →
               </a>
             </div>
           )}
           <button onClick={sauvegarder} disabled={saving}
-            style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}>
-            {saving ? "Sauvegarde..." : "Sauvegarder mes préférences"}
+            style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "12px 28px", fontWeight: 600, fontSize: 12, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1, textTransform: "uppercase", letterSpacing: "0.3px", fontFamily: "inherit" }}>
+            {saving ? "Sauvegarde…" : "Sauvegarder mes préférences"}
           </button>
         </div>
         </>}
 
-        <div style={{ background: "white", borderRadius: 20, padding: 24, marginTop: 24, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+        <div style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, padding: 26, marginTop: 24, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
           <div>
-            <h2 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 4px" }}>Paramètres du compte</h2>
-            <p style={{ fontSize: 13, color: "#6b7280", margin: 0, lineHeight: 1.5 }}>Mot de passe, apparence (clair/sombre), notifications, suppression de compte.</p>
+            <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 20, letterSpacing: "-0.3px", color: "#111", margin: "0 0 6px" }}>Paramètres du compte</h2>
+            <p style={{ fontSize: 13, color: "#8a8477", margin: 0, lineHeight: 1.5 }}>Mot de passe, apparence (clair/sombre), notifications, suppression de compte.</p>
           </div>
-          <Link href="/parametres" style={{ background: "#111", color: "white", borderRadius: 999, padding: "10px 22px", textDecoration: "none", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap" }}>
+          <Link href="/parametres" style={{ background: "#111", color: "white", borderRadius: 999, padding: "10px 22px", textDecoration: "none", fontWeight: 600, fontSize: 11, whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.3px" }}>
             Ouvrir les paramètres →
           </Link>
         </div>
