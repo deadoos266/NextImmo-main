@@ -96,9 +96,9 @@ export default function Favoris() {
         </div>
 
         {loading ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 17 }}>
             {[1, 2, 3].map(i => (
-              <div key={i} style={{ background: "white", borderRadius: 20, height: 280, opacity: 0.4 }} />
+              <div key={i} style={{ background: "white", borderRadius: 20, height: 240, opacity: 0.4 }} />
             ))}
           </div>
         ) : annonces.length === 0 ? (
@@ -130,7 +130,7 @@ export default function Favoris() {
           </div>
         ) : (
           // Vue liste
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 17 }}>
             {annonces.map(a => {
               const photo = Array.isArray(a.photos) && a.photos.length > 0 ? a.photos[0] : null
               const gradient = GRADIENTS[a.id % GRADIENTS.length]
@@ -140,9 +140,9 @@ export default function Favoris() {
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 12px rgba(0,0,0,0.06)"; (e.currentTarget as HTMLElement).style.transform = "none" }}>
 
                   {/* Photo */}
-                  <div style={{ position: "relative", height: 180, background: photo ? "#000" : gradient, overflow: "hidden" }}>
+                  <div style={{ position: "relative", height: 154, background: photo ? "#000" : gradient, overflow: "hidden" }}>
                     {photo
-                      ? <Image src={photo} alt={a.titre} fill sizes="(max-width: 768px) 100vw, 280px" style={{ objectFit: "cover" }} />
+                      ? <Image src={photo} alt={a.titre} fill sizes="(max-width: 768px) 100vw, 240px" style={{ objectFit: "cover" }} />
                       : <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(0,0,0,0.25)", fontSize: 12 }}>Pas de photo</span>
                     }
                     <span style={{ position: "absolute", top: 10, left: 10, background: a.dispo === "Disponible maintenant" ? "#16a34a" : "#ea580c", color: "white", padding: "3px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700 }}>

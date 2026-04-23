@@ -1185,22 +1185,21 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
 }
 
 /**
- * Container de la vue Grille v5.2 — cards rectangulaires ZOOMÉES.
- *  - Cards 520px FIXE rectangulaire (photo landscape 16/10).
- *  - Gap 24px, auto-fill (pas auto-fit → zéro stretch).
+ * Container de la vue Grille v5.3 — scale -15% pour densite (2026-04-23).
+ *  - Cards 442px FIXE rectangulaire (photo landscape 16/10). Etait 520.
+ *  - Gap 20px, auto-fill (pas auto-fit -> zero stretch). Etait 24.
  *  - `justify-content: center` pour centrer dans le container parent.
- *  - Max 3 cols à 1700 (3 × 520 + 2 × 24 = 1608 → tient largement).
- *  - Responsive : ≥1632 = 3 cols, 1088-1631 = 2 cols, <1088 = 1 col.
- *  - Objectif : cards plus grosses, pas 4-5 cards serrées par rangée.
+ *  - Objectif : densite plus rapprochee handoff design, moins de blanc.
+ *  - Responsive : >=1386 = 3 cols (3x442+2x20), 924-1385 = 2 cols, <924 = 1 col.
  */
 function GridContainer({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, 520px)",
+        gridTemplateColumns: "repeat(auto-fill, 442px)",
         justifyContent: "center",
-        gap: 24,
+        gap: 20,
         width: "100%",
         margin: "0 auto",
       }}
