@@ -5,6 +5,8 @@ interface ModalProps {
   open: boolean
   onClose: () => void
   title: string
+  /** Eyebrow optionnel (uppercase letterSpacing 1.4px) affichée au-dessus du titre. */
+  eyebrow?: string
   children: ReactNode
   /** Largeur max en px — défaut 560 */
   maxWidth?: number
@@ -17,16 +19,18 @@ interface ModalProps {
 }
 
 /**
- * Modale réutilisable : backdrop sombre + card blanche centrée + ESC/clic-dehors pour fermer.
+ * Modale réutilisable — calque handoff modals.jsx (editorial) :
+ * overlay noir blur 8px, card radius 24 + hairline beige, titre Fraunces italic,
+ * footer fond beige F7F4EF, header/footer hairline #EAE6DF.
  *
- * Design cohérent avec le système KeyMatch (radius 20, DM Sans, #111).
- * À utiliser pour flux secondaires (sélection équipements, aide contextuelle, confirmation)
- * plutôt que navigation vers une page dédiée.
+ * À utiliser pour flux secondaires (sélection équipements, aide contextuelle,
+ * confirmation) plutôt que navigation vers une page dédiée.
  */
 export default function Modal({
   open,
   onClose,
   title,
+  eyebrow,
   children,
   maxWidth = 560,
   showClose = true,
@@ -52,14 +56,21 @@ export default function Modal({
 
   return (
     <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,500&display=swap');
+        @keyframes nm-modal-fade { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes nm-modal-rise { from { opacity: 0; transform: translate(-50%, -48%) } to { opacity: 1; transform: translate(-50%, -50%) } }
+      `}</style>
       <div
         onClick={strict ? undefined : onClose}
         style={{
           position: "fixed",
           inset: 0,
-          background: "rgba(0,0,0,0.55)",
+          background: "rgba(17,17,17,0.55)",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
           zIndex: 9000,
-          animation: "nm-modal-fade 0.15s ease-out",
+          animation: "nm-modal-fade 0.18s ease-out",
         }}
       />
       <div
@@ -71,57 +82,81 @@ export default function Modal({
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
-          background: "white",
-          borderRadius: 20,
+          background: "#fff",
+          border: "1px solid #EAE6DF",
+          borderRadius: 24,
           width: `min(${maxWidth}px, 94vw)`,
           maxHeight: "92vh",
           display: "flex",
           flexDirection: "column",
-          boxShadow: "0 24px 64px rgba(0,0,0,0.28)",
+          boxShadow: "0 24px 64px rgba(17,17,17,0.22)",
           zIndex: 9001,
           fontFamily: "'DM Sans', sans-serif",
           overflow: "hidden",
+          animation: "nm-modal-rise 0.22s cubic-bezier(0.22, 1, 0.36, 1)",
         }}
       >
-        {/* Header */}
+        {/* Header — hairline beige */}
         <div
           style={{
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             justifyContent: "space-between",
-            padding: "20px 24px",
-            borderBottom: "1px solid #f3f4f6",
+            padding: "22px 28px 18px",
+            borderBottom: "1px solid #EAE6DF",
             flexShrink: 0,
+            gap: 16,
           }}
         >
-          <h2
-            id="nm-modal-title"
-            style={{
-              fontSize: 18,
-              fontWeight: 800,
-              margin: 0,
-              letterSpacing: "-0.2px",
-              color: "#111",
-            }}
-          >
-            {title}
-          </h2>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {eyebrow && (
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 6px" }}>
+                {eyebrow}
+              </p>
+            )}
+            <h2
+              id="nm-modal-title"
+              style={{
+                fontFamily: "'Fraunces', Georgia, serif",
+                fontStyle: "italic",
+                fontWeight: 500,
+                fontSize: 22,
+                lineHeight: 1.2,
+                letterSpacing: "-0.3px",
+                margin: 0,
+                color: "#111",
+              }}
+            >
+              {title}
+            </h2>
+          </div>
           {showClose && (
             <button
               onClick={onClose}
               aria-label="Fermer"
               style={{
-                background: "none",
-                border: "none",
-                fontSize: 22,
-                color: "#6b7280",
+                background: "#F7F4EF",
+                border: "1px solid #EAE6DF",
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                color: "#111",
                 cursor: "pointer",
-                padding: 4,
-                lineHeight: 1,
+                padding: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 fontFamily: "inherit",
+                flexShrink: 0,
+                transition: "background 200ms ease",
               }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#EAE6DF" }}
+              onMouseLeave={e => { e.currentTarget.style.background = "#F7F4EF" }}
             >
-              ×
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
             </button>
           )}
         </div>
@@ -129,35 +164,34 @@ export default function Modal({
         {/* Body scrollable */}
         <div
           style={{
-            padding: "20px 24px",
+            padding: "22px 28px",
             overflowY: "auto",
             flex: 1,
             fontSize: 14,
-            lineHeight: 1.55,
+            lineHeight: 1.6,
             color: "#111",
           }}
         >
           {children}
         </div>
 
-        {/* Footer optionnel */}
+        {/* Footer optionnel — fond beige, hairline */}
         {footer && (
           <div
             style={{
-              padding: "16px 24px",
-              borderTop: "1px solid #f3f4f6",
+              padding: "16px 28px",
+              borderTop: "1px solid #EAE6DF",
               display: "flex",
               gap: 10,
               justifyContent: "flex-end",
               flexShrink: 0,
-              background: "#fafafa",
+              background: "#F7F4EF",
             }}
           >
             {footer}
           </div>
         )}
       </div>
-      <style>{`@keyframes nm-modal-fade { from { opacity: 0 } to { opacity: 1 } }`}</style>
     </>
   )
 }

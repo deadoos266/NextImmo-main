@@ -3064,14 +3064,14 @@ function MessagesInner() {
                         type="button"
                         onClick={accepterLocation}
                         disabled={accepteEnCours}
-                        style={{ background: accepteEnCours ? "#8a8477" : "#16a34a", color: "white", border: "none", borderRadius: 999, padding: "8px 18px", fontWeight: 700, fontSize: 13, cursor: accepteEnCours ? "wait" : "pointer", fontFamily: "inherit", letterSpacing: "0.1px" }}>
+                        style={{ background: accepteEnCours ? "#8a8477" : "#111", color: "#fff", border: "none", borderRadius: 999, padding: "10px 20px", fontWeight: 600, fontSize: 12, cursor: accepteEnCours ? "wait" : "pointer", fontFamily: "inherit", letterSpacing: "0.3px" }}>
                         {accepteEnCours ? "Enregistrement…" : "Confirmer la location"}
                       </button>
                       <button
                         type="button"
                         onClick={() => setAccepterLocationOpen(false)}
                         disabled={accepteEnCours}
-                        style={{ background: "white", color: "#111", border: "1px solid #EAE6DF", borderRadius: 999, padding: "8px 18px", fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+                        style={{ background: "#fff", color: "#111", border: "1px solid #EAE6DF", borderRadius: 999, padding: "10px 20px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit", letterSpacing: "0.3px" }}>
                         Annuler
                       </button>
                     </div>
