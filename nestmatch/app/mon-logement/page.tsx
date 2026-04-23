@@ -399,7 +399,7 @@ export default function MonLogement() {
 
   if (status === "loading" || loading) {
     return (
-      <main style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif", color: "#6b7280" }}>
+      <main style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif", color: "#8a8477" }}>
         Chargement...
       </main>
     )
@@ -408,18 +408,19 @@ export default function MonLogement() {
   if (!bien) {
     return (
       <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: isMobile ? "32px 16px" : "48px 24px" }}>
-        <div style={{ maxWidth: 720, margin: "0 auto", background: "white", borderRadius: 20, padding: isMobile ? 24 : 40, textAlign: "center" }}>
-          <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, letterSpacing: "-0.5px", marginBottom: 12 }}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,500&display=swap');`}</style>
+        <div style={{ maxWidth: 720, margin: "0 auto", background: "#fff", border: "1px solid #EAE6DF", borderRadius: 20, padding: isMobile ? 32 : 48, textAlign: "center", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+          <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: isMobile ? 26 : 32, lineHeight: 1.15, letterSpacing: "-0.4px", color: "#111", marginBottom: 12 }}>
             Aucun logement actif
           </h1>
-          <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.6, marginBottom: 24 }}>
+          <p style={{ fontSize: 14, color: "#8a8477", lineHeight: 1.6, marginBottom: 28, maxWidth: 480, margin: "0 auto 28px" }}>
             Vous n&apos;avez pas encore signé de bail via {BRAND.name}. Retrouvez vos candidatures en cours pour suivre leur avancement.
           </p>
           <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-            <Link href="/mes-candidatures" style={{ background: "#111", color: "white", padding: "12px 24px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>
+            <Link href="/mes-candidatures" style={{ background: "#111", color: "#fff", padding: "12px 26px", borderRadius: 999, textDecoration: "none", fontWeight: 600, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.3px" }}>
               Mes candidatures
             </Link>
-            <Link href="/annonces" style={{ background: "white", border: "1.5px solid #e5e7eb", color: "#111", padding: "12px 24px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>
+            <Link href="/annonces" style={{ background: "#fff", border: "1px solid #EAE6DF", color: "#111", padding: "12px 26px", borderRadius: 999, textDecoration: "none", fontWeight: 600, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.3px" }}>
               Parcourir les annonces
             </Link>
           </div>
@@ -439,16 +440,17 @@ export default function MonLogement() {
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px 24px" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,500&display=swap');`}</style>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
 
         {/* En-tête */}
-        <p style={{ fontSize: 11, fontWeight: 700, color: "#16a34a", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "1.4px", marginBottom: 10 }}>
           Bail actif
         </p>
-        <h1 style={{ fontSize: isMobile ? 24 : 32, fontWeight: 800, letterSpacing: "-0.5px", marginBottom: 8 }}>
+        <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: isMobile ? 32 : 40, lineHeight: 1.1, letterSpacing: "-0.6px", color: "#111", margin: "0 0 10px" }}>
           Mon logement actuel
         </h1>
-        <p style={{ fontSize: 14, color: "#6b7280", marginBottom: 20 }}>
+        <p style={{ fontSize: 14, color: "#8a8477", marginBottom: 24, maxWidth: 520, lineHeight: 1.6 }}>
           Retrouvez ici votre logement, votre propriétaire, et tous vos documents.
         </p>
 
@@ -459,33 +461,35 @@ export default function MonLogement() {
         {/* Carte principale du bien */}
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
           {/* Visuel */}
-          <div style={{ background: "white", borderRadius: 20, overflow: "hidden", border: "1px solid #e5e7eb" }}>
+          <div style={{ background: "#fff", borderRadius: 20, overflow: "hidden", border: "1px solid #EAE6DF", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
             <div style={{
               height: isMobile ? 180 : 240,
               background: photoPrincipale
                 ? `url(${photoPrincipale}) center/cover no-repeat`
-                : "linear-gradient(135deg, #d4e8e0, #b8d4c8)",
+                : "linear-gradient(135deg, #F7F4EF, #EAE6DF)",
             }} />
-            <div style={{ padding: 20 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 6px", letterSpacing: "-0.3px" }}>{bien.titre}</h2>
-              <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 14px" }}>
-                {bien.adresse ? `${bien.adresse} · ` : ""}{bien.ville}
+            <div style={{ padding: 22 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 6px", letterSpacing: "-0.3px", color: "#111" }}>{bien.titre}</h2>
+              <p style={{ fontSize: 13, color: "#8a8477", margin: "0 0 14px" }}>
+                {bien.adresse ? <>{bien.adresse} <span style={{ color: "#EAE6DF" }}>·</span> </> : ""}{bien.ville}
               </p>
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", fontSize: 13, color: "#374151" }}>
-                {bien.surface && <span><strong>{bien.surface} m²</strong></span>}
-                {bien.pieces && <span><strong>{bien.pieces}</strong> pièces</span>}
-                {bien.dpe && <span>DPE <strong>{bien.dpe}</strong></span>}
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 13, color: "#111" }}>
+                {bien.surface && <span><strong style={{ fontWeight: 600 }}>{bien.surface} m²</strong></span>}
+                {bien.surface && bien.pieces && <span style={{ color: "#EAE6DF" }}>·</span>}
+                {bien.pieces && <span><strong style={{ fontWeight: 600 }}>{bien.pieces}</strong> pièces</span>}
+                {bien.dpe && <span style={{ color: "#EAE6DF" }}>·</span>}
+                {bien.dpe && <span>DPE <strong style={{ fontWeight: 600 }}>{bien.dpe}</strong></span>}
               </div>
             </div>
           </div>
 
           {/* Infos bail + contact */}
-          <div style={{ background: "white", borderRadius: 20, padding: 24, border: "1px solid #e5e7eb", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ background: "#fff", borderRadius: 20, padding: 26, border: "1px solid #EAE6DF", boxShadow: "0 1px 2px rgba(0,0,0,0.02)", display: "flex", flexDirection: "column", gap: 18 }}>
             <div>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>Loyer mensuel</p>
-              <p style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>{loyerTotal} €<span style={{ fontSize: 14, color: "#6b7280", fontWeight: 500 }}>/mois</span></p>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.4px", marginBottom: 6 }}>Loyer mensuel</p>
+              <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 32, margin: 0, color: "#111", letterSpacing: "-0.5px" }}>{loyerTotal} €<span style={{ fontSize: 14, color: "#8a8477", fontWeight: 400, fontFamily: "'DM Sans', sans-serif", fontStyle: "normal" }}>/mois</span></p>
               {bien.charges ? (
-                <p style={{ fontSize: 12, color: "#6b7280", margin: "4px 0 0" }}>
+                <p style={{ fontSize: 12, color: "#8a8477", margin: "4px 0 0" }}>
                   dont {bien.charges} € de charges
                 </p>
               ) : null}
@@ -493,21 +497,21 @@ export default function MonLogement() {
 
             {bien.date_debut_bail && (
               <div>
-                <p style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>Début du bail</p>
-                <p style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.4px", marginBottom: 6 }}>Début du bail</p>
+                <p style={{ fontSize: 15, fontWeight: 600, margin: 0, color: "#111" }}>
                   {new Date(bien.date_debut_bail).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
                 </p>
               </div>
             )}
 
             <div>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>Propriétaire</p>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.4px", marginBottom: 6 }}>Propriétaire</p>
               <p style={{ fontSize: 14, margin: 0, color: "#111" }}>{bien.proprietaire_email}</p>
             </div>
 
             <Link
               href={`/messages?with=${encodeURIComponent(bien.proprietaire_email)}`}
-              style={{ background: "#111", color: "white", borderRadius: 999, padding: "12px 24px", textAlign: "center", textDecoration: "none", fontWeight: 700, fontSize: 14 }}
+              style={{ background: "#111", color: "#fff", borderRadius: 999, padding: "13px 26px", textAlign: "center", textDecoration: "none", fontWeight: 600, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.3px" }}
             >
               Contacter mon propriétaire
             </Link>
@@ -516,44 +520,45 @@ export default function MonLogement() {
 
         {/* Raccourcis */}
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
-          <QuickLink href="/visites" title="Visites à venir" value={String(visitesAVenir)} bg="#eff6ff" color="#1d4ed8" />
-          <QuickLink href="/carnet" title="Carnet d'entretien" value="Accéder" bg="#fef3c7" color="#92400e" />
-          <QuickLink href={`/annonces/${bien.id}`} title="Fiche du bien" value="Consulter" bg="#f3f4f6" color="#111" />
-          <QuickLink href="/dossier" title="Mon dossier" value="Mettre à jour" bg="#f0fdf4" color="#15803d" />
+          <QuickLink href="/visites" title="Visites à venir" value={String(visitesAVenir)} bg="#EEF3FB" border="#D7E3F4" color="#1d4ed8" />
+          <QuickLink href="/carnet" title="Carnet d'entretien" value="Accéder" bg="#FBF6EA" border="#EADFC6" color="#a16207" />
+          <QuickLink href={`/annonces/${bien.id}`} title="Fiche du bien" value="Consulter" bg="#F7F4EF" border="#EAE6DF" color="#111" />
+          <QuickLink href="/dossier" title="Mon dossier" value="Mettre à jour" bg="#F0FAEE" border="#C6E9C0" color="#15803d" />
         </div>
 
         {/* ─── États des lieux ─── */}
-        <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 20 : 24, marginBottom: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 12, flexWrap: "wrap" }}>
-            <h2 style={{ fontSize: 17, fontWeight: 800, margin: 0, letterSpacing: "-0.3px" }}>États des lieux</h2>
+        <div style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 20, padding: isMobile ? 22 : 26, marginBottom: 16, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
+            <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, margin: 0, letterSpacing: "-0.3px", color: "#111" }}>États des lieux</h2>
             {edls.some(e => e.statut === "envoye") && (
-              <span style={{ background: "#fff7ed", color: "#c2410c", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
+              <span style={{ background: "#FBF6EA", color: "#a16207", border: "1px solid #EADFC6", padding: "4px 12px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
                 Action requise
               </span>
             )}
           </div>
           {edls.length === 0 ? (
-            <p style={{ fontSize: 13, color: "#9ca3af", margin: 0 }}>Aucun état des lieux pour l&apos;instant.</p>
+            <p style={{ fontSize: 13, color: "#8a8477", margin: 0 }}>Aucun état des lieux pour l&apos;instant.</p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {edls.map(e => {
                 const typeLabel = e.type === "entree" ? "Entrée" : "Sortie"
                 const dateStr = e.date_edl ? new Date(e.date_edl).toLocaleDateString("fr-FR") : ""
                 const statutStyle = e.statut === "valide"
-                  ? { bg: "#dcfce7", color: "#15803d", label: "Validé" }
+                  ? { bg: "#F0FAEE", color: "#15803d", border: "#C6E9C0", label: "Validé" }
                   : e.statut === "conteste"
-                  ? { bg: "#fee2e2", color: "#dc2626", label: "Contesté" }
+                  ? { bg: "#FEECEC", color: "#b91c1c", border: "#F4C9C9", label: "Contesté" }
                   : e.statut === "envoye"
-                  ? { bg: "#fff7ed", color: "#c2410c", label: "À valider" }
-                  : { bg: "#f3f4f6", color: "#6b7280", label: e.statut }
+                  ? { bg: "#FBF6EA", color: "#a16207", border: "#EADFC6", label: "À valider" }
+                  : { bg: "#F7F4EF", color: "#6b6559", border: "#EAE6DF", label: e.statut }
                 return (
                   <Link key={e.id} href={`/edl/consulter/${e.id}`}
-                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", border: "1px solid #e5e7eb", borderRadius: 12, textDecoration: "none", color: "#111", gap: 10 }}>
+                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", border: "1px solid #EAE6DF", borderRadius: 14, textDecoration: "none", color: "#111", gap: 10, background: "#fff" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
-                      <span style={{ fontWeight: 700, fontSize: 13 }}>EDL {typeLabel}</span>
-                      <span style={{ color: "#6b7280", fontSize: 12 }}>{dateStr}</span>
+                      <span style={{ fontWeight: 600, fontSize: 13, color: "#111" }}>EDL {typeLabel}</span>
+                      <span style={{ color: "#EAE6DF" }}>·</span>
+                      <span style={{ color: "#8a8477", fontSize: 12 }}>{dateStr}</span>
                     </div>
-                    <span style={{ background: statutStyle.bg, color: statutStyle.color, padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{statutStyle.label}</span>
+                    <span style={{ background: statutStyle.bg, color: statutStyle.color, border: `1px solid ${statutStyle.border}`, padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 700, flexShrink: 0, textTransform: "uppercase", letterSpacing: "1.2px" }}>{statutStyle.label}</span>
                   </Link>
                 )
               })}
@@ -568,33 +573,36 @@ export default function MonLogement() {
             .filter(x => x.jours > 0)
           const retardMax = retards.reduce((m, x) => x.jours > m.jours ? x : m, { l: null as any, jours: 0 })
           return (
-            <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 20 : 24, marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 10, flexWrap: "wrap" }}>
-                <h2 style={{ fontSize: 17, fontWeight: 800, margin: 0, letterSpacing: "-0.3px" }}>Mes loyers</h2>
+            <div style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 20, padding: isMobile ? 22 : 26, marginBottom: 16, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 10, flexWrap: "wrap" }}>
+                <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, margin: 0, letterSpacing: "-0.3px", color: "#111" }}>Mes loyers</h2>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                   {retards.length > 0 && (
-                    <span style={{ background: "#fef2f2", border: "1.5px solid #fecaca", color: "#b91c1c", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
-                      {retards.length} loyer{retards.length > 1 ? "s" : ""} en retard
+                    <span style={{ background: "#FEECEC", border: "1px solid #F4C9C9", color: "#b91c1c", padding: "4px 12px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
+                      {retards.length} en retard
                     </span>
                   )}
                   {loyers.length > 0 && (
                     <button type="button" onClick={exportHistoriqueLoyersPDF} disabled={exportingPdf}
-                      style={{ background: "white", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "4px 12px", fontSize: 12, fontWeight: 700, color: "#111", cursor: exportingPdf ? "wait" : "pointer", fontFamily: "inherit", opacity: exportingPdf ? 0.6 : 1 }}>
+                      style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 999, padding: "7px 16px", fontSize: 11, fontWeight: 600, color: "#111", cursor: exportingPdf ? "wait" : "pointer", fontFamily: "inherit", opacity: exportingPdf ? 0.6 : 1, textTransform: "uppercase", letterSpacing: "0.3px" }}>
                       {exportingPdf ? "Export…" : "Télécharger PDF"}
                     </button>
                   )}
                 </div>
               </div>
               {retardMax.l && (
-                <div style={{ background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 12, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#991b1b", lineHeight: 1.5 }}>
-                  <strong>Retard de paiement</strong> — votre loyer {new Date(retardMax.l.mois + "-01T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })} est en retard de {retardMax.jours} jour{retardMax.jours > 1 ? "s" : ""}. Contactez votre propriétaire dès que possible.
+                <div style={{ background: "#FEECEC", border: "1px solid #F4C9C9", borderRadius: 14, padding: "12px 16px", marginBottom: 12, fontSize: 13, color: "#b91c1c", lineHeight: 1.5 }}>
+                  <strong style={{ fontWeight: 600 }}>Retard de paiement</strong> — votre loyer {new Date(retardMax.l.mois + "-01T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })} est en retard de {retardMax.jours} jour{retardMax.jours > 1 ? "s" : ""}. Contactez votre propriétaire dès que possible.
                 </div>
               )}
 
               {/* Auto-paiement actif → badge info */}
               {bien.auto_paiement_actif && (
-                <div style={{ background: "#dcfce7", border: "1.5px solid #86efac", borderRadius: 12, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#15803d", fontWeight: 600 }}>
-                  ✓ Virement automatique actif — vos loyers sont confirmés automatiquement chaque mois.
+                <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 14, padding: "12px 16px", marginBottom: 12, fontSize: 13, color: "#15803d", fontWeight: 500, display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#DCF5E4", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                  Virement automatique actif — vos loyers sont confirmés automatiquement chaque mois.
                 </div>
               )}
 
@@ -608,13 +616,13 @@ export default function MonLogement() {
                 // Si auto-paiement actif : rien à afficher, le mois est déjà auto-créé
                 if (bien.auto_paiement_actif || dejaConfirme) return null
                 return (
-                  <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 12, padding: "12px 16px", marginBottom: 12 }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+                  <div style={{ background: "#EEF3FB", border: "1px solid #D7E3F4", borderRadius: 14, padding: "14px 18px", marginBottom: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
                       <div style={{ flex: 1, minWidth: 160 }}>
-                        <p style={{ fontSize: 13, fontWeight: 700, color: "#1e40af", margin: 0, textTransform: "capitalize" }}>
+                        <p style={{ fontSize: 10, fontWeight: 700, color: "#1d4ed8", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: "1.2px" }}>
                           Loyer de {moisLabel}
                         </p>
-                        <p style={{ fontSize: 12, color: "#1e40af", margin: "2px 0 0", opacity: 0.85 }}>
+                        <p style={{ fontSize: 13, color: "#1e40af", margin: 0 }}>
                           {dejaDeclare
                             ? "Paiement signalé — en attente de confirmation par votre propriétaire."
                             : "Signalez votre paiement."}
@@ -623,25 +631,25 @@ export default function MonLogement() {
                       {!dejaDeclare && (
                         <button
                           onClick={() => declarerPaiement(moisCourant)}
-                          style={{ background: "#1d4ed8", color: "white", border: "none", borderRadius: 999, padding: "9px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                          style={{ background: "#111", color: "#fff", border: "none", borderRadius: 999, padding: "9px 18px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}
                         >
-                          ✓ J&apos;ai payé
+                          J&apos;ai payé
                         </button>
                       )}
                     </div>
-                    <div style={{ borderTop: "1px solid #bfdbfe", paddingTop: 8, marginTop: 4 }}>
+                    <div style={{ borderTop: "1px solid #D7E3F4", paddingTop: 10 }}>
                       <button
                         onClick={demanderAutoPaiement}
-                        style={{ background: "none", border: "1.5px dashed #1d4ed8", color: "#1d4ed8", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" }}
+                        style={{ background: "transparent", border: "1px dashed #1d4ed8", color: "#1d4ed8", borderRadius: 999, padding: "8px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", width: "100%", textTransform: "uppercase", letterSpacing: "0.3px" }}
                       >
-                        🔄 J&apos;ai mis en place un virement automatique
+                        J&apos;ai mis en place un virement automatique
                       </button>
                     </div>
                   </div>
                 )
               })()}
               {loyers.length === 0 ? (
-                <p style={{ fontSize: 13, color: "#9ca3af", margin: 0 }}>Aucun loyer enregistré pour l&apos;instant.</p>
+                <p style={{ fontSize: 13, color: "#8a8477", margin: 0 }}>Aucun loyer enregistré pour l&apos;instant.</p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {loyers.map(l => {
@@ -652,18 +660,20 @@ export default function MonLogement() {
                     const quittanceEnvoyee = !!l.quittance_envoyee_at
                     const jRetard = joursRetardLoyer(l.mois, l.statut)
                     const enRetard = jRetard > 0
+                    const rowBg = confirmed ? "#F0FAEE" : enRetard ? "#FEECEC" : "#FBF6EA"
+                    const rowBorder = confirmed ? "#C6E9C0" : enRetard ? "#F4C9C9" : "#EADFC6"
                     return (
-                      <div key={l.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", border: `1px solid ${enRetard ? "#fecaca" : "#e5e7eb"}`, borderRadius: 12, gap: 10, background: enRetard ? "#fef2f2" : "white" }}>
+                      <div key={l.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", border: `1px solid ${rowBorder}`, borderRadius: 14, gap: 10, background: rowBg }}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1, minWidth: 0 }}>
-                          <span style={{ fontWeight: 700, fontSize: 13, textTransform: "capitalize" }}>{moisLabel}</span>
-                          <span style={{ color: "#6b7280", fontSize: 12 }}>{l.montant} €</span>
+                          <span style={{ fontWeight: 600, fontSize: 13, textTransform: "capitalize", color: "#111" }}>{moisLabel}</span>
+                          <span style={{ color: "#8a8477", fontSize: 12 }}>{l.montant} €</span>
                         </div>
                         <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
-                          <span style={{ background: confirmed ? "#dcfce7" : enRetard ? "#fee2e2" : "#fff7ed", color: confirmed ? "#15803d" : enRetard ? "#b91c1c" : "#c2410c", padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
-                            {confirmed ? "Payé" : enRetard ? `En retard ${jRetard} j` : "En attente"}
+                          <span style={{ background: "#fff", color: confirmed ? "#15803d" : enRetard ? "#b91c1c" : "#a16207", border: `1px solid ${rowBorder}`, padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
+                            {confirmed ? "Payé" : enRetard ? `Retard ${jRetard} j` : "En attente"}
                           </span>
                           {quittanceEnvoyee && (
-                            <Link href="/messages" style={{ fontSize: 11, color: "#1d4ed8", fontWeight: 700, textDecoration: "none" }}>Quittance →</Link>
+                            <Link href="/messages" style={{ fontSize: 10, color: "#111", fontWeight: 600, textDecoration: "none", textTransform: "uppercase", letterSpacing: "0.3px" }}>Quittance →</Link>
                           )}
                         </div>
                       </div>
@@ -682,40 +692,46 @@ export default function MonLogement() {
           const dejaSigne = !!sigLocataire
           const doubleSigne = !!sigLocataire && !!sigBailleur
           return (
-            <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 20 : 24, marginBottom: 16 }}>
+            <div style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 20, padding: isMobile ? 22 : 26, marginBottom: 16, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 10, flexWrap: "wrap" }}>
-                <h2 style={{ fontSize: 17, fontWeight: 800, margin: 0, letterSpacing: "-0.3px" }}>Mon bail</h2>
+                <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, margin: 0, letterSpacing: "-0.3px", color: "#111" }}>Mon bail</h2>
                 {doubleSigne ? (
-                  <span style={{ background: "#dcfce7", color: "#15803d", padding: "4px 12px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
-                    Signé par les deux parties ✓
+                  <span style={{ background: "#F0FAEE", color: "#15803d", border: "1px solid #C6E9C0", padding: "4px 12px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
+                    Signé par les deux parties
                   </span>
                 ) : dejaSigne ? (
-                  <span style={{ background: "#dcfce7", color: "#15803d", padding: "4px 12px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
-                    Signé par vous — en attente du propriétaire
+                  <span style={{ background: "#F0FAEE", color: "#15803d", border: "1px solid #C6E9C0", padding: "4px 12px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
+                    Signé — en attente du propriétaire
                   </span>
                 ) : (
-                  <span style={{ background: "#fff7ed", color: "#ea580c", padding: "4px 12px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
-                    Action requise : signer
+                  <span style={{ background: "#FBF6EA", color: "#a16207", border: "1px solid #EADFC6", padding: "4px 12px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
+                    Action requise — signer
                   </span>
                 )}
               </div>
               {bien.date_debut_bail && (
-                <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 12px" }}>
+                <p style={{ fontSize: 13, color: "#8a8477", margin: "0 0 14px" }}>
                   Bail du {new Date(bien.date_debut_bail).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}{bailFichierUrl ? " — document fourni par votre propriétaire" : " — généré via KeyMatch"}.
                 </p>
               )}
 
               {/* Résumé signatures */}
               {signatures.length > 0 && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
                   {sigLocataire && (
-                    <div style={{ fontSize: 12, color: "#15803d", fontWeight: 600 }}>
-                      ✓ Vous avez signé le {new Date(sigLocataire.signeAt).toLocaleDateString("fr-FR")}
+                    <div style={{ fontSize: 13, color: "#15803d", fontWeight: 500, display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ width: 20, height: 20, borderRadius: "50%", background: "#DCF5E4", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      </span>
+                      Vous avez signé le {new Date(sigLocataire.signeAt).toLocaleDateString("fr-FR")}
                     </div>
                   )}
                   {sigBailleur && (
-                    <div style={{ fontSize: 12, color: "#15803d", fontWeight: 600 }}>
-                      ✓ Votre propriétaire a signé le {new Date(sigBailleur.signeAt).toLocaleDateString("fr-FR")}
+                    <div style={{ fontSize: 13, color: "#15803d", fontWeight: 500, display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ width: 20, height: 20, borderRadius: "50%", background: "#DCF5E4", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      </span>
+                      Votre propriétaire a signé le {new Date(sigBailleur.signeAt).toLocaleDateString("fr-FR")}
                     </div>
                   )}
                 </div>
@@ -725,23 +741,23 @@ export default function MonLogement() {
                 {!dejaSigne && bien && (
                   <button
                     onClick={() => setSignModalOpen(true)}
-                    style={{ background: "#15803d", color: "white", border: "none", borderRadius: 999, padding: "10px 22px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
+                    style={{ background: "#111", color: "#fff", border: "none", borderRadius: 999, padding: "11px 24px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}
                   >
-                    ✍ Signer le bail
+                    Signer le bail
                   </button>
                 )}
                 <button
                   onClick={telechargerBail}
                   disabled={downloadingBail}
-                  style={{ background: "white", border: "1.5px solid #111", color: "#111", borderRadius: 999, padding: "10px 22px", fontWeight: 700, fontSize: 14, cursor: downloadingBail ? "wait" : "pointer", fontFamily: "inherit" }}
+                  style={{ background: "#fff", border: "1px solid #EAE6DF", color: "#111", borderRadius: 999, padding: "11px 24px", fontWeight: 600, fontSize: 12, cursor: downloadingBail ? "wait" : "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}
                 >
-                  {downloadingBail ? "Téléchargement…" : "📄 Télécharger le bail (PDF)"}
+                  {downloadingBail ? "Téléchargement…" : "Télécharger le bail (PDF)"}
                 </button>
               </div>
 
               {doubleSigne && edls.length === 0 && (
-                <div style={{ marginTop: 16, padding: "12px 14px", background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 12, fontSize: 13, color: "#1e40af", lineHeight: 1.6 }}>
-                  📋 <strong>Prochaine étape :</strong> état des lieux d&apos;entrée avec votre propriétaire.
+                <div style={{ marginTop: 16, padding: "14px 18px", background: "#EEF3FB", border: "1px solid #D7E3F4", borderRadius: 14, fontSize: 13, color: "#1e40af", lineHeight: 1.6 }}>
+                  <strong style={{ fontWeight: 600 }}>Prochaine étape :</strong> état des lieux d&apos;entrée avec votre propriétaire.
                   Vous le retrouverez ici dès qu&apos;il sera créé.
                 </div>
               )}
@@ -765,11 +781,11 @@ export default function MonLogement() {
   )
 }
 
-function QuickLink({ href, title, value, bg, color }: { href: string; title: string; value: string; bg: string; color: string }) {
+function QuickLink({ href, title, value, bg, border, color }: { href: string; title: string; value: string; bg: string; border: string; color: string }) {
   return (
-    <Link href={href} style={{ background: bg, borderRadius: 14, padding: "14px 16px", textDecoration: "none", display: "block" }}>
-      <p style={{ fontSize: 11, fontWeight: 700, color, textTransform: "uppercase", letterSpacing: "0.4px", margin: "0 0 4px" }}>{title}</p>
-      <p style={{ fontSize: 16, fontWeight: 800, margin: 0, color: "#111" }}>{value}</p>
+    <Link href={href} style={{ background: bg, border: `1px solid ${border}`, borderRadius: 16, padding: "16px 18px", textDecoration: "none", display: "block" }}>
+      <p style={{ fontSize: 10, fontWeight: 700, color, textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 6px" }}>{title}</p>
+      <p style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "#111", letterSpacing: "-0.2px" }}>{value}</p>
     </Link>
   )
 }
