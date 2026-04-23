@@ -3208,7 +3208,7 @@ function MessagesInner() {
                                 }
                               }}
                             >
-                              <div style={{ padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: isMine ? "#111" : "#f3f4f6", color: isMine ? "white" : "#111" }}>
+                              <div style={{ padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: isMine ? "#111" : "#fff", color: isMine ? "white" : "#111", border: isMine ? "none" : "1px solid #EAE6DF", boxShadow: isMine ? "none" : "0 1px 2px rgba(0,0,0,0.03)", letterSpacing: "-0.1px" }}>
                                 {/* Quote du message auquel on répond */}
                                 {quoted && quotedText && (
                                   <div
@@ -3420,18 +3420,26 @@ function MessagesInner() {
                     </div>
                   )}
                   {peerTyping && (
-                    <div aria-live="polite" style={{ fontSize: 11, color: "#9ca3af", marginBottom: 6, fontStyle: "italic", paddingLeft: 4 }}>
-                      En train d&apos;écrire…
+                    <div aria-live="polite" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, paddingLeft: 4 }}>
+                      <style>{`@keyframes km-typing { 0%,60%,100%{opacity:0.3;transform:translateY(0)} 30%{opacity:1;transform:translateY(-3px)} }`}</style>
+                      <span style={{ display: "inline-flex", gap: 4, padding: "8px 12px", background: "#F7F4EF", border: "1px solid #EAE6DF", borderRadius: 14 }}>
+                        {[0, 1, 2].map(i => (
+                          <span key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "#8a8477", animation: "km-typing 1.2s ease-in-out infinite", animationDelay: `${i * 150}ms` }} />
+                        ))}
+                      </span>
+                      <span style={{ fontSize: 11, color: "#8a8477" }}>En train d&apos;écrire…</span>
                     </div>
                   )}
-                  <div style={{ display: "flex", gap: 10 }}>
+                  {/* Composer handoff L401-419 : container beige pill avec input transparent + bouton rond */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F7F4EF", borderRadius: 24, padding: "6px 6px 6px 18px", border: "1px solid #EAE6DF" }}>
                     <input ref={inputRef} value={nouveau} onChange={e => { setNouveau(e.target.value); signalTyping() }}
                       onKeyDown={e => e.key === "Enter" && !e.shiftKey && envoyer()}
-                      placeholder={replyTo ? "Votre réponse…" : "Votre message…"}
-                      style={{ flex: 1, padding: "11px 16px", border: "1.5px solid #e5e7eb", borderRadius: 999, fontSize: 16, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }} />
+                      placeholder={replyTo ? "Votre réponse…" : "Votre message… (↵ pour envoyer)"}
+                      style={{ flex: 1, padding: "10px 0", border: "none", background: "transparent", fontSize: 14, outline: "none", fontFamily: "inherit", color: "#111", letterSpacing: "-0.1px" }} />
                     <button onClick={envoyer} disabled={envoi || !nouveau.trim()}
-                      style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "0 22px", fontWeight: 700, fontSize: 14, cursor: envoi || !nouveau.trim() ? "not-allowed" : "pointer", opacity: envoi || !nouveau.trim() ? 0.4 : 1, fontFamily: "inherit" }}>
-                      Envoyer
+                      aria-label="Envoyer le message"
+                      style={{ background: nouveau.trim() && !envoi ? "#111" : "#EAE6DF", color: nouveau.trim() && !envoi ? "white" : "#8a8477", border: "none", borderRadius: "50%", width: 38, height: 38, cursor: envoi || !nouveau.trim() ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 200ms ease" }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                     </button>
                   </div>
                 </div>
