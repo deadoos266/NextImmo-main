@@ -152,6 +152,10 @@ export interface MapAnnoncesProps {
   // userDriven=false au moveend initial (ne doit pas clear les filtres URL)
   onBoundsChange: (bounds: L.LatLngBounds, userDriven: boolean) => void
   centerHint?: [number, number] | null
+  // Favoris (optionnels) — quand passés, un bouton coeur apparait en overlay
+  // sur la photo du popup. Pattern miroir de ListingCardSearch.
+  favoris?: number[]
+  onToggleFavori?: (id: number) => void
 }
 
 export default function MapAnnonces({
@@ -160,6 +164,8 @@ export default function MapAnnonces({
   onSelect,
   onBoundsChange,
   centerHint,
+  favoris,
+  onToggleFavori,
 }: MapAnnoncesProps) {
   useEffect(() => { fixLeafletIcons() }, [])
   const [mapType, setMapType] = useState<MapType>("plan")
@@ -225,6 +231,8 @@ export default function MapAnnonces({
         <CenterOnHint centerHint={centerHint} />
         {withCoords.map(a => {
           const firstPhoto = Array.isArray(a.photos) && a.photos.length > 0 ? a.photos[0] : null
+          const isFavori = Array.isArray(favoris) && favoris.includes(a.id)
+          const canFavori = typeof onToggleFavori === "function"
           return (
             <Marker
               key={a.id}
@@ -235,8 +243,43 @@ export default function MapAnnonces({
               <Popup>
                 <div style={{ fontFamily: "'DM Sans',sans-serif", minWidth: 180 }}>
                   {firstPhoto && (
-                    <div style={{ margin: "-8px -12px 10px", height: 110, overflow: "hidden", borderRadius: "8px 8px 0 0" }}>
+                    <div style={{ margin: "-8px -12px 10px", height: 110, overflow: "hidden", borderRadius: "8px 8px 0 0", position: "relative" }}>
                       <img src={firstPhoto} alt={a.titre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      {canFavori && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            onToggleFavori!(a.id)
+                          }}
+                          aria-label={isFavori ? "Retirer des favoris" : "Ajouter aux favoris"}
+                          title={isFavori ? "Retirer des favoris" : "Ajouter aux favoris"}
+                          style={{
+                            position: "absolute",
+                            top: 8,
+                            right: 8,
+                            width: 30,
+                            height: 30,
+                            borderRadius: 999,
+                            background: "rgba(255,255,255,0.95)",
+                            border: "none",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                            padding: 0,
+                            transition: "transform 0.12s ease",
+                          }}
+                          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.12)" }}
+                          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)" }}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill={isFavori ? "#dc2626" : "none"} stroke={isFavori ? "#dc2626" : "#6b7280"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   )}
                   <p style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{a.titre}</p>

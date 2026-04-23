@@ -399,6 +399,12 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
     setFavoris(getFavoris())
   }
 
+  // Variant sans event (pour MapAnnonces, qui gere lui-meme stopPropagation)
+  function handleToggleFavoriId(id: number) {
+    toggleFavori(id)
+    setFavoris(getFavoris())
+  }
+
   const handleBoundsChange = useCallback((bounds: any, userDriven: boolean) => {
     if (userDriven) setMapBounds(bounds)
   }, [])
@@ -1010,6 +1016,8 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                       onSelect={id => setSelectedId(id)}
                       onBoundsChange={handleBoundsChange}
                       centerHint={centerCity ? [centerCity[0], centerCity[1]] : null}
+                      favoris={favoris}
+                      onToggleFavori={handleToggleFavoriId}
                     />
                   ) : null}
                 </div>
@@ -1117,6 +1125,8 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
               onSelect={id => setSelectedId(id)}
               onBoundsChange={handleBoundsChange}
               centerHint={centerCity ? [centerCity[0], centerCity[1]] : null}
+              favoris={favoris}
+              onToggleFavori={handleToggleFavoriId}
             />
           </div>
         </div>
