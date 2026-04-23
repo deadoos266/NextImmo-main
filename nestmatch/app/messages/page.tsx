@@ -2413,7 +2413,7 @@ function MessagesInner() {
           )
         })()}
       </Modal>
-      <div style={{ maxWidth: isMobile && convActiveData ? "100%" : 1140, margin: "0 auto", padding: isMobile && convActiveData ? 0 : isMobile ? "20px 16px" : "32px 48px" }}>
+      <div style={{ maxWidth: isMobile && convActiveData ? "100%" : 1400, margin: "0 auto", padding: isMobile && convActiveData ? 0 : isMobile ? "20px 16px" : "32px 48px" }}>
         {(!isMobile || !convActiveData) && (
           <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 800, marginBottom: isMobile ? 16 : 24, letterSpacing: "-0.5px", padding: isMobile ? 0 : undefined }}>Messages</h1>
         )}
@@ -3390,6 +3390,167 @@ function MessagesInner() {
               </>
             )}
           </div>
+
+          {/* ── Colonne droite : détails bien + docs + timeline (handoff L448-505) ── */}
+          {!isMobile && convActiveData && (() => {
+            const ann = annonceActive
+            const photo = Array.isArray(ann?.photos) && ann.photos.length > 0 ? ann.photos[0] : null
+            const statut = deriveStatut(convActiveData)
+            const matchPct = compatBadge(computeConvScore(convActiveData))?.pct ?? null
+            // Étapes timeline dérivées du statut (handoff L489-493)
+            type Step = { n: number; label: string; state: "done" | "active" | "todo" }
+            const stepsOrder: Array<{ n: number; label: string }> = [
+              { n: 1, label: "Candidature envoyée" },
+              { n: 2, label: "Dossier partagé" },
+              { n: 3, label: "Visite programmée" },
+              { n: 4, label: "Bail signé" },
+              { n: 5, label: "Emménagement" },
+            ]
+            const activeIdxByStatut: Record<StatutConv, number> = {
+              contact: 0, dossier: 1, visite: 2, bail: 3, rejete: 0,
+            }
+            const activeIdx = activeIdxByStatut[statut]
+            const steps: Step[] = stepsOrder.map((s, i) => ({
+              n: s.n,
+              label: s.label,
+              state: i < activeIdx ? "done" : i === activeIdx ? "active" : "todo",
+            }))
+            // Documents partagés = [DOSSIER_CARD] messages de la conv courante
+            type Doc = { label: string; sub: string; href: string | null }
+            const docs: Doc[] = []
+            for (const m of messages) {
+              if (typeof m.contenu === "string" && m.contenu.startsWith(DOSSIER_PREFIX)) {
+                try {
+                  const d = JSON.parse(m.contenu.slice(DOSSIER_PREFIX.length))
+                  const isSender = m.from_email?.toLowerCase() === myEmail
+                  docs.push({
+                    label: `Dossier · ${d.nom || d.email || (isSender ? "Vous" : "Candidat")}`,
+                    sub: d.score != null ? `Score ${d.score}% · chiffré` : "chiffré",
+                    href: d.shareUrl || null,
+                  })
+                } catch { /* ignore */ }
+              }
+            }
+            return (
+              <aside style={{ width: 300, flexShrink: 0, background: "white", borderRadius: 20, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", display: "flex", flexDirection: "column", overflowY: "auto" }}>
+                {ann ? (
+                  <>
+                    {/* Photo 4/3 + badge MATCH overlay (handoff L453-455) */}
+                    <div style={{ position: "relative", aspectRatio: "4/3", background: photo ? `#000 url(${photo}) center/cover no-repeat` : "#F7F4EF" }}>
+                      {matchPct !== null && (
+                        <div style={{ position: "absolute", top: 12, left: 12, padding: "4px 10px", background: "rgba(255,255,255,0.95)", borderRadius: 999, fontSize: 10, fontWeight: 700, letterSpacing: "1px", color: "#111" }}>
+                          {matchPct}% MATCH
+                        </div>
+                      )}
+                    </div>
+                    {/* Listing card (handoff L456-467) */}
+                    <div style={{ padding: "18px 20px" }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", textTransform: "uppercase" as const, letterSpacing: "1.2px", marginBottom: 6 }}>
+                        {ann.ville || "—"}
+                      </div>
+                      <h3 style={{ fontSize: 16, fontWeight: 500, margin: 0, marginBottom: 14, letterSpacing: "-0.2px", lineHeight: 1.3, color: "#111" }}>
+                        {ann.titre}
+                      </h3>
+                      {typeof ann.prix === "number" && (
+                        <>
+                          <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 4 }}>
+                            <span style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-0.5px", color: "#111" }}>
+                              {ann.prix.toLocaleString("fr-FR")} €
+                            </span>
+                            <span style={{ fontSize: 12, color: "#9ca3af" }}>/mois</span>
+                          </div>
+                          <div style={{ fontSize: 12, color: "#6b7280" }}>
+                            {ann.surface ? `${ann.surface} m²` : ""}{ann.pieces ? ` · ${ann.pieces} p.` : ""}
+                          </div>
+                        </>
+                      )}
+                      <Link href={`/annonces/${convActiveData.annonceId}`} style={{ display: "block", width: "100%", marginTop: 16, padding: "10px 14px", background: "#fff", border: "1px solid #111", borderRadius: 999, fontSize: 12, fontWeight: 600, fontFamily: "inherit", color: "#111", textAlign: "center" as const, textDecoration: "none", boxSizing: "border-box" }}>
+                        Voir l&apos;annonce →
+                      </Link>
+                    </div>
+                    {/* Documents partagés (handoff L468-486) */}
+                    <div style={{ padding: "16px 20px", borderTop: "1px solid #EAE6DF" }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase" as const, letterSpacing: "1.2px", marginBottom: 12 }}>
+                        Documents partagés
+                      </div>
+                      {docs.length === 0 ? (
+                        <p style={{ fontSize: 12, color: "#9ca3af", fontStyle: "italic" as const, margin: 0 }}>Aucun document partagé dans cette conversation.</p>
+                      ) : docs.map((d, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderTop: i === 0 ? "none" : "1px solid #EAE6DF" }}>
+                          <div style={{ width: 28, height: 28, borderRadius: 8, background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 12, fontWeight: 500, color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.label}</div>
+                            <div style={{ fontSize: 10, color: "#9ca3af" }}>{d.sub}</div>
+                          </div>
+                          {d.href && (
+                            <a href={d.href} target="_blank" rel="noopener noreferrer" title="Ouvrir" style={{ width: 26, height: 26, border: "none", background: "transparent", cursor: "pointer", color: "#6b7280", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                              </svg>
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {/* Timeline 5 steps (handoff L487-494 + Step component L507-525) */}
+                    <div style={{ padding: "16px 20px", borderTop: "1px solid #EAE6DF" }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase" as const, letterSpacing: "1.2px", marginBottom: 10 }}>
+                        État
+                      </div>
+                      {steps.map((s, i) => {
+                        const last = i === steps.length - 1
+                        const done = s.state === "done"
+                        const active = s.state === "active"
+                        return (
+                          <div key={s.n} style={{ display: "flex", gap: 12, paddingBottom: last ? 0 : 12 }}>
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
+                              <div style={{
+                                width: 22, height: 22, borderRadius: "50%",
+                                background: done ? "#111" : "#fff",
+                                border: active ? "2px solid #111" : done ? "none" : "1px solid #EAE6DF",
+                                color: done ? "#fff" : active ? "#111" : "#9ca3af",
+                                fontSize: 10, fontWeight: 700,
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                              }}>
+                                {done ? (
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                  </svg>
+                                ) : s.n}
+                              </div>
+                              {!last && <div style={{ width: 1, flex: 1, background: done ? "#111" : "#EAE6DF", minHeight: 18, marginTop: 2 }} />}
+                            </div>
+                            <div style={{ paddingTop: 2, paddingBottom: 8, fontSize: 12, fontWeight: active ? 600 : 400, color: active ? "#111" : done ? "#6b7280" : "#9ca3af", lineHeight: 1.3 }}>
+                              {s.label}
+                            </div>
+                          </div>
+                        )
+                      })}
+                      {statut === "rejete" && (
+                        <p style={{ marginTop: 10, fontSize: 11, fontWeight: 600, color: "#b91c1c" }}>
+                          Candidature refusée.
+                        </p>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ padding: 30, textAlign: "center" as const, color: "#9ca3af", fontSize: 13 }}>
+                    <div style={{ width: 60, height: 60, borderRadius: "50%", background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", margin: "40px auto 16px" }}>
+                      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 22s-8-4.5-8-11.8a8 8 0 0 1 16 0c0 7.3-8 11.8-8 11.8z"/>
+                        <circle cx="12" cy="10" r="3"/>
+                      </svg>
+                    </div>
+                    Aucune annonce liée à cette conversation
+                  </div>
+                )}
+              </aside>
+            )
+          })()}
         </div>
       </div>
       {/* Menu actions message — portal body pour échapper overflow-hidden du chat */}
