@@ -65,18 +65,19 @@ export default function AgendaVisites({
 
   return (
     <div>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,500&display=swap');`}</style>
       {/* Header navigation */}
-      <div style={{ background: "white", borderRadius: 20, padding: "20px 24px", marginBottom: 16 }}>
+      <div style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 20, padding: "22px 26px", marginBottom: 16, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <button onClick={prevMois}
-            style={{ width: 36, height: 36, borderRadius: "50%", border: "1.5px solid #e5e7eb", background: "white", cursor: "pointer", fontWeight: 700, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid #EAE6DF", background: "#F7F4EF", cursor: "pointer", fontWeight: 600, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", color: "#111", fontFamily: "inherit" }}>
             ‹
           </button>
-          <h2 style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.3px" }}>
+          <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, letterSpacing: "-0.3px", color: "#111", margin: 0 }}>
             {MOIS[mois]} {annee}
           </h2>
           <button onClick={nextMois}
-            style={{ width: 36, height: 36, borderRadius: "50%", border: "1.5px solid #e5e7eb", background: "white", cursor: "pointer", fontWeight: 700, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid #EAE6DF", background: "#F7F4EF", cursor: "pointer", fontWeight: 600, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", color: "#111", fontFamily: "inherit" }}>
             ›
           </button>
         </div>
@@ -84,7 +85,7 @@ export default function AgendaVisites({
         {/* Jours de la semaine */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 8 }}>
           {JOURS.map(j => (
-            <div key={j} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: "#9ca3af", padding: "4px 0", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <div key={j} style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: "#8a8477", padding: "4px 0", textTransform: "uppercase", letterSpacing: "1.2px" }}>
               {j}
             </div>
           ))}
@@ -111,24 +112,24 @@ export default function AgendaVisites({
                 onClick={() => setJourSelectionne(isSelected ? null : ds)}
                 style={{
                   minHeight: 80,
-                  borderRadius: 10,
+                  borderRadius: 12,
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "flex-start",
                   cursor: hasVisite ? "pointer" : "default",
-                  background: isSelected ? "#111" : isToday ? "#f3f4f6" : "white",
-                  border: isSelected ? "1.5px solid #111" : isToday ? "1.5px solid #d1d5db" : "1.5px solid #f3f4f6",
-                  transition: "all 0.1s",
+                  background: isSelected ? "#111" : isToday ? "#F7F4EF" : "#fff",
+                  border: isSelected ? "1px solid #111" : isToday ? "1px solid #EAE6DF" : "1px solid #F0ECE5",
+                  transition: "all 0.15s ease",
                   padding: "8px 8px 6px",
                   overflow: "hidden",
                 }}
-                onMouseEnter={e => { if (hasVisite && !isSelected) e.currentTarget.style.background = "#f9fafb" }}
-                onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = isToday ? "#f3f4f6" : "white" }}
+                onMouseEnter={e => { if (hasVisite && !isSelected) e.currentTarget.style.background = "#F7F4EF" }}
+                onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = isToday ? "#F7F4EF" : "#fff" }}
               >
                 {/* Numéro du jour */}
                 <span style={{
-                  fontSize: 13, fontWeight: isToday || isSelected ? 800 : 500,
-                  color: isSelected ? "white" : isToday ? "#111" : "#374151",
+                  fontSize: 13, fontWeight: isToday || isSelected ? 700 : 500,
+                  color: isSelected ? "#fff" : isToday ? "#111" : "#111",
                   marginBottom: hasVisite ? 5 : 0,
                   lineHeight: 1,
                 }}>
@@ -140,18 +141,18 @@ export default function AgendaVisites({
                   <div key={idx} style={{
                     width: "100%",
                     background: isSelected ? "rgba(255,255,255,0.15)" : DOT[v.statut] + "22",
-                    borderLeft: `3px solid ${isSelected ? "white" : DOT[v.statut]}`,
+                    borderLeft: `3px solid ${isSelected ? "#fff" : DOT[v.statut]}`,
                     borderRadius: "0 4px 4px 0",
                     padding: "2px 5px",
                     marginBottom: 2,
                   }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: isSelected ? "white" : DOT[v.statut], display: "block", lineHeight: 1.3 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: isSelected ? "#fff" : DOT[v.statut], display: "block", lineHeight: 1.3 }}>
                       {v.heure}
                     </span>
                   </div>
                 ))}
                 {visitesDuJour.length > 2 && (
-                  <span style={{ fontSize: 9, fontWeight: 700, color: isSelected ? "rgba(255,255,255,0.7)" : "#9ca3af", marginTop: 1 }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: isSelected ? "rgba(255,255,255,0.7)" : "#8a8477", marginTop: 1 }}>
                     +{visitesDuJour.length - 2} autre{visitesDuJour.length - 2 > 1 ? "s" : ""}
                   </span>
                 )}
@@ -161,11 +162,11 @@ export default function AgendaVisites({
         </div>
 
         {/* Légende */}
-        <div style={{ display: "flex", gap: 16, marginTop: 16, paddingTop: 12, borderTop: "1px solid #f3f4f6", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 16, marginTop: 16, paddingTop: 14, borderTop: "1px solid #EAE6DF", flexWrap: "wrap" }}>
           {Object.entries(DOT).map(([statut, color]) => (
-            <div key={statut} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <div key={statut} style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <div style={{ width: 8, height: 8, borderRadius: "50%", background: color }} />
-              <span style={{ fontSize: 11, color: "#6b7280" }}>{STATUT[statut]?.label}</span>
+              <span style={{ fontSize: 11, color: "#8a8477" }}>{STATUT[statut]?.label}</span>
             </div>
           ))}
         </div>
@@ -173,13 +174,13 @@ export default function AgendaVisites({
 
       {/* Détail du jour sélectionné */}
       {jourSelectionne && (
-        <div style={{ background: "white", borderRadius: 20, padding: "20px 24px" }}>
-          <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 16 }}>
+        <div style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 20, padding: "22px 26px", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+          <h3 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 20, letterSpacing: "-0.3px", color: "#111", marginTop: 0, marginBottom: 18, textTransform: "capitalize" }}>
             {new Date(jourSelectionne + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
           </h3>
 
           {visitesJour.length === 0 ? (
-            <p style={{ fontSize: 14, color: "#9ca3af" }}>Aucune visite ce jour</p>
+            <p style={{ fontSize: 14, color: "#8a8477", margin: 0 }}>Aucune visite ce jour</p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {visitesJour.map((v: any) => {
@@ -187,62 +188,62 @@ export default function AgendaVisites({
                 const s = STATUT[v.statut] ?? STATUT["proposée"]
                 const photo = Array.isArray(bien?.photos) && bien.photos.length > 0 ? bien.photos[0] : null
                 return (
-                  <div key={v.id} style={{ border: `1.5px solid ${s.border}`, borderRadius: 14, overflow: "hidden", display: "flex" }}>
+                  <div key={v.id} style={{ border: `1px solid ${s.border || "#EAE6DF"}`, borderRadius: 16, overflow: "hidden", display: "flex", background: "#fff" }}>
                     {photo ? (
-                      <div style={{ width: 80, flexShrink: 0 }}>
+                      <div style={{ width: 88, flexShrink: 0 }}>
                         <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       </div>
                     ) : (
-                      <div style={{ width: 80, flexShrink: 0, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, color: "#6b7280" }}>{(bien?.titre || "B")[0].toUpperCase()}</div>
+                      <div style={{ width: 88, flexShrink: 0, background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontSize: 24, color: "#8a8477" }}>{(bien?.titre || "B")[0].toUpperCase()}</div>
                     )}
-                    <div style={{ flex: 1, padding: "12px 16px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                        <div>
-                          <p style={{ fontWeight: 700, fontSize: 14 }}>{bien?.titre || "Bien"}</p>
-                          <p style={{ fontSize: 12, color: "#9ca3af" }}>{bien?.ville}{bien?.prix ? ` · ${bien.prix} €/mois` : ""}</p>
+                    <div style={{ flex: 1, padding: "14px 18px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, gap: 10 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontWeight: 600, fontSize: 14, color: "#111", margin: 0, letterSpacing: "-0.2px" }}>{bien?.titre || "Bien"}</p>
+                          <p style={{ fontSize: 12, color: "#8a8477", margin: "2px 0 0" }}>{bien?.ville}{bien?.prix ? <> <span style={{ color: "#EAE6DF" }}>·</span> {bien.prix} €/mois</> : ""}</p>
                         </div>
-                        <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`, fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 999, flexShrink: 0 }}>
+                        <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border || "#EAE6DF"}`, fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 999, flexShrink: 0, textTransform: "uppercase", letterSpacing: "1.2px" }}>
                           {s.label}
                         </span>
                       </div>
 
-                      <p style={{ fontSize: 14, fontWeight: 700, color: "#111", marginBottom: 4 }}>{v.heure}</p>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: "#111", margin: "0 0 4px" }}>{v.heure}</p>
 
                       {mode === "proprietaire" && (
-                        <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>{v.locataire_email}</p>
+                        <p style={{ fontSize: 12, color: "#8a8477", margin: "0 0 8px" }}>{v.locataire_email}</p>
                       )}
                       {v.message && (
-                        <p style={{ fontSize: 12, color: "#6b7280", fontStyle: "italic", marginBottom: 8 }}>"{v.message}"</p>
+                        <p style={{ fontSize: 12, color: "#8a8477", fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", margin: "0 0 10px" }}>«&nbsp;{v.message}&nbsp;»</p>
                       )}
 
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                         {mode === "proprietaire" && v.statut === "proposée" && onChangerStatut && (v.propose_par || "").toLowerCase() !== (myEmail || "").toLowerCase() && (
                           <>
                             <button onClick={() => onChangerStatut(v.id, "confirmée")}
-                              style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "6px 14px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
-                              ✓ Confirmer
+                              style={{ background: "#111", color: "#fff", border: "none", borderRadius: 999, padding: "7px 16px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+                              Confirmer
                             </button>
                             <button onClick={() => onChangerStatut(v.id, "annulée")}
-                              style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "6px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+                              style={{ background: "#fff", border: "1px solid #F4C9C9", color: "#b91c1c", borderRadius: 999, padding: "7px 16px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}>
                               Refuser
                             </button>
                           </>
                         )}
                         {mode === "proprietaire" && v.statut === "proposée" && (v.propose_par || "").toLowerCase() === (myEmail || "").toLowerCase() && (
-                          <span style={{ fontSize: 11, color: "#6b7280", fontStyle: "italic" }}>
+                          <span style={{ fontSize: 11, color: "#8a8477", fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic" }}>
                             En attente du locataire
                           </span>
                         )}
                         {mode === "proprietaire" && v.statut === "confirmée" && onChangerStatut && (
                           <button onClick={() => onChangerStatut(v.id, "effectuée")}
-                            style={{ background: "#f3f4f6", border: "none", color: "#374151", borderRadius: 999, padding: "6px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+                            style={{ background: "#F7F4EF", border: "1px solid #EAE6DF", color: "#111", borderRadius: 999, padding: "7px 16px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}>
                             Marquer effectuée
                           </button>
                         )}
                         {mode === "locataire" && v.statut === "proposée" && (
                           <Link href={`/annonces/${v.annonce_id}`}
-                            style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "5px 12px" }}>
-                            Voir l'annonce
+                            style={{ fontSize: 11, fontWeight: 600, color: "#111", textDecoration: "none", border: "1px solid #EAE6DF", borderRadius: 999, padding: "7px 16px", background: "#fff", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+                            Voir l&apos;annonce
                           </Link>
                         )}
                       </div>
@@ -257,8 +258,8 @@ export default function AgendaVisites({
 
       {/* Message si aucune visite ce mois */}
       {!jourSelectionne && Object.keys(parDate).filter(d => d.startsWith(`${annee}-${String(mois + 1).padStart(2, "0")}`)).length === 0 && (
-        <div style={{ textAlign: "center", padding: "30px 0", background: "white", borderRadius: 20, color: "#9ca3af" }}>
-          <p style={{ fontSize: 14 }}>Aucune visite ce mois-ci</p>
+        <div style={{ textAlign: "center", padding: "32px 24px", background: "#fff", border: "1px solid #EAE6DF", borderRadius: 20, color: "#8a8477", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+          <p style={{ fontSize: 14, margin: 0 }}>Aucune visite ce mois-ci</p>
         </div>
       )}
     </div>
