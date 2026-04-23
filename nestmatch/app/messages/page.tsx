@@ -3527,7 +3527,7 @@ function MessagesInner() {
                     </div>
                     {/* Listing card (handoff L456-467) */}
                     <div style={{ padding: "18px 20px" }}>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", textTransform: "uppercase" as const, letterSpacing: "1.2px", marginBottom: 6 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase" as const, letterSpacing: "1.4px", marginBottom: 6 }}>
                         {ann.ville || "—"}
                       </div>
                       <h3 style={{ fontSize: 16, fontWeight: 500, margin: 0, marginBottom: 14, letterSpacing: "-0.2px", lineHeight: 1.3, color: "#111" }}>
@@ -3539,9 +3539,9 @@ function MessagesInner() {
                             <span style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-0.5px", color: "#111" }}>
                               {ann.prix.toLocaleString("fr-FR")} €
                             </span>
-                            <span style={{ fontSize: 12, color: "#9ca3af" }}>/mois</span>
+                            <span style={{ fontSize: 12, color: "#8a8477" }}>/mois</span>
                           </div>
-                          <div style={{ fontSize: 12, color: "#6b7280" }}>
+                          <div style={{ fontSize: 12, color: "#8a8477", letterSpacing: "0.1px" }}>
                             {ann.surface ? `${ann.surface} m²` : ""}{ann.pieces ? ` · ${ann.pieces} p.` : ""}
                           </div>
                         </>
@@ -3552,22 +3552,22 @@ function MessagesInner() {
                     </div>
                     {/* Documents partagés (handoff L468-486) */}
                     <div style={{ padding: "16px 20px", borderTop: "1px solid #EAE6DF" }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase" as const, letterSpacing: "1.2px", marginBottom: 12 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase" as const, letterSpacing: "1.4px", marginBottom: 12 }}>
                         Documents partagés
                       </div>
                       {docs.length === 0 ? (
-                        <p style={{ fontSize: 12, color: "#9ca3af", fontStyle: "italic" as const, margin: 0 }}>Aucun document partagé dans cette conversation.</p>
+                        <p style={{ fontSize: 12, color: "#8a8477", fontStyle: "italic" as const, margin: 0, lineHeight: 1.5 }}>Aucun document partagé dans cette conversation.</p>
                       ) : docs.map((d, i) => (
                         <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderTop: i === 0 ? "none" : "1px solid #EAE6DF" }}>
-                          <div style={{ width: 28, height: 28, borderRadius: 8, background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <div style={{ width: 28, height: 28, borderRadius: 8, background: "#F7F4EF", border: "1px solid #EAE6DF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 12, fontWeight: 500, color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.label}</div>
-                            <div style={{ fontSize: 10, color: "#9ca3af" }}>{d.sub}</div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.label}</div>
+                            <div style={{ fontSize: 10.5, color: "#8a8477", letterSpacing: "0.1px" }}>{d.sub}</div>
                           </div>
                           {d.href && (
-                            <a href={d.href} target="_blank" rel="noopener noreferrer" title="Ouvrir" style={{ width: 26, height: 26, border: "none", background: "transparent", cursor: "pointer", color: "#6b7280", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <a href={d.href} target="_blank" rel="noopener noreferrer" title="Ouvrir" style={{ width: 26, height: 26, border: "none", background: "transparent", cursor: "pointer", color: "#8a8477", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                                 <polyline points="7 10 12 15 17 10"/>
@@ -3580,7 +3580,7 @@ function MessagesInner() {
                     </div>
                     {/* Timeline 5 steps (handoff L487-494 + Step component L507-525) */}
                     <div style={{ padding: "16px 20px", borderTop: "1px solid #EAE6DF" }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase" as const, letterSpacing: "1.2px", marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase" as const, letterSpacing: "1.4px", marginBottom: 12 }}>
                         État
                       </div>
                       {steps.map((s, i) => {
@@ -3594,7 +3594,7 @@ function MessagesInner() {
                                 width: 22, height: 22, borderRadius: "50%",
                                 background: done ? "#111" : "#fff",
                                 border: active ? "2px solid #111" : done ? "none" : "1px solid #EAE6DF",
-                                color: done ? "#fff" : active ? "#111" : "#9ca3af",
+                                color: done ? "#fff" : active ? "#111" : "#8a8477",
                                 fontSize: 10, fontWeight: 700,
                                 display: "flex", alignItems: "center", justifyContent: "center",
                               }}>
