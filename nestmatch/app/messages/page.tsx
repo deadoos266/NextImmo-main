@@ -2967,38 +2967,45 @@ function MessagesInner() {
                   )}
                 </div>
 
-                {/* Confirmation inline : louer à ce candidat */}
+                {/* Confirmation inline : louer à ce candidat — palette douce (vert subtil sur fond beige pour s'aligner sur le reste du site) */}
                 {accepterLocationOpen && proprietaireActive && convActiveData && (
-                  <div style={{ background: "#f0fdf4", borderBottom: "1px solid #bbf7d0", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-                    <p style={{ fontSize: 13, color: "#166534", margin: 0, lineHeight: 1.5 }}>
-                      <strong>Louer à {displayName(convActiveData.other)} ?</strong> Le bien sera marqué comme loué
-                      {annonceActive && (annonceActive.statut === "loué") && (annonceActive.locataire_email || "").toLowerCase() !== convActiveData.other.toLowerCase() && (
-                        <> (et remplacera <em>{displayName(annonceActive.locataire_email || "")}</em>)</>
-                      )}
-                      . Le locataire recevra une notification et accédera à « Mon logement ». Vous pourrez générer le bail quand vous voulez depuis votre dashboard.
-                    </p>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <div style={{ background: "#F7F4EF", borderBottom: "1px solid #EAE6DF", padding: "14px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#DCF5E4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }} aria-hidden>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#166534" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+                      <p style={{ fontSize: 13, color: "#111", margin: 0, lineHeight: 1.55 }}>
+                        <strong style={{ fontWeight: 700 }}>Louer à {displayName(convActiveData.other)} ?</strong> Le bien sera marqué comme loué
+                        {annonceActive && (annonceActive.statut === "loué") && (annonceActive.locataire_email || "").toLowerCase() !== convActiveData.other.toLowerCase() && (
+                          <> (et remplacera <em>{displayName(annonceActive.locataire_email || "")}</em>)</>
+                        )}
+                        . Le locataire recevra une notification et accédera à « Mon logement ». Vous pourrez générer le bail quand vous voulez depuis votre dashboard.
+                      </p>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", paddingLeft: 38 }}>
                       <button
                         type="button"
                         onClick={accepterLocation}
                         disabled={accepteEnCours}
-                        style={{ background: accepteEnCours ? "#9ca3af" : "#16a34a", color: "white", border: "none", borderRadius: 999, padding: "8px 18px", fontWeight: 800, fontSize: 13, cursor: accepteEnCours ? "wait" : "pointer", fontFamily: "inherit" }}>
+                        style={{ background: accepteEnCours ? "#8a8477" : "#16a34a", color: "white", border: "none", borderRadius: 999, padding: "8px 18px", fontWeight: 700, fontSize: 13, cursor: accepteEnCours ? "wait" : "pointer", fontFamily: "inherit", letterSpacing: "0.1px" }}>
                         {accepteEnCours ? "Enregistrement…" : "Confirmer la location"}
                       </button>
                       <button
                         type="button"
                         onClick={() => setAccepterLocationOpen(false)}
                         disabled={accepteEnCours}
-                        style={{ background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "8px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+                        style={{ background: "white", color: "#111", border: "1px solid #EAE6DF", borderRadius: 999, padding: "8px 18px", fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
                         Annuler
                       </button>
                     </div>
                   </div>
                 )}
 
-                {/* Note privée proprio (visible uniquement côté proprio) */}
+                {/* Note privée proprio (visible uniquement côté proprio) — palette editoriale + accent amber doux */}
                 {proprietaireActive && convActiveData && (
-                  <div style={{ background: "#fefce8", borderBottom: "1px solid #fef08a", padding: "8px 16px", display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ background: "#FBF6EA", borderBottom: "1px solid #EADFC6", padding: "10px 20px", display: "flex", alignItems: "center", gap: 8 }}>
                     {noteEditKey === convActiveData.key ? (
                       <>
                         <input
@@ -3011,26 +3018,26 @@ function MessagesInner() {
                           }}
                           placeholder="Note privée sur ce candidat (visible uniquement par vous)"
                           maxLength={240}
-                          style={{ flex: 1, background: "white", border: "1.5px solid #fde68a", borderRadius: 8, padding: "6px 10px", fontSize: 13, outline: "none", fontFamily: "inherit" }}
+                          style={{ flex: 1, background: "white", border: "1px solid #EADFC6", borderRadius: 999, padding: "7px 14px", fontSize: 13, outline: "none", fontFamily: "inherit", color: "#111" }}
                         />
                         <button type="button"
                           onClick={() => { saveNote(convActiveData.key, noteDraft); setNoteEditKey(null) }}
-                          style={{ background: "#ca8a04", color: "white", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                          style={{ background: "#a16207", color: "white", border: "none", borderRadius: 999, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                           Enregistrer
                         </button>
                         <button type="button" onClick={() => setNoteEditKey(null)}
-                          style={{ background: "white", color: "#713f12", border: "1.5px solid #fde68a", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                          style={{ background: "white", color: "#111", border: "1px solid #EADFC6", borderRadius: 999, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
                           Annuler
                         </button>
                       </>
                     ) : candidatNotes[convActiveData.key] ? (
                       <>
-                        <span style={{ fontSize: 12, color: "#713f12", flex: 1, lineHeight: 1.4 }}>
-                          <strong style={{ color: "#a16207", fontWeight: 700 }}>Note : </strong>
+                        <span style={{ fontSize: 12.5, color: "#6b5314", flex: 1, lineHeight: 1.5 }}>
+                          <strong style={{ color: "#a16207", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.8px", fontSize: 10.5 }}>Note · </strong>
                           {candidatNotes[convActiveData.key]}
                         </span>
                         <button type="button" onClick={() => openNoteEditor(convActiveData.key)}
-                          style={{ background: "none", color: "#ca8a04", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                          style={{ background: "none", color: "#a16207", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                           Modifier
                         </button>
                         <button type="button" onClick={() => saveNote(convActiveData.key, "")}
@@ -3040,18 +3047,20 @@ function MessagesInner() {
                       </>
                     ) : (
                       <button type="button" onClick={() => openNoteEditor(convActiveData.key)}
-                        style={{ background: "none", color: "#a16207", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
-                        + Ajouter une note privée sur ce candidat
+                        style={{ background: "none", color: "#a16207", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", padding: 0, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Ajouter une note privée sur ce candidat
                       </button>
                     )}
                   </div>
                 )}
 
-                {/* Messages */}
-                <div ref={messagesContainerRef} style={{ flex: 1, overflowY: "auto", padding: isMobile ? "12px 14px" : "20px 24px", display: "flex", flexDirection: "column", gap: 8, background: isMobile ? "#fafafa" : "white" }}>
+                {/* Messages — fond crème très léger pour contraster avec les bulles blanches */}
+                <div ref={messagesContainerRef} style={{ flex: 1, overflowY: "auto", padding: isMobile ? "14px 14px" : "22px 24px", display: "flex", flexDirection: "column", gap: 8, background: "#FBF8F3" }}>
                   {messages.length === 0 && (
-                    <div style={{ textAlign: "center", color: "#9ca3af", marginTop: 40 }}>
-                      <p style={{ fontSize: 14 }}>Démarrez la conversation</p>
+                    <div style={{ textAlign: "center", color: "#8a8477", marginTop: 48, padding: "0 24px" }}>
+                      <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontSize: 18, fontWeight: 500, color: "#111", letterSpacing: "-0.3px", margin: 0 }}>Démarrez la conversation</p>
+                      <p style={{ fontSize: 12.5, marginTop: 6, lineHeight: 1.5, color: "#8a8477" }}>Votre premier message apparaîtra ici.</p>
                     </div>
                   )}
                   {messagesAvecSep.map((item, idx) => {
