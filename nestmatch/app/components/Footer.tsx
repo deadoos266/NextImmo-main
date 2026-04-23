@@ -57,13 +57,47 @@ export default function Footer() {
       borderTop: "1px solid #EAE6DF",
       fontFamily: "'DM Sans', sans-serif",
       marginTop: isMobile ? 40 : 80,
+      position: "relative",
+      overflow: "hidden",
     }}>
+      {/* Watermark éditorial — calque handoff components.jsx L106-112.
+          Mot "keymatch" en Fraunces italic très low-opacity sur la palette
+          claire. On garde l'ADN beige du reste du site — pas de passage
+          dark comme le handoff. Pointer-events none + aria-hidden + zIndex
+          0 pour rester purement décoratif sous le contenu. */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,300&display=swap');
+        .km-foot-watermark { font-family: 'Fraunces', Georgia, serif; font-style: italic; font-weight: 300; }
+        .km-foot-soft { font-family: 'Fraunces', Georgia, serif; font-style: italic; font-weight: 400; }
+      `}</style>
+      <div
+        aria-hidden
+        className="km-foot-watermark"
+        style={{
+          position: "absolute",
+          bottom: isMobile ? -20 : -40,
+          left: "50%",
+          transform: "translateX(-50%)",
+          fontSize: isMobile ? "clamp(110px, 38vw, 180px)" : "clamp(180px, 22vw, 320px)",
+          lineHeight: 0.85,
+          letterSpacing: "-0.05em",
+          color: "rgba(17,17,17,0.045)",
+          pointerEvents: "none",
+          whiteSpace: "nowrap",
+          userSelect: "none",
+          zIndex: 0,
+        }}
+      >
+        keymatch
+      </div>
 
       {/* Bloc principal */}
       <div style={{
         maxWidth: 1200,
         margin: "0 auto",
         padding: isMobile ? "48px 20px 32px" : "72px 48px 48px",
+        position: "relative",
+        zIndex: 1,
       }}>
 
         {/* Logo en tête avec séparateur hairline */}
@@ -150,9 +184,12 @@ export default function Footer() {
         flexWrap: "wrap",
         gap: 12,
         flexDirection: isMobile ? "column" : "row",
+        position: "relative",
+        zIndex: 1,
       }}>
         <span suppressHydrationWarning style={{ fontSize: 12, color: "#888", letterSpacing: "0.3px" }}>
-          © {new Date().getFullYear()} Key Match — Location directe entre particuliers
+          © {new Date().getFullYear()} Key Match — Location directe{" "}
+          <span className="km-foot-soft" style={{ color: "#666" }}>avec soin</span>
         </span>
         <div style={{ display: "flex", gap: isMobile ? 14 : 22, flexWrap: "wrap" }}>
           {[
