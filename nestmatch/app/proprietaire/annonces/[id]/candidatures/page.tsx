@@ -23,12 +23,14 @@ import { calculerScore } from "../../../../../lib/matching"
 
 type StatutCand = "contact" | "dossier" | "visite" | "bail" | "rejete"
 
-const STATUT_META: Record<StatutCand, { label: string; dot: string; bg: string; color: string }> = {
-  contact: { label: "Premier contact",    dot: "#9CA3AF", bg: "#F3F4F6", color: "#374151" },
-  dossier: { label: "Dossier reçu",       dot: "#3B82F6", bg: "#EFF6FF", color: "#1E40AF" },
-  visite:  { label: "Visite programmée",  dot: "#F59E0B", bg: "#FFFBEB", color: "#92400E" },
-  bail:    { label: "Bail signé",         dot: "#10B981", bg: "#ECFDF5", color: "#065F46" },
-  rejete:  { label: "Refusée",            dot: "#6B7280", bg: "#F3F4F6", color: "#6B7280" },
+// Palette handoff 2026-04-24 — pastel doux + border hairline matching.
+// Eyebrow uppercase letterSpacing 1.2px fontSize 10 fontWeight 700 partout.
+const STATUT_META: Record<StatutCand, { label: string; dot: string; bg: string; color: string; border: string }> = {
+  contact: { label: "Premier contact",    dot: "#9CA3AF", bg: "#F7F4EF", color: "#6b6559", border: "#EAE6DF" },
+  dossier: { label: "Dossier reçu",       dot: "#3B82F6", bg: "#EEF3FB", color: "#1d4ed8", border: "#D7E3F4" },
+  visite:  { label: "Visite programmée",  dot: "#F59E0B", bg: "#FBF6EA", color: "#a16207", border: "#EADFC6" },
+  bail:    { label: "Bail signé",         dot: "#15803d", bg: "#F0FAEE", color: "#15803d", border: "#C6E9C0" },
+  rejete:  { label: "Refusée",            dot: "#6B7280", bg: "#F7F4EF", color: "#8a8477", border: "#EAE6DF" },
 }
 
 type SortKey = "score" | "recent" | "revenus" | "dossier"
@@ -436,11 +438,13 @@ function CandidatureCard({
         display: "grid",
         gridTemplateColumns: "64px 1fr auto",
         gap: 14,
-        padding: "14px 18px",
+        padding: "16px 20px",
         background: "#fff",
-        border: "1.5px solid #EAE6DF",
+        border: "1px solid #EAE6DF",
         borderRadius: 18,
         alignItems: "center",
+        boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
+        fontFamily: "'DM Sans', sans-serif",
       }}
     >
       {/* Avatar initiales */}
@@ -477,23 +481,23 @@ function CandidatureCard({
             </span>
           )}
         </div>
-        <div style={{ fontSize: 12.5, color: "#6b7280", marginTop: 4 }}>
+        <div style={{ fontSize: 12.5, color: "#8a8477", marginTop: 4, letterSpacing: "0.1px" }}>
           {pro}
           {revenus > 0 ? ` · ${revenus.toLocaleString("fr-FR")} €/mois` : ""}
           {ratio !== null ? ` · ${ratio.toFixed(1)}× loyer` : ""}
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6, fontSize: 11, flexWrap: "wrap" }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 999, background: meta.bg, color: meta.color, fontWeight: 600 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8, fontSize: 10, flexWrap: "wrap" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 10px", borderRadius: 999, background: meta.bg, color: meta.color, border: `1px solid ${meta.border}`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
             <span style={{ width: 5, height: 5, borderRadius: "50%", background: meta.dot }} />
             {meta.label}
           </span>
           {profil?.garant === true && (
-            <span style={{ color: "#8a8477" }}>· Garant{profil.type_garant ? ` ${profil.type_garant}` : ""}</span>
+            <span style={{ color: "#8a8477", fontSize: 11, letterSpacing: "0.1px" }}>· Garant{profil.type_garant ? ` ${profil.type_garant}` : ""}</span>
           )}
-          <span style={{ color: "#8a8477" }}>· {formatTime(createdAt)}</span>
+          <span style={{ color: "#8a8477", fontSize: 11, letterSpacing: "0.1px" }}>· {formatTime(createdAt)}</span>
         </div>
         {statut === "visite" && visite?.date_visite && (
-          <div style={{ marginTop: 8, fontSize: 11, color: "#92400E", fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 5 }}>
+          <div style={{ marginTop: 8, fontSize: 11, color: meta.color, fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 5 }}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /></svg>
             {new Date(visite.date_visite).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}
             {visite.heure ? ` · ${visite.heure}` : ""}
@@ -510,13 +514,13 @@ function CandidatureCard({
       <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
         <Link
           href={`/messages?with=${encodeURIComponent(email)}&annonce=${annonceId}`}
-          style={{ padding: "8px 14px", background: "#111", color: "#fff", borderRadius: 999, fontSize: 11.5, fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}
+          style={{ padding: "10px 18px", background: "#111", color: "#fff", borderRadius: 999, fontSize: 11, fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap", letterSpacing: "0.3px", fontFamily: "inherit" }}
         >
           Répondre
         </Link>
         <Link
           href={`/messages?with=${encodeURIComponent(email)}&annonce=${annonceId}&panel=dossier`}
-          style={{ padding: "8px 14px", background: "#fff", color: "#111", border: "1px solid #EAE6DF", borderRadius: 999, fontSize: 11.5, fontWeight: 500, textDecoration: "none", whiteSpace: "nowrap" }}
+          style={{ padding: "9px 18px", background: "#fff", color: "#111", border: "1px solid #EAE6DF", borderRadius: 999, fontSize: 11, fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap", letterSpacing: "0.3px", fontFamily: "inherit" }}
         >
           Voir dossier
         </Link>
