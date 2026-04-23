@@ -2811,26 +2811,34 @@ function MessagesInner() {
           {/* ── Colonne droite : chat ── */}
           <div style={{ flex: 1, background: "white", borderRadius: isMobile ? 0 : 20, display: isMobile && !convActiveData ? "none" : "flex", flexDirection: "column", overflow: "hidden", boxShadow: isMobile ? "none" : "0 2px 12px rgba(0,0,0,0.06)" }}>
             {!convActiveData ? (
-              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", color: "#9ca3af", gap: 12 }}>
-                <p style={{ fontSize: 16, fontWeight: 600, color: "#374151" }}>Sélectionnez une conversation</p>
+              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", color: "#8a8477", gap: 14, padding: 24, textAlign: "center" }}>
+                {/* Icône enveloppe discrète sur pastille beige — handoff EmptyThread */}
+                <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#F7F4EF", border: "1px solid #EAE6DF", display: "flex", alignItems: "center", justifyContent: "center" }} aria-hidden>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#8a8477" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="5" width="18" height="14" rx="2" />
+                    <path d="m3 7 9 6 9-6" />
+                  </svg>
+                </div>
+                <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontSize: 22, fontWeight: 500, color: "#111", letterSpacing: "-0.4px", margin: 0 }}>Sélectionnez une conversation</p>
                 {!proprietaireActive ? (
                   <>
-                    <p style={{ fontSize: 13 }}>Contactez un propriétaire depuis une annonce</p>
-                    <Link href="/annonces" style={{ marginTop: 8, padding: "10px 24px", background: "#111", color: "white", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>
+                    <p style={{ fontSize: 13, color: "#8a8477", margin: 0, maxWidth: 340, lineHeight: 1.6 }}>Contactez un propriétaire directement depuis une annonce pour commencer une discussion.</p>
+                    <Link href="/annonces" style={{ marginTop: 4, padding: "10px 24px", background: "#111", color: "white", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14, fontFamily: "inherit" }}>
                       Voir les annonces
                     </Link>
                   </>
                 ) : (
-                  <p style={{ fontSize: 13 }}>Les locataires intéressés vous contacteront ici</p>
+                  <p style={{ fontSize: 13, color: "#8a8477", margin: 0, maxWidth: 340, lineHeight: 1.6 }}>Les locataires intéressés vous contacteront ici — chaque échange apparaîtra dans cette fenêtre.</p>
                 )}
               </div>
             ) : (
               <>
-                {/* Header chat */}
-                <div style={{ padding: isMobile ? "10px 14px" : "14px 20px", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: isMobile ? 8 : 12 }}>
+                {/* Header chat — bordure alignee palette handoff (#EAE6DF hairline) */}
+                <div style={{ padding: isMobile ? "12px 14px" : "16px 22px", borderBottom: "1px solid #EAE6DF", display: "flex", alignItems: "center", gap: isMobile ? 8 : 12, background: "#fff" }}>
                   {isMobile && (
                     <button onClick={() => setConvActive(null)}
-                      style={{ background: "#f3f4f6", border: "none", borderRadius: 10, width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 18, flexShrink: 0 }}>
+                      aria-label="Retour aux conversations"
+                      style={{ background: "#F7F4EF", border: "1px solid #EAE6DF", borderRadius: 999, width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 18, color: "#111", flexShrink: 0, fontFamily: "inherit" }}>
                       ←
                     </button>
                   )}
@@ -2844,7 +2852,7 @@ function MessagesInner() {
                         {Array.isArray(annonceActive.photos) && annonceActive.photos[0] ? (
                           <img src={annonceActive.photos[0]} alt="" style={{ width: 42, height: 42, borderRadius: 10, objectFit: "cover", display: "block" }} />
                         ) : (
-                          <div style={{ width: 42, height: 42, borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#6b7280", fontWeight: 700 }}>{(annonceActive.titre || "A")[0].toUpperCase()}</div>
+                          <div style={{ width: 42, height: 42, borderRadius: 12, background: "#F7F4EF", border: "1px solid #EAE6DF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#8a8477", fontWeight: 700 }}>{(annonceActive.titre || "A")[0].toUpperCase()}</div>
                         )}
                         {/* Avatar peer en overlay pour contexte humain */}
                         <div style={{ position: "absolute", bottom: -4, right: -4, border: "2px solid white", borderRadius: "50%" }}>
@@ -2884,7 +2892,7 @@ function MessagesInner() {
                             )
                           })()}
                         </div>
-                        <p style={{ fontSize: 12, color: "#9ca3af", margin: "2px 0 0" }}>{annonceActive.ville} &middot; {displayName(convActiveData.other, annonceActive.proprietaire)}</p>
+                        <p style={{ fontSize: 12, color: "#8a8477", margin: "2px 0 0", letterSpacing: "0.1px" }}>{annonceActive.ville} &middot; {displayName(convActiveData.other, annonceActive.proprietaire)}</p>
                       </Link>
                       {/* Bouton "Louer à ce candidat" — côté proprio uniquement.
                          Cache si la location est déjà actée pour ce candidat. */}
