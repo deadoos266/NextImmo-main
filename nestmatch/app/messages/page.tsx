@@ -11,6 +11,7 @@ import { useResponsive } from "../hooks/useResponsive"
 import { displayName } from "../../lib/privacy"
 import { formatNomComplet } from "../../lib/profilHelpers"
 import AnnulerVisiteDialog from "../components/AnnulerVisiteDialog"
+import ProposerVisiteDialog from "../components/ProposerVisiteDialog"
 import { annulerVisite, STATUT_VISITE_STYLE as STATUT_VISITE } from "../../lib/visitesHelpers"
 import { postNotif } from "../../lib/notificationsClient"
 import MessageSkeleton from "../components/ui/MessageSkeleton"
@@ -1854,8 +1855,13 @@ function MessagesInner() {
     }
   }
 
-  async function proposerVisite() {
-    if (!convActiveData?.annonceId || !myEmail || !visiteDate || !visiteHeure) return
+  async function proposerVisite(params?: { date?: string; heure?: string; message?: string }) {
+    // Params fournis = appel depuis ProposerVisiteDialog (nouveau chemin UI).
+    // Pas de params = legacy (fallback, plus utilisé depuis la bascule modale).
+    const vDate = params?.date ?? visiteDate
+    const vHeure = params?.heure ?? visiteHeure
+    const vMessage = params?.message ?? visiteMessage
+    if (!convActiveData?.annonceId || !myEmail || !vDate || !vHeure) return
     setEnvoyantVisite(true)
     const isCounter = !!counterTarget
     const propEmail = proprietaireActive ? myEmail : convActiveData.other
@@ -1886,22 +1892,22 @@ function MessagesInner() {
       annonce_id: convActiveData.annonceId,
       proprietaire_email: propEmail.toLowerCase(),
       locataire_email: locEmail.toLowerCase(),
-      date_visite: visiteDate,
-      heure: visiteHeure,
-      message: visiteMessage.trim() || null,
+      date_visite: vDate,
+      heure: vHeure,
+      message: vMessage.trim() || null,
       statut: "proposée",
       propose_par: myEmail.toLowerCase(),
     }]).select().single()
     if (visite) {
       setVisitesConv(prev => [...prev, visite])
-      const dateFormatee = formatVisiteDate(visiteDate, { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+      const dateFormatee = formatVisiteDate(vDate, { weekday: "long", day: "numeric", month: "long", year: "numeric" })
       // Card visuelle plutôt que texte brut — rendu par VisiteDemandeCard
       const payload = JSON.stringify({
         visiteId: visite.id,
-        dateVisite: visiteDate,
-        heure: visiteHeure,
+        dateVisite: vDate,
+        heure: vHeure,
         dateFormatee,
-        message: visiteMessage.trim() || null,
+        message: vMessage.trim() || null,
         isCounter,
       })
       const contenu = `${VISITE_DEMANDE_PREFIX}${payload}`
@@ -1922,7 +1928,7 @@ function MessagesInner() {
         userEmail: convActiveData.other,
         type: "visite_proposee",
         title: isCounter ? "Contre-proposition de visite" : "Nouvelle demande de visite",
-        body: `${dateFormatee} à ${visiteHeure}`,
+        body: `${dateFormatee} à ${vHeure}`,
         href: "/visites",
         relatedId: String(visite.id),
       })
@@ -2198,6 +2204,26 @@ function MessagesInner() {
         mode={visiteCancelTarget?.mode}
         onClose={() => setVisiteCancelTarget(null)}
         onConfirm={handleAnnulerVisite}
+      />
+      <ProposerVisiteDialog
+        open={showVisiteForm && !!convActiveData?.annonceId}
+        onClose={() => { setShowVisiteForm(false); setCounterTarget(null) }}
+        onConfirm={async (p) => { await proposerVisite(p) }}
+        annonce={annonceActive ? {
+          titre: annonceActive.titre ?? null,
+          ville: annonceActive.ville ?? null,
+          prix: annonceActive.prix ?? null,
+          surface: annonceActive.surface ?? null,
+          photos: Array.isArray(annonceActive.photos) ? annonceActive.photos : null,
+        } : null}
+        counterTargetLabel={counterTarget ? `${formatVisiteDate(counterTarget.date_visite)} à ${counterTarget.heure}` : null}
+        envoi={envoyantVisite}
+        matchPct={(() => {
+          const s = computeConvScore(convActiveData ?? null)
+          return typeof s === "number" ? Math.round(s / 10) : null
+        })()}
+        initialDate={counterTarget?.date_visite || null}
+        initialHeure={counterTarget?.heure || null}
       />
       {signatureModal.open && signatureModal.bailData && signatureModal.annonceId && (
         <BailSignatureModal
@@ -3301,15 +3327,13 @@ function MessagesInner() {
                     )}
                     {convActiveData?.annonceId && (
                       <button onClick={() => {
-                        if (showVisiteForm) {
-                          setShowVisiteForm(false)
-                          setCounterTarget(null)
-                        } else {
-                          setShowVisiteForm(true)
-                        }
+                        // Bouton = ouvre la modale (ProposerVisiteDialog en bas de page).
+                        // Plus de formulaire inline bleu — design handoff v2.
+                        setCounterTarget(null)
+                        setShowVisiteForm(true)
                       }}
-                        style={{ background: showVisiteForm ? "#111" : "#eff6ff", border: "1.5px solid " + (showVisiteForm ? "#111" : "#bfdbfe"), color: showVisiteForm ? "white" : "#1d4ed8", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
-                        {showVisiteForm ? "Fermer" : "Proposer une visite"}
+                        style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", color: "#1d4ed8", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+                        Proposer une visite
                       </button>
                     )}
                     <div style={{ width: 1, height: 16, background: "#e5e7eb" }} />
@@ -3320,39 +3344,8 @@ function MessagesInner() {
                       </button>
                     ))}
                   </div>
-                  {showVisiteForm && convActiveData?.annonceId && (
-                    <div id="visite-form-anchor" style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 14, padding: "14px 16px", marginBottom: 10 }}>
-                      <p style={{ fontSize: 12, fontWeight: 800, color: "#1d4ed8", marginBottom: 12 }}>
-                        {counterTarget ? "Contre-proposer un autre créneau" : "Proposer une visite"}
-                      </p>
-                      {counterTarget && (
-                        <p style={{ fontSize: 11, color: "#6b7280", marginBottom: 10, lineHeight: 1.5 }}>
-                          La proposition initiale (<strong>{formatVisiteDate(counterTarget.date_visite)} à {counterTarget.heure}</strong>) sera annulée et remplacée par votre nouveau créneau.
-                        </p>
-                      )}
-                      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-                        <div style={{ flex: 1 }}>
-                          <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 4, textTransform: "uppercase" as const }}>Date</label>
-                          <input type="date" min={new Date().toISOString().split("T")[0]} value={visiteDate} onChange={e => setVisiteDate(e.target.value)}
-                            style={{ width: "100%", padding: "7px 10px", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const }} />
-                        </div>
-                        <div>
-                          <label style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 4, textTransform: "uppercase" as const }}>Heure</label>
-                          <select value={visiteHeure} onChange={e => setVisiteHeure(e.target.value)}
-                            style={{ padding: "7px 10px", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none", background: "white" }}>
-                            {["08:00","09:00","10:00","11:00","12:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"].map(h => <option key={h} value={h}>{h}</option>)}
-                          </select>
-                        </div>
-                      </div>
-                      <input value={visiteMessage} onChange={e => setVisiteMessage(e.target.value)}
-                        placeholder="Message pour le propriétaire (optionnel)..."
-                        style={{ width: "100%", padding: "7px 10px", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none", marginBottom: 10, boxSizing: "border-box" as const }} />
-                      <button onClick={proposerVisite} disabled={!visiteDate || !visiteHeure || envoyantVisite}
-                        style={{ background: visiteDate && visiteHeure && !envoyantVisite ? "#111" : "#e5e7eb", color: visiteDate && visiteHeure && !envoyantVisite ? "white" : "#9ca3af", border: "none", borderRadius: 999, padding: "8px 20px", fontSize: 13, fontWeight: 700, cursor: visiteDate && visiteHeure ? "pointer" : "not-allowed", fontFamily: "inherit" }}>
-                        {envoyantVisite ? "Envoi..." : "Envoyer la demande"}
-                      </button>
-                    </div>
-                  )}
+                  {/* NOTE : Formulaire visite inline retiré — migré vers <ProposerVisiteDialog>
+                      monté en bas de page (calque handoff modals.jsx VisitRequestModal). */}
                   {/* Preview du message auquel on répond */}
                   {replyTo && (
                     <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#f9fafb", borderLeft: "3px solid #111", borderRadius: 8, padding: "8px 12px", marginBottom: 8 }}>
