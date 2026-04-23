@@ -46,3 +46,6 @@ node_modules/.vite/
 
 # Dossier temporaire pour sources photos brutes (drop + crop + remplace)
 public/_pending/
+
+# Handoff design Claude (reference visuelle, jamais a shipper)
+design-handoff/

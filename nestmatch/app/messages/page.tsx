@@ -1856,18 +1856,16 @@ function MessagesInner() {
     return calculerScore(ann, profil)
   }
 
-  // Style du pill compat selon seuils (vert/orange/rouge) — aligné avec
-  // labelScore() mais rendu compact adapté a un badge 12px.
+  // Couleur score alignée sur le handoff keymatch-design-system (messages.jsx) :
+  // 3 tiers stricts ≥80 vert / ≥60 orange / <60 rouge. Plus lisible que l'échelle
+  // 5-tier du matching v3 pour un badge compact in-conv.
+  function matchColor(pct: number): string {
+    return pct >= 80 ? "#16a34a" : pct >= 60 ? "#ea580c" : "#dc2626"
+  }
   function compatBadge(score: number | null) {
     if (score === null) return null
     const pct = Math.round(score / 10)
-    const tone =
-      pct >= 80 ? { bg: "#dcfce7", color: "#15803d" } :
-      pct >= 65 ? { bg: "#ecfccb", color: "#4d7c0f" } :
-      pct >= 50 ? { bg: "#fef9c3", color: "#a16207" } :
-      pct >= 30 ? { bg: "#ffedd5", color: "#c2410c" } :
-                  { bg: "#fee2e2", color: "#b91c1c" }
-    return { pct, ...tone }
+    return { pct, color: matchColor(pct) }
   }
 
   // Détection "bail actif" pour la conv : annonce liée a un statut loué ou
@@ -2460,13 +2458,14 @@ function MessagesInner() {
                         {(() => {
                           const c = compatBadge(computeConvScore(conv))
                           if (!c) return null
-                          const label = proprietaireActive ? `${c.pct}% candidat` : `${c.pct}% compat`
+                          // Style handoff : point + texte inline, pas de pill de fond.
                           return (
                             <span
                               title={proprietaireActive ? "Score de compatibilité du candidat avec ce bien" : "Score de compatibilité du bien avec votre profil"}
-                              style={{ display: "inline-block", background: c.bg, color: c.color, fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 999, marginBottom: 2 }}
+                              style={{ display: "inline-flex", alignItems: "center", gap: 4, color: c.color, fontSize: 10.5, fontWeight: 700, marginBottom: 2, fontVariantNumeric: "tabular-nums" as const, letterSpacing: "0.1px" }}
                             >
-                              {label}
+                              <span style={{ width: 5, height: 5, borderRadius: 999, background: c.color }} />
+                              {c.pct}% match
                             </span>
                           )
                         })()}
@@ -2582,13 +2581,14 @@ function MessagesInner() {
                           {(() => {
                             const c = compatBadge(computeConvScore(convActiveData))
                             if (!c) return null
-                            const label = proprietaireActive ? `${c.pct}% candidat` : `${c.pct}% compat`
+                            // Style handoff ThreadHeader : pill fond blanc + border 33% opacity + dot
                             return (
                               <span
                                 title={proprietaireActive ? "Score de compatibilité du candidat avec ce bien" : "Score de compatibilité du bien avec votre profil"}
-                                style={{ flexShrink: 0, background: c.bg, color: c.color, fontSize: 11, fontWeight: 800, padding: "3px 9px", borderRadius: 999, fontFamily: "inherit" }}
+                                style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 9px 3px 7px", borderRadius: 999, background: "#fff", border: `1px solid ${c.color}33`, fontSize: 11, fontWeight: 700, color: c.color, fontVariantNumeric: "tabular-nums" as const, fontFamily: "inherit" }}
                               >
-                                {label}
+                                <span style={{ width: 6, height: 6, borderRadius: 999, background: c.color }} />
+                                {c.pct}% match
                               </span>
                             )
                           })()}
