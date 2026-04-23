@@ -829,6 +829,11 @@ function MessagesInner() {
   // Photos de profil des interlocuteurs (keyed par email lower). Chargé après
   // la liste de conv pour afficher un avatar dans la liste et dans le header chat.
   const [peerImages, setPeerImages] = useState<Record<string, string>>({})
+  // Téléphones des interlocuteurs (keyed par email lower). Chargé en piggyback
+  // de peerImages. Utilisé UNIQUEMENT pour afficher le bouton "Appeler" dans le
+  // header chat quand la relation est assez avancée (visite programmée ou bail
+  // signé) — cf. garde-fou vie privée 2026-04-23.
+  const [peerPhones, setPeerPhones] = useState<Record<string, string>>({})
   const [convActive, setConvActive] = useState<string | null>(null)
   const [messages, setMessages] = useState<any[]>([])
   // Signatures EDL : { [edlId]: { locataire: bool, bailleur: bool } }.
@@ -1252,9 +1257,10 @@ function MessagesInner() {
     if (peerEmails.length > 0) {
       const [usersRes, profilsRes] = await Promise.all([
         supabase.from("users").select("email, image").in("email", peerEmails),
-        supabase.from("profils").select("email, photo_url_custom").in("email", peerEmails),
+        supabase.from("profils").select("email, photo_url_custom, telephone").in("email", peerEmails),
       ])
       const map: Record<string, string> = {}
+      const phoneMap: Record<string, string> = {}
       // Fallback : Google / provider image
       for (const u of usersRes.data || []) {
         const e = (u as { email?: string | null }).email?.toLowerCase()
@@ -1266,10 +1272,13 @@ function MessagesInner() {
         for (const p of profilsRes.data || []) {
           const e = (p as { email?: string | null }).email?.toLowerCase()
           const img = (p as { photo_url_custom?: string | null }).photo_url_custom
+          const tel = (p as { telephone?: string | null }).telephone
           if (e && img) map[e] = img
+          if (e && tel && typeof tel === "string" && tel.trim()) phoneMap[e] = tel.trim()
         }
       }
       setPeerImages(map)
+      setPeerPhones(phoneMap)
     }
 
     // Fetch les annonces liées (avec locataire_email + statut pour badges)
@@ -2520,6 +2529,38 @@ function MessagesInner() {
                           </button>
                         )
                       )}
+                      {/* Bouton "Appeler" — click-to-call tel:. Garde-fou vie
+                         privée 2026-04-23 : visible UNIQUEMENT quand la
+                         relation est avancée, c.-à-d. une visite est en cours
+                         (proposée/confirmée/effectuée) OU le bail est signé
+                         (statut annonce = loué ou bail_envoye, géré par
+                         isActiveBail). Jamais pendant un premier contact. */}
+                      {(() => {
+                        const peerEmail = convActiveData.other.toLowerCase()
+                        const peerPhone = peerPhones[peerEmail]
+                        if (!peerPhone) return null
+                        // Note : loadVisitesConv charge uniquement les visites
+                        // en statut proposée/confirmée/annulée. On exclut
+                        // "annulée" ici — un proprio qui a annulé n'a plus de
+                        // raison d'être joignable par tél.
+                        const hasActiveVisite = visitesConv.some(v =>
+                          v.statut === "proposée" || v.statut === "confirmée"
+                        )
+                        const hasActiveBail = isActiveBail(convActiveData)
+                        if (!hasActiveVisite && !hasActiveBail) return null
+                        return (
+                          <a
+                            href={`tel:${peerPhone.replace(/\s/g, "")}`}
+                            title={`Appeler ${displayName(convActiveData.other, annonceActive.proprietaire)}`}
+                            aria-label="Appeler"
+                            style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: "#111", textDecoration: "none", background: "#f3f4f6", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "6px 12px", whiteSpace: "nowrap", fontFamily: "inherit" }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                            </svg>
+                            {isMobile ? null : "Appeler"}
+                          </a>
+                        )
+                      })()}
                       <Link href={`/annonces/${convActiveData.annonceId}`}
                         style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "6px 14px", whiteSpace: "nowrap" }}>
                         Voir l&apos;annonce
