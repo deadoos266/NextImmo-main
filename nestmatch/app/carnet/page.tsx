@@ -18,9 +18,9 @@ const TYPE_LABELS: Record<TypeEvent, string> = {
   "travaux": "Trav.", "serrurerie": "Serr.", "nuisibles": "Nuis.", "autre": "Autre",
 }
 const STATUT_STYLE: Record<Statut, { bg: string; color: string; border: string }> = {
-  "planifié": { bg: "#fff7ed", color: "#c2410c", border: "#fed7aa" },
-  "en cours": { bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" },
-  "terminé":  { bg: "#dcfce7", color: "#15803d", border: "#bbf7d0" },
+  "planifié": { bg: "#FBF6EA", color: "#a16207", border: "#EADFC6" },
+  "en cours": { bg: "#EEF3FB", color: "#1d4ed8", border: "#D7E3F4" },
+  "terminé":  { bg: "#F0FAEE", color: "#15803d", border: "#C6E9C0" },
 }
 const EMPTY_FORM = {
   titre: "", description: "", type: "autre" as TypeEvent,
@@ -148,7 +148,7 @@ export default function Carnet() {
   const totalCout = evenementsFiltres.reduce((acc, e) => acc + (Number(e.cout) || 0), 0)
 
   if (status === "loading" || loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif", color: "#6b7280" }}>Chargement...</div>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif", color: "#8a8477" }}>Chargement...</div>
   )
 
   // Locataire sans logement actif
@@ -156,7 +156,7 @@ export default function Carnet() {
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px 48px" }}>
       <div style={{ maxWidth: 600, margin: "0 auto", textAlign: "center", paddingTop: 80 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Carnet d'entretien</h1>
-        <p style={{ fontSize: 15, color: "#6b7280", marginBottom: 24, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 15, color: "#8a8477", marginBottom: 24, lineHeight: 1.6 }}>
           Le carnet d'entretien est disponible une fois votre visite confirmée.<br />
           Il relie votre logement, votre propriétaire et l'historique des travaux.
         </p>
@@ -167,7 +167,7 @@ export default function Carnet() {
     </main>
   )
 
-  const inp: any = { width: "100%", padding: "10px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 16, outline: "none", boxSizing: "border-box", fontFamily: "inherit", background: "white" }
+  const inp: any = { width: "100%", padding: "10px 14px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 16, outline: "none", boxSizing: "border-box", fontFamily: "inherit", background: "white" }
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px 48px" }}>
@@ -177,7 +177,7 @@ export default function Carnet() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: 28, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 14 : 0 }}>
           <div>
             <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, letterSpacing: "-0.5px" }}>Carnet d'entretien</h1>
-            <p style={{ color: "#6b7280", marginTop: 4, fontSize: 14 }}>
+            <p style={{ color: "#8a8477", marginTop: 4, fontSize: 14 }}>
               {proprietaireActive
                 ? "Historique des interventions sur vos biens"
                 : "Suivi des interventions pour votre logement"}
@@ -193,23 +193,23 @@ export default function Carnet() {
         {!proprietaireActive && biens.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
             {biens.map(b => (
-              <div key={b.id} style={{ background: "white", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, border: "1.5px solid #e5e7eb" }}>
+              <div key={b.id} style={{ background: "white", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, border: "1px solid #EAE6DF" }}>
                 {Array.isArray(b.photos) && b.photos[0]
                   ? <Image src={b.photos[0]} alt="" width={56} height={56} sizes="56px" style={{ width: 56, height: 56, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
-                  : <div style={{ width: 56, height: 56, borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, color: "#6b7280", flexShrink: 0 }}>{(b.titre || "B")[0].toUpperCase()}</div>
+                  : <div style={{ width: 56, height: 56, borderRadius: 10, background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, color: "#8a8477", flexShrink: 0 }}>{(b.titre || "B")[0].toUpperCase()}</div>
                 }
                 <div style={{ flex: 1 }}>
                   <p style={{ fontWeight: 700, fontSize: 15 }}>{b.titre}</p>
-                  <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>{b.ville}</p>
+                  <p style={{ fontSize: 12, color: "#8a8477", marginTop: 2 }}>{b.ville}</p>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <Link href={`/annonces/${b.id}`}
-                    style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "6px 14px" }}>
+                    style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1px solid #EAE6DF", borderRadius: 999, padding: "6px 14px" }}>
                     Voir l'annonce
                   </Link>
                   {b.proprietaire_email && (
                     <Link href={`/messages?with=${b.proprietaire_email}`}
-                      style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "6px 14px" }}>
+                      style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1px solid #EAE6DF", borderRadius: 999, padding: "6px 14px" }}>
                       Contacter
                     </Link>
                   )}
@@ -223,13 +223,13 @@ export default function Carnet() {
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : `repeat(${proprietaireActive ? 4 : 3}, 1fr)`, gap: 12, marginBottom: 24 }}>
           {[
             { label: "Total", val: evenements.length, bg: "white" },
-            { label: "En cours", val: evenements.filter(e => e.statut === "en cours").length, bg: evenements.filter(e => e.statut === "en cours").length > 0 ? "#eff6ff" : "white", color: evenements.filter(e => e.statut === "en cours").length > 0 ? "#1d4ed8" : undefined },
+            { label: "En cours", val: evenements.filter(e => e.statut === "en cours").length, bg: evenements.filter(e => e.statut === "en cours").length > 0 ? "#EEF3FB" : "white", color: evenements.filter(e => e.statut === "en cours").length > 0 ? "#1d4ed8" : undefined },
             { label: "Planifiés", val: evenements.filter(e => e.statut === "planifié").length, bg: "white" },
             ...(proprietaireActive ? [{ label: "Coût total", val: `${totalCout.toLocaleString("fr-FR")} €`, bg: "white" }] : []),
           ].map(s => (
             <div key={s.label} style={{ background: s.bg, borderRadius: 16, padding: "16px 20px" }}>
               <div style={{ fontSize: 22, fontWeight: 800, color: (s as any).color || "#111" }}>{s.val}</div>
-              <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{s.label}</div>
+              <div style={{ fontSize: 12, color: "#8a8477", marginTop: 2 }}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -242,18 +242,18 @@ export default function Carnet() {
             </h2>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
               <div style={{ gridColumn: "1 / -1" }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 6 }}>Bien concerné *</label>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "#8a8477", display: "block", marginBottom: 6 }}>Bien concerné *</label>
                 <select style={inp} value={form.annonce_id} onChange={set("annonce_id")}>
                   <option value="">Sélectionner un bien</option>
                   {biens.map(b => <option key={b.id} value={b.id}>{b.titre} — {b.ville}</option>)}
                 </select>
               </div>
               <div style={{ gridColumn: "1 / -1" }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 6 }}>Titre *</label>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "#8a8477", display: "block", marginBottom: 6 }}>Titre *</label>
                 <input style={inp} value={form.titre} onChange={set("titre")} placeholder={proprietaireActive ? "Ex: Remplacement chaudière" : "Ex: Fuite sous l'évier"} />
               </div>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 6 }}>Type</label>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "#8a8477", display: "block", marginBottom: 6 }}>Type</label>
                 <select style={inp} value={form.type} onChange={set("type")}>
                   {(Object.keys(TYPE_LABELS) as TypeEvent[]).map(t => (
                     <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
@@ -261,7 +261,7 @@ export default function Carnet() {
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 6 }}>Statut</label>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "#8a8477", display: "block", marginBottom: 6 }}>Statut</label>
                 <select style={inp} value={form.statut} onChange={set("statut")}>
                   <option value="planifié">Planifié</option>
                   <option value="en cours">En cours</option>
@@ -269,24 +269,24 @@ export default function Carnet() {
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 6 }}>Date</label>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "#8a8477", display: "block", marginBottom: 6 }}>Date</label>
                 <input type="date" style={inp} value={form.date_evenement} onChange={set("date_evenement")} />
               </div>
               {proprietaireActive && (
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 6 }}>Coût (€)</label>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: "#8a8477", display: "block", marginBottom: 6 }}>Coût (€)</label>
                   <input type="number" style={inp} value={form.cout} onChange={set("cout")} placeholder="0" />
                 </div>
               )}
               <div style={{ gridColumn: "1 / -1" }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 6 }}>Description</label>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "#8a8477", display: "block", marginBottom: 6 }}>Description</label>
                 <textarea style={{ ...inp, resize: "vertical", minHeight: 80 }} value={form.description} onChange={set("description")} placeholder="Décrivez l'intervention ou le problème…" />
               </div>
             </div>
-            {erreur && <div style={{ background: "#fee2e2", color: "#dc2626", padding: "10px 16px", borderRadius: 10, fontSize: 13, fontWeight: 600, marginTop: 16 }}>{erreur}</div>}
+            {erreur && <div style={{ background: "#FEECEC", color: "#b91c1c", border: "1px solid #F4C9C9", padding: "10px 16px", borderRadius: 12, fontSize: 13, fontWeight: 500, marginTop: 16 }}>{erreur}</div>}
             <div style={{ display: "flex", gap: 10, marginTop: 20, justifyContent: "flex-end" }}>
               <button onClick={() => { setShowForm(false); setForm(EMPTY_FORM) }}
-                style={{ padding: "10px 20px", background: "none", border: "1.5px solid #e5e7eb", borderRadius: 999, cursor: "pointer", fontWeight: 600, fontSize: 14, fontFamily: "inherit" }}>
+                style={{ padding: "10px 20px", background: "none", border: "1px solid #EAE6DF", borderRadius: 999, cursor: "pointer", fontWeight: 600, fontSize: 14, fontFamily: "inherit" }}>
                 Annuler
               </button>
               <button onClick={ajouter} disabled={saving}
@@ -309,7 +309,7 @@ export default function Carnet() {
           </div>
           {biens.length > 1 && (
             <select value={filtreBien} onChange={e => setFiltreBien(e.target.value)}
-              style={{ padding: "6px 14px", borderRadius: 10, border: "1.5px solid #e5e7eb", fontSize: 12, fontWeight: 600, fontFamily: "inherit", background: "white", cursor: "pointer" }}>
+              style={{ padding: "6px 14px", borderRadius: 10, border: "1px solid #EAE6DF", fontSize: 12, fontWeight: 600, fontFamily: "inherit", background: "white", cursor: "pointer" }}>
               <option value="tous">Tous les biens</option>
               {biens.map(b => <option key={b.id} value={String(b.id)}>{b.titre}</option>)}
             </select>
@@ -342,14 +342,14 @@ export default function Carnet() {
               const canEdit = proprietaireActive || e.locataire_email === session?.user?.email
               return (
                 <div key={e.id} style={{ background: "white", borderRadius: 16, padding: "18px 22px", display: "flex", alignItems: "flex-start", gap: 16, border: isLocataireEntry && proprietaireActive ? "1.5px solid #fde68a" : "1.5px solid transparent" }}>
-                  <div style={{ flexShrink: 0, background: "#f3f4f6", borderRadius: 10, padding: "6px 10px", fontSize: 11, fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: "0.5px" }}>{TYPE_LABELS[e.type as TypeEvent] ?? "Autre"}</div>
+                  <div style={{ flexShrink: 0, background: "#F7F4EF", borderRadius: 10, padding: "6px 10px", fontSize: 11, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "0.5px" }}>{TYPE_LABELS[e.type as TypeEvent] ?? "Autre"}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>
                       <div>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                           <p style={{ fontWeight: 700, fontSize: 15 }}>{e.titre}</p>
                           {isLocataireEntry && (
-                            <span style={{ background: "#fef3c7", color: "#92400e", fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 999, border: "1px solid #fde68a" }}>
+                            <span style={{ background: "#FBF6EA", color: "#a16207", fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, border: "1px solid #EADFC6", textTransform: "uppercase", letterSpacing: "1.2px" }}>
                               {proprietaireActive
                                 ? `Signalé par ${formatNomComplet(locataireProfil) || e.locataire_email}`
                                 : "Votre signalement"}
@@ -357,7 +357,7 @@ export default function Carnet() {
                           )}
                         </div>
                         {bien && biens.length > 1 && (
-                          <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>{bien.titre} · {bien.ville}</p>
+                          <p style={{ fontSize: 12, color: "#8a8477", marginTop: 2 }}>{bien.titre} · {bien.ville}</p>
                         )}
                       </div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
@@ -371,31 +371,31 @@ export default function Carnet() {
                     </div>
 
                     {e.description && (
-                      <p style={{ fontSize: 13, color: "#6b7280", marginTop: 6, lineHeight: 1.5 }}>{e.description}</p>
+                      <p style={{ fontSize: 13, color: "#8a8477", marginTop: 6, lineHeight: 1.5 }}>{e.description}</p>
                     )}
 
                     <div style={{ display: "flex", gap: 12, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
                       {e.date_evenement && (
-                        <span style={{ fontSize: 12, color: "#9ca3af" }}>
+                        <span style={{ fontSize: 12, color: "#8a8477" }}>
                           {new Date(e.date_evenement).toLocaleDateString("fr-FR")}
                         </span>
                       )}
                       {canEdit && e.statut !== "terminé" && (
                         <button onClick={() => changerStatut(e.id, e.statut === "planifié" ? "en cours" : "terminé")}
-                          style={{ fontSize: 12, fontWeight: 600, background: "#f3f4f6", border: "none", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontFamily: "inherit", color: "#374151" }}>
+                          style={{ fontSize: 12, fontWeight: 600, background: "#F7F4EF", border: "none", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontFamily: "inherit", color: "#111" }}>
                           → {e.statut === "planifié" ? "Démarrer" : "Terminer"}
                         </button>
                       )}
                       {/* Locataire peut contacter le proprio depuis une entrée signalée */}
                       {!proprietaireActive && bien?.proprietaire_email && (
                         <Link href={`/messages?with=${bien.proprietaire_email}`}
-                          style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "4px 10px" }}>
+                          style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1px solid #EAE6DF", borderRadius: 8, padding: "4px 10px" }}>
                           Contacter
                         </Link>
                       )}
                       {canEdit && (
                         <button onClick={() => supprimer(e.id)}
-                          style={{ fontSize: 12, fontWeight: 600, background: "#fee2e2", border: "none", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontFamily: "inherit", color: "#dc2626", marginLeft: "auto" }}>
+                          style={{ fontSize: 12, fontWeight: 600, background: "#FEECEC", border: "1px solid #F4C9C9", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontFamily: "inherit", color: "#b91c1c", marginLeft: "auto" }}>
                           Supprimer
                         </button>
                       )}
