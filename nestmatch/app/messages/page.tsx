@@ -2500,8 +2500,8 @@ function MessagesInner() {
 
           {/* ── Colonne gauche : conversations ── */}
           <div style={{ width: isMobile ? "100%" : 300, flexShrink: 0, background: "white", borderRadius: isMobile ? 0 : 20, display: isMobile && convActiveData ? "none" : "flex", flexDirection: "column", overflow: "hidden", boxShadow: isMobile ? "none" : "0 2px 12px rgba(0,0,0,0.06)" }}>
-            {/* Onglets Biens loués / Candidatures */}
-            <div style={{ display: "flex", padding: "10px 10px 0", gap: 6, borderBottom: "1px solid #f3f4f6" }}>
+            {/* Onglets Biens loués / Candidatures — palette handoff */}
+            <div style={{ display: "flex", padding: "12px 12px 0", gap: 6, borderBottom: "1px solid #EAE6DF" }}>
               {([
                 { k: "actifs" as const,    label: proprietaireActive ? "Biens loués" : "Mon bail", count: countActifs },
                 { k: "candidats" as const, label: proprietaireActive ? "Candidatures" : "Mes candidatures", count: countCandidats },
@@ -2514,18 +2514,20 @@ function MessagesInner() {
                     style={{
                       flex: 1,
                       padding: "9px 8px",
-                      background: active ? "#111" : "white",
-                      color: active ? "white" : "#374151",
-                      border: `1.5px solid ${active ? "#111" : "#e5e7eb"}`,
-                      borderRadius: 10,
+                      background: active ? "#111" : "#fff",
+                      color: active ? "white" : "#111",
+                      border: `1px solid ${active ? "#111" : "#EAE6DF"}`,
+                      borderRadius: 999,
                       fontSize: 12,
-                      fontWeight: active ? 800 : 600,
+                      fontWeight: active ? 700 : 600,
+                      letterSpacing: "0.1px",
                       cursor: "pointer",
                       fontFamily: "inherit",
-                      marginBottom: 10,
+                      marginBottom: 12,
+                      transition: "background 160ms ease, color 160ms ease, border-color 160ms ease",
                     }}
                   >
-                    {t.label}{t.count > 0 && <span style={{ marginLeft: 6, fontSize: 10, opacity: 0.8 }}>({t.count})</span>}
+                    {t.label}{t.count > 0 && <span style={{ marginLeft: 6, fontSize: 10, opacity: active ? 0.8 : 0.5, fontVariantNumeric: "tabular-nums" as const }}>({t.count})</span>}
                   </button>
                 )
               })}
@@ -3416,27 +3418,29 @@ function MessagesInner() {
                     )}
                     {MESSAGES_RAPIDES.map((msg, i) => (
                       <button key={i} onClick={() => setNouveau(msg)}
-                        style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 999, padding: "6px 12px", fontSize: 11, fontWeight: 500, cursor: "pointer", color: "#6b6b6b", fontFamily: "inherit", whiteSpace: "nowrap", letterSpacing: "0.1px" }}>
+                        onMouseEnter={e => { e.currentTarget.style.background = "#F7F4EF"; e.currentTarget.style.borderColor = "#111" }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#EAE6DF" }}
+                        style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 999, padding: "6px 12px", fontSize: 11, fontWeight: 500, cursor: "pointer", color: "#8a8477", fontFamily: "inherit", whiteSpace: "nowrap", letterSpacing: "0.1px", transition: "background 160ms ease, border-color 160ms ease" }}>
                         {msg.slice(0, 30)}{msg.length > 30 ? "…" : ""}
                       </button>
                     ))}
                   </div>
                   {/* NOTE : Formulaire visite inline retiré — migré vers <ProposerVisiteDialog>
                       monté en bas de page (calque handoff modals.jsx VisitRequestModal). */}
-                  {/* Preview du message auquel on répond */}
+                  {/* Preview du message auquel on répond — palette beige handoff */}
                   {replyTo && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#f9fafb", borderLeft: "3px solid #111", borderRadius: 8, padding: "8px 12px", marginBottom: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#F7F4EF", borderLeft: "3px solid #111", borderRadius: 12, padding: "10px 14px", marginBottom: 10, border: "1px solid #EAE6DF", borderLeftWidth: 3 }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: 11, fontWeight: 700, color: "#111", margin: 0, marginBottom: 2 }}>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: "#111", margin: 0, marginBottom: 2, letterSpacing: "0.2px" }}>
                           Répondre à {replyTo.from === myEmail ? "vous-même" : displayName(replyTo.from)}
                         </p>
-                        <p style={{ fontSize: 12, color: "#6b7280", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <p style={{ fontSize: 12, color: "#8a8477", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.5 }}>
                           {replyTo.contenu.slice(0, 100)}{replyTo.contenu.length > 100 ? "…" : ""}
                         </p>
                       </div>
                       <button onClick={() => setReplyTo(null)}
                         aria-label="Annuler la réponse"
-                        style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "#9ca3af", padding: 4, fontFamily: "inherit", lineHeight: 1 }}>
+                        style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "#8a8477", padding: 4, fontFamily: "inherit", lineHeight: 1 }}>
                         ×
                       </button>
                     </div>
