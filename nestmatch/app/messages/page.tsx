@@ -99,17 +99,17 @@ function DossierCard({ contenu, isMine, annonceId }: { contenu: string; isMine: 
   const scoreColor = data.score >= 80 ? "#15803d" : data.score >= 50 ? "#c2410c" : "#b91c1c"
   const scoreBg   = data.score >= 80 ? "#dcfce7" : data.score >= 50 ? "#fff7ed" : "#fee2e2"
   return (
-    <div style={{ background: isMine ? "#1a1a1a" : "#f9fafb", border: `1.5px solid ${isMine ? "#333" : "#e5e7eb"}`, borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 280 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+    <div style={{ background: isMine ? "#111" : "#fff", border: `1px solid ${isMine ? "#1a1a1a" : "#EAE6DF"}`, borderRadius: 16, padding: "14px 18px", minWidth: 220, maxWidth: 280, boxShadow: isMine ? "none" : "0 2px 8px rgba(17,17,17,0.04)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: `1px solid ${isMine ? "rgba(255,255,255,0.12)" : "#F2EEE6"}` }}>
         <div style={{ flex: 1 }}>
-          <p style={{ fontWeight: 700, fontSize: 13, color: isMine ? "white" : "#111", margin: 0 }}>Dossier locataire</p>
-          <p style={{ fontSize: 11, color: isMine ? "#9ca3af" : "#6b7280", margin: 0 }}>{data.email}</p>
+          <p style={{ fontSize: 10, fontWeight: 700, color: isMine ? "#bdbdbd" : "#8a8477", margin: 0, textTransform: "uppercase", letterSpacing: "1.4px" }}>Dossier locataire</p>
+          <p style={{ fontSize: 12.5, fontWeight: 600, color: isMine ? "white" : "#111", margin: "3px 0 0", letterSpacing: "-0.1px" }}>{data.email}</p>
         </div>
         {data.score != null && (
-          <span style={{ background: scoreBg, color: scoreColor, fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999 }}>{data.score}%</span>
+          <span style={{ background: scoreBg, color: scoreColor, fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 999, letterSpacing: "0.1px" }}>{data.score}%</span>
         )}
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         {data.nom           && <Row label="Nom"       val={data.nom}                                                   isMine={isMine} />}
         {data.situation_pro && <Row label="Situation" val={data.situation_pro}                                         isMine={isMine} />}
         {data.revenus_mensuels && <Row label="Revenus" val={`${Number(data.revenus_mensuels).toLocaleString("fr-FR")} €/mois`} isMine={isMine} />}
@@ -117,18 +117,18 @@ function DossierCard({ contenu, isMine, annonceId }: { contenu: string; isMine: 
       </div>
       {!isMine && data.shareUrl && (
         <a href={data.shareUrl} target="_blank" rel="noopener noreferrer"
-          style={{ display: "block", marginTop: 10, background: "#111", color: "white", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, textAlign: "center", textDecoration: "none", fontFamily: "inherit" }}>
+          style={{ display: "block", marginTop: 12, background: "#111", color: "white", borderRadius: 999, padding: "9px 14px", fontSize: 12, fontWeight: 600, textAlign: "center", textDecoration: "none", fontFamily: "inherit", letterSpacing: "0.1px" }}>
           Voir les pièces du dossier →
         </a>
       )}
       {!isMine && annonceId && data.email && (
         <a href={`/proprietaire/bail/${annonceId}?locataire=${encodeURIComponent(data.email)}`}
-          style={{ display: "block", marginTop: 6, background: "#16a34a", color: "white", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, textAlign: "center", textDecoration: "none", fontFamily: "inherit" }}>
+          style={{ display: "block", marginTop: 6, background: "#16a34a", color: "white", borderRadius: 999, padding: "9px 14px", fontSize: 12, fontWeight: 600, textAlign: "center", textDecoration: "none", fontFamily: "inherit", letterSpacing: "0.1px" }}>
           Accepter &amp; générer le bail →
         </a>
       )}
       {isMine && data.shareUrl && (
-        <p style={{ marginTop: 8, fontSize: 10, color: "#9ca3af" }}>Lien de partage 30 j inclus pour le propriétaire.</p>
+        <p style={{ marginTop: 10, fontSize: 10.5, color: "#bdbdbd", letterSpacing: "0.1px" }}>Lien de partage 30 j inclus pour le propriétaire.</p>
       )}
     </div>
   )
@@ -136,8 +136,8 @@ function DossierCard({ contenu, isMine, annonceId }: { contenu: string; isMine: 
 function Row({ label, val, isMine }: { label: string; val: string; isMine: boolean }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-      <span style={{ fontSize: 11, color: isMine ? "#9ca3af" : "#6b7280" }}>{label}</span>
-      <span style={{ fontSize: 11, fontWeight: 600, color: isMine ? "white" : "#111" }}>{val}</span>
+      <span style={{ fontSize: 11, color: isMine ? "#9b9b9b" : "#8a8477" }}>{label}</span>
+      <span style={{ fontSize: 11.5, fontWeight: 600, color: isMine ? "white" : "#111", letterSpacing: "-0.1px" }}>{val}</span>
     </div>
   )
 }
@@ -165,21 +165,30 @@ function DemandeDossierCard({ isMine, dossierRecu, onEnvoyer, envoyant }: {
     )
   }
   return (
-    <div style={{ background: "#f9fafb", border: "1.5px solid #e5e7eb", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 280 }}>
+    <div style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 16, padding: "16px 20px", minWidth: 220, maxWidth: 280, fontFamily: "'DM Sans', sans-serif", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+        <div style={{ width: 28, height: 28, borderRadius: 10, background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
         <div>
-          <p style={{ fontWeight: 700, fontSize: 13, color: "#111", margin: 0 }}>Demande de dossier</p>
-          <p style={{ fontSize: 11, color: "#6b7280", margin: "2px 0 0" }}>Le propriétaire souhaite voir votre dossier</p>
+          <p style={{ fontWeight: 600, fontSize: 13, color: "#111", margin: 0, letterSpacing: "-0.1px" }}>Demande de dossier</p>
+          <p style={{ fontSize: 11, color: "#8a8477", margin: "2px 0 0", letterSpacing: "0.2px" }}>Le propriétaire souhaite voir votre dossier</p>
         </div>
       </div>
       {dossierRecu ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#dcfce7", borderRadius: 8, padding: "7px 12px" }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: "#15803d" }}>Dossier envoyé</span>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 999, padding: "6px 12px" }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "#15803d", letterSpacing: "0.3px", textTransform: "uppercase" }}>Dossier envoyé</span>
         </div>
       ) : (
         <button onClick={onEnvoyer} disabled={envoyant}
-          style={{ width: "100%", background: envoyant ? "#e5e7eb" : "#111", color: envoyant ? "#9ca3af" : "white", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: envoyant ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
-          {envoyant ? "Envoi en cours..." : "Envoyer mon dossier"}
+          style={{ width: "100%", background: envoyant ? "#EAE6DF" : "#111", color: envoyant ? "#8a8477" : "#fff", border: "none", borderRadius: 999, padding: "10px 18px", fontSize: 12, fontWeight: 600, cursor: envoyant ? "not-allowed" : "pointer", letterSpacing: "0.3px", fontFamily: "inherit" }}>
+          {envoyant ? "Envoi en cours…" : "Envoyer mon dossier"}
         </button>
       )}
     </div>
@@ -248,11 +257,18 @@ function EdlCard({ contenu, isMine, signatures }: { contenu: string; isMine: boo
   }
 
   return (
-    <div style={{ background: "#f9fafb", border: "1.5px solid #e5e7eb", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 280 }}>
+    <div style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 16, padding: "16px 20px", minWidth: 220, maxWidth: 280, fontFamily: "'DM Sans', sans-serif", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+        <div style={{ width: 28, height: 28, borderRadius: 10, background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-4"/>
+            <polyline points="9 7 12 4 15 7"/>
+            <line x1="12" y1="4" x2="12" y2="15"/>
+          </svg>
+        </div>
         <div>
-          <p style={{ fontWeight: 700, fontSize: 13, color: "#111", margin: 0 }}>État des lieux d'{typeLabel}</p>
-          <p style={{ fontSize: 11, color: "#6b7280", margin: "2px 0 0" }}>
+          <p style={{ fontWeight: 600, fontSize: 13, color: "#111", margin: 0, letterSpacing: "-0.1px" }}>État des lieux d&apos;{typeLabel}</p>
+          <p style={{ fontSize: 11, color: "#8a8477", margin: "2px 0 0", letterSpacing: "0.2px" }}>
             {data.bienTitre || "Bien"} — {dateLabel}
           </p>
         </div>
@@ -260,12 +276,12 @@ function EdlCard({ contenu, isMine, signatures }: { contenu: string; isMine: boo
       {data.edlId && (
         <a href={`/edl/consulter/${data.edlId}`}
           style={{
-            display: "block", width: "100%", background: "#111", color: "white",
-            border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13,
-            fontWeight: 700, textAlign: "center", textDecoration: "none",
-            fontFamily: "inherit",
+            display: "block", width: "100%", background: "#111", color: "#fff",
+            border: "none", borderRadius: 999, padding: "10px 18px", fontSize: 12,
+            fontWeight: 600, textAlign: "center", textDecoration: "none",
+            letterSpacing: "0.3px", fontFamily: "inherit",
           }}>
-          Consulter l'EDL →
+          Consulter l&apos;EDL →
         </a>
       )}
     </div>
@@ -409,25 +425,34 @@ function BailCard({
 
   // === Variante LOCATAIRE (isMine = false) ===
   return (
-    <div style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 320 }}>
-      <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>
-        {dejaSigneParMoi ? "Bail signé" : "Bail à signer"}
-      </p>
-      <p style={{ fontWeight: 700, fontSize: 14, color: "#111", margin: 0 }}>{data.titreBien || "Bien"}</p>
-      <p style={{ fontSize: 12, color: "#6b7280", margin: "2px 0 10px" }}>{data.villeBien || ""}</p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#374151" }}>
-        {dateStr && <div>Début : <strong>{dateStr}</strong></div>}
-        {loyer > 0 && <div>Loyer : <strong>{loyer} €/mois</strong></div>}
-        {data.duree && <div>Durée : <strong>{data.duree} mois</strong></div>}
+    <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 16, padding: "16px 20px", minWidth: 240, maxWidth: 320, fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#DCF5E4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="9" y1="15" x2="15" y2="15"/>
+          </svg>
+        </div>
+        <p style={{ fontSize: 10, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0 }}>
+          {dejaSigneParMoi ? "Bail signé" : "Bail à signer"}
+        </p>
+      </div>
+      <p style={{ fontWeight: 600, fontSize: 14, color: "#111", margin: 0, letterSpacing: "-0.1px" }}>{data.titreBien || "Bien"}</p>
+      <p style={{ fontSize: 12, color: "#8a8477", margin: "2px 0 10px" }}>{data.villeBien || ""}</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#374151", lineHeight: 1.55 }}>
+        {dateStr && <div>Début : <strong style={{ fontWeight: 600 }}>{dateStr}</strong></div>}
+        {loyer > 0 && <div>Loyer : <strong style={{ fontWeight: 600 }}>{loyer} €/mois</strong></div>}
+        {data.duree && <div>Durée : <strong style={{ fontWeight: 600 }}>{data.duree} mois</strong></div>}
       </div>
 
       {sigLocataire && (
-        <div style={{ marginTop: 10, padding: "6px 10px", background: "#dcfce7", borderRadius: 8, fontSize: 11, color: "#15803d", fontWeight: 700 }}>
+        <div style={{ marginTop: 12, padding: "7px 12px", background: "#DCF5E4", borderRadius: 10, fontSize: 11, color: "#15803d", fontWeight: 600 }}>
           {signatureBadge(sigLocataire)}
         </div>
       )}
       {sigBailleur && (
-        <div style={{ marginTop: 6, padding: "6px 10px", background: "#dcfce7", borderRadius: 8, fontSize: 11, color: "#15803d", fontWeight: 700 }}>
+        <div style={{ marginTop: 6, padding: "7px 12px", background: "#DCF5E4", borderRadius: 10, fontSize: 11, color: "#15803d", fontWeight: 600 }}>
           {signatureBadge(sigBailleur)}
         </div>
       )}
@@ -435,19 +460,19 @@ function BailCard({
       {/* CTA signature — priorité sur tout */}
       {canSignAsRole === "locataire" && !dejaSigneParMoi && (
         <button onClick={signer}
-          style={{ display: "block", width: "100%", marginTop: 12, background: "#15803d", color: "white", border: "none", borderRadius: 8, padding: "12px 16px", fontSize: 14, fontWeight: 800, textAlign: "center", cursor: "pointer", fontFamily: "inherit" }}>
-          ✍ Signer le bail
+          style={{ display: "block", width: "100%", marginTop: 14, background: "#111", color: "#fff", border: "none", borderRadius: 999, padding: "12px 18px", fontSize: 13, fontWeight: 600, textAlign: "center", cursor: "pointer", letterSpacing: "0.3px", fontFamily: "inherit" }}>
+          Signer le bail
         </button>
       )}
 
       {canDownload && (
         <button onClick={telecharger} disabled={downloading}
-          style={{ display: "block", width: "100%", marginTop: 8, background: "white", color: "#15803d", border: "1.5px solid #15803d", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, textAlign: "center", cursor: downloading ? "wait" : "pointer", fontFamily: "inherit" }}>
+          style={{ display: "block", width: "100%", marginTop: 8, background: "#fff", color: "#111", border: "1px solid #EAE6DF", borderRadius: 999, padding: "9px 18px", fontSize: 12, fontWeight: 600, textAlign: "center", cursor: downloading ? "wait" : "pointer", letterSpacing: "0.3px", fontFamily: "inherit" }}>
           {downloading ? "Génération…" : "Télécharger le PDF"}
         </button>
       )}
       <a href="/mon-logement"
-        style={{ display: "block", marginTop: 6, background: "white", color: "#6b7280", border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "7px 16px", fontSize: 11, fontWeight: 600, textAlign: "center", textDecoration: "none", fontFamily: "inherit" }}>
+        style={{ display: "block", marginTop: 6, background: "transparent", color: "#8a8477", border: "none", borderRadius: 999, padding: "7px 16px", fontSize: 11, fontWeight: 500, textAlign: "center", textDecoration: "none", letterSpacing: "0.2px", fontFamily: "inherit" }}>
         Voir mon logement →
       </a>
     </div>
@@ -463,14 +488,21 @@ function EdlAPlanifierCard({ annonceId, proprietaireActive, isMine }: {
   const href = proprietaireActive && annonceId ? `/proprietaire/edl/${annonceId}` : "/mon-logement"
   const cta = proprietaireActive ? "Créer l'état des lieux" : "Voir mon logement"
   return (
-    <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 340 }}>
-      <p style={{ fontSize: 11, fontWeight: 700, color: "#1e40af", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>
-        Prochaine étape — État des lieux
+    <div style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 16, padding: "16px 20px", minWidth: 240, maxWidth: 340, fontFamily: "'DM Sans', sans-serif", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <div style={{ width: 28, height: 28, borderRadius: 10, background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </div>
+        <p style={{ fontSize: 10, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0 }}>
+          Prochaine étape — État des lieux
+        </p>
+      </div>
+      <p style={{ fontSize: 13, color: "#111", margin: 0, fontWeight: 500, lineHeight: 1.55 }}>
+        Le bail est signé par les deux parties.
       </p>
-      <p style={{ fontSize: 13, color: "#111", margin: 0, fontWeight: 600, lineHeight: 1.5 }}>
-        Le bail est signé par les deux parties ✓
-      </p>
-      <p style={{ fontSize: 12, color: "#1e40af", margin: "6px 0 10px", lineHeight: 1.5 }}>
+      <p style={{ fontSize: 12, color: "#8a8477", margin: "6px 0 12px", lineHeight: 1.55 }}>
         {proprietaireActive
           ? "Planifiez l'état des lieux d'entrée avec votre locataire."
           : "Votre bailleur va maintenant créer l'état des lieux d'entrée — vous serez notifié."}
@@ -479,13 +511,14 @@ function EdlAPlanifierCard({ annonceId, proprietaireActive, isMine }: {
         href={href}
         style={{
           display: "inline-block",
-          background: "#1d4ed8",
-          color: "white",
-          borderRadius: 8,
-          padding: "9px 16px",
-          fontSize: 13,
-          fontWeight: 700,
+          background: "#111",
+          color: "#fff",
+          borderRadius: 999,
+          padding: "10px 18px",
+          fontSize: 12,
+          fontWeight: 600,
           textDecoration: "none",
+          letterSpacing: "0.3px",
           fontFamily: "inherit",
         }}
       >
@@ -516,11 +549,27 @@ function AutoPaiementDemandeCard({
   try { data = JSON.parse(contenu.slice(AUTO_PAIEMENT_DEMANDE_PREFIX.length)) } catch { /* ignore */ }
   const confirmed = data.confirmedAt
   return (
-    <div style={{ background: confirmed ? "#dcfce7" : "#eff6ff", border: `1.5px solid ${confirmed ? "#86efac" : "#bfdbfe"}`, borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 340 }}>
-      <p style={{ fontSize: 11, fontWeight: 700, color: confirmed ? "#15803d" : "#1e40af", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>
-        {confirmed ? "Auto-paiement actif ✓" : "Demande d'auto-paiement"}
-      </p>
-      <p style={{ fontSize: 13, color: "#111", margin: 0, fontWeight: 600, lineHeight: 1.5 }}>
+    <div style={{ background: confirmed ? "#F0FAEE" : "#fff", border: `1px solid ${confirmed ? "#C6E9C0" : "#EAE6DF"}`, borderRadius: 16, padding: "16px 20px", minWidth: 240, maxWidth: 340, fontFamily: "'DM Sans', sans-serif", boxShadow: confirmed ? "none" : "0 1px 2px rgba(0,0,0,0.02)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <div style={{ width: 28, height: 28, borderRadius: confirmed ? "50%" : 10, background: confirmed ? "#DCF5E4" : "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          {confirmed ? (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 6L9 17l-5-5"/>
+            </svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 3l4 4-4 4"/>
+              <path d="M3 7h18"/>
+              <path d="M7 21l-4-4 4-4"/>
+              <path d="M21 17H3"/>
+            </svg>
+          )}
+        </div>
+        <p style={{ fontSize: 10, fontWeight: 700, color: confirmed ? "#15803d" : "#111", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0 }}>
+          {confirmed ? "Auto-paiement actif" : "Demande d'auto-paiement"}
+        </p>
+      </div>
+      <p style={{ fontSize: 13, color: "#111", margin: 0, fontWeight: 500, lineHeight: 1.55 }}>
         {isMine
           ? confirmed
             ? "Le propriétaire a confirmé votre virement automatique."
@@ -532,13 +581,13 @@ function AutoPaiementDemandeCard({
       {!confirmed && !isMine && proprietaireActive && annonceId && (
         <button
           onClick={() => onConfirme(annonceId)}
-          style={{ marginTop: 10, background: "#1d4ed8", color: "white", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+          style={{ marginTop: 12, background: "#111", color: "#fff", border: "none", borderRadius: 999, padding: "10px 18px", fontSize: 12, fontWeight: 600, cursor: "pointer", letterSpacing: "0.3px", fontFamily: "inherit" }}
         >
-          ✓ Confirmer l&apos;auto-paiement
+          Confirmer l&apos;auto-paiement
         </button>
       )}
       {confirmed && (
-        <p style={{ fontSize: 11, color: "#15803d", margin: "8px 0 0", lineHeight: 1.5 }}>
+        <p style={{ fontSize: 11, color: "#166534", margin: "10px 0 0", lineHeight: 1.55 }}>
           Les loyers seront automatiquement marqués payés chaque mois. Le proprio peut contester un mois individuellement si nécessaire.
         </p>
       )}
@@ -556,23 +605,25 @@ function LoyerPayeCard({ contenu, isMine }: { contenu: string; isMine: boolean }
     : ""
   const montant = Number(data.montant || 0)
   return (
-    <div style={{ background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 320 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M16 12l-4 4-4-4M12 8v8"/>
-        </svg>
-        <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "0.5px", margin: 0 }}>
+    <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 16, padding: "16px 20px", minWidth: 240, maxWidth: 320, fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#DCF5E4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M16 12l-4 4-4-4M12 8v8"/>
+          </svg>
+        </div>
+        <p style={{ fontSize: 10, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0 }}>
           Paiement signalé
         </p>
       </div>
-      <p style={{ fontWeight: 700, fontSize: 14, color: "#111", margin: 0, textTransform: "capitalize" }}>
+      <p style={{ fontWeight: 600, fontSize: 14, color: "#111", margin: 0, textTransform: "capitalize", letterSpacing: "-0.1px" }}>
         Loyer de {moisLabel}
       </p>
-      <p style={{ fontSize: 13, color: "#15803d", margin: "4px 0 0", fontWeight: 600 }}>
+      <p style={{ fontSize: 13, color: "#15803d", margin: "6px 0 0", fontWeight: 600 }}>
         {montant.toLocaleString("fr-FR")} € payé{isMine ? "" : "s"}
       </p>
-      <p style={{ fontSize: 12, color: "#166534", margin: "8px 0 0", lineHeight: 1.5 }}>
+      <p style={{ fontSize: 12, color: "#166534", margin: "10px 0 0", lineHeight: 1.55 }}>
         {isMine
           ? "En attente de la quittance du propriétaire."
           : "Le locataire signale avoir payé. Envoyez-lui la quittance depuis l'onglet Statistiques."}
@@ -681,19 +732,21 @@ function VisiteConfirmeeCard({ contenu, isMine }: { contenu: string; isMine: boo
   try { data = JSON.parse(contenu.slice(VISITE_CONFIRMEE_PREFIX.length)) } catch { /* ignore */ }
   const dateStr = data.dateFormatee || (data.dateVisite ? formatVisiteDate(data.dateVisite, { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "")
   return (
-    <div style={{ background: "#dcfce7", border: "1.5px solid #86efac", borderRadius: 14, padding: "12px 16px", minWidth: 240, maxWidth: 320 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20 6 9 17l-5-5"/>
-        </svg>
-        <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "0.5px", margin: 0 }}>
+    <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 16, padding: "12px 16px", minWidth: 240, maxWidth: 320 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+        <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#DCF5E4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6 9 17l-5-5"/>
+          </svg>
+        </div>
+        <p style={{ fontSize: 10.5, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0 }}>
           Visite confirmée
         </p>
       </div>
-      <p style={{ fontSize: 13, color: "#111", margin: 0, fontWeight: 600, lineHeight: 1.5 }}>
+      <p style={{ fontSize: 13, color: "#111", margin: 0, fontWeight: 600, lineHeight: 1.5, letterSpacing: "-0.1px" }}>
         {isMine ? "Vous avez confirmé la visite" : "La visite est confirmée"}
       </p>
-      <p style={{ fontSize: 12, color: "#15803d", margin: "4px 0 0", lineHeight: 1.5 }}>
+      <p style={{ fontSize: 12, color: "#15803d", margin: "4px 0 0", lineHeight: 1.5, fontWeight: 500 }}>
         {dateStr}{data.heure ? ` à ${data.heure}` : ""}
       </p>
     </div>
@@ -709,15 +762,22 @@ function BailSigneCard({ contenu, isMine }: { contenu: string; isMine: boolean }
     : ""
   const roleLabel = data.role === "locataire" ? "le locataire" : data.role === "bailleur" ? "le bailleur" : "le garant"
   return (
-    <div style={{ background: "#dcfce7", border: "1.5px solid #86efac", borderRadius: 14, padding: "12px 16px", minWidth: 240, maxWidth: 320 }}>
-      <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 4px" }}>
-        Bail signé ✓
-      </p>
-      <p style={{ fontSize: 13, color: "#111", margin: 0, fontWeight: 600 }}>
+    <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 16, padding: "14px 18px", minWidth: 240, maxWidth: 320, fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+        <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#DCF5E4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+        </div>
+        <p style={{ fontSize: 10, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0 }}>
+          Bail signé
+        </p>
+      </div>
+      <p style={{ fontSize: 13, color: "#111", margin: 0, fontWeight: 500, lineHeight: 1.5 }}>
         {isMine ? `Vous avez signé le bail` : `${data.nom || "La partie"} a signé en tant que ${roleLabel}`}
       </p>
       {d && (
-        <p style={{ fontSize: 11, color: "#15803d", margin: "4px 0 0" }}>{d}</p>
+        <p style={{ fontSize: 11, color: "#8a8477", margin: "6px 0 0", letterSpacing: "0.2px" }}>{d}</p>
       )}
     </div>
   )
@@ -733,22 +793,29 @@ function LocationAccepteeCard({ contenu, isMine }: { contenu: string; isMine: bo
     ? new Date(data.accepteLe).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
     : ""
   return (
-    <div style={{ background: "#dcfce7", border: "1.5px solid #86efac", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 340 }}>
-      <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>
-        {isMine ? "Location confirmée" : "Félicitations !"}
-      </p>
-      <p style={{ fontSize: 14, fontWeight: 700, color: "#111", margin: 0, lineHeight: 1.4 }}>
+    <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 16, padding: "16px 20px", minWidth: 240, maxWidth: 340, fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#DCF5E4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+        </div>
+        <p style={{ fontSize: 10, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0 }}>
+          {isMine ? "Location confirmée" : "Félicitations"}
+        </p>
+      </div>
+      <p style={{ fontSize: 14, fontWeight: 600, color: "#111", margin: 0, lineHeight: 1.45, letterSpacing: "-0.1px" }}>
         {isMine ? "Vous avez accepté cette candidature." : "Votre candidature a été acceptée."}
         {data.bienTitre ? ` (${data.bienTitre})` : ""}
       </p>
-      <p style={{ fontSize: 12, color: "#166534", margin: "6px 0 0", lineHeight: 1.5 }}>
+      <p style={{ fontSize: 12, color: "#166534", margin: "8px 0 0", lineHeight: 1.55 }}>
         {isMine
           ? "Le locataire peut désormais accéder à « Mon logement ». Générez le bail quand vous êtes prêt."
           : "Retrouvez votre logement, vos quittances et l'état des lieux dans « Mon logement »."}
       </p>
-      {dateStr && <p style={{ fontSize: 11, color: "#15803d", margin: "6px 0 0" }}>{dateStr}</p>}
+      {dateStr && <p style={{ fontSize: 11, color: "#8a8477", margin: "8px 0 0", letterSpacing: "0.2px" }}>{dateStr}</p>}
       {!isMine && (
-        <a href="/mon-logement" style={{ display: "inline-block", marginTop: 10, background: "#15803d", color: "white", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
+        <a href="/mon-logement" style={{ display: "inline-block", marginTop: 12, background: "#111", color: "#fff", borderRadius: 999, padding: "9px 18px", fontSize: 12, fontWeight: 600, textDecoration: "none", letterSpacing: "0.3px", fontFamily: "inherit" }}>
           Voir mon logement →
         </a>
       )}
@@ -756,9 +823,9 @@ function LocationAccepteeCard({ contenu, isMine }: { contenu: string; isMine: bo
       {isMine && data.annonceId && (
         <a
           href={`/proprietaire/bail/${data.annonceId}`}
-          style={{ display: "block", marginTop: 10, background: "#15803d", color: "white", borderRadius: 8, padding: "10px 16px", fontSize: 13, fontWeight: 700, textDecoration: "none", textAlign: "center", fontFamily: "inherit" }}
+          style={{ display: "block", marginTop: 12, background: "#111", color: "#fff", borderRadius: 999, padding: "11px 18px", fontSize: 12, fontWeight: 600, textDecoration: "none", textAlign: "center", letterSpacing: "0.3px", fontFamily: "inherit" }}
         >
-          📄 Générer le bail maintenant →
+          Générer le bail maintenant →
         </a>
       )}
     </div>
@@ -792,16 +859,24 @@ function QuittanceCard({ contenu, isMine }: { contenu: string; isMine: boolean }
   }
 
   return (
-    <div style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 320 }}>
-      <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>Quittance reçue</p>
-      <p style={{ fontWeight: 700, fontSize: 14, color: "#111", margin: 0 }}>{data.bienTitre || "Bien"}</p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#374151", marginTop: 8 }}>
-        {moisLabel && <div>Mois : <strong>{moisLabel}</strong></div>}
-        {montant > 0 && <div>Loyer : <strong>{montant} €</strong></div>}
-        {dateConf && <div>Confirmé le <strong>{dateConf}</strong></div>}
+    <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 16, padding: "16px 20px", minWidth: 220, maxWidth: 320, fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#DCF5E4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+        <p style={{ fontSize: 10, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0 }}>Quittance reçue</p>
+      </div>
+      <p style={{ fontWeight: 600, fontSize: 14, color: "#111", margin: 0, letterSpacing: "-0.1px" }}>{data.bienTitre || "Bien"}</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#374151", marginTop: 10, lineHeight: 1.5 }}>
+        {moisLabel && <div>Mois : <strong style={{ fontWeight: 600 }}>{moisLabel}</strong></div>}
+        {montant > 0 && <div>Loyer : <strong style={{ fontWeight: 600 }}>{montant} €</strong></div>}
+        {dateConf && <div>Confirmé le <strong style={{ fontWeight: 600 }}>{dateConf}</strong></div>}
       </div>
       <a href="/mon-logement"
-        style={{ display: "block", marginTop: 12, background: "#15803d", color: "white", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 700, textAlign: "center", textDecoration: "none", fontFamily: "inherit" }}>
+        style={{ display: "block", marginTop: 14, background: "#111", color: "#fff", border: "none", borderRadius: 999, padding: "10px 18px", fontSize: 12, fontWeight: 600, textAlign: "center", textDecoration: "none", letterSpacing: "0.3px", fontFamily: "inherit" }}>
         Voir mes quittances →
       </a>
     </div>
@@ -3092,7 +3167,7 @@ function MessagesInner() {
                         {isDossier ? (
                           <div>
                             <DossierCard contenu={m.contenu} isMine={isMine} annonceId={m.annonce_id || convActiveData?.annonceId || null} />
-                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                            <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
@@ -3104,7 +3179,7 @@ function MessagesInner() {
                               onEnvoyer={envoyerDossier}
                               envoyant={envoyantDossier}
                             />
-                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                            <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
@@ -3120,7 +3195,7 @@ function MessagesInner() {
                                 } catch { return undefined }
                               })()}
                             />
-                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                            <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
@@ -3136,14 +3211,14 @@ function MessagesInner() {
                               canSignAsRole={getMyRoleForAnnonce(m.annonce_id || convActiveData?.annonceId)}
                               onRequestSign={requestSign}
                             />
-                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                            <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
                         ) : isBailSigne ? (
                           <div>
                             <BailSigneCard contenu={m.contenu} isMine={isMine} />
-                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                            <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
@@ -3154,14 +3229,14 @@ function MessagesInner() {
                               proprietaireActive={!!proprietaireActive}
                               isMine={isMine}
                             />
-                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                            <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
                         ) : isVisiteConfirmee ? (
                           <div>
                             <VisiteConfirmeeCard contenu={m.contenu} isMine={isMine} />
-                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                            <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
@@ -3173,14 +3248,14 @@ function MessagesInner() {
                               visitesConv={visitesConv}
                               onOuvrirGestion={() => setVisitesModalOpen(true)}
                             />
-                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                            <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
                         ) : isLoyerPaye ? (
                           <div>
                             <LoyerPayeCard contenu={m.contenu} isMine={isMine} />
-                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                            <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
@@ -3193,28 +3268,28 @@ function MessagesInner() {
                               proprietaireActive={!!proprietaireActive}
                               onConfirme={confirmerAutoPaiement}
                             />
-                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                            <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
                         ) : isQuittance ? (
                           <div>
                             <QuittanceCard contenu={m.contenu} isMine={isMine} />
-                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                            <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
                         ) : isRetrait ? (
                           <div>
                             <CandidatureRetireeCard contenu={m.contenu} isMine={isMine} />
-                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                            <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
                         ) : isLocation ? (
                           <div>
                             <LocationAccepteeCard contenu={m.contenu} isMine={isMine} />
-                            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 3, textAlign: isMine ? "right" : "left" }}>
+                            <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
