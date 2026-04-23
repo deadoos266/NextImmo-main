@@ -30,12 +30,12 @@ export default function BetaBanner() {
     <div
       role="status"
       style={{
-        background: "#fef3c7",
-        borderBottom: "1.5px solid #fde68a",
-        color: "#92400e",
+        background: "#FBF6EA",
+        borderBottom: "1px solid #EADFC6",
+        color: "#a16207",
         fontFamily: "'DM Sans', sans-serif",
         fontSize: 13,
-        padding: "8px 16px",
+        padding: "10px 16px",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -44,7 +44,7 @@ export default function BetaBanner() {
         lineHeight: 1.5,
       }}
     >
-      <span style={{ fontWeight: 700 }}>🚧 Bêta</span>
+      <span style={{ fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: "1.4px", background: "#EADFC6", padding: "3px 10px", borderRadius: 999 }}>Bêta</span>
       <span>
         Le site est en phase de test actif — certaines fonctionnalités peuvent évoluer. Lancement officiel à venir.
       </span>
@@ -54,9 +54,9 @@ export default function BetaBanner() {
         style={{
           background: "transparent",
           border: "none",
-          color: "#92400e",
+          color: "#a16207",
           cursor: "pointer",
-          fontSize: 18,
+          fontSize: 16,
           padding: 0,
           lineHeight: 1,
           fontFamily: "inherit",

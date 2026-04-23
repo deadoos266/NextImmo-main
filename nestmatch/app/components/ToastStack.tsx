@@ -17,10 +17,10 @@ type Toast = {
 }
 
 const COLORS: Record<ToastType, { bg: string; border: string }> = {
-  message:           { bg: "#eff6ff", border: "#bfdbfe" },
-  visite_nouvelle:   { bg: "#fff7ed", border: "#fed7aa" },
-  visite_confirmee:  { bg: "#f0fdf4", border: "#bbf7d0" },
-  visite_annulee:    { bg: "#fef2f2", border: "#fecaca" },
+  message:           { bg: "#EEF3FB", border: "#D7E3F4" },
+  visite_nouvelle:   { bg: "#FBF6EA", border: "#EADFC6" },
+  visite_confirmee:  { bg: "#F0FAEE", border: "#C6E9C0" },
+  visite_annulee:    { bg: "#FEECEC", border: "#F4C9C9" },
 }
 
 /**
@@ -180,10 +180,10 @@ export default function ToastStack() {
             onClick={() => { if (t.href) router.push(t.href); dismiss(t.id) }}
             style={{
               background: c.bg,
-              border: `1.5px solid ${c.border}`,
-              borderRadius: 14,
-              padding: "12px 14px",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+              border: `1px solid ${c.border}`,
+              borderRadius: 16,
+              padding: "14px 16px",
+              boxShadow: "0 10px 30px rgba(17,17,17,0.08)",
               cursor: t.href ? "pointer" : "default",
               display: "flex",
               gap: 10,
@@ -192,9 +192,9 @@ export default function ToastStack() {
             }}
           >
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 13, fontWeight: 800, color: "#111", margin: 0 }}>{t.title}</p>
+              <p style={{ fontSize: 13, fontWeight: 600, color: "#111", margin: 0, letterSpacing: "-0.2px" }}>{t.title}</p>
               {t.body && (
-                <p style={{ fontSize: 12, color: "#4b5563", margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
+                <p style={{ fontSize: 12, color: "#8a8477", margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
                   {t.body}
                 </p>
               )}
@@ -202,7 +202,7 @@ export default function ToastStack() {
             <button
               onClick={e => { e.stopPropagation(); dismiss(t.id) }}
               aria-label="Fermer"
-              style={{ background: "none", border: "none", color: "#9ca3af", fontSize: 18, cursor: "pointer", padding: 0, lineHeight: 1, flexShrink: 0 }}
+              style={{ background: "none", border: "none", color: "#8a8477", fontSize: 18, cursor: "pointer", padding: 0, lineHeight: 1, flexShrink: 0 }}
             >
               ×
             </button>
