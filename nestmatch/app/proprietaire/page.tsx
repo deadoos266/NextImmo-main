@@ -9,8 +9,6 @@ import AnnulerVisiteDialog from "../components/AnnulerVisiteDialog"
 import { useResponsive } from "../hooks/useResponsive"
 import PipelineFunnel from "./PipelineFunnel"
 import { annulerVisite, STATUT_VISITE_STYLE as STATUT_V } from "../../lib/visitesHelpers"
-import { computeScreening } from "../../lib/screening"
-import { calculerScore } from "../../lib/matching"
 import { joursRetardLoyer, labelRetard } from "../../lib/loyerHelpers"
 import EmptyState from "../components/ui/EmptyState"
 import UndoToast from "../components/ui/UndoToast"
@@ -20,8 +18,10 @@ import { computeBailTimeline } from "../../lib/bailTimeline"
 import BailTimeline from "../components/ui/BailTimeline"
 import Image from "next/image"
 
-// 5 onglets (refonte 2026-04-19 v3 finale) : lifecycle propre.
-const ONGLETS = ["Mes biens", "Candidatures", "Visites", "Locataires", "Statistiques"] as const
+// 4 onglets (refonte 2026-04-24) : ancien onglet global "Candidatures" retire
+// — les candidatures sont gerees par bien via /proprietaire/annonces/[id]/candidatures
+// (bouton "Candidatures" sur chaque carte de bien dans l'onglet Mes biens).
+const ONGLETS = ["Mes biens", "Visites", "Locataires", "Statistiques"] as const
 type Onglet = typeof ONGLETS[number]
 
 /**
@@ -388,8 +388,6 @@ export default function Proprietaire() {
   const [edls, setEdls] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [supprimerId, setSupprimerId] = useState<number | null>(null)
-  const [dossierOuvert, setDossierOuvert] = useState<string | null>(null)
-  const [dossiers, setDossiers] = useState<Record<string, any>>({})
   const [clicsParBien, setClicsParBien] = useState<Record<number, number>>({})
   // Corbeille locale : garde le bien supprimé optimistiquement pour pouvoir
   // le restaurer si l'user clique "Annuler" dans les 5 sec.
@@ -475,21 +473,9 @@ export default function Proprietaire() {
     setVisites(v || [])
     if (ve) console.error("Visites error:", ve.message)
 
-    // Préchargement des dossiers des candidats — permet au screening auto
-    // de s'afficher dès le chargement sans que le proprio ait à cliquer
-    // « Voir le dossier » pour chaque candidature.
-    const emails = Array.from(new Set(candidaturesArr.map((c: any) => c.from_email).filter(Boolean)))
-    if (emails.length > 0) {
-      const { data: profilsCandidats } = await supabase
-        .from("profils")
-        .select("*")
-        .in("email", emails)
-      if (profilsCandidats) {
-        const map: Record<string, any> = {}
-        profilsCandidats.forEach((p: any) => { if (p.email) map[p.email] = p })
-        setDossiers(map)
-      }
-    }
+    // Le preload des dossiers candidats a ete retire avec l'ancien onglet
+    // global "Candidatures" (2026-04-24). Les dossiers sont desormais charges
+    // a la demande par /proprietaire/annonces/[id]/candidatures.
 
     setLoading(false)
   }
@@ -502,14 +488,6 @@ export default function Proprietaire() {
     setVisites(data || [])
   }
 
-  async function voirDossier(email: string) {
-    if (dossierOuvert === email) { setDossierOuvert(null); return }
-    if (!dossiers[email]) {
-      const { data } = await supabase.from("profils").select("*").eq("email", email).single()
-      if (data) setDossiers(prev => ({ ...prev, [email]: data }))
-    }
-    setDossierOuvert(email)
-  }
 
   async function changerStatut(id: number, statut: string) {
     await supabase.from("annonces").update({ statut }).eq("id", id)
@@ -1165,180 +1143,10 @@ export default function Proprietaire() {
           </div>
         )}
 
-        {/* CANDIDATURES */}
-        {onglet === "Candidatures" && (() => {
-          // Enrichir chaque candidature avec son screening automatique
-          // (basé sur le profil pré-chargé + le loyer de l'annonce visée)
-          const candidaturesAvecScreening = candidatures.map((c: any) => {
-            const bien = biens.find(b => b.id === c.annonce_id)
-            const loyer = bien ? (Number(bien.prix || 0) + Number(bien.charges || 0)) : null
-            const screening = computeScreening(dossiers[c.from_email] || null, loyer)
-            // Compat candidat ↔ bien : calculerScore attend (annonce, profil).
-            // Score /1000 affiché en % via Math.round(score / 10).
-            const profilCandidat = dossiers[c.from_email]
-            const compat = bien && profilCandidat ? calculerScore(bien, profilCandidat) : null
-            const compatPct = compat !== null ? Math.round(compat / 10) : null
-            return { ...c, _screening: screening, _bien: bien, _compatPct: compatPct }
-          })
-          // Tri par score desc — les meilleurs candidats en haut
-          const candidaturesTriees = [...candidaturesAvecScreening].sort((a, b) => b._screening.score - a._screening.score)
-
-          const exportCandidatsCSV = () => {
-            if (candidaturesTriees.length === 0) return
-            // CSV RFC 4180 — quote si contient , " ou \n
-            const esc = (v: unknown) => {
-              const s = v == null ? "" : String(v)
-              return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
-            }
-            const headers = ["Email", "Score", "Label", "Bien", "Prix", "Flags", "Date contact", "Premier message"]
-            const rows = candidaturesTriees.map((c: any) => [
-              c.from_email,
-              c._screening.score,
-              c._screening.label,
-              c._bien?.titre || "",
-              c._bien?.prix ?? "",
-              (c._screening.flags || []).join(" / "),
-              new Date(c.created_at).toLocaleDateString("fr-FR"),
-              (c.contenu || "").slice(0, 200),
-            ])
-            const csv = "\uFEFF" + [headers, ...rows].map(r => r.map(esc).join(",")).join("\n")
-            const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement("a")
-            a.href = url
-            a.download = `candidatures-${new Date().toISOString().slice(0, 10)}.csv`
-            document.body.appendChild(a)
-            a.click()
-            document.body.removeChild(a)
-            URL.revokeObjectURL(url)
-          }
-
-          return (
-          <div style={{ background: "white", borderRadius: 20, padding: 24 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
-              <h2 style={{ fontSize: 16, fontWeight: 800 }}>Candidatures reçues</h2>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                {candidatures.length > 0 && (
-                  <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>
-                    Tri par score (solvabilité, pro, garant, complétude)
-                  </p>
-                )}
-                {candidaturesTriees.length > 0 && (
-                  <button type="button" onClick={exportCandidatsCSV}
-                    style={{ background: "white", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "6px 14px", fontSize: 12, fontWeight: 700, color: "#111", cursor: "pointer", fontFamily: "inherit" }}>
-                    Exporter CSV
-                  </button>
-                )}
-              </div>
-            </div>
-            <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 18, lineHeight: 1.5 }}>
-              Le score est calculé automatiquement à partir du dossier du candidat. C'est une aide à la décision, pas un verdict.
-            </p>
-
-            {candidaturesTriees.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px 0", color: "#9ca3af" }}>
-                <p style={{ fontSize: 15, fontWeight: 600 }}>Aucune candidature pour le moment</p>
-              </div>
-            ) : candidaturesTriees.map((c: any) => {
-              const isOpen = dossierOuvert === c.from_email
-              const d = dossiers[c.from_email]
-              const s = c._screening
-              return (
-                <div key={c.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                  <div style={{ padding: "16px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 14, flexWrap: "wrap" }}>
-                    {/* Badge screening — score + label */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 260 }}>
-                      <div style={{
-                        background: s.bg,
-                        color: s.color,
-                        border: `1.5px solid ${s.border}`,
-                        borderRadius: 14,
-                        padding: "8px 14px",
-                        textAlign: "center",
-                        flexShrink: 0,
-                        minWidth: 72,
-                      }}>
-                        <div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1 }}>{s.score}</div>
-                        <div style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 3 }}>{s.label}</div>
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontWeight: 700, fontSize: 14 }}>{c.from_email}</p>
-                        <p style={{ fontSize: 13, color: "#374151", marginTop: 3, fontWeight: 500 }}>{s.summary}</p>
-                        {c._bien && (
-                          <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 3, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                            <span>Pour : <strong style={{ color: "#6b7280" }}>{c._bien.titre}</strong> · {c._bien.prix} €/mois</span>
-                            {/* Compat candidat ↔ logement — vert si >= 70, orange 40-70, rouge < 40 */}
-                            {c._compatPct !== null && (
-                              <span title="Compatibilité entre le candidat et le bien — basée sur budget, surface, pièces, équipements, DPE."
-                                style={{
-                                  background: c._compatPct >= 70 ? "#dcfce7" : c._compatPct >= 40 ? "#fef3c7" : "#fee2e2",
-                                  color: c._compatPct >= 70 ? "#15803d" : c._compatPct >= 40 ? "#92400e" : "#991b1b",
-                                  padding: "1px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, letterSpacing: "0.2px",
-                                }}>
-                                {c._compatPct}% compat
-                              </span>
-                            )}
-                          </p>
-                        )}
-                        {s.flags.length > 0 && (
-                          <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
-                            {s.flags.map((f: string, i: number) => (
-                              <span key={i} style={{ fontSize: 11, background: "#fff7ed", color: "#c2410c", padding: "2px 8px", borderRadius: 999, border: "1px solid #fed7aa" }}>{f}</span>
-                            ))}
-                          </div>
-                        )}
-                        <p style={{ color: "#9ca3af", fontSize: 11, marginTop: 6 }}>{new Date(c.created_at).toLocaleDateString("fr-FR")}{c.contenu ? ` · "${c.contenu.slice(0, 50)}${c.contenu.length > 50 ? "…" : ""}"` : ""}</p>
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
-                      <button onClick={() => voirDossier(c.from_email)}
-                        style={{ background: isOpen ? "#111" : "white", color: isOpen ? "white" : "#111", border: "1.5px solid #e5e7eb", padding: "7px 14px", borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
-                        {isOpen ? "Masquer le dossier" : "Voir le dossier"}
-                      </button>
-                      {c._bien && (
-                        <a href={`/annonces/${c._bien.id}`} target="_blank" rel="noopener noreferrer"
-                          style={{ background: "white", color: "#111", border: "1.5px solid #e5e7eb", padding: "7px 14px", borderRadius: 999, textDecoration: "none", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>
-                          Voir l&apos;annonce
-                        </a>
-                      )}
-                      <a href={`/messages?with=${encodeURIComponent(c.from_email)}${c.annonce_id ? `&annonce=${c.annonce_id}` : ""}`}
-                        style={{ background: "#111", color: "white", padding: "7px 14px", borderRadius: 999, textDecoration: "none", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>
-                        Répondre
-                      </a>
-                    </div>
-                  </div>
-                  {isOpen && (
-                    <div style={{ background: "#f9fafb", borderRadius: 14, padding: 20, marginBottom: 16 }}>
-                      {!d ? (
-                        <p style={{ fontSize: 13, color: "#9ca3af" }}>Aucun dossier rempli par ce locataire.</p>
-                      ) : (
-                        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 16 }}>
-                          {[
-                            { label: "Nom", val: d.nom },
-                            { label: "Situation pro", val: d.situation_pro },
-                            { label: "Revenus mensuels", val: d.revenus_mensuels ? `${d.revenus_mensuels.toLocaleString("fr-FR")} €` : null },
-                            { label: "Garant", val: d.garant === true ? "Oui" : d.garant === false ? "Non" : null },
-                            { label: "Type de garant", val: d.type_garant },
-                            { label: "Nb occupants", val: d.nb_occupants },
-                            { label: "Animaux", val: d.animaux === true ? "Oui" : d.animaux === false ? "Non" : null },
-                            { label: "Fumeur", val: d.fumeur === true ? "Oui" : d.fumeur === false ? "Non" : null },
-                            { label: "Ville souhaitée", val: d.ville_souhaitee },
-                          ].filter(item => item.val != null && item.val !== "").map(item => (
-                            <div key={item.label}>
-                              <p style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 3 }}>{item.label}</p>
-                              <p style={{ fontSize: 14, fontWeight: 600 }}>{String(item.val)}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-          )
-        })()}
+        {/* Ancien onglet global "Candidatures" retire 2026-04-24 : les
+            candidatures sont desormais gerees bien par bien via la page
+            dediee /proprietaire/annonces/[id]/candidatures (bouton
+            "Candidatures" directement sur chaque carte de bien). */}
 
         {/* LOYERS */}
         {onglet === "Locataires" && (
