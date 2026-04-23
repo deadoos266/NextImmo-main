@@ -2440,8 +2440,60 @@ function MessagesInner() {
         })()}
       </Modal>
       <div style={{ maxWidth: isMobile && convActiveData ? "100%" : 1400, margin: "0 auto", padding: isMobile && convActiveData ? 0 : isMobile ? "20px 16px" : "32px 48px" }}>
+        {/* Header éditorial — calque handoff messages.jsx L131-140.
+            Eyebrow "Messagerie" + titre "Conversations" 34px weight 500 +
+            trust signal discret à droite (chiffré E2E + archivage 3 ans). */}
         {(!isMobile || !convActiveData) && (
-          <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 800, marginBottom: isMobile ? 16 : 24, letterSpacing: "-0.5px", padding: isMobile ? 0 : undefined }}>Messages</h1>
+          <>
+            <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500&display=swap');`}</style>
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: isMobile ? "flex-start" : "flex-end",
+              flexDirection: isMobile ? "column" : "row",
+              gap: 8,
+              marginBottom: isMobile ? 16 : 22,
+            }}>
+              <div>
+                <p style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "#8a8477",
+                  textTransform: "uppercase",
+                  letterSpacing: "1.4px",
+                  margin: 0,
+                  marginBottom: 8,
+                }}>
+                  Messagerie
+                </p>
+                <h1 style={{
+                  fontSize: isMobile ? 26 : 34,
+                  fontWeight: 500,
+                  letterSpacing: "-1px",
+                  margin: 0,
+                  color: "#111",
+                  fontFamily: "'DM Sans', sans-serif",
+                }}>
+                  Conversations
+                </h1>
+              </div>
+              {!isMobile && (
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontSize: 11,
+                  color: "#8a8477",
+                  letterSpacing: "0.3px",
+                }}>
+                  <span>Chiffré de bout en bout · archivage 3 ans</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  </svg>
+                </div>
+              )}
+            </div>
+          </>
         )}
 
         <div style={{ display: "flex", gap: isMobile && convActiveData ? 0 : 16, height: isMobile ? "calc(100vh - 72px)" : "76vh" }}>
@@ -3310,36 +3362,39 @@ function MessagesInner() {
                 })()}
 
                 {/* Zone saisie */}
-                <div style={{ borderTop: "1px solid #f3f4f6", padding: isMobile ? "10px 12px 12px" : "10px 20px 14px", background: "white" }}>
-                  {/* Bouton dossier + réponses rapides */}
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+                <div style={{ borderTop: "1px solid #EAE6DF", padding: isMobile ? "12px 12px 14px" : "14px 20px 16px", background: "white" }}>
+                  {/* Chips d'actions + réponses rapides — calque handoff QuickReply L432-438.
+                      Actions sémantiques en pill 999, couleurs d'accent préservées mais adoucies.
+                      Séparateur vertical remplacé par gap naturel. */}
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
                     {!proprietaireActive && (
                       <button onClick={envoyerDossier} disabled={envoyantDossier}
-                        style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", color: "#15803d", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: envoyantDossier ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, opacity: envoyantDossier ? 0.6 : 1 }}>
-                        {envoyantDossier ? "Envoi..." : "Mon dossier"}
+                        style={{ background: "#fff", border: "1px solid #bbf7d0", color: "#15803d", borderRadius: 999, padding: "6px 14px", fontSize: 11.5, fontWeight: 600, cursor: envoyantDossier ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, opacity: envoyantDossier ? 0.6 : 1, letterSpacing: "0.1px" }}>
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#16a34a" }} />
+                        {envoyantDossier ? "Envoi…" : "Envoyer mon dossier"}
                       </button>
                     )}
                     {proprietaireActive && (
                       <button onClick={demanderDossier} disabled={demandantDossier}
-                        style={{ background: "#fef3c7", border: "1.5px solid #fde68a", color: "#d97706", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: demandantDossier ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, opacity: demandantDossier ? 0.6 : 1 }}>
-                        {demandantDossier ? "Envoi..." : "Demander le dossier"}
+                        style={{ background: "#fff", border: "1px solid #fde68a", color: "#b45309", borderRadius: 999, padding: "6px 14px", fontSize: 11.5, fontWeight: 600, cursor: demandantDossier ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, opacity: demandantDossier ? 0.6 : 1, letterSpacing: "0.1px" }}>
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#f59e0b" }} />
+                        {demandantDossier ? "Envoi…" : "Demander le dossier"}
                       </button>
                     )}
                     {convActiveData?.annonceId && (
                       <button onClick={() => {
                         // Bouton = ouvre la modale (ProposerVisiteDialog en bas de page).
-                        // Plus de formulaire inline bleu — design handoff v2.
                         setCounterTarget(null)
                         setShowVisiteForm(true)
                       }}
-                        style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", color: "#1d4ed8", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+                        style={{ background: "#fff", border: "1px solid #bfdbfe", color: "#1d4ed8", borderRadius: 999, padding: "6px 14px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, letterSpacing: "0.1px" }}>
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#1d4ed8" }} />
                         Proposer une visite
                       </button>
                     )}
-                    <div style={{ width: 1, height: 16, background: "#e5e7eb" }} />
                     {MESSAGES_RAPIDES.map((msg, i) => (
                       <button key={i} onClick={() => setNouveau(msg)}
-                        style={{ background: "#f3f4f6", border: "none", borderRadius: 999, padding: "5px 11px", fontSize: 11, fontWeight: 500, cursor: "pointer", color: "#374151", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                        style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 999, padding: "6px 12px", fontSize: 11, fontWeight: 500, cursor: "pointer", color: "#6b6b6b", fontFamily: "inherit", whiteSpace: "nowrap", letterSpacing: "0.1px" }}>
                         {msg.slice(0, 30)}{msg.length > 30 ? "…" : ""}
                       </button>
                     ))}
