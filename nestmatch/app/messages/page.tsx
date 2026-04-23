@@ -597,45 +597,77 @@ function VisiteDemandeCard({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let data: any = {}
   try { data = JSON.parse(contenu.slice(VISITE_DEMANDE_PREFIX.length)) } catch { /* ignore */ }
-  const dateStr = data.dateFormatee || (data.dateVisite ? formatVisiteDate(data.dateVisite, { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "")
+  // Date courte (jour semaine + date) pour le slot tile, longue pour le titre
+  const dayShort = data.dateVisite ? formatVisiteDate(data.dateVisite, { weekday: "short", day: "numeric", month: "short" }) : ""
+  const dateLong = data.dateFormatee || (data.dateVisite ? formatVisiteDate(data.dateVisite, { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "")
   // Trouve le statut réel de la visite (si toujours en DB)
   const visite = data.visiteId ? visitesConv.find(v => v.id === data.visiteId) : null
   const statut = visite?.statut || "proposée"
-  const title = data.isCounter ? "Contre-proposition" : "Demande de visite"
-  // Palette selon le statut
-  const palette =
-    statut === "confirmée" ? { bg: "#dcfce7", border: "#86efac", accent: "#15803d", badge: "Confirmée" }
-    : statut === "annulée" ? { bg: "#fee2e2", border: "#fecaca", accent: "#dc2626", badge: "Annulée" }
-    : { bg: "#eff6ff", border: "#bfdbfe", accent: "#1d4ed8", badge: "En attente" }
+  const title = data.isCounter ? "Contre-proposition" : "Proposition de visite"
+  // Palette de statut — on surcharge seulement la bande de statut, la carte
+  // reste en base neutre (handoff messages.jsx L344 : bg #fff + border KM.line)
+  const accent =
+    statut === "confirmée" ? "#15803d"
+    : statut === "annulée" ? "#dc2626"
+    : "#1d4ed8"
+  const badgeLabel =
+    statut === "confirmée" ? "Confirmée"
+    : statut === "annulée" ? "Annulée"
+    : "En attente"
+  const isPending = statut === "proposée"
   return (
-    <div style={{ background: palette.bg, border: `1.5px solid ${palette.border}`, borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 320 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
-        <p style={{ fontSize: 11, fontWeight: 700, color: palette.accent, textTransform: "uppercase", letterSpacing: "0.5px", margin: 0 }}>
-          {title}
-        </p>
-        <span style={{ background: "white", color: palette.accent, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, border: `1px solid ${palette.border}` }}>
-          {palette.badge}
+    <div style={{ background: "#fff", borderRadius: 18, border: "1px solid #EAE6DF", padding: 16, minWidth: 260, maxWidth: 340, boxShadow: "0 1px 2px rgba(0,0,0,0.02)", fontFamily: "'DM Sans', sans-serif" }}>
+      {/* En-tête : icône calendrier + libellés (handoff L345-353) */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+        <div style={{ width: 32, height: 32, borderRadius: 10, background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#111", letterSpacing: "-0.1px" }}>{title}</div>
+          <div style={{ fontSize: 10, color: "#9ca3af", textTransform: "uppercase" as const, letterSpacing: "1px", fontWeight: 600 }}>
+            1 créneau · 30 min
+          </div>
+        </div>
+        <span style={{ background: "#fff", color: accent, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, border: `1px solid ${accent}33`, textTransform: "uppercase" as const, letterSpacing: "0.3px", flexShrink: 0 }}>
+          {badgeLabel}
         </span>
       </div>
-      <p style={{ fontWeight: 700, fontSize: 14, color: "#111", margin: 0, textTransform: "capitalize" }}>
-        {dateStr}
-      </p>
-      {data.heure && (
-        <p style={{ fontSize: 12, color: "#6b7280", margin: "2px 0 0" }}>à {data.heure}</p>
-      )}
+      {/* Slot tile (handoff L354-364) — grille prête pour 3 slots futurs */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
+        <div style={{ padding: 12, background: "#FBF9F5", border: "1px solid #EAE6DF", borderRadius: 12, textAlign: "center" }}>
+          <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 3, textTransform: "uppercase" as const, letterSpacing: "0.5px", color: "#6b7280", fontWeight: 600 }}>
+            {dayShort || "Date à confirmer"}
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>
+            {data.heure || "–"}
+          </div>
+        </div>
+      </div>
       {data.message && (
-        <p style={{ fontSize: 12, color: "#374151", margin: "8px 0 0", fontStyle: "italic", lineHeight: 1.5 }}>
+        <p style={{ fontSize: 12, color: "#374151", margin: "10px 0 0", fontStyle: "italic", lineHeight: 1.5 }}>
           « {data.message} »
         </p>
       )}
-      {statut === "proposée" && (
+      {/* CTA rond pill (handoff L366-372) */}
+      {isPending && (
         <button
           type="button"
           onClick={onOuvrirGestion}
-          style={{ marginTop: 10, width: "100%", background: isMine ? "white" : palette.accent, color: isMine ? palette.accent : "white", border: isMine ? `1.5px solid ${palette.border}` : "none", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+          style={{ width: "100%", padding: 11, marginTop: 10, borderRadius: 999, background: "#111", color: "#fff", border: "none", fontFamily: "inherit", fontWeight: 600, fontSize: 12, cursor: "pointer", letterSpacing: "0.3px", transition: "all 200ms" }}
         >
-          {isMine ? "Gérer" : "Répondre"} →
+          {isMine ? "Gérer la proposition" : "Répondre à la visite"}
         </button>
+      )}
+      {/* Rappel date complète si visite confirmée/annulée */}
+      {!isPending && dateLong && (
+        <p style={{ fontSize: 11, color: accent, margin: "10px 0 0", textAlign: "right" as const, fontWeight: 600, textTransform: "capitalize" }}>
+          {dateLong}
+        </p>
       )}
     </div>
   )
