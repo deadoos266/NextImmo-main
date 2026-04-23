@@ -561,12 +561,14 @@ export default function Proprietaire() {
   const loyersAttendus = loyers.filter(l => l.statut === "déclaré").length
   const loyersConfirmes = loyers.filter(l => l.statut === "confirmé").length
 
+  // Palette handoff 2026-04-24 — badges doux : fond beige/success pastel,
+  // pas de couleurs saturees. letterSpacing uniforme applique en inline.
   const statutColor: any = {
-    "disponible": { bg: "#dcfce7", color: "#16a34a" },
-    "bail_envoye": { bg: "#fff7ed", color: "#ea580c" },
-    "loué": { bg: "#f3f4f6", color: "#6b7280" },
-    "en visite": { bg: "#dbeafe", color: "#2563eb" },
-    "réservé": { bg: "#fef9c3", color: "#ca8a04" },
+    "disponible": { bg: "#F0FAEE", color: "#15803d", border: "#C6E9C0" },
+    "bail_envoye": { bg: "#FBF6EA", color: "#a16207", border: "#EADFC6" },
+    "loué": { bg: "#F7F4EF", color: "#6b6559", border: "#EAE6DF" },
+    "en visite": { bg: "#EEF3FB", color: "#1d4ed8", border: "#D7E3F4" },
+    "réservé": { bg: "#FBF6EA", color: "#a16207", border: "#EADFC6" },
   }
 
   // Label affiché pour le statut (surcharge les clés brutes de la DB)
@@ -699,8 +701,12 @@ export default function Proprietaire() {
                 ctaLabel="Ajouter un bien"
                 ctaHref="/proprietaire/ajouter"
               />
-            ) : biens.map(b => (
-              <div key={b.id} style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24 }}>
+            ) : biens.map(b => {
+              const statutKey = b.statut || "disponible"
+              const badgeStyle = statutColor[statutKey] || statutColor["disponible"]
+              const nbCand = candidatures.filter((c: any) => c.annonce_id === b.id).length
+              return (
+              <div key={b.id} style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 20, padding: isMobile ? 20 : 26, fontFamily: "'DM Sans', sans-serif", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
                 {(() => {
                   // Alerte expiration si bien disponible et publié depuis > 45 jours sans update
                   const baseDate = b.updated_at || b.created_at
@@ -708,80 +714,77 @@ export default function Proprietaire() {
                   const jours = Math.floor((Date.now() - new Date(baseDate).getTime()) / (1000 * 60 * 60 * 24))
                   if (jours < 45) return null
                   return (
-                    <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 12, padding: "10px 14px", marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-                      <p style={{ fontSize: 13, color: "#9a3412", margin: 0 }}>
-                        <strong>Annonce en ligne depuis {jours} jours.</strong> Pensez à la rafraîchir (photos, description, prix) pour regagner en visibilité.
+                    <div style={{ background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 14, padding: "12px 16px", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                      <p style={{ fontSize: 13, color: "#a16207", margin: 0, lineHeight: 1.5 }}>
+                        <strong style={{ fontWeight: 600 }}>Annonce en ligne depuis {jours} jours.</strong> Pensez à la rafraîchir (photos, description, prix) pour regagner en visibilité.
                       </p>
-                      <a href={`/proprietaire/modifier/${b.id}`} style={{ fontSize: 12, fontWeight: 700, color: "#9a3412", textDecoration: "none", padding: "5px 12px", border: "1.5px solid #fed7aa", borderRadius: 999, background: "white", flexShrink: 0 }}>
+                      <a href={`/proprietaire/modifier/${b.id}`} style={{ fontSize: 11, fontWeight: 600, color: "#a16207", textDecoration: "none", padding: "7px 14px", border: "1px solid #EADFC6", borderRadius: 999, background: "#fff", flexShrink: 0, letterSpacing: "0.3px", textTransform: "uppercase" }}>
                         Rafraîchir
                       </a>
                     </div>
                   )
                 })()}
-                <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "stretch" : "flex-start", gap: isMobile ? 14 : 0 }}>
+                <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "stretch" : "flex-start", gap: isMobile ? 16 : 24 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
-                      <h3 style={{ fontSize: isMobile ? 15 : 17, fontWeight: 800 }}>{b.titre}</h3>
-                      <span style={{ background: statutColor[b.statut || "disponible"]?.bg || "#f3f4f6", color: statutColor[b.statut || "disponible"]?.color || "#6b7280", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
+                      <h3 style={{ fontSize: isMobile ? 16 : 18, fontWeight: 600, margin: 0, letterSpacing: "-0.2px", color: "#111" }}>{b.titre}</h3>
+                      <span style={{ background: badgeStyle.bg, color: badgeStyle.color, border: `1px solid ${badgeStyle.border || "#EAE6DF"}`, padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
                         {statutLabel[b.statut || ""] || b.statut || "disponible"}
                       </span>
                     </div>
-                    <p style={{ color: "#6b7280", fontSize: 13 }}>{b.adresse} · {b.ville}</p>
-                    <div style={{ display: "flex", gap: isMobile ? 10 : 16, marginTop: 10, fontSize: 13, color: "#6b7280", flexWrap: "wrap" }}>
+                    <p style={{ color: "#8a8477", fontSize: 13, margin: 0, letterSpacing: "0.1px" }}>{b.adresse} · {b.ville}</p>
+                    <div style={{ display: "flex", gap: isMobile ? 10 : 16, marginTop: 12, fontSize: 12, color: "#6b6559", flexWrap: "wrap" }}>
                       <span>{b.surface} m²</span>
+                      <span style={{ color: "#EAE6DF" }}>·</span>
                       <span>{b.pieces} pièces</span>
-                      <span>{b.prix} €/mois</span>
-                      {b.meuble && <span>Meuble</span>}
-                      {b.animaux && <span>Animaux OK</span>}
+                      <span style={{ color: "#EAE6DF" }}>·</span>
+                      <span style={{ fontWeight: 600, color: "#111" }}>{b.prix} €/mois</span>
+                      {b.meuble && <><span style={{ color: "#EAE6DF" }}>·</span><span>Meublé</span></>}
+                      {b.animaux && <><span style={{ color: "#EAE6DF" }}>·</span><span>Animaux OK</span></>}
                     </div>
                   </div>
-                  <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: 8, marginLeft: isMobile ? 0 : 24, flexWrap: "wrap" }}>
-                    {/* Bouton Candidatures — nouvelle page dédiée par annonce (Phase 5).
-                        Compte les messages type=candidature reçus sur ce bien. */}
-                    {(() => {
-                      const nbCand = candidatures.filter((c: any) => c.annonce_id === b.id).length
-                      return (
-                        <a href={`/proprietaire/annonces/${b.id}/candidatures`}
-                          style={{ textAlign: "center", padding: "10px 16px", border: "none", borderRadius: 10, textDecoration: "none", color: "white", background: "#111", fontSize: 13, fontWeight: 700, flex: isMobile ? 1 : undefined, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                          Candidatures{nbCand > 0 ? ` (${nbCand})` : ""}
-                        </a>
-                      )
-                    })()}
+                  <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: 8, flexWrap: "wrap", minWidth: isMobile ? "auto" : 200 }}>
+                    {/* CTA principal : Candidatures (pill noir, radius 999) */}
+                    <a href={`/proprietaire/annonces/${b.id}/candidatures`}
+                      style={{ textAlign: "center", padding: "11px 18px", border: "none", borderRadius: 999, textDecoration: "none", color: "#fff", background: "#111", fontSize: 12, fontWeight: 600, flex: isMobile ? 1 : undefined, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, letterSpacing: "0.3px", fontFamily: "inherit" }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                      Candidatures{nbCand > 0 ? ` · ${nbCand}` : ""}
+                    </a>
+                    {/* CTA secondaires : pill blanc + hairline */}
                     <a href={`/proprietaire/stats?id=${b.id}`}
-                      style={{ textAlign: "center", padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, textDecoration: "none", color: "#111", fontSize: 12, fontWeight: 600, flex: isMobile ? 1 : undefined, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                      style={{ textAlign: "center", padding: "9px 16px", border: "1px solid #EAE6DF", borderRadius: 999, textDecoration: "none", color: "#111", fontSize: 11, fontWeight: 600, flex: isMobile ? 1 : undefined, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, letterSpacing: "0.3px", background: "#fff", fontFamily: "inherit" }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
                       Statistiques
                     </a>
                     <select
                       value={b.statut || "disponible"}
                       onChange={e => changerStatut(b.id, e.target.value)}
-                      style={{ padding: "8px 12px", borderRadius: 10, border: "1.5px solid #e5e7eb", fontSize: 12, fontFamily: "inherit", cursor: "pointer", outline: "none", flex: isMobile ? 1 : undefined }}>
+                      style={{ padding: "9px 14px", borderRadius: 999, border: "1px solid #EAE6DF", fontSize: 11, fontFamily: "inherit", cursor: "pointer", outline: "none", flex: isMobile ? 1 : undefined, background: "#F7F4EF", color: "#111", fontWeight: 600, letterSpacing: "0.3px" }}>
                       <option value="disponible">Disponible</option>
                       <option value="en visite">En visite</option>
                       <option value="réservé">Réservé</option>
                       <option value="loué">Loué</option>
                     </select>
-                    <a href={`/proprietaire/modifier/${b.id}`} style={{ textAlign: "center", padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, textDecoration: "none", color: "#111", fontSize: 12, fontWeight: 600, flex: isMobile ? 1 : undefined }}>
+                    <a href={`/proprietaire/modifier/${b.id}`} style={{ textAlign: "center", padding: "9px 16px", border: "1px solid #EAE6DF", borderRadius: 999, textDecoration: "none", color: "#111", fontSize: 11, fontWeight: 600, flex: isMobile ? 1 : undefined, letterSpacing: "0.3px", background: "#fff" }}>
                       Modifier
                     </a>
-                    <a href={`/annonces/${b.id}`} style={{ textAlign: "center", padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, textDecoration: "none", color: "#6b7280", fontSize: 12, fontWeight: 600, flex: isMobile ? 1 : undefined }}>
+                    <a href={`/annonces/${b.id}`} style={{ textAlign: "center", padding: "9px 16px", border: "1px solid #EAE6DF", borderRadius: 999, textDecoration: "none", color: "#8a8477", fontSize: 11, fontWeight: 600, flex: isMobile ? 1 : undefined, letterSpacing: "0.3px", background: "#fff" }}>
                       Voir l&apos;annonce
                     </a>
                     {supprimerId === b.id ? (
                       <div style={{ display: "flex", gap: 6, flex: isMobile ? 1 : undefined }}>
-                        <button onClick={() => supprimerBien(b.id)} style={{ background: "#dc2626", color: "white", border: "none", borderRadius: 10, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Confirmer</button>
-                        <button onClick={() => setSupprimerId(null)} style={{ background: "#f3f4f6", color: "#111", border: "none", borderRadius: 10, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
+                        <button onClick={() => supprimerBien(b.id)} style={{ background: "#b91c1c", color: "#fff", border: "none", borderRadius: 999, padding: "9px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", letterSpacing: "0.3px", flex: 1 }}>Confirmer</button>
+                        <button onClick={() => setSupprimerId(null)} style={{ background: "#fff", color: "#6b6559", border: "1px solid #EAE6DF", borderRadius: 999, padding: "9px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", letterSpacing: "0.3px", flex: 1 }}>Annuler</button>
                       </div>
                     ) : (
-                      <button onClick={() => setSupprimerId(b.id)} style={{ textAlign: "center", padding: "8px 12px", border: "1.5px solid #fecaca", background: "#fef2f2", borderRadius: 10, color: "#dc2626", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", flex: isMobile ? 1 : undefined }}>
+                      <button onClick={() => setSupprimerId(b.id)} style={{ textAlign: "center", padding: "9px 16px", border: "1px solid #EAE6DF", background: "transparent", borderRadius: 999, color: "#b91c1c", fontSize: 11, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", flex: isMobile ? 1 : undefined, letterSpacing: "0.3px" }}>
                         Supprimer
                       </button>
                     )}
                   </div>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         )}
 
@@ -815,9 +818,9 @@ export default function Proprietaire() {
                   .filter((x: any) => x.jours > 0)
                 const retardPlusAncien = retardsBien.reduce((m: any, x: any) => x.jours > (m?.jours || 0) ? x : m, null as any)
                 const loyerMoisStyle =
-                  loyerMoisStatut === "paye"    ? { bg: "#dcfce7", color: "#15803d", label: "Loyer du mois reçu" }
-                  : loyerMoisStatut === "declare" ? { bg: "#fff7ed", color: "#c2410c", label: "Loyer du mois en attente" }
-                  : { bg: "#fee2e2", color: "#dc2626", label: "Loyer du mois à déclarer" }
+                  loyerMoisStatut === "paye"    ? { bg: "#F0FAEE", color: "#15803d", border: "#C6E9C0", label: "Loyer du mois reçu" }
+                  : loyerMoisStatut === "declare" ? { bg: "#FBF6EA", color: "#a16207", border: "#EADFC6", label: "Loyer du mois en attente" }
+                  : { bg: "#FEECEC", color: "#b91c1c", border: "#F4C9C9", label: "Loyer du mois à déclarer" }
                 const edlsBien = edls.filter((e: any) => e.annonce_id === b.id)
                 const timelineSteps = computeBailTimeline({
                   annonce: { id: b.id, statut: b.statut, bail_genere_at: b.bail_genere_at, date_debut_bail: b.date_debut_bail },
@@ -827,37 +830,37 @@ export default function Proprietaire() {
                 })
                 return (
                   <div key={b.id} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24, display: "flex", flexDirection: isMobile ? "column" : "row", gap: 16, alignItems: isMobile ? "stretch" : "center" }}>
+                    <div style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 20, padding: isMobile ? 20 : 26, display: "flex", flexDirection: isMobile ? "column" : "row", gap: 20, alignItems: isMobile ? "stretch" : "flex-start", fontFamily: "'DM Sans', sans-serif", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
-                          <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{b.titre}</h3>
-                          <span style={{ background: "#dcfce7", color: "#15803d", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>Bail actif</span>
-                          <span style={{ background: loyerMoisStyle.bg, color: loyerMoisStyle.color, padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>{loyerMoisStyle.label}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+                          <h3 style={{ fontSize: 17, fontWeight: 600, margin: 0, letterSpacing: "-0.2px", color: "#111" }}>{b.titre}</h3>
+                          <span style={{ background: "#F0FAEE", color: "#15803d", border: "1px solid #C6E9C0", padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>Bail actif</span>
+                          <span style={{ background: loyerMoisStyle.bg, color: loyerMoisStyle.color, border: `1px solid ${loyerMoisStyle.border}`, padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>{loyerMoisStyle.label}</span>
                           {retardPlusAncien && (
-                            <span title={`Loyer de ${new Date(retardPlusAncien.l.mois + "-01T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })} en retard`} style={{ background: "#fef2f2", color: "#b91c1c", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700, border: "1.5px solid #fecaca" }}>
+                            <span title={`Loyer de ${new Date(retardPlusAncien.l.mois + "-01T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })} en retard`} style={{ background: "#FEECEC", color: "#b91c1c", padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 700, border: "1px solid #F4C9C9", textTransform: "uppercase", letterSpacing: "1.2px" }}>
                               {labelRetard(retardPlusAncien.jours)}{retardsBien.length > 1 ? ` · ${retardsBien.length} mois` : ""}
                             </span>
                           )}
                         </div>
-                        <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 10px" }}>{b.adresse ? b.adresse + " · " : ""}{b.ville}</p>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
-                          <div><span style={{ color: "#9ca3af" }}>Locataire : </span><strong>{b.locataire_email}</strong></div>
-                          {b.date_debut_bail && <div><span style={{ color: "#9ca3af" }}>Début du bail : </span><strong>{new Date(b.date_debut_bail).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</strong></div>}
-                          <div><span style={{ color: "#9ca3af" }}>Loyer : </span><strong>{(b.prix || 0) + (b.charges || 0)} €</strong> <span style={{ color: "#6b7280" }}>/ mois</span></div>
-                          <div><span style={{ color: "#9ca3af" }}>Loyers confirmés : </span><strong>{moisLoyers}</strong></div>
+                        <p style={{ fontSize: 13, color: "#8a8477", margin: "0 0 14px", letterSpacing: "0.1px" }}>{b.adresse ? b.adresse + " · " : ""}{b.ville}</p>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 5, fontSize: 13, lineHeight: 1.5 }}>
+                          <div><span style={{ color: "#8a8477" }}>Locataire · </span><strong style={{ fontWeight: 600, color: "#111" }}>{b.locataire_email}</strong></div>
+                          {b.date_debut_bail && <div><span style={{ color: "#8a8477" }}>Début du bail · </span><strong style={{ fontWeight: 600, color: "#111" }}>{new Date(b.date_debut_bail).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</strong></div>}
+                          <div><span style={{ color: "#8a8477" }}>Loyer · </span><strong style={{ fontWeight: 600, color: "#111" }}>{(b.prix || 0) + (b.charges || 0)} €</strong> <span style={{ color: "#8a8477" }}>/ mois</span></div>
+                          <div><span style={{ color: "#8a8477" }}>Loyers confirmés · </span><strong style={{ fontWeight: 600, color: "#111" }}>{moisLoyers}</strong></div>
                         </div>
                       </div>
-                      <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: 8, flexWrap: "wrap", minWidth: isMobile ? "auto" : 180 }}>
+                      <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: 8, flexWrap: "wrap", minWidth: isMobile ? "auto" : 200 }}>
                         {loyerMoisStatut !== "paye" && (
-                          <a href={`/proprietaire/stats?id=${b.id}`} style={{ background: "#111", color: "white", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>
+                          <a href={`/proprietaire/stats?id=${b.id}`} style={{ background: "#111", color: "#fff", borderRadius: 999, padding: "11px 18px", textDecoration: "none", fontSize: 12, fontWeight: 600, textAlign: "center", flex: isMobile ? 1 : undefined, letterSpacing: "0.3px", fontFamily: "inherit" }}>
                             {loyerMoisStatut === "declare" ? "Confirmer loyer" : "Déclarer loyer"}
                           </a>
                         )}
-                        <a href={`/messages?with=${encodeURIComponent(b.locataire_email)}`} style={{ background: loyerMoisStatut === "paye" ? "#111" : "white", color: loyerMoisStatut === "paye" ? "white" : "#111", border: loyerMoisStatut === "paye" ? "none" : "1.5px solid #e5e7eb", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>Message</a>
-                        <a href={`/annonces/${b.id}`} target="_blank" rel="noopener noreferrer" style={{ background: "white", border: "1.5px solid #e5e7eb", color: "#111", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>Voir l&apos;annonce</a>
-                        <a href={`/proprietaire/bail/${b.id}`} style={{ background: "white", border: "1.5px solid #e5e7eb", color: "#111", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>Bail</a>
-                        <a href={`/proprietaire/edl/${b.id}?type=entree`} style={{ background: "white", border: "1.5px solid #e5e7eb", color: "#111", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>EDL entrée</a>
-                        <a href={`/proprietaire/edl/${b.id}?type=sortie`} style={{ background: "white", border: "1.5px solid #e5e7eb", color: "#111", borderRadius: 10, padding: "10px 16px", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center", flex: isMobile ? 1 : undefined }}>EDL sortie</a>
+                        <a href={`/messages?with=${encodeURIComponent(b.locataire_email)}`} style={{ background: loyerMoisStatut === "paye" ? "#111" : "#fff", color: loyerMoisStatut === "paye" ? "#fff" : "#111", border: loyerMoisStatut === "paye" ? "none" : "1px solid #EAE6DF", borderRadius: 999, padding: "11px 18px", textDecoration: "none", fontSize: 12, fontWeight: 600, textAlign: "center", flex: isMobile ? 1 : undefined, letterSpacing: "0.3px", fontFamily: "inherit" }}>Message</a>
+                        <a href={`/annonces/${b.id}`} target="_blank" rel="noopener noreferrer" style={{ background: "#fff", border: "1px solid #EAE6DF", color: "#111", borderRadius: 999, padding: "9px 18px", textDecoration: "none", fontSize: 11, fontWeight: 600, textAlign: "center", flex: isMobile ? 1 : undefined, letterSpacing: "0.3px", fontFamily: "inherit" }}>Voir l&apos;annonce</a>
+                        <a href={`/proprietaire/bail/${b.id}`} style={{ background: "#fff", border: "1px solid #EAE6DF", color: "#111", borderRadius: 999, padding: "9px 18px", textDecoration: "none", fontSize: 11, fontWeight: 600, textAlign: "center", flex: isMobile ? 1 : undefined, letterSpacing: "0.3px", fontFamily: "inherit" }}>Bail</a>
+                        <a href={`/proprietaire/edl/${b.id}?type=entree`} style={{ background: "#fff", border: "1px solid #EAE6DF", color: "#111", borderRadius: 999, padding: "9px 18px", textDecoration: "none", fontSize: 11, fontWeight: 600, textAlign: "center", flex: isMobile ? 1 : undefined, letterSpacing: "0.3px", fontFamily: "inherit" }}>EDL entrée</a>
+                        <a href={`/proprietaire/edl/${b.id}?type=sortie`} style={{ background: "#fff", border: "1px solid #EAE6DF", color: "#111", borderRadius: 999, padding: "9px 18px", textDecoration: "none", fontSize: 11, fontWeight: 600, textAlign: "center", flex: isMobile ? 1 : undefined, letterSpacing: "0.3px", fontFamily: "inherit" }}>EDL sortie</a>
                       </div>
                     </div>
                     <BailTimeline steps={timelineSteps} />
