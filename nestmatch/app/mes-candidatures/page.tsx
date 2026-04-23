@@ -15,12 +15,12 @@ import Image from "next/image"
  */
 
 type Statut = "contact" | "dossier" | "visite" | "bail" | "rejete"
-const STATUT_LABEL: Record<Statut, { label: string; bg: string; color: string }> = {
-  contact:  { label: "Contact établi",      bg: "#f3f4f6", color: "#374151" },
-  dossier:  { label: "Dossier envoyé",      bg: "#dcfce7", color: "#15803d" },
-  visite:   { label: "Visite programmée",   bg: "#dbeafe", color: "#1d4ed8" },
-  bail:     { label: "Bail signé",          bg: "#16a34a", color: "white" },
-  rejete:   { label: "Visite refusée",      bg: "#fee2e2", color: "#b91c1c" },
+const STATUT_LABEL: Record<Statut, { label: string; bg: string; color: string; border: string }> = {
+  contact:  { label: "Contact établi",      bg: "#F7F4EF", color: "#6b6559", border: "#EAE6DF" },
+  dossier:  { label: "Dossier envoyé",      bg: "#F0FAEE", color: "#15803d", border: "#C6E9C0" },
+  visite:   { label: "Visite programmée",   bg: "#EEF3FB", color: "#1d4ed8", border: "#D7E3F4" },
+  bail:     { label: "Bail signé",          bg: "#111",    color: "#fff",    border: "#111"    },
+  rejete:   { label: "Visite refusée",      bg: "#FEECEC", color: "#b91c1c", border: "#F4C9C9" },
 }
 
 const RETRAIT_PREFIX = "[CANDIDATURE_RETIREE]"
@@ -198,14 +198,20 @@ export default function MesCandidatures() {
   }
 
   if (status === "loading" || loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", color: "#6b7280", fontFamily: "'DM Sans', sans-serif" }}>Chargement...</div>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", color: "#8a8477", fontFamily: "'DM Sans', sans-serif" }}>Chargement...</div>
   )
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,500&display=swap');`}</style>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.5px" }}>Mes candidatures</h1>
-        <p style={{ fontSize: 14, color: "#6b7280", marginTop: 6, marginBottom: 28, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 10px" }}>
+          Locataire
+        </p>
+        <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: isMobile ? 32 : 40, lineHeight: 1.1, letterSpacing: "-0.6px", color: "#111", margin: 0 }}>
+          Mes candidatures
+        </h1>
+        <p style={{ fontSize: 14, color: "#8a8477", marginTop: 10, marginBottom: 28, lineHeight: 1.6, maxWidth: 520 }}>
           Toutes les annonces que vous avez contactées, avec leur statut actuel.
         </p>
 
@@ -223,35 +229,37 @@ export default function MesCandidatures() {
               const s = STATUT_LABEL[c.statut as Statut]
               const photo = ann && Array.isArray(ann.photos) && ann.photos.length > 0 ? ann.photos[0] : null
               return (
-                <div key={c.annonce_id} style={{ background: "white", borderRadius: 18, padding: 16, display: "flex", gap: 14, alignItems: "center", flexWrap: isMobile ? "wrap" : "nowrap" }}>
+                <div key={c.annonce_id} style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 20, padding: 18, display: "flex", gap: 14, alignItems: "center", flexWrap: isMobile ? "wrap" : "nowrap", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
                   {photo ? (
-                    <Image src={photo} alt="" width={80} height={80} sizes="80px" style={{ width: 80, height: 80, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
+                    <Image src={photo} alt="" width={80} height={80} sizes="80px" style={{ width: 80, height: 80, borderRadius: 14, objectFit: "cover", flexShrink: 0, border: "1px solid #EAE6DF" }} />
                   ) : (
-                    <div style={{ width: 80, height: 80, borderRadius: 12, background: "#f3f4f6", flexShrink: 0 }} />
+                    <div style={{ width: 80, height: 80, borderRadius: 14, background: "#F7F4EF", border: "1px solid #EAE6DF", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", color: "#8a8477", fontSize: 22 }}>
+                      {(ann?.titre || "—").slice(0, 1).toUpperCase()}
+                    </div>
                   )}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
-                      <p style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>{ann?.titre || "Annonce supprimée"}</p>
-                      <span style={{ background: s.bg, color: s.color, fontSize: 11, fontWeight: 700, padding: "2px 10px", borderRadius: 999 }}>
+                      <p style={{ fontSize: 15, fontWeight: 600, margin: 0, color: "#111", letterSpacing: "-0.2px" }}>{ann?.titre || "Annonce supprimée"}</p>
+                      <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`, fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "1.2px" }}>
                         {s.label}
                       </span>
                     </div>
-                    <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>
-                      {ann?.ville}{ann?.prix ? ` · ${ann.prix} €/mois` : ""}
+                    <p style={{ fontSize: 13, color: "#8a8477", margin: 0 }}>
+                      {ann?.ville}{ann?.prix ? <> <span style={{ color: "#EAE6DF" }}>·</span> {ann.prix} €/mois</> : ""}
                     </p>
-                    <p style={{ fontSize: 11, color: "#9ca3af", margin: "4px 0 0" }}>
+                    <p style={{ fontSize: 11, color: "#8a8477", margin: "6px 0 0" }}>
                       Premier contact le {new Date(c.premier_contact).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
-                      {" · "}Propriétaire : {displayName(c.proprietaire, ann?.proprietaire)}
+                      {" "}<span style={{ color: "#EAE6DF" }}>·</span>{" "}Propriétaire : {displayName(c.proprietaire, ann?.proprietaire)}
                     </p>
                   </div>
                   <div style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
                     <Link href={`/messages?with=${encodeURIComponent(c.proprietaire)}`}
-                      style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "7px 14px" }}>
-                      Voir messages
+                      style={{ fontSize: 11, fontWeight: 600, color: "#111", textDecoration: "none", border: "1px solid #EAE6DF", borderRadius: 999, padding: "8px 16px", background: "#fff", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+                      Messages
                     </Link>
                     {ann && (
                       <Link href={`/annonces/${ann.id}`}
-                        style={{ fontSize: 12, fontWeight: 700, color: "white", background: "#111", textDecoration: "none", borderRadius: 999, padding: "7px 14px" }}>
+                        style={{ fontSize: 11, fontWeight: 600, color: "#fff", background: "#111", textDecoration: "none", borderRadius: 999, padding: "8px 16px", textTransform: "uppercase", letterSpacing: "0.3px" }}>
                         Annonce
                       </Link>
                     )}
@@ -261,7 +269,7 @@ export default function MesCandidatures() {
                         disabled={relancantId === c.annonce_id}
                         onClick={() => relancerCandidature(c.annonce_id, c.proprietaire, ann?.titre || "")}
                         title={`Sans réponse depuis ${c.joursSansReponse} jours`}
-                        style={{ fontSize: 12, fontWeight: 700, color: "white", background: "#f59e0b", border: "none", borderRadius: 999, padding: "7px 14px", cursor: relancantId === c.annonce_id ? "wait" : "pointer", fontFamily: "inherit", opacity: relancantId === c.annonce_id ? 0.7 : 1 }}>
+                        style={{ fontSize: 11, fontWeight: 600, color: "#a16207", background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 999, padding: "8px 16px", cursor: relancantId === c.annonce_id ? "wait" : "pointer", fontFamily: "inherit", opacity: relancantId === c.annonce_id ? 0.7 : 1, textTransform: "uppercase", letterSpacing: "0.3px" }}>
                         {relancantId === c.annonce_id ? "…" : `Relancer (${c.joursSansReponse} j)`}
                       </button>
                     )}
@@ -271,14 +279,14 @@ export default function MesCandidatures() {
                           type="button"
                           disabled={retraitEnCours}
                           onClick={() => retirerCandidature(c.annonce_id, c.proprietaire, ann?.titre || "")}
-                          style={{ fontSize: 12, fontWeight: 700, color: "white", background: "#dc2626", border: "none", borderRadius: 999, padding: "7px 14px", cursor: retraitEnCours ? "wait" : "pointer", fontFamily: "inherit", opacity: retraitEnCours ? 0.7 : 1 }}>
+                          style={{ fontSize: 11, fontWeight: 600, color: "#fff", background: "#b91c1c", border: "none", borderRadius: 999, padding: "8px 16px", cursor: retraitEnCours ? "wait" : "pointer", fontFamily: "inherit", opacity: retraitEnCours ? 0.7 : 1, textTransform: "uppercase", letterSpacing: "0.3px" }}>
                           {retraitEnCours ? "…" : "Confirmer"}
                         </button>
                         <button
                           type="button"
                           disabled={retraitEnCours}
                           onClick={() => setRetraitId(null)}
-                          style={{ fontSize: 12, fontWeight: 600, color: "#111", background: "#f3f4f6", border: "none", borderRadius: 999, padding: "7px 14px", cursor: "pointer", fontFamily: "inherit" }}>
+                          style={{ fontSize: 11, fontWeight: 600, color: "#111", background: "#fff", border: "1px solid #EAE6DF", borderRadius: 999, padding: "8px 16px", cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}>
                           Annuler
                         </button>
                       </div>
@@ -287,7 +295,7 @@ export default function MesCandidatures() {
                         type="button"
                         onClick={() => setRetraitId(c.annonce_id)}
                         title="Retirer votre candidature — annule les visites en cours et notifie le propriétaire."
-                        style={{ fontSize: 12, fontWeight: 600, color: "#dc2626", background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 999, padding: "7px 14px", cursor: "pointer", fontFamily: "inherit" }}>
+                        style={{ fontSize: 11, fontWeight: 600, color: "#b91c1c", background: "#FEECEC", border: "1px solid #F4C9C9", borderRadius: 999, padding: "8px 16px", cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}>
                         Retirer
                       </button>
                     )}
