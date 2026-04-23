@@ -37,6 +37,33 @@ const LOYER_PAYE_PREFIX = "[LOYER_PAYE]"
 // Format : "[REPLY:<id>]\n<texte>". Permet d'implémenter le reply-to sans migration DB.
 const REPLY_REGEX = /^\[REPLY:(\d+)\]\n([\s\S]*)$/
 
+// ─── Statuts de conversation (fidèle handoff messages.jsx L12-19) ─────────────
+// Dérivation :
+//   contact  = échange entamé, pas encore de [DOSSIER_CARD]
+//   dossier  = au moins un message préfixé [DOSSIER_CARD]
+//   visite   = visite statut "proposée" / "confirmée" / "effectuée"
+//   bail     = annonce.statut === "loué" + locataire_email match
+//   rejete   = visite "annulée" uniquement (aucune en cours)
+type StatutConv = "contact" | "dossier" | "visite" | "bail" | "rejete"
+const STATUT_CONV: Record<StatutConv, { label: string; color: string; bg: string }> = {
+  contact: { label: "Contact",           color: "#374151", bg: "#f3f4f6" },
+  dossier: { label: "Dossier envoyé",    color: "#15803d", bg: "#dcfce7" },
+  visite:  { label: "Visite programmée", color: "#1d4ed8", bg: "#dbeafe" },
+  bail:    { label: "Bail signé",        color: "#ffffff", bg: "#16a34a" },
+  rejete:  { label: "Refusé",            color: "#b91c1c", bg: "#fee2e2" },
+}
+
+// Statut candidat côté propriétaire — qualifie la RELATION (indép. du cycle)
+//   standard  = candidat lambda
+//   confirme  = visite confirmée ou effectuée → prêt à signer
+//   locataire = bail signé, locataire en place
+type StatutCandidat = "standard" | "confirme" | "locataire"
+const CANDIDATE_STATUS: Record<StatutCandidat, { label: string; short: string; color: string; ring: string; dot: string }> = {
+  standard:  { label: "Candidat",          short: "Candidat",      color: "#6b7280", ring: "transparent", dot: "#9ca3af" },
+  confirme:  { label: "Prêt à signer",     short: "Prêt à signer", color: "#b45309", ring: "#f59e0b",     dot: "#f59e0b" },
+  locataire: { label: "Locataire actuel",  short: "Locataire",     color: "#111",    ring: "#111",        dot: "#111" },
+}
+
 function parseReply(contenu: string): { replyToId: number | null; text: string } {
   const m = contenu.match(REPLY_REGEX)
   if (m) return { replyToId: parseInt(m[1], 10), text: m[2] }
@@ -860,6 +887,11 @@ function MessagesInner() {
   // "candidats" (visite/dossier en cours). Côté proprio : biens loués vs
   // candidatures. Côté locataire : son logement vs ses candidatures.
   const [messagesTab, setMessagesTab] = useState<"actifs" | "candidats">("actifs")
+  // Filtre par statut (handoff messages.jsx L154-179) : 6 pills
+  const [statusFilter, setStatusFilter] = useState<"all" | StatutConv>("all")
+  // Derivation statut : flag [DOSSIER_CARD] par conv + visites batchées par conv
+  const [convDossierFlag, setConvDossierFlag] = useState<Record<string, boolean>>({})
+  const [convVisitesMap, setConvVisitesMap] = useState<Record<string, Array<{ statut: string }>>>({})
   // Filtre par bien (proprio uniquement) — persist localStorage
   const [bienFilter, setBienFilter] = useState<number | "all">("all")
   useEffect(() => {
@@ -1220,6 +1252,7 @@ function MessagesInner() {
 
     const convMap = new Map<string, any>()
     const searchBuckets = new Map<string, string[]>()
+    const dossierFlags = new Map<string, boolean>()
     if (data) {
       data.forEach((m: any) => {
         const other = m.from_email === email ? m.to_email : m.from_email
@@ -1235,6 +1268,9 @@ function MessagesInner() {
         // que le texte utilisateur. JSON des cards reste searchable via le nom
         // de l'annonce déjà filtré ailleurs.
         const raw = typeof m.contenu === "string" ? m.contenu : ""
+        // Flag "dossier envoyé" : au moins 1 message [DOSSIER_CARD] dans la conv
+        // (envoyé ou reçu). Utilisé par la dérivation de statut `dossier`.
+        if (raw.startsWith(DOSSIER_PREFIX)) dossierFlags.set(key, true)
         const plain = raw
           .replace(/^\[REPLY:\d+\]\n/, "")
           .replace(/^\[\w+[:\]][^\]]*\]/, "")
@@ -1246,6 +1282,9 @@ function MessagesInner() {
         }
       })
     }
+    const dossierFlagsObj: Record<string, boolean> = {}
+    for (const [k, v] of dossierFlags) dossierFlagsObj[k] = v
+    setConvDossierFlag(dossierFlagsObj)
     const nextIndex: Record<string, string> = {}
     for (const [k, arr] of searchBuckets) nextIndex[k] = arr.join(" ")
     setSearchIndex(nextIndex)
@@ -1312,6 +1351,32 @@ function MessagesInner() {
         const map: Record<number, any> = {}
         ann.forEach((a: any) => { map[a.id] = a })
         setAnnonces(map)
+      }
+    }
+
+    // Visites batchées pour toutes les convs — alimente la dérivation de
+    // statut (visite / rejete) et candidateStatus (confirme). Scopé à moi +
+    // annonces des convs. Beaucoup moins cher que d'appeler loadVisitesConv
+    // par conv à l'affichage.
+    if (ids.length > 0) {
+      const me2 = email.toLowerCase()
+      let vq = supabase
+        .from("visites")
+        .select("annonce_id, proprietaire_email, locataire_email, statut")
+        .in("annonce_id", ids as number[])
+      vq = proprietaireActive ? vq.eq("proprietaire_email", me2) : vq.eq("locataire_email", me2)
+      const { data: visites } = await vq
+      if (visites) {
+        const vmap: Record<string, Array<{ statut: string }>> = {}
+        for (const v of visites as any[]) {
+          const peer = (proprietaireActive ? v.locataire_email : v.proprietaire_email || "").toString().toLowerCase()
+          const annId = v.annonce_id
+          if (!peer || annId == null) continue
+          const key = [me2, peer].sort().join("|") + `:${annId}`
+          if (!vmap[key]) vmap[key] = []
+          vmap[key].push({ statut: String(v.statut || "") })
+        }
+        setConvVisitesMap(vmap)
       }
     }
 
@@ -1868,6 +1933,43 @@ function MessagesInner() {
     return { pct, color: matchColor(pct) }
   }
 
+  // Dérive le statut d'une conv (handoff messages.jsx) — priorité haut→bas :
+  //   bail > visite > rejete > dossier > contact
+  // Règles alignées sur CLAUDE_CODE.md du handoff.
+  function deriveStatut(conv: { key: string; other: string; annonceId: number | null }): StatutConv {
+    const ann = conv.annonceId != null ? annonces[conv.annonceId] : null
+    const meL = (myEmail || "").toLowerCase()
+    const otherL = (conv.other || "").toLowerCase()
+    // 1. bail — annonce louée + match locataire_email
+    if (ann?.statut === "loué" && ann.locataire_email) {
+      const loc = String(ann.locataire_email).toLowerCase()
+      if (otherL === loc || meL === loc) return "bail"
+    }
+    const visites = convVisitesMap[conv.key] || []
+    // 2. visite — au moins 1 visite active (proposée / confirmée / effectuée)
+    const actives = visites.filter(v => v.statut === "proposée" || v.statut === "confirmée" || v.statut === "effectuée")
+    if (actives.length > 0) return "visite"
+    // 3. rejete — visites existent mais toutes annulées
+    if (visites.length > 0 && visites.every(v => v.statut === "annulée")) return "rejete"
+    // 4. dossier — [DOSSIER_CARD] détecté
+    if (convDossierFlag[conv.key]) return "dossier"
+    // 5. contact — par défaut
+    return "contact"
+  }
+
+  // Statut candidat (proprio side uniquement) — qualifie la relation.
+  function deriveCandidateStatus(conv: { key: string; other: string; annonceId: number | null }): StatutCandidat {
+    if (!proprietaireActive) return "standard"
+    const ann = conv.annonceId != null ? annonces[conv.annonceId] : null
+    const otherL = (conv.other || "").toLowerCase()
+    if (ann?.statut === "loué" && ann.locataire_email && String(ann.locataire_email).toLowerCase() === otherL) {
+      return "locataire"
+    }
+    const visites = convVisitesMap[conv.key] || []
+    if (visites.some(v => v.statut === "confirmée" || v.statut === "effectuée")) return "confirme"
+    return "standard"
+  }
+
   // Détection "bail actif" pour la conv : annonce liée a un statut loué ou
   // bail_envoye (en attente signature) + l'autre interlocuteur EST le
   // locataire (côté proprio) OU le proprio (côté locataire).
@@ -1891,6 +1993,8 @@ function MessagesInner() {
     .filter(c => messagesTab === "actifs" ? isActiveBail(c) : !isActiveBail(c))
     .filter(c => showArchived ? archivedKeys.has(c.key) : !archivedKeys.has(c.key))
     .filter(c => bienFilter === "all" ? true : c.annonceId === bienFilter)
+    // Filtre par statut dérivé (handoff : 6 pills all/contact/dossier/visite/bail/rejete)
+    .filter(c => statusFilter === "all" ? true : deriveStatut(c) === statusFilter)
     .filter(c => {
       if (!recherche) return true
       const needle = recherche.toLowerCase()
@@ -1914,6 +2018,21 @@ function MessagesInner() {
   const countActifs = conversations.filter(c => isActiveBail(c) && !archivedKeys.has(c.key)).length
   const countCandidats = conversations.filter(c => !isActiveBail(c) && !archivedKeys.has(c.key)).length
   const countArchived = conversations.filter(c => archivedKeys.has(c.key)).length
+
+  // Pool pour compter les pills de statut — on applique tab + archive + bien,
+  // mais pas la recherche ni le statusFilter lui-meme (pour afficher la vraie
+  // distribution). Handoff : messages.jsx L156-161.
+  const statutPool = conversations
+    .filter(c => messagesTab === "actifs" ? isActiveBail(c) : !isActiveBail(c))
+    .filter(c => showArchived ? archivedKeys.has(c.key) : !archivedKeys.has(c.key))
+    .filter(c => bienFilter === "all" ? true : c.annonceId === bienFilter)
+  const statutCounts: Record<StatutConv | "all", number> = {
+    all: statutPool.length, contact: 0, dossier: 0, visite: 0, bail: 0, rejete: 0,
+  }
+  for (const c of statutPool) {
+    const s = deriveStatut(c)
+    statutCounts[s] = (statutCounts[s] || 0) + 1
+  }
 
   // Default tab intelligent : au premier load, si aucun bail actif → candidatures
   useEffect(() => {
@@ -2308,6 +2427,43 @@ function MessagesInner() {
                 placeholder="Rechercher..."
                 style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 13, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
               />
+              {/* Filtre par statut — 6 pills (handoff messages.jsx L154-179) */}
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {([
+                  ["all",     "Toutes",  null as null | StatutConv],
+                  ["contact", "Contact", "contact" as StatutConv],
+                  ["dossier", "Dossier", "dossier" as StatutConv],
+                  ["visite",  "Visite",  "visite"  as StatutConv],
+                  ["bail",    "Bail",    "bail"    as StatutConv],
+                  ["rejete",  "Refusé",  "rejete"  as StatutConv],
+                ] as const).map(([k, label, statutKey]) => {
+                  const s = statutKey ? STATUT_CONV[statutKey] : null
+                  const sel = statusFilter === k
+                  const n = statutCounts[k]
+                  return (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => setStatusFilter(k)}
+                      style={{
+                        padding: "5px 10px", borderRadius: 999,
+                        fontSize: 11, fontWeight: 600, fontFamily: "inherit",
+                        letterSpacing: "0.2px", cursor: "pointer",
+                        background: sel ? (s ? s.color : "#111") : "transparent",
+                        color: sel ? "#fff" : (s ? s.color : "#6b7280"),
+                        border: `1px solid ${sel ? (s ? s.color : "#111") : (s ? `${s.color}33` : "#e5e7eb")}`,
+                        display: "inline-flex", alignItems: "center", gap: 5,
+                      }}
+                    >
+                      {k !== "all" && s && (
+                        <span style={{ width: 6, height: 6, borderRadius: 999, background: sel ? "#fff" : s.color }} />
+                      )}
+                      {label}
+                      {n > 0 && <span style={{ opacity: 0.7 }}>{n}</span>}
+                    </button>
+                  )
+                })}
+              </div>
               {/* Filtre par bien — proprio uniquement, dès 2+ biens dans les convs */}
               {proprietaireActive && (() => {
                 const biensFromConvs = Array.from(
@@ -2396,22 +2552,26 @@ function MessagesInner() {
                   ? new Date(conv.lastMsg.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
                   : ""
 
-                // Badge de relation : locataire actif (bail actif), candidat, autre
+                // Badge de relation côté locataire : bail actif / ancienne candidature / candidat
                 let relBadge: { label: string; bg: string; color: string } | null = null
-                if (ann?.statut === "loué" && ann?.locataire_email) {
-                  const locEmail = (ann.locataire_email || "").toLowerCase()
-                  const other = (conv.other || "").toLowerCase()
-                  const me = (myEmail || "").toLowerCase()
-                  // Côté proprio : l'autre est le locataire si locataire_email === other
-                  // Côté locataire : l'autre est le proprio si locataire_email === me
-                  if (other === locEmail || me === locEmail) {
-                    relBadge = { label: "Bail actif", bg: "#dcfce7", color: "#15803d" }
+                if (!proprietaireActive) {
+                  if (ann?.statut === "loué" && ann?.locataire_email) {
+                    const locEmail = (ann.locataire_email || "").toLowerCase()
+                    const other = (conv.other || "").toLowerCase()
+                    const meLower = (myEmail || "").toLowerCase()
+                    if (other === locEmail || meLower === locEmail) {
+                      relBadge = { label: "Bail actif", bg: "#dcfce7", color: "#15803d" }
+                    } else if (conv.annonceId) {
+                      relBadge = { label: "Ancienne candidature", bg: "#f3f4f6", color: "#6b7280" }
+                    }
                   } else if (conv.annonceId) {
-                    relBadge = { label: "Ancienne candidature", bg: "#f3f4f6", color: "#6b7280" }
+                    relBadge = { label: "Candidat", bg: "#eff6ff", color: "#1d4ed8" }
                   }
-                } else if (conv.annonceId) {
-                  relBadge = { label: "Candidat", bg: "#eff6ff", color: "#1d4ed8" }
                 }
+                // Côté proprio : statut candidat (standard / confirme / locataire) via handoff
+                const candStatut = proprietaireActive ? deriveCandidateStatus(conv) : null
+                const cand = candStatut ? CANDIDATE_STATUS[candStatut] : null
+                const ringColor = cand && cand.ring !== "transparent" ? cand.ring : "transparent"
 
                 return (
                   <div key={conv.key}
@@ -2421,12 +2581,14 @@ function MessagesInner() {
                     onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "white"; if (menuConv !== conv.key) { const btn = e.currentTarget.querySelector(".menu-btn") as HTMLElement; if (btn) btn.style.opacity = "0" } }}
                   >
                     <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                      {/* Avatar annonce (ou peer si pas d'annonce) + badge unread */}
-                      <div style={{ position: "relative", flexShrink: 0 }}>
+                      {/* Avatar annonce (ou peer si pas d'annonce) + ring candidateStatus (handoff L227-230) + badge unread */}
+                      <div style={{ position: "relative", flexShrink: 0, padding: ringColor !== "transparent" ? 2 : 0, borderRadius: ringColor !== "transparent" ? 12 : 10, background: ringColor, transition: "background 200ms" }}>
                         {photo ? (
-                          <img src={photo} alt="" style={{ width: 40, height: 40, borderRadius: 10, objectFit: "cover", display: "block" }} />
+                          <img src={photo} alt="" style={{ width: ringColor !== "transparent" ? 36 : 40, height: ringColor !== "transparent" ? 36 : 40, borderRadius: ringColor !== "transparent" ? 8 : 10, objectFit: "cover", display: "block", border: ringColor !== "transparent" ? "2px solid #fff" : "none", boxSizing: "border-box" }} />
                         ) : (
-                          <Avatar email={conv.other} image={peerImages[conv.other.toLowerCase()]} size={40} />
+                          <div style={{ border: ringColor !== "transparent" ? "2px solid #fff" : "none", borderRadius: "50%" }}>
+                            <Avatar email={conv.other} image={peerImages[conv.other.toLowerCase()]} size={ringColor !== "transparent" ? 36 : 40} />
+                          </div>
                         )}
                         {/* Si annonce présente, overlay peer avatar pour contexte humain */}
                         {photo && (
@@ -2453,6 +2615,13 @@ function MessagesInner() {
                         {relBadge && (
                           <span style={{ display: "inline-block", background: relBadge.bg, color: relBadge.color, fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 999, marginBottom: 2, marginRight: 4 }}>
                             {relBadge.label}
+                          </span>
+                        )}
+                        {/* Statut candidat (proprio) : inline dot + label, style handoff L239-244 */}
+                        {cand && (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: cand.color, fontSize: 10.5, fontWeight: 700, marginRight: 6, letterSpacing: "0.1px" }}>
+                            <span style={{ width: 5, height: 5, borderRadius: 999, background: cand.dot }} />
+                            {cand.short}
                           </span>
                         )}
                         {(() => {
@@ -2589,6 +2758,18 @@ function MessagesInner() {
                               >
                                 <span style={{ width: 6, height: 6, borderRadius: 999, background: c.color }} />
                                 {c.pct}% match
+                              </span>
+                            )
+                          })()}
+                          {/* Statut candidat (proprio) pill — handoff messages.jsx L277-282 */}
+                          {proprietaireActive && (() => {
+                            const statut = deriveCandidateStatus(convActiveData)
+                            if (statut === "standard") return null
+                            const cand = CANDIDATE_STATUS[statut]
+                            return (
+                              <span style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 10px", borderRadius: 999, border: `1px solid ${cand.dot}`, color: cand.color, fontSize: 10, fontWeight: 700, letterSpacing: "0.4px", textTransform: "uppercase" as const, background: "#fff", fontFamily: "inherit" }}>
+                                <span style={{ width: 5, height: 5, borderRadius: 999, background: cand.dot }} />
+                                {cand.label}
                               </span>
                             )
                           })()}
