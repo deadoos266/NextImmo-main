@@ -2769,33 +2769,33 @@ function MessagesInner() {
                     {menuConv === conv.key && (
                       <>
                         <div onClick={e => { e.stopPropagation(); setMenuConv(null) }} style={{ position: "fixed", inset: 0, zIndex: 100 }} />
-                        <div style={{ position: "absolute", top: 36, right: 10, background: "white", borderRadius: 12, border: "1.5px solid #e5e7eb", boxShadow: "0 6px 20px rgba(0,0,0,0.12)", zIndex: 200, minWidth: 170, overflow: "hidden" }}>
+                        <div style={{ position: "absolute", top: 36, right: 10, background: "white", borderRadius: 14, border: "1px solid #EAE6DF", boxShadow: "0 18px 48px rgba(17,17,17,0.14)", zIndex: 200, minWidth: 180, overflow: "hidden", fontFamily: "inherit" }}>
                           {conv.unread > 0 && (
                             <button onClick={e => { e.stopPropagation(); marquerLu(conv); setMenuConv(null) }}
-                              style={{ width: "100%", padding: "10px 14px", background: "none", border: "none", borderBottom: "1px solid #f3f4f6", textAlign: "left", fontSize: 13, cursor: "pointer", fontFamily: "inherit", color: "#374151", display: "flex", alignItems: "center", gap: 8 }}
-                              onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
+                              style={{ width: "100%", padding: "11px 14px", background: "none", border: "none", borderBottom: "1px solid #F2EEE6", textAlign: "left", fontSize: 13, cursor: "pointer", fontFamily: "inherit", color: "#111", display: "flex", alignItems: "center", gap: 8 }}
+                              onMouseEnter={e => (e.currentTarget.style.background = "#F7F4EF")}
                               onMouseLeave={e => (e.currentTarget.style.background = "none")}>
                               Marquer comme lu
                             </button>
                           )}
                           {ann && (
                             <button onClick={e => { e.stopPropagation(); window.location.href = `/annonces/${conv.annonceId}`; setMenuConv(null) }}
-                              style={{ width: "100%", padding: "10px 14px", background: "none", border: "none", borderBottom: "1px solid #f3f4f6", textAlign: "left", fontSize: 13, cursor: "pointer", fontFamily: "inherit", color: "#374151", display: "flex", alignItems: "center", gap: 8 }}
-                              onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
+                              style={{ width: "100%", padding: "11px 14px", background: "none", border: "none", borderBottom: "1px solid #F2EEE6", textAlign: "left", fontSize: 13, cursor: "pointer", fontFamily: "inherit", color: "#111", display: "flex", alignItems: "center", gap: 8 }}
+                              onMouseEnter={e => (e.currentTarget.style.background = "#F7F4EF")}
                               onMouseLeave={e => (e.currentTarget.style.background = "none")}>
-                              Voir l'annonce
+                              Voir l&apos;annonce
                             </button>
                           )}
                           <button onClick={e => { e.stopPropagation(); toggleArchive(conv.key); setMenuConv(null) }}
-                            style={{ width: "100%", padding: "10px 14px", background: "none", border: "none", borderBottom: "1px solid #f3f4f6", textAlign: "left", fontSize: 13, cursor: "pointer", fontFamily: "inherit", color: "#374151", display: "flex", alignItems: "center", gap: 8 }}
-                            onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
+                            style={{ width: "100%", padding: "11px 14px", background: "none", border: "none", borderBottom: "1px solid #F2EEE6", textAlign: "left", fontSize: 13, cursor: "pointer", fontFamily: "inherit", color: "#111", display: "flex", alignItems: "center", gap: 8 }}
+                            onMouseEnter={e => (e.currentTarget.style.background = "#F7F4EF")}
                             onMouseLeave={e => (e.currentTarget.style.background = "none")}>
                             {archivedKeys.has(conv.key) ? "Désarchiver" : "Archiver"}
                           </button>
                           <button onClick={e => { e.stopPropagation(); supprimerConversation(conv.key); setMenuConv(null) }}
                             disabled={supprimant === conv.key}
-                            style={{ width: "100%", padding: "10px 14px", background: "none", border: "none", textAlign: "left", fontSize: 13, cursor: supprimant === conv.key ? "not-allowed" : "pointer", fontFamily: "inherit", color: "#dc2626", display: "flex", alignItems: "center", gap: 8, opacity: supprimant === conv.key ? 0.5 : 1 }}
-                            onMouseEnter={e => (e.currentTarget.style.background = "#fee2e2")}
+                            style={{ width: "100%", padding: "11px 14px", background: "none", border: "none", textAlign: "left", fontSize: 13, cursor: supprimant === conv.key ? "not-allowed" : "pointer", fontFamily: "inherit", color: "#b91c1c", display: "flex", alignItems: "center", gap: 8, opacity: supprimant === conv.key ? 0.5 : 1 }}
+                            onMouseEnter={e => (e.currentTarget.style.background = "#fef2f2")}
                             onMouseLeave={e => (e.currentTarget.style.background = "none")}>
                             {supprimant === conv.key ? "Suppression…" : "Supprimer"}
                           </button>
@@ -3041,10 +3041,11 @@ function MessagesInner() {
                   )}
                   {messagesAvecSep.map((item, idx) => {
                     if (item.type === "sep") return (
-                      <div key={`sep-${idx}`} style={{ display: "flex", alignItems: "center", gap: 12, margin: "8px 0" }}>
-                        <div style={{ flex: 1, height: 1, background: "#f3f4f6" }} />
-                        <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, whiteSpace: "nowrap" }}>{item.label}</span>
-                        <div style={{ flex: 1, height: 1, background: "#f3f4f6" }} />
+                      // Date divider editorial — hairline + pill beige avec jour en Fraunces italic
+                      <div key={`sep-${idx}`} style={{ display: "flex", alignItems: "center", gap: 14, margin: "18px 0 10px", padding: "0 4px" }}>
+                        <div style={{ flex: 1, height: 1, background: "#EAE6DF" }} />
+                        <span style={{ fontSize: 11, color: "#8a8477", fontWeight: 700, whiteSpace: "nowrap", textTransform: "uppercase" as const, letterSpacing: "1.4px", background: "#F7F4EF", border: "1px solid #EAE6DF", borderRadius: 999, padding: "4px 12px" }}>{item.label}</span>
+                        <div style={{ flex: 1, height: 1, background: "#EAE6DF" }} />
                       </div>
                     )
                     const m = item.msg
