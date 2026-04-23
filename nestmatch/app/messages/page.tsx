@@ -17,6 +17,7 @@ import MessageSkeleton from "../components/ui/MessageSkeleton"
 import BailSignatureModal from "../components/BailSignatureModal"
 import Modal from "../components/ui/Modal"
 import type { BailData } from "../../lib/bailPDF"
+import { calculerScore, type Profil as MatchingProfil, type Annonce as MatchingAnnonce } from "../../lib/matching"
 
 const DOSSIER_PREFIX = "[DOSSIER_CARD]"
 const BAIL_PREFIX = "[BAIL_CARD]"
@@ -834,6 +835,13 @@ function MessagesInner() {
   // header chat quand la relation est assez avancée (visite programmée ou bail
   // signé) — cf. garde-fou vie privée 2026-04-23.
   const [peerPhones, setPeerPhones] = useState<Record<string, string>>({})
+  // Profils matching des peers (keyed par email lower). Chargé en piggyback
+  // de peerImages pour pouvoir calculer, cote proprio, le score du candidat
+  // sur l'annonce concernée. Inutile cote locataire (c'est myProfile qui sert).
+  const [peerProfiles, setPeerProfiles] = useState<Record<string, MatchingProfil>>({})
+  // Profil matching de l'user connecte (cote locataire seulement). Sert a
+  // calculer le score d'une annonce donnee dans une conv (ex. "82% compat").
+  const [myProfile, setMyProfile] = useState<MatchingProfil | null>(null)
   const [convActive, setConvActive] = useState<string | null>(null)
   const [messages, setMessages] = useState<any[]>([])
   // Signatures EDL : { [edlId]: { locataire: bool, bailleur: bool } }.
@@ -1255,12 +1263,20 @@ function MessagesInner() {
     // (avatar uploadé par l'user), fallback users.image (Google OAuth).
     const peerEmails = [...new Set(convList.map(c => (c.other || "").toLowerCase()).filter(Boolean))]
     if (peerEmails.length > 0) {
-      const [usersRes, profilsRes] = await Promise.all([
+      // Colonnes matching : permet calcul score cote proprio (peer = candidat)
+      // + avatar/tel deja en piggyback depuis 2026-04-23.
+      const MATCH_COLS = "email, photo_url_custom, telephone, ville_souhaitee, mode_localisation, budget_max, surface_min, pieces_min, chambres_min, rez_de_chaussee_ok, animaux, meuble, parking, balcon, terrasse, jardin, cave, fibre, ascenseur, dpe_min"
+      const [usersRes, profilsRes, myProfileRes] = await Promise.all([
         supabase.from("users").select("email, image").in("email", peerEmails),
-        supabase.from("profils").select("email, photo_url_custom, telephone").in("email", peerEmails),
+        supabase.from("profils").select(MATCH_COLS).in("email", peerEmails),
+        // Mon profil pour calculer score cote locataire (score de l'annonce
+        // vs mes preferences). Skip silencieusement si erreur (ex. colonnes
+        // manquantes en prod) — le score tombera sur 500 neutre.
+        supabase.from("profils").select(MATCH_COLS).eq("email", email).maybeSingle(),
       ])
       const map: Record<string, string> = {}
       const phoneMap: Record<string, string> = {}
+      const profileMap: Record<string, MatchingProfil> = {}
       // Fallback : Google / provider image
       for (const u of usersRes.data || []) {
         const e = (u as { email?: string | null }).email?.toLowerCase()
@@ -1270,21 +1286,28 @@ function MessagesInner() {
       // Priorité : avatar custom uploadé par l'user (si colonne présente)
       if (!profilsRes.error) {
         for (const p of profilsRes.data || []) {
-          const e = (p as { email?: string | null }).email?.toLowerCase()
-          const img = (p as { photo_url_custom?: string | null }).photo_url_custom
-          const tel = (p as { telephone?: string | null }).telephone
+          const row = p as Record<string, unknown>
+          const e = (row.email as string | undefined)?.toLowerCase()
+          const img = row.photo_url_custom as string | null | undefined
+          const tel = row.telephone as string | null | undefined
           if (e && img) map[e] = img
           if (e && tel && typeof tel === "string" && tel.trim()) phoneMap[e] = tel.trim()
+          if (e) profileMap[e] = row as unknown as MatchingProfil
         }
       }
       setPeerImages(map)
       setPeerPhones(phoneMap)
+      setPeerProfiles(profileMap)
+      if (!myProfileRes.error && myProfileRes.data) {
+        setMyProfile(myProfileRes.data as unknown as MatchingProfil)
+      }
     }
 
-    // Fetch les annonces liées (avec locataire_email + statut pour badges)
+    // Fetch les annonces liées (avec locataire_email + statut pour badges +
+    // colonnes matching pour score compat affiche dans la liste et le header).
     const ids = [...new Set(convList.map(c => c.annonceId).filter(Boolean))]
     if (ids.length > 0) {
-      const { data: ann } = await supabase.from("annonces").select("id, titre, ville, photos, proprietaire_email, locataire_email, statut").in("id", ids)
+      const { data: ann } = await supabase.from("annonces").select("id, titre, ville, photos, proprietaire_email, locataire_email, statut, prix, surface, pieces, chambres, etage, animaux, meuble, parking, balcon, terrasse, jardin, cave, fibre, ascenseur, dpe").in("id", ids)
       if (ann) {
         const map: Record<number, any> = {}
         ann.forEach((a: any) => { map[a.id] = a })
@@ -1818,6 +1841,34 @@ function MessagesInner() {
   const { isMobile } = useResponsive()
   const convActiveData = conversations.find(c => c.key === convActive)
   const annonceActive = convActiveData?.annonceId ? annonces[convActiveData.annonceId] : null
+
+  // Score compat de la conv active — cote locataire = annonce vs myProfile,
+  // cote proprio = annonce vs profil candidat (peerProfile). Null si donnees
+  // manquantes (pas d'annonce liee, ou profil vide).
+  function computeConvScore(conv: { other: string; annonceId: number | null } | null | undefined): number | null {
+    if (!conv || !conv.annonceId) return null
+    const ann = annonces[conv.annonceId] as MatchingAnnonce | undefined
+    if (!ann) return null
+    const profil = proprietaireActive
+      ? peerProfiles[(conv.other || "").toLowerCase()]
+      : myProfile
+    if (!profil) return null
+    return calculerScore(ann, profil)
+  }
+
+  // Style du pill compat selon seuils (vert/orange/rouge) — aligné avec
+  // labelScore() mais rendu compact adapté a un badge 12px.
+  function compatBadge(score: number | null) {
+    if (score === null) return null
+    const pct = Math.round(score / 10)
+    const tone =
+      pct >= 80 ? { bg: "#dcfce7", color: "#15803d" } :
+      pct >= 65 ? { bg: "#ecfccb", color: "#4d7c0f" } :
+      pct >= 50 ? { bg: "#fef9c3", color: "#a16207" } :
+      pct >= 30 ? { bg: "#ffedd5", color: "#c2410c" } :
+                  { bg: "#fee2e2", color: "#b91c1c" }
+    return { pct, ...tone }
+  }
 
   // Détection "bail actif" pour la conv : annonce liée a un statut loué ou
   // bail_envoye (en attente signature) + l'autre interlocuteur EST le
@@ -2402,10 +2453,23 @@ function MessagesInner() {
                           <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName(conv.other, ann?.proprietaire)}</p>
                         )}
                         {relBadge && (
-                          <span style={{ display: "inline-block", background: relBadge.bg, color: relBadge.color, fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 999, marginBottom: 2 }}>
+                          <span style={{ display: "inline-block", background: relBadge.bg, color: relBadge.color, fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 999, marginBottom: 2, marginRight: 4 }}>
                             {relBadge.label}
                           </span>
                         )}
+                        {(() => {
+                          const c = compatBadge(computeConvScore(conv))
+                          if (!c) return null
+                          const label = proprietaireActive ? `${c.pct}% candidat` : `${c.pct}% compat`
+                          return (
+                            <span
+                              title={proprietaireActive ? "Score de compatibilité du candidat avec ce bien" : "Score de compatibilité du bien avec votre profil"}
+                              style={{ display: "inline-block", background: c.bg, color: c.color, fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 999, marginBottom: 2 }}
+                            >
+                              {label}
+                            </span>
+                          )
+                        })()}
                         {proprietaireActive && candidatNotes[conv.key] && (
                           <p style={{ fontSize: 11, color: "#ca8a04", fontWeight: 600, margin: "2px 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={candidatNotes[conv.key]}>
                             Note : {candidatNotes[conv.key]}
@@ -2513,7 +2577,22 @@ function MessagesInner() {
                         href={`/annonces/${convActiveData.annonceId}`}
                         style={{ flex: 1, textDecoration: "none", color: "inherit", minWidth: 0 }}
                       >
-                        <p style={{ fontWeight: 700, fontSize: 14, color: "#111", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{annonceActive.titre}</p>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                          <p style={{ fontWeight: 700, fontSize: 14, color: "#111", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{annonceActive.titre}</p>
+                          {(() => {
+                            const c = compatBadge(computeConvScore(convActiveData))
+                            if (!c) return null
+                            const label = proprietaireActive ? `${c.pct}% candidat` : `${c.pct}% compat`
+                            return (
+                              <span
+                                title={proprietaireActive ? "Score de compatibilité du candidat avec ce bien" : "Score de compatibilité du bien avec votre profil"}
+                                style={{ flexShrink: 0, background: c.bg, color: c.color, fontSize: 11, fontWeight: 800, padding: "3px 9px", borderRadius: 999, fontFamily: "inherit" }}
+                              >
+                                {label}
+                              </span>
+                            )
+                          })()}
+                        </div>
                         <p style={{ fontSize: 12, color: "#9ca3af", margin: "2px 0 0" }}>{annonceActive.ville} &middot; {displayName(convActiveData.other, annonceActive.proprietaire)}</p>
                       </Link>
                       {/* Bouton "Louer à ce candidat" — côté proprio uniquement.
