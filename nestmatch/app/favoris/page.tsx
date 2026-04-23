@@ -42,6 +42,17 @@ export default function Favoris() {
     setAnnonces(prev => prev.filter(a => a.id !== id))
   }
 
+  // Variant sans event (pour MapAnnonces, qui gere lui-meme stopPropagation)
+  function handleToggleFavoriId(id: number) {
+    toggleFavori(id)
+    const newFavoris = getFavoris()
+    setFavoris(newFavoris)
+    // Sur la page /favoris, un retrait doit aussi disparaitre de la liste
+    if (!newFavoris.includes(id)) {
+      setAnnonces(prev => prev.filter(a => a.id !== id))
+    }
+  }
+
   // Enrichir avec coords pour la carte
   const annoncesAvecCoords = annonces.map(a => {
     const coords = getCityCoords(a.ville || "")
@@ -107,6 +118,8 @@ export default function Favoris() {
                 onSelect={id => setSelectedId(id)}
                 onBoundsChange={() => { /* pas de filtre bbox sur les favoris */ }}
                 centerHint={null}
+                favoris={favoris}
+                onToggleFavori={handleToggleFavoriId}
               />
             ) : (
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", flexDirection: "column", padding: 40, textAlign: "center" }}>
