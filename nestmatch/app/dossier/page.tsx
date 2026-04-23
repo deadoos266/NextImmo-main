@@ -95,8 +95,10 @@ function toDocLibres(val: unknown): DocLibre[] {
 
 // ═══════════════════════════════════════════════════════════════════
 // STYLES éditoriaux — centralisés pour révision visuelle simplifiée.
-// Palette KM canonique (components.jsx:4-9). Zéro Fraunces : italique
-// sur DM Sans uniquement (layout.tsx charge style: ['normal', 'italic']).
+// Palette KM canonique (components.jsx:4-9). Fraunces (serif éditorial)
+// en accents hero + score + bandeau profil (calque handoff dossier.jsx
+// L56-135). Corps du formulaire reste DM Sans. Classe .km-serif + import
+// Google Fonts injectés inline dans le <style> du composant (L1693+).
 // ═══════════════════════════════════════════════════════════════════
 const T = {
   bg: "#F7F4EF",
@@ -126,22 +128,9 @@ const STYLES = {
     rule: { flex: 1, height: 1, background: T.line, maxWidth: 220, minWidth: 40 } as React.CSSProperties,
     metaRight: { fontSize: 11, color: T.soft, fontVariantNumeric: "tabular-nums" } as React.CSSProperties,
     grid: (isMobile: boolean): React.CSSProperties => ({ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.4fr 1fr", gap: isMobile ? 28 : 40, alignItems: "end" }),
-    title: (isMobile: boolean): React.CSSProperties => ({ fontSize: isMobile ? 40 : 64, fontWeight: 300, lineHeight: 0.98, letterSpacing: "-1.5px", margin: 0, color: T.ink }),
-    titleAccent: { fontStyle: "italic", fontWeight: 300, color: T.meta } as React.CSSProperties,
+    title: (isMobile: boolean): React.CSSProperties => ({ fontFamily: "'Fraunces', Georgia, serif", fontFeatureSettings: "'ss01'", fontSize: isMobile ? 48 : 88, fontWeight: 300, lineHeight: 0.95, letterSpacing: isMobile ? "-1.5px" : "-2px", margin: 0, color: T.ink }),
+    titleAccent: { fontFamily: "'Fraunces', Georgia, serif", fontFeatureSettings: "'ss01'", fontStyle: "italic", fontWeight: 300, color: T.meta } as React.CSSProperties,
     subtitle: { fontSize: 15, color: T.meta, lineHeight: 1.6, maxWidth: 520, marginTop: 22, marginBottom: 0 } as React.CSSProperties,
-    recap: (isMobile: boolean): React.CSSProperties => ({
-      marginTop: isMobile ? 20 : 28,
-      paddingTop: 16,
-      borderTop: `1px solid ${T.line}`,
-      display: "flex",
-      alignItems: "center",
-      gap: 12,
-      flexWrap: "wrap",
-      fontSize: 13,
-      color: T.meta,
-    }),
-    recapStrong: { color: T.ink, fontWeight: 600 } as React.CSSProperties,
-    recapDot: { width: 3, height: 3, borderRadius: "50%", background: T.soft, display: "inline-block" } as React.CSSProperties,
   },
 
   scoreCard: {
@@ -154,8 +143,8 @@ const STYLES = {
     }),
     topRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 20 } as React.CSSProperties,
     eyebrow: { fontSize: 10, fontWeight: 700, letterSpacing: "1.6px", textTransform: "uppercase", color: T.soft, marginBottom: 4 } as React.CSSProperties,
-    number: { fontSize: 60, fontWeight: 300, lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-2px" } as React.CSSProperties,
-    percent: { fontSize: 28, marginLeft: 2 } as React.CSSProperties,
+    number: { fontFamily: "'Fraunces', Georgia, serif", fontFeatureSettings: "'ss01'", fontSize: 76, fontWeight: 300, lineHeight: 1, fontVariantNumeric: "tabular-nums", letterSpacing: "-3px" } as React.CSSProperties,
+    percent: { fontSize: 36, marginLeft: 2 } as React.CSSProperties,
     label: { fontSize: 13, color: T.ink, marginTop: 6, fontWeight: 600 } as React.CSSProperties,
     divider: { marginTop: 18, paddingTop: 16, borderTop: `1px solid ${T.hairline}`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } as React.CSSProperties,
     alert: { marginTop: 16, padding: "10px 12px", background: T.warningBg, borderRadius: 12 } as React.CSSProperties,
@@ -166,6 +155,59 @@ const STYLES = {
   mini: {
     label: { fontSize: 10, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: T.soft } as React.CSSProperties,
     value: { fontSize: 20, fontWeight: 400, color: T.ink, marginTop: 2, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.3px" } as React.CSSProperties,
+  },
+
+  // Bandeau profil sombre — calque handoff dossier.jsx L113-135.
+  // S'affiche quand un minimum d'infos est renseigné (nom OU situation_pro).
+  // CTA "Télécharger · ZIP" câblé sur telechargerDossierZip() existant.
+  profileBand: {
+    wrap: (isMobile: boolean): React.CSSProperties => ({
+      background: T.ink,
+      color: T.white,
+      borderRadius: 24,
+      padding: isMobile ? "18px 20px" : "22px 28px",
+      marginTop: isMobile ? 20 : 24,
+      display: "grid",
+      gridTemplateColumns: isMobile ? "auto 1fr" : "auto 1fr auto auto",
+      gap: isMobile ? 16 : 24,
+      alignItems: "center",
+      rowGap: isMobile ? 14 : 0,
+    }),
+    avatar: {
+      width: 56,
+      height: 56,
+      borderRadius: "50%",
+      background: "rgba(255,255,255,0.08)",
+      border: "1px solid rgba(255,255,255,0.16)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      color: T.white,
+      fontSize: 20,
+      fontWeight: 500,
+      fontFamily: "'Fraunces', Georgia, serif",
+      fontFeatureSettings: "'ss01'",
+      letterSpacing: "-0.5px",
+    } as React.CSSProperties,
+    name: { fontFamily: "'Fraunces', Georgia, serif", fontFeatureSettings: "'ss01'", fontSize: 26, fontWeight: 400, lineHeight: 1.1, color: T.white } as React.CSSProperties,
+    meta: { fontSize: 13, color: "rgba(255,255,255,0.72)", marginTop: 4, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" } as React.CSSProperties,
+    metaDot: { width: 3, height: 3, borderRadius: "50%", background: "rgba(255,255,255,0.38)", display: "inline-block" } as React.CSSProperties,
+    visalePill: { display: "flex", gap: 8, alignItems: "center", padding: "6px 14px", background: "rgba(255,255,255,0.08)", borderRadius: 999, border: "1px solid rgba(255,255,255,0.14)" } as React.CSSProperties,
+    visaleDot: { width: 7, height: 7, borderRadius: "50%", background: "#6ee7b7" } as React.CSSProperties,
+    visaleLabel: { fontSize: 12, fontWeight: 600, color: T.white } as React.CSSProperties,
+    cta: (disabled: boolean): React.CSSProperties => ({
+      background: disabled ? "rgba(255,255,255,0.35)" : T.white,
+      color: T.ink,
+      border: "none",
+      borderRadius: 999,
+      padding: "12px 22px",
+      fontWeight: 700,
+      fontSize: 13,
+      cursor: disabled ? "not-allowed" : "pointer",
+      fontFamily: "'DM Sans', sans-serif",
+      letterSpacing: 0,
+      whiteSpace: "nowrap",
+    }),
   },
 
   layout: {
@@ -1690,7 +1732,13 @@ export default function Dossier() {
 
   return (
     <>
-      <style>{`@media print { nav, .no-print { display: none !important; } body { background: white !important; } .print-section { page-break-inside: avoid; } }`}</style>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&display=swap');
+        .km-serif { font-family: 'Fraunces', Georgia, serif; font-feature-settings: 'ss01'; }
+        .km-dot-anim { animation: kmPulse 2.2s ease-in-out infinite; }
+        @keyframes kmPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.55; transform: scale(1.25); } }
+        @media print { nav, .no-print { display: none !important; } body { background: white !important; } .print-section { page-break-inside: avoid; } }
+      `}</style>
 
       {undoLabel && (pendingDocs !== null || docsLibresBackup !== null) && (
         <UndoToast
@@ -1749,33 +1797,63 @@ export default function Dossier() {
               </div>
             </div>
 
-            {/* Récap hairline (remplace le bandeau dark du bundle) */}
-            {(form.prenom || form.nom || form.situation_pro || form.revenus_mensuels) && (
-              <div style={STYLES.hero.recap(isMobile)}>
-                {(form.prenom || form.nom) && <span style={STYLES.hero.recapStrong}>{formatNomComplet({ prenom: form.prenom, nom: form.nom })}</span>}
-                {form.situation_pro && (
-                  <>
-                    <span style={STYLES.hero.recapDot} aria-hidden />
-                    <span>{form.situation_pro}{form.employeur_nom ? ` · ${form.employeur_nom}` : ""}</span>
-                  </>
-                )}
-                {form.revenus_mensuels && (
-                  <>
-                    <span style={STYLES.hero.recapDot} aria-hidden />
-                    <span style={{ fontVariantNumeric: "tabular-nums" }}>
-                      {Number(form.revenus_mensuels).toLocaleString("fr-FR")} €/mois nets
-                    </span>
-                  </>
-                )}
-                {form.logement_actuel_ville && (
-                  <>
-                    <span style={STYLES.hero.recapDot} aria-hidden />
-                    <span>{form.logement_actuel_ville}</span>
-                  </>
-                )}
-              </div>
-            )}
           </section>
+
+          {/* ══════════ BANDEAU PROFIL SOMBRE ══════════
+              Calque handoff dossier.jsx L113-135. S'affiche dès qu'on a le
+              nom OU la situation pro saisis (sinon l'étape d'identité n'est
+              pas amorcée — bandeau muet plutôt que vide). */}
+          {(() => {
+            const fullName = formatNomComplet({ prenom: form.prenom, nom: form.nom })
+            const hasIdentity = !!(fullName || form.situation_pro)
+            if (!hasIdentity) return null
+            const initials = (fullName || "").split(/\s+/).filter(Boolean).slice(0, 2).map(s => s.charAt(0).toUpperCase()).join("") || (session?.user?.email || "?").charAt(0).toUpperCase()
+            const visaleValidated = form.garant === true && form.type_garant === "Organisme Visale"
+            return (
+              <section style={STYLES.profileBand.wrap(isMobile)}>
+                <div style={STYLES.profileBand.avatar} aria-hidden>{initials}</div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={STYLES.profileBand.name}>{fullName || "Dossier en cours"}</div>
+                  <div style={STYLES.profileBand.meta}>
+                    {form.situation_pro && (
+                      <span>{form.situation_pro}{form.employeur_nom ? ` · ${form.employeur_nom}` : ""}</span>
+                    )}
+                    {form.revenus_mensuels && (
+                      <>
+                        {form.situation_pro && <span style={STYLES.profileBand.metaDot} aria-hidden />}
+                        <span style={{ fontVariantNumeric: "tabular-nums" }}>
+                          {Number(form.revenus_mensuels).toLocaleString("fr-FR")} €/mois nets
+                        </span>
+                      </>
+                    )}
+                    {form.logement_actuel_ville && (
+                      <>
+                        {(form.situation_pro || form.revenus_mensuels) && <span style={STYLES.profileBand.metaDot} aria-hidden />}
+                        <span>{form.logement_actuel_ville}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                {!isMobile && visaleValidated && (
+                  <div style={STYLES.profileBand.visalePill}>
+                    <span className="km-dot-anim" style={STYLES.profileBand.visaleDot} />
+                    <span style={STYLES.profileBand.visaleLabel}>Garant Visale validé</span>
+                  </div>
+                )}
+                {!isMobile && (
+                  <button
+                    type="button"
+                    onClick={telechargerDossierZip}
+                    disabled={generatingPDF}
+                    style={STYLES.profileBand.cta(generatingPDF)}
+                    aria-label="Télécharger le dossier complet au format ZIP"
+                  >
+                    {generatingPDF ? "Préparation…" : "Télécharger · ZIP"}
+                  </button>
+                )}
+              </section>
+            )
+          })()}
 
           {uploadError && (
             <div style={STYLES.errorBanner}>
