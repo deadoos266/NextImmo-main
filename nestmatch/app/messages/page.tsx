@@ -2681,7 +2681,7 @@ function MessagesInner() {
                     if (other === locEmail || meLower === locEmail) {
                       relBadge = { label: "Bail actif", bg: "#dcfce7", color: "#15803d" }
                     } else if (conv.annonceId) {
-                      relBadge = { label: "Ancienne candidature", bg: "#f3f4f6", color: "#6b7280" }
+                      relBadge = { label: "Ancienne candidature", bg: "#F7F4EF", color: "#8a8477" }
                     }
                   } else if (conv.annonceId) {
                     relBadge = { label: "Candidat", bg: "#eff6ff", color: "#1d4ed8" }
@@ -2695,8 +2695,8 @@ function MessagesInner() {
                 return (
                   <div key={conv.key}
                     onClick={() => { setConvActive(conv.key); setMenuConv(null); setVisitesConv([]); loadMessages(myEmail!, conv.other, conv.annonceId); loadVisitesConv(conv.other, conv.annonceId) }}
-                    style={{ padding: "12px 16px", cursor: "pointer", background: isActive ? "#f9fafb" : "white", borderBottom: "1px solid #f3f4f6", borderLeft: isActive ? "3px solid #111" : conv.unread > 0 ? "3px solid #ef4444" : "3px solid transparent", position: "relative" }}
-                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "#fafafa"; const btn = e.currentTarget.querySelector(".menu-btn") as HTMLElement; if (btn) btn.style.opacity = "1" }}
+                    style={{ padding: "14px 16px", cursor: "pointer", background: isActive ? "#F7F4EF" : "white", borderBottom: "1px solid #F2EEE6", borderLeft: isActive ? "3px solid #111" : conv.unread > 0 ? "3px solid #ef4444" : "3px solid transparent", position: "relative", transition: "background 160ms ease" }}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "#FBF8F3"; const btn = e.currentTarget.querySelector(".menu-btn") as HTMLElement; if (btn) btn.style.opacity = "1" }}
                     onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "white"; if (menuConv !== conv.key) { const btn = e.currentTarget.querySelector(".menu-btn") as HTMLElement; if (btn) btn.style.opacity = "0" } }}
                   >
                     <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
@@ -2726,10 +2726,10 @@ function MessagesInner() {
                           <p style={{ fontWeight: conv.unread > 0 ? 800 : 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 130, color: "#111" }}>
                             {ann?.titre || displayName(conv.other, ann?.proprietaire)}
                           </p>
-                          <span style={{ fontSize: 10, color: "#9ca3af", whiteSpace: "nowrap" }}>{time}</span>
+                          <span style={{ fontSize: 10.5, color: "#8a8477", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" as const, letterSpacing: "0.2px" }}>{time}</span>
                         </div>
                         {ann?.titre && (
-                          <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName(conv.other, ann?.proprietaire)}</p>
+                          <p style={{ fontSize: 11, color: "#8a8477", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName(conv.other, ann?.proprietaire)}</p>
                         )}
                         {relBadge && (
                           <span style={{ display: "inline-block", background: relBadge.bg, color: relBadge.color, fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 999, marginBottom: 2, marginRight: 4 }}>
@@ -2762,7 +2762,7 @@ function MessagesInner() {
                             Note : {candidatNotes[conv.key]}
                           </p>
                         )}
-                        <p style={{ fontSize: 12, color: conv.unread > 0 ? "#374151" : "#9ca3af", fontWeight: conv.unread > 0 ? 600 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{preview}</p>
+                        <p style={{ fontSize: 12, color: conv.unread > 0 ? "#111" : "#8a8477", fontWeight: conv.unread > 0 ? 600 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.5 }}>{preview}</p>
                       </div>
                     </div>
 
