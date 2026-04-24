@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { supabase } from "../../../lib/supabase"
 import { useRole } from "../../providers"
+import { km, KMButton, KMButtonText, KMCard, KMEyebrow, KMHeading } from "../../components/ui/km"
 
 export default function ActiverProprietaire() {
   const { data: session, status } = useSession()
@@ -35,47 +36,92 @@ export default function ActiverProprietaire() {
   }
 
   return (
-    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 24px" }}>
+    <main style={{
+      minHeight: "100vh",
+      background: km.beige,
+      fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "32px 24px",
+    }}>
       <div style={{ maxWidth: 560, width: "100%" }}>
 
-        <div style={{ background: "white", borderRadius: 24, padding: "48px 40px", boxShadow: "0 4px 32px rgba(0,0,0,0.08)", textAlign: "center" }}>
-          <div style={{ width: 56, height: 56, borderRadius: 16, background: "#111", margin: "0 auto 20px" }} />
-          <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.5px", marginBottom: 12 }}>
-            Espace propriétaire
-          </h1>
-          <p style={{ color: "#8a8477", fontSize: 15, lineHeight: 1.6, marginBottom: 32 }}>
+        <KMCard padding="48px 40px" style={{ textAlign: "center", borderRadius: 24 }}>
+          {/* Eyebrow éditorial — remplace le carré noir décoratif par un marqueur typographique */}
+          <KMEyebrow style={{ marginBottom: 14 }}>Espace bailleur</KMEyebrow>
+
+          <KMHeading as="h1" size={34} style={{ marginBottom: 14 }}>
+            Activer l&apos;espace propriétaire
+          </KMHeading>
+
+          <p style={{
+            color: km.muted,
+            fontSize: 15,
+            lineHeight: 1.6,
+            marginBottom: 32,
+            maxWidth: 420,
+            marginLeft: "auto",
+            marginRight: "auto",
+          }}>
             Cet espace est réservé aux propriétaires qui souhaitent mettre leur bien en location.
-            En activant ce mode, vous pourrez publier des annonces, recevoir des candidatures et gérer vos locations.
+            En l&apos;activant, vous pourrez publier des annonces, recevoir des candidatures et gérer vos locations.
           </p>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 36 }}>
+          {/* Trio de bénéfices — style éditorial (pas de cartes beiges, séparateurs hairline) */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr 1fr",
+            gap: 0,
+            marginBottom: 36,
+            borderTop: `1px solid ${km.line}`,
+            borderBottom: `1px solid ${km.line}`,
+          }}>
             {[
-              { title: "Publiez", desc: "Ajoutez vos biens en quelques minutes" },
-              { title: "Ciblez", desc: "Recevez des candidats compatibles" },
-              { title: "Gérez", desc: "Messagerie et suivi des loyers" },
-            ].map(item => (
-              <div key={item.title} style={{ background: "#F7F4EF", borderRadius: 14, padding: "16px 12px" }}>
-                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{item.title}</div>
-                <div style={{ fontSize: 12, color: "#8a8477", lineHeight: 1.4 }}>{item.desc}</div>
+              { num: "01", title: "Publiez", desc: "Ajoutez vos biens en quelques minutes" },
+              { num: "02", title: "Ciblez", desc: "Recevez des candidats compatibles" },
+              { num: "03", title: "Gérez", desc: "Messagerie et suivi des loyers" },
+            ].map((item, i) => (
+              <div key={item.title} style={{
+                padding: "20px 12px",
+                borderLeft: i > 0 ? `1px solid ${km.line}` : "none",
+                textAlign: "left",
+              }}>
+                <div style={{
+                  fontFamily: "var(--font-fraunces), 'Fraunces', Georgia, serif",
+                  fontStyle: "italic",
+                  fontWeight: 500,
+                  fontSize: 18,
+                  color: km.muted,
+                  marginBottom: 6,
+                }}>{item.num}</div>
+                <div style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: km.ink,
+                  textTransform: "uppercase",
+                  letterSpacing: "1.4px",
+                  marginBottom: 6,
+                }}>{item.title}</div>
+                <div style={{ fontSize: 12, color: km.muted, lineHeight: 1.45 }}>{item.desc}</div>
               </div>
             ))}
           </div>
 
-          <button
+          <KMButton
             onClick={activer}
             disabled={loading || status === "loading"}
-            style={{ width: "100%", background: "#111", color: "white", border: "none", borderRadius: 999, padding: "16px 0", fontWeight: 700, fontSize: 16, cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: loading ? 0.7 : 1, marginBottom: 12 }}>
-            {loading ? "Activation..." : "Activer mon espace propriétaire"}
-          </button>
+            size="lg"
+            style={{ width: "100%", marginBottom: 14 }}>
+            {loading ? "Activation…" : "Activer mon espace propriétaire"}
+          </KMButton>
 
-          <button
-            onClick={() => router.push("/annonces")}
-            style={{ background: "none", border: "none", color: "#8a8477", fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
-            Je suis locataire, retour aux annonces
-          </button>
-        </div>
+          <KMButtonText onClick={() => router.push("/annonces")}>
+            Je suis locataire · retour aux annonces
+          </KMButtonText>
+        </KMCard>
 
-        <p style={{ textAlign: "center", marginTop: 16, fontSize: 12, color: "#8a8477" }}>
+        <p style={{ textAlign: "center", marginTop: 16, fontSize: 12, color: km.muted }}>
           Vous pourrez repasser en mode locataire à tout moment depuis la barre de navigation.
         </p>
       </div>

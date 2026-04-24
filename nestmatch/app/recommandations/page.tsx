@@ -6,19 +6,28 @@ import Link from "next/link"
 import { supabase } from "../../lib/supabase"
 import { calculerScore, estExclu } from "../../lib/matching"
 import { useResponsive } from "../hooks/useResponsive"
+import { km, KMEyebrow, KMHeading, KMCard, KMMatchRing } from "../components/ui/km"
 
 /**
  * Recommandations de villes basées sur les critères du locataire.
  * Pour chaque ville, calcule le nombre d'annonces compatibles + le score moyen.
- * Top 5 affiché.
+ * Top 8 affiché.
  */
+
+type Reco = {
+  ville: string
+  totalAnnonces: number
+  compatibles: number
+  scoreMoyen: number
+  prixMedian: number
+}
 
 export default function Recommandations() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const { isMobile } = useResponsive()
   const [profil, setProfil] = useState<any>(null)
-  const [recos, setRecos] = useState<any[]>([])
+  const [recos, setRecos] = useState<Reco[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -49,7 +58,7 @@ export default function Recommandations() {
       villes.get(a.ville)!.scores.push(score)
     }
 
-    const list = Array.from(villes.entries()).map(([ville, v]) => {
+    const list: Reco[] = Array.from(villes.entries()).map(([ville, v]) => {
       const scoreMoyen = v.scores.reduce((s, x) => s + x, 0) / v.scores.length
       const compatibles = v.scores.filter(s => s >= 600).length
       return {
@@ -76,56 +85,118 @@ export default function Recommandations() {
   }
 
   if (status === "loading" || loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", color: "#8a8477", fontFamily: "'DM Sans', sans-serif" }}>Chargement...</div>
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "center",
+      height: "100vh", color: km.muted,
+      fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
+      fontSize: 13, textTransform: "uppercase", letterSpacing: "1.2px",
+    }}>Chargement…</div>
   )
 
   return (
-    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px" }}>
+    <main style={{
+      minHeight: "100vh",
+      background: km.beige,
+      fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
+      padding: isMobile ? "24px 16px" : "40px",
+    }}>
       <div style={{ maxWidth: 820, margin: "0 auto" }}>
-        <Link href="/annonces" style={{ fontSize: 13, color: "#8a8477", textDecoration: "none" }}>&larr; Retour aux annonces</Link>
+        <Link href="/annonces" style={{
+          fontSize: 11, color: km.muted, textDecoration: "none",
+          textTransform: "uppercase", letterSpacing: "1.2px", fontWeight: 700,
+        }}>← Retour aux annonces</Link>
 
-        <div style={{ marginTop: 16, marginBottom: 28 }}>
-          <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.5px" }}>Villes recommandées pour vous</h1>
-          <p style={{ fontSize: 14, color: "#8a8477", marginTop: 6, lineHeight: 1.6 }}>
+        {/* Hero éditorial */}
+        <div style={{ marginTop: 20, marginBottom: 32 }}>
+          <KMEyebrow style={{ marginBottom: 14 }}>Découverte · Matching ville</KMEyebrow>
+          <KMHeading as="h1" size={isMobile ? 32 : 42}>
+            Villes recommandées pour vous
+          </KMHeading>
+          <p style={{
+            fontSize: 14, color: km.muted, marginTop: 12, lineHeight: 1.6,
+            maxWidth: 560,
+          }}>
             Villes classées par compatibilité moyenne avec votre dossier. Utile pour découvrir des zones auxquelles vous n&apos;aviez pas pensé.
           </p>
         </div>
 
         {!profil && (
-          <div style={{ background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 14, padding: "14px 18px", marginBottom: 20, color: "#9a3412", fontSize: 13, lineHeight: 1.5 }}>
-            Complétez votre <Link href="/profil" style={{ color: "#9a3412", fontWeight: 700 }}>profil de recherche</Link> pour obtenir des recommandations personnalisées.
+          <div style={{
+            background: km.warnBg, border: `1px solid ${km.warnLine}`,
+            borderRadius: 14, padding: "14px 18px", marginBottom: 20,
+            color: km.warnText, fontSize: 13, lineHeight: 1.5,
+          }}>
+            Complétez votre <Link href="/profil" style={{ color: km.warnText, fontWeight: 700, textDecoration: "underline", textUnderlineOffset: 3 }}>profil de recherche</Link> pour obtenir des recommandations personnalisées.
           </div>
         )}
 
         {recos.length === 0 ? (
-          <div style={{ background: "white", borderRadius: 20, padding: 48, textAlign: "center" }}>
-            <p style={{ fontSize: 16, fontWeight: 600, color: "#111", marginBottom: 8 }}>Pas encore de recommandations</p>
-            <p style={{ fontSize: 14, color: "#8a8477" }}>Nous n&apos;avons pas trouvé d&apos;annonces compatibles avec vos critères.</p>
-          </div>
+          <KMCard padding={48} style={{ textAlign: "center" }}>
+            <KMHeading as="h2" size={20} style={{ marginBottom: 10 }}>Pas encore de recommandations</KMHeading>
+            <p style={{ fontSize: 14, color: km.muted, margin: 0 }}>Nous n&apos;avons pas trouvé d&apos;annonces compatibles avec vos critères.</p>
+          </KMCard>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {recos.map((r, i) => {
-              const scoreColor = r.scoreMoyen >= 750 ? "#15803d" : r.scoreMoyen >= 600 ? "#a16207" : "#8a8477"
+              const rank = i + 1
+              const topTier = rank <= 3
+              const pct = Math.round(r.scoreMoyen / 10)
               return (
                 <Link key={r.ville} href={`/annonces?ville=${encodeURIComponent(r.ville)}`}
-                  style={{ background: "white", borderRadius: 18, padding: "18px 22px", display: "flex", alignItems: "center", gap: 16, textDecoration: "none", color: "#111", transition: "box-shadow 0.15s, transform 0.15s" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(0,0,0,0.08)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)" }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; (e.currentTarget as HTMLElement).style.transform = "none" }}>
-                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: i < 3 ? "#111" : "#F7F4EF", color: i < 3 ? "white" : "#8a8477", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, flexShrink: 0 }}>
-                    {i + 1}
+                  style={{
+                    background: km.white,
+                    border: `1px solid ${km.line}`,
+                    borderRadius: 18,
+                    padding: "18px 22px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 18,
+                    textDecoration: "none",
+                    color: km.ink,
+                    transition: "box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease",
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLElement).style.boxShadow = "0 6px 24px rgba(17,17,17,0.06)"
+                    ;(e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"
+                    ;(e.currentTarget as HTMLElement).style.borderColor = km.ink
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLElement).style.boxShadow = "none"
+                    ;(e.currentTarget as HTMLElement).style.transform = "none"
+                    ;(e.currentTarget as HTMLElement).style.borderColor = km.line
+                  }}>
+                  {/* Rang en Fraunces italic */}
+                  <div style={{
+                    width: 44, height: 44, borderRadius: "50%",
+                    background: topTier ? km.ink : km.beige,
+                    color: topTier ? km.white : km.muted,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontFamily: "var(--font-fraunces), 'Fraunces', Georgia, serif",
+                    fontStyle: "italic", fontWeight: 500,
+                    fontSize: 18, letterSpacing: "-0.5px",
+                    flexShrink: 0,
+                  }}>
+                    {rank}
                   </div>
+
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 17, fontWeight: 800, margin: 0 }}>{r.ville}</p>
-                    <p style={{ fontSize: 13, color: "#8a8477", margin: "2px 0 0" }}>
+                    <p style={{
+                      fontFamily: "var(--font-fraunces), 'Fraunces', Georgia, serif",
+                      fontStyle: "italic", fontWeight: 500,
+                      fontSize: 20, letterSpacing: "-0.3px",
+                      margin: 0, color: km.ink,
+                    }}>{r.ville}</p>
+                    <p style={{ fontSize: 12, color: km.muted, margin: "4px 0 0", lineHeight: 1.45 }}>
                       {r.compatibles > 0
                         ? `${r.compatibles} annonce${r.compatibles > 1 ? "s" : ""} compatible${r.compatibles > 1 ? "s" : ""}`
                         : `${r.totalAnnonces} annonce${r.totalAnnonces > 1 ? "s" : ""} disponible${r.totalAnnonces > 1 ? "s" : ""}`}
                       {r.prixMedian > 0 && <> · Loyer médian {r.prixMedian} €/mois</>}
                     </p>
                   </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <p style={{ fontSize: 22, fontWeight: 800, color: scoreColor, letterSpacing: "-0.5px", margin: 0 }}>{Math.round(r.scoreMoyen / 10)}%</p>
-                    <p style={{ fontSize: 10, color: "#8a8477", margin: 0, textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 700 }}>Compat. moy.</p>
+
+                  {/* Ring de match KM */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                    <KMMatchRing score={pct} size={52} />
                   </div>
                 </Link>
               )

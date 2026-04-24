@@ -1,6 +1,7 @@
 import Link from "next/link"
 import Logo from "./components/Logo"
 import { BRAND } from "../lib/brand"
+import { km, KMCard, KMEyebrow, KMHeading } from "./components/ui/km"
 
 export const metadata = {
   title: "Page introuvable",
@@ -10,48 +11,32 @@ export default function NotFound() {
   return (
     <main style={{
       minHeight: "calc(100vh - 72px)",
-      background: "#F7F4EF",
-      fontFamily: "'DM Sans', sans-serif",
+      background: km.beige,
+      fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       padding: "40px 20px",
     }}>
-      <div style={{
-        maxWidth: 520,
-        width: "100%",
-        background: "white",
-        borderRadius: 24,
-        padding: "48px 40px",
-        textAlign: "center",
-        boxShadow: "0 4px 32px rgba(0,0,0,0.06)",
-      }}>
+      <KMCard padding="48px 40px" style={{ maxWidth: 520, width: "100%", textAlign: "center", borderRadius: 24 }}>
         <div style={{ marginBottom: 18 }}>
           <Logo variant="compact" />
         </div>
-        {/* Gros "404" stylisé */}
-        <p style={{
-          fontSize: 96,
-          fontWeight: 800,
-          letterSpacing: "-4px",
-          lineHeight: 1,
-          color: "#111",
-          marginBottom: 4,
-        }}>
+
+        {/* Eyebrow éditorial */}
+        <KMEyebrow style={{ marginBottom: 14 }}>Erreur · 404</KMEyebrow>
+
+        {/* Gros "404" Fraunces italic */}
+        <KMHeading as="h1" size={96} style={{ letterSpacing: "-4px", lineHeight: 1, marginBottom: 10 }}>
           404
-        </p>
+        </KMHeading>
 
-        <h1 style={{
-          fontSize: 24,
-          fontWeight: 800,
-          letterSpacing: "-0.5px",
-          marginBottom: 8,
-        }}>
+        <KMHeading as="h2" size={22} style={{ marginBottom: 10 }}>
           Cette page n&apos;existe pas.
-        </h1>
+        </KMHeading>
 
         <p style={{
-          color: "#8a8477",
+          color: km.muted,
           fontSize: 14,
           lineHeight: 1.6,
           marginBottom: 28,
@@ -59,16 +44,18 @@ export default function NotFound() {
           Le lien a peut-être changé ou la page a été déplacée. Retournez à l&apos;accueil ou explorez {BRAND.name}.
         </p>
 
-        {/* CTA principal */}
+        {/* CTA principal — pilule noire KM */}
         <Link href="/" style={{
           display: "inline-block",
-          background: "#111",
-          color: "white",
+          background: km.ink,
+          color: km.white,
           padding: "14px 32px",
           borderRadius: 999,
           textDecoration: "none",
           fontWeight: 700,
-          fontSize: 15,
+          fontSize: 11,
+          textTransform: "uppercase",
+          letterSpacing: "0.6px",
           marginBottom: 20,
         }}>
           Retour à l&apos;accueil
@@ -89,18 +76,20 @@ export default function NotFound() {
           ].map(l => (
             <Link key={l.href} href={l.href} style={{
               padding: "8px 16px",
-              border: "1px solid #EAE6DF",
+              border: `1px solid ${km.line}`,
               borderRadius: 999,
               textDecoration: "none",
-              color: "#111",
+              color: km.ink,
               fontWeight: 600,
-              fontSize: 13,
+              fontSize: 11,
+              textTransform: "uppercase",
+              letterSpacing: "0.6px",
             }}>
               {l.label}
             </Link>
           ))}
         </div>
-      </div>
+      </KMCard>
     </main>
   )
 }
