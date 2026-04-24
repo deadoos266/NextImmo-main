@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import PasswordInput from "../components/PasswordInput"
 import Logo from "../components/Logo"
 import { BRAND } from "../../lib/brand"
+import { km, KMButton, KMEyebrow, KMHeading, KMCard } from "../components/ui/km"
 
 type Mode = "connexion" | "inscription"
 type Role = "locataire" | "proprietaire"
@@ -26,10 +27,40 @@ export default function Auth() {
 
 function AuthFallback() {
   return (
-    <main style={{ minHeight: "100vh", background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif", color: "#8a8477" }}>
-      Chargement...
+    <main style={{
+      minHeight: "100vh",
+      background: km.beige,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
+      color: km.muted, fontSize: 13,
+      textTransform: "uppercase", letterSpacing: "1.2px",
+    }}>
+      Chargement…
     </main>
   )
+}
+
+const INPUT_STYLE: React.CSSProperties = {
+  width: "100%",
+  padding: "12px 16px",
+  border: `1px solid ${km.line}`,
+  borderRadius: 10,
+  fontSize: 15,
+  outline: "none",
+  boxSizing: "border-box",
+  fontFamily: "inherit",
+  background: km.white,
+  color: km.ink,
+}
+
+const LABEL_STYLE: React.CSSProperties = {
+  fontSize: 10,
+  fontWeight: 700,
+  marginBottom: 8,
+  display: "block",
+  color: km.muted,
+  textTransform: "uppercase",
+  letterSpacing: "1.4px",
 }
 
 function AuthContent() {
@@ -149,46 +180,84 @@ function AuthContent() {
   }
 
   return (
-    <main style={{ minHeight: "100vh", background: "#F7F4EF", display: "flex", flexDirection: "column", fontFamily: "'DM Sans', sans-serif" }}>
+    <main style={{
+      minHeight: "100vh",
+      background: km.beige,
+      display: "flex", flexDirection: "column",
+      fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
+    }}>
 
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 16px" }}>
-        <div style={{ background: "white", borderRadius: 24, padding: "32px 24px", width: "100%", maxWidth: 460, boxShadow: "0 4px 32px rgba(0,0,0,0.08)" }}>
+        <KMCard padding="36px 28px" style={{ width: "100%", maxWidth: 460, borderRadius: 24 }}>
 
-          <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <div style={{ textAlign: "center", marginBottom: 20 }}>
             <Logo variant="auth" />
           </div>
 
-          {/* Toggle connexion / inscription */}
-          <div style={{ display: "flex", background: "#F7F4EF", borderRadius: 14, padding: 4, marginBottom: 32 }}>
+          {/* Toggle connexion / inscription — carré hairline, pas de gros pastille grise */}
+          <div style={{
+            display: "flex",
+            borderTop: `1px solid ${km.line}`,
+            borderBottom: `1px solid ${km.line}`,
+            marginBottom: 28,
+          }}>
             {(["connexion", "inscription"] as Mode[]).map(m => (
               <button key={m} onClick={() => switchMode(m)}
-                style={{ flex: 1, padding: "10px 0", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 14, fontFamily: "inherit", background: mode === m ? "white" : "transparent", color: mode === m ? "#111" : "#8a8477", boxShadow: mode === m ? "0 1px 4px rgba(0,0,0,0.1)" : "none", transition: "all 0.2s" }}>
+                style={{
+                  flex: 1,
+                  padding: "14px 0",
+                  border: "none",
+                  borderBottom: mode === m ? `2px solid ${km.ink}` : "2px solid transparent",
+                  marginBottom: -1,
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  fontSize: 10,
+                  fontFamily: "inherit",
+                  background: "transparent",
+                  color: mode === m ? km.ink : km.muted,
+                  textTransform: "uppercase",
+                  letterSpacing: "1.5px",
+                  transition: "color 0.2s, border-color 0.2s",
+                }}>
                 {m.charAt(0).toUpperCase() + m.slice(1)}
               </button>
             ))}
           </div>
 
-          <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 8, letterSpacing: "-0.5px" }}>
+          <KMEyebrow style={{ marginBottom: 10 }}>
+            {mode === "connexion" ? "Retour sur votre espace" : `Rejoindre ${BRAND.name}`}
+          </KMEyebrow>
+          <KMHeading as="h1" size={30} style={{ marginBottom: 10 }}>
             {mode === "connexion" ? "Bon retour" : "Créer un compte"}
-          </h1>
-          <p style={{ color: "#8a8477", fontSize: 14, marginBottom: 28 }}>
-            {mode === "connexion" ? "Connecte-toi pour accéder à ton espace." : `Rejoins ${BRAND.name} gratuitement.`}
+          </KMHeading>
+          <p style={{ color: km.muted, fontSize: 14, marginBottom: 28, lineHeight: 1.5 }}>
+            {mode === "connexion" ? "Connectez-vous pour accéder à votre espace." : `Rejoignez ${BRAND.name} gratuitement, en moins d'une minute.`}
           </p>
 
           {/* Choix du rôle — seulement à l'inscription */}
           {mode === "inscription" && (
             <div style={{ marginBottom: 24 }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: "#8a8477", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.5px" }}>Je suis</p>
+              <p style={LABEL_STYLE}>Je suis</p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 {[
                   { val: "locataire" as Role, label: "Locataire", desc: "Je cherche un logement" },
                   { val: "proprietaire" as Role, label: "Propriétaire", desc: "Je mets en location" },
                 ].map(r => (
-                  <div key={r.val} onClick={() => setRole(r.val)}
-                    style={{ padding: "14px 16px", border: `2px solid ${role === r.val ? "#111" : "#EAE6DF"}`, borderRadius: 14, cursor: "pointer", background: role === r.val ? "#111" : "white", transition: "all 0.2s" }}>
-                    <p style={{ fontWeight: 700, fontSize: 14, color: role === r.val ? "white" : "#111" }}>{r.label}</p>
-                    <p style={{ fontSize: 12, color: role === r.val ? "#8a8477" : "#8a8477", marginTop: 2 }}>{r.desc}</p>
-                  </div>
+                  <button key={r.val} type="button" onClick={() => setRole(r.val)}
+                    style={{
+                      padding: "14px 16px",
+                      border: `1px solid ${role === r.val ? km.ink : km.line}`,
+                      borderRadius: 14,
+                      cursor: "pointer",
+                      background: role === r.val ? km.ink : km.white,
+                      color: role === r.val ? km.white : km.ink,
+                      transition: "all 0.2s",
+                      textAlign: "left",
+                      fontFamily: "inherit",
+                    }}>
+                    <p style={{ fontWeight: 700, fontSize: 13, margin: 0, textTransform: "uppercase", letterSpacing: "1px" }}>{r.label}</p>
+                    <p style={{ fontSize: 12, color: role === r.val ? "rgba(255,255,255,0.72)" : km.muted, marginTop: 4 }}>{r.desc}</p>
+                  </button>
                 ))}
               </div>
             </div>
@@ -198,8 +267,23 @@ function AuthContent() {
           <button
             onClick={() => signIn("google", { callbackUrl: role === "proprietaire" ? "/proprietaire" : "/profil" })}
             disabled={loading}
-            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "13px 0", border: "1px solid #EAE6DF", borderRadius: 999, background: "white", cursor: "pointer", fontWeight: 700, fontSize: 15, fontFamily: "inherit", marginBottom: 20, opacity: loading ? 0.6 : 1 }}>
-            <svg width="20" height="20" viewBox="0 0 48 48">
+            style={{
+              width: "100%",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
+              padding: "13px 0",
+              border: `1px solid ${km.line}`,
+              borderRadius: 999,
+              background: km.white,
+              cursor: "pointer",
+              fontWeight: 700, fontSize: 13,
+              fontFamily: "inherit",
+              marginBottom: 20,
+              opacity: loading ? 0.6 : 1,
+              color: km.ink,
+              textTransform: "uppercase",
+              letterSpacing: "0.8px",
+            }}>
+            <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden>
               <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
               <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
               <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
@@ -209,17 +293,17 @@ function AuthContent() {
           </button>
 
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-            <div style={{ flex: 1, height: 1, background: "#EAE6DF" }} />
-            <span style={{ color: "#8a8477", fontSize: 13 }}>ou</span>
-            <div style={{ flex: 1, height: 1, background: "#EAE6DF" }} />
+            <div style={{ flex: 1, height: 1, background: km.line }} />
+            <span style={{ color: km.muted, fontSize: 10, textTransform: "uppercase", letterSpacing: "1.5px", fontWeight: 700 }}>ou</span>
+            <div style={{ flex: 1, height: 1, background: km.line }} />
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {mode === "inscription" && (
               <>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <div>
-                    <label htmlFor="signup-prenom" style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "block", color: "#8a8477" }}>Prénom</label>
+                    <label htmlFor="signup-prenom" style={LABEL_STYLE}>Prénom</label>
                     <input
                       id="signup-prenom"
                       type="text"
@@ -229,11 +313,11 @@ function AuthContent() {
                       onChange={handleChange("prenom")}
                       maxLength={80}
                       required
-                      style={{ width: "100%", padding: "12px 16px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                      style={INPUT_STYLE}
                     />
                   </div>
                   <div>
-                    <label htmlFor="signup-nom" style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "block", color: "#8a8477" }}>Nom de famille</label>
+                    <label htmlFor="signup-nom" style={LABEL_STYLE}>Nom de famille</label>
                     <input
                       id="signup-nom"
                       type="text"
@@ -243,7 +327,7 @@ function AuthContent() {
                       onChange={handleChange("nom")}
                       maxLength={80}
                       required
-                      style={{ width: "100%", padding: "12px 16px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                      style={INPUT_STYLE}
                     />
                   </div>
                 </div>
@@ -253,25 +337,32 @@ function AuthContent() {
               </>
             )}
             <div>
-              <label style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "block", color: "#8a8477" }}>Email</label>
+              <label style={LABEL_STYLE}>Email</label>
               <input
                 type="email"
                 placeholder="jean@exemple.fr"
                 value={form.email}
                 onChange={handleChange("email")}
                 required
-                style={{ width: "100%", padding: "12px 16px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                style={INPUT_STYLE}
               />
             </div>
             <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-                <label style={{ fontSize: 13, fontWeight: 700, color: "#8a8477" }}>Mot de passe</label>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+                <label style={{ ...LABEL_STYLE, marginBottom: 0 }}>Mot de passe</label>
                 {mode === "connexion" && (
                   <button
                     type="button"
                     onClick={() => { setResetOpen(v => !v); setResetEmail(form.email); setResetState("idle"); setResetError("") }}
-                    style={{ fontSize: 12, color: "#1d4ed8", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit", fontWeight: 600 }}>
-                    Mot de passe oublié ?
+                    style={{
+                      fontSize: 10, color: km.ink,
+                      background: "none", border: "none",
+                      cursor: "pointer", padding: 0,
+                      fontFamily: "inherit", fontWeight: 700,
+                      textTransform: "uppercase", letterSpacing: "1.2px",
+                      textDecoration: "underline", textUnderlineOffset: 3,
+                    }}>
+                    Oublié ?
                   </button>
                 )}
               </div>
@@ -286,16 +377,16 @@ function AuthContent() {
             </div>
 
             {resetOpen && mode === "connexion" && (
-              <div style={{ background: "#F7F4EF", border: "1px solid #EAE6DF", borderRadius: 12, padding: 14 }}>
+              <div style={{ background: km.beige, border: `1px solid ${km.line}`, borderRadius: 12, padding: 14 }}>
                 {resetState === "sent" ? (
                   <div>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: "#15803d", margin: "0 0 6px" }}>Email envoyé</p>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: km.successText, margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "1.4px" }}>Email envoyé</p>
                     <p style={{ fontSize: 12, color: "#4b5563", margin: 0, lineHeight: 1.5 }}>
                       Si un compte existe pour <strong>{resetEmail}</strong>, vous allez recevoir un lien de réinitialisation. Le lien est valide 1 heure.
                     </p>
                   </div>
                 ) : (
-                  <form onSubmit={envoyerResetPassword} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <form onSubmit={envoyerResetPassword} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     <p style={{ fontSize: 12, color: "#4b5563", margin: 0, lineHeight: 1.5 }}>
                       Indiquez votre adresse e-mail, nous vous enverrons un lien pour réinitialiser votre mot de passe.
                     </p>
@@ -305,20 +396,34 @@ function AuthContent() {
                       value={resetEmail}
                       onChange={e => setResetEmail(e.target.value)}
                       required
-                      style={{ width: "100%", padding: "10px 14px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                      style={{ ...INPUT_STYLE, padding: "10px 14px", fontSize: 14 }}
                     />
-                    {resetError && <p style={{ fontSize: 12, color: "#b91c1c", margin: 0 }}>{resetError}</p>}
+                    {resetError && <p style={{ fontSize: 12, color: km.errText, margin: 0 }}>{resetError}</p>}
                     <div style={{ display: "flex", gap: 8 }}>
                       <button
                         type="submit"
                         disabled={resetState === "sending"}
-                        style={{ background: "#111", color: "white", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: resetState === "sending" ? "wait" : "pointer", fontFamily: "inherit", opacity: resetState === "sending" ? 0.7 : 1 }}>
+                        style={{
+                          background: km.ink, color: km.white,
+                          border: "none", borderRadius: 999,
+                          padding: "8px 20px", fontSize: 10, fontWeight: 700,
+                          cursor: resetState === "sending" ? "wait" : "pointer",
+                          fontFamily: "inherit",
+                          opacity: resetState === "sending" ? 0.7 : 1,
+                          textTransform: "uppercase", letterSpacing: "0.8px",
+                        }}>
                         {resetState === "sending" ? "Envoi…" : "Envoyer la demande"}
                       </button>
                       <button
                         type="button"
                         onClick={() => setResetOpen(false)}
-                        style={{ background: "white", color: "#111", border: "1px solid #EAE6DF", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                        style={{
+                          background: km.white, color: km.ink,
+                          border: `1px solid ${km.line}`, borderRadius: 999,
+                          padding: "8px 20px", fontSize: 10, fontWeight: 600,
+                          cursor: "pointer", fontFamily: "inherit",
+                          textTransform: "uppercase", letterSpacing: "0.8px",
+                        }}>
                         Annuler
                       </button>
                     </div>
@@ -328,17 +433,14 @@ function AuthContent() {
             )}
 
             {error && (
-              <p style={{ color: "#b91c1c", fontSize: 13, margin: 0 }}>{error}</p>
+              <p style={{ color: km.errText, fontSize: 13, margin: 0 }}>{error}</p>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              style={{ width: "100%", background: loading ? "#8a8477" : "#111", color: "white", border: "none", borderRadius: 999, padding: "14px 0", fontWeight: 800, fontSize: 15, cursor: loading ? "not-allowed" : "pointer", marginTop: 4, fontFamily: "inherit", transition: "background 0.2s" }}>
-              {loading ? "Chargement..." : mode === "connexion" ? "Se connecter" : "Créer mon compte"}
-            </button>
+            <KMButton type="submit" disabled={loading} size="lg" style={{ width: "100%", marginTop: 4 }}>
+              {loading ? "Chargement…" : mode === "connexion" ? "Se connecter" : "Créer mon compte"}
+            </KMButton>
           </form>
-        </div>
+        </KMCard>
       </div>
     </main>
   )

@@ -12,6 +12,7 @@ import Tooltip from "../../components/Tooltip"
 import MarketRentHint from "./MarketRentHint"
 
 import { Toggle, Sec, F } from "../../components/FormHelpers"
+import { km, KMButton, KMButtonOutline, KMEyebrow, KMHeading } from "../../components/ui/km"
 
 const DRAFT_VERSION = 1
 function draftStorageKey(email: string) {
@@ -260,16 +261,32 @@ export default function AjouterBien() {
   const manquants = checks.filter(c => !c.ok).map(c => c.label)
 
   return (
-    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
+    <main style={{
+      minHeight: "100vh",
+      background: km.beige,
+      fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
+    }}>
       <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 48px" }}>
-        <a href="/proprietaire" style={{ fontSize: 14, color: "#8a8477", textDecoration: "none" }}>← Retour au dashboard</a>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap", margin: "16px 0 4px" }}>
-          <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.5px", margin: 0 }}>Ajouter un bien</h1>
-          {savedHint && (
-            <span style={{ fontSize: 12, color: "#15803d", fontWeight: 700 }}>Brouillon sauvegardé</span>
-          )}
+        <a href="/proprietaire" style={{
+          fontSize: 11, color: km.muted, textDecoration: "none",
+          textTransform: "uppercase", letterSpacing: "1.2px", fontWeight: 700,
+        }}>← Retour au dashboard</a>
+
+        <div style={{ marginTop: 18, marginBottom: 6 }}>
+          <KMEyebrow style={{ marginBottom: 12 }}>Publication · Nouveau bien</KMEyebrow>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <KMHeading as="h1" size={isMobile ? 32 : 42}>Ajouter un bien</KMHeading>
+            {savedHint && (
+              <span style={{
+                fontSize: 10, fontWeight: 700, color: km.successText,
+                textTransform: "uppercase", letterSpacing: "1.4px",
+              }}>Brouillon sauvegardé</span>
+            )}
+          </div>
         </div>
-        <p style={{ color: "#8a8477", marginBottom: 20, fontSize: 14 }}>Publiez une annonce ou enregistrez un bien déjà loué pour le gérer</p>
+        <p style={{ color: km.muted, margin: "10px 0 24px", fontSize: 14, lineHeight: 1.5 }}>
+          Publiez une annonce ou enregistrez un bien déjà loué pour le gérer.
+        </p>
 
         {draftPromptOpen && (
           <div style={{ background: "#EEF3FB", border: "1px solid #D7E3F4", borderRadius: 14, padding: "14px 18px", marginBottom: 20, display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
@@ -517,20 +534,29 @@ export default function AjouterBien() {
         </Sec>
 
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <a href="/proprietaire" style={{ padding: "14px 28px", border: "1px solid #EAE6DF", borderRadius: 999, textDecoration: "none", color: "#111", fontWeight: 600 }}>Annuler</a>
+          <a href="/proprietaire" style={{
+            padding: "11px 25px",
+            border: `1px solid ${km.line}`,
+            borderRadius: 999,
+            textDecoration: "none",
+            color: km.ink,
+            fontWeight: 700,
+            fontSize: 11,
+            textTransform: "uppercase",
+            letterSpacing: "0.6px",
+            display: "inline-flex",
+            alignItems: "center",
+          }}>Annuler</a>
           <div style={{ display: "flex", gap: 12 }}>
-            <button
-              type="button"
+            <KMButtonOutline
               onClick={() => setShowPreview(true)}
               disabled={!form.titre || !form.ville || !form.prix}
-              style={{ background: "white", border: "1px solid #111", color: "#111", borderRadius: 999, padding: "14px 24px", fontWeight: 700, fontSize: 15, cursor: form.titre && form.ville && form.prix ? "pointer" : "not-allowed", opacity: form.titre && form.ville && form.prix ? 1 : 0.5, fontFamily: "inherit" }}
-            >
+              size="lg">
               Prévisualiser
-            </button>
-            <button onClick={publier} disabled={saving}
-              style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1, fontFamily: "inherit" }}>
-              {saving ? "Publication..." : dejaLoue ? "Enregistrer le bien" : "Publier l'annonce"}
-            </button>
+            </KMButtonOutline>
+            <KMButton onClick={publier} disabled={saving} size="lg">
+              {saving ? "Publication…" : dejaLoue ? "Enregistrer le bien" : "Publier l'annonce"}
+            </KMButton>
           </div>
         </div>
 

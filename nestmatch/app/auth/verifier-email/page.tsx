@@ -1,6 +1,7 @@
 "use client"
 import { Suspense, useState, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { km, KMButton, KMCard, KMEyebrow, KMHeading } from "../../components/ui/km"
 
 /**
  * Page de confirmation d'email avec code OTP 6 chiffres.
@@ -100,37 +101,63 @@ function VerifierEmailForm() {
     }
   }
 
+  const LABEL: React.CSSProperties = {
+    fontSize: 10, fontWeight: 700, color: km.muted,
+    textTransform: "uppercase", letterSpacing: "1.4px",
+    display: "block", marginBottom: 8,
+  }
+
   return (
-    <main style={{ minHeight: "calc(100vh - 72px)", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
-      <div style={{ maxWidth: 440, width: "100%", background: "white", borderRadius: 24, padding: "36px 32px", boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
+    <main style={{
+      minHeight: "calc(100vh - 72px)",
+      background: km.beige,
+      fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "40px 20px",
+    }}>
+      <KMCard padding="36px 32px" style={{ maxWidth: 440, width: "100%", borderRadius: 24 }}>
         {success ? (
           <div style={{ textAlign: "center" }}>
-            <div style={{ width: 56, height: 56, margin: "0 auto 18px", background: "#F0FAEE", color: "#15803d", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+            <div style={{
+              width: 56, height: 56, margin: "0 auto 18px",
+              background: km.successBg, color: km.successText,
+              border: `1px solid ${km.successLine}`,
+              borderRadius: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
             </div>
-            <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.3px", margin: 0, marginBottom: 6 }}>Email confirmé</h1>
-            <p style={{ fontSize: 14, color: "#8a8477", margin: 0 }}>Redirection vers la connexion…</p>
+            <KMHeading as="h1" size={24} style={{ marginBottom: 8 }}>Email confirmé</KMHeading>
+            <p style={{ fontSize: 13, color: km.muted, margin: 0, textTransform: "uppercase", letterSpacing: "1.2px", fontWeight: 600 }}>Redirection vers la connexion…</p>
           </div>
         ) : (
           <>
-            <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.5px", margin: 0, marginBottom: 6 }}>Confirme ton email</h1>
-            <p style={{ fontSize: 14, color: "#8a8477", marginBottom: 22, lineHeight: 1.55 }}>
-              Entre le code à 6 chiffres reçu dans ton inbox. Il est valide 15 minutes.
+            <KMEyebrow style={{ marginBottom: 12 }}>Étape · Confirmation email</KMEyebrow>
+            <KMHeading as="h1" size={28} style={{ marginBottom: 10 }}>Confirmez votre email</KMHeading>
+            <p style={{ fontSize: 14, color: km.muted, marginBottom: 24, lineHeight: 1.55 }}>
+              Entrez le code à 6 chiffres reçu dans votre boîte mail. Il est valide 15 minutes.
             </p>
 
             <form onSubmit={submit}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: 6 }}>Email</label>
+              <label style={LABEL}>Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="ton@email.com"
+                placeholder="votre@email.com"
                 autoComplete="email"
-                style={{ width: "100%", padding: "11px 14px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit", marginBottom: 18 }}
+                style={{
+                  width: "100%", padding: "11px 14px",
+                  border: `1px solid ${km.line}`,
+                  borderRadius: 10, fontSize: 14,
+                  outline: "none", boxSizing: "border-box",
+                  fontFamily: "inherit", marginBottom: 20,
+                  background: km.white, color: km.ink,
+                }}
               />
 
-              <label style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: 8 }}>Code de vérification</label>
-              <div style={{ display: "flex", gap: 8, marginBottom: 18, justifyContent: "space-between" }}>
+              <label style={LABEL}>Code de vérification</label>
+              <div style={{ display: "flex", gap: 8, marginBottom: 20, justifyContent: "space-between" }}>
                 {digits.map((d, i) => (
                   <input
                     key={i}
@@ -145,37 +172,43 @@ function VerifierEmailForm() {
                     aria-label={`Chiffre ${i + 1}`}
                     style={{
                       width: 46, height: 56,
-                      border: `1px solid ${d ? "#111" : "#EAE6DF"}`,
+                      border: `1px solid ${d ? km.ink : km.line}`,
                       borderRadius: 10,
-                      fontSize: 24, fontWeight: 800, textAlign: "center",
-                      outline: "none", fontFamily: "'DM Mono', ui-monospace, monospace",
-                      color: "#111", background: "white", boxSizing: "border-box",
+                      fontSize: 24, fontWeight: 700, textAlign: "center",
+                      outline: "none",
+                      fontFamily: "var(--font-fraunces), 'Fraunces', Georgia, serif",
+                      fontStyle: "italic",
+                      color: km.ink, background: km.white, boxSizing: "border-box",
                     }}
                   />
                 ))}
               </div>
 
               {error && (
-                <p style={{ background: "#FEECEC", color: "#b91c1c", padding: "10px 14px", borderRadius: 10, fontSize: 13, marginBottom: 16, lineHeight: 1.4 }}>
+                <p style={{
+                  background: km.errBg, color: km.errText,
+                  border: `1px solid ${km.errLine}`,
+                  padding: "10px 14px", borderRadius: 10,
+                  fontSize: 13, marginBottom: 16, lineHeight: 1.4,
+                }}>
                   {error}
                 </p>
               )}
 
-              <button type="submit" disabled={submitting}
-                style={{ width: "100%", padding: "13px 20px", background: submitting ? "#8a8477" : "#111", color: "white", border: "none", borderRadius: 999, fontWeight: 700, fontSize: 15, cursor: submitting ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+              <KMButton type="submit" disabled={submitting} size="lg" style={{ width: "100%" }}>
                 {submitting ? "Vérification…" : "Vérifier mon email"}
-              </button>
+              </KMButton>
             </form>
 
-            <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #F7F4EF", textAlign: "center" }}>
-              <p style={{ fontSize: 12, color: "#8a8477", margin: 0, marginBottom: 8, lineHeight: 1.5 }}>
-                Pas de code reçu ? Vérifie tes spams ou demande un nouvel envoi.
+            <div style={{ marginTop: 24, paddingTop: 18, borderTop: `1px solid ${km.line}`, textAlign: "center" }}>
+              <p style={{ fontSize: 12, color: km.muted, margin: 0, marginBottom: 10, lineHeight: 1.5 }}>
+                Pas de code reçu ? Vérifiez vos spams ou demandez un nouvel envoi.
               </p>
               <button
                 type="button"
                 onClick={async () => {
                   if (!email.trim()) {
-                    setResendMsg("Entre d'abord ton email.")
+                    setResendMsg("Entrez d'abord votre email.")
                     return
                   }
                   setResending(true)
@@ -187,10 +220,10 @@ function VerifierEmailForm() {
                       body: JSON.stringify({ email: email.trim() }),
                     })
                     if (res.ok) {
-                      setResendMsg("Un nouveau code a été envoyé. Vérifie ta boîte mail.")
+                      setResendMsg("Un nouveau code a été envoyé. Vérifiez votre boîte mail.")
                     } else {
                       const j = await res.json().catch(() => ({}))
-                      setResendMsg(j.error || "Erreur, réessaie plus tard.")
+                      setResendMsg(j.error || "Erreur, réessayez plus tard.")
                     }
                   } catch {
                     setResendMsg("Erreur réseau.")
@@ -198,21 +231,33 @@ function VerifierEmailForm() {
                   setResending(false)
                 }}
                 disabled={resending}
-                style={{ background: "none", border: "none", color: "#111", fontSize: 13, fontWeight: 700, textDecoration: "underline", cursor: resending ? "not-allowed" : "pointer", fontFamily: "inherit", padding: 0 }}>
+                style={{
+                  background: "none", border: "none",
+                  color: km.ink,
+                  fontSize: 10, fontWeight: 700,
+                  textTransform: "uppercase", letterSpacing: "1.2px",
+                  textDecoration: "underline", textUnderlineOffset: 4,
+                  cursor: resending ? "not-allowed" : "pointer",
+                  fontFamily: "inherit", padding: 0,
+                }}>
                 {resending ? "Envoi…" : "Renvoyer un code"}
               </button>
               {resendMsg && (
-                <p style={{ fontSize: 12, color: resendMsg.startsWith("Un nouveau") ? "#15803d" : "#b91c1c", marginTop: 8, marginBottom: 0 }}>
+                <p style={{
+                  fontSize: 12,
+                  color: resendMsg.startsWith("Un nouveau") ? km.successText : km.errText,
+                  marginTop: 10, marginBottom: 0,
+                }}>
                   {resendMsg}
                 </p>
               )}
-              <p style={{ fontSize: 12, color: "#8a8477", marginTop: 14, margin: "14px 0 0" }}>
-                <a href="/auth" style={{ color: "#8a8477", textDecoration: "underline" }}>Retour à la connexion</a>
+              <p style={{ fontSize: 11, color: km.muted, margin: "16px 0 0", textTransform: "uppercase", letterSpacing: "1.2px", fontWeight: 600 }}>
+                <a href="/auth" style={{ color: km.muted, textDecoration: "underline", textUnderlineOffset: 3 }}>Retour à la connexion</a>
               </p>
             </div>
           </>
         )}
-      </div>
+      </KMCard>
     </main>
   )
 }
