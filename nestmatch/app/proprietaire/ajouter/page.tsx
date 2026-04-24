@@ -29,7 +29,12 @@ type AnnonceForm = {
   locataire_email: string; date_debut_bail: string; mensualite_credit: string; valeur_bien: string
   duree_credit: string; taxe_fonciere: string; assurance_pno: string; charges_copro_annuelles: string
   lat: number | null; lng: number | null
+  // Critères candidats (handoff publish.jsx step 6) — non discriminants, servent au matching.
+  min_revenus_ratio: number; garants_acceptes: string[]; profils_acceptes: string[]; message_proprietaire: string
 }
+
+const GARANTS_OPTIONS = ["Visale", "Garantme", "Parents CDI", "Caution bancaire", "Indifférent"] as const
+const PROFILS_OPTIONS = ["CDI", "CDD", "Étudiant", "Fonctionnaire", "Freelance / Indépendant", "Retraité"] as const
 
 type AnnonceToggles = {
   meuble: boolean; animaux: boolean; parking: boolean; cave: boolean
@@ -38,16 +43,20 @@ type AnnonceToggles = {
 }
 
 // ─── Définition des étapes (source de vérité du wizard) ────────────────────
+// 7 étapes, fidèle au handoff publish.jsx. Étape 6 « Critères » — slider
+// ratio revenus + chips garants/profils + message candidats + disclaimer
+// non-discrimination, non bloquante.
 const STEPS = [
-  { n: 1, label: "Nature",      eyebrow: "Étape 1 sur 6", title: "Quel bien voulez-vous publier ?", sub: "Le type de logement et son statut actuel." },
-  { n: 2, label: "Adresse",     eyebrow: "Étape 2 sur 6", title: "Où se trouve-t-il ?",             sub: "Titre, ville et adresse — l'adresse précise reste privée par défaut." },
-  { n: 3, label: "Dimensions",  eyebrow: "Étape 3 sur 6", title: "Ses caractéristiques",             sub: "Surface, pièces, chambres, étage et DPE." },
-  { n: 4, label: "Équipements", eyebrow: "Étape 4 sur 6", title: "Ce qui le distingue",              sub: "Cochez les équipements présents. Plus c'est précis, mieux c'est matché." },
-  { n: 5, label: "Récit",       eyebrow: "Étape 5 sur 6", title: "Donnez-lui vie",                   sub: "Photos et description. C'est ce qui déclenche le clic." },
-  { n: 6, label: "Publier",     eyebrow: "Étape 6 sur 6", title: "Loyer et dernier regard",          sub: "Fixez le loyer, relisez l'ensemble, publiez." },
+  { n: 1, label: "Nature",      eyebrow: "Étape 1 sur 7", title: "Quel bien voulez-vous publier ?", sub: "Le type de logement et son statut actuel." },
+  { n: 2, label: "Adresse",     eyebrow: "Étape 2 sur 7", title: "Où se trouve-t-il ?",             sub: "Titre, ville et adresse — l'adresse précise reste privée par défaut." },
+  { n: 3, label: "Dimensions",  eyebrow: "Étape 3 sur 7", title: "Ses caractéristiques",             sub: "Surface, pièces, chambres, étage et DPE." },
+  { n: 4, label: "Équipements", eyebrow: "Étape 4 sur 7", title: "Ce qui le distingue",              sub: "Cochez les équipements présents. Plus c'est précis, mieux c'est matché." },
+  { n: 5, label: "Récit",       eyebrow: "Étape 5 sur 7", title: "Donnez-lui vie",                   sub: "Photos et description. C'est ce qui déclenche le clic." },
+  { n: 6, label: "Critères",    eyebrow: "Étape 6 sur 7", title: "Quel locataire recherchez-vous ?", sub: "Non discriminants — servent à prioriser les dossiers compatibles." },
+  { n: 7, label: "Publier",     eyebrow: "Étape 7 sur 7", title: "Loyer et dernier regard",          sub: "Fixez le loyer, relisez l'ensemble, publiez." },
 ] as const
 
-type StepNum = 1 | 2 | 3 | 4 | 5 | 6
+type StepNum = 1 | 2 | 3 | 4 | 5 | 6 | 7
 
 const SEL_STATUT = [
   { v: "disponible", label: "Disponible — à louer" },
@@ -78,6 +87,7 @@ export default function AjouterBien() {
     duree_credit: "",
     taxe_fonciere: "", assurance_pno: "", charges_copro_annuelles: "",
     lat: null, lng: null,
+    min_revenus_ratio: 3, garants_acceptes: ["Visale"], profils_acceptes: ["CDI", "Fonctionnaire"], message_proprietaire: "",
   })
   const [toggles, setToggles] = useState<AnnonceToggles>({
     meuble: false, animaux: false, parking: false, cave: false,
@@ -221,6 +231,12 @@ export default function AjouterBien() {
         membre: "Membre depuis " + new Date().getFullYear(), verifie: true,
         photos: photos.length > 0 ? photos : null,
         lat: form.lat, lng: form.lng,
+        // Critères candidats — handoff publish.jsx. Colonnes optionnelles :
+        // fallback « sans ces cols » déclenché si la migration n'a pas tourné.
+        min_revenus_ratio: form.min_revenus_ratio,
+        garants_acceptes: form.garants_acceptes.length > 0 ? form.garants_acceptes : null,
+        profils_acceptes: form.profils_acceptes.length > 0 ? form.profils_acceptes : null,
+        message_proprietaire: form.message_proprietaire || null,
         ...toggles,
       }
 
@@ -237,7 +253,10 @@ export default function AjouterBien() {
 
       Object.keys(data).forEach(k => { if (data[k] === null || data[k] === "") delete data[k] })
 
-      // Fallback lat/lng si colonnes absentes (migration non lancée).
+      // Fallback progressif si colonnes absentes (migration non lancée).
+      // Ordre : (1) insert complet → (2) retry sans lat/lng → (3) retry sans
+      // critères candidats (colonnes `min_revenus_ratio`, `garants_acceptes`,
+      // `profils_acceptes`, `message_proprietaire` optionnelles).
       const { data: inserted, error: errIns } = await supabase.from("annonces").insert([data]).select("id")
       let error = errIns
       let insertedRows = inserted
@@ -246,6 +265,18 @@ export default function AjouterBien() {
         delete dataNoCoords.lat
         delete dataNoCoords.lng
         const retry = await supabase.from("annonces").insert([dataNoCoords]).select("id")
+        error = retry.error
+        insertedRows = retry.data
+      }
+      if (error && /min_revenus_ratio|garants_acceptes|profils_acceptes|message_proprietaire|column.*does not exist/i.test(error.message || "")) {
+        const dataNoCriteria = { ...data }
+        delete dataNoCriteria.min_revenus_ratio
+        delete dataNoCriteria.garants_acceptes
+        delete dataNoCriteria.profils_acceptes
+        delete dataNoCriteria.message_proprietaire
+        delete dataNoCriteria.lat
+        delete dataNoCriteria.lng
+        const retry = await supabase.from("annonces").insert([dataNoCriteria]).select("id")
         error = retry.error
         insertedRows = retry.data
       }
@@ -275,18 +306,20 @@ export default function AjouterBien() {
   }
 
   // ─── Validation par étape — bloque « Suivant » si manquant ────────────────
+  // Étape 6 (Critères) est volontairement non bloquante : tous les champs sont
+  // optionnels conformément au handoff (disclaimer non-discrimination).
   const canAdvance = (() => {
     if (step === 2) return form.titre.trim().length > 0 && form.ville.trim().length > 0
-    if (step === 6) return form.prix.trim().length > 0 && parseInt(form.prix, 10) > 0
+    if (step === 7) return form.prix.trim().length > 0 && parseInt(form.prix, 10) > 0
     return true
   })()
 
-  // Récap visuel étape 6 — checklist réutilisée pour aider le proprio.
+  // Récap visuel étape 7 — checklist réutilisée pour aider le proprio.
   const checks = [
     { key: "titre",       label: "Titre",          ok: !!form.titre.trim(),                                        editStep: 2 as StepNum },
     { key: "type",        label: "Type de bien",   ok: !!form.type_bien,                                           editStep: 1 as StepNum },
     { key: "ville",       label: "Ville",          ok: !!form.ville,                                               editStep: 2 as StepNum },
-    { key: "prix",        label: "Loyer",          ok: !!form.prix,                                                editStep: 6 as StepNum },
+    { key: "prix",        label: "Loyer",          ok: !!form.prix,                                                editStep: 7 as StepNum },
     { key: "surface",     label: "Surface",        ok: !!form.surface,                                             editStep: 3 as StepNum },
     { key: "pieces",      label: "Pièces",         ok: !!form.pieces,                                              editStep: 3 as StepNum },
     { key: "description", label: "Description",    ok: (form.description || "").trim().length >= 80,               editStep: 5 as StepNum },
@@ -376,7 +409,10 @@ export default function AjouterBien() {
             />
           )}
           {step === 6 && (
-            <Step6Publier
+            <Step6Criteres form={form} setForm={setForm} isMobile={isMobile} />
+          )}
+          {step === 7 && (
+            <Step7Publier
               form={form}
               setForm={setForm}
               toggles={toggles}
@@ -402,7 +438,7 @@ export default function AjouterBien() {
           </KMButtonOutline>
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            {step === 6 && (
+            {step === 7 && (
               <KMButtonOutline
                 onClick={() => setShowPreview(true)}
                 disabled={!form.titre || !form.ville || !form.prix}
@@ -433,7 +469,7 @@ export default function AjouterBien() {
             Titre et ville sont requis pour continuer.
           </p>
         )}
-        {!canAdvance && step === 6 && (
+        {!canAdvance && step === 7 && (
           <p style={{ fontSize: 12, color: km.errText, marginTop: 10, textAlign: "right" }}>
             Le loyer est requis pour publier.
           </p>
@@ -707,8 +743,122 @@ function Step5Recit({
   )
 }
 
-// ─── Étape 6 — Conditions + récap + publication ────────────────────────────
-function Step6Publier({
+// ─── Étape 6 — Critères candidats (handoff publish.jsx) ────────────────────
+// Non discriminants : servent au matching. Slider ratio revenus 2×-4×,
+// chips garants + profils multi-select, message visible en haut de l'annonce,
+// disclaimer non-discrimination permanent.
+function Step6Criteres({
+  form, setForm, isMobile,
+}: {
+  form: AnnonceForm
+  setForm: React.Dispatch<React.SetStateAction<AnnonceForm>>
+  isMobile: boolean
+}) {
+  const loyer = parseInt(form.prix || "0", 10) || 1000
+  const minIncome = Math.round(loyer * form.min_revenus_ratio)
+  const toggleArr = (key: "garants_acceptes" | "profils_acceptes", val: string) => {
+    setForm(f => {
+      const has = f[key].includes(val)
+      return { ...f, [key]: has ? f[key].filter(v => v !== val) : [...f[key], val] }
+    })
+  }
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+      <div style={{
+        padding: "14px 18px", background: km.infoBg, border: `1px solid ${km.infoLine}`,
+        borderRadius: 14, fontSize: 12.5, color: km.infoText, lineHeight: 1.6,
+      }}>
+        Ces critères ne sont <strong>pas discriminants</strong> — ils nous aident simplement à calculer le score de match et à prioriser les dossiers compatibles.
+      </div>
+
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: km.ink, textTransform: "uppercase", letterSpacing: "1.2px" }}>Ratio revenus / loyer minimum</span>
+          <span style={{ fontSize: 11, color: km.muted }}>
+            {form.min_revenus_ratio.toFixed(1).replace(/\.0$/, "")}× le loyer — soit {minIncome.toLocaleString("fr-FR")} €/mois net
+          </span>
+        </div>
+        <input
+          type="range"
+          min={2}
+          max={4}
+          step={0.5}
+          value={form.min_revenus_ratio}
+          onChange={(e) => setForm(f => ({ ...f, min_revenus_ratio: parseFloat(e.target.value) }))}
+          style={{ width: "100%", accentColor: km.ink }}
+        />
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: km.muted, marginTop: 6 }}>
+          <span>2×</span><span>2,5×</span><span>3× (standard)</span><span>3,5×</span><span>4×</span>
+        </div>
+      </div>
+
+      <div>
+        <p style={{ fontSize: 12, fontWeight: 700, color: km.ink, textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 10px" }}>Garants acceptés</p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {GARANTS_OPTIONS.map(g => {
+            const active = form.garants_acceptes.includes(g)
+            return (
+              <button
+                key={g}
+                type="button"
+                onClick={() => toggleArr("garants_acceptes", g)}
+                style={{
+                  padding: "9px 16px", borderRadius: 999, fontFamily: "inherit", fontSize: 12.5, fontWeight: 500, cursor: "pointer",
+                  border: `1.5px solid ${active ? km.ink : km.line}`,
+                  background: active ? km.ink : km.white,
+                  color: active ? km.white : km.ink,
+                }}
+              >{g}</button>
+            )
+          })}
+        </div>
+      </div>
+
+      <div>
+        <p style={{ fontSize: 12, fontWeight: 700, color: km.ink, textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 10px" }}>Profils professionnels</p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {PROFILS_OPTIONS.map(p => {
+            const active = form.profils_acceptes.includes(p)
+            return (
+              <button
+                key={p}
+                type="button"
+                onClick={() => toggleArr("profils_acceptes", p)}
+                style={{
+                  padding: "9px 16px", borderRadius: 999, fontFamily: "inherit", fontSize: 12.5, fontWeight: 500, cursor: "pointer",
+                  border: `1.5px solid ${active ? km.ink : km.line}`,
+                  background: active ? km.ink : km.white,
+                  color: active ? km.white : km.ink,
+                }}
+              >{p}</button>
+            )
+          })}
+        </div>
+      </div>
+
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: km.ink, textTransform: "uppercase", letterSpacing: "1.2px" }}>Message aux candidats (optionnel)</span>
+          <span style={{ fontSize: 11, color: km.muted }}>{form.message_proprietaire.length}/500 — visible en haut de l'annonce</span>
+        </div>
+        <textarea
+          style={{ ...inp, minHeight: 96, resize: "vertical" }}
+          value={form.message_proprietaire}
+          onChange={(e) => setForm(f => ({ ...f, message_proprietaire: e.target.value.slice(0, 500) }))}
+          placeholder="Bonjour ! Je cherche un locataire calme et sérieux…"
+          rows={3}
+        />
+      </div>
+
+      <p style={{ fontSize: 11, color: km.muted, lineHeight: 1.5, margin: 0, fontStyle: "italic" }}>
+        La loi française interdit toute discrimination sur l'origine, le sexe, la situation familiale, l'apparence, le handicap, les opinions politiques ou religieuses, l'orientation sexuelle, l'âge ou le patronyme{isMobile ? "." : " (article 1er loi 2002-73)."}
+      </p>
+    </div>
+  )
+}
+
+// ─── Étape 7 — Conditions + récap + publication ────────────────────────────
+function Step7Publier({
   form, setForm, toggles, setToggles, photos, checks, completion, goToStep, dejaLoue, isMobile,
 }: {
   form: AnnonceForm
