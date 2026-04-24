@@ -760,12 +760,16 @@ export default async function Annonce({ params }: any) {
             </section>
           </div>
 
-          <div className="r-detail-sidebar" style={{ width: 360, flexShrink: 0, display: "flex", flexDirection: "column", gap: 16 }}>
+          <div className="r-detail-sidebar" style={{ width: 360, flexShrink: 0 }}>
             {/* R10.7 — sticky info card ≥1024px, avec maxHeight pour éviter que
                 la carte dépasse la viewport sur petits écrans laptop. Scrollable
                 si le contenu excède l'espace dispo.
                 R10.10 — id="r-sticky-card-target" = cible de l'IntersectionObserver
-                du bandeau bas (StickyCTABanner). */}
+                du bandeau bas (StickyCTABanner).
+                R10.12 fix — sidebar passe en layout BLOCK (au lieu de flex
+                column). position:sticky en flex-column parent est fragile ;
+                block élimine toute ambiguïté. Les cards suivantes utilisent
+                marginTop: 16 pour reproduire l'espacement d'un gap:16. */}
             <div
               id="r-sticky-card-target"
               className="r-detail-stickycard"
@@ -842,12 +846,17 @@ export default async function Annonce({ params }: any) {
               </div>
             </div>
 
-            {/* ─── R10.10 Card "Votre compatibilité" (profil recherché + loyer max) */}
-            <LocataireMatchCard annonce={annonce} />
+            {/* ─── R10.10 Card "Profil recherché" (critères owner + loyer max)
+                R10.12 — dédoublonnage : le titre "Votre compatibilité" et la
+                pastille globale sont retirés côté composant, puisque le chip
+                "X % de compatibilité" est déjà affiché dans la sticky card. */}
+            <div style={{ marginTop: 16 }}>
+              <LocataireMatchCard annonce={annonce} />
+            </div>
 
             {/* ─── R10.10 Card "Activité sur l'annonce" (social proof) ─── */}
             {(nbCandidatures > 0 || nbVues > 0 || annonce.dispo) && (
-              <div style={{ background: "white", borderRadius: 20, padding: 22, boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
+              <div style={{ marginTop: 16, background: "white", borderRadius: 20, padding: 22, boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
                 <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0, marginBottom: 8 }}>
                   Activité
                 </p>
@@ -879,7 +888,7 @@ export default async function Annonce({ params }: any) {
 
             {/* ─── R10.10 Card "Budget estimé au départ" ──────────────── */}
             {annonce.prix && (
-              <div style={{ background: "white", borderRadius: 20, padding: 22, boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
+              <div style={{ marginTop: 16, background: "white", borderRadius: 20, padding: 22, boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
                 <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0, marginBottom: 8 }}>
                   Budget
                 </p>
@@ -917,7 +926,7 @@ export default async function Annonce({ params }: any) {
 
             {/* ─── R10.10 Card "Autres biens de ce propriétaire" ──────── */}
             {nbAutresBiens >= 1 && (
-              <div style={{ background: "white", borderRadius: 20, padding: 22, boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
+              <div style={{ marginTop: 16, background: "white", borderRadius: 20, padding: 22, boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
                 <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0, marginBottom: 8 }}>
                   Propriétaire
                 </p>
@@ -928,7 +937,9 @@ export default async function Annonce({ params }: any) {
             )}
 
             {/* ─── R10.10 Card Partager ───────────────────────────────── */}
-            <PartagerCard url={`${BASE_URL}/annonces/${id}`} titre={annonce.titre || "Bien à louer"} />
+            <div style={{ marginTop: 16 }}>
+              <PartagerCard url={`${BASE_URL}/annonces/${id}`} titre={annonce.titre || "Bien à louer"} />
+            </div>
           </div>
         </div>
 

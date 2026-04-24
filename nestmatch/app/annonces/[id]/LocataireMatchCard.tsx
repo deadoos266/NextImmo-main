@@ -125,35 +125,27 @@ export default function LocataireMatchCard({ annonce }: { annonce: any }) {
     })
   }
 
-  const okCount = rows.filter(r => r.ok === true).length
-  const totalCount = rows.length
-  const pctMatch = totalCount > 0 ? Math.round((okCount / totalCount) * 100) : 0
-
-  // Pastille globale
-  const globalBadge: { bg: string; color: string; text: string } = (() => {
-    if (totalCount === 0) return { bg: "#EAE6DF", color: "#8a8477", text: "Critères non renseignés" }
-    if (pctMatch === 100) return { bg: "#F0FAEE", color: "#15803d", text: "Vous correspondez au profil recherché" }
-    if (pctMatch >= 60) return { bg: "#FFF4E5", color: "#a16207", text: "Vous correspondez partiellement" }
-    return { bg: "#FBECEC", color: "#b91c1c", text: "Profil peu compatible" }
-  })()
-
   // Loyer max conseillé (33 %)
   const loyerMax = Math.round(userRevenus / 3)
   const loyerOk = loyerCC <= loyerMax
   const hasRevenus = userRevenus > 0
 
+  // R10.12 — Si la card n'a RIEN à montrer (pas de rows ET pas de loyer max
+  // utile), on ne rend rien plutôt que de laisser une card vide à l'écran.
+  if (rows.length === 0 && !(hasRevenus && loyerCC > 0)) return null
+
+  // R10.12 — Dédoublonnage : on retire le titre "Votre compatibilité" et la
+  // pastille globale ("Vous correspondez au profil recherché" etc.) car le
+  // chip "X % de compatibilité" est déjà affiché dans la sticky card du
+  // haut. Cette card devient purement granulaire : critères owner + loyer max.
   return (
     <div style={{ background: "white", borderRadius: 20, padding: 22, boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
       <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0, marginBottom: 8 }}>
         Profil recherché
       </p>
-      <h3 style={{ fontSize: 18, fontWeight: 400, fontStyle: "italic", fontFamily: "'Fraunces', 'DM Sans', serif", letterSpacing: "-0.3px", margin: 0, marginBottom: 14, color: "#111" }}>
-        Votre compatibilité
+      <h3 style={{ fontSize: 16, fontWeight: 400, fontStyle: "italic", fontFamily: "'Fraunces', 'DM Sans', serif", letterSpacing: "-0.3px", margin: 0, marginBottom: 14, color: "#111" }}>
+        Critères du propriétaire
       </h3>
-
-      <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: globalBadge.bg, color: globalBadge.color, padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700, marginBottom: 14 }}>
-        <span>{globalBadge.text}</span>
-      </div>
 
       {rows.length > 0 && (
         <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8, marginBottom: hasRevenus ? 14 : 0 }}>
