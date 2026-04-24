@@ -18,7 +18,12 @@ import FiltersModal from "../components/annonces/FiltersModal"
 import ListingCardSearch from "../components/annonces/ListingCardSearch"
 import SavedSearchesPopover from "../components/annonces/SavedSearchesPopover"
 import BandeauDossier from "../components/annonces/BandeauDossier"
+import QuickViewModal from "../components/annonces/QuickViewModal"
+import CompareTray from "../components/annonces/CompareTray"
 import { km, KMButton, KMButtonOutline, KMEyebrow, KMHeading } from "../components/ui/km"
+
+// R10.2 — max simultané d'annonces dans le comparateur.
+const COMPARE_MAX = 3
 
 // IMPORTANT : pas de `dynamic(..., { ssr: false })` au niveau module.
 // Ça émet `<template data-dgst="BAILOUT_TO_CLIENT_SIDE_RENDERING">` au SSR,
@@ -208,6 +213,11 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   // ── Recherches sauvegardées
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([])
 
+  // ── R10.2 — Comparateur (max 3, persist localStorage km_compare_ids)
+  const [compareIds, setCompareIds] = useState<number[]>([])
+  // ── R10.2 — Quick-view modal
+  const [quickViewId, setQuickViewId] = useState<number | null>(null)
+
   const { data: session, status } = useSession()
   const { role } = useRole()
   const isProprietaire = role === "proprietaire"
@@ -358,6 +368,36 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
     const next = savedSearches.filter(s => s.id !== id)
     setSavedSearches(next)
     persistSavedSearches(next)
+  }
+
+  // ── R10.2 — Compare helpers (persist localStorage km_compare_ids)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("km_compare_ids")
+      if (raw) {
+        const arr = JSON.parse(raw)
+        if (Array.isArray(arr)) setCompareIds(arr.filter((x: unknown) => typeof x === "number").slice(0, COMPARE_MAX))
+      }
+    } catch { /* noop */ }
+  }, [])
+
+  function persistCompare(list: number[]) {
+    try { localStorage.setItem("km_compare_ids", JSON.stringify(list)) } catch { /* noop */ }
+  }
+  function handleToggleCompare(id: number) {
+    setCompareIds(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id].slice(0, COMPARE_MAX)
+      persistCompare(next)
+      return next
+    })
+  }
+  function handleClearCompare() {
+    setCompareIds([])
+    persistCompare([])
+  }
+  function handleLaunchCompare() {
+    if (compareIds.length < 2) return
+    router.push(`/annonces/comparer?ids=${compareIds.join(",")}`)
   }
 
   // ── Fetch annonces + profil
@@ -883,9 +923,13 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
             ) : annoncesTraitees.length === 0 ? (
               <EmptyState
                 title="Aucun logement trouvé"
-                description="Ajustez vos filtres pour voir plus de résultats."
+                description={activeVille
+                  ? `Aucun résultat à ${activeVille} pour ces critères. Élargissez la recherche ou effacez la ville.`
+                  : "Ajustez vos filtres pour voir plus de résultats."}
                 ctaLabel={activeFilterCount > 0 ? "Réinitialiser les filtres" : undefined}
                 onCtaClick={activeFilterCount > 0 ? onResetAll : undefined}
+                secondaryCtaLabel={activeVille ? "Voir toutes les villes" : undefined}
+                onSecondaryCtaClick={activeVille ? () => onChangeVille("") : undefined}
               />
             ) : (
               <GridContainer>
@@ -894,6 +938,7 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                   const info = !isProprietaire && score !== null ? labelScore(score) : null
                   const isOwn = isProprietaire && a.proprietaire_email === session?.user?.email
                   const isSelected = selectedId === a.id
+                  const isCompared = compareIds.includes(a.id)
                   return (
                     <ListingCardSearch
                       key={a.id}
@@ -908,6 +953,10 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                       onMouseLeave={() => setSelectedId(null)}
                       motCle={motCle}
                       variant="grid"
+                      onQuickView={() => setQuickViewId(a.id)}
+                      compared={isCompared}
+                      onToggleCompare={handleToggleCompare}
+                      compareDisabled={compareIds.length >= COMPARE_MAX}
                     />
                   )
                 })}
@@ -956,9 +1005,15 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
               ) : annoncesTraitees.length === 0 ? (
                 <EmptyState
                   title="Aucun logement trouvé"
-                  description={mapBounds ? "Essayez d'élargir la zone de recherche sur la carte." : "Ajustez vos filtres pour voir plus de résultats."}
+                  description={mapBounds
+                    ? "Essayez d'élargir la zone de recherche sur la carte."
+                    : activeVille
+                      ? `Aucun résultat à ${activeVille} pour ces critères. Élargissez la recherche ou effacez la ville.`
+                      : "Ajustez vos filtres pour voir plus de résultats."}
                   ctaLabel={mapBounds ? "Élargir la zone" : activeFilterCount > 0 ? "Réinitialiser les filtres" : undefined}
                   onCtaClick={mapBounds ? () => setMapBounds(null) : activeFilterCount > 0 ? onResetAll : undefined}
+                  secondaryCtaLabel={activeVille && !mapBounds ? "Voir toutes les villes" : undefined}
+                  onSecondaryCtaClick={activeVille && !mapBounds ? () => onChangeVille("") : undefined}
                 />
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -967,6 +1022,7 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                     const info = !isProprietaire && score !== null ? labelScore(score) : null
                     const isOwn = isProprietaire && a.proprietaire_email === session?.user?.email
                     const isSelected = selectedId === a.id
+                    const isCompared = compareIds.includes(a.id)
                     return (
                       <ListingCardSearch
                         key={a.id}
@@ -981,6 +1037,10 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                         onMouseLeave={() => setSelectedId(null)}
                         motCle={motCle}
                         variant={listCardVariant}
+                        onQuickView={() => setQuickViewId(a.id)}
+                        compared={isCompared}
+                        onToggleCompare={handleToggleCompare}
+                        compareDisabled={compareIds.length >= COMPARE_MAX}
                       />
                     )
                   })}
@@ -1140,6 +1200,29 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           </div>
         </div>
       )}
+
+      {/* ── R10.2 — QuickView modal ───────────────────────────────────── */}
+      <QuickViewModal
+        open={quickViewId !== null}
+        onClose={() => setQuickViewId(null)}
+        annonce={quickViewId !== null ? annoncesEnrichies.find(a => a.id === quickViewId) ?? null : null}
+        score={quickViewId !== null ? (annoncesEnrichies.find(a => a.id === quickViewId)?.scoreMatching ?? null) : null}
+        favori={quickViewId !== null ? favoris.includes(quickViewId) : false}
+        onToggleFavori={() => { if (quickViewId !== null) handleToggleFavoriId(quickViewId) }}
+      />
+
+      {/* ── R10.2 — Compare tray (sticky bas d'écran) ─────────────────── */}
+      <CompareTray
+        items={compareIds
+          .map(id => annoncesEnrichies.find(a => a.id === id))
+          .filter((a): a is NonNullable<typeof a> => !!a)
+          .map(a => ({ id: a.id, titre: a.titre ?? null, ville: a.ville ?? null, prix: a.prix ?? null }))
+        }
+        max={COMPARE_MAX}
+        onRemove={handleToggleCompare}
+        onClear={handleClearCompare}
+        onCompare={handleLaunchCompare}
+      />
 
       {/* ── Modal filtres ─────────────────────────────────────────────── */}
       <FiltersModal

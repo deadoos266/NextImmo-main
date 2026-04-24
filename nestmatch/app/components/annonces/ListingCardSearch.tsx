@@ -43,6 +43,14 @@ interface Props {
   onMouseLeave: () => void
   motCle: string
   variant: Variant
+  /** R10.2 — handler aperçu rapide (modal). Si absent, bouton masqué. */
+  onQuickView?: (annonceId: number) => void
+  /** R10.2 — état « cochée pour comparaison ». Default false. */
+  compared?: boolean
+  /** R10.2 — toggle comparer. Si absent, case masquée. */
+  onToggleCompare?: (annonceId: number) => void
+  /** R10.2 — true quand la tray est pleine (≥ max) : empêche cocher en plus. */
+  compareDisabled?: boolean
 }
 
 // ─── Helpers exportables (DpeBadge, ScoreMatchDonut…) ──────────────────
@@ -520,7 +528,21 @@ export default function ListingCardSearch({
   onMouseLeave,
   motCle,
   variant,
+  onQuickView,
+  compared = false,
+  onToggleCompare,
+  compareDisabled = false,
 }: Props) {
+  function handleQuickView(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (onQuickView) onQuickView(annonce.id)
+  }
+  function handleCompareToggle(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (onToggleCompare && (compared || !compareDisabled)) onToggleCompare(annonce.id)
+  }
   const baseStyle: React.CSSProperties = {
     display: "block",
     textDecoration: "none",
@@ -813,6 +835,58 @@ export default function ListingCardSearch({
                 </svg>
                 Voir sur la carte
               </button>
+              {/* R10.2 — Aperçu rapide (modal sans quitter la page) */}
+              {onQuickView && (
+                <button
+                  type="button"
+                  onClick={handleQuickView}
+                  aria-label="Aperçu rapide"
+                  style={{
+                    background: "white", color: "#111",
+                    border: "1px solid #EAE6DF", padding: "4px 11px",
+                    borderRadius: 999, fontSize: 11, fontWeight: 500,
+                    whiteSpace: "nowrap", display: "inline-flex",
+                    alignItems: "center", gap: 5, cursor: "pointer",
+                    fontFamily: "inherit", transition: "background 0.15s",
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "#F1EEE8" }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "white" }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                  Aperçu
+                </button>
+              )}
+              {/* R10.2 — Toggle Comparer */}
+              {onToggleCompare && (
+                <button
+                  type="button"
+                  onClick={handleCompareToggle}
+                  aria-label={compared ? "Retirer du comparateur" : "Ajouter au comparateur"}
+                  aria-pressed={compared}
+                  disabled={!compared && compareDisabled}
+                  title={!compared && compareDisabled ? "Maximum atteint — retirez une annonce pour en ajouter une autre" : undefined}
+                  style={{
+                    background: compared ? "#111" : "white",
+                    color: compared ? "white" : "#111",
+                    border: compared ? "1px solid #111" : "1px solid #EAE6DF",
+                    padding: "4px 11px",
+                    borderRadius: 999, fontSize: 11, fontWeight: 600,
+                    whiteSpace: "nowrap", display: "inline-flex",
+                    alignItems: "center", gap: 5,
+                    cursor: !compared && compareDisabled ? "not-allowed" : "pointer",
+                    opacity: !compared && compareDisabled ? 0.5 : 1,
+                    fontFamily: "inherit", transition: "background 0.15s",
+                  }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    {compared ? <polyline points="20 6 9 17 4 12" /> : <><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></>}
+                  </svg>
+                  {compared ? "Ajouté" : "Comparer"}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -945,6 +1019,50 @@ export default function ListingCardSearch({
       </div>
       <div style={{ padding: "18px 22px 22px" }}>
         <MetaBlockGrid annonce={annonce} score={score} info={info} isOwn={isOwn} motCle={motCle} />
+        {/* R10.2 — action strip Aperçu / Comparer (sous le récap grid) */}
+        {(onQuickView || onToggleCompare) && (
+          <div style={{ display: "flex", gap: 6, marginTop: 12, flexWrap: "wrap" }}>
+            {onQuickView && (
+              <button
+                type="button"
+                onClick={handleQuickView}
+                aria-label="Aperçu rapide"
+                style={{
+                  background: "white", color: "#111",
+                  border: "1px solid #EAE6DF", padding: "6px 14px",
+                  borderRadius: 999, fontSize: 11, fontWeight: 500,
+                  whiteSpace: "nowrap", cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                Aperçu
+              </button>
+            )}
+            {onToggleCompare && (
+              <button
+                type="button"
+                onClick={handleCompareToggle}
+                aria-label={compared ? "Retirer du comparateur" : "Ajouter au comparateur"}
+                aria-pressed={compared}
+                disabled={!compared && compareDisabled}
+                title={!compared && compareDisabled ? "Maximum atteint" : undefined}
+                style={{
+                  background: compared ? "#111" : "white",
+                  color: compared ? "white" : "#111",
+                  border: compared ? "1px solid #111" : "1px solid #EAE6DF",
+                  padding: "6px 14px",
+                  borderRadius: 999, fontSize: 11, fontWeight: 600,
+                  whiteSpace: "nowrap",
+                  cursor: !compared && compareDisabled ? "not-allowed" : "pointer",
+                  opacity: !compared && compareDisabled ? 0.5 : 1,
+                  fontFamily: "inherit",
+                }}
+              >
+                {compared ? "Ajouté au comparateur" : "Comparer"}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </a>
   )

@@ -7,6 +7,10 @@ type Props = {
   ctaLabel?: string
   ctaHref?: string
   onCtaClick?: () => void
+  /** CTA secondaire optionnel (outline) — placé à droite du CTA principal. */
+  secondaryCtaLabel?: string
+  secondaryCtaHref?: string
+  onSecondaryCtaClick?: () => void
 }
 
 /**
@@ -17,7 +21,11 @@ type Props = {
  * Utilisé partout : dashboard proprio onglets vides, favoris, candidatures,
  * visites, etc. Un refactor ici touche tous les ecrans "vide".
  */
-export default function EmptyState({ icon, title, description, ctaLabel, ctaHref, onCtaClick }: Props) {
+export default function EmptyState({
+  icon, title, description,
+  ctaLabel, ctaHref, onCtaClick,
+  secondaryCtaLabel, secondaryCtaHref, onSecondaryCtaClick,
+}: Props) {
   const ctaStyle: React.CSSProperties = {
     display: "inline-block",
     background: "#111",
@@ -29,6 +37,20 @@ export default function EmptyState({ icon, title, description, ctaLabel, ctaHref
     fontSize: 12,
     cursor: "pointer",
     border: "none",
+    fontFamily: "inherit",
+    letterSpacing: "0.3px",
+  }
+  const outlineStyle: React.CSSProperties = {
+    display: "inline-block",
+    background: "#fff",
+    color: "#111",
+    padding: "11px 25px",
+    borderRadius: 999,
+    textDecoration: "none",
+    fontWeight: 600,
+    fontSize: 12,
+    cursor: "pointer",
+    border: "1px solid #111",
     fontFamily: "inherit",
     letterSpacing: "0.3px",
   }
@@ -62,10 +84,16 @@ export default function EmptyState({ icon, title, description, ctaLabel, ctaHref
             {description}
           </p>
         )}
-        {ctaLabel && ctaHref && <Link href={ctaHref} style={ctaStyle}>{ctaLabel}</Link>}
-        {ctaLabel && onCtaClick && !ctaHref && (
-          <button type="button" onClick={onCtaClick} style={ctaStyle}>{ctaLabel}</button>
-        )}
+        <div style={{ display: "inline-flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+          {ctaLabel && ctaHref && <Link href={ctaHref} style={ctaStyle}>{ctaLabel}</Link>}
+          {ctaLabel && onCtaClick && !ctaHref && (
+            <button type="button" onClick={onCtaClick} style={ctaStyle}>{ctaLabel}</button>
+          )}
+          {secondaryCtaLabel && secondaryCtaHref && <Link href={secondaryCtaHref} style={outlineStyle}>{secondaryCtaLabel}</Link>}
+          {secondaryCtaLabel && onSecondaryCtaClick && !secondaryCtaHref && (
+            <button type="button" onClick={onSecondaryCtaClick} style={outlineStyle}>{secondaryCtaLabel}</button>
+          )}
+        </div>
       </div>
     </>
   )
