@@ -70,20 +70,34 @@ export function Toggle({
   )
 }
 
-/** Section carte blanche avec titre h2. Utilisé pour grouper des champs de formulaire. */
-export function Sec({ t, children }: { t: ReactNode; children: ReactNode }) {
+/** Section carte blanche avec titre h2. Utilisé pour grouper des champs de formulaire.
+ *
+ *  Props optionnelles (backward-compat):
+ *  - `id`     → attribut DOM id pour ancre TOC + IntersectionObserver (R10.3)
+ *  - `footer` → zone rendue en bas (typiquement bouton « Enregistrer cette section »)
+ */
+export function Sec({
+  t, children, id, footer,
+}: {
+  t: ReactNode
+  children: ReactNode
+  id?: string
+  footer?: ReactNode
+}) {
   return (
-    <div style={{
+    <section id={id} style={{
       background: km.white,
       border: `1px solid ${km.line}`,
       borderRadius: 20,
       padding: 28,
       marginBottom: 20,
       boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
+      scrollMarginTop: 96,
     }}>
       <KMHeading as="h2" size={22} style={{ marginBottom: 20 }}>{t}</KMHeading>
       {children}
-    </div>
+      {footer && <div style={{ marginTop: 22, paddingTop: 18, borderTop: `1px solid ${km.beige}`, display: "flex", justifyContent: "flex-end" }}>{footer}</div>}
+    </section>
   )
 }
 

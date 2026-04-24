@@ -1,6 +1,6 @@
 "use client"
 import { useSession, signOut } from "next-auth/react"
-import { Suspense, useEffect, useState } from "react"
+import { Suspense, useEffect, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "../../lib/supabase"
 import { useResponsive } from "../hooks/useResponsive"
@@ -12,7 +12,57 @@ import Tooltip from "../components/Tooltip"
 // Composants HORS du composant principal pour éviter le bug de focus
 import { Toggle, Sec, F } from "../components/FormHelpers"
 import { calculerCompletudeProfil } from "../../lib/profilCompleteness"
-import { km } from "../components/ui/km"
+import { km, KMButton } from "../components/ui/km"
+
+// ─── Sections du profil (source de vérité pour sommaire + saves sectionnels) ─
+// Chaque section énumère ses clés form + toggles pour un upsert ciblé. R10.3a.
+type FormShape = {
+  ville_souhaitee: string; mode_localisation: string; type_quartier: string
+  budget_min: string; budget_max: string; surface_min: string; surface_max: string
+  pieces_min: string; chambres_min: string; dpe_min: string; type_bail: string
+  situation_pro: string; revenus_mensuels: string; type_garant: string
+  nb_occupants: string; profil_locataire: string
+}
+type TogglesShape = {
+  animaux: boolean; meuble: boolean; parking: boolean; cave: boolean
+  fibre: boolean; balcon: boolean; terrasse: boolean; jardin: boolean
+  ascenseur: boolean; rez_de_chaussee_ok: boolean; fumeur: boolean
+  proximite_metro: boolean; proximite_ecole: boolean
+  proximite_commerces: boolean; proximite_parcs: boolean
+}
+
+const SECTIONS: Array<{
+  id: string
+  label: string
+  formKeys: Array<keyof FormShape>
+  toggleKeys: Array<keyof TogglesShape>
+}> = [
+  {
+    id: "criteres",
+    label: "Critères de recherche",
+    formKeys: ["ville_souhaitee", "mode_localisation", "type_quartier", "budget_min", "budget_max",
+      "surface_min", "surface_max", "pieces_min", "chambres_min", "dpe_min", "type_bail"],
+    toggleKeys: ["rez_de_chaussee_ok"],
+  },
+  {
+    id: "equipements",
+    label: "Équipements",
+    formKeys: [],
+    toggleKeys: ["meuble", "animaux", "parking", "cave", "fibre", "balcon", "terrasse", "jardin", "ascenseur"],
+  },
+  {
+    id: "proximites",
+    label: "Proximités",
+    formKeys: [],
+    toggleKeys: ["proximite_metro", "proximite_ecole", "proximite_commerces", "proximite_parcs"],
+  },
+  {
+    id: "profil-locataire",
+    label: "Profil locataire",
+    formKeys: ["situation_pro", "revenus_mensuels", "type_garant", "nb_occupants", "profil_locataire"],
+    toggleKeys: ["fumeur"],
+  },
+]
 
 // Next 15 : useSearchParams requiert un boundary <Suspense> au-dessus du
 // composant qui l'utilise pour que le prerender statique tolère le CSR
@@ -45,14 +95,27 @@ function Profil() {
   const [dataLoaded, setDataLoaded] = useState(false)
   const [photoCustom, setPhotoCustom] = useState<string | null>(null)
   const [createdBannerOpen, setCreatedBannerOpen] = useState(justCreated)
-  const [form, setForm] = useState({
+
+  // R10.3 — sauvegardes sectionnelles : active section (TOC), état par section,
+  // et undo toast 5 s avec snapshot des valeurs précédentes.
+  const [activeSection, setActiveSection] = useState<string>("criteres")
+  const [savingSection, setSavingSection] = useState<string | null>(null)
+  const [undo, setUndo] = useState<{
+    sectionId: string
+    label: string
+    prevForm: FormShape
+    prevToggles: TogglesShape
+    expiresAt: number
+  } | null>(null)
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [form, setForm] = useState<FormShape>({
     ville_souhaitee: "", mode_localisation: "souple", type_quartier: "", budget_min: "", budget_max: "",
     surface_min: "", surface_max: "", pieces_min: "1", chambres_min: "0",
     dpe_min: "D", type_bail: "longue durée",
     situation_pro: "CDI", revenus_mensuels: "", type_garant: "",
     nb_occupants: "1", profil_locataire: "jeune actif",
   })
-  const [toggles, setToggles] = useState({
+  const [toggles, setToggles] = useState<TogglesShape>({
     animaux: false, meuble: false, parking: false, cave: false,
     fibre: false, balcon: false, terrasse: false, jardin: false,
     ascenseur: false, rez_de_chaussee_ok: true,
@@ -149,6 +212,93 @@ function Profil() {
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
   }
+
+  // R10.3b — save sectionnel : n'upsert que les clés de la section concernée
+  // + snapshot pour undo. Toast affiché 5 s avec compte à rebours.
+  async function saveSection(sectionId: string) {
+    if (!session?.user?.email) return
+    const sec = SECTIONS.find(s => s.id === sectionId)
+    if (!sec) return
+    // Snapshot AVANT mutation (pour undo) — clone pour pas bouger.
+    const prevForm = { ...form }
+    const prevToggles = { ...toggles }
+
+    setSavingSection(sectionId)
+    setErreur("")
+    const toInt = (v: string) => v ? parseInt(v) : null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const patch: Record<string, any> = { email: session.user.email }
+    for (const k of sec.formKeys) {
+      const raw = form[k]
+      // Colonnes int en base : on cast, sinon on laisse string/ville_souhaitee.
+      if (["budget_min", "budget_max", "surface_min", "surface_max", "pieces_min", "chambres_min", "nb_occupants", "revenus_mensuels"].includes(k)) {
+        patch[k] = toInt(raw)
+      } else {
+        patch[k] = raw
+      }
+    }
+    for (const k of sec.toggleKeys) patch[k] = !!toggles[k]
+
+    const { error } = await supabase.from("profils").upsert(patch, { onConflict: "email" })
+    if (error) {
+      setErreur("Erreur : " + error.message)
+      setSavingSection(null)
+      return
+    }
+    setSavingSection(null)
+
+    // Armer le toast undo. Si un précédent est en cours, annuler son timer.
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    setUndo({
+      sectionId,
+      label: sec.label,
+      prevForm,
+      prevToggles,
+      expiresAt: Date.now() + 5000,
+    })
+    undoTimerRef.current = setTimeout(() => setUndo(null), 5000)
+  }
+
+  async function applyUndo() {
+    if (!undo || !session?.user?.email) return
+    const sec = SECTIONS.find(s => s.id === undo.sectionId)
+    if (!sec) return
+    // Restaurer UI immédiatement (optimistic), puis persister.
+    setForm(undo.prevForm)
+    setToggles(undo.prevToggles)
+    const toInt = (v: string) => v ? parseInt(v) : null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const patch: Record<string, any> = { email: session.user.email }
+    for (const k of sec.formKeys) {
+      const raw = undo.prevForm[k]
+      if (["budget_min", "budget_max", "surface_min", "surface_max", "pieces_min", "chambres_min", "nb_occupants", "revenus_mensuels"].includes(k)) {
+        patch[k] = toInt(raw)
+      } else {
+        patch[k] = raw
+      }
+    }
+    for (const k of sec.toggleKeys) patch[k] = !!undo.prevToggles[k]
+    await supabase.from("profils").upsert(patch, { onConflict: "email" })
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    setUndo(null)
+  }
+
+  // R10.3a — IntersectionObserver pour surligner la section active dans le TOC.
+  useEffect(() => {
+    if (!dataLoaded || proprietaireActive) return
+    const nodes = SECTIONS.map(s => document.getElementById(s.id)).filter((n): n is HTMLElement => n !== null)
+    if (nodes.length === 0) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        // Section avec le plus grand ratio visible = active.
+        const visible = entries.filter(e => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)
+        if (visible[0]) setActiveSection(visible[0].target.id)
+      },
+      { rootMargin: "-20% 0px -50% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] },
+    )
+    nodes.forEach(n => io.observe(n))
+    return () => io.disconnect()
+  }, [dataLoaded, proprietaireActive])
 
   if (status === "loading" || !dataLoaded) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "'DM Sans', sans-serif", color: km.muted }}>Chargement...</div>
@@ -276,7 +426,17 @@ function Profil() {
         )}
 
         {!proprietaireActive && <>
-        <Sec t="Mes critères de recherche">
+
+        {/* Sommaire sticky (desktop) + layout 2 colonnes — R10.3a.
+            Sur mobile, le TOC se replie en une barre horizontale scrollable
+            placée juste avant les sections. */}
+        <ProfilTOC active={activeSection} isMobile={isMobile} />
+
+        <Sec
+          id="criteres"
+          t="Mes critères de recherche"
+          footer={<SectionSaveBtn sectionId="criteres" saving={savingSection === "criteres"} onSave={() => saveSection("criteres")} />}
+        >
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
             <F l={<>Ville souhaitée <Tooltip text="Choisissez une ville dans la liste. Elle sera utilisée pour centrer la carte et matcher les annonces. Tapez pour filtrer les suggestions." /></>}>
               <CityAutocomplete value={form.ville_souhaitee} onChange={v => setForm(f => ({ ...f, ville_souhaitee: v }))} placeholder="Commencez à taper..." />
@@ -320,7 +480,11 @@ function Profil() {
           <Toggle label="Rez-de-chaussée accepté" k="rez_de_chaussee_ok" toggles={toggles} setToggles={setToggles} />
         </Sec>
 
-        <Sec t="Équipements souhaités">
+        <Sec
+          id="equipements"
+          t="Équipements souhaités"
+          footer={<SectionSaveBtn sectionId="equipements" saving={savingSection === "equipements"} onSave={() => saveSection("equipements")} />}
+        >
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
             <Toggle label="Meublé" k="meuble" toggles={toggles} setToggles={setToggles} />
             <Toggle label="Animaux acceptés" k="animaux" toggles={toggles} setToggles={setToggles} />
@@ -334,7 +498,11 @@ function Profil() {
           </div>
         </Sec>
 
-        <Sec t="Proximités souhaitées">
+        <Sec
+          id="proximites"
+          t="Proximités souhaitées"
+          footer={<SectionSaveBtn sectionId="proximites" saving={savingSection === "proximites"} onSave={() => saveSection("proximites")} />}
+        >
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
             <Toggle label="Proche métro/bus" k="proximite_metro" toggles={toggles} setToggles={setToggles} />
             <Toggle label="Proche écoles" k="proximite_ecole" toggles={toggles} setToggles={setToggles} />
@@ -343,7 +511,11 @@ function Profil() {
           </div>
         </Sec>
 
-        <Sec t="Mon profil locataire">
+        <Sec
+          id="profil-locataire"
+          t="Mon profil locataire"
+          footer={<SectionSaveBtn sectionId="profil-locataire" saving={savingSection === "profil-locataire"} onSave={() => saveSection("profil-locataire")} />}
+        >
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
             <F l={<>Situation professionnelle <Tooltip text="Votre situation actuelle. Les propriétaires y sont sensibles : CDI et fonctionnaire rassurent le plus, mais un garant solide peut compenser un CDD, une situation d'indépendant ou d'étudiant." /></>}>
               <select style={sel} value={form.situation_pro} onChange={set("situation_pro")}>{["CDI","CDD","indépendant","étudiant","retraité","fonctionnaire","autre"].map(v=><option key={v}>{v}</option>)}</select>
@@ -400,6 +572,162 @@ function Profil() {
           </Link>
         </div>
       </div>
+
+      {undo && (
+        <UndoToast
+          label={`« ${undo.label} » enregistrée`}
+          onUndo={applyUndo}
+          onDismiss={() => { if (undoTimerRef.current) clearTimeout(undoTimerRef.current); setUndo(null) }}
+        />
+      )}
     </main>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Helpers HORS composant — CLAUDE.md convention (focus preservation).
+// ═══════════════════════════════════════════════════════════════════════════
+
+function ProfilTOC({ active, isMobile }: { active: string; isMobile: boolean }) {
+  // Desktop aside : visible uniquement si viewport >= 1200px pour éviter de
+  // chevaucher le contenu (main maxWidth 900, margin auto).
+  const [wide, setWide] = useState(false)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const mq = window.matchMedia("(min-width: 1200px)")
+    const update = () => setWide(mq.matches)
+    update()
+    mq.addEventListener("change", update)
+    return () => mq.removeEventListener("change", update)
+  }, [])
+
+  if (isMobile || !wide) {
+    // Barre horizontale scrollable (mobile + tablette).
+    return (
+      <nav aria-label="Sommaire du profil" style={{
+        position: "sticky", top: 72, zIndex: 10, background: km.beige,
+        padding: "10px 0 12px", marginBottom: 14,
+        overflowX: "auto", whiteSpace: "nowrap",
+        borderBottom: `1px solid ${km.line}`,
+      }}>
+        <div style={{ display: "inline-flex", gap: 8, padding: "0 2px" }}>
+          {SECTIONS.map(s => {
+            const on = s.id === active
+            return (
+              <a key={s.id} href={`#${s.id}`} style={{
+                padding: "7px 14px", borderRadius: 999,
+                border: `1px solid ${on ? km.ink : km.line}`,
+                background: on ? km.ink : km.white, color: on ? km.white : km.ink,
+                textDecoration: "none", fontSize: 11, fontWeight: 600,
+                textTransform: "uppercase", letterSpacing: "1.1px",
+              }}>{s.label}</a>
+            )
+          })}
+        </div>
+      </nav>
+    )
+  }
+  return (
+    <aside aria-label="Sommaire du profil" style={{
+      position: "fixed", left: "calc(50vw - 610px)", top: 120,
+      width: 200, zIndex: 5,
+      padding: "18px 0",
+    }}>
+      <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 12px 14px" }}>Sommaire</p>
+      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+        {SECTIONS.map(s => {
+          const on = s.id === active
+          return (
+            <li key={s.id}>
+              <a href={`#${s.id}`} style={{
+                display: "block", padding: "10px 14px", borderRadius: 10,
+                fontSize: 12.5, fontWeight: on ? 700 : 500,
+                color: on ? km.ink : km.muted,
+                background: on ? km.beige : "transparent",
+                borderLeft: `2px solid ${on ? km.ink : "transparent"}`,
+                textDecoration: "none", transition: "all 160ms",
+              }}>{s.label}</a>
+            </li>
+          )
+        })}
+      </ul>
+    </aside>
+  )
+}
+
+function SectionSaveBtn({
+  sectionId: _sectionId, saving, onSave,
+}: { sectionId: string; saving: boolean; onSave: () => void }) {
+  void _sectionId
+  return (
+    <KMButton size="sm" onClick={onSave} disabled={saving}>
+      {saving ? "Enregistrement…" : "Enregistrer cette section"}
+    </KMButton>
+  )
+}
+
+function UndoToast({ label, onUndo, onDismiss }: { label: string; onUndo: () => void; onDismiss: () => void }) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        position: "fixed",
+        bottom: 24,
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 8000,
+        background: km.ink,
+        color: km.white,
+        borderRadius: 999,
+        padding: "12px 18px 12px 22px",
+        boxShadow: "0 8px 30px rgba(0,0,0,0.25)",
+        display: "flex",
+        alignItems: "center",
+        gap: 14,
+        fontSize: 13,
+        fontWeight: 500,
+        maxWidth: "calc(100vw - 32px)",
+      }}
+    >
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+        <span aria-hidden style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(255,255,255,0.18)" }}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </span>
+        {label}
+      </span>
+      <button
+        type="button"
+        onClick={onUndo}
+        style={{
+          background: "transparent",
+          color: km.white,
+          border: `1px solid rgba(255,255,255,0.35)`,
+          borderRadius: 999,
+          padding: "6px 14px",
+          fontFamily: "inherit",
+          fontSize: 11,
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "1px",
+          cursor: "pointer",
+        }}
+      >Annuler</button>
+      <button
+        type="button"
+        aria-label="Fermer"
+        onClick={onDismiss}
+        style={{
+          background: "transparent",
+          border: "none",
+          color: "rgba(255,255,255,0.7)",
+          fontSize: 18,
+          cursor: "pointer",
+          padding: 0,
+          lineHeight: 1,
+          fontFamily: "inherit",
+        }}
+      >×</button>
+    </div>
   )
 }
