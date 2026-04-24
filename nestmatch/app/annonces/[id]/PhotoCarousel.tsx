@@ -18,18 +18,50 @@ import { useResponsive } from "../../hooks/useResponsive"
  * app/components/ui/Lightbox.tsx). next/image optimisé sur la grande photo
  * (priority=first paint).
  */
+// Clamp le ratio w/h d'un hero :
+//   - Portrait très haut (h/w > 1.3, donc w/h < 0.77) → force 4/5 (0.8) pour
+//     éviter que l'image bouffe toute la hauteur écran.
+//   - Ultra-wide (w/h > 2.5) → force 16/9 pour éviter la bande étroite.
+//   - Sinon : ratio réel.
+function clampedAspect(naturalW: number, naturalH: number): string {
+  if (!naturalW || !naturalH) return "16 / 10"
+  const r = naturalW / naturalH
+  if (r < 0.77) return "4 / 5"
+  if (r > 2.5) return "16 / 9"
+  return `${naturalW} / ${naturalH}`
+}
+
 export default function PhotoCarousel({ photos }: { photos: string[] }) {
   const [idx, setIdx] = useState(0)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIdx, setLightboxIdx] = useState(0)
   const [mounted, setMounted] = useState(false)
+  // Ratio mesuré par photo (clé = index). Avant mesure, on utilise 16/10 par défaut
+  // (ratio paysage neutre — majoritaire en photo immo).
+  const [aspects, setAspects] = useState<Record<number, string>>({})
   const { isMobile } = useResponsive()
 
   useEffect(() => { setMounted(true) }, [])
 
   if (!photos || photos.length === 0) return (
-    <div style={{ height: 380, background: "linear-gradient(135deg, #EAE6DF, #EAE6DF)", borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 28 }}>
-      <span style={{ color: "#8a8477", fontSize: 16 }}>Aucune photo disponible</span>
+    <div style={{
+      maxWidth: 960,
+      margin: "0 auto 28px",
+      height: 240,
+      background: "#EAE6DF",
+      border: "1px dashed #cec9bd",
+      borderRadius: 20,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+    }}>
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#8a8477" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+        <circle cx="12" cy="13" r="4" />
+      </svg>
+      <span style={{ color: "#8a8477", fontSize: 14, fontWeight: 500 }}>Aucune photo disponible</span>
     </div>
   )
 
@@ -55,16 +87,28 @@ export default function PhotoCarousel({ photos }: { photos: string[] }) {
   // On force donc le layout carousel classique tant que `mounted` est
   // false. Après mount, on bascule sur 2/1 si desktop + ≥3 photos.
   if (!mounted || isMobile || photos.length < 3) {
-    // Hero adaptatif : object-fit: contain + fond éditorial beige pour
-    // garantir que l'image est visible en entière sans coupe brutale,
-    // quel que soit son ratio (portrait, paysage, carré). Hauteur étendue
-    // 70vh desktop / 50vh mobile — plus haute qu'avant, CLS neutre car
-    // height fixe réservée avant chargement image.
-    const heroHeight = isMobile ? "min(50vh, 380px)" : "min(70vh, 620px)"
+    // Hero bornes :
+    //   - aspect-ratio dérivé du vrai ratio de l'image (clampé 4/5 ↔ 16/9)
+    //   - min-height 380px : empêche une photo ultra-wide d'être ridiculement plate
+    //   - max-height 50vh mobile / 70vh desktop : empêche un portrait de bouffer l'écran
+    //   - object-fit: contain + fond éditorial : image visible entière sans coupe
+    //   - Avant mesure, on utilise 16/10 par défaut (neutre, photo immo paysage).
+    const heroAspect = aspects[idx] ?? "16 / 10"
+    const heroMaxHeight = isMobile ? "50vh" : "70vh"
     return (
       <>
         <div
-          style={{ position: "relative", height: heroHeight, borderRadius: 20, overflow: "hidden", marginBottom: 28, background: "#F7F4EF", cursor: "zoom-in" }}
+          style={{
+            position: "relative",
+            aspectRatio: heroAspect,
+            minHeight: 380,
+            maxHeight: heroMaxHeight,
+            borderRadius: 20,
+            overflow: "hidden",
+            marginBottom: 28,
+            background: "#F7F4EF",
+            cursor: "zoom-in",
+          }}
           onMouseEnter={e => e.currentTarget.querySelectorAll<HTMLButtonElement>(".pnav").forEach(b => (b.style.opacity = "1"))}
           onMouseLeave={e => e.currentTarget.querySelectorAll<HTMLButtonElement>(".pnav").forEach(b => (b.style.opacity = "0"))}
           onClick={() => openLightboxAt(idx)}
@@ -76,6 +120,11 @@ export default function PhotoCarousel({ photos }: { photos: string[] }) {
             sizes="(max-width: 768px) 100vw, 1100px"
             priority={idx === 0}
             style={{ objectFit: "contain", display: "block" }}
+            onLoad={e => {
+              const img = e.currentTarget as HTMLImageElement
+              const next = clampedAspect(img.naturalWidth, img.naturalHeight)
+              setAspects(prev => (prev[idx] === next ? prev : { ...prev, [idx]: next }))
+            }}
           />
 
           {photos.length > 1 && (
