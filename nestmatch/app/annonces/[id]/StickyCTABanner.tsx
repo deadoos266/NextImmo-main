@@ -78,7 +78,7 @@ export default function StickyCTABanner({ annonce }: { annonce: any }) {
           left: 0,
           right: 0,
           bottom: 0,
-          zIndex: 60,
+          zIndex: 9999,
           background: "white",
           borderTop: "1.5px solid #EAE6DF",
           boxShadow: "0 -4px 24px rgba(0,0,0,0.08)",

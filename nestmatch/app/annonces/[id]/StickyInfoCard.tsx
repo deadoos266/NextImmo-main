@@ -1,110 +1,108 @@
 "use client"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useHeroPassed } from "./useHeroPassed"
 
 /**
- * StickyInfoCard — R10.13
+ * StickyInfoCard — R10.14 (bulletproof rewrite)
  *
- * Sticky JS-based : `position: sticky` CSS refuse de sticker sur cette page
- * (cause exacte non identifiable statiquement — ancêtres paraissent clean).
- * On court-circuite avec `position: fixed` calculé au scroll.
+ * Sticky JS ultra-simple (approche demandée par user R10.14) :
+ *   1. Au mount : capture `offsetTop` du wrapper (position document-relative)
+ *      + largeur + position left via getBoundingClientRect.
+ *   2. Scroll listener : si `scrollY + NAV_OFFSET > offsetTop` → pin.
+ *   3. Quand pinned : card en `position: fixed top:80 left:X width:W`,
+ *      z-index 9998 (sous banner 9999 mais au-dessus de Leaflet).
+ *   4. Wrapper reçoit `minHeight = cardHeight` pour zéro saut visuel.
  *
- * Principe :
- *   - Un wrapper-placeholder mesuré en permanence (garde sa place dans le flow)
- *   - Un enfant card qui bascule en `position: fixed` quand le placeholder
- *     passe sous NAVBAR_OFFSET (80 px). On aligne left/width sur le placeholder
- *     pour que la card reste dans la gouttière de la sidebar.
- *   - `minHeight` du placeholder = hauteur mesurée de la card → pas de saut
- *     visuel quand on bascule fixed.
+ * Clamp maxHeight quand bandeau visible via useHeroPassed : évite l'overlap
+ * avec la zone banner (80 px + 16 px gap).
  *
- * Clamp maxHeight : quand le StickyCTABanner est visible (même trigger
- * scroll via useHeroPassed), on raccourcit la card pour laisser le bandeau
- * respirer 80 px + 16 px de gap. Garantit zéro overlap entre les deux zones
- * fixed.
+ * Skip sous 900 px : la sidebar stack sous le contenu principal.
  *
- * Skip sous 1024 px : la sidebar stack sous le contenu principal, la card
- * reste en flow normal.
- *
- * Perf : rAF-throttled scroll + resize, listener passif. z-index 20, sous le
- * z-index 60 du banner — si overlap malgré le clamp, banner gagne visuellement.
+ * Debug : window.__R_STICKY_DEBUG__ = true dans la console pour voir le
+ * pinned state + thresholds.
  */
 
-const NAVBAR_OFFSET = 80
-const BANNER_HEIGHT = 80
-const BANNER_GAP = 16
+const NAV_OFFSET = 80
+const BANNER_CLEARANCE = 96 // 80 banner + 16 gap
 
 export default function StickyInfoCard({ children }: { children: React.ReactNode }) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
-  const rafRef = useRef<number | null>(null)
-  const [cardHeight, setCardHeight] = useState(0)
-  const [fixedPos, setFixedPos] = useState<{ left: number; width: number } | null>(null)
+  const [pinned, setPinned] = useState(false)
+  const [metrics, setMetrics] = useState<{ left: number; width: number; height: number } | null>(null)
   const bannerVisible = useHeroPassed()
 
-  const update = useCallback(() => {
-    const wrapper = wrapperRef.current
-    const card = cardRef.current
-    if (!wrapper || !card) return
-
-    if (window.innerWidth < 1024) {
-      setFixedPos(null)
-      return
-    }
-
-    const rect = wrapper.getBoundingClientRect()
-    const h = card.offsetHeight
-    if (h && h !== cardHeight) setCardHeight(h)
-
-    if (rect.top <= NAVBAR_OFFSET) {
-      setFixedPos({ left: rect.left, width: rect.width })
-    } else {
-      setFixedPos(null)
-    }
-  }, [cardHeight])
-
   useEffect(() => {
-    function onScrollOrResize() {
-      if (rafRef.current !== null) return
-      rafRef.current = requestAnimationFrame(() => {
-        rafRef.current = null
-        update()
+    if (typeof window === "undefined") return
+
+    let pinThreshold = 0
+
+    const measure = () => {
+      const wrapper = wrapperRef.current
+      const card = cardRef.current
+      if (!wrapper || !card) return
+      const rect = wrapper.getBoundingClientRect()
+      pinThreshold = rect.top + window.scrollY
+      setMetrics({
+        left: rect.left,
+        width: rect.width,
+        height: card.offsetHeight,
       })
     }
-    update()
-    window.addEventListener("scroll", onScrollOrResize, { passive: true })
-    window.addEventListener("resize", onScrollOrResize)
-    return () => {
-      window.removeEventListener("scroll", onScrollOrResize)
-      window.removeEventListener("resize", onScrollOrResize)
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
-    }
-  }, [update])
 
-  const isFixed = fixedPos !== null
+    const onScroll = () => {
+      if (window.innerWidth < 900) {
+        setPinned(false)
+        return
+      }
+      if (pinThreshold === 0) measure()
+      const shouldPin = window.scrollY + NAV_OFFSET > pinThreshold
+      setPinned(shouldPin)
+      if ((window as unknown as { __R_STICKY_DEBUG__?: boolean }).__R_STICKY_DEBUG__) {
+        // eslint-disable-next-line no-console
+        console.log("[StickyInfoCard]", { pinned: shouldPin, scrollY: window.scrollY, pinThreshold })
+      }
+    }
+
+    const onResize = () => {
+      measure()
+      onScroll()
+    }
+
+    measure()
+    onScroll()
+
+    window.addEventListener("scroll", onScroll, { passive: true })
+    window.addEventListener("resize", onResize)
+    return () => {
+      window.removeEventListener("scroll", onScroll)
+      window.removeEventListener("resize", onResize)
+    }
+  }, [])
+
   const maxHeight = bannerVisible
-    ? `calc(100vh - ${NAVBAR_OFFSET + BANNER_HEIGHT + BANNER_GAP}px)`
-    : `calc(100vh - ${NAVBAR_OFFSET + 30}px)`
+    ? `calc(100vh - ${NAV_OFFSET + BANNER_CLEARANCE}px)`
+    : `calc(100vh - ${NAV_OFFSET + 30}px)`
 
   return (
     <div
       ref={wrapperRef}
       style={{
-        width: "100%",
-        minHeight: isFixed && cardHeight ? cardHeight : undefined,
+        minHeight: pinned && metrics ? metrics.height : undefined,
       }}
     >
       <div
         ref={cardRef}
         id="r-sticky-card-target"
-        style={isFixed ? {
+        style={pinned && metrics ? {
           position: "fixed",
-          top: NAVBAR_OFFSET,
-          left: fixedPos!.left,
-          width: fixedPos!.width,
+          top: NAV_OFFSET,
+          left: metrics.left,
+          width: metrics.width,
           maxHeight,
           overflowY: "auto",
           WebkitOverflowScrolling: "touch",
-          zIndex: 20,
+          zIndex: 9998,
           transition: "max-height 200ms ease",
         } : undefined}
       >
