@@ -1331,11 +1331,19 @@ function MessagesInner() {
         setAnnonces(prev => ({ ...prev, [ann.id as number]: { ...(prev[ann.id as number] || {}), ...ann } }))
       })
       // Realtime bail_signatures : nouvelle signature → reload messages pour
-      // refresh BailCard (qui lit les signatures via signaturesParAnnonce).
+      // refresh BailCard (qui lit les signatures via signaturesParAnnonce),
+      // ET refresh de l'annonce liée : la signature locataire bascule statut
+      // "bail_envoye" → "loué" côté DB, l'UPDATE Realtime annonces peut tarder
+      // selon la publication → on refetch l'annonce ici pour garantir que
+      // deriveStatut passe bien à "bail" et la timeline avance.
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "bail_signatures" }, (payload) => {
         const sig = payload.new as { annonce_id?: number }
         if (!sig?.annonce_id || sig.annonce_id !== convAnnId) return
         if (myEmail) void loadMessages(myEmail, conv.other, convAnnId)
+        void (async () => {
+          const { data: ann } = await supabase.from("annonces").select("*").eq("id", convAnnId).single()
+          if (ann) setAnnonces(prev => ({ ...prev, [ann.id as number]: { ...(prev[ann.id as number] || {}), ...ann } }))
+        })()
       })
       // Realtime edl_signatures : idem — permet a EdlCard cote proprio de
       // passer d'"En attente de confirmation" à "Signé par le locataire".
@@ -2231,8 +2239,23 @@ function MessagesInner() {
 
   async function onBailSigned() {
     // Recharger les messages pour voir la nouvelle [BAIL_SIGNE] card
-    if (convActiveData && myEmail) {
-      await loadMessages(myEmail, convActiveData.other, convActiveData.annonceId)
+    if (!convActiveData || !myEmail) return
+    await loadMessages(myEmail, convActiveData.other, convActiveData.annonceId)
+    // Recharger l'annonce associée : l'API /api/bail/signer bascule statut à
+    // "loué" quand le locataire signe. Sans ce refresh, `deriveStatut` garde
+    // l'ancien statut → la timeline ne passe pas à l'étape suivante
+    // (cf. bug signalé par Paul 2026-04-24 : "quand le bail a été signé côté
+    // locataire et proprio ça va pas à la prochaine étape dans les messages").
+    // Le Realtime annonces UPDATE est en place mais peut tarder / manquer
+    // selon la propagation — on force le refresh ici en synchrone.
+    if (convActiveData.annonceId != null) {
+      const { data: ann } = await supabase.from("annonces")
+        .select("*")
+        .eq("id", convActiveData.annonceId)
+        .single()
+      if (ann) {
+        setAnnonces(prev => ({ ...prev, [ann.id as number]: { ...(prev[ann.id as number] || {}), ...ann } }))
+      }
     }
   }
 
