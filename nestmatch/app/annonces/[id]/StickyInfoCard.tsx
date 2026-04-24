@@ -2,21 +2,20 @@
 import { useEffect, useState } from "react"
 
 /**
- * StickyInfoCard — R10.16 (nucléaire simple)
+ * StickyInfoCard — R10.17 (toutes les infos fixées ensemble)
  *
- * Widget fixed qui contient UNIQUEMENT la booking card (prix + score + CTAs
- * + proprio). Pas d'overflow, pas de maxHeight, hauteur = hauteur naturelle
- * du contenu. Zéro scroll nested.
+ * La colonne droite ENTIÈRE est fixée en haut et ne bouge jamais au scroll.
+ * Contient toutes les cards empilées en flex-column (booking, profil
+ * recherché, activité, budget, partager).
+ *
+ * Zéro overflow, zéro maxHeight, hauteur auto. Si le contenu dépasse le
+ * viewport en bas, tant pis — choix assumé (pas de scroll dans le scroll).
  *
  * Desktop (≥1024 px) : `position: fixed top:80 right:gutter width:360`,
- * z-index 9998 (sous banner 9999, au-dessus de Leaflet).
+ * z-index 9998 (sous banner 9999, au-dessus de Leaflet ≤700).
  *
- * Mobile (<1024 px) : retombe en flow normal, la sidebar stacke sous le
- * contenu principal via la media query de page.tsx.
- *
- * Toutes les autres cards (LocataireMatchCard, Activité, Budget, Autres biens,
- * Partager) ont été re-ventilées dans le flow principal de la colonne
- * gauche ou en bas de page — plus de scroll dans le scroll.
+ * Mobile (<1024 px) : flow normal, la sidebar stacke sous le contenu
+ * principal via la media query de page.tsx.
  */
 
 const NAV_OFFSET = 80
@@ -35,7 +34,10 @@ export default function StickyInfoCard({ children }: { children: React.ReactNode
 
   if (!isDesktop) {
     return (
-      <div id="r-sticky-card-target" style={{ width: "100%" }}>
+      <div
+        id="r-sticky-card-target"
+        style={{ width: "100%", display: "flex", flexDirection: "column", gap: 16 }}
+      >
         {children}
       </div>
     )
@@ -48,9 +50,13 @@ export default function StickyInfoCard({ children }: { children: React.ReactNode
       style={{
         position: "fixed",
         top: NAV_OFFSET,
-        right: `max(48px, calc((100vw - 1280px) / 2 + 48px))`,
+        right: `max(24px, calc((100vw - 1280px) / 2 + 24px))`,
         width: CARD_WIDTH,
+        height: "auto",
         zIndex: 9998,
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
       }}
     >
       {children}
