@@ -62,6 +62,7 @@ function computeCardWidth(): number {
 export default function StickyInfoCard({ children }: { children: React.ReactNode }) {
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null)
   const [isDark, setIsDark] = useState<boolean>(false)
+  const [debug, setDebug] = useState<string>("boot")
   const asideRef = useRef<HTMLElement | null>(null)
 
   // Init portal target + dark-mode observer
@@ -116,6 +117,15 @@ export default function StickyInfoCard({ children }: { children: React.ReactNode
       if (Math.abs(drift) > 1) {
         el.style.transform = `translateY(${-drift}px)`
       }
+      // Debug badge : expose le state au UI pour diagnostique visuel direct.
+      // Lit le parent DOM pour vérifier si le portal est bien posé hors body.
+      const parent = el.parentElement
+      const parentId = parent?.id || parent?.tagName || "?"
+      setDebug(
+        `${VERSION} | rect.top=${rect.top.toFixed(0)} drift=${drift.toFixed(0)} ` +
+        `scrollY=${window.scrollY.toFixed(0)} parent=${parentId} ` +
+        `pos=${el.style.position} top=${el.style.top} transform=${el.style.transform || "none"}`
+      )
     }
 
     function schedule() {
@@ -171,6 +181,29 @@ export default function StickyInfoCard({ children }: { children: React.ReactNode
         // scroll). Si les cards dépassent le viewport, cutoff bas assumé.
       }}
     >
+      {/* Badge debug R10.22 — à retirer une fois le bug résolu. Affiche
+          en direct la position, le parent DOM, et la dérive mesurée. */}
+      <div
+        style={{
+          position: "absolute",
+          top: -32,
+          left: 0,
+          right: 0,
+          background: "#FF4A1C",
+          color: "white",
+          fontSize: 10,
+          fontFamily: "monospace",
+          padding: "4px 8px",
+          borderRadius: 6,
+          zIndex: 99999,
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-all",
+          lineHeight: 1.3,
+          fontWeight: 700,
+        }}
+      >
+        {debug}
+      </div>
       {children}
     </aside>
   )
