@@ -1,6 +1,6 @@
 "use client"
 import { useSession, signOut } from "next-auth/react"
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "../../lib/supabase"
 import { useResponsive } from "../hooks/useResponsive"
@@ -13,7 +13,25 @@ import Tooltip from "../components/Tooltip"
 import { Toggle, Sec, F } from "../components/FormHelpers"
 import { calculerCompletudeProfil } from "../../lib/profilCompleteness"
 
-export default function Profil() {
+// Next 15 : useSearchParams requiert un boundary <Suspense> au-dessus du
+// composant qui l'utilise pour que le prerender statique tolère le CSR
+// bailout. Le fallback reproduit l'état « Chargement… » de l'inner pour
+// éviter un flash visible à l'hydratation.
+function ProfilLoadingFallback() {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "'DM Sans', sans-serif", color: "#8a8477" }}>Chargement…</div>
+  )
+}
+
+export default function ProfilPage() {
+  return (
+    <Suspense fallback={<ProfilLoadingFallback />}>
+      <Profil />
+    </Suspense>
+  )
+}
+
+function Profil() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const searchParams = useSearchParams()
