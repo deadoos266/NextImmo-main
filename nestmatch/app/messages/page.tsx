@@ -93,7 +93,7 @@ function formatVisiteDate(raw: unknown, opts: Intl.DateTimeFormatOptions = { day
 
 // ─── Dossier Card ────────────────────────────────────────────────────────────
 
-function DossierCard({ contenu, isMine, annonceId }: { contenu: string; isMine: boolean; annonceId?: number | null }) {
+function DossierCard({ contenu, isMine, annonceId, bailDejaGenere }: { contenu: string; isMine: boolean; annonceId?: number | null; bailDejaGenere?: boolean }) {
   let data: any = {}
   try { data = JSON.parse(contenu.slice(DOSSIER_PREFIX.length)) } catch {}
   const scoreColor = data.score >= 80 ? "#15803d" : data.score >= 50 ? "#c2410c" : "#b91c1c"
@@ -121,10 +121,16 @@ function DossierCard({ contenu, isMine, annonceId }: { contenu: string; isMine: 
           Voir les pièces du dossier →
         </a>
       )}
-      {!isMine && annonceId && data.email && (
+      {!isMine && annonceId && data.email && !bailDejaGenere && (
         <a href={`/proprietaire/bail/${annonceId}?locataire=${encodeURIComponent(data.email)}`}
-          style={{ display: "block", marginTop: 6, background: "#16a34a", color: "white", borderRadius: 999, padding: "9px 14px", fontSize: 12, fontWeight: 600, textAlign: "center", textDecoration: "none", fontFamily: "inherit", letterSpacing: "0.1px" }}>
+          style={{ display: "block", marginTop: 6, background: "#15803d", color: "white", borderRadius: 999, padding: "9px 14px", fontSize: 12, fontWeight: 600, textAlign: "center", textDecoration: "none", fontFamily: "inherit", letterSpacing: "0.1px" }}>
           Accepter &amp; générer le bail →
+        </a>
+      )}
+      {!isMine && annonceId && bailDejaGenere && (
+        <a href={`/proprietaire/bail/${annonceId}`}
+          style={{ display: "block", marginTop: 6, background: "#fff", color: "#111", border: "1px solid #EAE6DF", borderRadius: 999, padding: "9px 14px", fontSize: 12, fontWeight: 600, textAlign: "center", textDecoration: "none", fontFamily: "inherit", letterSpacing: "0.1px" }}>
+          Voir le bail →
         </a>
       )}
       {isMine && data.shareUrl && (
@@ -785,7 +791,7 @@ function BailSigneCard({ contenu, isMine }: { contenu: string; isMine: boolean }
 
 // ─── Location acceptée Card ──────────────────────────────────────────────────
 
-function LocationAccepteeCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
+function LocationAccepteeCard({ contenu, isMine, bailDejaGenere }: { contenu: string; isMine: boolean; bailDejaGenere?: boolean }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let data: any = {}
   try { data = JSON.parse(contenu.slice(LOCATION_PREFIX.length)) } catch { /* ignore */ }
@@ -819,13 +825,22 @@ function LocationAccepteeCard({ contenu, isMine }: { contenu: string; isMine: bo
           Voir mon logement →
         </a>
       )}
-      {/* CTA proprio : générer le bail direct après acceptation */}
-      {isMine && data.annonceId && (
+      {/* CTA proprio : générer le bail direct après acceptation.
+          Si bail déjà généré/envoyé → bascule vers "Voir le bail". */}
+      {isMine && data.annonceId && !bailDejaGenere && (
         <a
           href={`/proprietaire/bail/${data.annonceId}`}
           style={{ display: "block", marginTop: 12, background: "#111", color: "#fff", borderRadius: 999, padding: "11px 18px", fontSize: 12, fontWeight: 600, textDecoration: "none", textAlign: "center", letterSpacing: "0.3px", fontFamily: "inherit" }}
         >
           Générer le bail maintenant →
+        </a>
+      )}
+      {isMine && data.annonceId && bailDejaGenere && (
+        <a
+          href={`/proprietaire/bail/${data.annonceId}`}
+          style={{ display: "block", marginTop: 12, background: "#fff", color: "#111", border: "1px solid #EAE6DF", borderRadius: 999, padding: "11px 18px", fontSize: 12, fontWeight: 600, textDecoration: "none", textAlign: "center", letterSpacing: "0.3px", fontFamily: "inherit" }}
+        >
+          Voir le bail →
         </a>
       )}
     </div>
@@ -3168,14 +3183,22 @@ function MessagesInner() {
                     const isLocation = typeof m.contenu === "string" && m.contenu.startsWith(LOCATION_PREFIX)
                     return (
                       <div key={m.id} style={{ display: "flex", justifyContent: isMine ? "flex-end" : "flex-start" }}>
-                        {isDossier ? (
+                        {isDossier ? (() => {
+                          // Ne pas reproposer "Accepter & générer le bail" si
+                          // le bail a déjà été généré ou envoyé — on bascule
+                          // sur "Voir le bail" dans ce cas.
+                          const effId = (m.annonce_id || convActiveData?.annonceId || null) as number | null
+                          const annCur = effId != null ? annonces[effId] : null
+                          const bailDejaGenere = !!(annCur && (annCur.bail_genere_at || annCur.statut === "loué" || annCur.statut === "bail_envoye"))
+                          return (
                           <div>
-                            <DossierCard contenu={m.contenu} isMine={isMine} annonceId={m.annonce_id || convActiveData?.annonceId || null} />
+                            <DossierCard contenu={m.contenu} isMine={isMine} annonceId={effId} bailDejaGenere={bailDejaGenere} />
                             <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
-                        ) : isDemande ? (
+                          )
+                        })() : isDemande ? (
                           <div>
                             <DemandeDossierCard
                               isMine={isMine}
@@ -3290,14 +3313,22 @@ function MessagesInner() {
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
-                        ) : isLocation ? (
+                        ) : isLocation ? (() => {
+                          // Idem DossierCard : masquer "Générer le bail" si déjà fait.
+                          let locAnnId: number | null = null
+                          try { const p = JSON.parse(m.contenu.slice(LOCATION_PREFIX.length)); if (p?.annonceId) locAnnId = Number(p.annonceId) } catch { /* ignore */ }
+                          const effId = (locAnnId ?? m.annonce_id ?? convActiveData?.annonceId ?? null) as number | null
+                          const annCur = effId != null ? annonces[effId] : null
+                          const bailDejaGenere = !!(annCur && (annCur.bail_genere_at || annCur.statut === "loué" || annCur.statut === "bail_envoye"))
+                          return (
                           <div>
-                            <LocationAccepteeCard contenu={m.contenu} isMine={isMine} />
+                            <LocationAccepteeCard contenu={m.contenu} isMine={isMine} bailDejaGenere={bailDejaGenere} />
                             <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
-                        ) : (() => {
+                          )
+                        })() : (() => {
                           // Parse reply-to : si le message est une réponse, afficher la quote au-dessus
                           const { replyToId, text: rawText } = parseReply(m.contenu || "")
                           const isRelance = rawText.startsWith(RELANCE_PREFIX)
