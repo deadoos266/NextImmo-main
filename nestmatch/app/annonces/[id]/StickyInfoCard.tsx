@@ -3,29 +3,36 @@ import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
 /**
- * StickyInfoCard — R10.21 (NUKE : toujours fixée, peu importe le viewport)
+ * StickyInfoCard — R10.22 (portal + fixed + transform-compensation)
  *
  * Abandon définitif de toute logique responsive côté composant.
- * L'aside est TOUJOURS portal'd hors <body>, TOUJOURS positionnée en
- * position:fixed ET renforcée par un scroll-listener JS qui force
- * `style.top = 80px` à chaque frame. Impossible à casser :
+ * L'aside est TOUJOURS portal'd hors <body> (vers documentElement), TOUJOURS
+ * positionnée en position:fixed ET renforcée par un scroll-listener JS qui
+ * mesure la dérive et la compense par `transform: translateY(-drift)`.
  *
- *   - Si un ancêtre a filter/transform → on est déjà hors <body> via portal
- *   - Si le CSS fixed foirait quand même → le JS rattrape au frame suivant
+ * Pourquoi transform et pas re-positionnement absolute ?
+ *
+ *   L'ancienne R10.21 basculait en `position: absolute; top: scrollY + 80`
+ *   quand elle détectait une dérive. Bug : selon le Initial Containing Block
+ *   (ICB) du navigateur, cette stratégie peut faire BOUGER l'élément AVEC le
+ *   scroll au lieu de le compenser — symptôme observé : ça tient 0.5s puis
+ *   ça se met à scroller. Les transforms CSS sont mathématiquement non
+ *   ambigus (pixels absolus, zéro ICB) donc la compensation marche toujours.
+ *
+ * Impossible à casser :
+ *   - Si un ancêtre a filter/transform qui remonte jusqu'au portal → le
+ *     translateY rattrape la dérive au prochain frame
+ *   - Si le CSS fixed marche → drift=0, transform reste vide, aucun coût
  *   - Si le viewport est petit → la card se réduit à min(360px, 92vw) au
  *     lieu de disparaître
  *
  * Le seul cas où on revient au fallback flow = SSR (pas de DOM côté serveur).
- *
- * La card reste donc toujours visible, toujours à 80 px du haut du viewport,
- * toujours alignée à droite. L'utilisateur voit ses cards sans jamais
- * qu'elles descendent au scroll.
  */
 
 const NAV_OFFSET = 80
 const MAX_CARD_WIDTH = 360
 const PORTAL_TARGET_ID = "nm-fixed-portal-root"
-const VERSION = "R10.21"
+const VERSION = "R10.22"
 
 function getOrCreatePortalTarget(): HTMLElement {
   let el = document.getElementById(PORTAL_TARGET_ID)
@@ -72,6 +79,18 @@ export default function StickyInfoCard({ children }: { children: React.ReactNode
 
   // Scroll + resize listener — renforce la position même si position:fixed
   // CSS était mystérieusement cassé. rAF-throttled, passive.
+  //
+  // R10.22 — FIX CRITIQUE : l'ancienne version R10.21 basculait en
+  // `position: absolute; top: scrollY + 80` quand elle détectait une dérive.
+  // MAIS : selon le Initial Containing Block (ICB) du navigateur, cette
+  // stratégie peut faire BOUGER l'élément AVEC le scroll au lieu de le
+  // compenser (symptôme exact rapporté : ça tient 0.5s puis ça scrolle).
+  //
+  // Nouvelle stratégie : on GARDE toujours position:fixed + top:80 et on
+  // compense la dérive par `transform: translateY(-drift)`. Les transforms
+  // sont mathématiquement non ambigus : -drift pixels, point. Aucun ICB,
+  // aucun anchor container. Si le parent a filter/transform qui casse le
+  // fixed, le translateY rattrape la différence frame par frame.
   useEffect(() => {
     if (!portalTarget) return
     let raf: number | null = null
@@ -80,24 +99,23 @@ export default function StickyInfoCard({ children }: { children: React.ReactNode
       raf = null
       const el = asideRef.current
       if (!el) return
-      // On met BOTH position:fixed (naturel via CSS) ET un top absolu.
-      // Si fixed marche, top:80 reste à 80 au viewport.
-      // Si fixed était cassé (body contenant block à cause d'un filter),
-      // on force position:absolute + top:scrollY+80 pour compenser.
-      // Détection : on mesure le rect ; si top dérive du 80 attendu au
-      // scroll, on bascule en mode absolute-compensated.
-      const rect = el.getBoundingClientRect()
-      const drift = Math.abs(rect.top - NAV_OFFSET)
-      if (drift > 2) {
-        // position:fixed est cassée. Bascule absolute-compensated.
-        el.style.position = "absolute"
-        el.style.top = `${window.scrollY + NAV_OFFSET}px`
-      } else {
-        el.style.position = "fixed"
-        el.style.top = `${NAV_OFFSET}px`
-      }
+      // Étape 1 : appliquer position:fixed + top:80 + reset transform.
+      // On reset le transform AVANT de mesurer sinon on mesure un rect
+      // déjà compensé et la dérive calculée serait nulle à tort.
+      el.style.position = "fixed"
+      el.style.top = `${NAV_OFFSET}px`
       el.style.right = `${computeRightOffset()}px`
       el.style.width = `${computeCardWidth()}px`
+      el.style.transform = ""
+      // Étape 2 : mesurer la position réelle. Si fixed marche, rect.top === 80.
+      // Sinon (parent a filter/transform), rect.top dérive.
+      const rect = el.getBoundingClientRect()
+      const drift = rect.top - NAV_OFFSET
+      // Étape 3 : compenser la dérive avec translateY. Mathématiquement
+      // non ambigu : -drift pixels. Zéro dépendance à l'ICB.
+      if (Math.abs(drift) > 1) {
+        el.style.transform = `translateY(${-drift}px)`
+      }
     }
 
     function schedule() {
