@@ -28,18 +28,18 @@ export default function Navbar() {
   const isActive = (path: string) => pathname?.startsWith(path)
   const linkStyle = (path: string): any => ({
     textDecoration: "none",
-    color: isActive(path) ? "#111" : "#6b7280",
+    color: isActive(path) ? "#111" : "#8a8477",
     fontWeight: isActive(path) ? 700 : 500,
     fontSize: 14,
     padding: "6px 12px",
     borderRadius: 8,
-    background: isActive(path) ? "#f3f4f6" : "transparent",
+    background: isActive(path) ? "#F7F4EF" : "transparent",
     transition: "background 200ms ease, color 200ms ease",
   })
   // Hover handlers : feedback léger uniquement si le lien est inactif.
-  // Sur le lien actif, on laisse le background #f3f4f6 en place (pas d'override).
+  // Sur le lien actif, on laisse le background #F7F4EF en place (pas d'override).
   const hoverEnter = (path: string) => (e: React.MouseEvent<HTMLElement>) => {
-    if (!isActive(path)) e.currentTarget.style.background = "#f9fafb"
+    if (!isActive(path)) e.currentTarget.style.background = "#F7F4EF"
   }
   const hoverLeave = (path: string) => (e: React.MouseEvent<HTMLElement>) => {
     if (!isActive(path)) e.currentTarget.style.background = "transparent"
@@ -127,7 +127,7 @@ export default function Navbar() {
   const totalBadge = badgeVisites + badgeMessages
 
   return (
-    <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: isSmall ? "0 16px" : "0 48px", background: "white", borderBottom: "1px solid #e5e7eb", position: "sticky", top: 0, zIndex: 7000, height: 72, boxShadow: "0 1px 8px rgba(0,0,0,0.05)" }}>
+    <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: isSmall ? "0 16px" : "0 48px", background: "white", borderBottom: "1px solid #EAE6DF", position: "sticky", top: 0, zIndex: 7000, height: 72, boxShadow: "0 1px 8px rgba(0,0,0,0.05)" }}>
 
       {/* Logo */}
       <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
@@ -147,33 +147,33 @@ export default function Navbar() {
               <div style={{ position: "relative" }}>
                 <button
                   onClick={() => setEspaceOpen(!espaceOpen)}
-                  onMouseEnter={e => { if (!espaceActif) e.currentTarget.style.background = "#f9fafb" }}
+                  onMouseEnter={e => { if (!espaceActif) e.currentTarget.style.background = "#F7F4EF" }}
                   onMouseLeave={e => { if (!espaceActif) e.currentTarget.style.background = "transparent" }}
-                  style={{ ...linkStyle("/profil"), background: espaceActif ? "#f3f4f6" : "transparent", color: espaceActif ? "#111" : "#6b7280", fontWeight: espaceActif ? 700 : 500, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit" }}>
+                  style={{ ...linkStyle("/profil"), background: espaceActif ? "#F7F4EF" : "transparent", color: espaceActif ? "#111" : "#8a8477", fontWeight: espaceActif ? 700 : 500, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit" }}>
                   Mon espace
                   {badgeVisites > 0 && (
-                    <span style={{ background: "#ef4444", color: "white", borderRadius: 999, fontSize: 10, fontWeight: 800, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>
+                    <span style={{ background: "#b91c1c", color: "white", borderRadius: 999, fontSize: 10, fontWeight: 800, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>
                       {badgeVisites}
                     </span>
                   )}
-                  <span style={{ fontSize: 10, color: "#9ca3af" }}>▼</span>
+                  <span style={{ fontSize: 10, color: "#8a8477" }}>▼</span>
                 </button>
 
                 {espaceOpen && (
                   <>
                     <div onClick={() => setEspaceOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 150 }} />
-                    <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, background: "white", borderRadius: 16, border: "1px solid #e5e7eb", boxShadow: "0 8px 32px rgba(0,0,0,0.12)", minWidth: 240, zIndex: 200, overflow: "hidden" }}>
+                    <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, background: "white", borderRadius: 16, border: "1px solid #EAE6DF", boxShadow: "0 8px 32px rgba(0,0,0,0.12)", minWidth: 240, zIndex: 200, overflow: "hidden" }}>
                       {espaceLinksAvecBadge.map(item => (
                         <Link key={item.href} href={item.href} onClick={() => setEspaceOpen(false)}
-                          style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", textDecoration: "none", color: "#111", borderBottom: "1px solid #f3f4f6" }}
-                          onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
+                          style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", textDecoration: "none", color: "#111", borderBottom: "1px solid #F7F4EF" }}
+                          onMouseEnter={e => (e.currentTarget.style.background = "#F7F4EF")}
                           onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                           <div style={{ flex: 1 }}>
                             <p style={{ fontSize: 13, fontWeight: 600, margin: 0 }}>{item.label}</p>
-                            <p style={{ fontSize: 11, color: "#9ca3af", margin: 0, marginTop: 1 }}>{item.desc}</p>
+                            <p style={{ fontSize: 11, color: "#8a8477", margin: 0, marginTop: 1 }}>{item.desc}</p>
                           </div>
                           {(item as any).badge > 0 && (
-                            <span style={{ background: "#ef4444", color: "white", borderRadius: 999, fontSize: 10, fontWeight: 800, minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px", flexShrink: 0 }}>
+                            <span style={{ background: "#b91c1c", color: "white", borderRadius: 999, fontSize: 10, fontWeight: 800, minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px", flexShrink: 0 }}>
                               {(item as any).badge}
                             </span>
                           )}
@@ -187,7 +187,7 @@ export default function Navbar() {
               <div style={{ position: "relative" }}>
                 <Link href="/messages" style={linkStyle("/messages")} onMouseEnter={hoverEnter("/messages")} onMouseLeave={hoverLeave("/messages")}>Messages</Link>
                 {badgeMessages > 0 && (
-                  <span style={{ position: "absolute", top: -4, right: -4, background: "#ef4444", color: "white", borderRadius: 999, fontSize: 9, fontWeight: 800, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", pointerEvents: "none" }}>
+                  <span style={{ position: "absolute", top: -4, right: -4, background: "#b91c1c", color: "white", borderRadius: 999, fontSize: 9, fontWeight: 800, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", pointerEvents: "none" }}>
                     {badgeMessages > 9 ? "9+" : badgeMessages}
                   </span>
                 )}
@@ -204,22 +204,22 @@ export default function Navbar() {
           {session ? (
             <div style={{ position: "relative" }}>
               <div onClick={() => setMenuOpen(!menuOpen)}
-                style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "6px 12px", borderRadius: 999, border: "1px solid #e5e7eb", background: menuOpen ? "#f3f4f6" : "white", transition: "background 200ms ease" }}>
+                style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "6px 12px", borderRadius: 999, border: "1px solid #EAE6DF", background: menuOpen ? "#F7F4EF" : "white", transition: "background 200ms ease" }}>
                 {avatarSrc
                   ? <img src={avatarSrc} alt="avatar" referrerPolicy="no-referrer" style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }} />
                   : <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 16 }}>{session.user?.name?.[0]}</div>
                 }
                 <span style={{ fontSize: 14, fontWeight: 600 }}>{session.user?.name?.split(" ")[0]}</span>
-                <span style={{ fontSize: 10, color: "#6b7280" }}>▼</span>
+                <span style={{ fontSize: 10, color: "#8a8477" }}>▼</span>
               </div>
 
               {menuOpen && (
                 <>
                   <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 150 }} />
-                  <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, background: "white", borderRadius: 16, border: "1px solid #e5e7eb", boxShadow: "0 8px 32px rgba(0,0,0,0.12)", minWidth: 220, zIndex: 200, overflow: "hidden" }}>
-                    <div style={{ padding: "14px 16px 12px", borderBottom: "1px solid #f3f4f6" }}>
+                  <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, background: "white", borderRadius: 16, border: "1px solid #EAE6DF", boxShadow: "0 8px 32px rgba(0,0,0,0.12)", minWidth: 220, zIndex: 200, overflow: "hidden" }}>
+                    <div style={{ padding: "14px 16px 12px", borderBottom: "1px solid #F7F4EF" }}>
                       <p style={{ fontWeight: 700, fontSize: 14 }}>{session.user?.name}</p>
-                      <p style={{ color: "#6b7280", fontSize: 12, marginTop: 2 }}>{session.user?.email}</p>
+                      <p style={{ color: "#8a8477", fontSize: 12, marginTop: 2 }}>{session.user?.email}</p>
                     </div>
                     {(proprietaireActive ? [
                       { href: "/profil",               label: "Mon profil",      desc: "Informations personnelles" },
@@ -236,28 +236,28 @@ export default function Navbar() {
                     ]).map(item => (
                       <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)}
                         style={{ display: "block", padding: "12px 16px", textDecoration: "none", color: "#111" }}
-                        onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
+                        onMouseEnter={e => (e.currentTarget.style.background = "#F7F4EF")}
                         onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                         <p style={{ fontSize: 14, fontWeight: 600 }}>{item.label}</p>
-                        <p style={{ fontSize: 12, color: "#6b7280", marginTop: 1 }}>{item.desc}</p>
+                        <p style={{ fontSize: 12, color: "#8a8477", marginTop: 1 }}>{item.desc}</p>
                       </Link>
                     ))}
                     <Link href="/parametres" onClick={() => setMenuOpen(false)}
-                      style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", textDecoration: "none", color: "#111", borderTop: "1px solid #f3f4f6" }}
-                      onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
+                      style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", textDecoration: "none", color: "#111", borderTop: "1px solid #F7F4EF" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "#F7F4EF")}
                       onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                         <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                       </svg>
                       <div>
                         <p style={{ fontSize: 14, fontWeight: 600 }}>Paramètres</p>
-                        <p style={{ fontSize: 12, color: "#6b7280", marginTop: 1 }}>Compte, apparence, sécurité</p>
+                        <p style={{ fontSize: 12, color: "#8a8477", marginTop: 1 }}>Compte, apparence, sécurité</p>
                       </div>
                     </Link>
-                    <div style={{ borderTop: "1px solid #f3f4f6", padding: 8 }}>
+                    <div style={{ borderTop: "1px solid #F7F4EF", padding: 8 }}>
                       <button onClick={() => { setMenuOpen(false); signOut({ callbackUrl: "/" }) }}
-                        style={{ width: "100%", padding: "10px 12px", background: "none", border: "none", borderRadius: 10, cursor: "pointer", textAlign: "left", fontSize: 14, fontWeight: 600, color: "#dc2626", fontFamily: "inherit" }}
-                        onMouseEnter={e => (e.currentTarget.style.background = "#fee2e2")}
+                        style={{ width: "100%", padding: "10px 12px", background: "none", border: "none", borderRadius: 10, cursor: "pointer", textAlign: "left", fontSize: 14, fontWeight: 600, color: "#b91c1c", fontFamily: "inherit" }}
+                        onMouseEnter={e => (e.currentTarget.style.background = "#FEECEC")}
                         onMouseLeave={e => (e.currentTarget.style.background = "none")}>
                         Déconnexion
                       </button>
@@ -287,7 +287,7 @@ export default function Navbar() {
             order: -1,
             position: "relative",
             background: "white",
-            border: "1px solid #e5e7eb",
+            border: "1px solid #EAE6DF",
             borderRadius: "50%",
             width: 40,
             height: 40,
@@ -330,7 +330,7 @@ export default function Navbar() {
             }} />
           </span>
           {totalBadge > 0 && !mobileOpen && (
-            <span style={{ position: "absolute", top: -2, right: -2, background: "#ef4444", color: "white", borderRadius: 999, fontSize: 9, fontWeight: 800, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: "2px solid white" }}>
+            <span style={{ position: "absolute", top: -2, right: -2, background: "#b91c1c", color: "white", borderRadius: 999, fontSize: 9, fontWeight: 800, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: "2px solid white" }}>
               {totalBadge > 9 ? "9+" : totalBadge}
             </span>
           )}
@@ -364,14 +364,14 @@ export default function Navbar() {
 
             {/* User info */}
             {session && (
-              <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #F7F4EF", display: "flex", alignItems: "center", gap: 12 }}>
                 {avatarSrc
                   ? <img src={avatarSrc} alt="avatar" referrerPolicy="no-referrer" style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover" }} />
                   : <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 18 }}>{session.user?.name?.[0]}</div>
                 }
                 <div>
                   <p style={{ fontWeight: 700, fontSize: 14 }}>{session.user?.name}</p>
-                  <p style={{ color: "#9ca3af", fontSize: 12 }}>{session.user?.email}</p>
+                  <p style={{ color: "#8a8477", fontSize: 12 }}>{session.user?.email}</p>
                 </div>
               </div>
             )}
@@ -383,7 +383,7 @@ export default function Navbar() {
                 { href: "/favoris",  label: "Favoris" },
               ].map(item => (
                 <Link key={item.href} href={item.href}
-                  style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: isActive(item.href) ? "#111" : "#374151", background: isActive(item.href) ? "#f3f4f6" : "transparent", fontWeight: isActive(item.href) ? 700 : 500, fontSize: 15, borderBottom: "1px solid #f9fafb" }}>
+                  style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: isActive(item.href) ? "#111" : "#111", background: isActive(item.href) ? "#F7F4EF" : "transparent", fontWeight: isActive(item.href) ? 700 : 500, fontSize: 15, borderBottom: "1px solid #F7F4EF" }}>
                   {item.label}
                 </Link>
               ))}
@@ -392,29 +392,29 @@ export default function Navbar() {
                 <>
                   {/* Messages */}
                   <Link href="/messages"
-                    style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: isActive("/messages") ? "#111" : "#374151", background: isActive("/messages") ? "#f3f4f6" : "transparent", fontWeight: isActive("/messages") ? 700 : 500, fontSize: 15, borderBottom: "1px solid #f9fafb", justifyContent: "space-between" }}>
+                    style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: isActive("/messages") ? "#111" : "#111", background: isActive("/messages") ? "#F7F4EF" : "transparent", fontWeight: isActive("/messages") ? 700 : 500, fontSize: 15, borderBottom: "1px solid #F7F4EF", justifyContent: "space-between" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                       Messages
                     </div>
                     {badgeMessages > 0 && (
-                      <span style={{ background: "#ef4444", color: "white", borderRadius: 999, fontSize: 11, fontWeight: 800, minWidth: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px" }}>
+                      <span style={{ background: "#b91c1c", color: "white", borderRadius: 999, fontSize: 11, fontWeight: 800, minWidth: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px" }}>
                         {badgeMessages}
                       </span>
                     )}
                   </Link>
 
                   {/* Espace : section */}
-                  <div style={{ padding: "12px 20px 6px", background: "#f9fafb" }}>
-                    <p style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px" }}>Mon espace</p>
+                  <div style={{ padding: "12px 20px 6px", background: "#F7F4EF" }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "0.5px" }}>Mon espace</p>
                   </div>
                   {espaceLinksAvecBadge.map(item => (
                     <Link key={item.href} href={item.href}
-                      style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: isActive(item.href) ? "#111" : "#374151", background: isActive(item.href) ? "#f3f4f6" : "transparent", fontWeight: isActive(item.href) ? 700 : 500, fontSize: 15, borderBottom: "1px solid #f9fafb", justifyContent: "space-between" }}>
+                      style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: isActive(item.href) ? "#111" : "#111", background: isActive(item.href) ? "#F7F4EF" : "transparent", fontWeight: isActive(item.href) ? 700 : 500, fontSize: 15, borderBottom: "1px solid #F7F4EF", justifyContent: "space-between" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                         {item.label}
                       </div>
                       {(item as any).badge > 0 && (
-                        <span style={{ background: "#ef4444", color: "white", borderRadius: 999, fontSize: 11, fontWeight: 800, minWidth: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px" }}>
+                        <span style={{ background: "#b91c1c", color: "white", borderRadius: 999, fontSize: 11, fontWeight: 800, minWidth: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px" }}>
                           {(item as any).badge}
                         </span>
                       )}
@@ -422,13 +422,13 @@ export default function Navbar() {
                   ))}
 
                   <Link href="/parametres" onClick={() => setMobileOpen(false)}
-                    style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: isActive("/parametres") ? "#111" : "#374151", background: isActive("/parametres") ? "#f3f4f6" : "transparent", fontWeight: isActive("/parametres") ? 700 : 500, fontSize: 15, borderBottom: "1px solid #f9fafb" }}>
+                    style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: isActive("/parametres") ? "#111" : "#111", background: isActive("/parametres") ? "#F7F4EF" : "transparent", fontWeight: isActive("/parametres") ? 700 : 500, fontSize: 15, borderBottom: "1px solid #F7F4EF" }}>
                     Paramètres
                   </Link>
 
-                  <div style={{ padding: 16, borderTop: "1px solid #f3f4f6", marginTop: 8 }}>
+                  <div style={{ padding: 16, borderTop: "1px solid #F7F4EF", marginTop: 8 }}>
                     <button onClick={() => { setMobileOpen(false); signOut({ callbackUrl: "/" }) }}
-                      style={{ width: "100%", padding: "12px", background: "#fee2e2", border: "none", borderRadius: 12, cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#dc2626", fontFamily: "inherit" }}>
+                      style={{ width: "100%", padding: "12px", background: "#FEECEC", border: "none", borderRadius: 12, cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#b91c1c", fontFamily: "inherit" }}>
                       Déconnexion
                     </button>
                   </div>
@@ -440,7 +440,7 @@ export default function Navbar() {
                   <Link href="/auth" style={{ display: "block", padding: "12px", background: "#111", color: "white", borderRadius: 12, textDecoration: "none", fontWeight: 700, fontSize: 15, textAlign: "center" }}>
                     Se connecter
                   </Link>
-                  <Link href="/auth?mode=inscription" style={{ display: "block", padding: "12px", background: "#f3f4f6", color: "#111", borderRadius: 12, textDecoration: "none", fontWeight: 600, fontSize: 15, textAlign: "center" }}>
+                  <Link href="/auth?mode=inscription" style={{ display: "block", padding: "12px", background: "#F7F4EF", color: "#111", borderRadius: 12, textDecoration: "none", fontWeight: 600, fontSize: 15, textAlign: "center" }}>
                     S'inscrire
                   </Link>
                 </div>
