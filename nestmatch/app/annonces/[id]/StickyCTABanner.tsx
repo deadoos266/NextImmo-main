@@ -1,25 +1,25 @@
 "use client"
 import { useSession } from "next-auth/react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { supabase } from "../../../lib/supabase"
 import { useRole } from "../../providers"
 import { calculerScore } from "../../../lib/matching"
+import { useHeroPassed } from "./useHeroPassed"
 import ContactButton from "./ContactButton"
 
 /**
- * StickyCTABanner — R10.10
+ * StickyCTABanner — R10.13
  *
- * Bandeau fixé en bas de l'écran, apparaît UNIQUEMENT quand la card sticky
- * droite (avec bouton Contacter) n'est plus visible au viewport. Fade 200ms.
+ * Bandeau fixé en bas de l'écran, apparaît quand le user a scrollé au-delà
+ * du bas du hero image (id #r-hero-photo). Fade 200ms.
  *
  * Contenu : prix CC + score compat (chip vert/orange/gris) + bouton Contacter.
  *
- * IntersectionObserver :
- *   - Target = la card sticky droite (injecté via data-r-sticky-target sur
- *     l'élément parent dans page.tsx, mais on observe directement l'ID
- *     `r-sticky-card-target` exposé par le parent).
- *   - Quand la target n'intersecte plus → on affiche le bandeau.
- *   - Quand elle revient visible → on masque.
+ * Trigger (R10.13) : useHeroPassed hook partagé avec StickyInfoCard. Ancien
+ * IntersectionObserver sur la card sticky droite retiré — incompatible avec
+ * la card devenue `position: fixed` (toujours visible au viewport). Le scroll-
+ * position trigger sert aussi de signal au StickyInfoCard pour clamper son
+ * maxHeight et laisser respirer le bandeau (zéro overlap).
  *
  * a11y :
  *   - role="complementary" + aria-label descriptif
@@ -32,14 +32,10 @@ import ContactButton from "./ContactButton"
 export default function StickyCTABanner({ annonce }: { annonce: any }) {
   const { data: session, status } = useSession()
   const { role } = useRole()
-  const [visible, setVisible] = useState(false)
   const [profil, setProfil] = useState<any>(null)
-  const [mounted, setMounted] = useState(false)
-  const bannerRef = useRef<HTMLDivElement | null>(null)
+  const visible = useHeroPassed()
 
   const loyerCC = Number(annonce.prix || 0) + Number(annonce.charges || 0)
-
-  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     if (session?.user?.email) {
@@ -47,23 +43,6 @@ export default function StickyCTABanner({ annonce }: { annonce: any }) {
         .then(({ data }) => { setProfil(data || null) })
     }
   }, [session])
-
-  useEffect(() => {
-    if (!mounted) return
-    const target = document.getElementById("r-sticky-card-target")
-    if (!target) return
-    const io = new IntersectionObserver(
-      entries => {
-        const e = entries[0]
-        if (!e) return
-        // Invisible = bandeau affiché. Intersecte = bandeau masqué.
-        setVisible(!e.isIntersecting)
-      },
-      { threshold: 0, rootMargin: "0px 0px -80px 0px" }
-    )
-    io.observe(target)
-    return () => io.disconnect()
-  }, [mounted])
 
   // Owner sur sa propre annonce → pas de bandeau (déjà pas de contact)
   if (role === "proprietaire" && session?.user?.email === annonce.proprietaire_email) return null
@@ -91,7 +70,6 @@ export default function StickyCTABanner({ annonce }: { annonce: any }) {
         }
       ` }} />
       <div
-        ref={bannerRef}
         role="complementary"
         aria-label="Barre d'action — prix et contact"
         aria-hidden={!visible}

@@ -14,6 +14,7 @@ import ShareButton from "./ShareButton"
 import LocataireMatchCard from "./LocataireMatchCard"
 import PartagerCard from "./PartagerCard"
 import StickyCTABanner from "./StickyCTABanner"
+import StickyInfoCard from "./StickyInfoCard"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -462,7 +463,9 @@ export default async function Annonce({ params }: any) {
 
         <div className="r-detail-layout" style={{ display: "flex", gap: 28, alignItems: "flex-start" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <PhotoCarousel photos={photos} />
+            <div id="r-hero-photo">
+              <PhotoCarousel photos={photos} />
+            </div>
             <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
               {[
                 { val: annonce.surface ? `${annonce.surface}` : "—", label: "m²" },
@@ -761,28 +764,21 @@ export default async function Annonce({ params }: any) {
           </div>
 
           <div className="r-detail-sidebar" style={{ width: 360, flexShrink: 0 }}>
-            {/* R10.7 — sticky info card ≥1024px, avec maxHeight pour éviter que
-                la carte dépasse la viewport sur petits écrans laptop. Scrollable
-                si le contenu excède l'espace dispo.
-                R10.10 — id="r-sticky-card-target" = cible de l'IntersectionObserver
-                du bandeau bas (StickyCTABanner).
-                R10.12 fix — sidebar passe en layout BLOCK (au lieu de flex
-                column). position:sticky en flex-column parent est fragile ;
-                block élimine toute ambiguïté. Les cards suivantes utilisent
-                marginTop: 16 pour reproduire l'espacement d'un gap:16. */}
+            {/* R10.13 — sticky JS-based via StickyInfoCard (position:fixed
+                calculé au scroll). Le wrapper fournit la card visuelle (bg/
+                radius/padding/shadow), StickyInfoCard gère le positionnement
+                fixed top:80, le clamp maxHeight quand le bandeau bas est
+                visible, et le fallback static sous 1024 px. L'id
+                r-sticky-card-target est exposé par StickyInfoCard sur sa div
+                interne (conservé pour continuité, plus de rôle IO). */}
+            <StickyInfoCard>
             <div
-              id="r-sticky-card-target"
               className="r-detail-stickycard"
               style={{
                 background: "white",
                 borderRadius: 20,
                 padding: 28,
                 boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
-                position: "sticky",
-                top: 80,
-                maxHeight: "calc(100vh - 110px)",
-                overflowY: "auto",
-                WebkitOverflowScrolling: "touch",
               }}
             >
               <div style={{ marginBottom: 16 }}>
@@ -845,6 +841,7 @@ export default async function Annonce({ params }: any) {
                 <SignalerButton type="annonce" targetId={String(annonce.id)} label="Signaler cette annonce" compact hideForEmail={annonce.proprietaire_email} />
               </div>
             </div>
+            </StickyInfoCard>
 
             {/* ─── R10.10 Card "Profil recherché" (critères owner + loyer max)
                 R10.12 — dédoublonnage : le titre "Votre compatibilité" et la
