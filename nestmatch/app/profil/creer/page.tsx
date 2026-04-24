@@ -8,6 +8,7 @@ import CityAutocomplete from "../../components/CityAutocomplete"
 import Tooltip from "../../components/Tooltip"
 import { Toggle, F } from "../../components/FormHelpers"
 import { KMButton, KMButtonOutline, KMEyebrow, KMHeading } from "../../components/ui/km"
+import { StepBar } from "../../components/ui/StepBar"
 
 /**
  * Wizard step-by-step de création du profil locataire — inspiré du principe
@@ -73,42 +74,8 @@ const STEPS = [
 const inp: React.CSSProperties = { width: "100%", padding: "12px 14px", border: "1px solid #EAE6DF", borderRadius: 12, fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit", background: "#fff", color: "#111" }
 const sel: React.CSSProperties = { ...inp, background: "white", appearance: "none", backgroundImage: "url('data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'12\\' height=\\'8\\' viewBox=\\'0 0 12 8\\' fill=\\'none\\'><path d=\\'M1 1l5 5 5-5\\' stroke=\\'%23111\\' stroke-width=\\'1.5\\' stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\'/></svg>')", backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center", paddingRight: 36 }
 
-// Les primitives KMButton/KMButtonOutline/KMEyebrow/KMHeading viennent
-// désormais de components/ui/km.tsx — source de vérité partagée.
-
-/** Barre de progression horizontale pill. */
-function StepBar({ current, total, isMobile }: { current: number; total: number; isMobile: boolean }) {
-  const pct = Math.round((current / total) * 100)
-  return (
-    <div style={{ marginBottom: isMobile ? 24 : 32 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {STEPS.map(s => {
-            const state = s.n < current ? "done" : s.n === current ? "current" : "future"
-            const bg = state === "done" ? "#111" : state === "current" ? "#111" : "#EAE6DF"
-            const color = state === "future" ? "#8a8477" : "white"
-            return (
-              <span key={s.n} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: state === "current" ? "#F7F4EF" : "transparent", border: state === "current" ? "1px solid #111" : "1px solid transparent", padding: "4px 10px 4px 4px", borderRadius: 999 }}>
-                <span style={{ width: 22, height: 22, borderRadius: "50%", background: bg, color, fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit" }}>
-                  {state === "done" ? (
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
-                  ) : s.n}
-                </span>
-                {!isMobile && (
-                  <span style={{ fontSize: 10, fontWeight: 700, color: state === "future" ? "#8a8477" : "#111", textTransform: "uppercase", letterSpacing: "1.2px" }}>{s.label}</span>
-                )}
-              </span>
-            )
-          })}
-        </div>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px" }}>{pct}%</span>
-      </div>
-      <div style={{ background: "#EAE6DF", borderRadius: 999, height: 4, overflow: "hidden" }}>
-        <div style={{ background: "#111", borderRadius: 999, height: "100%", width: `${pct}%`, transition: "width 0.3s ease" }} />
-      </div>
-    </div>
-  )
-}
+// Les primitives KMButton/KMButtonOutline/KMEyebrow/KMHeading et StepBar
+// viennent désormais de components/ui/* — source de vérité partagée.
 
 /** Grille de 2 colonnes responsive — reprend le pattern des autres formulaires. */
 function Grid2({ children, isMobile }: { children: ReactNode; isMobile: boolean }) {
@@ -280,7 +247,12 @@ export default function CreerProfil() {
           Retour au profil
         </a>
 
-        <StepBar current={step} total={STEPS.length} isMobile={isMobile} />
+        <StepBar
+          steps={STEPS.map(s => ({ n: s.n, label: s.label }))}
+          current={step}
+          isMobile={isMobile}
+          onStepClick={(n) => setStep(n)}
+        />
 
         <KMEyebrow style={{ marginBottom: 10 }}>{current.eyebrow}</KMEyebrow>
         <KMHeading size={isMobile ? 26 : 34} style={{ marginBottom: 8 }}>{current.title}</KMHeading>
