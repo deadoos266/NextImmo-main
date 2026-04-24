@@ -764,13 +764,13 @@ export default async function Annonce({ params }: any) {
           </div>
 
           <div className="r-detail-sidebar" style={{ width: 360, flexShrink: 0 }}>
-            {/* R10.13 — sticky JS-based via StickyInfoCard (position:fixed
-                calculé au scroll). Le wrapper fournit la card visuelle (bg/
-                radius/padding/shadow), StickyInfoCard gère le positionnement
-                fixed top:80, le clamp maxHeight quand le bandeau bas est
-                visible, et le fallback static sous 1024 px. L'id
-                r-sticky-card-target est exposé par StickyInfoCard sur sa div
-                interne (conservé pour continuité, plus de rôle IO). */}
+            {/* R10.15 — widget fixed-always. StickyInfoCard rend un <aside>
+                position:fixed top:80 right:gutter, scrollable en interne,
+                qui contient TOUTES les cards de la sidebar (booking, profil
+                recherché, activité, budget, autres biens, partager). Le
+                parent .r-detail-sidebar width:360 sert de placeholder
+                horizontal pour que la colonne gauche ne déborde pas. Mobile
+                <1024 : aside retombe en flow normal (position: relative). */}
             <StickyInfoCard>
             <div
               className="r-detail-stickycard"
@@ -841,7 +841,6 @@ export default async function Annonce({ params }: any) {
                 <SignalerButton type="annonce" targetId={String(annonce.id)} label="Signaler cette annonce" compact hideForEmail={annonce.proprietaire_email} />
               </div>
             </div>
-            </StickyInfoCard>
 
             {/* ─── R10.10 Card "Profil recherché" (critères owner + loyer max)
                 R10.12 — dédoublonnage : le titre "Votre compatibilité" et la
@@ -937,6 +936,7 @@ export default async function Annonce({ params }: any) {
             <div style={{ marginTop: 16 }}>
               <PartagerCard url={`${BASE_URL}/annonces/${id}`} titre={annonce.titre || "Bien à louer"} />
             </div>
+            </StickyInfoCard>
           </div>
         </div>
 

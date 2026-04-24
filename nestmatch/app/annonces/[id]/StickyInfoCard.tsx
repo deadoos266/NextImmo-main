@@ -1,113 +1,77 @@
 "use client"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { useHeroPassed } from "./useHeroPassed"
 
 /**
- * StickyInfoCard — R10.14 (bulletproof rewrite)
+ * StickyInfoCard — R10.15 (widget fixed-always)
  *
- * Sticky JS ultra-simple (approche demandée par user R10.14) :
- *   1. Au mount : capture `offsetTop` du wrapper (position document-relative)
- *      + largeur + position left via getBoundingClientRect.
- *   2. Scroll listener : si `scrollY + NAV_OFFSET > offsetTop` → pin.
- *   3. Quand pinned : card en `position: fixed top:80 left:X width:W`,
- *      z-index 9998 (sous banner 9999 mais au-dessus de Leaflet).
- *   4. Wrapper reçoit `minHeight = cardHeight` pour zéro saut visuel.
+ * Plus de scroll listener, plus de calcul de seuil, plus de containing-block
+ * warfare. Sur desktop (≥1024 px), la card est `position: fixed top:80 right:X`
+ * dès le premier render, comme un widget Intercom. Sur mobile (<1024 px),
+ * elle retombe en flow normal (position: relative) — la sidebar stacke sous
+ * le contenu principal via la media query de page.tsx.
  *
- * Clamp maxHeight quand bandeau visible via useHeroPassed : évite l'overlap
- * avec la zone banner (80 px + 16 px gap).
+ * Placeholder horizontal : la colonne droite du grid garde `width: 360` →
+ * le contenu de la colonne gauche n'empiète pas sur la zone du widget.
  *
- * Skip sous 900 px : la sidebar stack sous le contenu principal.
+ * Max-height clamp : quand le StickyCTABanner est visible (via useHeroPassed),
+ * on raccourcit de 96 px (80 banner + 16 gap) pour éviter l'overlap avec la
+ * zone fixed du bas.
  *
- * Debug : window.__R_STICKY_DEBUG__ = true dans la console pour voir le
- * pinned state + thresholds.
+ * z-index 9998 : sous le banner (9999) mais au-dessus de tout le reste, y
+ * compris les panes Leaflet (≤ 700).
+ *
+ * Sécurité SSR : on assume desktop par défaut pour matcher le rendu serveur,
+ * puis on hydrate vers la vraie valeur mobile/desktop via matchMedia.
  */
 
 const NAV_OFFSET = 80
+const CARD_WIDTH = 360
 const BANNER_CLEARANCE = 96 // 80 banner + 16 gap
 
 export default function StickyInfoCard({ children }: { children: React.ReactNode }) {
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const cardRef = useRef<HTMLDivElement>(null)
-  const [pinned, setPinned] = useState(false)
-  const [metrics, setMetrics] = useState<{ left: number; width: number; height: number } | null>(null)
+  const [isDesktop, setIsDesktop] = useState<boolean>(true)
   const bannerVisible = useHeroPassed()
 
   useEffect(() => {
-    if (typeof window === "undefined") return
-
-    let pinThreshold = 0
-
-    const measure = () => {
-      const wrapper = wrapperRef.current
-      const card = cardRef.current
-      if (!wrapper || !card) return
-      const rect = wrapper.getBoundingClientRect()
-      pinThreshold = rect.top + window.scrollY
-      setMetrics({
-        left: rect.left,
-        width: rect.width,
-        height: card.offsetHeight,
-      })
-    }
-
-    const onScroll = () => {
-      if (window.innerWidth < 900) {
-        setPinned(false)
-        return
-      }
-      if (pinThreshold === 0) measure()
-      const shouldPin = window.scrollY + NAV_OFFSET > pinThreshold
-      setPinned(shouldPin)
-      if ((window as unknown as { __R_STICKY_DEBUG__?: boolean }).__R_STICKY_DEBUG__) {
-        // eslint-disable-next-line no-console
-        console.log("[StickyInfoCard]", { pinned: shouldPin, scrollY: window.scrollY, pinThreshold })
-      }
-    }
-
-    const onResize = () => {
-      measure()
-      onScroll()
-    }
-
-    measure()
-    onScroll()
-
-    window.addEventListener("scroll", onScroll, { passive: true })
-    window.addEventListener("resize", onResize)
-    return () => {
-      window.removeEventListener("scroll", onScroll)
-      window.removeEventListener("resize", onResize)
-    }
+    const mql = window.matchMedia("(min-width: 1024px)")
+    const update = () => setIsDesktop(mql.matches)
+    update()
+    mql.addEventListener("change", update)
+    return () => mql.removeEventListener("change", update)
   }, [])
 
   const maxHeight = bannerVisible
     ? `calc(100vh - ${NAV_OFFSET + BANNER_CLEARANCE}px)`
     : `calc(100vh - ${NAV_OFFSET + 30}px)`
 
-  return (
-    <div
-      ref={wrapperRef}
-      style={{
-        minHeight: pinned && metrics ? metrics.height : undefined,
-      }}
-    >
-      <div
-        ref={cardRef}
-        id="r-sticky-card-target"
-        style={pinned && metrics ? {
-          position: "fixed",
-          top: NAV_OFFSET,
-          left: metrics.left,
-          width: metrics.width,
-          maxHeight,
-          overflowY: "auto",
-          WebkitOverflowScrolling: "touch",
-          zIndex: 9998,
-          transition: "max-height 200ms ease",
-        } : undefined}
-      >
+  if (!isDesktop) {
+    // Mobile / tablette : pas de fixed, flow normal. Le parent .r-detail-sidebar
+    // stacke déjà sous le contenu principal via media query < 1024.
+    return (
+      <div id="r-sticky-card-target" style={{ width: "100%" }}>
         {children}
       </div>
-    </div>
+    )
+  }
+
+  return (
+    <aside
+      id="r-sticky-card-target"
+      aria-label="Informations et actions du logement"
+      style={{
+        position: "fixed",
+        top: NAV_OFFSET,
+        right: `max(48px, calc((100vw - 1280px) / 2 + 48px))`,
+        width: CARD_WIDTH,
+        maxHeight,
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
+        zIndex: 9998,
+        transition: "max-height 200ms ease",
+      }}
+    >
+      {children}
+    </aside>
   )
 }
