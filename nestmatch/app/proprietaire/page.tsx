@@ -60,12 +60,12 @@ function RevenusChart12Mois({ loyers, isMobile }: { loyers: any[]; isMobile: boo
     <section style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24, marginBottom: 24 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
         <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>Revenus 12 derniers mois</h2>
-        <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>
+        <p style={{ fontSize: 12, color: "#8a8477", margin: 0 }}>
           Total encaissé : <strong style={{ color: "#111" }}>{totalCumule.toLocaleString("fr-FR")} €</strong>
         </p>
       </div>
       {totalCumule === 0 ? (
-        <p style={{ fontSize: 13, color: "#9ca3af", padding: "20px 0" }}>
+        <p style={{ fontSize: 13, color: "#8a8477", padding: "20px 0" }}>
           Aucun loyer confirmé sur les 12 derniers mois.
         </p>
       ) : (
@@ -77,7 +77,7 @@ function RevenusChart12Mois({ loyers, isMobile }: { loyers: any[]; isMobile: boo
                 key={pct}
                 x1={0} y1={H - pct * H}
                 x2={totalW} y2={H - pct * H}
-                stroke="#f3f4f6" strokeWidth={1}
+                stroke="#F7F4EF" strokeWidth={1}
               />
             ))}
             {sums.map((m, i) => {
@@ -91,7 +91,7 @@ function RevenusChart12Mois({ loyers, isMobile }: { loyers: any[]; isMobile: boo
                     y={y}
                     width={BAR_W}
                     height={h}
-                    fill={m.total > 0 ? "#16a34a" : "#e5e7eb"}
+                    fill={m.total > 0 ? "#15803d" : "#EAE6DF"}
                     rx={4}
                   />
                   {m.total > 0 && (
@@ -100,7 +100,7 @@ function RevenusChart12Mois({ loyers, isMobile }: { loyers: any[]; isMobile: boo
                       y={y - 4}
                       textAnchor="middle"
                       fontSize={9}
-                      fill="#6b7280"
+                      fill="#8a8477"
                       fontFamily="'DM Sans', sans-serif"
                     >
                       {m.total >= 1000 ? `${Math.round(m.total / 100) / 10}k` : m.total}
@@ -111,7 +111,7 @@ function RevenusChart12Mois({ loyers, isMobile }: { loyers: any[]; isMobile: boo
                     y={H + 16}
                     textAnchor="middle"
                     fontSize={10}
-                    fill="#9ca3af"
+                    fill="#8a8477"
                     fontFamily="'DM Sans', sans-serif"
                   >
                     {m.label}
@@ -221,11 +221,11 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
         <div style={{ display: "flex", background: "white", borderRadius: 12, padding: 4, gap: 2 }}>
           <button onClick={() => setVue("liste")}
-            style={{ padding: "7px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, background: vue === "liste" ? "#111" : "transparent", color: vue === "liste" ? "white" : "#6b7280" }}>
+            style={{ padding: "7px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, background: vue === "liste" ? "#111" : "transparent", color: vue === "liste" ? "white" : "#8a8477" }}>
             Liste
           </button>
           <button onClick={() => setVue("agenda")}
-            style={{ padding: "7px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, background: vue === "agenda" ? "#111" : "transparent", color: vue === "agenda" ? "white" : "#6b7280" }}>
+            style={{ padding: "7px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 600, background: vue === "agenda" ? "#111" : "transparent", color: vue === "agenda" ? "white" : "#8a8477" }}>
             Agenda
           </button>
         </div>
@@ -241,13 +241,13 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
         {[
           { label: "Total demandes", val: visites.length, bg: "white", color: "#111" },
-          { label: "En attente",     val: nbAttente,      bg: nbAttente > 0 ? "#fff7ed" : "white", color: nbAttente > 0 ? "#c2410c" : "#111" },
-          { label: "Confirmées",     val: nbConfirmées,   bg: nbConfirmées > 0 ? "#dcfce7" : "white", color: nbConfirmées > 0 ? "#15803d" : "#111" },
-          { label: "Effectuées",     val: nbEffectuées,   bg: "white", color: "#374151" },
+          { label: "En attente",     val: nbAttente,      bg: nbAttente > 0 ? "#FBF6EA" : "white", color: nbAttente > 0 ? "#a16207" : "#111" },
+          { label: "Confirmées",     val: nbConfirmées,   bg: nbConfirmées > 0 ? "#F0FAEE" : "white", color: nbConfirmées > 0 ? "#15803d" : "#111" },
+          { label: "Effectuées",     val: nbEffectuées,   bg: "white", color: "#111" },
         ].map(s => (
           <div key={s.label} style={{ background: s.bg, borderRadius: 16, padding: "16px 20px" }}>
             <div style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.val}</div>
-            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>{s.label}</div>
+            <div style={{ fontSize: 12, color: "#8a8477", marginTop: 2 }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -256,7 +256,7 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
       <div style={{ display: "flex", background: "white", borderRadius: 12, padding: 4, gap: 2, marginBottom: 16, width: isMobile ? "100%" : "fit-content", overflowX: isMobile ? "auto" : undefined }}>
         {["toutes", "proposée", "confirmée", "annulée", "effectuée"].map(f => (
           <button key={f} onClick={() => setFiltre(f)}
-            style={{ padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, background: filtre === f ? "#111" : "transparent", color: filtre === f ? "white" : "#6b7280", whiteSpace: "nowrap", flexShrink: 0 }}>
+            style={{ padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, background: filtre === f ? "#111" : "transparent", color: filtre === f ? "white" : "#8a8477", whiteSpace: "nowrap", flexShrink: 0 }}>
             {f === "toutes" ? "Toutes" : STATUT_V[f]?.label}
             {f !== "toutes" && visites.filter(v => v.statut === f).length > 0 && (
               <span style={{ marginLeft: 4, opacity: 0.7 }}>({visites.filter(v => v.statut === f).length})</span>
@@ -279,7 +279,7 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
             const photo = Array.isArray(bien?.photos) && bien.photos.length > 0 ? bien.photos[0] : null
             const future = new Date(v.date_visite) >= new Date()
             return (
-              <div key={v.id} style={{ background: "white", borderRadius: 18, border: `1.5px solid ${v.statut === "proposée" ? "#fed7aa" : "#e5e7eb"}`, overflow: "hidden", display: "flex", flexDirection: isMobile ? "column" : "row" }}>
+              <div key={v.id} style={{ background: "white", borderRadius: 18, border: `1px solid ${v.statut === "proposée" ? "#EADFC6" : "#EAE6DF"}`, overflow: "hidden", display: "flex", flexDirection: isMobile ? "column" : "row" }}>
                 {/* Photo bien */}
                 {!isMobile && (
                   photo ? (
@@ -287,7 +287,7 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
                       <Image src={photo} alt="" fill sizes="100px" style={{ objectFit: "cover" }} />
                     </div>
                   ) : (
-                    <div style={{ width: 100, flexShrink: 0, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 700, color: "#6b7280" }}>{(bien?.titre || "B")[0].toUpperCase()}</div>
+                    <div style={{ width: 100, flexShrink: 0, background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 700, color: "#8a8477" }}>{(bien?.titre || "B")[0].toUpperCase()}</div>
                   )
                 )}
 
@@ -298,12 +298,12 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
                         <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`, fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 999 }}>
                           {s.label}
                         </span>
-                        {bien && <span style={{ fontSize: 12, color: "#9ca3af" }}>{bien.titre} · {bien.ville}</span>}
+                        {bien && <span style={{ fontSize: 12, color: "#8a8477" }}>{bien.titre} · {bien.ville}</span>}
                       </div>
                       <p style={{ fontWeight: 700, fontSize: isMobile ? 13 : 15, marginTop: 6 }}>
                         {new Date(v.date_visite).toLocaleDateString("fr-FR", { weekday: isMobile ? "short" : "long", day: "numeric", month: isMobile ? "short" : "long" })} à {v.heure}
                         {future && v.statut !== "annulée" && (
-                          <span style={{ marginLeft: 8, fontSize: 11, background: "#f3f4f6", color: "#6b7280", padding: "1px 8px", borderRadius: 999, fontWeight: 600 }}>
+                          <span style={{ marginLeft: 8, fontSize: 11, background: "#F7F4EF", color: "#8a8477", padding: "1px 8px", borderRadius: 999, fontWeight: 600 }}>
                             {jours(v.date_visite)}
                           </span>
                         )}
@@ -319,18 +319,18 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
                             ✓ Confirmer
                           </button>
                           <button onClick={() => setCancelTarget({ v, mode: "refus" })}
-                            style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "7px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+                            style={{ background: "none", border: "1px solid #F4C9C9", color: "#b91c1c", borderRadius: 999, padding: "7px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
                             Refuser
                           </button>
                         </>
                       )}
                       {v.statut === "proposée" && (v.propose_par || "").toLowerCase() === (myEmail || "").toLowerCase() && (
                         <>
-                          <span style={{ fontSize: 11, color: "#6b7280", fontStyle: "italic", padding: "7px 12px" }}>
+                          <span style={{ fontSize: 11, color: "#8a8477", fontStyle: "italic", padding: "7px 12px" }}>
                             En attente du locataire
                           </span>
                           <button onClick={() => setCancelTarget({ v, mode: "annulation" })}
-                            style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "7px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+                            style={{ background: "none", border: "1px solid #F4C9C9", color: "#b91c1c", borderRadius: 999, padding: "7px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
                             Annuler
                           </button>
                         </>
@@ -338,11 +338,11 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
                       {v.statut === "confirmée" && (
                         <>
                           <button onClick={() => changerStatut(v.id, "effectuée")}
-                            style={{ background: "#f3f4f6", border: "none", color: "#374151", borderRadius: 999, padding: "7px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+                            style={{ background: "#F7F4EF", border: "none", color: "#111", borderRadius: 999, padding: "7px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
                             Effectuée
                           </button>
                           <button onClick={() => setCancelTarget({ v, mode: "annulation" })}
-                            style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "7px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+                            style={{ background: "none", border: "1px solid #F4C9C9", color: "#b91c1c", borderRadius: 999, padding: "7px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
                             Annuler
                           </button>
                         </>
@@ -352,15 +352,15 @@ function VisitesProprio({ visites, biens, setVisites, myEmail }: { visites: any[
 
                   {/* Locataire + message */}
                   <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#e5e7eb", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#EAE6DF", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
                       {v.locataire_email[0]?.toUpperCase()}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 12, fontWeight: 600, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v.locataire_email}</p>
-                      {v.message && <p style={{ fontSize: 11, color: "#6b7280", fontStyle: "italic", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>"{v.message}"</p>}
+                      <p style={{ fontSize: 12, fontWeight: 600, color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v.locataire_email}</p>
+                      {v.message && <p style={{ fontSize: 11, color: "#8a8477", fontStyle: "italic", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>"{v.message}"</p>}
                     </div>
                     <Link href={`/messages?with=${v.locataire_email}`}
-                      style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "5px 12px", flexShrink: 0 }}>
+                      style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", border: "1px solid #EAE6DF", borderRadius: 999, padding: "5px 12px", flexShrink: 0 }}>
                       Message
                     </Link>
                   </div>
@@ -552,7 +552,7 @@ export default function Proprietaire() {
   }
 
   if (status === "loading" || loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif", color: "#6b7280" }}>Chargement...</div>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif", color: "#8a8477" }}>Chargement...</div>
   )
 
   const biensDispos = biens.filter(b => !b.statut || b.statut === "disponible").length
@@ -643,10 +643,10 @@ export default function Proprietaire() {
             const nbVisitesAttente = visites.filter(v => v.statut === "proposée" && (v.propose_par || "").toLowerCase() !== (myEmail || "").toLowerCase()).length
             return (
               <button key={o} onClick={() => { setOnglet(o); if (o === "Visites") reloadVisites() }}
-                style={{ padding: "8px 18px", borderRadius: 10, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13, fontFamily: "inherit", background: onglet === o ? "#111" : "transparent", color: onglet === o ? "white" : "#6b7280", transition: "all 0.15s", whiteSpace: "nowrap", flexShrink: 0 }}>
+                style={{ padding: "8px 18px", borderRadius: 10, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13, fontFamily: "inherit", background: onglet === o ? "#111" : "transparent", color: onglet === o ? "white" : "#8a8477", transition: "all 0.15s", whiteSpace: "nowrap", flexShrink: 0 }}>
                 {o}
                 {o === "Locataires" && loyersAttendus > 0 && (
-                  <span style={{ marginLeft: 6, background: "#ef4444", color: "white", borderRadius: 999, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{loyersAttendus}</span>
+                  <span style={{ marginLeft: 6, background: "#b91c1c", color: "white", borderRadius: 999, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{loyersAttendus}</span>
                 )}
                 {o === "Visites" && nbVisitesAttente > 0 && (
                   <span style={{ marginLeft: 6, background: "#f97316", color: "white", borderRadius: 999, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{nbVisitesAttente}</span>
@@ -660,24 +660,24 @@ export default function Proprietaire() {
         {onglet === "Statistiques" && (
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 12 : 18, marginBottom: 24 }}>
             {[
-              { label: "Biens disponibles", val: biensDispos, color: "#16a34a", bg: "#f0fdf4", targetOnglet: "Mes biens" as const },
-              { label: "Biens loués",       val: biensLoues, color: "#6b7280", bg: "#f9fafb", targetOnglet: "Locataires" as const },
-              { label: "Loyers à confirmer", val: loyersAttendus, color: "#ea580c", bg: loyersAttendus > 0 ? "#fff7ed" : "white", targetOnglet: "Locataires" as const },
-              { label: "Loyers confirmés",  val: loyersConfirmes, color: "#16a34a", bg: "white", targetOnglet: "Locataires" as const },
+              { label: "Biens disponibles", val: biensDispos, color: "#15803d", bg: "#f0fdf4", targetOnglet: "Mes biens" as const },
+              { label: "Biens loués",       val: biensLoues, color: "#8a8477", bg: "#f9fafb", targetOnglet: "Locataires" as const },
+              { label: "Loyers à confirmer", val: loyersAttendus, color: "#a16207", bg: loyersAttendus > 0 ? "#FBF6EA" : "white", targetOnglet: "Locataires" as const },
+              { label: "Loyers confirmés",  val: loyersConfirmes, color: "#15803d", bg: "white", targetOnglet: "Locataires" as const },
             ].map(s => (
               <button
                 key={s.label}
                 onClick={() => setOnglet(s.targetOnglet)}
                 style={{
                   background: s.bg, borderRadius: 20, padding: isMobile ? "18px 20px" : "24px 28px",
-                  border: "1px solid #f3f4f6", textAlign: "left", cursor: "pointer",
+                  border: "1px solid #F7F4EF", textAlign: "left", cursor: "pointer",
                   fontFamily: "inherit", transition: "transform 0.15s, box-shadow 0.15s",
                 }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.06)" }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "none" }}
               >
                 <div style={{ fontSize: isMobile ? 32 : 40, fontWeight: 800, color: s.color, letterSpacing: "-1px", lineHeight: 1 }}>{s.val}</div>
-                <div style={{ fontSize: 12, color: "#6b7280", marginTop: 8, fontWeight: 600 }}>{s.label}</div>
+                <div style={{ fontSize: 12, color: "#8a8477", marginTop: 8, fontWeight: 600 }}>{s.label}</div>
               </button>
             ))}
           </div>
@@ -685,9 +685,9 @@ export default function Proprietaire() {
 
         {/* Alerte loyers — toujours visible en haut de Statistiques */}
         {onglet === "Statistiques" && loyersAttendus > 0 && (
-          <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 14, padding: isMobile ? "12px 16px" : "14px 20px", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <p style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#ea580c" }}>{loyersAttendus} paiement{loyersAttendus > 1 ? "s" : ""} en attente</p>
-            <button onClick={() => setOnglet("Locataires")} style={{ background: "#ea580c", color: "white", border: "none", borderRadius: 999, padding: "6px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Voir</button>
+          <div style={{ background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 14, padding: isMobile ? "12px 16px" : "14px 20px", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <p style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "#a16207" }}>{loyersAttendus} paiement{loyersAttendus > 1 ? "s" : ""} en attente</p>
+            <button onClick={() => setOnglet("Locataires")} style={{ background: "#a16207", color: "white", border: "none", borderRadius: 999, padding: "6px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Voir</button>
           </div>
         )}
 
@@ -894,15 +894,15 @@ export default function Proprietaire() {
                   return (
                     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: isMobile ? 12 : 18, marginBottom: 24 }}>
                       {[
-                        { label: "Revenus confirmés", val: `${revenusConfirmes.toLocaleString("fr-FR")} €`, sub: "cumul toutes périodes", color: "#16a34a", bg: "#f0fdf4" },
+                        { label: "Revenus confirmés", val: `${revenusConfirmes.toLocaleString("fr-FR")} €`, sub: "cumul toutes périodes", color: "#15803d", bg: "#f0fdf4" },
                         { label: "Loyers mensuels", val: `${loyerTheoriqueTotal.toLocaleString("fr-FR")} €`, sub: `${biens.filter((b: any) => b.statut === "loué").length} bien(s) loué(s)`, color: "#111", bg: "white" },
-                        { label: "Cashflow mensuel", val: `${cashflowMensuelTotal >= 0 ? "+" : ""}${cashflowMensuelTotal.toLocaleString("fr-FR")} €`, sub: "après crédit", color: cashflowMensuelTotal >= 0 ? "#16a34a" : "#dc2626", bg: cashflowMensuelTotal >= 0 ? "#f0fdf4" : "#fef2f2" },
+                        { label: "Cashflow mensuel", val: `${cashflowMensuelTotal >= 0 ? "+" : ""}${cashflowMensuelTotal.toLocaleString("fr-FR")} €`, sub: "après crédit", color: cashflowMensuelTotal >= 0 ? "#15803d" : "#b91c1c", bg: cashflowMensuelTotal >= 0 ? "#f0fdf4" : "#fef2f2" },
                         { label: "Valeur patrimoine", val: patrimoineTotal > 0 ? `${Math.round(patrimoineTotal / 1000)} k€` : "—", sub: "somme des biens", color: "#111", bg: "white" },
                       ].map(s => (
-                        <div key={s.label} style={{ background: s.bg, borderRadius: 20, padding: isMobile ? "18px 20px" : "22px 26px", border: "1px solid #f3f4f6" }}>
+                        <div key={s.label} style={{ background: s.bg, borderRadius: 20, padding: isMobile ? "18px 20px" : "22px 26px", border: "1px solid #F7F4EF" }}>
                           <div style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, color: s.color, letterSpacing: "-0.5px", lineHeight: 1.1 }}>{s.val}</div>
-                          <div style={{ fontSize: 12, color: "#6b7280", marginTop: 8, fontWeight: 600 }}>{s.label}</div>
-                          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{s.sub}</div>
+                          <div style={{ fontSize: 12, color: "#8a8477", marginTop: 8, fontWeight: 600 }}>{s.label}</div>
+                          <div style={{ fontSize: 11, color: "#8a8477", marginTop: 2 }}>{s.sub}</div>
                         </div>
                       ))}
                     </div>
@@ -919,14 +919,14 @@ export default function Proprietaire() {
                 <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 14, marginTop: 8 }}>Activité sur les annonces</h2>
                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: isMobile ? 10 : 16, marginBottom: 24 }}>
                   {[
-                    { label: "Clics uniques", val: Object.values(clicsParBien).reduce((s: number, v: number) => s + v, 0), color: "#1d4ed8", bg: "#eff6ff" },
-                    { label: "Messages reçus", val: candidatures.length, color: "#16a34a", bg: "#dcfce7" },
-                    { label: "Visites demandées", val: visites.length, color: "#ea580c", bg: "#fff7ed" },
+                    { label: "Clics uniques", val: Object.values(clicsParBien).reduce((s: number, v: number) => s + v, 0), color: "#1d4ed8", bg: "#EEF3FB" },
+                    { label: "Messages reçus", val: candidatures.length, color: "#15803d", bg: "#F0FAEE" },
+                    { label: "Visites demandées", val: visites.length, color: "#a16207", bg: "#FBF6EA" },
                     { label: "Biens actifs", val: biens.filter((b: any) => !b.statut || b.statut === "disponible").length, color: "#111", bg: "white" },
                   ].map(s => (
                     <div key={s.label} style={{ background: s.bg, borderRadius: 16, padding: "20px 24px" }}>
                       <div style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.val}</div>
-                      <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>{s.label}</div>
+                      <div style={{ fontSize: 12, color: "#8a8477", marginTop: 4 }}>{s.label}</div>
                     </div>
                   ))}
                 </div>
@@ -935,14 +935,14 @@ export default function Proprietaire() {
                 <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 8 }}>
                     <h2 style={{ fontSize: 16, fontWeight: 800 }}>Détail par bien</h2>
-                    <p style={{ fontSize: 12, color: "#6b7280" }}>Cliquez sur un bien pour voir ses statistiques détaillées</p>
+                    <p style={{ fontSize: 12, color: "#8a8477" }}>Cliquez sur un bien pour voir ses statistiques détaillées</p>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
                     {/* Header */}
                     {!isMobile && (
                       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 40px", gap: 12, padding: "10px 16px", background: "#f9fafb", borderRadius: "10px 10px 0 0" }}>
                         {["Bien", "Clics uniques", "Messages", "Visites", "Taux conv.", ""].map((h, i) => (
-                          <span key={i} style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>{h}</span>
+                          <span key={i} style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>{h}</span>
                         ))}
                       </div>
                     )}
@@ -955,21 +955,21 @@ export default function Proprietaire() {
                       if (isMobile) {
                         return (
                           <a key={b.id} href={`/proprietaire/stats?id=${b.id}`}
-                            style={{ display: "block", padding: "14px 0", borderBottom: i < biens.length - 1 ? "1px solid #f3f4f6" : "none", textDecoration: "none", color: "#111" }}>
+                            style={{ display: "block", padding: "14px 0", borderBottom: i < biens.length - 1 ? "1px solid #F7F4EF" : "none", textDecoration: "none", color: "#111" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                               <p style={{ fontWeight: 700, fontSize: 14 }}>{b.titre}</p>
-                              <span style={{ fontSize: 18, color: "#9ca3af" }}>&rsaquo;</span>
+                              <span style={{ fontSize: 18, color: "#8a8477" }}>&rsaquo;</span>
                             </div>
                             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                               {[
                                 { label: "Clics", val: vues, color: "#1d4ed8" },
-                                { label: "Messages", val: msgs, color: "#16a34a" },
-                                { label: "Visites", val: vis, color: "#ea580c" },
-                                { label: "Conv.", val: `${tauxConv}%`, color: tauxConv >= 5 ? "#16a34a" : "#6b7280" },
+                                { label: "Messages", val: msgs, color: "#15803d" },
+                                { label: "Visites", val: vis, color: "#a16207" },
+                                { label: "Conv.", val: `${tauxConv}%`, color: tauxConv >= 5 ? "#15803d" : "#8a8477" },
                               ].map(s => (
                                 <div key={s.label} style={{ background: "#f9fafb", borderRadius: 8, padding: "6px 12px", textAlign: "center" }}>
                                   <div style={{ fontSize: 16, fontWeight: 800, color: s.color }}>{s.val}</div>
-                                  <div style={{ fontSize: 10, color: "#9ca3af" }}>{s.label}</div>
+                                  <div style={{ fontSize: 10, color: "#8a8477" }}>{s.label}</div>
                                 </div>
                               ))}
                             </div>
@@ -979,23 +979,23 @@ export default function Proprietaire() {
 
                       return (
                         <a key={b.id} href={`/proprietaire/stats?id=${b.id}`}
-                          style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 40px", gap: 12, padding: "14px 16px", borderBottom: "1px solid #f3f4f6", alignItems: "center", textDecoration: "none", color: "#111", cursor: "pointer", transition: "background 0.15s" }}
+                          style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 40px", gap: 12, padding: "14px 16px", borderBottom: "1px solid #F7F4EF", alignItems: "center", textDecoration: "none", color: "#111", cursor: "pointer", transition: "background 0.15s" }}
                           onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
                           onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                           <div>
                             <p style={{ fontWeight: 700, fontSize: 14 }}>{b.titre}</p>
-                            <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>{b.ville} &middot; {b.prix} €/mois</p>
+                            <p style={{ fontSize: 12, color: "#8a8477", marginTop: 2 }}>{b.ville} &middot; {b.prix} €/mois</p>
                           </div>
                           <span style={{ fontSize: 16, fontWeight: 800, color: "#1d4ed8" }}>{vues}</span>
-                          <span style={{ fontSize: 16, fontWeight: 800, color: "#16a34a" }}>{msgs}</span>
-                          <span style={{ fontSize: 16, fontWeight: 800, color: "#ea580c" }}>{vis}</span>
+                          <span style={{ fontSize: 16, fontWeight: 800, color: "#15803d" }}>{msgs}</span>
+                          <span style={{ fontSize: 16, fontWeight: 800, color: "#a16207" }}>{vis}</span>
                           <div>
-                            <span style={{ fontSize: 16, fontWeight: 800, color: tauxConv >= 5 ? "#16a34a" : tauxConv >= 2 ? "#ea580c" : "#6b7280" }}>{tauxConv}%</span>
-                            <div style={{ background: "#f3f4f6", borderRadius: 4, height: 4, marginTop: 4, overflow: "hidden" }}>
-                              <div style={{ height: "100%", borderRadius: 4, width: `${Math.min(100, tauxConv * 5)}%`, background: tauxConv >= 5 ? "#16a34a" : tauxConv >= 2 ? "#ea580c" : "#d1d5db" }} />
+                            <span style={{ fontSize: 16, fontWeight: 800, color: tauxConv >= 5 ? "#15803d" : tauxConv >= 2 ? "#a16207" : "#8a8477" }}>{tauxConv}%</span>
+                            <div style={{ background: "#F7F4EF", borderRadius: 4, height: 4, marginTop: 4, overflow: "hidden" }}>
+                              <div style={{ height: "100%", borderRadius: 4, width: `${Math.min(100, tauxConv * 5)}%`, background: tauxConv >= 5 ? "#15803d" : tauxConv >= 2 ? "#a16207" : "#EAE6DF" }} />
                             </div>
                           </div>
-                          <span style={{ fontSize: 22, color: "#9ca3af", textAlign: "right" }}>&rsaquo;</span>
+                          <span style={{ fontSize: 22, color: "#8a8477", textAlign: "right" }}>&rsaquo;</span>
                         </a>
                       )
                     })}
@@ -1007,15 +1007,15 @@ export default function Proprietaire() {
                   <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Conseils pour améliorer la visibilité</h2>
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {biens.filter((b: any) => !b.photos || (Array.isArray(b.photos) && b.photos.length < 3)).length > 0 && (
-                      <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#fff7ed", borderRadius: 12, border: "1px solid #fed7aa" }}>
+                      <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#FBF6EA", borderRadius: 12, border: "1px solid #EADFC6" }}>
                         <div>
                           <p style={{ fontSize: 13, fontWeight: 700, color: "#9a3412" }}>Ajoutez plus de photos</p>
-                          <p style={{ fontSize: 12, color: "#ea580c" }}>{biens.filter((b: any) => !b.photos || (Array.isArray(b.photos) && b.photos.length < 3)).length} bien(s) avec moins de 3 photos — les annonces avec 5+ photos reçoivent 3x plus de vues</p>
+                          <p style={{ fontSize: 12, color: "#a16207" }}>{biens.filter((b: any) => !b.photos || (Array.isArray(b.photos) && b.photos.length < 3)).length} bien(s) avec moins de 3 photos — les annonces avec 5+ photos reçoivent 3x plus de vues</p>
                         </div>
                       </div>
                     )}
                     {biens.filter((b: any) => !b.description || b.description.length < 100).length > 0 && (
-                      <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#eff6ff", borderRadius: 12, border: "1px solid #bfdbfe" }}>
+                      <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#EEF3FB", borderRadius: 12, border: "1px solid #D7E3F4" }}>
                         <div>
                           <p style={{ fontSize: 13, fontWeight: 700, color: "#1e40af" }}>Enrichissez vos descriptions</p>
                           <p style={{ fontSize: 12, color: "#1d4ed8" }}>{biens.filter((b: any) => !b.description || b.description.length < 100).length} bien(s) sans description détaillée — une bonne description augmente les contacts de 40%</p>
@@ -1023,18 +1023,18 @@ export default function Proprietaire() {
                       </div>
                     )}
                     {biens.filter((b: any) => !b.dpe).length > 0 && (
-                      <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#dcfce7", borderRadius: 12, border: "1px solid #bbf7d0" }}>
+                      <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#F0FAEE", borderRadius: 12, border: "1px solid #C6E9C0" }}>
                         <div>
                           <p style={{ fontSize: 13, fontWeight: 700, color: "#166534" }}>Renseignez le DPE</p>
-                          <p style={{ fontSize: 12, color: "#16a34a" }}>{biens.filter((b: any) => !b.dpe).length} bien(s) sans DPE — le DPE est obligatoire et rassure les locataires</p>
+                          <p style={{ fontSize: 12, color: "#15803d" }}>{biens.filter((b: any) => !b.dpe).length} bien(s) sans DPE — le DPE est obligatoire et rassure les locataires</p>
                         </div>
                       </div>
                     )}
                     {biens.every((b: any) => b.photos && Array.isArray(b.photos) && b.photos.length >= 3 && b.description && b.description.length >= 100 && b.dpe) && (
-                      <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#dcfce7", borderRadius: 12, border: "1px solid #bbf7d0" }}>
+                      <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#F0FAEE", borderRadius: 12, border: "1px solid #C6E9C0" }}>
                         <div>
                           <p style={{ fontSize: 13, fontWeight: 700, color: "#166534" }}>Vos annonces sont optimisées !</p>
-                          <p style={{ fontSize: 12, color: "#16a34a" }}>Tous vos biens ont des photos, descriptions et DPE — continuez comme ça</p>
+                          <p style={{ fontSize: 12, color: "#15803d" }}>Tous vos biens ont des photos, descriptions et DPE — continuez comme ça</p>
                         </div>
                       </div>
                     )}
@@ -1062,7 +1062,7 @@ export default function Proprietaire() {
               <>
                 <div style={{ background: "white", borderRadius: 20, padding: isMobile ? 18 : 24, marginBottom: 16 }}>
                   <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 6, letterSpacing: "-0.3px" }}>Documents de location</h2>
-                  <p style={{ fontSize: 13, color: "#6b7280" }}>
+                  <p style={{ fontSize: 13, color: "#8a8477" }}>
                     Générez baux et états des lieux directement depuis vos biens. Tous les documents sont conformes à la loi ALUR.
                   </p>
                 </div>
@@ -1075,12 +1075,12 @@ export default function Proprietaire() {
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
                           <div>
                             <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 2 }}>{b.titre}</h3>
-                            <p style={{ fontSize: 13, color: "#6b7280" }}>
+                            <p style={{ fontSize: 13, color: "#8a8477" }}>
                               {b.ville}{b.adresse ? ` · ${b.adresse}` : ""}
-                              {hasLocataire && <span style={{ marginLeft: 8, color: "#16a34a", fontWeight: 600 }}>· Locataire : {b.locataire_email}</span>}
+                              {hasLocataire && <span style={{ marginLeft: 8, color: "#15803d", fontWeight: 600 }}>· Locataire : {b.locataire_email}</span>}
                             </p>
                           </div>
-                          <span style={{ background: statutColor[b.statut || "disponible"]?.bg || "#f3f4f6", color: statutColor[b.statut || "disponible"]?.color || "#6b7280", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+                          <span style={{ background: statutColor[b.statut || "disponible"]?.bg || "#F7F4EF", color: statutColor[b.statut || "disponible"]?.color || "#8a8477", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                             {b.statut || "disponible"}
                           </span>
                         </div>
@@ -1088,7 +1088,7 @@ export default function Proprietaire() {
                         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 12 }}>
                           {/* Bail */}
                           <a href={`/proprietaire/bail/${b.id}`}
-                            style={{ background: "#f9fafb", borderRadius: 14, padding: "16px 18px", textDecoration: "none", color: "#111", border: "1px solid #f3f4f6", transition: "all 0.15s", display: "block" }}
+                            style={{ background: "#f9fafb", borderRadius: 14, padding: "16px 18px", textDecoration: "none", color: "#111", border: "1px solid #F7F4EF", transition: "all 0.15s", display: "block" }}
                             onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#111"; (e.currentTarget as HTMLAnchorElement).style.color = "white" }}
                             onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#f9fafb"; (e.currentTarget as HTMLAnchorElement).style.color = "#111" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
@@ -1103,7 +1103,7 @@ export default function Proprietaire() {
 
                           {/* EDL entrée */}
                           <a href={`/proprietaire/edl/${b.id}?type=entree`}
-                            style={{ background: "#f9fafb", borderRadius: 14, padding: "16px 18px", textDecoration: "none", color: "#111", border: "1px solid #f3f4f6", transition: "all 0.15s", display: "block" }}
+                            style={{ background: "#f9fafb", borderRadius: 14, padding: "16px 18px", textDecoration: "none", color: "#111", border: "1px solid #F7F4EF", transition: "all 0.15s", display: "block" }}
                             onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#111"; (e.currentTarget as HTMLAnchorElement).style.color = "white" }}
                             onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#f9fafb"; (e.currentTarget as HTMLAnchorElement).style.color = "#111" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
@@ -1118,7 +1118,7 @@ export default function Proprietaire() {
 
                           {/* EDL sortie */}
                           <a href={`/proprietaire/edl/${b.id}?type=sortie`}
-                            style={{ background: "#f9fafb", borderRadius: 14, padding: "16px 18px", textDecoration: "none", color: "#111", border: "1px solid #f3f4f6", transition: "all 0.15s", display: "block" }}
+                            style={{ background: "#f9fafb", borderRadius: 14, padding: "16px 18px", textDecoration: "none", color: "#111", border: "1px solid #F7F4EF", transition: "all 0.15s", display: "block" }}
                             onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#111"; (e.currentTarget as HTMLAnchorElement).style.color = "white" }}
                             onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#f9fafb"; (e.currentTarget as HTMLAnchorElement).style.color = "#111" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
@@ -1133,7 +1133,7 @@ export default function Proprietaire() {
                         </div>
 
                         {!hasLocataire && (
-                          <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 12, fontStyle: "italic" }}>
+                          <p style={{ fontSize: 12, color: "#8a8477", marginTop: 12, fontStyle: "italic" }}>
                             Associez un locataire à ce bien (onglet Mes biens → Modifier) pour pouvoir envoyer les documents.
                           </p>
                         )}
@@ -1156,23 +1156,23 @@ export default function Proprietaire() {
           <div style={{ background: "white", borderRadius: 20, padding: 24 }}>
             <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 20 }}>Suivi des loyers</h2>
             {loyers.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px 0", color: "#9ca3af" }}>
+              <div style={{ textAlign: "center", padding: "40px 0", color: "#8a8477" }}>
                 <p style={{ fontSize: 15, fontWeight: 600 }}>Aucun loyer enregistré</p>
                 <p style={{ fontSize: 13, marginTop: 8 }}>Les loyers déclarés par vos locataires apparaîtront ici</p>
               </div>
             ) : loyers.map((l: any) => (
-              <div key={l.id} style={{ padding: "16px 0", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div key={l.id} style={{ padding: "16px 0", borderBottom: "1px solid #F7F4EF", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <p style={{ fontWeight: 700, fontSize: 14 }}>{l.titre_bien || "Bien"} — {l.mois}</p>
-                  <p style={{ color: "#6b7280", fontSize: 12, marginTop: 2 }}>Locataire : {l.locataire_email}</p>
+                  <p style={{ color: "#8a8477", fontSize: 12, marginTop: 2 }}>Locataire : {l.locataire_email}</p>
                   <p style={{ fontWeight: 700, fontSize: 14, marginTop: 4 }}>{l.montant} €</p>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   {l.statut === "confirmé" ? (
-                    <span style={{ background: "#dcfce7", color: "#16a34a", padding: "6px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700 }}>Confirmé</span>
+                    <span style={{ background: "#F0FAEE", color: "#15803d", padding: "6px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700 }}>Confirmé</span>
                   ) : (
                     <>
-                      <span style={{ background: "#fff7ed", color: "#ea580c", padding: "6px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700 }}>En attente</span>
+                      <span style={{ background: "#FBF6EA", color: "#a16207", padding: "6px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700 }}>En attente</span>
                       <button onClick={() => confirmerLoyer(l.id)}
                         style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "8px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
                         Confirmer
