@@ -11,6 +11,9 @@ import ViewTracker from "./ViewTracker"
 import MapBienWrapper from "./MapBienWrapper"
 import SignalerButton from "../../components/SignalerButton"
 import ShareButton from "./ShareButton"
+import LocataireMatchCard from "./LocataireMatchCard"
+import PartagerCard from "./PartagerCard"
+import StickyCTABanner from "./StickyCTABanner"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -117,13 +120,19 @@ export default async function Annonce({ params }: any) {
   // head-only pour éviter de transférer des lignes, juste le count.
   let nbVues = 0
   let nbCandidatures = 0
+  let nbAutresBiens = 0
   if (annonce?.id) {
-    const [{ count: vuesCount }, { count: candCount }] = await Promise.all([
+    const ownerEmail = annonce.proprietaire_email || null
+    const [{ count: vuesCount }, { count: candCount }, { count: autresBiensCount }] = await Promise.all([
       supabase.from("clics_annonces").select("annonce_id", { count: "exact", head: true }).eq("annonce_id", annonce.id),
       supabase.from("messages").select("id", { count: "exact", head: true }).eq("annonce_id", annonce.id),
+      ownerEmail
+        ? supabase.from("annonces").select("id", { count: "exact", head: true }).eq("proprietaire_email", ownerEmail).neq("id", annonce.id)
+        : Promise.resolve({ count: 0 } as { count: number | null }),
     ])
     nbVues = vuesCount ?? 0
     nbCandidatures = candCount ?? 0
+    nbAutresBiens = autresBiensCount ?? 0
   }
 
   // Annonces similaires : même ville + prix ±30 % + exclut la louée courante,
@@ -751,11 +760,14 @@ export default async function Annonce({ params }: any) {
             </section>
           </div>
 
-          <div className="r-detail-sidebar" style={{ width: 360, flexShrink: 0 }}>
+          <div className="r-detail-sidebar" style={{ width: 360, flexShrink: 0, display: "flex", flexDirection: "column", gap: 16 }}>
             {/* R10.7 — sticky info card ≥1024px, avec maxHeight pour éviter que
                 la carte dépasse la viewport sur petits écrans laptop. Scrollable
-                si le contenu excède l'espace dispo. */}
+                si le contenu excède l'espace dispo.
+                R10.10 — id="r-sticky-card-target" = cible de l'IntersectionObserver
+                du bandeau bas (StickyCTABanner). */}
             <div
+              id="r-sticky-card-target"
               className="r-detail-stickycard"
               style={{
                 background: "white",
@@ -829,6 +841,94 @@ export default async function Annonce({ params }: any) {
                 <SignalerButton type="annonce" targetId={String(annonce.id)} label="Signaler cette annonce" compact hideForEmail={annonce.proprietaire_email} />
               </div>
             </div>
+
+            {/* ─── R10.10 Card "Votre compatibilité" (profil recherché + loyer max) */}
+            <LocataireMatchCard annonce={annonce} />
+
+            {/* ─── R10.10 Card "Activité sur l'annonce" (social proof) ─── */}
+            {(nbCandidatures > 0 || nbVues > 0 || annonce.dispo) && (
+              <div style={{ background: "white", borderRadius: 20, padding: 22, boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0, marginBottom: 8 }}>
+                  Activité
+                </p>
+                <h3 style={{ fontSize: 16, fontWeight: 400, fontStyle: "italic", fontFamily: "'Fraunces', 'DM Sans', serif", letterSpacing: "-0.3px", margin: 0, marginBottom: 12, color: "#111" }}>
+                  Sur cette annonce
+                </h3>
+                <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {nbCandidatures > 0 && (
+                    <li style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#111" }}>
+                      <span style={{ color: "#666" }}>Candidatures envoyées</span>
+                      <span style={{ fontWeight: 700 }}>{nbCandidatures}</span>
+                    </li>
+                  )}
+                  {nbVues > 0 && (
+                    <li style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#111" }}>
+                      <span style={{ color: "#666" }}>Vues</span>
+                      <span style={{ fontWeight: 700 }}>{nbVues}</span>
+                    </li>
+                  )}
+                  {annonce.dispo && (
+                    <li style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#111", gap: 10 }}>
+                      <span style={{ color: "#666" }}>Disponibilité</span>
+                      <span style={{ fontWeight: 700, textAlign: "right" }}>{annonce.dispo}</span>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+
+            {/* ─── R10.10 Card "Budget estimé au départ" ──────────────── */}
+            {annonce.prix && (
+              <div style={{ background: "white", borderRadius: 20, padding: 22, boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0, marginBottom: 8 }}>
+                  Budget
+                </p>
+                <h3 style={{ fontSize: 16, fontWeight: 400, fontStyle: "italic", fontFamily: "'Fraunces', 'DM Sans', serif", letterSpacing: "-0.3px", margin: 0, marginBottom: 12, color: "#111" }}>
+                  À prévoir au départ
+                </h3>
+                {(() => {
+                  const loyerCC = Number(annonce.prix) + Number(annonce.charges || 0)
+                  const depot = Number(annonce.caution || annonce.prix)
+                  const total = loyerCC + depot
+                  return (
+                    <>
+                      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+                        <li style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                          <span style={{ color: "#666" }}>1er loyer CC</span>
+                          <span style={{ fontWeight: 600, color: "#111" }}>{loyerCC} €</span>
+                        </li>
+                        <li style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                          <span style={{ color: "#666" }}>Dépôt de garantie</span>
+                          <span style={{ fontWeight: 600, color: "#111" }}>{depot} €</span>
+                        </li>
+                      </ul>
+                      <div style={{ borderTop: "1px solid #F7F4EF", marginTop: 10, paddingTop: 10, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "0.6px" }}>Total</span>
+                        <span style={{ fontSize: 20, fontWeight: 700, color: "#111", letterSpacing: "-0.4px" }}>{total} €</span>
+                      </div>
+                      <p style={{ fontSize: 11, color: "#8a8477", marginTop: 8, marginBottom: 0, lineHeight: 1.5 }}>
+                        Zéro frais d&apos;agence — vous contactez directement le propriétaire.
+                      </p>
+                    </>
+                  )
+                })()}
+              </div>
+            )}
+
+            {/* ─── R10.10 Card "Autres biens de ce propriétaire" ──────── */}
+            {nbAutresBiens >= 1 && (
+              <div style={{ background: "white", borderRadius: 20, padding: 22, boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0, marginBottom: 8 }}>
+                  Propriétaire
+                </p>
+                <p style={{ fontSize: 13, color: "#111", margin: 0, marginBottom: 8, lineHeight: 1.5 }}>
+                  {annonce.proprietaire || "Ce propriétaire"} propose <strong>{nbAutresBiens} {nbAutresBiens === 1 ? "autre bien" : "autres biens"}</strong> en location.
+                </p>
+              </div>
+            )}
+
+            {/* ─── R10.10 Card Partager ───────────────────────────────── */}
+            <PartagerCard url={`${BASE_URL}/annonces/${id}`} titre={annonce.titre || "Bien à louer"} />
           </div>
         </div>
 
@@ -878,6 +978,11 @@ export default async function Annonce({ params }: any) {
           </section>
         )}
       </div>
+
+      {/* R10.10 — Bandeau sticky bas, visible uniquement quand la card sticky
+          droite sort du viewport. Ne s'affiche pas pour les propriétaires
+          sur leur propre annonce (géré côté composant). */}
+      <StickyCTABanner annonce={annonce} />
     </main>
   )
 }
