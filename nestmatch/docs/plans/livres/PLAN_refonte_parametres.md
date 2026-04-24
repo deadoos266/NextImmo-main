@@ -1,3 +1,6 @@
+﻿<!-- LIVRE 2026-04 -->
+<!-- Evidence: commit 3a69d26 palette handoff 7 fichiers -->
+
 # PLAN — Refonte page Paramètres
 
 ## 1. Contexte et objectif

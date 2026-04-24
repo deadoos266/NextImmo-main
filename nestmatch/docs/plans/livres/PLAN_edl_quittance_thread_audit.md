@@ -1,3 +1,6 @@
+﻿<!-- LIVRE 2026-04 -->
+<!-- Evidence: commit 373193d bulles systeme bail/quittance/EDL/auto-paiement -->
+
 # PLAN — Audit EDL / quittance / bail / dossier dans thread messages
 
 ## 1. Contexte et objectif

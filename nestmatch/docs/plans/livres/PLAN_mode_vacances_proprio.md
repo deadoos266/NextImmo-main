@@ -1,3 +1,6 @@
+﻿<!-- LIVRE 2026-04 -->
+<!-- Evidence: migration 011_mode_vacances.sql -->
+
 # PLAN — Mode vacances propriétaire
 
 ## 1. Contexte et objectif

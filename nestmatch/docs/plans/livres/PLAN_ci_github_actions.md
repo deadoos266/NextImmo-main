@@ -1,3 +1,6 @@
+﻿<!-- LIVRE 2026-01 -->
+<!-- Evidence: .github/workflows/ci.yml -->
+
 # PLAN — CI GitHub Actions (lint + tsc + test + build)
 
 ## 1. Contexte et objectif

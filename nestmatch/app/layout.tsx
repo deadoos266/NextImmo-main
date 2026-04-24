@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { DM_Sans } from 'next/font/google'
+import { DM_Sans, Fraunces } from 'next/font/google'
 import './globals.css'
 import Providers from './providers'
 import AdminBar from './components/AdminBar'
@@ -25,6 +25,19 @@ const dmSans = DM_Sans({
   style: ['normal', 'italic'],
   display: 'swap',
   variable: '--font-dm-sans',
+  adjustFontFallback: false,
+})
+
+// Fraunces : typo editoriale italic utilisee par les titres handoff KeyMatch
+// (KMHeading + KMMatchRing). Sans cet import, les titres tombaient en fallback
+// Georgia — les commits "Fraunces italic" ne rendaient donc jamais la vraie
+// police en prod. Exposee en CSS variable consommee par km.tsx.
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  style: ['normal', 'italic'],
+  display: 'swap',
+  variable: '--font-fraunces',
   adjustFontFallback: false,
 })
 
@@ -142,7 +155,7 @@ const ORG_JSON_LD = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={dmSans.variable} suppressHydrationWarning>
+    <html lang="fr" className={`${dmSans.variable} ${fraunces.variable}`} suppressHydrationWarning>
       <head>
         {/* theme-init.js RETIRÉ (cause confirmée de React #418 args HTML) :
             il faisait documentElement.setAttribute('data-theme', ...) AVANT

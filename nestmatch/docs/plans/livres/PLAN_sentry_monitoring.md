@@ -1,3 +1,6 @@
+﻿<!-- LIVRE 2026-01 -->
+<!-- Evidence: sentry.*.config.ts + instrumentation.ts -->
+
 # PLAN — Sentry monitoring front + API
 
 ## 1. Contexte et objectif

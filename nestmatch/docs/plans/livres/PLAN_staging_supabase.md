@@ -1,3 +1,6 @@
+﻿<!-- LIVRE 2026-01 -->
+<!-- Evidence: Phase 0 infra live -->
+
 # PLAN — Staging Supabase distinct
 
 ## 1. Contexte et objectif

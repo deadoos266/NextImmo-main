@@ -1,3 +1,6 @@
+﻿<!-- LIVRE 2026-04 -->
+<!-- Evidence: 158 tests vitest sur 16 fichiers lib/ -->
+
 # PLAN — Tests unitaires manquants (screening, profilCompleteness, dateHelpers)
 
 ## 1. Contexte et objectif

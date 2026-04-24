@@ -1,3 +1,6 @@
+﻿<!-- LIVRE 2026-04 -->
+<!-- Evidence: NotificationBell.tsx + migration 012_notifications.sql -->
+
 # PLAN — Cloche notifications centralisée navbar
 
 ## 1. Contexte et objectif

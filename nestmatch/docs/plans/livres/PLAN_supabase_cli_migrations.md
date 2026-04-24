@@ -1,3 +1,6 @@
+﻿<!-- LIVRE 2026-04 -->
+<!-- Evidence: workflow documente MEMORY.md -->
+
 # PLAN — Supabase CLI + migrations versionnées + seed
 
 ## 1. Contexte et objectif

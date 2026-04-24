@@ -1,3 +1,6 @@
+﻿<!-- LIVRE 2026-01 -->
+<!-- Evidence: lib/rateLimit.ts -->
+
 # PLAN — Rate-limits Upstash Redis distribués
 
 ## 1. Contexte et objectif

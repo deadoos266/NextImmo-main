@@ -1,3 +1,6 @@
+﻿<!-- LIVRE 2026-04 -->
+<!-- Evidence: BailTimeline.tsx + commit 3342436 -->
+
 # PLAN — Timeline post-location (4 étapes visible proprio + locataire)
 
 ## 1. Contexte et objectif

@@ -1,3 +1,6 @@
+﻿<!-- ARCHIVE - 2026-04-24 -->
+<!-- Bug #1 (hydration mismatch React #418) : RESOLU par commits c4df3f7 (root cause theme-init.js pre-hydration) + 7303c71 (ThemeApplier client post-mount). Verifie sur 6 pages + dark mode clean. -->
+<!-- Bug #2 (TypeError poll Sentry extension) : FAUX POSITIF, erreur provenait d'une extension navigateur, pas du code NestMatch. -->
 # Bugs découverts via Sentry (2026-04-19)
 
 Dès le branchement Sentry, 2 bugs réels sont remontés spontanément. À fixer en passe suivante, **pas prioritaires** mais à ne pas oublier.

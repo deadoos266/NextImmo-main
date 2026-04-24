@@ -1,3 +1,6 @@
+﻿<!-- LIVRE 2026-04 -->
+<!-- Evidence: Skeleton/EmptyState/BoundarySection.tsx en app/components/ui/ -->
+
 # PLAN — Error boundaries granulaires + Skeletons / Empty states cohérents
 
 ## 1. Contexte et objectif

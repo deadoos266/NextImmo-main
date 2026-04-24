@@ -163,7 +163,7 @@ export function KMHeading({
 }) {
   return (
     <Tag style={{
-      fontFamily: "'Fraunces', Georgia, serif",
+      fontFamily: "var(--font-fraunces), 'Fraunces', Georgia, serif",
       fontStyle: "italic",
       fontWeight: 500,
       fontSize: size,
@@ -274,7 +274,7 @@ export function KMMatchRing({
         width: innerSize, height: innerSize, borderRadius: "50%",
         background: km.white,
         display: "flex", alignItems: "center", justifyContent: "center",
-        fontFamily: "'Fraunces', Georgia, serif",
+        fontFamily: "var(--font-fraunces), 'Fraunces', Georgia, serif",
         fontStyle: "italic", fontWeight: 500,
         fontSize: Math.round(size * 0.32),
         color: km.ink,

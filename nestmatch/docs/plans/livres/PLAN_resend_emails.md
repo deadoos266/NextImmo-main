@@ -1,3 +1,6 @@
+﻿<!-- LIVRE 2026-04-19 -->
+<!-- Evidence: lib/email/resend.ts + domaine verifie Resend -->
+
 # PLAN — Resend emails (infra + 6 templates)
 
 ## 1. Contexte et objectif

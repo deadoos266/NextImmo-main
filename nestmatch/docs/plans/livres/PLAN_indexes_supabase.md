@@ -1,3 +1,6 @@
+﻿<!-- LIVRE 2026-01 -->
+<!-- Evidence: migration 010_indexes_performance.sql -->
+
 # PLAN — Review indexes Supabase sur colonnes de filtres
 
 ## 1. Contexte et objectif

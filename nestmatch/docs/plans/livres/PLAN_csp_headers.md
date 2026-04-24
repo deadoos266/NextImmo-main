@@ -1,3 +1,6 @@
+﻿<!-- LIVRE 2026-01 -->
+<!-- Evidence: next.config.js (report-only) -->
+
 # PLAN — CSP headers stricts
 
 ## 1. Contexte et objectif

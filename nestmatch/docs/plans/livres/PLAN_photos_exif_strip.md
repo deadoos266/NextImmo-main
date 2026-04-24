@@ -1,3 +1,6 @@
+﻿<!-- LIVRE 2026-04 -->
+<!-- Evidence: lib/imageSanitize.ts -->
+
 # PLAN — Strip EXIF photos (annonces + avatars) côté serveur
 
 ## 1. Contexte et objectif
