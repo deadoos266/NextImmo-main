@@ -1,70 +1,78 @@
 "use client"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
 /**
- * StickyInfoCard — R10.19 (portal bulletproof hors <body>)
+ * StickyInfoCard — R10.20 (JS-driven, bulletproof)
  *
- * PROBLÈME IDENTIFIÉ
- * ------------------
- * `position: fixed` était cassé par un ancêtre qui crée un containing block.
- * Spec CSS : tout ancêtre avec `filter`, `transform`, `will-change`,
- * `perspective` ou `contain` fait que `position: fixed` se comporte comme
- * `position: absolute` relatif à cet ancêtre, au lieu du viewport.
+ * Après plusieurs tentatives CSS cassées par le filter dark-mode sur <body>,
+ * on passe à une approche JS pure : la position de l'aside est calculée et
+ * appliquée en JavaScript à chaque scroll. Aucun risque de containing block
+ * puisqu'on ne dépend plus de `position: fixed` pour rester au viewport.
  *
- * Cas dans NestMatch : `globals.css` applique `html[data-theme="dark"] body
- * { filter: invert(...) }` pour le mode sombre. En dark mode, body devient
- * containing block → le widget « fixed » scrollait avec le body.
+ * STRATÉGIE
+ * ---------
+ * 1. React Portal vers un <div> enfant direct de <html> (hors <body>).
+ *    → Aucun ancêtre filtrant entre l'aside et le viewport.
+ * 2. Aside en `position: absolute` (pas fixed), initial containing block
+ *    = viewport (parent du portal target n'a aucune style positionnelle).
+ * 3. Scroll listener rAF-throttled qui update `style.top = scrollY + 80px`.
+ *    → L'aside suit le scroll manuellement, reste visuellement ancrée
+ *       à 80 px du haut du viewport en permanence.
+ * 4. Resize listener pour recalculer la gutter `right`.
  *
- * SOLUTION
- * --------
- * React Portal vers un `<div id="nm-fixed-portal-root">` injecté comme
- * enfant direct de `<html>` (hors de `<body>`). Aucun ancêtre entre l'aside
- * et le viewport → `position: fixed` est honoré par le navigateur
- * indépendamment des transforms/filters appliqués au reste du DOM.
+ * GUARDS
+ * ------
+ * - Breakpoint 1024 px : en-dessous, fallback flow normal (sidebar stacke
+ *   naturellement sous le contenu principal via la media query de page.tsx).
+ * - SSR : avant mount, même fallback flow normal — pas de hydration mismatch.
+ * - Dark mode : filter d'inversion ré-appliqué à l'aside (perdu en sortant
+ *   de <body>).
  *
- * En dark mode, on ré-applique manuellement le filter d'inversion sur
- * l'aside elle-même (pour rester visuellement cohérent avec la page).
- * Le filter sur l'aside crée un containing block pour ses DESCENDANTS
- * fixed uniquement — ça ne casse PAS le fixed de l'aside elle-même.
- *
- * BEHAVIOR
- * --------
- * Desktop (≥1024 px) : portal + position: fixed top:80 right:gutter.
- * Mobile (<1024 px) : pas de portal, flow normal dans la sidebar wrapper.
- * SSR / avant mount : fallback flow normal (pas de portal côté serveur).
+ * DIAGNOSTICS
+ * -----------
+ * `data-nm-sticky-version="R10.20"` + `data-nm-sticky-mode="{flow|portal}"`
+ * sur l'élément — permet de vérifier de l'extérieur (DevTools, script
+ * utilisateur) quelle branche est active sans mot de passe de debug.
  */
 
 const NAV_OFFSET = 80
 const CARD_WIDTH = 360
+const BREAKPOINT = 1024
 const PORTAL_TARGET_ID = "nm-fixed-portal-root"
+const VERSION = "R10.20"
 
 function getOrCreatePortalTarget(): HTMLElement {
   let el = document.getElementById(PORTAL_TARGET_ID)
   if (!el) {
     el = document.createElement("div")
     el.id = PORTAL_TARGET_ID
-    // Enfant direct de <html>, hors de <body> → aucun filter/transform
-    // parent ne peut casser le position:fixed des descendants.
     document.documentElement.appendChild(el)
   }
   return el
+}
+
+function computeRightOffset(): number {
+  // Même logique que `max(24px, calc((100vw - 1280px) / 2 + 24px))`
+  // en JS pour contrôler la position au pixel près.
+  if (typeof window === "undefined") return 24
+  return Math.max(24, Math.floor((window.innerWidth - 1280) / 2 + 24))
 }
 
 export default function StickyInfoCard({ children }: { children: React.ReactNode }) {
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null)
   const [isDesktop, setIsDesktop] = useState<boolean>(true)
   const [isDark, setIsDark] = useState<boolean>(false)
+  const asideRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     setPortalTarget(getOrCreatePortalTarget())
 
-    const mql = window.matchMedia("(min-width: 1024px)")
+    const mql = window.matchMedia(`(min-width: ${BREAKPOINT}px)`)
     const updateDesktop = () => setIsDesktop(mql.matches)
     updateDesktop()
     mql.addEventListener("change", updateDesktop)
 
-    // Synchronise le filter d'inversion quand le user toggle le thème.
     const checkDark = () => {
       setIsDark(document.documentElement.getAttribute("data-theme") === "dark")
     }
@@ -78,13 +86,42 @@ export default function StickyInfoCard({ children }: { children: React.ReactNode
     }
   }, [])
 
-  // Avant portal dispo ou mobile : flow normal. Garantit un HTML serveur ==
-  // client (pas de hydration mismatch) puisque le portal est exclusivement
-  // côté client.
+  // Scroll + resize listener : met à jour top/right du aside
+  // rAF-throttled pour rester smooth.
+  useEffect(() => {
+    if (!portalTarget || !isDesktop) return
+    let raf: number | null = null
+
+    function apply() {
+      raf = null
+      const el = asideRef.current
+      if (!el) return
+      el.style.top = `${window.scrollY + NAV_OFFSET}px`
+      el.style.right = `${computeRightOffset()}px`
+    }
+
+    function schedule() {
+      if (raf !== null) return
+      raf = requestAnimationFrame(apply)
+    }
+
+    apply() // position initiale
+    window.addEventListener("scroll", schedule, { passive: true })
+    window.addEventListener("resize", schedule)
+    return () => {
+      window.removeEventListener("scroll", schedule)
+      window.removeEventListener("resize", schedule)
+      if (raf !== null) cancelAnimationFrame(raf)
+    }
+  }, [portalTarget, isDesktop])
+
+  // Fallback pre-mount / mobile : flow normal stacké.
   if (!portalTarget || !isDesktop) {
     return (
       <div
         id="r-sticky-card-target"
+        data-nm-sticky-version={VERSION}
+        data-nm-sticky-mode="flow"
         style={{ width: "100%", display: "flex", flexDirection: "column", gap: 16 }}
       >
         {children}
@@ -94,21 +131,22 @@ export default function StickyInfoCard({ children }: { children: React.ReactNode
 
   const aside = (
     <aside
+      ref={asideRef}
       id="r-sticky-card-target"
+      data-nm-sticky-version={VERSION}
+      data-nm-sticky-mode="portal"
       aria-label="Informations et actions du logement"
       style={{
-        position: "fixed",
+        position: "absolute", // top/right sont driven par le scroll listener
         top: NAV_OFFSET,
-        right: `max(24px, calc((100vw - 1280px) / 2 + 24px))`,
+        right: computeRightOffset(),
         width: CARD_WIDTH,
-        height: "auto",
         zIndex: 9998,
         display: "flex",
         flexDirection: "column",
         gap: 16,
         fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
         color: "#111",
-        // Dark mode : on ré-applique l'inversion perdue en sortant de <body>.
         filter: isDark ? "invert(0.92) hue-rotate(180deg)" : undefined,
       }}
     >
