@@ -9,6 +9,23 @@ import { useResponsive } from "../hooks/useResponsive"
 import Logo from "./Logo"
 import NotificationBell from "./NotificationBell"
 
+// ─── Icon vocabulary (aligné sur le handoff Claude Design, stroke 1.8px) ─────
+function MenuIcon({ name }: { name: string }) {
+  const common = { width: 15, height: 15, viewBox: "0 0 24 24", fill: "none", stroke: "#555", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true, style: { flexShrink: 0 } }
+  switch (name) {
+    case "user":     return <svg {...common}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    case "home":     return <svg {...common}><path d="M3 9.5 12 3l9 6.5V20a2 2 0 0 1-2 2h-4v-7h-6v7H5a2 2 0 0 1-2-2V9.5z"/></svg>
+    case "plus":     return <svg {...common}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    case "wrench":   return <svg {...common}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94L14.7 6.3z"/></svg>
+    case "chat":     return <svg {...common}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    case "file":     return <svg {...common}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    case "calendar": return <svg {...common}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    case "heart":    return <svg {...common}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l9.84-9.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+    case "settings": return <svg {...common}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    default:         return null
+  }
+}
+
 export default function Navbar() {
   const { data: session } = useSession()
   const { isAdmin, proprietaireActive } = useRole()
@@ -216,49 +233,73 @@ export default function Navbar() {
               {menuOpen && (
                 <>
                   <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 150 }} />
-                  <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, background: "white", borderRadius: 16, border: "1px solid #EAE6DF", boxShadow: "0 8px 32px rgba(0,0,0,0.12)", minWidth: 220, zIndex: 200, overflow: "hidden" }}>
-                    <div style={{ padding: "14px 16px 12px", borderBottom: "1px solid #F7F4EF" }}>
-                      <p style={{ fontWeight: 700, fontSize: 14 }}>{session.user?.name}</p>
-                      <p style={{ color: "#8a8477", fontSize: 12, marginTop: 2 }}>{session.user?.email}</p>
+                  <div style={{ position: "absolute", top: "calc(100% + 12px)", right: 0, background: "white", borderRadius: 14, border: "1px solid #EAE6DF", boxShadow: "0 12px 32px -8px rgba(0,0,0,0.18)", minWidth: 260, zIndex: 200, overflow: "visible", fontFamily: "inherit" }}>
+                    {/* Flèche pointeur vers le trigger */}
+                    <div style={{ position: "absolute", top: -6, right: 24, width: 10, height: 10, background: "#fff", borderLeft: "1px solid #EAE6DF", borderTop: "1px solid #EAE6DF", transform: "rotate(45deg)" }} />
+
+                    {/* Header avec avatar + name + email */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderBottom: "1px solid #F1EDE5" }}>
+                      {avatarSrc
+                        ? <img src={avatarSrc} alt="avatar" referrerPolicy="no-referrer" style={{ width: 34, height: 34, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                        : <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{session.user?.name?.[0]}</div>
+                      }
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <p style={{ fontWeight: 700, fontSize: 13, color: "#111", letterSpacing: "-0.2px", lineHeight: 1.2, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{session.user?.name}</p>
+                        <p style={{ color: "#888", fontSize: 11, lineHeight: 1.2, margin: 0, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{session.user?.email}</p>
+                      </div>
                     </div>
+
+                    {/* Eyebrow groupe */}
+                    <p style={{ fontSize: 10, fontWeight: 700, color: "#999", textTransform: "uppercase", letterSpacing: "1.2px", padding: "10px 16px 4px", margin: 0 }}>Mon espace</p>
+
+                    {/* Items avec icônes et indicateur actif */}
                     {(proprietaireActive ? [
-                      { href: "/profil",               label: "Mon profil",      desc: "Informations personnelles" },
-                      { href: "/proprietaire",         label: "Mes biens",       desc: "Dashboard proprietaire" },
-                      { href: "/proprietaire/ajouter", label: "Publier un bien", desc: "Ajouter une annonce" },
-                      { href: "/carnet",               label: "Carnet d'entretien", desc: "Travaux & maintenance" },
-                      { href: "/messages",             label: "Messages",        desc: "Vos conversations" },
+                      { href: "/profil",               label: "Mon profil",      icon: "user" },
+                      { href: "/proprietaire",         label: "Mes biens",       icon: "home" },
+                      { href: "/proprietaire/ajouter", label: "Publier un bien", icon: "plus" },
+                      { href: "/carnet",               label: "Carnet d'entretien", icon: "wrench" },
+                      { href: "/messages",             label: "Messages",        icon: "chat", count: badgeMessages },
                     ] : [
-                      { href: "/profil",       label: "Mon profil",   desc: "Criteres de recherche" },
-                      { href: "/dossier",      label: "Mon dossier",  desc: "Documents & candidature" },
-                      { href: "/visites",      label: "Mes visites",  desc: "Demandes & confirmations" },
-                      { href: "/favoris",      label: "Mes favoris",  desc: "Annonces sauvegardees" },
-                      { href: "/messages",     label: "Messages",     desc: "Vos conversations" },
-                    ]).map(item => (
-                      <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)}
-                        style={{ display: "block", padding: "12px 16px", textDecoration: "none", color: "#111" }}
-                        onMouseEnter={e => (e.currentTarget.style.background = "#F7F4EF")}
-                        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                        <p style={{ fontSize: 14, fontWeight: 600 }}>{item.label}</p>
-                        <p style={{ fontSize: 12, color: "#8a8477", marginTop: 1 }}>{item.desc}</p>
-                      </Link>
-                    ))}
+                      { href: "/profil",       label: "Mon profil",   icon: "user" },
+                      { href: "/dossier",      label: "Mon dossier",  icon: "file" },
+                      { href: "/visites",      label: "Mes visites",  icon: "calendar", count: badgeVisites },
+                      { href: "/favoris",      label: "Mes favoris",  icon: "heart" },
+                      { href: "/messages",     label: "Messages",     icon: "chat", count: badgeMessages },
+                    ]).map(item => {
+                      const active = isActive(item.href)
+                      return (
+                        <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)}
+                          style={{ position: "relative", display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", textDecoration: "none", color: "#111", transition: "background 150ms ease" }}
+                          onMouseEnter={e => (e.currentTarget.style.background = "#F7F4EF")}
+                          onMouseLeave={e => (e.currentTarget.style.background = active ? "#F7F4EF" : "transparent")}
+                          ref={el => { if (el && active) el.style.background = "#F7F4EF" }}>
+                          {active && <span style={{ position: "absolute", left: 0, top: 6, bottom: 6, width: 2, background: "#111", borderRadius: 2 }} />}
+                          <MenuIcon name={item.icon} />
+                          <span style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>{item.label}</span>
+                          {(item as any).count > 0 && (
+                            <span style={{ background: "#b91c1c", color: "white", borderRadius: 999, fontSize: 10, fontWeight: 700, minWidth: 18, height: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 5px" }}>{(item as any).count}</span>
+                          )}
+                        </Link>
+                      )
+                    })}
+
+                    {/* Divider */}
+                    <div style={{ height: 1, background: "#F1EDE5", margin: "6px 0" }} />
+
+                    {/* Paramètres */}
                     <Link href="/parametres" onClick={() => setMenuOpen(false)}
-                      style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", textDecoration: "none", color: "#111", borderTop: "1px solid #F7F4EF" }}
+                      style={{ position: "relative", display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", textDecoration: "none", color: "#111" }}
                       onMouseEnter={e => (e.currentTarget.style.background = "#F7F4EF")}
                       onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                      </svg>
-                      <div>
-                        <p style={{ fontSize: 14, fontWeight: 600 }}>Paramètres</p>
-                        <p style={{ fontSize: 12, color: "#8a8477", marginTop: 1 }}>Compte, apparence, sécurité</p>
-                      </div>
+                      <MenuIcon name="settings" />
+                      <span style={{ fontSize: 13, fontWeight: 500 }}>Paramètres</span>
                     </Link>
-                    <div style={{ borderTop: "1px solid #F7F4EF", padding: 8 }}>
+
+                    {/* Footer : version + déconnexion */}
+                    <div style={{ borderTop: "1px solid #F1EDE5", marginTop: 6, padding: "8px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 10, color: "#888", letterSpacing: "0.3px" }}>KeyMatch · beta</span>
                       <button onClick={() => { setMenuOpen(false); signOut({ callbackUrl: "/" }) }}
-                        style={{ width: "100%", padding: "10px 12px", background: "none", border: "none", borderRadius: 10, cursor: "pointer", textAlign: "left", fontSize: 14, fontWeight: 600, color: "#b91c1c", fontFamily: "inherit" }}
-                        onMouseEnter={e => (e.currentTarget.style.background = "#FEECEC")}
-                        onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+                        style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#b91c1c", fontFamily: "inherit", padding: 0, letterSpacing: "0.2px" }}>
                         Déconnexion
                       </button>
                     </div>
