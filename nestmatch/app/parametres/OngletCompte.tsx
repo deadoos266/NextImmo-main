@@ -136,14 +136,15 @@ export default function OngletCompte() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,500&display=swap');`}</style>
       {proprietaireActive && (
-        <section style={{ background: "white", borderRadius: 20, padding: 28 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 4px" }}>Message d&apos;indisponibilité</h2>
-          <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px", lineHeight: 1.5 }}>
+        <section style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, padding: 28, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+          <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, letterSpacing: "-0.3px", color: "#111", margin: "0 0 6px" }}>Message d&apos;indisponibilité</h2>
+          <p style={{ fontSize: 13, color: "#8a8477", margin: "0 0 16px", lineHeight: 1.5 }}>
             Affiche un bandeau sur vos fiches annonces pour prévenir les locataires que vos réponses peuvent tarder (congés, forte activité, etc.). Vos annonces restent visibles et les candidatures possibles.
           </p>
           {vacancesLoading ? (
-            <p style={{ fontSize: 13, color: "#9ca3af" }}>Chargement…</p>
+            <p style={{ fontSize: 13, color: "#8a8477" }}>Chargement…</p>
           ) : (
             <>
               <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
@@ -154,11 +155,11 @@ export default function OngletCompte() {
                   disabled={vacancesSaving}
                   style={{ width: 18, height: 18, accentColor: "#111", cursor: vacancesSaving ? "wait" : "pointer" }}
                 />
-                <span style={{ fontSize: 14, fontWeight: 700 }}>Afficher le bandeau sur mes annonces</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>Afficher le bandeau sur mes annonces</span>
               </label>
               {vacancesActif && (
                 <div style={{ marginTop: 14 }}>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 6 }}>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "1.2px" }}>
                     Message affiché sur vos fiches ({vacancesMessage.length}/{VACANCES_MAX_LENGTH})
                   </label>
                   <textarea
@@ -168,27 +169,34 @@ export default function OngletCompte() {
                     placeholder="Ex : Délai de réponse actuel 3 à 5 jours. Merci pour votre patience."
                     rows={3}
                     maxLength={VACANCES_MAX_LENGTH}
-                    style={{ width: "100%", padding: "10px 12px", border: "1.5px solid #e5e7eb", borderRadius: 12, fontSize: 14, fontFamily: "inherit", resize: "vertical", boxSizing: "border-box", outline: "none" }}
+                    style={{ width: "100%", padding: "10px 12px", border: "1px solid #EAE6DF", borderRadius: 12, fontSize: 14, fontFamily: "inherit", resize: "vertical", boxSizing: "border-box", outline: "none", background: "#fff" }}
                   />
                 </div>
               )}
-              {vacancesSaving && <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 10 }}>Enregistrement…</p>}
-              {vacancesSaved && !vacancesSaving && <p style={{ fontSize: 11, color: "#16a34a", marginTop: 10, fontWeight: 700 }}>Enregistré.</p>}
-              {vacancesError && <p style={{ fontSize: 12, color: "#dc2626", marginTop: 10 }}>{vacancesError}</p>}
+              {vacancesSaving && <p style={{ fontSize: 11, color: "#8a8477", marginTop: 10 }}>Enregistrement…</p>}
+              {vacancesSaved && !vacancesSaving && (
+                <p style={{ fontSize: 11, color: "#15803d", marginTop: 10, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <span aria-hidden style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 16, height: 16, borderRadius: "50%", background: "#DCF5E4", border: "1px solid #C6E9C0", color: "#15803d" }}>
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                  Enregistré.
+                </p>
+              )}
+              {vacancesError && <p style={{ fontSize: 12, color: "#b91c1c", marginTop: 10, background: "#FEECEC", border: "1px solid #F4C9C9", borderRadius: 12, padding: "8px 12px" }}>{vacancesError}</p>}
             </>
           )}
         </section>
       )}
 
-      <section style={{ background: "white", borderRadius: 20, padding: 28 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 4px" }}>Notifications par e-mail</h2>
-        <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 18px", lineHeight: 1.5 }}>
+      <section style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, padding: 28, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+        <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, letterSpacing: "-0.3px", color: "#111", margin: "0 0 6px" }}>Notifications par e-mail</h2>
+        <p style={{ fontSize: 13, color: "#8a8477", margin: "0 0 18px", lineHeight: 1.5 }}>
           Choisissez les événements pour lesquels vous souhaitez recevoir un e-mail. Vos préférences sont enregistrées automatiquement.
           {" "}
           <em>Note : l&apos;envoi d&apos;e-mails est en cours de mise en place — vos choix seront appliqués dès l&apos;activation.</em>
         </p>
         {loading ? (
-          <p style={{ fontSize: 13, color: "#9ca3af" }}>Chargement…</p>
+          <p style={{ fontSize: 13, color: "#8a8477" }}>Chargement…</p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {LABELS.map(({ key, label, desc }) => (
@@ -200,37 +208,37 @@ export default function OngletCompte() {
                   style={{ marginTop: 3, width: 18, height: 18, accentColor: "#111", cursor: "pointer" }}
                 />
                 <div>
-                  <p style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>{label}</p>
-                  <p style={{ fontSize: 12, color: "#6b7280", margin: "2px 0 0", lineHeight: 1.5 }}>{desc}</p>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "#111", margin: 0 }}>{label}</p>
+                  <p style={{ fontSize: 12, color: "#8a8477", margin: "2px 0 0", lineHeight: 1.5 }}>{desc}</p>
                 </div>
               </label>
             ))}
           </div>
         )}
-        {saving && <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 12 }}>Enregistrement…</p>}
+        {saving && <p style={{ fontSize: 11, color: "#8a8477", marginTop: 12 }}>Enregistrement…</p>}
       </section>
 
-      <section style={{ background: "white", borderRadius: 20, padding: 28 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 4px" }}>Mes données</h2>
-        <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px", lineHeight: 1.5 }}>
+      <section style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, padding: 28, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+        <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, letterSpacing: "-0.3px", color: "#111", margin: "0 0 6px" }}>Mes données</h2>
+        <p style={{ fontSize: 13, color: "#8a8477", margin: "0 0 16px", lineHeight: 1.5 }}>
           Téléchargez une copie JSON de votre profil. Pour une extraction complète (messages, candidatures, dossier), contactez-nous depuis la page Contact.
         </p>
         <button
           type="button"
           onClick={telechargerMesDonnees}
-          style={{ background: "white", color: "#111", border: "1.5px solid #111", borderRadius: 999, padding: "10px 22px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+          style={{ background: "#F7F4EF", color: "#111", border: "1px solid #EAE6DF", borderRadius: 999, padding: "10px 22px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}>
           Télécharger mes données (JSON)
         </button>
       </section>
 
-      <section style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 20, padding: 24 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 800, color: "#991b1b", margin: "0 0 4px" }}>Zone sensible</h2>
-        <p style={{ fontSize: 13, color: "#7f1d1d", margin: "0 0 14px", lineHeight: 1.5 }}>
+      <section style={{ background: "#FEECEC", border: "1px solid #F4C9C9", borderRadius: 20, padding: 26 }}>
+        <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 20, letterSpacing: "-0.3px", color: "#b91c1c", margin: "0 0 6px" }}>Zone sensible</h2>
+        <p style={{ fontSize: 13, color: "#b91c1c", opacity: 0.85, margin: "0 0 14px", lineHeight: 1.5 }}>
           La suppression du compte est définitive. Vos annonces, messages, visites et dossier sont effacés sans possibilité de récupération.
         </p>
         {!showDelete ? (
           <button onClick={() => setShowDelete(true)}
-            style={{ background: "white", border: "1.5px solid #dc2626", color: "#dc2626", borderRadius: 999, padding: "10px 22px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+            style={{ background: "white", border: "1px solid #F4C9C9", color: "#b91c1c", borderRadius: 999, padding: "10px 22px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}>
             Supprimer mon compte
           </button>
         ) : (

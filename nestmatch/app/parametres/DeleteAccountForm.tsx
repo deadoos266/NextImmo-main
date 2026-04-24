@@ -2,7 +2,7 @@
 import { useState } from "react"
 import { signOut } from "next-auth/react"
 
-const inp = { width: "100%", padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 16, outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit" }
+const inp = { width: "100%", padding: "11px 14px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 16, outline: "none", boxSizing: "border-box" as const, fontFamily: "inherit", background: "#fff" }
 
 /**
  * Suppression de compte (RGPD).
@@ -40,16 +40,16 @@ export default function DeleteAccountForm({ onCancel }: { onCancel: () => void }
 
   return (
     <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 420 }}>
-      <p style={{ fontSize: 13, color: "#7f1d1d" }}>Tapez <strong>SUPPRIMER</strong> pour confirmer la suppression définitive.</p>
+      <p style={{ fontSize: 13, color: "#b91c1c" }}>Tapez <strong>SUPPRIMER</strong> pour confirmer la suppression définitive.</p>
       <input type="text" placeholder="SUPPRIMER" value={confirm} onChange={e => setConfirm(e.target.value)} style={inp} />
-      {error && <p style={{ color: "#dc2626", fontSize: 13 }}>{error}</p>}
-      <div style={{ display: "flex", gap: 10 }}>
+      {error && <p style={{ color: "#b91c1c", fontSize: 13, background: "#FEECEC", border: "1px solid #F4C9C9", borderRadius: 12, padding: "8px 12px", margin: 0 }}>{error}</p>}
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <button type="submit" disabled={loading || confirm !== "SUPPRIMER"}
-          style={{ background: "#dc2626", color: "white", border: "none", borderRadius: 999, padding: "10px 24px", fontWeight: 700, fontSize: 14, cursor: loading ? "not-allowed" : (confirm === "SUPPRIMER" ? "pointer" : "not-allowed"), opacity: confirm === "SUPPRIMER" ? 1 : 0.5, fontFamily: "inherit" }}>
-          {loading ? "Suppression..." : "Supprimer définitivement"}
+          style={{ background: "#b91c1c", color: "white", border: "none", borderRadius: 999, padding: "10px 22px", fontWeight: 600, fontSize: 11, cursor: loading ? "not-allowed" : (confirm === "SUPPRIMER" ? "pointer" : "not-allowed"), opacity: confirm === "SUPPRIMER" ? 1 : 0.5, fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+          {loading ? "Suppression…" : "Supprimer définitivement"}
         </button>
         <button type="button" onClick={onCancel} disabled={loading}
-          style={{ background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 999, padding: "10px 24px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
+          style={{ background: "white", color: "#111", border: "1px solid #EAE6DF", borderRadius: 999, padding: "10px 22px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}>
           Annuler
         </button>
       </div>

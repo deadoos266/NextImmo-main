@@ -41,7 +41,12 @@ export default function ChangePasswordForm({ onDone }: { onDone: () => void }) {
   }
 
   if (ok) return (
-    <p style={{ marginTop: 14, color: "#16a34a", fontSize: 13, fontWeight: 600 }}>Mot de passe mis à jour.</p>
+    <p style={{ marginTop: 14, color: "#15803d", fontSize: 13, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 8 }}>
+      <span aria-hidden style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "#DCF5E4", border: "1px solid #C6E9C0", color: "#15803d" }}>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>
+      Mot de passe mis à jour.
+    </p>
   )
 
   return (
@@ -49,10 +54,10 @@ export default function ChangePasswordForm({ onDone }: { onDone: () => void }) {
       <PasswordInput value={currentPassword} onChange={setCurrentPassword} placeholder="Mot de passe actuel" required autoComplete="current-password" />
       <PasswordInput value={newPassword} onChange={setNewPassword} placeholder="Nouveau mot de passe (8+ caractères)" required minLength={8} autoComplete="new-password" />
       <PasswordInput value={confirmPassword} onChange={setConfirmPassword} placeholder="Confirmer le nouveau mot de passe" required autoComplete="new-password" />
-      {error && <p style={{ color: "#dc2626", fontSize: 13 }}>{error}</p>}
+      {error && <p style={{ color: "#b91c1c", fontSize: 13, background: "#FEECEC", border: "1px solid #F4C9C9", borderRadius: 12, padding: "8px 12px", margin: 0 }}>{error}</p>}
       <button type="submit" disabled={loading}
-        style={{ alignSelf: "flex-start", background: "#111", color: "white", border: "none", borderRadius: 999, padding: "10px 24px", fontWeight: 700, fontSize: 14, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, fontFamily: "inherit" }}>
-        {loading ? "Enregistrement..." : "Enregistrer"}
+        style={{ alignSelf: "flex-start", background: "#111", color: "white", border: "none", borderRadius: 999, padding: "10px 22px", fontWeight: 600, fontSize: 11, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1, fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+        {loading ? "Enregistrement…" : "Enregistrer"}
       </button>
     </form>
   )

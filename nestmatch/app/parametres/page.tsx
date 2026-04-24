@@ -72,9 +72,11 @@ function ParametresInner() {
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,500&display=swap');`}</style>
       <div style={{ maxWidth: 1040, margin: "0 auto", padding: isMobile ? "24px 16px 40px" : "40px 48px 60px" }}>
-        <h1 style={{ fontSize: isMobile ? 24 : 30, fontWeight: 800, letterSpacing: "-0.5px", margin: "0 0 6px" }}>Paramètres</h1>
-        <p style={{ fontSize: isMobile ? 13 : 14, color: "#6b7280", margin: "0 0 24px", lineHeight: 1.5 }}>
+        <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 10px" }}>Réglages</p>
+        <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: isMobile ? 28 : 40, letterSpacing: "-0.5px", color: "#111", margin: "0 0 8px" }}>Paramètres</h1>
+        <p style={{ fontSize: isMobile ? 13 : 14, color: "#8a8477", margin: "0 0 28px", lineHeight: 1.6 }}>
           Gérez votre compte, votre apparence et vos préférences de notifications.
         </p>
 
@@ -107,11 +109,11 @@ function ParametresInner() {
                     gap: 10,
                     padding: isMobile ? "10px 14px" : "11px 14px",
                     background: active ? "#111" : "white",
-                    color: active ? "white" : "#374151",
-                    border: `1.5px solid ${active ? "#111" : "#e5e7eb"}`,
+                    color: active ? "white" : "#111",
+                    border: `1px solid ${active ? "#111" : "#EAE6DF"}`,
                     borderRadius: 12,
-                    fontSize: 14,
-                    fontWeight: active ? 800 : 600,
+                    fontSize: 13,
+                    fontWeight: active ? 700 : 500,
                     cursor: "pointer",
                     fontFamily: "inherit",
                     whiteSpace: "nowrap",
@@ -119,6 +121,7 @@ function ParametresInner() {
                     textAlign: "left",
                     width: isMobile ? "auto" : "100%",
                     transition: "all 0.15s",
+                    boxShadow: active ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
                   }}
                 >
                   {t.icon}
@@ -143,7 +146,7 @@ function ParametresInner() {
 export default function ParametresPage() {
   return (
     <Suspense fallback={
-      <main style={{ minHeight: "100vh", background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif", color: "#6b7280" }}>Chargement…</main>
+      <main style={{ minHeight: "100vh", background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif", color: "#8a8477" }}>Chargement…</main>
     }>
       <ParametresInner />
     </Suspense>
