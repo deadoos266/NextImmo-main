@@ -486,6 +486,12 @@ export default async function Annonce({ params }: any) {
               )}
             </div>
 
+            {/* ─── R10.16 Profil recherché (ex-sidebar, remonté en colonne
+                gauche pour visibilité du matching dès le début) ──────── */}
+            <div style={{ marginBottom: 20 }}>
+              <LocataireMatchCard annonce={annonce} />
+            </div>
+
             {/* ─── R10.9 À propos de ce logement ─────────────────────── */}
             <section style={{ background: "white", borderRadius: 20, padding: "28px 28px 26px", marginBottom: 20 }}>
               <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.6px", margin: 0, marginBottom: 8 }}>
@@ -539,6 +545,44 @@ export default async function Annonce({ params }: any) {
                 })()}
               </dl>
             </section>
+
+            {/* ─── R10.16 Budget à prévoir au départ (ex-sidebar) ─── */}
+            {annonce.prix && (
+              <section style={{ background: "white", borderRadius: 20, padding: "28px 28px 26px", marginBottom: 20 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.6px", margin: 0, marginBottom: 8 }}>
+                  Budget
+                </p>
+                <h2 style={{ fontSize: 24, fontWeight: 400, fontStyle: "italic", fontFamily: "'Fraunces', 'DM Sans', serif", letterSpacing: "-0.4px", margin: 0, marginBottom: 18, color: "#111" }}>
+                  À prévoir au départ
+                </h2>
+                {(() => {
+                  const loyerCC = Number(annonce.prix) + Number(annonce.charges || 0)
+                  const depot = Number(annonce.caution || annonce.prix)
+                  const total = loyerCC + depot
+                  return (
+                    <>
+                      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+                        <li style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
+                          <span style={{ color: "#666" }}>1er loyer CC</span>
+                          <span style={{ fontWeight: 600, color: "#111" }}>{loyerCC} €</span>
+                        </li>
+                        <li style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
+                          <span style={{ color: "#666" }}>Dépôt de garantie</span>
+                          <span style={{ fontWeight: 600, color: "#111" }}>{depot} €</span>
+                        </li>
+                      </ul>
+                      <div style={{ borderTop: "1px solid #F7F4EF", marginTop: 14, paddingTop: 14, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "0.6px" }}>Total</span>
+                        <span style={{ fontSize: 22, fontWeight: 700, color: "#111", letterSpacing: "-0.4px" }}>{total} €</span>
+                      </div>
+                      <p style={{ fontSize: 12, color: "#8a8477", marginTop: 10, marginBottom: 0, lineHeight: 1.5 }}>
+                        Zéro frais d&apos;agence — vous contactez directement le propriétaire.
+                      </p>
+                    </>
+                  )
+                })()}
+              </section>
+            )}
 
             {/* ─── R10.9 Diagnostic énergétique (DPE bars) ──────────── */}
             {annonce.dpe && typeof annonce.dpe === "string" && (
@@ -707,6 +751,43 @@ export default async function Annonce({ params }: any) {
               </section>
             )}
 
+            {/* ─── R10.16 Partager (ex-sidebar) ───────────────────── */}
+            <div style={{ marginBottom: 20 }}>
+              <PartagerCard url={`${BASE_URL}/annonces/${id}`} titre={annonce.titre || "Bien à louer"} />
+            </div>
+
+            {/* ─── R10.16 Activité sur l'annonce (ex-sidebar) ────── */}
+            {(nbCandidatures > 0 || nbVues > 0 || annonce.dispo) && (
+              <section style={{ background: "white", borderRadius: 20, padding: "28px 28px 26px", marginBottom: 20 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.6px", margin: 0, marginBottom: 8 }}>
+                  Activité
+                </p>
+                <h2 style={{ fontSize: 24, fontWeight: 400, fontStyle: "italic", fontFamily: "'Fraunces', 'DM Sans', serif", letterSpacing: "-0.4px", margin: 0, marginBottom: 18, color: "#111" }}>
+                  Activité de l&apos;annonce
+                </h2>
+                <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+                  {nbCandidatures > 0 && (
+                    <li style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#111" }}>
+                      <span style={{ color: "#666" }}>Candidatures envoyées</span>
+                      <span style={{ fontWeight: 700 }}>{nbCandidatures}</span>
+                    </li>
+                  )}
+                  {nbVues > 0 && (
+                    <li style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#111" }}>
+                      <span style={{ color: "#666" }}>Vues</span>
+                      <span style={{ fontWeight: 700 }}>{nbVues}</span>
+                    </li>
+                  )}
+                  {annonce.dispo && (
+                    <li style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#111", gap: 10 }}>
+                      <span style={{ color: "#666" }}>Disponibilité</span>
+                      <span style={{ fontWeight: 700, textAlign: "right" }}>{annonce.dispo}</span>
+                    </li>
+                  )}
+                </ul>
+              </section>
+            )}
+
             {/* ─── R10.9 FAQ rapide ─────────────────────────────────── */}
             <section style={{ background: "white", borderRadius: 20, padding: "28px 28px 24px", marginBottom: 20 }}>
               <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.6px", margin: 0, marginBottom: 8 }}>
@@ -764,13 +845,13 @@ export default async function Annonce({ params }: any) {
           </div>
 
           <div className="r-detail-sidebar" style={{ width: 360, flexShrink: 0 }}>
-            {/* R10.15 — widget fixed-always. StickyInfoCard rend un <aside>
-                position:fixed top:80 right:gutter, scrollable en interne,
-                qui contient TOUTES les cards de la sidebar (booking, profil
-                recherché, activité, budget, autres biens, partager). Le
-                parent .r-detail-sidebar width:360 sert de placeholder
-                horizontal pour que la colonne gauche ne déborde pas. Mobile
-                <1024 : aside retombe en flow normal (position: relative). */}
+            {/* R10.16 — widget fixed ULTRA simple. Ne contient QUE la booking
+                card (prix + score + CTAs + proprio). Hauteur auto, zéro
+                overflow, zéro scroll nested. Les autres cards (profil
+                recherché, budget, activité, partager, autres biens) ont été
+                re-ventilées dans le flow principal (colonne gauche et bas de
+                page). Le parent .r-detail-sidebar width:360 reste placeholder
+                horizontal. Mobile <1024 : aside retombe en flow normal. */}
             <StickyInfoCard>
             <div
               className="r-detail-stickycard"
@@ -841,104 +922,23 @@ export default async function Annonce({ params }: any) {
                 <SignalerButton type="annonce" targetId={String(annonce.id)} label="Signaler cette annonce" compact hideForEmail={annonce.proprietaire_email} />
               </div>
             </div>
-
-            {/* ─── R10.10 Card "Profil recherché" (critères owner + loyer max)
-                R10.12 — dédoublonnage : le titre "Votre compatibilité" et la
-                pastille globale sont retirés côté composant, puisque le chip
-                "X % de compatibilité" est déjà affiché dans la sticky card. */}
-            <div style={{ marginTop: 16 }}>
-              <LocataireMatchCard annonce={annonce} />
-            </div>
-
-            {/* ─── R10.10 Card "Activité sur l'annonce" (social proof) ─── */}
-            {(nbCandidatures > 0 || nbVues > 0 || annonce.dispo) && (
-              <div style={{ marginTop: 16, background: "white", borderRadius: 20, padding: 22, boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0, marginBottom: 8 }}>
-                  Activité
-                </p>
-                <h3 style={{ fontSize: 16, fontWeight: 400, fontStyle: "italic", fontFamily: "'Fraunces', 'DM Sans', serif", letterSpacing: "-0.3px", margin: 0, marginBottom: 12, color: "#111" }}>
-                  Sur cette annonce
-                </h3>
-                <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
-                  {nbCandidatures > 0 && (
-                    <li style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#111" }}>
-                      <span style={{ color: "#666" }}>Candidatures envoyées</span>
-                      <span style={{ fontWeight: 700 }}>{nbCandidatures}</span>
-                    </li>
-                  )}
-                  {nbVues > 0 && (
-                    <li style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#111" }}>
-                      <span style={{ color: "#666" }}>Vues</span>
-                      <span style={{ fontWeight: 700 }}>{nbVues}</span>
-                    </li>
-                  )}
-                  {annonce.dispo && (
-                    <li style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#111", gap: 10 }}>
-                      <span style={{ color: "#666" }}>Disponibilité</span>
-                      <span style={{ fontWeight: 700, textAlign: "right" }}>{annonce.dispo}</span>
-                    </li>
-                  )}
-                </ul>
-              </div>
-            )}
-
-            {/* ─── R10.10 Card "Budget estimé au départ" ──────────────── */}
-            {annonce.prix && (
-              <div style={{ marginTop: 16, background: "white", borderRadius: 20, padding: 22, boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0, marginBottom: 8 }}>
-                  Budget
-                </p>
-                <h3 style={{ fontSize: 16, fontWeight: 400, fontStyle: "italic", fontFamily: "'Fraunces', 'DM Sans', serif", letterSpacing: "-0.3px", margin: 0, marginBottom: 12, color: "#111" }}>
-                  À prévoir au départ
-                </h3>
-                {(() => {
-                  const loyerCC = Number(annonce.prix) + Number(annonce.charges || 0)
-                  const depot = Number(annonce.caution || annonce.prix)
-                  const total = loyerCC + depot
-                  return (
-                    <>
-                      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                        <li style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-                          <span style={{ color: "#666" }}>1er loyer CC</span>
-                          <span style={{ fontWeight: 600, color: "#111" }}>{loyerCC} €</span>
-                        </li>
-                        <li style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-                          <span style={{ color: "#666" }}>Dépôt de garantie</span>
-                          <span style={{ fontWeight: 600, color: "#111" }}>{depot} €</span>
-                        </li>
-                      </ul>
-                      <div style={{ borderTop: "1px solid #F7F4EF", marginTop: 10, paddingTop: 10, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "0.6px" }}>Total</span>
-                        <span style={{ fontSize: 20, fontWeight: 700, color: "#111", letterSpacing: "-0.4px" }}>{total} €</span>
-                      </div>
-                      <p style={{ fontSize: 11, color: "#8a8477", marginTop: 8, marginBottom: 0, lineHeight: 1.5 }}>
-                        Zéro frais d&apos;agence — vous contactez directement le propriétaire.
-                      </p>
-                    </>
-                  )
-                })()}
-              </div>
-            )}
-
-            {/* ─── R10.10 Card "Autres biens de ce propriétaire" ──────── */}
-            {nbAutresBiens >= 1 && (
-              <div style={{ marginTop: 16, background: "white", borderRadius: 20, padding: 22, boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0, marginBottom: 8 }}>
-                  Propriétaire
-                </p>
-                <p style={{ fontSize: 13, color: "#111", margin: 0, marginBottom: 8, lineHeight: 1.5 }}>
-                  {annonce.proprietaire || "Ce propriétaire"} propose <strong>{nbAutresBiens} {nbAutresBiens === 1 ? "autre bien" : "autres biens"}</strong> en location.
-                </p>
-              </div>
-            )}
-
-            {/* ─── R10.10 Card Partager ───────────────────────────────── */}
-            <div style={{ marginTop: 16 }}>
-              <PartagerCard url={`${BASE_URL}/annonces/${id}`} titre={annonce.titre || "Bien à louer"} />
-            </div>
             </StickyInfoCard>
           </div>
         </div>
+
+        {/* R10.16 — Card "Autres biens du propriétaire" en bandeau full-width
+            sous le layout 2-col. Sort de la sidebar pour éliminer le scroll
+            dans le scroll imposé par le widget fixed. */}
+        {nbAutresBiens >= 1 && (
+          <div style={{ marginTop: 32, background: "white", borderRadius: 20, padding: "22px 28px", boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0, marginBottom: 8 }}>
+              Propriétaire
+            </p>
+            <p style={{ fontSize: 14, color: "#111", margin: 0, lineHeight: 1.5 }}>
+              {annonce.proprietaire || "Ce propriétaire"} propose <strong>{nbAutresBiens} {nbAutresBiens === 1 ? "autre bien" : "autres biens"}</strong> en location.
+            </p>
+          </div>
+        )}
 
         {similaires.length > 0 && (
           <section style={{ marginTop: 56 }}>
