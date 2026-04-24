@@ -2,6 +2,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useResponsive } from "../hooks/useResponsive"
+import { km, KMButton, KMButtonOutline, KMEyebrow, KMHeading } from "../components/ui/km"
 
 const STORAGE_KEY = "cookie_consent"
 
@@ -9,7 +10,7 @@ const STORAGE_KEY = "cookie_consent"
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 36 }}>
-      <h2 style={{ fontSize: 20, fontWeight: 800, color: "#111", margin: "0 0 14px", letterSpacing: "-0.3px" }}>{title}</h2>
+      <KMHeading as="h2" size={20} style={{ marginBottom: 14 }}>{title}</KMHeading>
       {children}
     </div>
   )
@@ -17,15 +18,15 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 /* ── Paragraph ── */
 function P({ children }: { children: React.ReactNode }) {
-  return <p style={{ fontSize: 14, color: "#111", lineHeight: 1.75, margin: "0 0 12px" }}>{children}</p>
+  return <p style={{ fontSize: 14, color: "#3f3c37", lineHeight: 1.75, margin: "0 0 12px" }}>{children}</p>
 }
 
 /* ── Cookie table row ── */
 function CookieTableRow({ category, purpose, duration, legal }: { category: string; purpose: string; duration: string; legal: string }) {
-  const cellStyle: React.CSSProperties = { padding: "12px 14px", fontSize: 13, color: "#111", lineHeight: 1.5, borderBottom: "1px solid #F7F4EF" }
+  const cellStyle: React.CSSProperties = { padding: "12px 14px", fontSize: 13, color: "#3f3c37", lineHeight: 1.5, borderBottom: `1px solid ${km.beige}` }
   return (
     <tr>
-      <td style={{ ...cellStyle, fontWeight: 700, color: "#111" }}>{category}</td>
+      <td style={{ ...cellStyle, fontWeight: 700, color: km.ink }}>{category}</td>
       <td style={cellStyle}>{purpose}</td>
       <td style={cellStyle}>{duration}</td>
       <td style={cellStyle}>{legal}</td>
@@ -59,38 +60,57 @@ export default function CookiesPage() {
 
   const headCell: React.CSSProperties = {
     padding: "12px 14px",
-    fontSize: 11,
-    fontWeight: 800,
-    color: "#8a8477",
+    fontSize: 10,
+    fontWeight: 700,
+    color: km.muted,
     textTransform: "uppercase",
-    letterSpacing: "0.5px",
-    borderBottom: "2px solid #EAE6DF",
+    letterSpacing: "1.4px",
+    borderBottom: `2px solid ${km.line}`,
     textAlign: "left",
   }
 
+  const strongStyle: React.CSSProperties = { color: km.ink, fontWeight: 700 }
+
   return (
-    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: isMobile ? "32px 16px" : "40px 48px" }}>
+    <main style={{
+      minHeight: "100vh",
+      background: km.beige,
+      fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
+      padding: isMobile ? "32px 16px" : "40px 48px",
+    }}>
       <div style={{ maxWidth: 800, margin: "0 auto" }}>
 
         {/* Header */}
-        <div style={{ marginBottom: 40 }}>
+        <div style={{ marginBottom: 32 }}>
           <Link
             href="/"
-            style={{ fontSize: 13, color: "#8a8477", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 20 }}
+            style={{
+              fontSize: 10, color: km.muted, textDecoration: "none",
+              textTransform: "uppercase", letterSpacing: "1.4px", fontWeight: 700,
+              display: "inline-block", marginBottom: 22,
+            }}
           >
-            <span style={{ fontSize: 16 }}>←</span> Retour à l&apos;accueil
+            ← Retour à l&apos;accueil
           </Link>
-          <h1 style={{ fontSize: isMobile ? 28 : 36, fontWeight: 800, color: "#111", margin: "0 0 8px", letterSpacing: "-0.5px" }}>
-            Politique de cookies
-          </h1>
-          <p style={{ fontSize: 14, color: "#8a8477", margin: 0 }}>En vigueur au 18 avril 2026</p>
+          <KMEyebrow style={{ marginBottom: 10 }}>Légal · Cookies</KMEyebrow>
+          <KMHeading as="h1" size={isMobile ? 32 : 38} style={{ marginBottom: 8 }}>Politique de cookies</KMHeading>
+          <p style={{
+            fontSize: 11, color: km.muted, margin: 0,
+            textTransform: "uppercase", letterSpacing: "1.2px", fontWeight: 600,
+          }}>En vigueur au 18 avril 2026</p>
         </div>
 
         {/* Content card */}
-        <div style={{ background: "white", borderRadius: 20, padding: isMobile ? "24px 20px" : "36px 40px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+        <div style={{
+          background: km.white,
+          border: `1px solid ${km.line}`,
+          borderRadius: 20,
+          padding: isMobile ? "24px 20px" : "36px 40px",
+          boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
+        }}>
 
           {/* 1. Qu'est-ce qu'un cookie */}
-          <Section title="1. Qu&apos;est-ce qu&apos;un cookie ?">
+          <Section title="1. Qu'est-ce qu'un cookie ?">
             <P>
               Un cookie est un petit fichier texte déposé sur votre navigateur lorsque vous visitez un site web.
               Il permet au site de mémoriser certaines informations sur votre visite, comme vos préférences
@@ -168,8 +188,8 @@ export default function CookiesPage() {
                 { name: "Safari", url: "Préférences > Confidentialité" },
                 { name: "Microsoft Edge", url: "edge://settings/privacy" },
               ].map(b => (
-                <li key={b.name} style={{ fontSize: 14, color: "#111", lineHeight: 2 }}>
-                  <strong>{b.name}</strong> : {b.url}
+                <li key={b.name} style={{ fontSize: 14, color: "#3f3c37", lineHeight: 2 }}>
+                  <strong style={strongStyle}>{b.name}</strong> : {b.url}
                 </li>
               ))}
             </ul>
@@ -185,17 +205,17 @@ export default function CookiesPage() {
               Certains services tiers intégrés à KeyMatch peuvent déposer leurs propres cookies :
             </P>
             <ul style={{ paddingLeft: 20, margin: "8px 0 16px" }}>
-              <li style={{ fontSize: 14, color: "#111", lineHeight: 2 }}>
-                <strong>Google OAuth</strong> — L&apos;authentification via Google implique le dépôt de cookies
+              <li style={{ fontSize: 14, color: "#3f3c37", lineHeight: 2 }}>
+                <strong style={strongStyle}>Google OAuth</strong> — L&apos;authentification via Google implique le dépôt de cookies
                 par Google pour gérer la session d&apos;authentification. Ces cookies sont strictement nécessaires
                 à la connexion avec votre compte Google.
               </li>
-              <li style={{ fontSize: 14, color: "#111", lineHeight: 2 }}>
-                <strong>Base de données</strong> — Notre base de données utilise des mécanismes techniques de gestion
+              <li style={{ fontSize: 14, color: "#3f3c37", lineHeight: 2 }}>
+                <strong style={strongStyle}>Base de données</strong> — Notre base de données utilise des mécanismes techniques de gestion
                 de session. Aucun cookie de suivi n&apos;est déposé.
               </li>
-              <li style={{ fontSize: 14, color: "#111", lineHeight: 2 }}>
-                <strong>OpenStreetMap</strong> — L&apos;affichage des cartes peut impliquer le chargement
+              <li style={{ fontSize: 14, color: "#3f3c37", lineHeight: 2 }}>
+                <strong style={strongStyle}>OpenStreetMap</strong> — L&apos;affichage des cartes peut impliquer le chargement
                 de tuiles depuis les serveurs OpenStreetMap, susceptibles de déposer des cookies techniques.
               </li>
             </ul>
@@ -216,12 +236,12 @@ export default function CookiesPage() {
                 "Droit d'opposition : vous opposer au traitement de vos données pour des motifs légitimes.",
                 "Droit à la portabilité : recevoir vos données dans un format structuré et lisible.",
               ].map(d => (
-                <li key={d} style={{ fontSize: 14, color: "#111", lineHeight: 2 }}>{d}</li>
+                <li key={d} style={{ fontSize: 14, color: "#3f3c37", lineHeight: 2 }}>{d}</li>
               ))}
             </ul>
             <P>
               Pour exercer ces droits, vous pouvez nous contacter à l&apos;adresse suivante :{" "}
-              <strong>contact@keymatch-immo.fr</strong>
+              <strong style={strongStyle}>contact@keymatch-immo.fr</strong>
             </P>
             <P>
               Vous pouvez également introduire une réclamation auprès de la CNIL (Commission Nationale de
@@ -230,7 +250,7 @@ export default function CookiesPage() {
                 href="https://www.cnil.fr"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: "#111", fontWeight: 600, textDecoration: "underline", textUnderlineOffset: 2 }}
+                style={{ color: km.ink, fontWeight: 600, textDecoration: "underline", textUnderlineOffset: 3 }}
               >
                 www.cnil.fr
               </a>
@@ -247,40 +267,27 @@ export default function CookiesPage() {
           </Section>
 
           {/* Divider */}
-          <div style={{ height: 1, background: "#EAE6DF", margin: "32px 0" }} />
+          <div style={{ height: 1, background: km.line, margin: "32px 0" }} />
 
           {/* Preferences section */}
           {!prefsOpened ? (
             <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center", gap: 12 }}>
-              <button
-                onClick={openPreferences}
-                style={{
-                  background: "#111",
-                  color: "white",
-                  borderRadius: 999,
-                  padding: "10px 24px",
-                  fontWeight: 700,
-                  fontSize: 13,
-                  border: "none",
-                  cursor: "pointer",
-                  fontFamily: "'DM Sans', sans-serif",
-                }}
-              >
-                Modifier mes préférences
-              </button>
+              <KMButton onClick={openPreferences} size="md">Modifier mes préférences</KMButton>
               <Link
                 href="/"
                 style={{
                   background: "none",
-                  border: "1px solid #EAE6DF",
+                  border: `1px solid ${km.ink}`,
                   borderRadius: 999,
-                  padding: "8px 20px",
+                  padding: "11px 25px",
                   fontWeight: 600,
-                  fontSize: 13,
-                  color: "#111",
-                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 11,
+                  color: km.ink,
+                  fontFamily: "inherit",
                   textDecoration: "none",
                   textAlign: "center",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.6px",
                 }}
               >
                 Retour à l&apos;accueil
@@ -288,7 +295,7 @@ export default function CookiesPage() {
             </div>
           ) : (
             <div>
-              <p style={{ fontSize: 16, fontWeight: 800, color: "#111", margin: "0 0 16px" }}>Vos préférences</p>
+              <KMHeading as="h3" size={18} style={{ marginBottom: 16 }}>Vos préférences</KMHeading>
 
               <div style={{ marginBottom: 16 }}>
                 <PreferenceRow label="Nécessaires" description="Session, authentification, sécurité." checked={true} disabled />
@@ -298,38 +305,8 @@ export default function CookiesPage() {
               </div>
 
               <div style={{ display: "flex", gap: 10, flexDirection: isMobile ? "column" : "row" }}>
-                <button
-                  onClick={savePreferences}
-                  style={{
-                    background: "#111",
-                    color: "white",
-                    borderRadius: 999,
-                    padding: "10px 24px",
-                    fontWeight: 700,
-                    fontSize: 13,
-                    border: "none",
-                    cursor: "pointer",
-                    fontFamily: "'DM Sans', sans-serif",
-                  }}
-                >
-                  Enregistrer mes choix
-                </button>
-                <button
-                  onClick={() => setPrefsOpened(false)}
-                  style={{
-                    background: "none",
-                    border: "1px solid #EAE6DF",
-                    borderRadius: 999,
-                    padding: "8px 20px",
-                    fontWeight: 600,
-                    fontSize: 13,
-                    cursor: "pointer",
-                    color: "#111",
-                    fontFamily: "'DM Sans', sans-serif",
-                  }}
-                >
-                  Annuler
-                </button>
+                <KMButton onClick={savePreferences}>Enregistrer mes choix</KMButton>
+                <KMButtonOutline onClick={() => setPrefsOpened(false)}>Annuler</KMButtonOutline>
               </div>
             </div>
           )}
@@ -348,10 +325,14 @@ function PreferenceRow({ label, description, checked, disabled, onChange }: {
   onChange?: (v: boolean) => void
 }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "12px 0", borderBottom: "1px solid #F7F4EF" }}>
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      gap: 16, padding: "12px 0",
+      borderBottom: `1px solid ${km.beige}`,
+    }}>
       <div style={{ flex: 1 }}>
-        <p style={{ fontSize: 14, fontWeight: 700, color: "#111", margin: 0 }}>{label}</p>
-        <p style={{ fontSize: 12, color: "#8a8477", margin: "2px 0 0" }}>{description}</p>
+        <p style={{ fontSize: 14, fontWeight: 700, color: km.ink, margin: 0 }}>{label}</p>
+        <p style={{ fontSize: 12, color: km.muted, margin: "2px 0 0" }}>{description}</p>
       </div>
       <button
         type="button"
@@ -364,7 +345,7 @@ function PreferenceRow({ label, description, checked, disabled, onChange }: {
           height: 24,
           borderRadius: 999,
           border: "none",
-          background: checked ? "#111" : "#EAE6DF",
+          background: checked ? km.ink : km.line,
           position: "relative",
           cursor: disabled ? "not-allowed" : "pointer",
           transition: "background 0.2s ease",
@@ -380,7 +361,7 @@ function PreferenceRow({ label, description, checked, disabled, onChange }: {
             width: 18,
             height: 18,
             borderRadius: "50%",
-            background: "white",
+            background: km.white,
             transition: "left 0.2s ease",
             boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
           }}
