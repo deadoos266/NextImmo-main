@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { RAISONS } from "@/lib/signalements"
+import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
 
 const schema = z.object({
   type: z.enum(["annonce", "message", "user"]),
@@ -21,6 +22,18 @@ export async function POST(req: NextRequest) {
   const email = session?.user?.email?.toLowerCase()
   if (!email) {
     return NextResponse.json({ success: false, error: "Authentification requise" }, { status: 401 })
+  }
+
+  // Rate-limit Upstash (IP + email) : 20 POST / h. Complète la limite DB
+  // 10/jour/user en empêchant un attaquant de brûler les tokens via plusieurs
+  // comptes depuis la même IP.
+  const ip = getClientIp(req.headers)
+  const rl = await checkRateLimitAsync(`signalements:${ip}:${email}`, { max: 20, windowMs: 3600_000 })
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { success: false, error: "Trop de requêtes. Réessayez plus tard." },
+      { status: 429, headers: rl.retryAfterSec ? { "Retry-After": String(rl.retryAfterSec) } : undefined },
+    )
   }
 
   let body: unknown

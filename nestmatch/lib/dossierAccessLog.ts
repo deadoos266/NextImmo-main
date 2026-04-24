@@ -12,9 +12,26 @@ export function hashToken(token: string): string {
  * Hash IP anonymisée (RGPD). On salte avec une variable serveur pour
  * qu'on ne puisse pas reverse par force brute. Tronqué à 24 caractères :
  * suffisant pour dédupliquer, insuffisant pour identifier.
+ *
+ * Throw si DOSSIER_LOG_SALT absent ou reste sur la valeur par défaut.
+ * Sinon tous les hashes seraient prévisibles par force brute (brute-force
+ * d'IPs possibles en quelques secondes), faisant perdre la protection RGPD.
+ * Cf. .env.example pour la commande de génération du sel.
  */
 export function hashIP(ip: string): string {
-  const salt = process.env.DOSSIER_LOG_SALT || "nestmatch-default-salt-changeme"
+  const salt = process.env.DOSSIER_LOG_SALT
+  if (!salt || salt.trim().length === 0) {
+    throw new Error(
+      "[dossierAccessLog] DOSSIER_LOG_SALT env var est obligatoire en RGPD. " +
+      "Générer : openssl rand -hex 32"
+    )
+  }
+  if (salt === "nestmatch-default-salt-changeme" || salt === "REMPLACER_PAR_UN_SEL_ALEATOIRE_LONG") {
+    throw new Error(
+      "[dossierAccessLog] DOSSIER_LOG_SALT est encore la valeur par défaut. " +
+      "Générer un vrai sel : openssl rand -hex 32"
+    )
+  }
   return createHash("sha256").update(`${ip}:${salt}`).digest("hex").slice(0, 24)
 }
 

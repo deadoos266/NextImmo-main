@@ -12,15 +12,27 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
+import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions)
   const email = session?.user?.email?.toLowerCase()
   if (!email) {
     return NextResponse.json({ success: false, error: "Authentification requise" }, { status: 401 })
+  }
+
+  // Rate-limit suppression annonce : 10/h par user+IP. Une suppression massive
+  // peut orphan'er messages/visites/signalements donc on limite agressivement.
+  const ip = getClientIp(req.headers)
+  const rl = await checkRateLimitAsync(`annonces:delete:${ip}:${email}`, { max: 10, windowMs: 3600_000 })
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { success: false, error: "Trop de suppressions récentes. Réessayez plus tard." },
+      { status: 429, headers: rl.retryAfterSec ? { "Retry-After": String(rl.retryAfterSec) } : undefined },
+    )
   }
 
   const { id: idParam } = await params
