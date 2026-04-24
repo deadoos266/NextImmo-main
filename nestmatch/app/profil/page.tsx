@@ -1,7 +1,7 @@
 "use client"
 import { useSession, signOut } from "next-auth/react"
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { supabase } from "../../lib/supabase"
 import { useResponsive } from "../hooks/useResponsive"
 import { useRole } from "../providers"
@@ -16,6 +16,8 @@ import { calculerCompletudeProfil } from "../../lib/profilCompleteness"
 export default function Profil() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const justCreated = searchParams?.get("created") === "1"
   const { isMobile } = useResponsive()
   const { proprietaireActive } = useRole()
   const [saving, setSaving] = useState(false)
@@ -23,6 +25,7 @@ export default function Profil() {
   const [erreur, setErreur] = useState("")
   const [dataLoaded, setDataLoaded] = useState(false)
   const [photoCustom, setPhotoCustom] = useState<string | null>(null)
+  const [createdBannerOpen, setCreatedBannerOpen] = useState(justCreated)
   const [form, setForm] = useState({
     ville_souhaitee: "", mode_localisation: "souple", type_quartier: "", budget_min: "", budget_max: "",
     surface_min: "", surface_max: "", pieces_min: "1", chambres_min: "0",
@@ -163,6 +166,22 @@ export default function Profil() {
           </a>
         </div>
 
+        {/* Bannière succès après création guidée */}
+        {createdBannerOpen && !proprietaireActive && (
+          <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 16, padding: "14px 18px", marginBottom: 20, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+            <span aria-hidden style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: "50%", background: "#15803d", color: "white" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#15803d", margin: 0 }}>Profil configuré</p>
+              <p style={{ fontSize: 12, color: "#15803d", margin: "2px 0 0", lineHeight: 1.5 }}>
+                Chaque section ci-dessous reste modifiable à tout moment.
+              </p>
+            </div>
+            <button type="button" aria-label="Fermer" onClick={() => setCreatedBannerOpen(false)} style={{ background: "transparent", border: "none", fontSize: 18, cursor: "pointer", color: "#15803d", padding: 0, lineHeight: 1 }}>×</button>
+          </div>
+        )}
+
         {/* Proprio : message d'accueil simple */}
         {proprietaireActive && (
           <div style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, padding: 26, marginBottom: 20, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
@@ -181,7 +200,7 @@ export default function Profil() {
           </div>
         )}
 
-        {/* Locataire : Score de complétion */}
+        {/* Locataire : Score de complétion + CTA wizard si profil peu rempli */}
         {!proprietaireActive && (
           <div style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, padding: 26, marginBottom: 20, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 16 }}>
@@ -201,12 +220,27 @@ export default function Profil() {
 
             {/* Champs manquants */}
             {manquants.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: scoreCompletion <= 20 ? 18 : 0 }}>
                 {manquants.map(c => (
                   <span key={c.label} style={{ background: "#FBF6EA", color: "#a16207", border: "1px solid #EADFC6", padding: "4px 12px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
                     {c.label}
                   </span>
                 ))}
+              </div>
+            )}
+
+            {/* CTA wizard — affiché uniquement si profil très incomplet */}
+            {scoreCompletion <= 20 && (
+              <div style={{ borderTop: "1px solid #F7F4EF", paddingTop: 16, marginTop: 4, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 220 }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 4px" }}>Configuration guidée</p>
+                  <p style={{ fontSize: 13, color: "#111", margin: 0, lineHeight: 1.5 }}>
+                    5 étapes rapides pour construire un profil complet.
+                  </p>
+                </div>
+                <a href="/profil/creer" style={{ background: "#111", color: "white", padding: "10px 22px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.6px", whiteSpace: "nowrap" }}>
+                  Démarrer →
+                </a>
               </div>
             )}
           </div>
