@@ -21,7 +21,7 @@ function BarChart({
   refVal: number
 }) {
   if (items.every(d => d.amount === 0)) return (
-    <div style={{ textAlign: "center", padding: "40px 0", color: "#9ca3af" }}>
+    <div style={{ textAlign: "center", padding: "40px 0", color: "#8a8477" }}>
       <p style={{ fontSize: 13 }}>Aucun loyer enregistré sur cette période</p>
     </div>
   )
@@ -46,7 +46,7 @@ function BarChart({
             key={pct}
             x1={0} y1={H - pct * H}
             x2={totalW} y2={H - pct * H}
-            stroke="#f3f4f6" strokeWidth={1}
+            stroke="#F7F4EF" strokeWidth={1}
           />
         ))}
 
@@ -56,9 +56,9 @@ function BarChart({
             <line
               x1={0} y1={refY}
               x2={totalW} y2={refY}
-              stroke="#d1d5db" strokeWidth={1} strokeDasharray="4 4"
+              stroke="#EAE6DF" strokeWidth={1} strokeDasharray="4 4"
             />
-            <text x={4} y={refY - 4} fontSize={9} fill="#9ca3af">
+            <text x={4} y={refY - 4} fontSize={9} fill="#8a8477">
               loyer théorique {refVal.toLocaleString("fr-FR")} €
             </text>
           </>
@@ -69,8 +69,8 @@ function BarChart({
           const x = i * (BAR_W + GAP)
           const y = H - barH
           const color = d.amount === 0
-            ? "#e5e7eb"
-            : d.confirmed ? "#16a34a" : "#f97316"
+            ? "#EAE6DF"
+            : d.confirmed ? "#15803d" : "#f97316"
 
           return (
             <g key={i}>
@@ -95,7 +95,7 @@ function BarChart({
               )}
               <text
                 x={x + BAR_W / 2} y={H + 16}
-                textAnchor="middle" fontSize={9} fill="#9ca3af"
+                textAnchor="middle" fontSize={9} fill="#8a8477"
               >
                 {d.label}
               </text>
@@ -122,7 +122,7 @@ function LineChart({
 }) {
   const n = points.length
   if (n < 2) return (
-    <div style={{ textAlign: "center", padding: "40px 0", color: "#9ca3af" }}>
+    <div style={{ textAlign: "center", padding: "40px 0", color: "#8a8477" }}>
       <p style={{ fontSize: 13 }}>Pas encore assez de données</p>
     </div>
   )
@@ -157,21 +157,21 @@ function LineChart({
       <svg width={W} height={H + 52} style={{ display: "block" }}>
         {/* Gridlines */}
         {[0.25, 0.5, 0.75, 1].map(pct => (
-          <line key={pct} x1={0} y1={py(maxV * pct)} x2={W} y2={py(maxV * pct)} stroke="#f3f4f6" strokeWidth={1} />
+          <line key={pct} x1={0} y1={py(maxV * pct)} x2={W} y2={py(maxV * pct)} stroke="#F7F4EF" strokeWidth={1} />
         ))}
 
         {/* Break-even target line */}
         {targetY !== null && (
           <>
-            <line x1={0} y1={targetY} x2={W} y2={targetY} stroke="#dc2626" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />
-            <text x={4} y={targetY - 5} fontSize={9} fill="#dc2626" fontWeight="600">
+            <line x1={0} y1={targetY} x2={W} y2={targetY} stroke="#b91c1c" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />
+            <text x={4} y={targetY - 5} fontSize={9} fill="#b91c1c" fontWeight="600">
               Seuil — {unit ? `${target}${unit}` : target >= 1000 ? `${(target / 1000).toFixed(0)}k €` : `${target} €`}
             </text>
           </>
         )}
 
         {/* Projection line */}
-        <path d={projPath} fill="none" stroke="#d1d5db" strokeWidth={1.5} strokeDasharray="5 3" />
+        <path d={projPath} fill="none" stroke="#EAE6DF" strokeWidth={1.5} strokeDasharray="5 3" />
 
         {/* Actual area + line */}
         {actPath && (
@@ -189,11 +189,11 @@ function LineChart({
           <>
             <circle
               cx={px(breakIdx)} cy={py(points[breakIdx].projected)}
-              r={7} fill="#16a34a"
+              r={7} fill="#15803d"
             />
             <text
               x={px(breakIdx)} y={py(points[breakIdx].projected) - 12}
-              textAnchor="middle" fontSize={9} fill="#16a34a" fontWeight="bold"
+              textAnchor="middle" fontSize={9} fill="#15803d" fontWeight="bold"
             >
               Rentable
             </text>
@@ -207,7 +207,7 @@ function LineChart({
 
         {/* X axis labels */}
         {labels.map((l, i) => l && i % labelStep === 0 && (
-          <text key={i} x={px(i)} y={H + 16} textAnchor="middle" fontSize={9} fill="#9ca3af">
+          <text key={i} x={px(i)} y={H + 16} textAnchor="middle" fontSize={9} fill="#8a8477">
             {l}
           </text>
         ))}
@@ -625,7 +625,7 @@ function StatsInner() {
       sub: revenuAnnuelReel < revenuAnnuelTheorique
         ? `objectif: ${revenuAnnuelTheorique.toLocaleString("fr-FR")} €`
         : "objectif annuel atteint ✓",
-      color: "#16a34a",
+      color: "#15803d",
     },
     {
       label: "Rentabilité brute",
@@ -634,10 +634,10 @@ function StatsInner() {
         ? `valeur bien: ${valeurBien.toLocaleString("fr-FR")} €`
         : "Renseignez la valeur du bien",
       color: rentabiliteBrute
-        ? rentabiliteBrute >= 7 ? "#16a34a"
-        : rentabiliteBrute >= 5 ? "#ea580c"
-        : "#dc2626"
-        : "#9ca3af",
+        ? rentabiliteBrute >= 7 ? "#15803d"
+        : rentabiliteBrute >= 5 ? "#a16207"
+        : "#b91c1c"
+        : "#8a8477",
     },
     {
       label: "Rentabilite nette",
@@ -648,8 +648,8 @@ function StatsInner() {
         ? `apres ${totalChargesAnnuelles.toLocaleString("fr-FR")} euros/an de charges`
         : "Renseignez taxe fonciere + assurance",
       color: rentabiliteNette != null
-        ? rentabiliteNette >= 0 ? "#16a34a" : "#dc2626"
-        : "#9ca3af",
+        ? rentabiliteNette >= 0 ? "#15803d" : "#b91c1c"
+        : "#8a8477",
     },
     {
       label: "PER immobilier",
@@ -660,10 +660,10 @@ function StatsInner() {
         : "Bien cher par rapport aux loyers"
         : "Renseignez la valeur du bien",
       color: breakEvenAns
-        ? breakEvenAns <= 15 ? "#16a34a"
-        : breakEvenAns <= 20 ? "#ea580c"
-        : "#dc2626"
-        : "#9ca3af",
+        ? breakEvenAns <= 15 ? "#15803d"
+        : breakEvenAns <= 20 ? "#a16207"
+        : "#b91c1c"
+        : "#8a8477",
     },
     {
       label: "Durée restante crédit",
@@ -680,11 +680,11 @@ function StatsInner() {
         ? "Renseignez la date de début du bail"
         : "Renseignez la durée du crédit",
       color: creditTermine
-        ? "#16a34a"
+        ? "#15803d"
         : anneesRestantesCredit !== null
-        ? anneesRestantesCredit <= 5 ? "#ea580c"
+        ? anneesRestantesCredit <= 5 ? "#a16207"
         : "#111"
-        : "#9ca3af",
+        : "#8a8477",
     },
   ]
 
@@ -697,10 +697,10 @@ function StatsInner() {
   const cashflowRatio = revenuMensuel > 0 ? Math.min(100, Math.round((Math.abs(cashflowMensuel) / revenuMensuel) * 100)) : 0
 
   const statutMap: Record<string, { label: string; bg: string; color: string; border: string }> = {
-    disponible: { label: "Disponible", bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" },
-    "en visite": { label: "En visite", bg: "#fff7ed", color: "#ea580c", border: "#fed7aa" },
-    "réservé": { label: "Réservé", bg: "#fefce8", color: "#a16207", border: "#fde68a" },
-    "loué": { label: "Loué", bg: "#dcfce7", color: "#16a34a", border: "#bbf7d0" },
+    disponible: { label: "Disponible", bg: "#EEF3FB", color: "#1d4ed8", border: "#D7E3F4" },
+    "en visite": { label: "En visite", bg: "#FBF6EA", color: "#a16207", border: "#fed7aa" },
+    "réservé": { label: "Réservé", bg: "#fefce8", color: "#a16207", border: "#EADFC6" },
+    "loué": { label: "Loué", bg: "#F0FAEE", color: "#15803d", border: "#C6E9C0" },
   }
   const statutBadge = statutMap[bien.statut] || statutMap.disponible
 
@@ -728,7 +728,7 @@ function StatsInner() {
   const labelStyle = {
     fontSize: 10,
     fontWeight: 700,
-    color: "#6b7280",
+    color: "#8a8477",
     textTransform: "uppercase" as const,
     letterSpacing: "0.5px",
     marginBottom: 6,
@@ -739,7 +739,7 @@ function StatsInner() {
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: isMobile ? "24px 16px" : "32px 48px" }}>
 
-        <Link href="/proprietaire" style={{ fontSize: 13, color: "#6b7280", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <Link href="/proprietaire" style={{ fontSize: 13, color: "#8a8477", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
           <span style={{ fontSize: 16 }}>&larr;</span> Retour au dashboard
         </Link>
 
@@ -762,7 +762,7 @@ function StatsInner() {
                   {statutBadge.label}
                 </span>
               </div>
-              <p style={{ fontSize: 14, color: "#6b7280", margin: 0, lineHeight: 1.6 }}>
+              <p style={{ fontSize: 14, color: "#8a8477", margin: 0, lineHeight: 1.6 }}>
                 {bien.ville}{bien.surface ? ` \u00B7 ${bien.surface} m\u00B2` : ""}
                 {bien.date_debut_bail && moisDepuisDebut > 0 ? ` \u00B7 Bail : ${moisDepuisDebut} mois` : ""}
               </p>
@@ -785,7 +785,7 @@ function StatsInner() {
                 {bien.locataire_email && (
                   <Link href={`/messages?to=${bien.locataire_email}`}
                     style={{
-                      padding: "9px 18px", border: "1.5px solid #e5e7eb", borderRadius: 999,
+                      padding: "9px 18px", border: "1px solid #EAE6DF", borderRadius: 999,
                       fontSize: 13, fontWeight: 700, color: "#111", textDecoration: "none",
                       background: "none", display: "inline-flex", alignItems: "center", gap: 6,
                     }}>
@@ -794,8 +794,8 @@ function StatsInner() {
                 )}
                 <Link href={`/annonces/${bienId}`}
                   style={{
-                    padding: "9px 18px", border: "1.5px solid #e5e7eb", borderRadius: 999,
-                    fontSize: 13, fontWeight: 700, color: "#6b7280", textDecoration: "none",
+                    padding: "9px 18px", border: "1px solid #EAE6DF", borderRadius: 999,
+                    fontSize: 13, fontWeight: 700, color: "#8a8477", textDecoration: "none",
                     background: "none", display: "inline-flex", alignItems: "center",
                   }}>
                   Voir l&apos;annonce
@@ -810,12 +810,12 @@ function StatsInner() {
                       fontSize: 13, fontWeight: 700,
                       display: "inline-flex", alignItems: "center", gap: 6,
                       ...(edlStatut === "valide"
-                        ? { background: "#dcfce7", color: "#16a34a", border: "1.5px solid #bbf7d0" }
+                        ? { background: "#F0FAEE", color: "#15803d", border: "1px solid #C6E9C0" }
                         : edlStatut === "envoye"
-                        ? { background: "#fff7ed", color: "#ea580c", border: "1.5px solid #fed7aa" }
+                        ? { background: "#FBF6EA", color: "#a16207", border: "1px solid #fed7aa" }
                         : edlStatut === "conteste"
-                        ? { background: "#fee2e2", color: "#dc2626", border: "1.5px solid #fecaca" }
-                        : { background: "#eff6ff", color: "#1d4ed8", border: "1.5px solid #bfdbfe" }),
+                        ? { background: "#FEECEC", color: "#b91c1c", border: "1px solid #F4C9C9" }
+                        : { background: "#EEF3FB", color: "#1d4ed8", border: "1px solid #D7E3F4" }),
                   }}>
                     {edlStatut === "valide" ? "EDL validé ✓"
                       : edlStatut === "envoye" ? "EDL envoyé"
@@ -831,9 +831,9 @@ function StatsInner() {
             {tauxOccupation !== null && (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0 }}>
                 <svg viewBox="0 0 36 36" width={72} height={72}>
-                  <circle cx={18} cy={18} r={15.9} fill="none" stroke="#f3f4f6" strokeWidth={3.8} />
+                  <circle cx={18} cy={18} r={15.9} fill="none" stroke="#F7F4EF" strokeWidth={3.8} />
                   <circle cx={18} cy={18} r={15.9} fill="none"
-                    stroke={tauxOccupation >= 90 ? "#16a34a" : tauxOccupation >= 70 ? "#ea580c" : "#dc2626"}
+                    stroke={tauxOccupation >= 90 ? "#15803d" : tauxOccupation >= 70 ? "#a16207" : "#b91c1c"}
                     strokeWidth={3.8}
                     strokeDasharray={`${tauxOccupation} ${100 - tauxOccupation}`}
                     strokeDashoffset={25} strokeLinecap="round"
@@ -842,8 +842,8 @@ function StatsInner() {
                     {tauxOccupation}%
                   </text>
                 </svg>
-                <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 600 }}>Occupation</span>
-                <span style={{ fontSize: 10, color: "#9ca3af" }}>{loyers.length}/{moisDepuisDebut} mois</span>
+                <span style={{ fontSize: 11, color: "#8a8477", fontWeight: 600 }}>Occupation</span>
+                <span style={{ fontSize: 10, color: "#8a8477" }}>{loyers.length}/{moisDepuisDebut} mois</span>
               </div>
             )}
           </div>
@@ -853,7 +853,7 @@ function StatsInner() {
             EDIT PANEL (collapsible)
            ══════════════════════════════════════════════════════════════════════ */}
         {editOpen && (
-          <div style={{ ...cardStyle, marginBottom: 20, border: "1.5px solid #e5e7eb" }}>
+          <div style={{ ...cardStyle, marginBottom: 20, border: "1px solid #EAE6DF" }}>
             <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 20 }}>Donnees du bien</h3>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 16, marginBottom: 16 }}>
               {[
@@ -874,7 +874,7 @@ function StatsInner() {
                     type={f.type || "text"}
                     value={editForm[f.k] ?? ""}
                     onChange={e => setEditForm((p: any) => ({ ...p, [f.k]: e.target.value }))}
-                    style={{ width: "100%", padding: "9px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const }}
+                    style={{ width: "100%", padding: "9px 12px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const }}
                   />
                 </div>
               ))}
@@ -883,12 +883,12 @@ function StatsInner() {
               <LocataireEmailField
                 value={editForm.locataire_email ?? ""}
                 onChange={v => setEditForm((p: any) => ({ ...p, locataire_email: v }))}
-                inputStyle={{ width: "100%", padding: "9px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const }}
+                inputStyle={{ width: "100%", padding: "9px 12px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const }}
               />
               <div>
                 <label style={labelStyle}>Statut</label>
                 <select value={editForm.statut ?? "disponible"} onChange={e => setEditForm((p: any) => ({ ...p, statut: e.target.value }))}
-                  style={{ width: "100%", padding: "9px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, fontFamily: "inherit", outline: "none", background: "white", boxSizing: "border-box" as const }}>
+                  style={{ width: "100%", padding: "9px 12px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 14, fontFamily: "inherit", outline: "none", background: "white", boxSizing: "border-box" as const }}>
                   <option value="disponible">Disponible</option>
                   <option value="en visite">En visite</option>
                   <option value="réservé">Réservé</option>
@@ -897,7 +897,7 @@ function StatsInner() {
               </div>
             </div>
             <button onClick={sauvegarderBien} disabled={saving}
-              style={{ padding: "10px 24px", background: savedOk ? "#16a34a" : saving ? "#9ca3af" : "#111", color: "white", border: "none", borderRadius: 999, fontWeight: 700, fontSize: 14, cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+              style={{ padding: "10px 24px", background: savedOk ? "#15803d" : saving ? "#8a8477" : "#111", color: "white", border: "none", borderRadius: 999, fontWeight: 700, fontSize: 14, cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
               {saving ? "Sauvegarde..." : savedOk ? "Sauvegarde !" : "Sauvegarder"}
             </button>
           </div>
@@ -908,7 +908,7 @@ function StatsInner() {
            ══════════════════════════════════════════════════════════════════════ */}
         {pendingLoyers.length > 0 && (
           <div style={{
-            background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 14,
+            background: "#FBF6EA", border: "1px solid #fed7aa", borderRadius: 14,
             padding: "12px 20px", marginBottom: 20,
             display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
             flexWrap: "wrap",
@@ -924,8 +924,8 @@ function StatsInner() {
               if (el) el.scrollIntoView({ behavior: "smooth" })
             }}
               style={{
-                padding: "6px 16px", borderRadius: 999, border: "1.5px solid #ea580c",
-                background: "none", color: "#ea580c", fontWeight: 700, fontSize: 12,
+                padding: "6px 16px", borderRadius: 999, border: "1px solid #a16207",
+                background: "none", color: "#a16207", fontWeight: 700, fontSize: 12,
                 cursor: "pointer", fontFamily: "inherit",
               }}>
               Voir
@@ -943,20 +943,20 @@ function StatsInner() {
             <p style={labelStyle}>Cashflow mensuel</p>
             <p style={{
               fontSize: isMobile ? 26 : 30, fontWeight: 800, letterSpacing: "-1px", lineHeight: 1.1, margin: "4px 0 10px",
-              color: cashflowMensuel >= 0 ? "#16a34a" : "#dc2626",
+              color: cashflowMensuel >= 0 ? "#15803d" : "#b91c1c",
             }}>
               {cashflowMensuel >= 0 ? "+" : ""}{cashflowMensuel.toLocaleString("fr-FR")} &euro;
             </p>
             {/* Mini progress bar */}
-            <div style={{ background: "#f3f4f6", borderRadius: 6, height: 6, overflow: "hidden", marginBottom: 6 }}>
+            <div style={{ background: "#F7F4EF", borderRadius: 6, height: 6, overflow: "hidden", marginBottom: 6 }}>
               <div style={{
                 height: "100%", borderRadius: 6,
                 width: `${cashflowRatio}%`,
-                background: cashflowMensuel >= 0 ? "#16a34a" : "#dc2626",
+                background: cashflowMensuel >= 0 ? "#15803d" : "#b91c1c",
                 transition: "width 0.3s",
               }} />
             </div>
-            <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>
+            <p style={{ fontSize: 11, color: "#8a8477", margin: 0 }}>
               {mensualiteCredit > 0
                 ? `${revenuMensuel.toLocaleString("fr-FR")} revenus - ${mensualiteCredit.toLocaleString("fr-FR")} credit`
                 : "Pas de credit renseigne"}
@@ -969,15 +969,15 @@ function StatsInner() {
             <p style={{
               fontSize: isMobile ? 26 : 30, fontWeight: 800, letterSpacing: "-1px", lineHeight: 1.1, margin: "4px 0 10px",
               color: rentabiliteBrute
-                ? rentabiliteBrute >= 7 ? "#16a34a" : rentabiliteBrute >= 5 ? "#ea580c" : "#dc2626"
-                : "#9ca3af",
+                ? rentabiliteBrute >= 7 ? "#15803d" : rentabiliteBrute >= 5 ? "#a16207" : "#b91c1c"
+                : "#8a8477",
             }}>
               {rentabiliteBrute ? `${rentabiliteBrute.toFixed(2)}%` : "\u2014"}
             </p>
-            <p style={{ fontSize: 12, color: "#6b7280", margin: 0, fontWeight: 600 }}>
+            <p style={{ fontSize: 12, color: "#8a8477", margin: 0, fontWeight: 600 }}>
               {breakEvenAns ? `PER : ${breakEvenAns.toFixed(1)} ans` : "PER : \u2014"}
             </p>
-            <p style={{ fontSize: 11, color: "#9ca3af", margin: "4px 0 0" }}>
+            <p style={{ fontSize: 11, color: "#8a8477", margin: "4px 0 0" }}>
               {rentabiliteBrute
                 ? rentabiliteBrute >= 7 ? "Excellent rendement" : rentabiliteBrute >= 5 ? "Rendement correct" : "Rendement faible"
                 : "Renseignez la valeur du bien"}
@@ -994,15 +994,15 @@ function StatsInner() {
               {revenuAnnuelReel.toLocaleString("fr-FR")} &euro;
             </p>
             {/* Progress toward annual target */}
-            <div style={{ background: "#f3f4f6", borderRadius: 6, height: 6, overflow: "hidden", marginBottom: 6 }}>
+            <div style={{ background: "#F7F4EF", borderRadius: 6, height: 6, overflow: "hidden", marginBottom: 6 }}>
               <div style={{
                 height: "100%", borderRadius: 6,
                 width: `${Math.min(100, pctObjectif)}%`,
-                background: pctObjectif >= 90 ? "#16a34a" : pctObjectif >= 60 ? "#ea580c" : "#dc2626",
+                background: pctObjectif >= 90 ? "#15803d" : pctObjectif >= 60 ? "#a16207" : "#b91c1c",
                 transition: "width 0.3s",
               }} />
             </div>
-            <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>
+            <p style={{ fontSize: 11, color: "#8a8477", margin: 0 }}>
               {pctObjectif}% de l'objectif ({revenuAnnuelTheorique.toLocaleString("fr-FR")} &euro;)
             </p>
           </div>
@@ -1018,7 +1018,7 @@ function StatsInner() {
             <p style={{ fontSize: 20, fontWeight: 800, color: "#111", margin: "2px 0", letterSpacing: "-0.5px" }}>
               {loyerMensuel.toLocaleString("fr-FR")} &euro;
             </p>
-            <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>
+            <p style={{ fontSize: 11, color: "#8a8477", margin: 0 }}>
               {charges > 0 ? `+ ${charges} charges = ${revenuMensuel} CC` : "charges non incluses"}
             </p>
           </div>
@@ -1028,13 +1028,13 @@ function StatsInner() {
             <p style={{ ...labelStyle, marginBottom: 4 }}>ROI net / an</p>
             <p style={{
               fontSize: 20, fontWeight: 800, margin: "2px 0", letterSpacing: "-0.5px",
-              color: rentabiliteNette != null ? (rentabiliteNette >= 0 ? "#16a34a" : "#dc2626") : "#9ca3af",
+              color: rentabiliteNette != null ? (rentabiliteNette >= 0 ? "#15803d" : "#b91c1c") : "#8a8477",
             }}>
               {rentabiliteNette != null
                 ? `${rentabiliteNette >= 0 ? "+" : ""}${rentabiliteNette.toFixed(2)}%`
                 : "\u2014"}
             </p>
-            <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>
+            <p style={{ fontSize: 11, color: "#8a8477", margin: 0 }}>
               {mensualiteCredit > 0 ? `cashflow: ${cashflowMensuel >= 0 ? "+" : ""}${cashflowMensuel.toLocaleString("fr-FR")} /mois` : "Renseignez le credit"}
             </p>
           </div>
@@ -1044,7 +1044,7 @@ function StatsInner() {
             <p style={{ ...labelStyle, marginBottom: 4 }}>Credit restant</p>
             <p style={{
               fontSize: 20, fontWeight: 800, margin: "2px 0", letterSpacing: "-0.5px",
-              color: creditTermine ? "#16a34a" : anneesRestantesCredit !== null ? (anneesRestantesCredit <= 5 ? "#ea580c" : "#111") : "#9ca3af",
+              color: creditTermine ? "#15803d" : anneesRestantesCredit !== null ? (anneesRestantesCredit <= 5 ? "#a16207" : "#111") : "#8a8477",
             }}>
               {creditTermine
                 ? "Termine"
@@ -1052,7 +1052,7 @@ function StatsInner() {
                 ? `${anneesRestantesCredit.toFixed(1)} ans`
                 : "\u2014"}
             </p>
-            <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>
+            <p style={{ fontSize: 11, color: "#8a8477", margin: 0 }}>
               {dateFinCredit
                 ? creditTermine
                   ? `Solde depuis ${dateFinCredit.toLocaleDateString("fr-FR", { month: "short", year: "numeric" })}`
@@ -1069,9 +1069,9 @@ function StatsInner() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
             <h3 style={{ fontSize: isMobile ? 14 : 15, fontWeight: 800, margin: 0 }}>Revenus mensuels — 12 derniers mois</h3>
             {!isMobile && (
-              <div style={{ display: "flex", gap: 16, fontSize: 11, color: "#6b7280" }}>
+              <div style={{ display: "flex", gap: 16, fontSize: 11, color: "#8a8477" }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: 2, background: "#16a34a", display: "inline-block" }} />
+                  <span style={{ width: 10, height: 10, borderRadius: 2, background: "#15803d", display: "inline-block" }} />
                   Confirme
                 </span>
                 <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
@@ -1079,7 +1079,7 @@ function StatsInner() {
                   Declare
                 </span>
                 <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ width: 18, height: 1, background: "#d1d5db", display: "inline-block", borderTop: "1px dashed #d1d5db" }} />
+                  <span style={{ width: 18, height: 1, background: "#EAE6DF", display: "inline-block", borderTop: "1px dashed #EAE6DF" }} />
                   Loyer theorique
                 </span>
               </div>
@@ -1090,19 +1090,19 @@ function StatsInner() {
           {/* Summary row below chart */}
           <div style={{
             display: "flex", gap: isMobile ? 12 : 32, marginTop: 18, paddingTop: 14,
-            borderTop: "1px solid #f3f4f6", flexWrap: "wrap",
+            borderTop: "1px solid #F7F4EF", flexWrap: "wrap",
           }}>
             <div>
-              <p style={{ fontSize: 10, color: "#6b7280", fontWeight: 700, textTransform: "uppercase" as const, margin: "0 0 2px" }}>Total encaisse</p>
+              <p style={{ fontSize: 10, color: "#8a8477", fontWeight: 700, textTransform: "uppercase" as const, margin: "0 0 2px" }}>Total encaisse</p>
               <p style={{ fontSize: 16, fontWeight: 800, color: "#111", margin: 0 }}>{totalEncaisse.toLocaleString("fr-FR")} &euro;</p>
             </div>
             <div>
-              <p style={{ fontSize: 10, color: "#6b7280", fontWeight: 700, textTransform: "uppercase" as const, margin: "0 0 2px" }}>Confirme {currentYear}</p>
-              <p style={{ fontSize: 16, fontWeight: 800, color: "#16a34a", margin: 0 }}>{totalConfirmeAnnee.toLocaleString("fr-FR")} &euro;</p>
+              <p style={{ fontSize: 10, color: "#8a8477", fontWeight: 700, textTransform: "uppercase" as const, margin: "0 0 2px" }}>Confirme {currentYear}</p>
+              <p style={{ fontSize: 16, fontWeight: 800, color: "#15803d", margin: 0 }}>{totalConfirmeAnnee.toLocaleString("fr-FR")} &euro;</p>
             </div>
             <div>
-              <p style={{ fontSize: 10, color: "#6b7280", fontWeight: 700, textTransform: "uppercase" as const, margin: "0 0 2px" }}>vs Objectif</p>
-              <p style={{ fontSize: 16, fontWeight: 800, color: pctObjectif >= 90 ? "#16a34a" : "#ea580c", margin: 0 }}>{pctObjectif}%</p>
+              <p style={{ fontSize: 10, color: "#8a8477", fontWeight: 700, textTransform: "uppercase" as const, margin: "0 0 2px" }}>vs Objectif</p>
+              <p style={{ fontSize: 16, fontWeight: 800, color: pctObjectif >= 90 ? "#15803d" : "#a16207", margin: 0 }}>{pctObjectif}%</p>
             </div>
           </div>
         </div>
@@ -1121,15 +1121,15 @@ function StatsInner() {
               gap: 10,
             }}>
               {calendarMonths.map(m => {
-                const dotColor = m.status === "confirmé" ? "#16a34a" : m.status === "déclaré" ? "#f97316" : "#e5e7eb"
-                const dotBg = m.status === "confirmé" ? "#dcfce7" : m.status === "déclaré" ? "#fff7ed" : "#f9fafb"
+                const dotColor = m.status === "confirmé" ? "#15803d" : m.status === "déclaré" ? "#f97316" : "#EAE6DF"
+                const dotBg = m.status === "confirmé" ? "#F0FAEE" : m.status === "déclaré" ? "#FBF6EA" : "#f9fafb"
                 return (
                   <div key={m.key} style={{
                     display: "flex", flexDirection: "column", alignItems: "center",
                     padding: "10px 6px", borderRadius: 12, background: dotBg,
-                    border: `1px solid ${m.status === "none" ? "#f3f4f6" : dotColor}20`,
+                    border: `1px solid ${m.status === "none" ? "#F7F4EF" : dotColor}20`,
                   }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase" as const, marginBottom: 6 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase" as const, marginBottom: 6 }}>
                       {m.label}
                     </span>
                     <span style={{
@@ -1142,22 +1142,22 @@ function StatsInner() {
                       </span>
                     )}
                     {m.amount === 0 && (
-                      <span style={{ fontSize: 10, color: "#9ca3af" }}>&mdash;</span>
+                      <span style={{ fontSize: 10, color: "#8a8477" }}>&mdash;</span>
                     )}
                   </div>
                 )
               })}
             </div>
             {/* Legend */}
-            <div style={{ display: "flex", gap: 14, marginTop: 14, fontSize: 10, color: "#6b7280", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 14, marginTop: 14, fontSize: 10, color: "#8a8477", flexWrap: "wrap" }}>
               <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16a34a", display: "inline-block" }} /> Confirme
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#15803d", display: "inline-block" }} /> Confirme
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#f97316", display: "inline-block" }} /> Declare
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#e5e7eb", display: "inline-block" }} /> Manquant
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#EAE6DF", display: "inline-block" }} /> Manquant
               </span>
             </div>
           </div>
@@ -1169,30 +1169,30 @@ function StatsInner() {
               {[
                 { label: "Loyer mensuel HC", val: `${loyerMensuel.toLocaleString("fr-FR")} \u20AC`, color: "#111", bold: false },
                 { label: "Charges recuperables", val: `${charges.toLocaleString("fr-FR")} \u20AC`, color: "#111", bold: false },
-                { label: "Revenu mensuel brut", val: `${revenuMensuel.toLocaleString("fr-FR")} \u20AC`, color: "#16a34a", bold: true },
-                ...(taxeFonciere ? [{ label: "Taxe fonciere", val: `-${Math.round(taxeFonciere / 12).toLocaleString("fr-FR")} \u20AC/mois`, color: "#dc2626", bold: false }] : []),
-                ...(assurancePno ? [{ label: "Assurance PNO", val: `-${Math.round(assurancePno / 12).toLocaleString("fr-FR")} \u20AC/mois`, color: "#dc2626", bold: false }] : []),
-                ...(chargesCoproAnnuelles ? [{ label: "Charges copro non recup.", val: `-${Math.round(chargesCoproAnnuelles / 12).toLocaleString("fr-FR")} \u20AC/mois`, color: "#dc2626", bold: false }] : []),
-                ...(totalChargesAnnuelles > 0 ? [{ label: "Total charges proprio", val: `-${chargesMensuelles.toLocaleString("fr-FR")} \u20AC/mois`, color: "#dc2626", bold: true }] : []),
-                { label: "Mensualite credit", val: mensualiteCredit ? `-${mensualiteCredit.toLocaleString("fr-FR")} \u20AC` : "Non renseigne", color: mensualiteCredit ? "#dc2626" : "#9ca3af", bold: false },
-                { label: "Cashflow net mensuel", val: `${cashflowMensuel >= 0 ? "+" : ""}${cashflowMensuel.toLocaleString("fr-FR")} \u20AC`, color: cashflowMensuel >= 0 ? "#16a34a" : "#dc2626", bold: true },
-                ...(travauxCout > 0 ? [{ label: "Total travaux (carnet)", val: `-${travauxCout.toLocaleString("fr-FR")} \u20AC`, color: "#ea580c", bold: false }] : []),
+                { label: "Revenu mensuel brut", val: `${revenuMensuel.toLocaleString("fr-FR")} \u20AC`, color: "#15803d", bold: true },
+                ...(taxeFonciere ? [{ label: "Taxe fonciere", val: `-${Math.round(taxeFonciere / 12).toLocaleString("fr-FR")} \u20AC/mois`, color: "#b91c1c", bold: false }] : []),
+                ...(assurancePno ? [{ label: "Assurance PNO", val: `-${Math.round(assurancePno / 12).toLocaleString("fr-FR")} \u20AC/mois`, color: "#b91c1c", bold: false }] : []),
+                ...(chargesCoproAnnuelles ? [{ label: "Charges copro non recup.", val: `-${Math.round(chargesCoproAnnuelles / 12).toLocaleString("fr-FR")} \u20AC/mois`, color: "#b91c1c", bold: false }] : []),
+                ...(totalChargesAnnuelles > 0 ? [{ label: "Total charges proprio", val: `-${chargesMensuelles.toLocaleString("fr-FR")} \u20AC/mois`, color: "#b91c1c", bold: true }] : []),
+                { label: "Mensualite credit", val: mensualiteCredit ? `-${mensualiteCredit.toLocaleString("fr-FR")} \u20AC` : "Non renseigne", color: mensualiteCredit ? "#b91c1c" : "#8a8477", bold: false },
+                { label: "Cashflow net mensuel", val: `${cashflowMensuel >= 0 ? "+" : ""}${cashflowMensuel.toLocaleString("fr-FR")} \u20AC`, color: cashflowMensuel >= 0 ? "#15803d" : "#b91c1c", bold: true },
+                ...(travauxCout > 0 ? [{ label: "Total travaux (carnet)", val: `-${travauxCout.toLocaleString("fr-FR")} \u20AC`, color: "#a16207", bold: false }] : []),
                 { label: `Revenus reels ${currentYear}`, val: `${revenuAnnuelReel.toLocaleString("fr-FR")} \u20AC`, color: "#111", bold: false },
-                { label: "Total encaisse confirme", val: `${totalEncaisse.toLocaleString("fr-FR")} \u20AC`, color: "#16a34a", bold: true },
+                { label: "Total encaisse confirme", val: `${totalEncaisse.toLocaleString("fr-FR")} \u20AC`, color: "#15803d", bold: true },
               ].map((r, idx, arr) => (
                 <div key={r.label} style={{
                   display: "flex", justifyContent: "space-between", alignItems: "center",
                   padding: "9px 0",
-                  borderBottom: idx < arr.length - 1 ? "1px solid #f3f4f6" : "none",
+                  borderBottom: idx < arr.length - 1 ? "1px solid #F7F4EF" : "none",
                 }}>
-                  <span style={{ fontSize: 13, color: "#6b7280" }}>{r.label}</span>
+                  <span style={{ fontSize: 13, color: "#8a8477" }}>{r.label}</span>
                   <span style={{ fontSize: 14, fontWeight: r.bold ? 800 : 600, color: r.color }}>{r.val}</span>
                 </div>
               ))}
             </div>
 
             {!valeurBien && (
-              <div style={{ marginTop: 14, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, padding: "10px 14px" }}>
+              <div style={{ marginTop: 14, background: "#fffbeb", border: "1px solid #EADFC6", borderRadius: 10, padding: "10px 14px" }}>
                 <p style={{ fontSize: 12, color: "#92400e", fontWeight: 600, margin: 0 }}>
                   Ajoutez la valeur du bien et la mensualite credit pour voir le ROI et le seuil de rentabilite
                 </p>
@@ -1213,10 +1213,10 @@ function StatsInner() {
               {([{ label: "5 ans", val: 60 }, { label: "10 ans", val: 120 }, { label: "15 ans", val: 180 }, { label: "Tout", val: 0 }] as const).map(z => (
                 <button key={z.val} onClick={() => setZoomMois(z.val)}
                   style={{
-                    padding: "4px 10px", border: "1.5px solid #e5e7eb", borderRadius: 999,
+                    padding: "4px 10px", border: "1px solid #EAE6DF", borderRadius: 999,
                     fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
                     background: zoomMois === z.val ? "#111" : "white",
-                    color: zoomMois === z.val ? "white" : "#6b7280",
+                    color: zoomMois === z.val ? "white" : "#8a8477",
                     transition: "all 0.15s",
                   }}>
                   {z.label}
@@ -1224,7 +1224,7 @@ function StatsInner() {
               ))}
             </div>
           </div>
-          <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16, marginTop: 8 }}>
+          <p style={{ fontSize: 12, color: "#8a8477", marginBottom: 16, marginTop: 8 }}>
             % de l'investissement recupere via les loyers ({valeurBien > 0 ? `${(valeurBien / 1000).toFixed(0)}k \u20AC` : "valeur non renseignee"}).
             Projection a {loyerMensuel > 0 ? `${loyerMensuel.toLocaleString("fr-FR")} \u20AC/mois` : "loyer non renseigne"}.
           </p>
@@ -1237,24 +1237,24 @@ function StatsInner() {
           />
 
           {perPoints.length >= 2 && (
-            <div style={{ display: "flex", gap: 16, marginTop: 12, fontSize: 11, color: "#6b7280", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 16, marginTop: 12, fontSize: 11, color: "#8a8477", flexWrap: "wrap" }}>
               <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
                 <span style={{ width: 20, height: 2, background: "#111", display: "inline-block" }} />
                 Reel (loyers encaisses)
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width: 20, height: 1, borderTop: "2px dashed #d1d5db", display: "inline-block" }} />
+                <span style={{ width: 20, height: 1, borderTop: "2px dashed #EAE6DF", display: "inline-block" }} />
                 Projection theorique
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width: 20, height: 1, borderTop: "2px dashed #dc2626", display: "inline-block", opacity: 0.7 }} />
+                <span style={{ width: 20, height: 1, borderTop: "2px dashed #b91c1c", display: "inline-block", opacity: 0.7 }} />
                 100% — rentabilise
               </span>
             </div>
           )}
 
           {perPoints.length < 2 && (
-            <div style={{ marginTop: 8, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, padding: "10px 14px" }}>
+            <div style={{ marginTop: 8, background: "#fffbeb", border: "1px solid #EADFC6", borderRadius: 10, padding: "10px 14px" }}>
               <p style={{ fontSize: 12, color: "#92400e", fontWeight: 600, margin: 0 }}>
                 Renseignez la date de debut du bail et la valeur du bien pour voir ce graphique
               </p>
@@ -1273,27 +1273,27 @@ function StatsInner() {
             <div>
               <label style={labelStyle}>Mois</label>
               <input type="month" value={newLoyerMois} onChange={e => setNewLoyerMois(e.target.value)}
-                style={{ padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+                style={{ padding: "8px 12px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
             </div>
             <div>
               <label style={labelStyle}>Montant (euros)</label>
               <input type="number" value={newLoyerMontant} onChange={e => setNewLoyerMontant(e.target.value)}
                 placeholder={String(loyerMensuel)}
-                style={{ padding: "8px 12px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 13, fontFamily: "inherit", outline: "none", width: 120 }} />
+                style={{ padding: "8px 12px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 13, fontFamily: "inherit", outline: "none", width: 120 }} />
             </div>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#374151", marginBottom: 10 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#111", marginBottom: 10 }}>
               <input
                 type="checkbox"
                 checked={newLoyerConfirme}
                 onChange={e => setNewLoyerConfirme(e.target.checked)}
-                style={{ width: 16, height: 16, accentColor: "#16a34a", cursor: "pointer" }}
+                style={{ width: 16, height: 16, accentColor: "#15803d", cursor: "pointer" }}
               />
               <span>Loyer déjà reçu — envoyer directement la quittance au locataire</span>
             </label>
             <button onClick={ajouterOuMettreAJourLoyer} disabled={!newLoyerMois || !newLoyerMontant || savingLoyer}
               style={{
-                background: newLoyerMois && newLoyerMontant ? (newLoyerConfirme ? "#16a34a" : "#111") : "#e5e7eb",
-                color: newLoyerMois && newLoyerMontant ? "white" : "#9ca3af",
+                background: newLoyerMois && newLoyerMontant ? (newLoyerConfirme ? "#15803d" : "#111") : "#EAE6DF",
+                color: newLoyerMois && newLoyerMontant ? "white" : "#8a8477",
                 border: "none", borderRadius: 999, padding: "9px 20px",
                 fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit",
               }}>
@@ -1307,7 +1307,7 @@ function StatsInner() {
 
           {/* Loyer list */}
           {loyers.length === 0 ? (
-            <p style={{ fontSize: 13, color: "#9ca3af", textAlign: "center", padding: "20px 0" }}>
+            <p style={{ fontSize: 13, color: "#8a8477", textAlign: "center", padding: "20px 0" }}>
               Aucun loyer enregistre. Ajoutez le premier loyer ci-dessus.
             </p>
           ) : isMobile ? (
@@ -1320,14 +1320,14 @@ function StatsInner() {
                 return (
                   <div key={l.id} style={{
                     background: "#f9fafb", borderRadius: 14, padding: "14px 16px",
-                    border: "1px solid #f3f4f6",
+                    border: "1px solid #F7F4EF",
                   }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                       <span style={{ fontSize: 14, fontWeight: 700, textTransform: "capitalize" as const }}>{moisLabel}</span>
                       <span style={{
-                        background: estConfirme ? "#dcfce7" : "#fff7ed",
-                        color: estConfirme ? "#16a34a" : "#c2410c",
-                        border: `1px solid ${estConfirme ? "#bbf7d0" : "#fed7aa"}`,
+                        background: estConfirme ? "#F0FAEE" : "#FBF6EA",
+                        color: estConfirme ? "#15803d" : "#c2410c",
+                        border: `1px solid ${estConfirme ? "#C6E9C0" : "#fed7aa"}`,
                         padding: "2px 9px", borderRadius: 999, fontSize: 11, fontWeight: 700,
                       }}>
                         {estConfirme ? "Confirme" : "En attente"}
@@ -1355,12 +1355,12 @@ function StatsInner() {
                           charges: Number(bien.charges) || 0,
                           moisLabel,
                         })}
-                          style={{ background: "#eff6ff", color: "#1d4ed8", border: "1.5px solid #bfdbfe", borderRadius: 999, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                          style={{ background: "#EEF3FB", color: "#1d4ed8", border: "1px solid #D7E3F4", borderRadius: 999, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                           Quittance PDF
                         </button>
                       )}
                       {estConfirme && !bien.locataire_email && (
-                        <span style={{ fontSize: 11, color: "#9ca3af", alignSelf: "center" }}>Email locataire manquant</span>
+                        <span style={{ fontSize: 11, color: "#8a8477", alignSelf: "center" }}>Email locataire manquant</span>
                       )}
                     </div>
                   </div>
@@ -1385,16 +1385,16 @@ function StatsInner() {
                 return (
                   <div key={l.id} style={{
                     display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 0,
-                    padding: "12px 16px", borderBottom: "1px solid #f3f4f6",
+                    padding: "12px 16px", borderBottom: "1px solid #F7F4EF",
                     background: i % 2 === 0 ? "white" : "#fafafa", alignItems: "center",
                   }}>
                     <span style={{ fontSize: 13, fontWeight: 600, textTransform: "capitalize" as const }}>{moisLabel}</span>
                     <span style={{ fontSize: 14, fontWeight: 700 }}>{l.montant.toLocaleString("fr-FR")} &euro;</span>
                     <span style={{ display: "inline-flex" }}>
                       <span style={{
-                        background: estConfirme ? "#dcfce7" : "#fff7ed",
-                        color: estConfirme ? "#16a34a" : "#c2410c",
-                        border: `1px solid ${estConfirme ? "#bbf7d0" : "#fed7aa"}`,
+                        background: estConfirme ? "#F0FAEE" : "#FBF6EA",
+                        color: estConfirme ? "#15803d" : "#c2410c",
+                        border: `1px solid ${estConfirme ? "#C6E9C0" : "#fed7aa"}`,
                         padding: "2px 9px", borderRadius: 999, fontSize: 11, fontWeight: 700,
                       }}>
                         {estConfirme ? "Confirme" : "En attente"}
@@ -1421,12 +1421,12 @@ function StatsInner() {
                           charges: Number(bien.charges) || 0,
                           moisLabel,
                         })}
-                          style={{ background: "#eff6ff", color: "#1d4ed8", border: "1.5px solid #bfdbfe", borderRadius: 999, padding: "4px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                          style={{ background: "#EEF3FB", color: "#1d4ed8", border: "1px solid #D7E3F4", borderRadius: 999, padding: "4px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                           PDF
                         </button>
                       )}
                       {estConfirme && !bien.locataire_email && (
-                        <span style={{ fontSize: 10, color: "#9ca3af" }}>Email locataire manquant</span>
+                        <span style={{ fontSize: 10, color: "#8a8477" }}>Email locataire manquant</span>
                       )}
                     </span>
                   </div>
@@ -1458,39 +1458,39 @@ function StatsInner() {
                         <div key={yr.year} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                           <p style={{ fontSize: 12, fontWeight: 800, margin: 0 }}>{yr.total.toLocaleString("fr-FR")} &euro;</p>
                           {pct !== null && (
-                            <p style={{ fontSize: 10, color: pct >= 90 ? "#16a34a" : "#ea580c", margin: 0 }}>{pct}% objectif</p>
+                            <p style={{ fontSize: 10, color: pct >= 90 ? "#15803d" : "#a16207", margin: 0 }}>{pct}% objectif</p>
                           )}
                           <div style={{ width: "100%", display: "flex", alignItems: "flex-end", height: BAR_H, gap: 4, justifyContent: "center" }}>
-                            <div style={{ width: 28, height: hTotal, background: "#e5e7eb", borderRadius: "4px 4px 0 0" }} title="Total declare" />
-                            <div style={{ width: 28, height: hConf, background: "#16a34a", borderRadius: "4px 4px 0 0" }} title="Confirme" />
+                            <div style={{ width: 28, height: hTotal, background: "#EAE6DF", borderRadius: "4px 4px 0 0" }} title="Total declare" />
+                            <div style={{ width: 28, height: hConf, background: "#15803d", borderRadius: "4px 4px 0 0" }} title="Confirme" />
                           </div>
-                          <p style={{ fontSize: 12, color: "#6b7280", fontWeight: 700, margin: 0 }}>{yr.year}</p>
-                          <p style={{ fontSize: 10, color: "#16a34a", margin: 0 }}>{yr.confirmed.toLocaleString("fr-FR")} &euro;</p>
+                          <p style={{ fontSize: 12, color: "#8a8477", fontWeight: 700, margin: 0 }}>{yr.year}</p>
+                          <p style={{ fontSize: 10, color: "#15803d", margin: 0 }}>{yr.confirmed.toLocaleString("fr-FR")} &euro;</p>
                         </div>
                       )
                     })}
                     <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                      <p style={{ fontSize: 12, fontWeight: 800, color: "#9ca3af", margin: 0 }}>
+                      <p style={{ fontSize: 12, fontWeight: 800, color: "#8a8477", margin: 0 }}>
                         {revenuAnnuelTheorique.toLocaleString("fr-FR")} &euro;
                       </p>
-                      <p style={{ fontSize: 10, color: "#9ca3af", margin: 0 }}>100% objectif</p>
+                      <p style={{ fontSize: 10, color: "#8a8477", margin: 0 }}>100% objectif</p>
                       <div style={{ width: "100%", display: "flex", alignItems: "flex-end", height: BAR_H, justifyContent: "center" }}>
-                        <div style={{ width: 28, height: BAR_H, background: "transparent", borderRadius: "4px 4px 0 0", border: "2px dashed #e5e7eb" }} />
+                        <div style={{ width: 28, height: BAR_H, background: "transparent", borderRadius: "4px 4px 0 0", border: "2px dashed #EAE6DF" }} />
                       </div>
-                      <p style={{ fontSize: 12, color: "#9ca3af", fontWeight: 700, margin: 0 }}>Objectif</p>
-                      <p style={{ fontSize: 10, color: "#9ca3af", margin: 0 }}>theorique</p>
+                      <p style={{ fontSize: 12, color: "#8a8477", fontWeight: 700, margin: 0 }}>Objectif</p>
+                      <p style={{ fontSize: 10, color: "#8a8477", margin: 0 }}>theorique</p>
                     </div>
                   </>
                 )
               })()}
             </div>
-            <div style={{ display: "flex", gap: 16, marginTop: 16, fontSize: 11, color: "#6b7280" }}>
+            <div style={{ display: "flex", gap: 16, marginTop: 16, fontSize: 11, color: "#8a8477" }}>
               <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 2, background: "#e5e7eb", display: "inline-block" }} />
+                <span style={{ width: 10, height: 10, borderRadius: 2, background: "#EAE6DF", display: "inline-block" }} />
                 Total declare
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 2, background: "#16a34a", display: "inline-block" }} />
+                <span style={{ width: 10, height: 10, borderRadius: 2, background: "#15803d", display: "inline-block" }} />
                 Confirme
               </span>
             </div>
