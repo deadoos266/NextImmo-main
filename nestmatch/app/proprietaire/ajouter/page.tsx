@@ -24,6 +24,8 @@ function draftStorageKey(email: string) {
 }
 
 // ─── Types partagés ────────────────────────────────────────────────────────
+type TriPolitique = "indifferent" | "oui" | "non"
+
 type AnnonceForm = {
   titre: string; ville: string; adresse: string; prix: string; charges: string; caution: string
   surface: string; pieces: string; chambres: string; etage: string; dpe: string
@@ -33,10 +35,58 @@ type AnnonceForm = {
   lat: number | null; lng: number | null
   // Critères candidats (handoff publish.jsx step 6) — non discriminants, servent au matching.
   min_revenus_ratio: number; garants_acceptes: string[]; profils_acceptes: string[]; message_proprietaire: string
+  // R10.6 — critères v2 bonus-only (jamais de malus). Stockés dans nouvelles colonnes (migration 025).
+  age_min: string; age_max: string; max_occupants: string
+  animaux_politique: TriPolitique; fumeur_politique: TriPolitique
 }
 
 const GARANTS_OPTIONS = ["Visale", "Garantme", "Parents CDI", "Caution bancaire", "Indifférent"] as const
 const PROFILS_OPTIONS = ["CDI", "CDD", "Étudiant", "Fonctionnaire", "Freelance / Indépendant", "Retraité"] as const
+
+// R10.6 — étages courants (pills) + saisie libre acceptée via un input séparé.
+const ETAGES_COMMUNS = ["Sous-sol", "Rez-de-chaussée", "1er", "2e", "3e", "4e", "5e", "6e", "7e+"] as const
+// R10.6 — DPE : pills A-G + pill "Non renseigné". Les classements spécifiques sont marqués "Non communiqué".
+const DPE_VALUES = ["A", "B", "C", "D", "E", "F", "G", "Non renseigné"] as const
+
+// R10.6 — équipements étendus (stockés dans jsonb equipements_extras).
+// Key = colonne jsonb ; label = affichage. Regroupés par famille pour lisibilité.
+const EQUIP_EXTRAS_GROUPS: Array<{ title: string; items: Array<{ k: string; label: string }> }> = [
+  {
+    title: "Électroménager",
+    items: [
+      { k: "lave_linge",     label: "Lave-linge" },
+      { k: "seche_linge",    label: "Sèche-linge" },
+      { k: "lave_vaisselle", label: "Lave-vaisselle" },
+      { k: "four",           label: "Four" },
+      { k: "micro_ondes",    label: "Micro-ondes" },
+      { k: "frigo",          label: "Réfrigérateur" },
+      { k: "congelateur",    label: "Congélateur" },
+      { k: "plaques",        label: "Plaques de cuisson" },
+      { k: "hotte",          label: "Hotte aspirante" },
+    ],
+  },
+  {
+    title: "Confort",
+    items: [
+      { k: "wifi",            label: "Wifi inclus" },
+      { k: "climatisation",   label: "Climatisation" },
+      { k: "cheminee",        label: "Cheminée" },
+      { k: "interphone",      label: "Interphone" },
+      { k: "gardien",         label: "Gardien" },
+      { k: "rangements",      label: "Rangements / placards" },
+      { k: "double_vitrage",  label: "Double vitrage" },
+      { k: "cuisine_equipee", label: "Cuisine équipée" },
+    ],
+  },
+  {
+    title: "Exposition & vue",
+    items: [
+      { k: "exposition_sud", label: "Exposition sud" },
+      { k: "vue_degagee",    label: "Vue dégagée" },
+      { k: "traversant",     label: "Traversant" },
+    ],
+  },
+]
 
 type AnnonceToggles = {
   meuble: boolean; animaux: boolean; parking: boolean; cave: boolean
@@ -90,7 +140,12 @@ export default function AjouterBien() {
     taxe_fonciere: "", assurance_pno: "", charges_copro_annuelles: "",
     lat: null, lng: null,
     min_revenus_ratio: 3, garants_acceptes: ["Visale"], profils_acceptes: ["CDI", "Fonctionnaire"], message_proprietaire: "",
+    age_min: "", age_max: "", max_occupants: "",
+    animaux_politique: "indifferent", fumeur_politique: "indifferent",
   })
+  // R10.6 — équipements étendus stockés dans jsonb equipements_extras.
+  // Clé = nom colonne handoff ; valeur = boolean. Init à {} (tout off).
+  const [equipExtras, setEquipExtras] = useState<Record<string, boolean>>({})
   const [toggles, setToggles] = useState<AnnonceToggles>({
     meuble: false, animaux: false, parking: false, cave: false,
     fibre: false, balcon: false, terrasse: false, jardin: false, ascenseur: false,
@@ -123,7 +178,7 @@ export default function AjouterBien() {
     if (!hasContent) return
     const t = setTimeout(() => {
       try {
-        const payload = { form, toggles, photos, step, savedAt: new Date().toISOString() }
+        const payload = { form, toggles, equipExtras, photos, step, savedAt: new Date().toISOString() }
         localStorage.setItem(draftStorageKey(session.user!.email!), JSON.stringify(payload))
         setSavedHint(true)
         setTimeout(() => setSavedHint(false), 1400)
@@ -131,7 +186,7 @@ export default function AjouterBien() {
     }, 900)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, toggles, photos, step, session?.user?.email])
+  }, [form, toggles, equipExtras, photos, step, session?.user?.email])
 
   function restaurerBrouillon() {
     if (!session?.user?.email) return
@@ -141,6 +196,7 @@ export default function AjouterBien() {
       const draft = JSON.parse(raw)
       if (draft.form) setForm((f) => ({ ...f, ...draft.form }))
       if (draft.toggles) setToggles((t) => ({ ...t, ...draft.toggles }))
+      if (draft.equipExtras && typeof draft.equipExtras === "object") setEquipExtras(draft.equipExtras)
       if (Array.isArray(draft.photos)) setPhotos(draft.photos)
       // Compat v1 : l'ancien draft n'avait pas de champ `step` — fallback 1.
       const parsedStep = Number(draft.step)
@@ -239,8 +295,20 @@ export default function AjouterBien() {
         garants_acceptes: form.garants_acceptes.length > 0 ? form.garants_acceptes : null,
         profils_acceptes: form.profils_acceptes.length > 0 ? form.profils_acceptes : null,
         message_proprietaire: form.message_proprietaire || null,
+        // R10.6 — critères v2 (migration 025). Fallback si colonnes absentes.
+        age_min: toInt(form.age_min),
+        age_max: toInt(form.age_max),
+        max_occupants: toInt(form.max_occupants),
+        animaux_politique: form.animaux_politique === "indifferent" ? null : form.animaux_politique,
+        fumeur_politique: form.fumeur_politique === "indifferent" ? null : form.fumeur_politique,
+        equipements_extras: Object.keys(equipExtras).length > 0 ? equipExtras : null,
         ...toggles,
       }
+      // R10.6 — la décision animaux est désormais tri-state en Step6 ; on dérive
+      // la colonne boolean `animaux` (legacy, lue par matching.ts v3) de la politique.
+      // "oui" → true, "non" → false, "indifferent" → reste à la valeur toggles (false par défaut).
+      if (form.animaux_politique === "oui") data.animaux = true
+      else if (form.animaux_politique === "non") data.animaux = false
 
       if (dejaLoue) {
         data.locataire_email = form.locataire_email ? form.locataire_email.trim().toLowerCase() : null
@@ -270,12 +338,32 @@ export default function AjouterBien() {
         error = retry.error
         insertedRows = retry.data
       }
+      // Fallback R10.6 — retire les nouveaux champs critères v2 / equipements_extras
+      // si migration 025 pas appliquée.
+      if (error && /age_min|age_max|max_occupants|animaux_politique|fumeur_politique|equipements_extras|column.*does not exist/i.test(error.message || "")) {
+        const dataNoV2 = { ...data }
+        delete dataNoV2.age_min
+        delete dataNoV2.age_max
+        delete dataNoV2.max_occupants
+        delete dataNoV2.animaux_politique
+        delete dataNoV2.fumeur_politique
+        delete dataNoV2.equipements_extras
+        const retry = await supabase.from("annonces").insert([dataNoV2]).select("id")
+        error = retry.error
+        insertedRows = retry.data
+      }
       if (error && /min_revenus_ratio|garants_acceptes|profils_acceptes|message_proprietaire|column.*does not exist/i.test(error.message || "")) {
         const dataNoCriteria = { ...data }
         delete dataNoCriteria.min_revenus_ratio
         delete dataNoCriteria.garants_acceptes
         delete dataNoCriteria.profils_acceptes
         delete dataNoCriteria.message_proprietaire
+        delete dataNoCriteria.age_min
+        delete dataNoCriteria.age_max
+        delete dataNoCriteria.max_occupants
+        delete dataNoCriteria.animaux_politique
+        delete dataNoCriteria.fumeur_politique
+        delete dataNoCriteria.equipements_extras
         delete dataNoCriteria.lat
         delete dataNoCriteria.lng
         const retry = await supabase.from("annonces").insert([dataNoCriteria]).select("id")
@@ -394,9 +482,9 @@ export default function AjouterBien() {
           marginBottom: 20, boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
         }}>
           {step === 1 && <Step1Nature form={form} setForm={setForm} isMobile={isMobile} />}
-          {step === 2 && <Step2Adresse form={form} setForm={setForm} isMobile={isMobile} />}
+          {step === 2 && <Step2Adresse form={form} setForm={setForm} toggles={toggles} setToggles={setToggles} isMobile={isMobile} />}
           {step === 3 && <Step3Dimensions form={form} setForm={setForm} isMobile={isMobile} />}
-          {step === 4 && <Step4Equipements toggles={toggles} setToggles={setToggles} isMobile={isMobile} />}
+          {step === 4 && <Step4Equipements toggles={toggles} setToggles={setToggles} equipExtras={equipExtras} setEquipExtras={setEquipExtras} isMobile={isMobile} />}
           {step === 5 && (
             <Step5Recit
               form={form}
@@ -529,57 +617,80 @@ function Step1Nature({
 }
 
 // ─── Étape 2 — Localisation ────────────────────────────────────────────────
+// R10.6 — on ré-introduit le toggle `localisation_exacte` dans cette étape
+// (avant il était paumé en Step 4 Équipements). C'est conceptuellement la
+// bonne place : décision liée à l'adresse exacte.
 function Step2Adresse({
-  form, setForm, isMobile,
+  form, setForm, toggles, setToggles, isMobile,
 }: {
   form: AnnonceForm
   setForm: React.Dispatch<React.SetStateAction<AnnonceForm>>
+  toggles: AnnonceToggles
+  setToggles: React.Dispatch<React.SetStateAction<AnnonceToggles>>
   isMobile: boolean
 }) {
   const set = (key: keyof AnnonceForm) => (e: { target: { value: string } }) =>
     setForm(f => ({ ...f, [key]: e.target.value }))
   return (
-    <Grid2 isMobile={isMobile}>
-      <F l="Titre de l'annonce">
-        <input style={inp} value={form.titre} onChange={set("titre")} maxLength={120} placeholder="Ex : Bel appartement T2 lumineux" />
-      </F>
-      <F l="Ville">
-        <CityAutocomplete value={form.ville} onChange={v => setForm(f => ({ ...f, ville: v }))} placeholder="Commencez à taper…" />
-      </F>
-      <F l={<>Adresse <Tooltip text="L'adresse reste privée par défaut. Vous pourrez exposer la position précise à l'étape 4." /></>}>
-        <AddressAutocomplete
-          value={form.adresse}
-          onChange={v => setForm(f => ({ ...f, adresse: v }))}
-          onSelect={a => {
-            setForm(f => ({
-              ...f,
-              adresse: a.street || a.label,
-              ville: a.city || f.ville,
-              lat: a.lat,
-              lng: a.lng,
-            }))
-          }}
-          city={form.ville || undefined}
-          placeholder="Ex : 6 rue de Rivoli"
-        />
-      </F>
-      <F l="Disponible à partir du">
-        <input
-          type="date"
-          style={inp}
-          value={form.dispo && form.dispo !== "Disponible maintenant" && /^\d{4}-\d{2}-\d{2}$/.test(form.dispo) ? form.dispo : ""}
-          min={new Date().toISOString().split("T")[0]}
-          onChange={e => setForm(f => ({ ...f, dispo: e.target.value || "Disponible maintenant" }))}
-        />
-        <p style={{ fontSize: 11, color: km.muted, marginTop: 6 }}>
-          Laisser vide = « Disponible maintenant ».
+    <>
+      <Grid2 isMobile={isMobile}>
+        <F l="Titre de l'annonce">
+          <input style={inp} value={form.titre} onChange={set("titre")} maxLength={120} placeholder="Ex : Bel appartement T2 lumineux" />
+        </F>
+        <F l="Ville">
+          <CityAutocomplete value={form.ville} onChange={v => setForm(f => ({ ...f, ville: v }))} placeholder="Commencez à taper…" />
+        </F>
+        <F l={<>Adresse <Tooltip text="L'adresse reste privée par défaut. Voir l'option ci-dessous pour l'exposer." /></>}>
+          <AddressAutocomplete
+            value={form.adresse}
+            onChange={v => setForm(f => ({ ...f, adresse: v }))}
+            onSelect={a => {
+              setForm(f => ({
+                ...f,
+                adresse: a.street || a.label,
+                ville: a.city || f.ville,
+                lat: a.lat,
+                lng: a.lng,
+              }))
+            }}
+            city={form.ville || undefined}
+            placeholder="Ex : 6 rue de Rivoli"
+          />
+        </F>
+        <F l="Disponible à partir du">
+          <input
+            type="date"
+            style={inp}
+            value={form.dispo && form.dispo !== "Disponible maintenant" && /^\d{4}-\d{2}-\d{2}$/.test(form.dispo) ? form.dispo : ""}
+            min={new Date().toISOString().split("T")[0]}
+            onChange={e => setForm(f => ({ ...f, dispo: e.target.value || "Disponible maintenant" }))}
+          />
+          <p style={{ fontSize: 11, color: km.muted, marginTop: 6 }}>
+            Laisser vide = « Disponible maintenant ».
+          </p>
+        </F>
+      </Grid2>
+
+      <div style={{ borderTop: `1px solid ${km.beige}`, paddingTop: 22, marginTop: 28 }}>
+        <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 14px" }}>
+          Confidentialité de la localisation
+          {" "}<Tooltip text="Par défaut, un cercle de 400 m est affiché autour de la ville — votre adresse exacte reste privée. Activez uniquement si vous souhaitez exposer la position précise sur la carte publique." />
         </p>
-      </F>
-    </Grid2>
+        <Toggle label="Afficher la localisation exacte sur la carte publique" k="localisation_exacte" toggles={toggles} setToggles={setToggles} />
+        <p style={{ fontSize: 12, color: km.muted, marginTop: 6, lineHeight: 1.5 }}>
+          {toggles.localisation_exacte
+            ? "Les visiteurs verront un marqueur précis à l'adresse du bien."
+            : "Les visiteurs verront uniquement une zone approximative (cercle de 400 m). Recommandé."}
+        </p>
+      </div>
+    </>
   )
 }
 
 // ─── Étape 3 — Dimensions ──────────────────────────────────────────────────
+// R10.6 — pieces/chambres en saisie libre (input number). Étage et DPE passent
+// aux pills pour ressembler au handoff publish.jsx + input libre en secours
+// pour les cas exotiques.
 function Step3Dimensions({
   form, setForm, isMobile,
 }: {
@@ -589,67 +700,155 @@ function Step3Dimensions({
 }) {
   const set = (key: keyof AnnonceForm) => (e: { target: { value: string } }) =>
     setForm(f => ({ ...f, [key]: e.target.value }))
+  // « courant » = valeur dans les pills ; sinon on considère que c'est une saisie libre.
+  const etageInPills = (ETAGES_COMMUNS as readonly string[]).includes(form.etage)
+  const dpeInPills = (DPE_VALUES as readonly string[]).includes(form.dpe)
   return (
-    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: 16 }}>
-      <F l="Surface (m²)"><input style={inp} type="number" value={form.surface} onChange={set("surface")} placeholder="38" /></F>
-      <F l="Pièces">
-        <select style={sel} value={form.pieces} onChange={set("pieces")}>
-          {["","1","2","3","4","5","6","7+"].map(v => <option key={v} value={v}>{v || "Sélectionner"}</option>)}
-        </select>
-      </F>
-      <F l="Chambres">
-        <select style={sel} value={form.chambres} onChange={set("chambres")}>
-          {["","0","1","2","3","4","5+"].map(v => <option key={v} value={v}>{v === "" ? "Sélectionner" : v}</option>)}
-        </select>
-      </F>
-      <F l="Étage">
-        <select style={sel} value={form.etage} onChange={set("etage")}>
-          {["","Rez-de-chaussée","1er","2e","3e","4e","5e","6e","7e","8e","9e","10e+"].map(v => <option key={v} value={v}>{v || "Sélectionner"}</option>)}
-        </select>
-      </F>
-      <F l={<>DPE <Tooltip text="Le DPE est obligatoire depuis 2007. A = très économe, G = passoire thermique. Les logements F et G sont progressivement interdits à la location." /></>}>
-        <select style={sel} value={form.dpe} onChange={set("dpe")}>
-          {["A","B","C","D","E","F","G"].map(v => <option key={v}>{v}</option>)}
-        </select>
-      </F>
+    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: 16 }}>
+        <F l="Surface (m²)"><input style={inp} type="number" min={0} value={form.surface} onChange={set("surface")} placeholder="38" /></F>
+        <F l="Pièces"><input style={inp} type="number" min={0} max={20} value={form.pieces} onChange={set("pieces")} placeholder="Ex : 2" /></F>
+        <F l="Chambres"><input style={inp} type="number" min={0} max={20} value={form.chambres} onChange={set("chambres")} placeholder="Ex : 1" /></F>
+      </div>
+
+      <div>
+        <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 10px" }}>Étage</p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+          {ETAGES_COMMUNS.map(v => {
+            const active = form.etage === v
+            return (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setForm(f => ({ ...f, etage: v }))}
+                style={{
+                  padding: "8px 14px", borderRadius: 999, fontFamily: "inherit", fontSize: 12.5, fontWeight: 500, cursor: "pointer",
+                  border: `1.5px solid ${active ? km.ink : km.line}`,
+                  background: active ? km.ink : km.white,
+                  color: active ? km.white : km.ink,
+                }}
+              >{v}</button>
+            )
+          })}
+        </div>
+        <input
+          style={{ ...inp, maxWidth: 240 }}
+          type="text"
+          placeholder="Ou saisie libre (ex : 12e)"
+          value={etageInPills ? "" : form.etage}
+          onChange={set("etage")}
+        />
+      </div>
+
+      <div>
+        <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 10px" }}>
+          DPE
+          {" "}<Tooltip text="Le DPE est obligatoire depuis 2007. A = très économe, G = passoire thermique. Les logements F et G sont progressivement interdits à la location." />
+        </p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+          {DPE_VALUES.map((v, i) => {
+            const active = form.dpe === v
+            const isLetter = v.length === 1
+            const letterColors = ["#2E7D32", "#66BB6A", "#AED581", "#FFEE58", "#FFA726", "#EF5350", "#C62828"]
+            return (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setForm(f => ({ ...f, dpe: v }))}
+                style={{
+                  padding: isLetter ? "10px 18px" : "10px 14px",
+                  borderRadius: 10,
+                  fontFamily: "inherit",
+                  fontSize: isLetter ? 14 : 12.5,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  border: `2px solid ${active ? km.ink : "transparent"}`,
+                  background: isLetter ? letterColors[i] : km.white,
+                  color: isLetter ? km.white : km.ink,
+                  boxShadow: active ? "0 0 0 1px inset rgba(255,255,255,0.3)" : "none",
+                  letterSpacing: isLetter ? "0.5px" : "0.3px",
+                  minWidth: isLetter ? 44 : "auto",
+                  textAlign: "center",
+                  outline: !isLetter ? `1px solid ${active ? km.ink : km.line}` : "none",
+                }}
+              >{v}</button>
+            )
+          })}
+        </div>
+        {!dpeInPills && (
+          <input
+            style={{ ...inp, maxWidth: 280 }}
+            type="text"
+            placeholder="Ou saisie libre (ex : En attente)"
+            value={form.dpe}
+            onChange={set("dpe")}
+          />
+        )}
+      </div>
     </div>
   )
 }
 
 // ─── Étape 4 — Équipements ─────────────────────────────────────────────────
+// R10.6 — le toggle localisation_exacte a été déplacé en Step2 (Adresse).
+// L'étape ne contient plus que des équipements. Groupe 1 = champs historiques
+// (colonnes boolean en DB), groupes suivants = équipements étendus stockés
+// dans `equipements_extras` jsonb (migration 025).
 function Step4Equipements({
-  toggles, setToggles, isMobile,
+  toggles, setToggles, equipExtras, setEquipExtras, isMobile,
 }: {
   toggles: AnnonceToggles
   setToggles: React.Dispatch<React.SetStateAction<AnnonceToggles>>
+  equipExtras: Record<string, boolean>
+  setEquipExtras: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
   isMobile: boolean
 }) {
+  const toggleExtra = (k: string) =>
+    setEquipExtras(prev => ({ ...prev, [k]: !prev[k] }))
   return (
-    <>
-      <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 14px" }}>Équipements</p>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 4, marginBottom: 24 }}>
-        <Toggle label="Meublé" k="meuble" toggles={toggles} setToggles={setToggles} />
-        <Toggle label="Animaux acceptés" k="animaux" toggles={toggles} setToggles={setToggles} />
-        <Toggle label="Parking" k="parking" toggles={toggles} setToggles={setToggles} />
-        <Toggle label="Cave" k="cave" toggles={toggles} setToggles={setToggles} />
-        <Toggle label="Fibre optique" k="fibre" toggles={toggles} setToggles={setToggles} />
-        <Toggle label="Balcon" k="balcon" toggles={toggles} setToggles={setToggles} />
-        <Toggle label="Terrasse" k="terrasse" toggles={toggles} setToggles={setToggles} />
-        <Toggle label="Jardin" k="jardin" toggles={toggles} setToggles={setToggles} />
-        <Toggle label="Ascenseur" k="ascenseur" toggles={toggles} setToggles={setToggles} />
+    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+      <div>
+        <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 14px" }}>Général</p>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 4 }}>
+          <Toggle label="Meublé" k="meuble" toggles={toggles} setToggles={setToggles} />
+          <Toggle label="Parking" k="parking" toggles={toggles} setToggles={setToggles} />
+          <Toggle label="Cave" k="cave" toggles={toggles} setToggles={setToggles} />
+          <Toggle label="Fibre optique" k="fibre" toggles={toggles} setToggles={setToggles} />
+          <Toggle label="Balcon" k="balcon" toggles={toggles} setToggles={setToggles} />
+          <Toggle label="Terrasse" k="terrasse" toggles={toggles} setToggles={setToggles} />
+          <Toggle label="Jardin" k="jardin" toggles={toggles} setToggles={setToggles} />
+          <Toggle label="Ascenseur" k="ascenseur" toggles={toggles} setToggles={setToggles} />
+        </div>
       </div>
 
-      <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 14px" }}>
-        Confidentialité de la localisation
-        {" "}<Tooltip text="Par défaut, un cercle de 400 m est affiché autour de la ville — votre adresse exacte reste privée. Activez uniquement si vous souhaitez exposer la position précise sur la carte publique." />
+      {EQUIP_EXTRAS_GROUPS.map(group => (
+        <div key={group.title}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 10px" }}>{group.title}</p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {group.items.map(it => {
+              const active = !!equipExtras[it.k]
+              return (
+                <button
+                  key={it.k}
+                  type="button"
+                  onClick={() => toggleExtra(it.k)}
+                  style={{
+                    padding: "8px 14px", borderRadius: 999, fontFamily: "inherit", fontSize: 12.5, fontWeight: 500, cursor: "pointer",
+                    border: `1.5px solid ${active ? km.ink : km.line}`,
+                    background: active ? km.ink : km.white,
+                    color: active ? km.white : km.ink,
+                  }}
+                >{it.label}</button>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+
+      <p style={{ fontSize: 11, color: km.muted, lineHeight: 1.5, margin: 0, fontStyle: "italic" }}>
+        Plus vous cochez d'équipements, plus le matching locataire est précis. Les équipements non renseignés sont considérés comme absents.
       </p>
-      <Toggle label="Afficher la localisation exacte sur la carte publique" k="localisation_exacte" toggles={toggles} setToggles={setToggles} />
-      <p style={{ fontSize: 12, color: km.muted, marginTop: 6, lineHeight: 1.5 }}>
-        {toggles.localisation_exacte
-          ? "Les visiteurs verront un marqueur précis à l'adresse du bien."
-          : "Les visiteurs verront uniquement une zone approximative (cercle de 400 m). Recommandé."}
-      </p>
-    </>
+    </div>
   )
 }
 
@@ -802,10 +1001,13 @@ function Step5Recit({
   )
 }
 
-// ─── Étape 6 — Critères candidats (handoff publish.jsx) ────────────────────
+// ─── Étape 6 — Critères candidats (handoff publish.jsx + R10.6 v2) ─────────
 // Non discriminants : servent au matching. Slider ratio revenus 2×-4×,
 // chips garants + profils multi-select, message visible en haut de l'annonce,
 // disclaimer non-discrimination permanent.
+// R10.6 — ajout borne d'âge, plafond occupants, politique animaux/fumeur.
+// Ces critères ne génèrent que des bonus au score (jamais de malus) côté
+// matching.ts, à l'exception d'une incompatibilité dure animaux=non.
 function Step6Criteres({
   form, setForm, isMobile,
 }: {
@@ -821,6 +1023,17 @@ function Step6Criteres({
       return { ...f, [key]: has ? f[key].filter(v => v !== val) : [...f[key], val] }
     })
   }
+  const setPolitique = (key: "animaux_politique" | "fumeur_politique", v: TriPolitique) =>
+    setForm(f => ({ ...f, [key]: v }))
+  const occupantsPills: Array<{ v: string; label: string }> = [
+    { v: "", label: "Indifférent" },
+    { v: "1", label: "1" }, { v: "2", label: "2" }, { v: "3", label: "3" }, { v: "4", label: "4" }, { v: "5", label: "5 +" },
+  ]
+  const triOptions: Array<{ v: TriPolitique; label: string }> = [
+    { v: "indifferent", label: "Indifférent" },
+    { v: "oui", label: "Oui" },
+    { v: "non", label: "Non" },
+  ]
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
       <div style={{
@@ -909,8 +1122,104 @@ function Step6Criteres({
         />
       </div>
 
+      <div>
+        <p style={{ fontSize: 12, fontWeight: 700, color: km.ink, textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 10px" }}>Nombre maximum d&apos;occupants</p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {occupantsPills.map(p => {
+            const active = form.max_occupants === p.v
+            return (
+              <button
+                key={p.v || "any"}
+                type="button"
+                onClick={() => setForm(f => ({ ...f, max_occupants: p.v }))}
+                style={{
+                  padding: "9px 16px", borderRadius: 999, fontFamily: "inherit", fontSize: 12.5, fontWeight: 500, cursor: "pointer",
+                  border: `1.5px solid ${active ? km.ink : km.line}`,
+                  background: active ? km.ink : km.white,
+                  color: active ? km.white : km.ink,
+                  minWidth: p.v === "" ? "auto" : 48,
+                }}
+              >{p.label}</button>
+            )
+          })}
+        </div>
+        <p style={{ fontSize: 11, color: km.muted, marginTop: 6, lineHeight: 1.5 }}>
+          Bonus de matching si le foyer candidat a {isMobile ? "moins d'occupants." : "moins ou autant d'occupants que ce plafond. Jamais de malus."}
+        </p>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
+        <F l="Âge minimum candidat (optionnel)">
+          <input
+            style={inp}
+            type="number"
+            min={18}
+            max={99}
+            value={form.age_min}
+            onChange={e => setForm(f => ({ ...f, age_min: e.target.value }))}
+            placeholder="18"
+          />
+        </F>
+        <F l="Âge maximum candidat (optionnel)">
+          <input
+            style={inp}
+            type="number"
+            min={18}
+            max={99}
+            value={form.age_max}
+            onChange={e => setForm(f => ({ ...f, age_max: e.target.value }))}
+            placeholder="99"
+          />
+        </F>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 18 }}>
+        <div>
+          <p style={{ fontSize: 12, fontWeight: 700, color: km.ink, textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 10px" }}>Animaux</p>
+          <div style={{ display: "flex", gap: 6 }}>
+            {triOptions.map(o => {
+              const active = form.animaux_politique === o.v
+              return (
+                <button
+                  key={o.v}
+                  type="button"
+                  onClick={() => setPolitique("animaux_politique", o.v)}
+                  style={{
+                    flex: 1, padding: "9px 12px", borderRadius: 10, fontFamily: "inherit", fontSize: 12.5, fontWeight: 500, cursor: "pointer",
+                    border: `1.5px solid ${active ? km.ink : km.line}`,
+                    background: active ? km.ink : km.white,
+                    color: active ? km.white : km.ink,
+                  }}
+                >{o.label}</button>
+              )
+            })}
+          </div>
+        </div>
+        <div>
+          <p style={{ fontSize: 12, fontWeight: 700, color: km.ink, textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 10px" }}>Fumeur toléré</p>
+          <div style={{ display: "flex", gap: 6 }}>
+            {triOptions.map(o => {
+              const active = form.fumeur_politique === o.v
+              return (
+                <button
+                  key={o.v}
+                  type="button"
+                  onClick={() => setPolitique("fumeur_politique", o.v)}
+                  style={{
+                    flex: 1, padding: "9px 12px", borderRadius: 10, fontFamily: "inherit", fontSize: 12.5, fontWeight: 500, cursor: "pointer",
+                    border: `1.5px solid ${active ? km.ink : km.line}`,
+                    background: active ? km.ink : km.white,
+                    color: active ? km.white : km.ink,
+                  }}
+                >{o.label}</button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
       <p style={{ fontSize: 11, color: km.muted, lineHeight: 1.5, margin: 0, fontStyle: "italic" }}>
-        La loi française interdit toute discrimination sur l'origine, le sexe, la situation familiale, l'apparence, le handicap, les opinions politiques ou religieuses, l'orientation sexuelle, l'âge ou le patronyme{isMobile ? "." : " (article 1er loi 2002-73)."}
+        La loi française interdit toute discrimination sur l&apos;origine, le sexe, la situation familiale, l&apos;apparence, le handicap, les opinions politiques ou religieuses, l&apos;orientation sexuelle, l&apos;âge ou le patronyme{isMobile ? "." : " (article 1er loi 2002-73)."} Les filtres ci-dessus ne génèrent que des préférences de matching, jamais de rejet automatique.
       </p>
     </div>
   )

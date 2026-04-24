@@ -30,6 +30,19 @@ export interface Profil {
   fibre?: boolean
   ascenseur?: boolean
   dpe_min?: string
+  // R10.6 — dérivés du dossier locataire, lus depuis table `profils`.
+  // `fumeur` / `nb_occupants` existent depuis la baseline ; `date_naissance` depuis 007.
+  // `date_naissance` → on calcule l'âge à la volée, pour comparaison avec annonce.age_min/age_max.
+  fumeur?: boolean
+  nb_occupants?: number
+  date_naissance?: string | null
+  // Critères discriminants protégés par la loi — conservés en interface pour
+  // typage, mais STRICTEMENT IGNORÉS par le matching (voir tests).
+  nb_enfants?: number
+  situation_familiale?: string
+  nationalite?: string
+  religion?: string
+  orientation?: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   preferences_implicites?: any
 }
@@ -51,6 +64,26 @@ export interface Annonce {
   fibre?: boolean
   ascenseur?: boolean
   dpe?: string
+  // R10.6 — critères v2, non-discriminants, bonus matching uniquement.
+  age_min?: number | null
+  age_max?: number | null
+  max_occupants?: number | null
+  animaux_politique?: "indifferent" | "oui" | "non" | null
+  fumeur_politique?: "indifferent" | "oui" | "non" | null
+  equipements_extras?: Record<string, boolean> | null
+}
+
+// R10.6 — calcule l'âge en années depuis date_naissance ISO. Renvoie undefined
+// si format invalide ou date future / trop ancienne.
+function computeAge(dateNaissance?: string | null): number | undefined {
+  if (!dateNaissance) return undefined
+  const ts = Date.parse(dateNaissance)
+  if (Number.isNaN(ts)) return undefined
+  const diffMs = Date.now() - ts
+  if (diffMs < 0) return undefined
+  const years = Math.floor(diffMs / (365.25 * 24 * 3600 * 1000))
+  if (years < 0 || years > 130) return undefined
+  return years
 }
 
 // ──────────────────────────────────────────────
@@ -71,8 +104,12 @@ export function estExclu(annonce: Annonce, profil: Profil): boolean {
     if (annonce.prix > profil.budget_max * 1.20) return true
   }
 
-  // Animaux refusés
-  if (toBool(profil.animaux) === true && toBool(annonce.animaux) === false) return true
+  // Animaux refusés — prise en compte du nouveau champ `animaux_politique`
+  // (R10.6) s'il est défini ; sinon fallback sur le boolean legacy.
+  if (toBool(profil.animaux) === true) {
+    if (annonce.animaux_politique === "non") return true
+    if (annonce.animaux_politique == null && toBool(annonce.animaux) === false) return true
+  }
 
   // Rez-de-chaussée refusé — si profil a coché "PAS de RDC" et annonce au RDC,
   // exclu. On considère RDC les valeurs : "0", "RDC", "rdc", "Rez-de-chaussée".
@@ -219,6 +256,39 @@ export function calculerScore(annonce: Annonce, profil: Profil): number {
   } else {
     score += 25 // neutre
   }
+
+  // ── CRITÈRES CANDIDATS v2 (R10.6) ─────────────
+  // Bonus / petits malus très ciblés. Les critères protégés par la loi
+  // (nb_enfants, situation_familiale, nationalité, origine, religion,
+  // orientation) ne sont PAS lus ici — ils n'influent jamais le score.
+  let criteresBonus = 0
+
+  // Âge candidat — bonus uniquement si dans la borne. Hors borne = 0 (pas de malus).
+  const age = computeAge(profil.date_naissance)
+  if (age !== undefined && (annonce.age_min != null || annonce.age_max != null)) {
+    const okMin = annonce.age_min == null || age >= annonce.age_min
+    const okMax = annonce.age_max == null || age <= annonce.age_max
+    if (okMin && okMax) criteresBonus += 20
+  }
+
+  // Nombre d'occupants — bonus si foyer ≤ plafond annonce. Sinon 0.
+  if (annonce.max_occupants != null && typeof profil.nb_occupants === "number") {
+    if (profil.nb_occupants <= annonce.max_occupants) criteresBonus += 20
+  }
+
+  // Fumeur — politique explicite uniquement.
+  if (annonce.fumeur_politique === "non" && toBool(profil.fumeur) === true) {
+    criteresBonus -= 15 // malus léger mais explicite (propriétaire strict)
+  } else if (annonce.fumeur_politique === "oui" && toBool(profil.fumeur) === true) {
+    criteresBonus += 10
+  }
+
+  // Animaux — si politique oui + locataire a animaux : bonus léger
+  if (annonce.animaux_politique === "oui" && toBool(profil.animaux) === true) {
+    criteresBonus += 10
+  }
+
+  score += criteresBonus
 
   // ── COEFFICIENT DE COHÉRENCE ──────────────────
   score = Math.round(score * facteurCoherence)

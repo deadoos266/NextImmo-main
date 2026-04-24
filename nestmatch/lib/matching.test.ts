@@ -146,3 +146,125 @@ describe("calculerScore — jardin (régression batch 34)", () => {
     expect(avecJardin).toBeGreaterThan(sansJardin)
   })
 })
+
+// ═══════════════════════════════════════════════════════════════════════════
+// R10.6 — critères candidats v2 (age / occupants / animaux / fumeur) +
+// garantie que les discriminants légalement protégés n'affectent pas le score.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const baseR10ProfilMatch: Profil = {
+  ville_souhaitee: "Paris",
+  budget_max: 1200,
+  surface_min: 30,
+  pieces_min: 2,
+  chambres_min: 1,
+  meuble: false,
+}
+const baseR10Annonce: Annonce = {
+  ville: "Paris",
+  prix: 1100,
+  surface: 35,
+  pieces: 2,
+  chambres: 1,
+  meuble: false,
+  dpe: "C",
+}
+
+describe("R10.6 — discriminants protégés n'abaissent JAMAIS le score", () => {
+  it("nb_enfants n'influe pas le score", () => {
+    const a = calculerScore(baseR10Annonce, { ...baseR10ProfilMatch, nb_enfants: 0 })
+    const b = calculerScore(baseR10Annonce, { ...baseR10ProfilMatch, nb_enfants: 5 })
+    expect(a).toBe(b)
+  })
+  it("situation_familiale n'influe pas le score", () => {
+    const a = calculerScore(baseR10Annonce, { ...baseR10ProfilMatch, situation_familiale: "celibataire" })
+    const b = calculerScore(baseR10Annonce, { ...baseR10ProfilMatch, situation_familiale: "marie" })
+    expect(a).toBe(b)
+  })
+  it("nationalité / religion / orientation n'influent pas le score", () => {
+    const base = calculerScore(baseR10Annonce, baseR10ProfilMatch)
+    expect(calculerScore(baseR10Annonce, { ...baseR10ProfilMatch, nationalite: "MA" })).toBe(base)
+    expect(calculerScore(baseR10Annonce, { ...baseR10ProfilMatch, religion: "catholique" })).toBe(base)
+    expect(calculerScore(baseR10Annonce, { ...baseR10ProfilMatch, orientation: "homosexuel" })).toBe(base)
+  })
+})
+
+describe("R10.6 — critères v2 bonus/malus ciblés", () => {
+  it("âge dans la borne → bonus ; hors borne → neutre (pas de malus)", () => {
+    const dn = new Date()
+    dn.setFullYear(dn.getFullYear() - 32)
+    const profil: Profil = { ...baseR10ProfilMatch, date_naissance: dn.toISOString().slice(0, 10) }
+    const sans = calculerScore(baseR10Annonce, profil)
+    const dansBorne = calculerScore({ ...baseR10Annonce, age_min: 25, age_max: 40 }, profil)
+    const horsBorne = calculerScore({ ...baseR10Annonce, age_min: 50, age_max: 70 }, profil)
+    expect(dansBorne).toBeGreaterThan(sans)
+    expect(horsBorne).toBe(sans)
+  })
+
+  it("occupants sous plafond → bonus ; au-dessus → neutre", () => {
+    const profilOk: Profil = { ...baseR10ProfilMatch, nb_occupants: 2 }
+    const profilKo: Profil = { ...baseR10ProfilMatch, nb_occupants: 5 }
+    const sansContrainte = calculerScore(baseR10Annonce, profilOk)
+    const bonus = calculerScore({ ...baseR10Annonce, max_occupants: 3 }, profilOk)
+    const neutre = calculerScore({ ...baseR10Annonce, max_occupants: 3 }, profilKo)
+    expect(bonus).toBeGreaterThan(sansContrainte)
+    expect(neutre).toBe(calculerScore(baseR10Annonce, profilKo))
+  })
+
+  it("fumeur_politique=non + fumeur locataire = petit malus", () => {
+    const profil: Profil = { ...baseR10ProfilMatch, fumeur: true }
+    const sans = calculerScore(baseR10Annonce, profil)
+    const avec = calculerScore({ ...baseR10Annonce, fumeur_politique: "non" }, profil)
+    expect(avec).toBeLessThan(sans)
+  })
+
+  it("fumeur_politique=indifferent : neutre", () => {
+    const profil: Profil = { ...baseR10ProfilMatch, fumeur: true }
+    const a = calculerScore(baseR10Annonce, profil)
+    const b = calculerScore({ ...baseR10Annonce, fumeur_politique: "indifferent" }, profil)
+    expect(a).toBe(b)
+  })
+
+  it("animaux_politique=oui + locataire avec animaux = bonus léger", () => {
+    const profil: Profil = { ...baseR10ProfilMatch, animaux: true }
+    const sans = calculerScore({ ...baseR10Annonce, animaux: true }, profil)
+    const avec = calculerScore({ ...baseR10Annonce, animaux: true, animaux_politique: "oui" }, profil)
+    expect(avec).toBeGreaterThan(sans)
+  })
+
+  it("score reste dans [0, 1000] avec tous les bonus cumulés", () => {
+    const s = calculerScore(
+      { ...baseR10Annonce, age_min: 18, age_max: 99, max_occupants: 5, animaux_politique: "oui", fumeur_politique: "oui" },
+      {
+        ...baseR10ProfilMatch, budget_max: 2000, surface_min: 20, pieces_min: 1, chambres_min: 0,
+        nb_occupants: 1, animaux: true, fumeur: true, date_naissance: "1990-01-01",
+      },
+    )
+    expect(s).toBeGreaterThanOrEqual(0)
+    expect(s).toBeLessThanOrEqual(1000)
+  })
+})
+
+describe("R10.6 — estExclu + animaux_politique prend le pas sur boolean", () => {
+  it("politique=non + locataire animaux → exclu", () => {
+    const excluded = estExclu(
+      { ...baseR10Annonce, animaux_politique: "non", animaux: true },
+      { ...baseR10ProfilMatch, animaux: true },
+    )
+    expect(excluded).toBe(true)
+  })
+  it("politique=oui + locataire animaux → pas exclu (même si annonce.animaux=false)", () => {
+    const excluded = estExclu(
+      { ...baseR10Annonce, animaux_politique: "oui", animaux: false },
+      { ...baseR10ProfilMatch, animaux: true },
+    )
+    expect(excluded).toBe(false)
+  })
+  it("politique=null (fallback legacy) : boolean annonce.animaux=false + locataire animaux → exclu", () => {
+    const excluded = estExclu(
+      { ...baseR10Annonce, animaux: false },
+      { ...baseR10ProfilMatch, animaux: true },
+    )
+    expect(excluded).toBe(true)
+  })
+})
