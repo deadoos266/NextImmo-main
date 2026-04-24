@@ -946,20 +946,6 @@ function MessagesInner() {
   const searchParams = useSearchParams()
   const withEmail = searchParams.get("with")
 
-  const MESSAGES_RAPIDES = proprietaireActive ? [
-    "Bien toujours disponible, n'hésitez pas à proposer une visite.",
-    "Pourriez-vous m'envoyer votre dossier locataire ?",
-    "Votre candidature a retenu notre attention, pouvons-nous convenir d'une visite ?",
-    "Suite donnée à une autre candidature. Bonne recherche !",
-    "Quelles sont vos disponibilités pour visiter le bien ?",
-  ] : [
-    "Je suis toujours intéressé(e) par votre bien.",
-    "Mon dossier est complet, je peux vous l'envoyer.",
-    "Quelles sont vos disponibilités pour une visite ?",
-    "Avez-vous d'autres biens disponibles ?",
-    "Pouvez-vous me confirmer que le bien est encore disponible ?",
-  ]
-
   const [conversations, setConversations] = useState<any[]>([])
   const [annonces, setAnnonces] = useState<Record<number, any>>({})
   // Photos de profil des interlocuteurs (keyed par email lower). Chargé après
@@ -1696,9 +1682,19 @@ function MessagesInner() {
 
   async function envoyerDossier() {
     if (!convActive || !myEmail) return
-    setEnvoyantDossier(true)
     const conv = conversations.find(c => c.key === convActive)
-    if (!conv) { setEnvoyantDossier(false); return }
+    if (!conv) return
+
+    // Confirmation explicite avant envoi : l'envoi génère un lien de partage
+    // actif 30 jours qui donne accès aux pièces justificatives — on évite
+    // l'envoi par mégarde ou par double-clic.
+    const annonceTitre = conv.annonceId && annonces[conv.annonceId]?.titre ? annonces[conv.annonceId].titre : null
+    const confirmMsg = annonceTitre
+      ? `Envoyer votre dossier à ${conv.other} pour « ${annonceTitre} » ?\n\nUn lien de consultation sera généré (valide 30 jours, révocable depuis votre profil).`
+      : `Envoyer votre dossier à ${conv.other} ?\n\nUn lien de consultation sera généré (valide 30 jours, révocable depuis votre profil).`
+    if (!window.confirm(confirmMsg)) return
+
+    setEnvoyantDossier(true)
 
     const { data: profil } = await supabase.from("profils")
       .select("prenom,nom,situation_pro,revenus_mensuels,garant,type_garant,nb_occupants,dossier_docs")
@@ -1716,11 +1712,19 @@ function MessagesInner() {
       }
     }
 
-    // Génère un lien de partage sécurisé (HMAC 7j) pour que le proprio
+    // Génère un lien de partage sécurisé (HMAC 30j) pour que le proprio
     // puisse consulter les pièces justificatives directement.
+    // Label = destinataire [+ titre annonce] pour permettre au locataire de
+    // retrouver/révoquer le lien depuis /parametres > partages.
+    const labelBase = annonceTitre ? `${conv.other} — ${annonceTitre}` : conv.other
+    const label = labelBase.slice(0, 80)
     let shareUrl: string | null = null
     try {
-      const res = await fetch("/api/dossier/share", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ days: 30 }) })
+      const res = await fetch("/api/dossier/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ days: 30, label }),
+      })
       const json = await res.json()
       if (res.ok && json.success) shareUrl = json.url
     } catch { /* silent — le dossier est envoyé sans lien, le proprio verra juste le récap */ }
@@ -3500,14 +3504,7 @@ function MessagesInner() {
                         Proposer une visite
                       </button>
                     )}
-                    {MESSAGES_RAPIDES.map((msg, i) => (
-                      <button key={i} onClick={() => setNouveau(msg)}
-                        onMouseEnter={e => { e.currentTarget.style.background = "#F7F4EF"; e.currentTarget.style.borderColor = "#111" }}
-                        onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "#EAE6DF" }}
-                        style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 999, padding: "6px 12px", fontSize: 11, fontWeight: 500, cursor: "pointer", color: "#8a8477", fontFamily: "inherit", whiteSpace: "nowrap", letterSpacing: "0.1px", transition: "background 160ms ease, border-color 160ms ease" }}>
-                        {msg.slice(0, 30)}{msg.length > 30 ? "…" : ""}
-                      </button>
-                    ))}
+                    {/* Messages préfaits retirés — préférer un message personnalisé. */}
                   </div>
                   {/* NOTE : Formulaire visite inline retiré — migré vers <ProposerVisiteDialog>
                       monté en bas de page (calque handoff modals.jsx VisitRequestModal). */}
