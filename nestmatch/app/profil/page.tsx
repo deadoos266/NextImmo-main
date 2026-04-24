@@ -300,6 +300,18 @@ function Profil() {
     return () => io.disconnect()
   }, [dataLoaded, proprietaireActive])
 
+  // R10.11 — Viewport wide (≥ 1280px) → Completion + Settings vont dans
+  // l'aside sticky droite. En dessous, fallback inline (empile dans le flux).
+  const [wideAside, setWideAside] = useState(false)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const mq = window.matchMedia("(min-width: 1280px)")
+    const update = () => setWideAside(mq.matches)
+    update()
+    mq.addEventListener("change", update)
+    return () => mq.removeEventListener("change", update)
+  }, [])
+
   if (status === "loading" || !dataLoaded) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "'DM Sans', sans-serif", color: km.muted }}>Chargement...</div>
   )
@@ -369,50 +381,14 @@ function Profil() {
           </div>
         )}
 
-        {/* Locataire : Score de complétion + CTA wizard si profil peu rempli */}
-        {!proprietaireActive && (
-          <div style={{ background: km.white, border: `1px solid ${km.line}`, borderRadius: 20, padding: 26, marginBottom: 20, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 16 }}>
-              <div>
-                <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, letterSpacing: "-0.3px", color: km.ink, margin: 0 }}>Complétion du dossier</h2>
-                <p style={{ fontSize: 13, color: km.muted, marginTop: 4 }}>
-                  {scoreCompletion === 100 ? "Dossier complet — vous maximisez vos chances !" : `Remplissez les champs manquants pour booster votre profil`}
-                </p>
-              </div>
-              <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontSize: 32, fontWeight: 500, color: scoreColor, letterSpacing: "-0.5px" }}>{scoreCompletion}%</span>
-            </div>
-
-            {/* Barre de progression */}
-            <div style={{ background: km.beige, border: `1px solid ${km.line}`, borderRadius: 999, height: 10, marginBottom: 16, overflow: "hidden" }}>
-              <div style={{ background: scoreColor, borderRadius: 999, height: "100%", width: `${scoreCompletion}%`, transition: "width 0.4s ease" }} />
-            </div>
-
-            {/* Champs manquants */}
-            {manquants.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: scoreCompletion <= 20 ? 18 : 0 }}>
-                {manquants.map(c => (
-                  <span key={c.label} style={{ background: km.warnBg, color: km.warnText, border: `1px solid ${km.warnLine}`, padding: "4px 12px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
-                    {c.label}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* CTA wizard — affiché uniquement si profil très incomplet */}
-            {scoreCompletion <= 20 && (
-              <div style={{ borderTop: `1px solid ${km.beige}`, paddingTop: 16, marginTop: 4, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                <div style={{ flex: 1, minWidth: 220 }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 4px" }}>Configuration guidée</p>
-                  <p style={{ fontSize: 13, color: km.ink, margin: 0, lineHeight: 1.5 }}>
-                    5 étapes rapides pour construire un profil complet.
-                  </p>
-                </div>
-                <a href="/profil/creer" style={{ background: km.ink, color: km.white, padding: "10px 22px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.6px", whiteSpace: "nowrap" }}>
-                  Démarrer →
-                </a>
-              </div>
-            )}
-          </div>
+        {/* Locataire : Score de complétion — inline uniquement si viewport étroit
+            (< 1280px). Sur desktop large, la card va dans l'aside sticky droit. */}
+        {!proprietaireActive && !wideAside && (
+          <CompletionCard
+            scoreCompletion={scoreCompletion}
+            scoreColor={scoreColor}
+            manquants={manquants}
+          />
         )}
 
         {/* Lien discret « Reprendre la configuration guidée » pour les profils 20–80 %
@@ -562,16 +538,41 @@ function Profil() {
         </div>
         </>}
 
-        <div style={{ background: km.white, border: `1px solid ${km.line}`, borderRadius: 20, padding: 26, marginTop: 24, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
-          <div>
-            <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 20, letterSpacing: "-0.3px", color: km.ink, margin: "0 0 6px" }}>Paramètres du compte</h2>
-            <p style={{ fontSize: 13, color: km.muted, margin: 0, lineHeight: 1.5 }}>Mot de passe, apparence (clair/sombre), notifications, suppression de compte.</p>
-          </div>
-          <Link href="/parametres" style={{ background: km.ink, color: km.white, borderRadius: 999, padding: "10px 22px", textDecoration: "none", fontWeight: 600, fontSize: 11, whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-            Ouvrir les paramètres →
-          </Link>
-        </div>
+        {/* Paramètres — inline uniquement si viewport étroit. Sur desktop large,
+            la card est déplacée dans l'aside sticky droit (en dessous de
+            Complétion). */}
+        {!wideAside && <SettingsCardInline />}
       </div>
+
+      {/* Aside sticky droit — Complétion + Paramètres (desktop ≥ 1280px). Fixed
+          position pour rester visible pendant le scroll des sections. */}
+      {wideAside && (
+        <aside
+          aria-label="Complétion du dossier et paramètres"
+          style={{
+            position: "fixed",
+            left: "calc(50vw + 460px)",
+            top: 120,
+            width: 280,
+            maxHeight: "calc(100vh - 140px)",
+            overflowY: "auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+            zIndex: 5,
+          }}
+        >
+          {!proprietaireActive && (
+            <CompletionCard
+              scoreCompletion={scoreCompletion}
+              scoreColor={scoreColor}
+              manquants={manquants}
+              compact
+            />
+          )}
+          <SettingsCardInline compact />
+        </aside>
+      )}
 
       {undo && (
         <UndoToast
@@ -663,6 +664,128 @@ function SectionSaveBtn({
     <KMButton size="sm" onClick={onSave} disabled={saving}>
       {saving ? "Enregistrement…" : "Enregistrer cette section"}
     </KMButton>
+  )
+}
+
+// R10.11 — CompletionCard extrait : utilisé soit inline (narrow), soit dans
+// l'aside sticky droit (wide ≥ 1280px). En mode compact, padding réduit + titre
+// plus petit pour s'adapter aux 280px de large.
+function CompletionCard({
+  scoreCompletion, scoreColor, manquants, compact = false,
+}: {
+  scoreCompletion: number
+  scoreColor: string
+  manquants: Array<{ label: string }>
+  compact?: boolean
+}) {
+  const padX = compact ? 20 : 26
+  const padY = compact ? 20 : 26
+  const titleSize = compact ? 17 : 22
+  const scoreSize = compact ? 26 : 32
+
+  return (
+    <div style={{ background: km.white, border: `1px solid ${km.line}`, borderRadius: 20, padding: `${padY}px ${padX}px`, marginBottom: compact ? 0 : 20, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 12 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 4px" }}>Complétion</p>
+          <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: titleSize, letterSpacing: "-0.3px", color: km.ink, margin: 0, lineHeight: 1.15 }}>
+            {compact ? "Votre dossier" : "Complétion du dossier"}
+          </h2>
+          {!compact && (
+            <p style={{ fontSize: 13, color: km.muted, marginTop: 4 }}>
+              {scoreCompletion === 100 ? "Dossier complet — vous maximisez vos chances !" : `Remplissez les champs manquants pour booster votre profil`}
+            </p>
+          )}
+        </div>
+        <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontSize: scoreSize, fontWeight: 500, color: scoreColor, letterSpacing: "-0.5px" }}>{scoreCompletion}%</span>
+      </div>
+
+      {/* Barre de progression */}
+      <div style={{ background: km.beige, border: `1px solid ${km.line}`, borderRadius: 999, height: 10, marginBottom: 14, overflow: "hidden" }}>
+        <div style={{ background: scoreColor, borderRadius: 999, height: "100%", width: `${scoreCompletion}%`, transition: "width 0.4s ease" }} />
+      </div>
+
+      {/* Champs manquants : lien scroll-to-section plutôt que simple pill */}
+      {manquants.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: scoreCompletion <= 20 ? 16 : 0 }}>
+          {manquants.map(c => (
+            <a
+              key={c.label}
+              href={`#${manquantToSectionId(c.label)}`}
+              style={{
+                background: km.warnBg, color: km.warnText, border: `1px solid ${km.warnLine}`,
+                padding: "4px 10px", borderRadius: 999,
+                fontSize: 10, fontWeight: 700,
+                textTransform: "uppercase", letterSpacing: "1px",
+                textDecoration: "none", whiteSpace: "nowrap",
+              }}
+            >
+              {c.label}
+            </a>
+          ))}
+        </div>
+      )}
+
+      {/* CTA wizard — affiché uniquement si profil très incomplet */}
+      {scoreCompletion <= 20 && (
+        <div style={{ borderTop: `1px solid ${km.beige}`, paddingTop: 14, marginTop: 4, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: compact ? 0 : 220 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 4px" }}>Configuration guidée</p>
+            {!compact && (
+              <p style={{ fontSize: 13, color: km.ink, margin: 0, lineHeight: 1.5 }}>
+                5 étapes rapides pour construire un profil complet.
+              </p>
+            )}
+          </div>
+          <a href="/profil/creer" style={{ background: km.ink, color: km.white, padding: "9px 18px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.6px", whiteSpace: "nowrap" }}>
+            Démarrer →
+          </a>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// R10.11 — Mapping label → id de section pour les liens scroll-to depuis
+// CompletionCard. Les labels viennent de lib/profilCompleteness.
+function manquantToSectionId(label: string): string {
+  const criteres = ["ville", "budget", "surface", "pièces", "chambres", "dpe", "bail", "quartier"]
+  const profil = ["situation", "revenus", "garant", "occupants", "profil"]
+  const low = label.toLowerCase()
+  if (criteres.some(k => low.includes(k))) return "criteres"
+  if (profil.some(k => low.includes(k))) return "profil-locataire"
+  return "criteres"
+}
+
+// R10.11 — SettingsCardInline extrait. En mode compact (aside droit), mise
+// en page verticale (titre → desc → bouton) au lieu du row wide.
+function SettingsCardInline({ compact = false }: { compact?: boolean }) {
+  if (compact) {
+    return (
+      <div style={{ background: km.white, border: `1px solid ${km.line}`, borderRadius: 20, padding: 20, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+        <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 4px" }}>Compte</p>
+        <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 17, letterSpacing: "-0.3px", color: km.ink, margin: "0 0 8px", lineHeight: 1.15 }}>
+          Paramètres
+        </h2>
+        <p style={{ fontSize: 12, color: km.muted, margin: "0 0 14px", lineHeight: 1.5 }}>
+          Mot de passe, apparence, notifications, suppression.
+        </p>
+        <Link href="/parametres" style={{ display: "inline-block", background: km.ink, color: km.white, borderRadius: 999, padding: "9px 18px", textDecoration: "none", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.3px" }}>
+          Ouvrir →
+        </Link>
+      </div>
+    )
+  }
+  return (
+    <div style={{ background: km.white, border: `1px solid ${km.line}`, borderRadius: 20, padding: 26, marginTop: 24, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+      <div>
+        <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 20, letterSpacing: "-0.3px", color: km.ink, margin: "0 0 6px" }}>Paramètres du compte</h2>
+        <p style={{ fontSize: 13, color: km.muted, margin: 0, lineHeight: 1.5 }}>Mot de passe, apparence (clair/sombre), notifications, suppression de compte.</p>
+      </div>
+      <Link href="/parametres" style={{ background: km.ink, color: km.white, borderRadius: 999, padding: "10px 22px", textDecoration: "none", fontWeight: 600, fontSize: 11, whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+        Ouvrir les paramètres →
+      </Link>
+    </div>
   )
 }
 
