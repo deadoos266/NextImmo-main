@@ -8,6 +8,7 @@ import { supabase } from "../../lib/supabase"
 import { useResponsive } from "../hooks/useResponsive"
 import Logo from "./Logo"
 import NotificationBell from "./NotificationBell"
+import { km } from "./ui/km"
 
 // ─── Icon vocabulary (aligné sur le handoff Claude Design, stroke 1.8px) ─────
 function MenuIcon({ name }: { name: string }) {
@@ -45,18 +46,18 @@ export default function Navbar() {
   const isActive = (path: string) => pathname?.startsWith(path)
   const linkStyle = (path: string): any => ({
     textDecoration: "none",
-    color: isActive(path) ? "#111" : "#8a8477",
+    color: isActive(path) ? km.ink : km.muted,
     fontWeight: isActive(path) ? 700 : 500,
     fontSize: 14,
     padding: "6px 12px",
     borderRadius: 8,
-    background: isActive(path) ? "#F7F4EF" : "transparent",
+    background: isActive(path) ? km.beige : "transparent",
     transition: "background 200ms ease, color 200ms ease",
   })
   // Hover handlers : feedback léger uniquement si le lien est inactif.
-  // Sur le lien actif, on laisse le background #F7F4EF en place (pas d'override).
+  // Sur le lien actif, on laisse le background km.beige en place (pas d'override).
   const hoverEnter = (path: string) => (e: React.MouseEvent<HTMLElement>) => {
-    if (!isActive(path)) e.currentTarget.style.background = "#F7F4EF"
+    if (!isActive(path)) e.currentTarget.style.background = km.beige
   }
   const hoverLeave = (path: string) => (e: React.MouseEvent<HTMLElement>) => {
     if (!isActive(path)) e.currentTarget.style.background = "transparent"
@@ -143,13 +144,20 @@ export default function Navbar() {
 
   const totalBadge = badgeVisites + badgeMessages
 
+  // Badge « action requise » (rouge d'erreur), utilisé dans le menu pour attirer l'œil.
+  const badgePill: React.CSSProperties = {
+    background: km.errText, color: km.white, borderRadius: 999,
+    fontSize: 10, fontWeight: 800, minWidth: 16, height: 16,
+    display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px",
+  }
+
   return (
-    <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: isSmall ? "0 16px" : "0 48px", background: "white", borderBottom: "1px solid #EAE6DF", position: "sticky", top: 0, zIndex: 7000, height: 72, boxShadow: "0 1px 8px rgba(0,0,0,0.05)" }}>
+    <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: isSmall ? "0 16px" : "0 48px", background: km.white, borderBottom: `1px solid ${km.line}`, position: "sticky", top: 0, zIndex: 7000, height: 72, boxShadow: "0 1px 8px rgba(0,0,0,0.05)" }}>
 
       {/* Logo */}
       <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
         <Logo variant={isSmall ? "compact" : "navbar"} />
-        {isAdmin && <Link href="/admin" style={{ fontSize: 11, background: "#111", color: "white", padding: "2px 6px", borderRadius: 999, textDecoration: "none" }}>ADMIN</Link>}
+        {isAdmin && <Link href="/admin" style={{ fontSize: 11, background: km.ink, color: km.white, padding: "2px 6px", borderRadius: 999, textDecoration: "none" }}>ADMIN</Link>}
       </div>
 
       {/* Desktop : liens centraux */}
@@ -164,33 +172,33 @@ export default function Navbar() {
               <div style={{ position: "relative" }}>
                 <button
                   onClick={() => setEspaceOpen(!espaceOpen)}
-                  onMouseEnter={e => { if (!espaceActif) e.currentTarget.style.background = "#F7F4EF" }}
+                  onMouseEnter={e => { if (!espaceActif) e.currentTarget.style.background = km.beige }}
                   onMouseLeave={e => { if (!espaceActif) e.currentTarget.style.background = "transparent" }}
-                  style={{ ...linkStyle("/profil"), background: espaceActif ? "#F7F4EF" : "transparent", color: espaceActif ? "#111" : "#8a8477", fontWeight: espaceActif ? 700 : 500, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit" }}>
+                  style={{ ...linkStyle("/profil"), background: espaceActif ? km.beige : "transparent", color: espaceActif ? km.ink : km.muted, fontWeight: espaceActif ? 700 : 500, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit" }}>
                   Mon espace
                   {badgeVisites > 0 && (
-                    <span style={{ background: "#b91c1c", color: "white", borderRadius: 999, fontSize: 10, fontWeight: 800, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>
+                    <span style={badgePill}>
                       {badgeVisites}
                     </span>
                   )}
-                  <span style={{ fontSize: 10, color: "#8a8477" }}>▼</span>
+                  <span style={{ fontSize: 10, color: km.muted }}>▼</span>
                 </button>
 
                 {espaceOpen && (
                   <>
                     <div onClick={() => setEspaceOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 150 }} />
-                    <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, background: "white", borderRadius: 16, border: "1px solid #EAE6DF", boxShadow: "0 8px 32px rgba(0,0,0,0.12)", minWidth: 240, zIndex: 200, overflow: "hidden" }}>
+                    <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, background: km.white, borderRadius: 16, border: `1px solid ${km.line}`, boxShadow: "0 8px 32px rgba(0,0,0,0.12)", minWidth: 240, zIndex: 200, overflow: "hidden" }}>
                       {espaceLinksAvecBadge.map(item => (
                         <Link key={item.href} href={item.href} onClick={() => setEspaceOpen(false)}
-                          style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", textDecoration: "none", color: "#111", borderBottom: "1px solid #F7F4EF" }}
-                          onMouseEnter={e => (e.currentTarget.style.background = "#F7F4EF")}
+                          style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", textDecoration: "none", color: km.ink, borderBottom: `1px solid ${km.beige}` }}
+                          onMouseEnter={e => (e.currentTarget.style.background = km.beige)}
                           onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                           <div style={{ flex: 1 }}>
                             <p style={{ fontSize: 13, fontWeight: 600, margin: 0 }}>{item.label}</p>
-                            <p style={{ fontSize: 11, color: "#8a8477", margin: 0, marginTop: 1 }}>{item.desc}</p>
+                            <p style={{ fontSize: 11, color: km.muted, margin: 0, marginTop: 1 }}>{item.desc}</p>
                           </div>
                           {(item as any).badge > 0 && (
-                            <span style={{ background: "#b91c1c", color: "white", borderRadius: 999, fontSize: 10, fontWeight: 800, minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px", flexShrink: 0 }}>
+                            <span style={{ ...badgePill, minWidth: 18, height: 18, padding: "0 5px", flexShrink: 0 }}>
                               {(item as any).badge}
                             </span>
                           )}
@@ -204,7 +212,7 @@ export default function Navbar() {
               <div style={{ position: "relative" }}>
                 <Link href="/messages" style={linkStyle("/messages")} onMouseEnter={hoverEnter("/messages")} onMouseLeave={hoverLeave("/messages")}>Messages</Link>
                 {badgeMessages > 0 && (
-                  <span style={{ position: "absolute", top: -4, right: -4, background: "#b91c1c", color: "white", borderRadius: 999, fontSize: 9, fontWeight: 800, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", pointerEvents: "none" }}>
+                  <span style={{ position: "absolute", top: -4, right: -4, background: km.errText, color: km.white, borderRadius: 999, fontSize: 9, fontWeight: 800, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", pointerEvents: "none" }}>
                     {badgeMessages > 9 ? "9+" : badgeMessages}
                   </span>
                 )}
@@ -221,36 +229,36 @@ export default function Navbar() {
           {session ? (
             <div style={{ position: "relative" }}>
               <div onClick={() => setMenuOpen(!menuOpen)}
-                style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "6px 12px", borderRadius: 999, border: "1px solid #EAE6DF", background: menuOpen ? "#F7F4EF" : "white", transition: "background 200ms ease" }}>
+                style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "6px 12px", borderRadius: 999, border: `1px solid ${km.line}`, background: menuOpen ? km.beige : km.white, transition: "background 200ms ease" }}>
                 {avatarSrc
                   ? <img src={avatarSrc} alt="avatar" referrerPolicy="no-referrer" style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }} />
-                  : <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 16 }}>{session.user?.name?.[0]}</div>
+                  : <div style={{ width: 40, height: 40, borderRadius: "50%", background: km.ink, display: "flex", alignItems: "center", justifyContent: "center", color: km.white, fontWeight: 700, fontSize: 16 }}>{session.user?.name?.[0]}</div>
                 }
                 <span style={{ fontSize: 14, fontWeight: 600 }}>{session.user?.name?.split(" ")[0]}</span>
-                <span style={{ fontSize: 10, color: "#8a8477" }}>▼</span>
+                <span style={{ fontSize: 10, color: km.muted }}>▼</span>
               </div>
 
               {menuOpen && (
                 <>
                   <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 150 }} />
-                  <div style={{ position: "absolute", top: "calc(100% + 12px)", right: 0, background: "white", borderRadius: 14, border: "1px solid #EAE6DF", boxShadow: "0 12px 32px -8px rgba(0,0,0,0.18)", minWidth: 260, zIndex: 200, overflow: "visible", fontFamily: "inherit" }}>
+                  <div style={{ position: "absolute", top: "calc(100% + 12px)", right: 0, background: km.white, borderRadius: 14, border: `1px solid ${km.line}`, boxShadow: "0 12px 32px -8px rgba(0,0,0,0.18)", minWidth: 260, zIndex: 200, overflow: "visible", fontFamily: "inherit" }}>
                     {/* Flèche pointeur vers le trigger */}
-                    <div style={{ position: "absolute", top: -6, right: 24, width: 10, height: 10, background: "#fff", borderLeft: "1px solid #EAE6DF", borderTop: "1px solid #EAE6DF", transform: "rotate(45deg)" }} />
+                    <div style={{ position: "absolute", top: -6, right: 24, width: 10, height: 10, background: km.white, borderLeft: `1px solid ${km.line}`, borderTop: `1px solid ${km.line}`, transform: "rotate(45deg)" }} />
 
                     {/* Header avec avatar + name + email */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderBottom: "1px solid #F1EDE5" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderBottom: `1px solid ${km.line}` }}>
                       {avatarSrc
                         ? <img src={avatarSrc} alt="avatar" referrerPolicy="no-referrer" style={{ width: 34, height: 34, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-                        : <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{session.user?.name?.[0]}</div>
+                        : <div style={{ width: 34, height: 34, borderRadius: "50%", background: km.ink, display: "flex", alignItems: "center", justifyContent: "center", color: km.white, fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{session.user?.name?.[0]}</div>
                       }
                       <div style={{ minWidth: 0, flex: 1 }}>
-                        <p style={{ fontWeight: 700, fontSize: 13, color: "#111", letterSpacing: "-0.2px", lineHeight: 1.2, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{session.user?.name}</p>
-                        <p style={{ color: "#888", fontSize: 11, lineHeight: 1.2, margin: 0, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{session.user?.email}</p>
+                        <p style={{ fontWeight: 700, fontSize: 13, color: km.ink, letterSpacing: "-0.2px", lineHeight: 1.2, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{session.user?.name}</p>
+                        <p style={{ color: km.muted, fontSize: 11, lineHeight: 1.2, margin: 0, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{session.user?.email}</p>
                       </div>
                     </div>
 
                     {/* Eyebrow groupe */}
-                    <p style={{ fontSize: 10, fontWeight: 700, color: "#999", textTransform: "uppercase", letterSpacing: "1.2px", padding: "10px 16px 4px", margin: 0 }}>Mon espace</p>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.2px", padding: "10px 16px 4px", margin: 0 }}>Mon espace</p>
 
                     {/* Items avec icônes et indicateur actif */}
                     {(proprietaireActive ? [
@@ -269,37 +277,37 @@ export default function Navbar() {
                       const active = isActive(item.href)
                       return (
                         <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)}
-                          style={{ position: "relative", display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", textDecoration: "none", color: "#111", transition: "background 150ms ease" }}
-                          onMouseEnter={e => (e.currentTarget.style.background = "#F7F4EF")}
-                          onMouseLeave={e => (e.currentTarget.style.background = active ? "#F7F4EF" : "transparent")}
-                          ref={el => { if (el && active) el.style.background = "#F7F4EF" }}>
-                          {active && <span style={{ position: "absolute", left: 0, top: 6, bottom: 6, width: 2, background: "#111", borderRadius: 2 }} />}
+                          style={{ position: "relative", display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", textDecoration: "none", color: km.ink, transition: "background 150ms ease" }}
+                          onMouseEnter={e => (e.currentTarget.style.background = km.beige)}
+                          onMouseLeave={e => (e.currentTarget.style.background = active ? km.beige : "transparent")}
+                          ref={el => { if (el && active) el.style.background = km.beige }}>
+                          {active && <span style={{ position: "absolute", left: 0, top: 6, bottom: 6, width: 2, background: km.ink, borderRadius: 2 }} />}
                           <MenuIcon name={item.icon} />
                           <span style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>{item.label}</span>
                           {(item as any).count > 0 && (
-                            <span style={{ background: "#b91c1c", color: "white", borderRadius: 999, fontSize: 10, fontWeight: 700, minWidth: 18, height: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 5px" }}>{(item as any).count}</span>
+                            <span style={{ ...badgePill, minWidth: 18, height: 18, padding: "0 5px" }}>{(item as any).count}</span>
                           )}
                         </Link>
                       )
                     })}
 
                     {/* Divider */}
-                    <div style={{ height: 1, background: "#F1EDE5", margin: "6px 0" }} />
+                    <div style={{ height: 1, background: km.line, margin: "6px 0" }} />
 
                     {/* Paramètres */}
                     <Link href="/parametres" onClick={() => setMenuOpen(false)}
-                      style={{ position: "relative", display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", textDecoration: "none", color: "#111" }}
-                      onMouseEnter={e => (e.currentTarget.style.background = "#F7F4EF")}
+                      style={{ position: "relative", display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", textDecoration: "none", color: km.ink }}
+                      onMouseEnter={e => (e.currentTarget.style.background = km.beige)}
                       onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                       <MenuIcon name="settings" />
                       <span style={{ fontSize: 13, fontWeight: 500 }}>Paramètres</span>
                     </Link>
 
                     {/* Footer : version + déconnexion */}
-                    <div style={{ borderTop: "1px solid #F1EDE5", marginTop: 6, padding: "8px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 10, color: "#888", letterSpacing: "0.3px" }}>KeyMatch · beta</span>
+                    <div style={{ borderTop: `1px solid ${km.line}`, marginTop: 6, padding: "8px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 10, color: km.muted, letterSpacing: "0.3px" }}>KeyMatch · beta</span>
                       <button onClick={() => { setMenuOpen(false); signOut({ callbackUrl: "/" }) }}
-                        style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, color: "#b91c1c", fontFamily: "inherit", padding: 0, letterSpacing: "0.2px" }}>
+                        style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700, color: km.errText, fontFamily: "inherit", padding: 0, letterSpacing: "0.2px" }}>
                         Déconnexion
                       </button>
                     </div>
@@ -309,8 +317,20 @@ export default function Navbar() {
             </div>
           ) : (
             <>
-              <Link href="/auth" style={{ padding: "8px 16px", textDecoration: "none", color: "#111", fontWeight: 500, fontSize: 14 }}>Connexion</Link>
-              <Link href="/auth?mode=inscription" style={{ padding: "10px 22px", background: "#111", color: "white", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14 }}>S'inscrire</Link>
+              {/* Auth CTAs — alignés sur le pattern KMButtonText + KMButton */}
+              <Link href="/auth" style={{
+                padding: "8px 16px", textDecoration: "none",
+                color: km.ink, fontWeight: 600, fontSize: 13,
+                textTransform: "uppercase", letterSpacing: "0.6px",
+                fontFamily: "inherit",
+              }}>Connexion</Link>
+              <Link href="/auth?mode=inscription" style={{
+                padding: "12px 26px", background: km.ink, color: km.white,
+                borderRadius: 999, textDecoration: "none",
+                fontWeight: 700, fontSize: 11,
+                textTransform: "uppercase", letterSpacing: "0.6px",
+                fontFamily: "inherit", whiteSpace: "nowrap",
+              }}>S&apos;inscrire</Link>
             </>
           )}
         </div>
@@ -327,8 +347,8 @@ export default function Navbar() {
           style={{
             order: -1,
             position: "relative",
-            background: "white",
-            border: "1px solid #EAE6DF",
+            background: km.white,
+            border: `1px solid ${km.line}`,
             borderRadius: "50%",
             width: 40,
             height: 40,
@@ -347,7 +367,7 @@ export default function Navbar() {
             <span style={{
               position: "absolute", left: 0,
               top: mobileOpen ? 6 : 0,
-              width: 18, height: 2, background: "#111", borderRadius: 2,
+              width: 18, height: 2, background: km.ink, borderRadius: 2,
               transform: mobileOpen ? "rotate(45deg)" : "rotate(0deg)",
               transformOrigin: "center",
               transition: "top 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.22s cubic-bezier(0.4, 0, 0.2, 1) 0.12s",
@@ -355,7 +375,7 @@ export default function Navbar() {
             {/* Barre milieu — s'efface en s'échappant latéralement */}
             <span style={{
               position: "absolute", left: 0, top: 6,
-              width: 18, height: 2, background: "#111", borderRadius: 2,
+              width: 18, height: 2, background: km.ink, borderRadius: 2,
               opacity: mobileOpen ? 0 : 1,
               transform: mobileOpen ? "translateX(-22px)" : "translateX(0)",
               transition: "opacity 0.15s ease, transform 0.18s ease",
@@ -364,14 +384,14 @@ export default function Navbar() {
             <span style={{
               position: "absolute", left: 0,
               top: mobileOpen ? 6 : 12,
-              width: 18, height: 2, background: "#111", borderRadius: 2,
+              width: 18, height: 2, background: km.ink, borderRadius: 2,
               transform: mobileOpen ? "rotate(-45deg)" : "rotate(0deg)",
               transformOrigin: "center",
               transition: "top 0.22s cubic-bezier(0.4, 0, 0.2, 1), transform 0.22s cubic-bezier(0.4, 0, 0.2, 1) 0.12s",
             }} />
           </span>
           {totalBadge > 0 && !mobileOpen && (
-            <span style={{ position: "absolute", top: -2, right: -2, background: "#b91c1c", color: "white", borderRadius: 999, fontSize: 9, fontWeight: 800, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: "2px solid white" }}>
+            <span style={{ position: "absolute", top: -2, right: -2, background: km.errText, color: km.white, borderRadius: 999, fontSize: 9, fontWeight: 800, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: `2px solid ${km.white}` }}>
               {totalBadge > 9 ? "9+" : totalBadge}
             </span>
           )}
@@ -396,7 +416,7 @@ export default function Navbar() {
             style={{
               position: "fixed", top: 72, left: 0, bottom: 0,
               width: "100vw",
-              background: "white", zIndex: 8001, overflowY: "auto",
+              background: km.white, zIndex: 8001, overflowY: "auto",
               boxShadow: mobileOpen ? "0 0 40px rgba(0,0,0,0.15)" : "none",
               transform: mobileOpen ? "translateX(0)" : "translateX(-100%)",
               transition: "transform 0.32s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -405,14 +425,14 @@ export default function Navbar() {
 
             {/* User info */}
             {session && (
-              <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #F7F4EF", display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ padding: "20px 20px 16px", borderBottom: `1px solid ${km.beige}`, display: "flex", alignItems: "center", gap: 12 }}>
                 {avatarSrc
                   ? <img src={avatarSrc} alt="avatar" referrerPolicy="no-referrer" style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover" }} />
-                  : <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 18 }}>{session.user?.name?.[0]}</div>
+                  : <div style={{ width: 48, height: 48, borderRadius: "50%", background: km.ink, display: "flex", alignItems: "center", justifyContent: "center", color: km.white, fontWeight: 700, fontSize: 18 }}>{session.user?.name?.[0]}</div>
                 }
                 <div>
                   <p style={{ fontWeight: 700, fontSize: 14 }}>{session.user?.name}</p>
-                  <p style={{ color: "#8a8477", fontSize: 12 }}>{session.user?.email}</p>
+                  <p style={{ color: km.muted, fontSize: 12 }}>{session.user?.email}</p>
                 </div>
               </div>
             )}
@@ -424,7 +444,7 @@ export default function Navbar() {
                 { href: "/favoris",  label: "Favoris" },
               ].map(item => (
                 <Link key={item.href} href={item.href}
-                  style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: isActive(item.href) ? "#111" : "#111", background: isActive(item.href) ? "#F7F4EF" : "transparent", fontWeight: isActive(item.href) ? 700 : 500, fontSize: 15, borderBottom: "1px solid #F7F4EF" }}>
+                  style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: km.ink, background: isActive(item.href) ? km.beige : "transparent", fontWeight: isActive(item.href) ? 700 : 500, fontSize: 15, borderBottom: `1px solid ${km.beige}` }}>
                   {item.label}
                 </Link>
               ))}
@@ -433,29 +453,29 @@ export default function Navbar() {
                 <>
                   {/* Messages */}
                   <Link href="/messages"
-                    style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: isActive("/messages") ? "#111" : "#111", background: isActive("/messages") ? "#F7F4EF" : "transparent", fontWeight: isActive("/messages") ? 700 : 500, fontSize: 15, borderBottom: "1px solid #F7F4EF", justifyContent: "space-between" }}>
+                    style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: km.ink, background: isActive("/messages") ? km.beige : "transparent", fontWeight: isActive("/messages") ? 700 : 500, fontSize: 15, borderBottom: `1px solid ${km.beige}`, justifyContent: "space-between" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                       Messages
                     </div>
                     {badgeMessages > 0 && (
-                      <span style={{ background: "#b91c1c", color: "white", borderRadius: 999, fontSize: 11, fontWeight: 800, minWidth: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px" }}>
+                      <span style={{ background: km.errText, color: km.white, borderRadius: 999, fontSize: 11, fontWeight: 800, minWidth: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px" }}>
                         {badgeMessages}
                       </span>
                     )}
                   </Link>
 
                   {/* Espace : section */}
-                  <div style={{ padding: "12px 20px 6px", background: "#F7F4EF" }}>
-                    <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "0.5px" }}>Mon espace</p>
+                  <div style={{ padding: "12px 20px 6px", background: km.beige }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "0.5px" }}>Mon espace</p>
                   </div>
                   {espaceLinksAvecBadge.map(item => (
                     <Link key={item.href} href={item.href}
-                      style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: isActive(item.href) ? "#111" : "#111", background: isActive(item.href) ? "#F7F4EF" : "transparent", fontWeight: isActive(item.href) ? 700 : 500, fontSize: 15, borderBottom: "1px solid #F7F4EF", justifyContent: "space-between" }}>
+                      style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: km.ink, background: isActive(item.href) ? km.beige : "transparent", fontWeight: isActive(item.href) ? 700 : 500, fontSize: 15, borderBottom: `1px solid ${km.beige}`, justifyContent: "space-between" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                         {item.label}
                       </div>
                       {(item as any).badge > 0 && (
-                        <span style={{ background: "#b91c1c", color: "white", borderRadius: 999, fontSize: 11, fontWeight: 800, minWidth: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px" }}>
+                        <span style={{ background: km.errText, color: km.white, borderRadius: 999, fontSize: 11, fontWeight: 800, minWidth: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px" }}>
                           {(item as any).badge}
                         </span>
                       )}
@@ -463,13 +483,13 @@ export default function Navbar() {
                   ))}
 
                   <Link href="/parametres" onClick={() => setMobileOpen(false)}
-                    style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: isActive("/parametres") ? "#111" : "#111", background: isActive("/parametres") ? "#F7F4EF" : "transparent", fontWeight: isActive("/parametres") ? 700 : 500, fontSize: 15, borderBottom: "1px solid #F7F4EF" }}>
+                    style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: km.ink, background: isActive("/parametres") ? km.beige : "transparent", fontWeight: isActive("/parametres") ? 700 : 500, fontSize: 15, borderBottom: `1px solid ${km.beige}` }}>
                     Paramètres
                   </Link>
 
-                  <div style={{ padding: 16, borderTop: "1px solid #F7F4EF", marginTop: 8 }}>
+                  <div style={{ padding: 16, borderTop: `1px solid ${km.beige}`, marginTop: 8 }}>
                     <button onClick={() => { setMobileOpen(false); signOut({ callbackUrl: "/" }) }}
-                      style={{ width: "100%", padding: "12px", background: "#FEECEC", border: "none", borderRadius: 12, cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#b91c1c", fontFamily: "inherit" }}>
+                      style={{ width: "100%", padding: "12px", background: km.errBg, border: "none", borderRadius: 12, cursor: "pointer", fontSize: 14, fontWeight: 700, color: km.errText, fontFamily: "inherit" }}>
                       Déconnexion
                     </button>
                   </div>
@@ -478,11 +498,25 @@ export default function Navbar() {
 
               {!session && (
                 <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
-                  <Link href="/auth" style={{ display: "block", padding: "12px", background: "#111", color: "white", borderRadius: 12, textDecoration: "none", fontWeight: 700, fontSize: 15, textAlign: "center" }}>
-                    Se connecter
+                  {/* Auth CTAs mobile — principal (noir) + secondaire (outline) */}
+                  <Link href="/auth?mode=inscription" style={{
+                    display: "block", padding: "14px", background: km.ink, color: km.white,
+                    borderRadius: 999, textDecoration: "none",
+                    fontWeight: 700, fontSize: 12,
+                    textTransform: "uppercase", letterSpacing: "0.6px",
+                    textAlign: "center", fontFamily: "inherit",
+                  }}>
+                    S&apos;inscrire
                   </Link>
-                  <Link href="/auth?mode=inscription" style={{ display: "block", padding: "12px", background: "#F7F4EF", color: "#111", borderRadius: 12, textDecoration: "none", fontWeight: 600, fontSize: 15, textAlign: "center" }}>
-                    S'inscrire
+                  <Link href="/auth" style={{
+                    display: "block", padding: "14px", background: km.white,
+                    color: km.ink, border: `1px solid ${km.ink}`,
+                    borderRadius: 999, textDecoration: "none",
+                    fontWeight: 700, fontSize: 12,
+                    textTransform: "uppercase", letterSpacing: "0.6px",
+                    textAlign: "center", fontFamily: "inherit",
+                  }}>
+                    Se connecter
                   </Link>
                 </div>
               )}
