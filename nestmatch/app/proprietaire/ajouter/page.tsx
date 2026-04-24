@@ -104,7 +104,7 @@ export default function AjouterBien() {
 
   const set = (key: string) => (e: any) => setForm(f => ({ ...f, [key]: e.target.value }))
   const toInt = (v: string) => v ? parseInt(v) : null
-  const inp: any = { width: "100%", padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 16, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }
+  const inp: any = { width: "100%", padding: "11px 14px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 16, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }
   const sel: any = { ...inp, background: "white" }
 
   const dejaLoue = form.statut === "loué"
@@ -262,20 +262,20 @@ export default function AjouterBien() {
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 48px" }}>
-        <a href="/proprietaire" style={{ fontSize: 14, color: "#6b7280", textDecoration: "none" }}>← Retour au dashboard</a>
+        <a href="/proprietaire" style={{ fontSize: 14, color: "#8a8477", textDecoration: "none" }}>← Retour au dashboard</a>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap", margin: "16px 0 4px" }}>
           <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.5px", margin: 0 }}>Ajouter un bien</h1>
           {savedHint && (
-            <span style={{ fontSize: 12, color: "#16a34a", fontWeight: 700 }}>Brouillon sauvegardé</span>
+            <span style={{ fontSize: 12, color: "#15803d", fontWeight: 700 }}>Brouillon sauvegardé</span>
           )}
         </div>
-        <p style={{ color: "#6b7280", marginBottom: 20, fontSize: 14 }}>Publiez une annonce ou enregistrez un bien déjà loué pour le gérer</p>
+        <p style={{ color: "#8a8477", marginBottom: 20, fontSize: 14 }}>Publiez une annonce ou enregistrez un bien déjà loué pour le gérer</p>
 
         {draftPromptOpen && (
-          <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 14, padding: "14px 18px", marginBottom: 20, display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ background: "#EEF3FB", border: "1px solid #D7E3F4", borderRadius: 14, padding: "14px 18px", marginBottom: 20, display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
             <div style={{ flex: 1, minWidth: 200 }}>
               <p style={{ fontSize: 13, fontWeight: 700, color: "#1e3a8a", margin: 0 }}>Brouillon détecté</p>
-              <p style={{ fontSize: 12, color: "#1e40af", margin: "4px 0 0", lineHeight: 1.5 }}>
+              <p style={{ fontSize: 12, color: "#1d4ed8", margin: "4px 0 0", lineHeight: 1.5 }}>
                 Vous avez commencé à rédiger une annonce{draftLoadedAt ? ` le ${new Date(draftLoadedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}` : ""}. Voulez-vous la reprendre ?
               </p>
             </div>
@@ -285,7 +285,7 @@ export default function AjouterBien() {
                 Reprendre
               </button>
               <button type="button" onClick={repartirDeZero}
-                style={{ background: "white", color: "#1e40af", border: "1.5px solid #bfdbfe", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                style={{ background: "white", color: "#1d4ed8", border: "1px solid #D7E3F4", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
                 Repartir de zéro
               </button>
             </div>
@@ -293,19 +293,19 @@ export default function AjouterBien() {
         )}
 
         {/* Progress bar de complétude — style SeLoger : feedback visible sur ce qui reste à remplir */}
-        <div style={{ background: "white", borderRadius: 16, padding: isMobile ? "14px 16px" : "18px 22px", marginBottom: 24, border: "1px solid #e5e7eb" }}>
+        <div style={{ background: "white", borderRadius: 16, padding: isMobile ? "14px 16px" : "18px 22px", marginBottom: 24, border: "1px solid #EAE6DF" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, gap: 12, flexWrap: "wrap" }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: completion === 100 ? "#16a34a" : "#111", margin: 0 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: completion === 100 ? "#15803d" : "#111", margin: 0 }}>
               {completion === 100 ? "✓ Annonce complète — prête à publier" : `Annonce complète à ${completion}%`}
             </p>
             {completion < 100 && (
-              <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>
+              <p style={{ fontSize: 12, color: "#8a8477", margin: 0 }}>
                 À compléter : {manquants.slice(0, 3).join(" · ")}{manquants.length > 3 ? ` · +${manquants.length - 3}` : ""}
               </p>
             )}
           </div>
-          <div style={{ height: 6, background: "#f3f4f6", borderRadius: 999, overflow: "hidden" }}>
-            <div style={{ width: `${completion}%`, height: "100%", background: completion === 100 ? "#16a34a" : "#111", transition: "width 0.2s" }} />
+          <div style={{ height: 6, background: "#F7F4EF", borderRadius: 999, overflow: "hidden" }}>
+            <div style={{ width: `${completion}%`, height: "100%", background: completion === 100 ? "#15803d" : "#111", transition: "width 0.2s" }} />
           </div>
         </div>
 
@@ -358,7 +358,7 @@ export default function AjouterBien() {
                 min={new Date().toISOString().split("T")[0]}
                 onChange={e => setForm(f => ({ ...f, dispo: e.target.value || "Disponible maintenant" }))}
               />
-              <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 6 }}>
+              <p style={{ fontSize: 11, color: "#8a8477", marginTop: 6 }}>
                 Laisser vide = &quot;Disponible maintenant&quot;
               </p>
             </F>
@@ -368,9 +368,9 @@ export default function AjouterBien() {
         {/* Photos */}
         <Sec t="Photos du bien">
           {photoError && (
-            <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <p style={{ fontSize: 13, color: "#dc2626" }}>{photoError}</p>
-              <button type="button" aria-label="Fermer le message d'erreur" onClick={() => setPhotoError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: 18 }}>×</button>
+            <div style={{ background: "#FEECEC", border: "1px solid #F4C9C9", borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <p style={{ fontSize: 13, color: "#b91c1c" }}>{photoError}</p>
+              <button type="button" aria-label="Fermer le message d'erreur" onClick={() => setPhotoError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#b91c1c", fontSize: 18 }}>×</button>
             </div>
           )}
 
@@ -378,7 +378,7 @@ export default function AjouterBien() {
           {photos.length > 0 && (
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
               {photos.map((url, idx) => (
-                <div key={idx} style={{ position: "relative", width: 120, height: 90, borderRadius: 10, overflow: "hidden", border: "1.5px solid #e5e7eb" }}>
+                <div key={idx} style={{ position: "relative", width: 120, height: 90, borderRadius: 10, overflow: "hidden", border: "1px solid #EAE6DF" }}>
                   <img src={url} alt={`Photo ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   <button onClick={() => removePhoto(idx)}
                     style={{ position: "absolute", top: 4, right: 4, background: "rgba(0,0,0,0.6)", border: "none", borderRadius: "50%", width: 22, height: 22, cursor: "pointer", color: "white", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -407,7 +407,7 @@ export default function AjouterBien() {
           <button
             onClick={() => photoInputRef.current?.click()}
             disabled={uploadingPhoto}
-            style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 20px", border: "2px dashed #d1d5db", borderRadius: 12, background: "transparent", cursor: uploadingPhoto ? "not-allowed" : "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: "#6b7280", opacity: uploadingPhoto ? 0.6 : 1 }}>
+            style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 20px", border: "2px dashed #EAE6DF", borderRadius: 12, background: "transparent", cursor: uploadingPhoto ? "not-allowed" : "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: "#8a8477", opacity: uploadingPhoto ? 0.6 : 1 }}>
             {uploadingPhoto ? (
               <span>Upload en cours...</span>
             ) : (
@@ -417,14 +417,14 @@ export default function AjouterBien() {
               </>
             )}
           </button>
-          <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 8 }}>La première photo sera la photo principale de l'annonce.</p>
+          <p style={{ fontSize: 12, color: "#8a8477", marginTop: 8 }}>La première photo sera la photo principale de l'annonce.</p>
         </Sec>
 
         {/* Champs supplémentaires si déjà loué */}
         {dejaLoue && (
           <Sec t="Informations de location en cours">
-            <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12, padding: "12px 16px", marginBottom: 20 }}>
-              <p style={{ fontSize: 13, color: "#16a34a", fontWeight: 600 }}>Ce bien sera géré dans votre dashboard mais n'apparaîtra pas dans les annonces publiques.</p>
+            <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 12, padding: "12px 16px", marginBottom: 20 }}>
+              <p style={{ fontSize: 13, color: "#15803d", fontWeight: 600 }}>Ce bien sera géré dans votre dashboard mais n'apparaîtra pas dans les annonces publiques.</p>
             </div>
             <div style={{ marginBottom: 20 }}>
               <LocataireEmailField value={form.locataire_email} onChange={v => setForm(f => ({ ...f, locataire_email: v }))} inputStyle={inp} />
@@ -443,7 +443,7 @@ export default function AjouterBien() {
                 <input style={inp} value={form.valeur_bien} onChange={set("valeur_bien")} type="number" placeholder="250000" />
               </F>
             </div>
-            <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 20, marginTop: 20 }}>
+            <div style={{ borderTop: "1px solid #F7F4EF", paddingTop: 20, marginTop: 20 }}>
               <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 14, color: "#111" }}>Charges annuelles du propriétaire</p>
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
                 <F l="Taxe foncière (€/an)">
@@ -509,7 +509,7 @@ export default function AjouterBien() {
 
         <Sec t={<>Confidentialité de la localisation <Tooltip text="Par défaut, seul un cercle autour de la ville est affiché sur la carte publique, ce qui protège votre adresse exacte. Activez cette option uniquement si vous souhaitez afficher la position précise du bien à tous les visiteurs de l'annonce." /></>}>
           <Toggle label="Afficher la localisation exacte du bien sur la carte publique" k="localisation_exacte" toggles={toggles} setToggles={setToggles} />
-          <p style={{ fontSize: 12, color: "#6b7280", marginTop: 6, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 12, color: "#8a8477", marginTop: 6, lineHeight: 1.5 }}>
             {toggles.localisation_exacte
               ? "Les visiteurs verront un marqueur précis à l'adresse du bien."
               : "Les visiteurs verront uniquement une zone approximative (cercle de 400 m autour de la ville). Recommandé."}
@@ -517,13 +517,13 @@ export default function AjouterBien() {
         </Sec>
 
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <a href="/proprietaire" style={{ padding: "14px 28px", border: "1.5px solid #e5e7eb", borderRadius: 999, textDecoration: "none", color: "#111", fontWeight: 600 }}>Annuler</a>
+          <a href="/proprietaire" style={{ padding: "14px 28px", border: "1px solid #EAE6DF", borderRadius: 999, textDecoration: "none", color: "#111", fontWeight: 600 }}>Annuler</a>
           <div style={{ display: "flex", gap: 12 }}>
             <button
               type="button"
               onClick={() => setShowPreview(true)}
               disabled={!form.titre || !form.ville || !form.prix}
-              style={{ background: "white", border: "1.5px solid #111", color: "#111", borderRadius: 999, padding: "14px 24px", fontWeight: 700, fontSize: 15, cursor: form.titre && form.ville && form.prix ? "pointer" : "not-allowed", opacity: form.titre && form.ville && form.prix ? 1 : 0.5, fontFamily: "inherit" }}
+              style={{ background: "white", border: "1px solid #111", color: "#111", borderRadius: 999, padding: "14px 24px", fontWeight: 700, fontSize: 15, cursor: form.titre && form.ville && form.prix ? "pointer" : "not-allowed", opacity: form.titre && form.ville && form.prix ? 1 : 0.5, fontFamily: "inherit" }}
             >
               Prévisualiser
             </button>
@@ -549,32 +549,32 @@ function PreviewModal({ form, toggles, photos, onClose }: { form: any; toggles: 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, overflow: "auto" }}>
       <div onClick={e => e.stopPropagation()} style={{ background: "white", borderRadius: 20, width: "min(720px, 100%)", maxHeight: "90vh", overflow: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", fontFamily: "'DM Sans', sans-serif" }}>
-        <div style={{ position: "sticky", top: 0, background: "white", padding: "18px 24px", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 1 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", margin: 0 }}>Aperçu de votre annonce</p>
-          <button type="button" aria-label="Fermer l'aperçu" onClick={onClose} style={{ background: "none", border: "none", fontSize: 24, cursor: "pointer", color: "#6b7280", padding: 0, lineHeight: 1 }}>×</button>
+        <div style={{ position: "sticky", top: 0, background: "white", padding: "18px 24px", borderBottom: "1px solid #F7F4EF", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 1 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "0.5px", margin: 0 }}>Aperçu de votre annonce</p>
+          <button type="button" aria-label="Fermer l'aperçu" onClick={onClose} style={{ background: "none", border: "none", fontSize: 24, cursor: "pointer", color: "#8a8477", padding: 0, lineHeight: 1 }}>×</button>
         </div>
         <div style={{ padding: "20px 24px" }}>
           {photos.length > 0 ? (
             <div style={{ height: 280, background: `url(${photos[0]}) center/cover no-repeat`, borderRadius: 14, marginBottom: 18 }} />
           ) : (
-            <div style={{ height: 280, background: "linear-gradient(135deg, #d4e8e0, #b8d4c8)", borderRadius: 14, marginBottom: 18, display: "flex", alignItems: "center", justifyContent: "center", color: "#6b7280", fontSize: 13 }}>
+            <div style={{ height: 280, background: "linear-gradient(135deg, #d4e8e0, #b8d4c8)", borderRadius: 14, marginBottom: 18, display: "flex", alignItems: "center", justifyContent: "center", color: "#8a8477", fontSize: 13 }}>
               Aucune photo — ajoutez-en pour maximiser l&apos;intérêt
             </div>
           )}
           <h2 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 6px", letterSpacing: "-0.5px" }}>{form.titre || "Titre de l'annonce"}</h2>
-          <p style={{ fontSize: 14, color: "#6b7280", margin: "0 0 14px" }}>
+          <p style={{ fontSize: 14, color: "#8a8477", margin: "0 0 14px" }}>
             {form.adresse && toggles.localisation_exacte ? `${form.adresse} · ` : ""}{form.ville}
           </p>
-          <div style={{ display: "flex", gap: 14, marginBottom: 18, flexWrap: "wrap", fontSize: 14, color: "#374151" }}>
+          <div style={{ display: "flex", gap: 14, marginBottom: 18, flexWrap: "wrap", fontSize: 14, color: "#111" }}>
             {form.surface && <span><strong>{form.surface} m²</strong></span>}
             {form.pieces && <span><strong>{form.pieces}</strong> pièces</span>}
             {form.chambres && <span><strong>{form.chambres}</strong> chambres</span>}
             {form.dpe && <span>DPE <strong>{form.dpe}</strong></span>}
-            {form.type_bien && <span style={{ color: "#6b7280" }}>{form.type_bien}</span>}
+            {form.type_bien && <span style={{ color: "#8a8477" }}>{form.type_bien}</span>}
           </div>
-          <div style={{ background: "#f9fafb", borderRadius: 12, padding: "14px 18px", marginBottom: 18 }}>
-            <p style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>{loyerTotal} €<span style={{ fontSize: 14, color: "#6b7280", fontWeight: 500 }}> / mois</span></p>
-            {form.charges && <p style={{ fontSize: 12, color: "#6b7280", margin: "4px 0 0" }}>dont {form.charges} € de charges</p>}
+          <div style={{ background: "#F7F4EF", borderRadius: 12, padding: "14px 18px", marginBottom: 18 }}>
+            <p style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>{loyerTotal} €<span style={{ fontSize: 14, color: "#8a8477", fontWeight: 500 }}> / mois</span></p>
+            {form.charges && <p style={{ fontSize: 12, color: "#8a8477", margin: "4px 0 0" }}>dont {form.charges} € de charges</p>}
           </div>
           {form.description && (
             <div style={{ marginBottom: 18 }}>
@@ -585,13 +585,13 @@ function PreviewModal({ form, toggles, photos, onClose }: { form: any; toggles: 
           <h3 style={{ fontSize: 15, fontWeight: 800, margin: "0 0 8px" }}>Équipements</h3>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 18 }}>
             {Object.entries(toggles).filter(([, v]) => v).map(([k]) => (
-              <span key={k} style={{ background: "#f0fdf4", color: "#15803d", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600 }}>{k.replace(/_/g, " ")}</span>
+              <span key={k} style={{ background: "#F0FAEE", color: "#15803d", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600 }}>{k.replace(/_/g, " ")}</span>
             ))}
             {Object.entries(toggles).filter(([, v]) => v).length === 0 && (
-              <span style={{ fontSize: 13, color: "#9ca3af" }}>Aucun équipement coché.</span>
+              <span style={{ fontSize: 13, color: "#8a8477" }}>Aucun équipement coché.</span>
             )}
           </div>
-          <p style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", margin: "20px 0 0" }}>
+          <p style={{ fontSize: 12, color: "#8a8477", textAlign: "center", margin: "20px 0 0" }}>
             Aperçu indicatif — le rendu public peut légèrement varier.
           </p>
         </div>

@@ -17,12 +17,12 @@ import Image from "next/image"
 type Etat = "Neuf" | "Tres bon" | "Bon" | "Usage" | "Mauvais" | "Degrade"
 
 const ETAT_STYLE: Record<Etat, { bg: string; color: string; border: string }> = {
-  "Neuf":     { bg: "#dcfce7", color: "#16a34a", border: "#bbf7d0" },
-  "Tres bon": { bg: "#dcfce7", color: "#16a34a", border: "#bbf7d0" },
-  "Bon":      { bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" },
-  "Usage":    { bg: "#fff7ed", color: "#ea580c", border: "#fed7aa" },
-  "Mauvais":  { bg: "#fee2e2", color: "#dc2626", border: "#fecaca" },
-  "Degrade":  { bg: "#fee2e2", color: "#991b1b", border: "#fca5a5" },
+  "Neuf":     { bg: "#F0FAEE", color: "#15803d", border: "#C6E9C0" },
+  "Tres bon": { bg: "#F0FAEE", color: "#15803d", border: "#C6E9C0" },
+  "Bon":      { bg: "#EEF3FB", color: "#1d4ed8", border: "#D7E3F4" },
+  "Usage":    { bg: "#FBF6EA", color: "#a16207", border: "#EADFC6" },
+  "Mauvais":  { bg: "#FEECEC", color: "#b91c1c", border: "#F4C9C9" },
+  "Degrade":  { bg: "#FEECEC", color: "#991b1b", border: "#F4C9C9" },
 }
 
 type ElementData = { etat: Etat; observation: string }
@@ -355,7 +355,7 @@ export default function ConsulterEdlPage() {
   }
 
   if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "'DM Sans', sans-serif", color: "#6b7280" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "'DM Sans', sans-serif", color: "#8a8477" }}>
       Chargement...
     </div>
   )
@@ -380,7 +380,7 @@ export default function ConsulterEdlPage() {
   const dateLabel = edl.date_edl ? new Date(edl.date_edl).toLocaleDateString("fr-FR") : "—"
 
   const cardS: any = { background: "white", borderRadius: 20, padding: isMobile ? 18 : 28, marginBottom: 20, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }
-  const lbl: any = { fontSize: 12, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 4 }
+  const lbl: any = { fontSize: 12, fontWeight: 700, color: "#8a8477", display: "block", marginBottom: 4 }
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
@@ -388,32 +388,32 @@ export default function ConsulterEdlPage() {
 
         {/* ─── Header ─── */}
         <div style={{ marginBottom: 28 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
             État des lieux
           </p>
           <h1 style={{ fontSize: isMobile ? 22 : 30, fontWeight: 800, letterSpacing: "-0.5px", margin: "0 0 6px" }}>
             État des lieux d'{typeLabel}
           </h1>
-          <p style={{ color: "#6b7280", fontSize: 14, margin: 0 }}>
+          <p style={{ color: "#8a8477", fontSize: 14, margin: 0 }}>
             {bien?.titre || "Bien"} — {bien?.ville || ""} — {dateLabel}
           </p>
         </div>
 
         {/* ─── Status banner ─── */}
         {statut === "brouillon" && (
-          <div style={{ background: "#f3f4f6", border: "1.5px solid #e5e7eb", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
-            <p style={{ fontSize: 14, fontWeight: 600, color: "#6b7280", margin: 0 }}>Ce document est en cours de préparation par le propriétaire</p>
+          <div style={{ background: "#F7F4EF", border: "1px solid #EAE6DF", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: "#8a8477", margin: 0 }}>Ce document est en cours de préparation par le propriétaire</p>
           </div>
         )}
 
         {statut === "envoye" && (
-          <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
+          <div style={{ background: "#EEF3FB", border: "1px solid #D7E3F4", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
             <p style={{ fontSize: 14, fontWeight: 700, color: "#1d4ed8", margin: 0 }}>Veuillez vérifier les informations puis valider ou contester cet état des lieux</p>
           </div>
         )}
 
         {statut === "valide" && (
-          <div style={{ background: "#dcfce7", border: "1.5px solid #bbf7d0", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
+          <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
             <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: 0 }}>
               État des lieux validé {edl.date_validation ? `le ${new Date(edl.date_validation).toLocaleDateString("fr-FR")}` : ""}
             </p>
@@ -421,7 +421,7 @@ export default function ConsulterEdlPage() {
         )}
 
         {statut === "conteste" && (
-          <div style={{ background: "#fefce8", border: "1.5px solid #fde68a", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
+          <div style={{ background: "#fefce8", border: "1px solid #fde68a", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
             <p style={{ fontSize: 14, fontWeight: 700, color: "#92400e", margin: edl.commentaire_locataire ? "0 0 8px" : 0 }}>État des lieux contesté — en attente de révision par le propriétaire</p>
             {edl.commentaire_locataire && (
               <p style={{ fontSize: 13, color: "#92400e", margin: "4px 0 0", fontStyle: "italic" }}>
@@ -476,19 +476,19 @@ export default function ConsulterEdlPage() {
           <div key={pieceIdx} style={cardS}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
               <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{piece.nom}</h2>
-              <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600 }}>{Object.keys(piece.elements).length} elements</span>
+              <span style={{ fontSize: 11, color: "#8a8477", fontWeight: 600 }}>{Object.keys(piece.elements).length} elements</span>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
               {Object.entries(piece.elements).map(([elem, val]) => (
                 <div key={elem} style={{
-                  padding: "10px 0", borderBottom: "1px solid #f3f4f6",
+                  padding: "10px 0", borderBottom: "1px solid #F7F4EF",
                   display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
                 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#374151", flex: 1, minWidth: 120 }}>{elem}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111", flex: 1, minWidth: 120 }}>{elem}</span>
                   <EtatBadge etat={val.etat} />
                   {val.observation && (
-                    <span style={{ fontSize: 12, color: "#6b7280", fontStyle: "italic", flexBasis: isMobile ? "100%" : "auto" }}>
+                    <span style={{ fontSize: 12, color: "#8a8477", fontStyle: "italic", flexBasis: isMobile ? "100%" : "auto" }}>
                       {val.observation}
                     </span>
                   )}
@@ -498,12 +498,12 @@ export default function ConsulterEdlPage() {
 
             {/* Photos */}
             {piece.photos && piece.photos.length > 0 && (
-              <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #f3f4f6" }}>
-                <p style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", marginBottom: 8 }}>Photos ({piece.photos.length})</p>
+              <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #F7F4EF" }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "#8a8477", marginBottom: 8 }}>Photos ({piece.photos.length})</p>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {piece.photos.map((url: string, photoIdx: number) => (
                     <a key={photoIdx} href={url} target="_blank" rel="noopener noreferrer"
-                      style={{ position: "relative", width: 80, height: 80, borderRadius: 10, overflow: "hidden", border: "1.5px solid #e5e7eb", display: "block", flexShrink: 0 }}>
+                      style={{ position: "relative", width: 80, height: 80, borderRadius: 10, overflow: "hidden", border: "1px solid #EAE6DF", display: "block", flexShrink: 0 }}>
                       <Image src={url} alt="" fill sizes="80px" style={{ objectFit: "cover" }} />
                     </a>
                   ))}
@@ -517,18 +517,18 @@ export default function ConsulterEdlPage() {
         {edl.observations && (
           <div style={cardS}>
             <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>Observations générales</h2>
-            <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, margin: 0 }}>{edl.observations}</p>
+            <p style={{ fontSize: 14, color: "#111", lineHeight: 1.6, margin: 0 }}>{edl.observations}</p>
           </div>
         )}
 
         {/* ─── Actions ─── */}
         {/* Vue proprio : EDL envoyé, on attend le locataire */}
         {statut === "envoye" && (session?.user?.email || "").toLowerCase() === (edl.proprietaire_email || "").toLowerCase() && (
-          <div style={{ ...cardS, background: "#eff6ff", border: "1.5px solid #bfdbfe" }}>
-            <p style={{ fontSize: 14, fontWeight: 700, color: "#1e40af", margin: 0 }}>
+          <div style={{ ...cardS, background: "#EEF3FB", border: "1px solid #D7E3F4" }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: "#1d4ed8", margin: 0 }}>
               En attente de la décision du locataire
             </p>
-            <p style={{ fontSize: 12, color: "#1e40af", margin: "6px 0 0", lineHeight: 1.6 }}>
+            <p style={{ fontSize: 12, color: "#1d4ed8", margin: "6px 0 0", lineHeight: 1.6 }}>
               Le locataire a reçu l&apos;état des lieux et peut le valider ou le contester depuis sa messagerie.
               Vous serez notifié dès sa réponse.
             </p>
@@ -555,8 +555,8 @@ export default function ConsulterEdlPage() {
                 <button onClick={() => setShowContest(true)}
                   style={{
                     flex: 1, padding: "16px 32px",
-                    background: "white", color: "#ea580c",
-                    border: "1.5px solid #fed7aa", borderRadius: 16, fontWeight: 800, fontSize: 16,
+                    background: "white", color: "#a16207",
+                    border: "1px solid #EADFC6", borderRadius: 16, fontWeight: 800, fontSize: 16,
                     cursor: "pointer", fontFamily: "inherit",
                   }}>
                   Contester
@@ -571,7 +571,7 @@ export default function ConsulterEdlPage() {
                   placeholder="Indiquez les éléments que vous souhaitez contester et pourquoi..."
                   rows={4}
                   style={{
-                    width: "100%", padding: "12px 14px", border: "1.5px solid #fde68a", borderRadius: 12,
+                    width: "100%", padding: "12px 14px", border: "1px solid #fde68a", borderRadius: 12,
                     fontSize: 14, outline: "none", fontFamily: "inherit", boxSizing: "border-box" as const,
                     resize: "vertical", marginBottom: 12,
                   }}
@@ -580,8 +580,8 @@ export default function ConsulterEdlPage() {
                   <button onClick={contesterEdl} disabled={contesting || !commentaire.trim()}
                     style={{
                       padding: "12px 24px",
-                      background: contesting || !commentaire.trim() ? "#e5e7eb" : "#ea580c",
-                      color: contesting || !commentaire.trim() ? "#9ca3af" : "white",
+                      background: contesting || !commentaire.trim() ? "#EAE6DF" : "#a16207",
+                      color: contesting || !commentaire.trim() ? "#8a8477" : "white",
                       border: "none", borderRadius: 999, fontWeight: 700, fontSize: 14,
                       cursor: contesting || !commentaire.trim() ? "not-allowed" : "pointer",
                       fontFamily: "inherit",
@@ -590,9 +590,9 @@ export default function ConsulterEdlPage() {
                   </button>
                   <button onClick={() => { setShowContest(false); setCommentaire("") }}
                     style={{
-                      padding: "12px 24px", background: "none", border: "1.5px solid #e5e7eb",
+                      padding: "12px 24px", background: "none", border: "1px solid #EAE6DF",
                       borderRadius: 999, fontWeight: 600, fontSize: 14, cursor: "pointer",
-                      fontFamily: "inherit", color: "#6b7280",
+                      fontFamily: "inherit", color: "#8a8477",
                     }}>
                     Annuler
                   </button>
@@ -627,7 +627,7 @@ export default function ConsulterEdlPage() {
               style={{
                 flex: "1 1 200px", padding: "14px 24px",
                 background: "#111", color: "white",
-                border: "1.5px solid #111", borderRadius: 16, fontWeight: 800, fontSize: 14,
+                border: "1px solid #111", borderRadius: 16, fontWeight: 800, fontSize: 14,
                 cursor: "pointer", fontFamily: "inherit",
               }}>
               Télécharger le PDF
@@ -636,7 +636,7 @@ export default function ConsulterEdlPage() {
               style={{
                 flex: "1 1 200px", padding: "14px 24px",
                 background: "white", color: "#111",
-                border: "1.5px solid #111", borderRadius: 16, fontWeight: 700, fontSize: 14,
+                border: "1px solid #111", borderRadius: 16, fontWeight: 700, fontSize: 14,
                 cursor: "pointer", fontFamily: "inherit",
               }}>
               Télécharger les photos (.zip)
@@ -646,7 +646,7 @@ export default function ConsulterEdlPage() {
 
         {/* Statut signatures */}
         {signatures.length > 0 && (
-          <div style={{ ...cardS, background: "#f0fdf4", border: "1.5px solid #86efac" }}>
+          <div style={{ ...cardS, background: "#f0fdf4", border: "1px solid #86efac" }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 10px" }}>
               Signatures électroniques
             </p>
@@ -664,7 +664,7 @@ export default function ConsulterEdlPage() {
           && !signatures.find(s => s.role === "bailleur")
           && signatures.find(s => s.role === "locataire")
           && (
-          <div style={{ ...cardS, background: "#fff7ed", border: "1.5px solid #fed7aa" }}>
+          <div style={{ ...cardS, background: "#FBF6EA", border: "1px solid #EADFC6" }}>
             <p style={{ fontSize: 14, fontWeight: 700, color: "#9a3412", margin: "0 0 10px" }}>
               Le locataire a signé cet EDL
             </p>
@@ -678,7 +678,7 @@ export default function ConsulterEdlPage() {
           </div>
         )}
 
-        <p style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", marginTop: 20, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 12, color: "#8a8477", textAlign: "center", marginTop: 20, lineHeight: 1.6 }}>
           Document contradictoire — généré par {BRAND.name}.
         </p>
       </div>
