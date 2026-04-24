@@ -246,6 +246,16 @@ export default function Profil() {
           </div>
         )}
 
+        {/* Lien discret « Reprendre la configuration guidée » pour les profils 20–80 %
+            (le CTA plein bouton est déjà affiché dans le score card si <= 20). */}
+        {!proprietaireActive && scoreCompletion > 20 && scoreCompletion < 100 && (
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+            <a href="/profil/creer" style={{ fontSize: 11, fontWeight: 700, color: "#111", textDecoration: "underline", textUnderlineOffset: 4, textTransform: "uppercase", letterSpacing: "1.2px" }}>
+              Reprendre la configuration guidée →
+            </a>
+          </div>
+        )}
+
         {!proprietaireActive && <>
         <Sec t="Mes critères de recherche">
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>

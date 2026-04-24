@@ -141,6 +141,11 @@ function Grid2({ children, isMobile }: { children: ReactNode; isMobile: boolean 
   return <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>{children}</div>
 }
 
+const WIZARD_STEP_KEY_PREFIX = "keymatch:profilWizardStep:"
+function stepStorageKey(email: string) {
+  return WIZARD_STEP_KEY_PREFIX + email.toLowerCase()
+}
+
 export default function CreerProfil() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -211,9 +216,23 @@ export default function CreerProfil() {
             proximite_parcs: !!data.proximite_parcs,
           })
         }
+        // Restaurer l'étape si l'user revient en cours de parcours.
+        try {
+          const rawStep = localStorage.getItem(stepStorageKey(session.user!.email!))
+          const parsed = rawStep ? parseInt(rawStep, 10) : 1
+          if (parsed >= 1 && parsed <= STEPS.length) setStep(parsed)
+        } catch { /* noop */ }
         setDataLoaded(true)
       })
   }, [session, status, router])
+
+  // Persiste l'étape courante pour permettre la reprise après rechargement.
+  useEffect(() => {
+    if (!session?.user?.email || !dataLoaded) return
+    try {
+      localStorage.setItem(stepStorageKey(session.user.email), step.toString())
+    } catch { /* quota — silencieux */ }
+  }, [step, session?.user?.email, dataLoaded])
 
   const set = (key: keyof FormState) => (e: { target: { value: string } }) => setForm(f => ({ ...f, [key]: e.target.value }))
 
@@ -263,6 +282,9 @@ export default function CreerProfil() {
       }
     }
     setSaving(false)
+    try {
+      if (session?.user?.email) localStorage.removeItem(stepStorageKey(session.user.email))
+    } catch { /* noop */ }
     router.push("/profil?created=1")
   }
 
