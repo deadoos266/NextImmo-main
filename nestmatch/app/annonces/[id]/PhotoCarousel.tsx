@@ -19,15 +19,15 @@ import { useResponsive } from "../../hooks/useResponsive"
  * (priority=first paint).
  */
 // Clamp le ratio w/h d'un hero :
-//   - Portrait très haut (h/w > 1.3, donc w/h < 0.77) → force 4/5 (0.8) pour
-//     éviter que l'image bouffe toute la hauteur écran.
-//   - Ultra-wide (w/h > 2.5) → force 16/9 pour éviter la bande étroite.
+//   - Portrait (w/h < 0.75, donc h/w > 1.33) → force 3/4 (0.75) pour garder
+//     une proportion raisonnable dans la colonne gauche du grid.
+//   - Ultra-wide (w/h > 2) → force 16/9 pour éviter la bande étroite.
 //   - Sinon : ratio réel.
 function clampedAspect(naturalW: number, naturalH: number): string {
   if (!naturalW || !naturalH) return "16 / 10"
   const r = naturalW / naturalH
-  if (r < 0.77) return "4 / 5"
-  if (r > 2.5) return "16 / 9"
+  if (r < 0.75) return "3 / 4"
+  if (r > 2) return "16 / 9"
   return `${naturalW} / ${naturalH}`
 }
 
@@ -45,9 +45,9 @@ export default function PhotoCarousel({ photos }: { photos: string[] }) {
 
   if (!photos || photos.length === 0) return (
     <div style={{
-      maxWidth: 960,
-      margin: "0 auto 28px",
-      height: 240,
+      width: "100%",
+      height: 200,
+      marginBottom: 20,
       background: "#EAE6DF",
       border: "1px dashed #cec9bd",
       borderRadius: 20,
@@ -57,11 +57,11 @@ export default function PhotoCarousel({ photos }: { photos: string[] }) {
       justifyContent: "center",
       gap: 10,
     }}>
-      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#8a8477" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8a8477" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
         <circle cx="12" cy="13" r="4" />
       </svg>
-      <span style={{ color: "#8a8477", fontSize: 14, fontWeight: 500 }}>Aucune photo disponible</span>
+      <span style={{ color: "#8a8477", fontSize: 13, fontWeight: 500 }}>Aucune photo disponible</span>
     </div>
   )
 
@@ -87,25 +87,26 @@ export default function PhotoCarousel({ photos }: { photos: string[] }) {
   // On force donc le layout carousel classique tant que `mounted` est
   // false. Après mount, on bascule sur 2/1 si desktop + ≥3 photos.
   if (!mounted || isMobile || photos.length < 3) {
-    // Hero bornes :
-    //   - aspect-ratio dérivé du vrai ratio de l'image (clampé 4/5 ↔ 16/9)
-    //   - min-height 380px : empêche une photo ultra-wide d'être ridiculement plate
-    //   - max-height 50vh mobile / 70vh desktop : empêche un portrait de bouffer l'écran
-    //   - object-fit: contain + fond éditorial : image visible entière sans coupe
-    //   - Avant mesure, on utilise 16/10 par défaut (neutre, photo immo paysage).
+    // Hero bornes — photo DANS la colonne gauche du grid 2-col (≤800px de large
+    // desktop, full-width stack en mobile) :
+    //   - aspect-ratio dérivé de la vraie image (clampé 3/4 ↔ 16/9)
+    //   - min-height 280px desktop / 240px mobile : photo jamais ridiculement petite
+    //   - max-height 520px desktop / 50vh mobile : photo ne bouffe jamais tout l'écran
+    //   - width: 100% → épouse naturellement la colonne parent du grid
+    //   - object-fit: contain + fond éditorial : image entière, zéro coupe
     const heroAspect = aspects[idx] ?? "16 / 10"
-    const heroMaxHeight = isMobile ? "50vh" : "70vh"
     return (
       <>
         <div
           style={{
             position: "relative",
+            width: "100%",
             aspectRatio: heroAspect,
-            minHeight: 380,
-            maxHeight: heroMaxHeight,
+            minHeight: isMobile ? 240 : 280,
+            maxHeight: isMobile ? "50vh" : 520,
             borderRadius: 20,
             overflow: "hidden",
-            marginBottom: 28,
+            marginBottom: 20,
             background: "#F7F4EF",
             cursor: "zoom-in",
           }}
@@ -180,8 +181,9 @@ export default function PhotoCarousel({ photos }: { photos: string[] }) {
         display: "grid",
         gridTemplateColumns: "2fr 1fr",
         gap: 12,
-        height: "min(70vh, 560px)",
-        marginBottom: 28,
+        width: "100%",
+        height: 440,
+        marginBottom: 20,
       }}>
         {/* Grande photo gauche — contain + fond beige pour voir l'image entière */}
         <div

@@ -408,10 +408,9 @@ export default async function Annonce({ params }: any) {
           </div>
         )}
 
-        <PhotoCarousel photos={photos} />
-
         <div className="r-detail-layout" style={{ display: "flex", gap: 28, alignItems: "flex-start" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
+            <PhotoCarousel photos={photos} />
             <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
               {[
                 { val: annonce.surface ? `${annonce.surface}` : "—", label: "m²" },
