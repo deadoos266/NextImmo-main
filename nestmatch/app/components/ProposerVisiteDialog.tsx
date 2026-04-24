@@ -9,34 +9,43 @@ interface AnnoncePreview {
   photos?: string[] | null
 }
 
+export interface VisiteSlot {
+  date: string   // YYYY-MM-DD
+  heure: string  // HH:MM
+}
+
 interface Props {
   open: boolean
   onClose: () => void
-  /** Callback au submit. Parent gère l'async + la fermeture sur succès. */
-  onConfirm: (p: { date: string; heure: string; message: string }) => Promise<void> | void
-  /** Annonce concernée pour le rail preview. Optionnel (fallback neutre). */
+  /**
+   * Callback au submit. Le payload propose jusqu'à 5 créneaux (R10.8).
+   * Le parent insère une visite DB (avec le 1er slot comme colonne primaire)
+   * et fait voyager les autres créneaux dans la carte message.
+   */
+  onConfirm: (p: { slots: VisiteSlot[]; message: string }) => Promise<void> | void
+  /** Annonce concernée pour le rail preview. */
   annonce?: AnnoncePreview | null
   /** Si contre-proposition : libellé de la proposition qui va être annulée. */
   counterTargetLabel?: string | null
-  /** Mode envoi en cours — parent contrôle pour afficher "Envoi…". */
+  /** Mode envoi en cours. */
   envoi?: boolean
   /** Badge compat % (optionnel) */
   matchPct?: number | null
-  /** Pré-remplissage date (contre-proposition notamment). Format YYYY-MM-DD. */
+  /** Pré-remplissage slot initial — utilisé en contre-proposition. */
   initialDate?: string | null
-  /** Pré-remplissage heure. Format HH:MM. */
   initialHeure?: string | null
 }
 
+const MAX_SLOTS = 5
+const HEURES = ["08:00", "09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00"]
+
 /**
- * Modale "Proposer une visite" — calque handoff modals.jsx VisitRequestModal.
+ * Modale "Proposer une visite" — R10.8 multi-créneaux.
  *
- * Design editorial : overlay noir + blur, card 24px radius, Fraunces italic
- * pour le titre principal, preview rail annonce, champs date/heure en ligne,
- * textarea message, CTA noir rond.
- *
- * La logique API reste 100% dans le parent (proposerVisite) — ce composant
- * est purement UI + validation basique. Le parent décide quand fermer.
+ * Le propriétaire peut proposer de 1 à 5 créneaux. Le locataire choisira
+ * ensuite lequel il retient (côté VisiteDemandeCard + choisirSlotVisite).
+ * Le locataire (contre-proposition) peut aussi proposer jusqu'à 5 créneaux
+ * — même UI, pas de branche.
  */
 export default function ProposerVisiteDialog({
   open,
@@ -49,17 +58,13 @@ export default function ProposerVisiteDialog({
   initialDate,
   initialHeure,
 }: Props) {
-  const [date, setDate] = useState("")
-  const [heure, setHeure] = useState("10:00")
+  const [slots, setSlots] = useState<VisiteSlot[]>([{ date: "", heure: "10:00" }])
   const [message, setMessage] = useState("")
 
-  // Reset à chaque ouverture — avec pré-remplissage si initial* fournis
-  // (contre-proposition : la modale démarre sur l'ancienne date/heure
-  // pour que le user n'ait qu'à bouger d'un cran).
+  // Reset à chaque ouverture (pré-remplissage du 1er slot si initial* fournis).
   useEffect(() => {
     if (open) {
-      setDate(initialDate || "")
-      setHeure(initialHeure || "10:00")
+      setSlots([{ date: initialDate || "", heure: initialHeure || "10:00" }])
       setMessage("")
     }
   }, [open, initialDate, initialHeure])
@@ -76,20 +81,32 @@ export default function ProposerVisiteDialog({
 
   if (!open) return null
 
-  const canSubmit = !envoi && !!date && !!heure
+  const validSlots = slots.filter(s => s.date && s.heure)
+  const canSubmit = !envoi && validSlots.length > 0
+  const canAddSlot = slots.length < MAX_SLOTS
   const isCounter = !!counterTargetLabel
-  const title = isCounter ? "Contre-proposer un créneau" : "Proposer une visite"
+  const title = isCounter ? "Contre-proposer un ou plusieurs créneaux" : "Proposer jusqu'à 5 créneaux"
+
+  const updateSlot = (i: number, patch: Partial<VisiteSlot>) =>
+    setSlots(prev => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)))
+  const addSlot = () =>
+    setSlots(prev => (prev.length >= MAX_SLOTS ? prev : [...prev, { date: "", heure: "10:00" }]))
+  const removeSlot = (i: number) =>
+    setSlots(prev => (prev.length <= 1 ? prev : prev.filter((_, idx) => idx !== i)))
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!canSubmit) return
-    await onConfirm({ date, heure, message: message.trim() })
+    // On n'envoie que les slots valides (au moins 1 garanti par canSubmit).
+    await onConfirm({ slots: validSlots, message: message.trim() })
   }
 
   const photo = Array.isArray(annonce?.photos) && annonce!.photos!.length > 0 ? annonce!.photos![0] : null
   const matchColor = typeof matchPct === "number"
     ? (matchPct >= 80 ? "#15803d" : matchPct >= 60 ? "#a16207" : "#b91c1c")
     : "#8a8477"
+
+  const minDate = new Date().toISOString().split("T")[0]
 
   return (
     <>
@@ -137,20 +154,14 @@ export default function ProposerVisiteDialog({
           animation: "km-visite-rise 240ms cubic-bezier(.2,.7,.3,1)",
         }}
       >
-        {/* Header — eyebrow + close */}
+        {/* Header */}
         <div style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "18px 24px",
-          borderBottom: "1px solid #EAE6DF",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "18px 24px", borderBottom: "1px solid #EAE6DF",
         }}>
           <span style={{
-            fontSize: 10,
-            fontWeight: 700,
-            color: "#8a8477",
-            textTransform: "uppercase",
-            letterSpacing: "1.4px",
+            fontSize: 10, fontWeight: 700, color: "#8a8477",
+            textTransform: "uppercase", letterSpacing: "1.4px",
           }}>
             {isCounter ? "Contre-proposition" : "Demande de visite"}
           </span>
@@ -159,15 +170,9 @@ export default function ProposerVisiteDialog({
             aria-label="Fermer"
             type="button"
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
-              border: "none",
-              background: "#F7F4EF",
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
+              width: 32, height: 32, borderRadius: "50%", border: "none",
+              background: "#F7F4EF", cursor: "pointer",
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
               color: "#111",
             }}
           >
@@ -178,28 +183,18 @@ export default function ProposerVisiteDialog({
         {/* Preview rail de l'annonce */}
         {annonce && (
           <div style={{
-            display: "flex",
-            gap: 12,
-            padding: "14px 24px",
-            background: "#F7F4EF",
-            borderBottom: "1px solid #EAE6DF",
-            alignItems: "center",
+            display: "flex", gap: 12, padding: "14px 24px",
+            background: "#F7F4EF", borderBottom: "1px solid #EAE6DF", alignItems: "center",
           }}>
             <div style={{
-              width: 48,
-              height: 48,
-              borderRadius: 10,
+              width: 48, height: 48, borderRadius: 10,
               background: photo ? `url(${photo}) center/cover` : "#EAE6DF",
               flexShrink: 0,
             }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: "#111",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
+                fontSize: 13, fontWeight: 600, color: "#111",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                 letterSpacing: "-0.1px",
               }}>
                 {annonce.titre || "Annonce"}
@@ -219,170 +214,147 @@ export default function ProposerVisiteDialog({
 
         {/* Body */}
         <form onSubmit={submit} style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "24px 24px 8px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 18,
+          flex: 1, overflowY: "auto", padding: "24px 24px 8px",
+          display: "flex", flexDirection: "column", gap: 18,
         }}>
           <div>
             <h2
               id="proposer-visite-title"
               className="km-visite-serif"
               style={{
-                fontSize: 26,
-                fontWeight: 500,
-                letterSpacing: "-0.5px",
-                margin: 0,
-                marginBottom: 6,
-                color: "#111",
+                fontSize: 26, fontWeight: 500, letterSpacing: "-0.5px",
+                margin: 0, marginBottom: 6, color: "#111",
               }}
             >
               {title}
             </h2>
             <p style={{ fontSize: 13, color: "#6b6b6b", margin: 0, lineHeight: 1.55 }}>
               {isCounter
-                ? <>La proposition initiale (<strong style={{ color: "#111" }}>{counterTargetLabel}</strong>) sera annulée et remplacée par votre nouveau créneau.</>
-                : "Le propriétaire doit valider votre créneau — réponse sous 24 h en moyenne."}
+                ? <>La proposition initiale (<strong style={{ color: "#111" }}>{counterTargetLabel}</strong>) sera annulée. Vous pouvez proposer un ou plusieurs créneaux de remplacement.</>
+                : "Ajoutez jusqu'à 5 créneaux. Le candidat en choisira un — les autres seront automatiquement rejetés."}
             </p>
           </div>
 
-          {/* Date + Heure */}
-          <div style={{ display: "flex", gap: 12 }}>
-            <div style={{ flex: 2 }}>
-              <label style={{
-                fontSize: 10,
-                fontWeight: 700,
-                color: "#8a8477",
-                textTransform: "uppercase",
-                letterSpacing: "1.2px",
-                display: "block",
-                marginBottom: 6,
+          {/* Liste des slots */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {slots.map((slot, i) => (
+              <div key={i} style={{
+                display: "flex", gap: 10, alignItems: "flex-end",
+                background: "#FBF9F5", border: "1px solid #EAE6DF", borderRadius: 14, padding: 12,
               }}>
-                Date
-              </label>
-              <input
-                type="date"
-                min={new Date().toISOString().split("T")[0]}
-                value={date}
-                onChange={e => setDate(e.target.value)}
-                autoFocus
+                <div style={{ flex: 2 }}>
+                  <label style={{
+                    fontSize: 9.5, fontWeight: 700, color: "#8a8477",
+                    textTransform: "uppercase", letterSpacing: "1.2px",
+                    display: "block", marginBottom: 5,
+                  }}>
+                    Créneau {i + 1} — Date
+                  </label>
+                  <input
+                    type="date"
+                    min={minDate}
+                    value={slot.date}
+                    onChange={e => updateSlot(i, { date: e.target.value })}
+                    autoFocus={i === 0}
+                    style={{
+                      width: "100%", padding: "10px 12px",
+                      border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 13.5,
+                      fontFamily: "inherit", outline: "none", boxSizing: "border-box",
+                      background: "#fff", color: "#111",
+                    }}
+                    onFocus={e => { e.currentTarget.style.borderColor = "#111" }}
+                    onBlur={e => { e.currentTarget.style.borderColor = "#EAE6DF" }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{
+                    fontSize: 9.5, fontWeight: 700, color: "#8a8477",
+                    textTransform: "uppercase", letterSpacing: "1.2px",
+                    display: "block", marginBottom: 5,
+                  }}>
+                    Heure
+                  </label>
+                  <select
+                    value={slot.heure}
+                    onChange={e => updateSlot(i, { heure: e.target.value })}
+                    style={{
+                      width: "100%", padding: "10px 12px",
+                      border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 13.5,
+                      fontFamily: "inherit", outline: "none",
+                      background: "#fff", color: "#111",
+                      cursor: "pointer", boxSizing: "border-box",
+                    }}
+                  >
+                    {HEURES.map(h => (
+                      <option key={h} value={h}>{h}</option>
+                    ))}
+                  </select>
+                </div>
+                {slots.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeSlot(i)}
+                    aria-label={`Supprimer le créneau ${i + 1}`}
+                    style={{
+                      width: 36, height: 36, borderRadius: "50%", border: "1px solid #EAE6DF",
+                      background: "#fff", cursor: "pointer", color: "#8a8477",
+                      display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                )}
+              </div>
+            ))}
+            {canAddSlot && (
+              <button
+                type="button"
+                onClick={addSlot}
                 style={{
-                  width: "100%",
-                  padding: "12px 14px",
-                  border: "1px solid #EAE6DF",
-                  borderRadius: 12,
-                  fontSize: 14,
-                  fontFamily: "inherit",
-                  outline: "none",
-                  boxSizing: "border-box",
-                  background: "#fff",
-                  color: "#111",
-                }}
-                onFocus={e => { e.currentTarget.style.borderColor = "#111" }}
-                onBlur={e => { e.currentTarget.style.borderColor = "#EAE6DF" }}
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{
-                fontSize: 10,
-                fontWeight: 700,
-                color: "#8a8477",
-                textTransform: "uppercase",
-                letterSpacing: "1.2px",
-                display: "block",
-                marginBottom: 6,
-              }}>
-                Heure
-              </label>
-              <select
-                value={heure}
-                onChange={e => setHeure(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "12px 14px",
-                  border: "1px solid #EAE6DF",
-                  borderRadius: 12,
-                  fontSize: 14,
-                  fontFamily: "inherit",
-                  outline: "none",
-                  background: "#fff",
-                  color: "#111",
-                  cursor: "pointer",
-                  boxSizing: "border-box",
+                  padding: "10px 14px", borderRadius: 12, border: "1.5px dashed #EAE6DF",
+                  background: "transparent", cursor: "pointer", color: "#111",
+                  fontFamily: "inherit", fontSize: 13, fontWeight: 600, letterSpacing: "0.2px",
+                  display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
                 }}
               >
-                {["08:00","09:00","10:00","11:00","12:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"].map(h => (
-                  <option key={h} value={h}>{h}</option>
-                ))}
-              </select>
-            </div>
+                <span style={{ fontSize: 16, lineHeight: 1 }}>+</span>
+                Ajouter un créneau {slots.length < MAX_SLOTS && <span style={{ color: "#8a8477", fontWeight: 400 }}>({slots.length}/{MAX_SLOTS})</span>}
+              </button>
+            )}
           </div>
 
           {/* Message */}
           <div>
             <label style={{
-              fontSize: 10,
-              fontWeight: 700,
-              color: "#8a8477",
-              textTransform: "uppercase",
-              letterSpacing: "1.2px",
-              display: "block",
-              marginBottom: 6,
+              fontSize: 10, fontWeight: 700, color: "#8a8477",
+              textTransform: "uppercase", letterSpacing: "1.2px",
+              display: "block", marginBottom: 6,
             }}>
               Message (optionnel)
             </label>
             <textarea
               value={message}
               onChange={e => setMessage(e.target.value)}
-              placeholder="Ex : je suis très intéressé, mon dossier est complet, je peux m'adapter sur un autre créneau…"
-              rows={4}
+              placeholder="Ex : je peux m'adapter sur un autre créneau, parking disponible devant l'immeuble…"
+              rows={3}
               style={{
-                width: "100%",
-                padding: "12px 14px",
-                border: "1px solid #EAE6DF",
-                borderRadius: 12,
-                fontSize: 13.5,
-                lineHeight: 1.55,
-                fontFamily: "inherit",
-                outline: "none",
-                resize: "vertical",
-                boxSizing: "border-box",
-                background: "#F7F4EF",
-                color: "#111",
+                width: "100%", padding: "12px 14px",
+                border: "1px solid #EAE6DF", borderRadius: 12,
+                fontSize: 13.5, lineHeight: 1.55, fontFamily: "inherit",
+                outline: "none", resize: "vertical", boxSizing: "border-box",
+                background: "#F7F4EF", color: "#111",
               }}
               onFocus={e => { e.currentTarget.style.borderColor = "#111"; e.currentTarget.style.background = "#fff" }}
               onBlur={e => { e.currentTarget.style.borderColor = "#EAE6DF"; e.currentTarget.style.background = "#F7F4EF" }}
             />
           </div>
 
-          {/* Info pills */}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <span style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "5px 10px",
-              borderRadius: 999,
-              background: "#F7F4EF",
-              fontSize: 11,
-              color: "#6b6b6b",
-              fontWeight: 500,
-            }}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              Identité vérifiée
-            </span>
-            <span style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "5px 10px",
-              borderRadius: 999,
-              background: "#F7F4EF",
-              fontSize: 11,
-              color: "#6b6b6b",
-              fontWeight: 500,
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "5px 10px", borderRadius: 999, background: "#F7F4EF",
+              fontSize: 11, color: "#6b6b6b", fontWeight: 500,
             }}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               Réponse sous 24 h en moyenne
@@ -392,28 +364,19 @@ export default function ProposerVisiteDialog({
 
         {/* Footer */}
         <div style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: 10,
-          padding: "16px 24px",
-          borderTop: "1px solid #EAE6DF",
-          background: "#fff",
+          display: "flex", justifyContent: "flex-end", gap: 10,
+          padding: "16px 24px", borderTop: "1px solid #EAE6DF", background: "#fff",
         }}>
           <button
             type="button"
             onClick={onClose}
             disabled={envoi}
             style={{
-              padding: "11px 20px",
-              background: "#fff",
-              color: "#111",
-              border: "1px solid #EAE6DF",
-              borderRadius: 999,
-              fontSize: 13,
-              fontWeight: 500,
+              padding: "11px 20px", background: "#fff", color: "#111",
+              border: "1px solid #EAE6DF", borderRadius: 999,
+              fontSize: 13, fontWeight: 500,
               cursor: envoi ? "not-allowed" : "pointer",
-              fontFamily: "inherit",
-              opacity: envoi ? 0.6 : 1,
+              fontFamily: "inherit", opacity: envoi ? 0.6 : 1,
             }}
           >
             Annuler
@@ -426,17 +389,18 @@ export default function ProposerVisiteDialog({
               padding: "11px 24px",
               background: canSubmit ? "#111" : "#EAE6DF",
               color: canSubmit ? "#fff" : "#8a8477",
-              border: "none",
-              borderRadius: 999,
-              fontSize: 13,
-              fontWeight: 600,
+              border: "none", borderRadius: 999,
+              fontSize: 13, fontWeight: 600,
               cursor: canSubmit ? "pointer" : "not-allowed",
-              fontFamily: "inherit",
-              letterSpacing: "0.2px",
+              fontFamily: "inherit", letterSpacing: "0.2px",
               transition: "background 200ms ease",
             }}
           >
-            {envoi ? "Envoi…" : (isCounter ? "Envoyer la contre-proposition" : "Envoyer la demande")}
+            {envoi
+              ? "Envoi…"
+              : validSlots.length > 1
+                ? `Envoyer ${validSlots.length} créneaux`
+                : (isCounter ? "Envoyer la contre-proposition" : "Envoyer la demande")}
           </button>
         </div>
       </div>

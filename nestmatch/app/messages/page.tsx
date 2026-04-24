@@ -639,31 +639,35 @@ function LoyerPayeCard({ contenu, isMine }: { contenu: string; isMine: boolean }
 }
 
 // Carte "Demande de visite" ou "Contre-proposition" — envoyée quand on propose
-// une visite. Statut dynamique via visitesConv (proposée/confirmée/annulée).
+// une visite. R10.8 : gère jusqu'à 5 créneaux (data.slots[]). Le destinataire
+// clique sur un slot pour le retenir ; les autres s'affichent grisés « non retenu ».
 function VisiteDemandeCard({
   contenu,
   isMine,
   visitesConv,
   onOuvrirGestion,
+  onChooseSlot,
 }: {
   contenu: string
   isMine: boolean
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   visitesConv: any[]
   onOuvrirGestion: () => void
+  onChooseSlot: (visiteId: string, slot: { date: string; heure: string }) => void | Promise<void>
 }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let data: any = {}
   try { data = JSON.parse(contenu.slice(VISITE_DEMANDE_PREFIX.length)) } catch { /* ignore */ }
-  // Date courte (jour semaine + date) pour le slot tile, longue pour le titre
-  const dayShort = data.dateVisite ? formatVisiteDate(data.dateVisite, { weekday: "short", day: "numeric", month: "short" }) : ""
+  // R10.8 — slots[] si multi-créneaux, sinon on construit un tableau à 1 entrée
+  // à partir des champs legacy dateVisite/heure pour unifier le rendu.
+  const rawSlots: Array<{ date: string; heure: string }> = Array.isArray(data.slots) && data.slots.length > 0
+    ? data.slots
+    : (data.dateVisite && data.heure ? [{ date: data.dateVisite, heure: data.heure }] : [])
+  const multi = rawSlots.length > 1
   const dateLong = data.dateFormatee || (data.dateVisite ? formatVisiteDate(data.dateVisite, { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "")
-  // Trouve le statut réel de la visite (si toujours en DB)
   const visite = data.visiteId ? visitesConv.find(v => v.id === data.visiteId) : null
   const statut = visite?.statut || "proposée"
   const title = data.isCounter ? "Contre-proposition" : "Proposition de visite"
-  // Palette de statut — on surcharge seulement la bande de statut, la carte
-  // reste en base neutre (handoff messages.jsx L344 : bg #fff + border KM.line)
   const accent =
     statut === "confirmée" ? "#15803d"
     : statut === "annulée" ? "#b91c1c"
@@ -673,9 +677,16 @@ function VisiteDemandeCard({
     : statut === "annulée" ? "Annulée"
     : "En attente"
   const isPending = statut === "proposée"
+  // Quand la visite est confirmée, on détecte le créneau retenu par date+heure
+  // (la visites row a été mise à jour par choisirSlotVisite).
+  const retenu = visite && statut === "confirmée"
+    ? rawSlots.findIndex(s => s.date === visite.date_visite && s.heure === visite.heure)
+    : -1
+  // Le destinataire peut choisir un slot s'il n'est pas l'auteur ET la visite est
+  // en attente ET au moins un slot existe.
+  const canChoose = !isMine && isPending && rawSlots.length > 0
   return (
     <div style={{ background: "#fff", borderRadius: 18, border: "1px solid #EAE6DF", padding: 16, minWidth: 260, maxWidth: 340, boxShadow: "0 1px 2px rgba(0,0,0,0.02)", fontFamily: "'DM Sans', sans-serif" }}>
-      {/* En-tête : icône calendrier + libellés (handoff L345-353) */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
         <div style={{ width: 32, height: 32, borderRadius: 10, background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -688,41 +699,84 @@ function VisiteDemandeCard({
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: "#111", letterSpacing: "-0.1px" }}>{title}</div>
           <div style={{ fontSize: 10, color: "#8a8477", textTransform: "uppercase" as const, letterSpacing: "1px", fontWeight: 600 }}>
-            1 créneau · 30 min
+            {rawSlots.length} créneau{rawSlots.length > 1 ? "x" : ""} · 30 min
           </div>
         </div>
         <span style={{ background: "#fff", color: accent, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, border: `1px solid ${accent}33`, textTransform: "uppercase" as const, letterSpacing: "0.3px", flexShrink: 0 }}>
           {badgeLabel}
         </span>
       </div>
-      {/* Slot tile (handoff L354-364) — grille prête pour 3 slots futurs */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
-        <div style={{ padding: 12, background: "#FBF9F5", border: "1px solid #EAE6DF", borderRadius: 12, textAlign: "center" }}>
-          <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 3, textTransform: "uppercase" as const, letterSpacing: "0.5px", color: "#8a8477", fontWeight: 600 }}>
-            {dayShort || "Date à confirmer"}
-          </div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>
-            {data.heure || "–"}
-          </div>
-        </div>
+      {/* Slots — R10.8. Grille à 1 col si 1-2 slots, 2 col si ≥3 pour compacité. */}
+      <div style={{ display: "grid", gridTemplateColumns: rawSlots.length >= 3 ? "1fr 1fr" : "1fr", gap: 6 }}>
+        {rawSlots.map((slot, i) => {
+          const dayShort = slot.date ? formatVisiteDate(slot.date, { weekday: "short", day: "numeric", month: "short" }) : ""
+          const isRetenu = retenu === i
+          const isNonRetenu = statut === "confirmée" && retenu >= 0 && i !== retenu
+          return (
+            <button
+              key={`${slot.date}-${slot.heure}-${i}`}
+              type="button"
+              disabled={!canChoose}
+              onClick={() => { if (canChoose && data.visiteId) void onChooseSlot(data.visiteId, slot) }}
+              style={{
+                padding: 12,
+                background: isRetenu ? "#F0FAEE" : isNonRetenu ? "#F7F4EF" : "#FBF9F5",
+                border: `1px solid ${isRetenu ? "#15803d" : "#EAE6DF"}`,
+                borderRadius: 12,
+                textAlign: "center",
+                cursor: canChoose ? "pointer" : "default",
+                fontFamily: "inherit",
+                opacity: isNonRetenu ? 0.5 : 1,
+                transition: "all 180ms",
+                position: "relative",
+              }}
+              onMouseEnter={e => { if (canChoose) e.currentTarget.style.borderColor = "#111" }}
+              onMouseLeave={e => { if (canChoose) e.currentTarget.style.borderColor = isRetenu ? "#15803d" : "#EAE6DF" }}
+            >
+              <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 3, textTransform: "uppercase" as const, letterSpacing: "0.5px", color: "#8a8477", fontWeight: 600 }}>
+                {dayShort || "Date"}
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: isNonRetenu ? "#8a8477" : "#111" }}>
+                {slot.heure || "–"}
+              </div>
+              {isRetenu && (
+                <div style={{ fontSize: 9, fontWeight: 700, color: "#15803d", marginTop: 4, textTransform: "uppercase" as const, letterSpacing: "0.4px" }}>
+                  ✓ Retenu
+                </div>
+              )}
+              {isNonRetenu && (
+                <div style={{ fontSize: 9, fontWeight: 600, color: "#8a8477", marginTop: 4, textTransform: "uppercase" as const, letterSpacing: "0.4px" }}>
+                  Non retenu
+                </div>
+              )}
+            </button>
+          )
+        })}
       </div>
+      {canChoose && multi && (
+        <p style={{ fontSize: 11, color: "#8a8477", margin: "10px 0 0", lineHeight: 1.45 }}>
+          Cliquez sur le créneau qui vous arrange — les autres seront automatiquement rejetés.
+        </p>
+      )}
       {data.message && (
         <p style={{ fontSize: 12, color: "#111", margin: "10px 0 0", fontStyle: "italic", lineHeight: 1.5 }}>
           « {data.message} »
         </p>
       )}
-      {/* CTA rond pill (handoff L366-372) */}
-      {isPending && (
+      {/* CTA secondaire : ouvrir la gestion (annuler, proposer autre créneau).
+          Visible pour l'auteur (proposer un autre créneau) ou le destinataire
+          d'une proposition 1-slot (compat avec l'ancien flow). */}
+      {isPending && (isMine || !multi) && (
         <button
           type="button"
           onClick={onOuvrirGestion}
-          style={{ width: "100%", padding: 11, marginTop: 10, borderRadius: 999, background: "#111", color: "#fff", border: "none", fontFamily: "inherit", fontWeight: 600, fontSize: 12, cursor: "pointer", letterSpacing: "0.3px", transition: "all 200ms" }}
+          style={{ width: "100%", padding: 11, marginTop: 10, borderRadius: 999, background: isMine ? "#111" : "#fff", color: isMine ? "#fff" : "#111", border: isMine ? "none" : "1px solid #EAE6DF", fontFamily: "inherit", fontWeight: 600, fontSize: 12, cursor: "pointer", letterSpacing: "0.3px", transition: "all 200ms" }}
         >
-          {isMine ? "Gérer la proposition" : "Répondre à la visite"}
+          {isMine ? "Gérer la proposition" : "Proposer un autre créneau"}
         </button>
       )}
-      {/* Rappel date complète si visite confirmée/annulée */}
-      {!isPending && dateLong && (
+      {/* Ligne de rappel date si confirmée/annulée sur un format 1-slot */}
+      {!isPending && !multi && dateLong && (
         <p style={{ fontSize: 11, color: accent, margin: "10px 0 0", textAlign: "right" as const, fontWeight: 600, textTransform: "capitalize" }}>
           {dateLong}
         </p>
@@ -1957,22 +2011,25 @@ function MessagesInner() {
     }
   }
 
-  async function proposerVisite(params?: { date?: string; heure?: string; message?: string }) {
-    // Params fournis = appel depuis ProposerVisiteDialog (nouveau chemin UI).
-    // Pas de params = legacy (fallback, plus utilisé depuis la bascule modale).
-    const vDate = params?.date ?? visiteDate
-    const vHeure = params?.heure ?? visiteHeure
+  async function proposerVisite(params?: { slots?: Array<{ date: string; heure: string }>; date?: string; heure?: string; message?: string }) {
+    // R10.8 — accepte jusqu'à 5 créneaux via `slots[]`. Pour rétro-compat,
+    // un couple { date, heure } isolé est promu en slot unique.
+    const slots: Array<{ date: string; heure: string }> = (() => {
+      if (params?.slots && params.slots.length > 0) return params.slots
+      const d = params?.date ?? visiteDate
+      const h = params?.heure ?? visiteHeure
+      if (d && h) return [{ date: d, heure: h }]
+      return []
+    })()
+    const primary = slots[0]
     const vMessage = params?.message ?? visiteMessage
-    if (!convActiveData?.annonceId || !myEmail || !vDate || !vHeure) return
+    if (!convActiveData?.annonceId || !myEmail || !primary) return
     setEnvoyantVisite(true)
     const isCounter = !!counterTarget
     const propEmail = proprietaireActive ? myEmail : convActiveData.other
     const locEmail  = proprietaireActive ? convActiveData.other : myEmail
 
     // Si contre-proposition : annuler l'ancienne visite (en base + local).
-    // IMPORTANT : on utilise .select() pour vérifier que l'UPDATE a bien
-    // affecté la row (sinon l'ancienne demande réapparaissait comme "à traiter"
-    // au prochain reload / realtime).
     if (isCounter && counterTarget?.id) {
       const { data: updated, error: updErr } = await supabase
         .from("visites")
@@ -1990,27 +2047,33 @@ function MessagesInner() {
       setVisitesConv(prev => prev.map(v => v.id === counterTarget.id ? { ...v, statut: "annulée" } : v))
     }
 
+    // Insert d'une visite DB avec le 1er slot comme colonne primaire. Les autres
+    // créneaux voyagent dans le payload message (pas besoin de colonnes DB en
+    // plus — choisirSlotVisite() mettra à jour date_visite/heure au moment du
+    // choix locataire).
     const { data: visite } = await supabase.from("visites").insert([{
       annonce_id: convActiveData.annonceId,
       proprietaire_email: propEmail.toLowerCase(),
       locataire_email: locEmail.toLowerCase(),
-      date_visite: vDate,
-      heure: vHeure,
+      date_visite: primary.date,
+      heure: primary.heure,
       message: vMessage.trim() || null,
       statut: "proposée",
       propose_par: myEmail.toLowerCase(),
     }]).select().single()
     if (visite) {
       setVisitesConv(prev => [...prev, visite])
-      const dateFormatee = formatVisiteDate(vDate, { weekday: "long", day: "numeric", month: "long", year: "numeric" })
-      // Card visuelle plutôt que texte brut — rendu par VisiteDemandeCard
+      const dateFormatee = formatVisiteDate(primary.date, { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+      // R10.8 — slots[] inclus pour rendu multi-créneaux (undefined si 1 seul
+      // pour garder les anciens payloads courts).
       const payload = JSON.stringify({
         visiteId: visite.id,
-        dateVisite: vDate,
-        heure: vHeure,
+        dateVisite: primary.date,
+        heure: primary.heure,
         dateFormatee,
         message: vMessage.trim() || null,
         isCounter,
+        slots: slots.length > 1 ? slots : undefined,
       })
       const contenu = `${VISITE_DEMANDE_PREFIX}${payload}`
       const { data: msg } = await supabase.from("messages").insert([{
@@ -2025,12 +2088,12 @@ function MessagesInner() {
         setMessages(prev => [...prev, msg])
         setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: msg } : c))
       }
-      // Notif cloche à l'autre partie (proposition ou contre-proposition)
+      const countHint = slots.length > 1 ? ` (${slots.length} créneaux)` : ""
       void postNotif({
         userEmail: convActiveData.other,
         type: "visite_proposee",
         title: isCounter ? "Contre-proposition de visite" : "Nouvelle demande de visite",
-        body: `${dateFormatee} à ${vHeure}`,
+        body: `${dateFormatee} à ${primary.heure}${countHint}`,
         href: "/visites",
         relatedId: String(visite.id),
       })
@@ -2041,6 +2104,63 @@ function MessagesInner() {
     setVisiteHeure("10:00")
     setVisiteMessage("")
     setEnvoyantVisite(false)
+  }
+
+  // R10.8 — le locataire (ou le destinataire de la proposition) choisit un slot
+  // parmi ceux proposés. On met à jour la visite (statut confirmée + date/heure
+  // retenues) et on émet une VISITE_CONFIRMEE. Les autres slots deviennent
+  // automatiquement "non retenus" côté UI (via comparaison date/heure).
+  async function choisirSlotVisite(visiteId: string, slot: { date: string; heure: string }) {
+    if (!myEmail) return
+    const visite = visitesConv.find(v => v.id === visiteId)
+    if (!visite) return
+    if (visite.statut !== "proposée") return
+    const { data: rows, error } = await supabase
+      .from("visites")
+      .update({
+        statut: "confirmée",
+        date_visite: slot.date,
+        heure: slot.heure,
+      })
+      .eq("id", visiteId)
+      .select("id")
+    if (error) {
+      alert(`Erreur lors du choix du créneau : ${error.message}`)
+      return
+    }
+    if (!rows || rows.length === 0) {
+      alert("Aucune visite mise à jour — elle a peut-être déjà été traitée.")
+      return
+    }
+    setVisitesConv(prev => prev.map(v =>
+      v.id === visiteId ? { ...v, statut: "confirmée", date_visite: slot.date, heure: slot.heure } : v
+    ))
+    const other = visite.proprietaire_email === myEmail ? visite.locataire_email : visite.proprietaire_email
+    const dateFormatee = formatVisiteDate(slot.date, { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+    const payload = JSON.stringify({
+      visiteId,
+      dateVisite: slot.date,
+      heure: slot.heure,
+      dateFormatee,
+    })
+    const contenu = `${VISITE_CONFIRMEE_PREFIX}${payload}`
+    const { data: msg } = await supabase.from("messages").insert([{
+      from_email: myEmail, to_email: other, contenu, lu: false,
+      annonce_id: visite.annonce_id ?? null,
+      created_at: new Date().toISOString(),
+    }]).select().single()
+    if (msg) {
+      setMessages(prev => [...prev, msg])
+      setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: msg } : c))
+    }
+    void postNotif({
+      userEmail: other,
+      type: "visite_confirmee",
+      title: "Créneau retenu",
+      body: `${dateFormatee} à ${slot.heure}`,
+      href: "/visites",
+      relatedId: String(visiteId),
+    })
   }
 
   const { isMobile } = useResponsive()
@@ -3297,6 +3417,7 @@ function MessagesInner() {
                               isMine={isMine}
                               visitesConv={visitesConv}
                               onOuvrirGestion={() => setVisitesModalOpen(true)}
+                              onChooseSlot={(visiteId, slot) => choisirSlotVisite(visiteId, slot)}
                             />
                             <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
