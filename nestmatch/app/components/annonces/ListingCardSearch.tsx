@@ -54,7 +54,7 @@ function dpeColorFor(letter: string): string {
     A: "#16A34A", B: "#65A30D", C: "#EAB308",
     D: "#F59E0B", E: "#EA580C", F: "#DC2626", G: "#7F1D1D",
   }
-  return map[L] || "#6b7280"
+  return map[L] || "#8a8477"
 }
 
 /**
@@ -245,7 +245,7 @@ function CardPhoto({
             position: "absolute",
             top: 10,
             left: 10,
-            background: annonce.dispo === "Disponible maintenant" ? "#16a34a" : "#ea580c",
+            background: annonce.dispo === "Disponible maintenant" ? "#15803d" : "#a16207",
             color: "white",
             padding: "3px 9px",
             borderRadius: 999,
@@ -386,8 +386,8 @@ function FavoriButton({ favori, onClick }: { favori: boolean; onClick: (e: React
         width="16"
         height="16"
         viewBox="0 0 24 24"
-        fill={favori ? "#dc2626" : "none"}
-        stroke={favori ? "#dc2626" : "#6b7280"}
+        fill={favori ? "#b91c1c" : "none"}
+        stroke={favori ? "#b91c1c" : "#8a8477"}
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -452,7 +452,7 @@ function MetaBlockGrid({
           <span
             style={{
               background: "#F1EEE8",
-              color: "#374151",
+              color: "#111",
               padding: "2px 9px",
               borderRadius: 999,
               fontSize: 10,
@@ -467,13 +467,13 @@ function MetaBlockGrid({
       <h3 style={{ fontSize: 18, fontWeight: 500, lineHeight: 1.3, margin: "0 0 12px", color: "#111" }}>
         {titre}
       </h3>
-      <div style={{ display: "flex", gap: 12, fontSize: 13, color: "#6b7280", marginBottom: 12, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 12, fontSize: 13, color: "#8a8477", marginBottom: 12, flexWrap: "wrap" }}>
         {annonce.surface != null && <span>{annonce.surface} m²</span>}
-        {annonce.surface != null && annonce.pieces != null && <span style={{ color: "#d1d5db" }}>·</span>}
+        {annonce.surface != null && annonce.pieces != null && <span style={{ color: "#EAE6DF" }}>·</span>}
         {annonce.pieces != null && <span>{annonce.pieces} p.</span>}
         {annonce.meuble === true && (
           <>
-            <span style={{ color: "#d1d5db" }}>·</span>
+            <span style={{ color: "#EAE6DF" }}>·</span>
             <span>Meublé</span>
           </>
         )}
@@ -500,7 +500,7 @@ function MetaBlockGrid({
         </span>
         <span style={{ fontSize: 22, fontWeight: 500, color: "#111" }}>
           {annonce.prix} €
-          <span style={{ fontSize: 12, fontWeight: 400, color: "#9ca3af" }}>/mois</span>
+          <span style={{ fontSize: 12, fontWeight: 400, color: "#8a8477" }}>/mois</span>
         </span>
       </div>
     </>
@@ -675,7 +675,7 @@ export default function ListingCardSearch({
                 <span
                   style={{
                     background: "#F1EEE8",
-                    color: "#374151",
+                    color: "#111",
                     padding: "2px 8px",
                     borderRadius: 999,
                     fontSize: 10,
@@ -714,22 +714,22 @@ export default function ListingCardSearch({
               alignItems: "center",
               gap: 8,
               fontSize: 13,
-              color: "#374151",
+              color: "#111",
               flexWrap: "wrap",
             }}
           >
             {annonce.surface != null && <span>{annonce.surface} m²</span>}
-            {annonce.surface != null && annonce.pieces != null && <span style={{ color: "#d1d5db" }}>·</span>}
+            {annonce.surface != null && annonce.pieces != null && <span style={{ color: "#EAE6DF" }}>·</span>}
             {annonce.pieces != null && <span>{annonce.pieces} {annonce.pieces > 1 ? "pièces" : "pièce"}</span>}
             {annonce.etage != null && (
               <>
-                <span style={{ color: "#d1d5db" }}>·</span>
+                <span style={{ color: "#EAE6DF" }}>·</span>
                 <span>Ét. {annonce.etage === 0 ? "RDC" : annonce.etage}</span>
               </>
             )}
             {annonce.dpe && (
               <>
-                <span style={{ color: "#d1d5db" }}>·</span>
+                <span style={{ color: "#EAE6DF" }}>·</span>
                 <DpeBadge letter={annonce.dpe} />
               </>
             )}
@@ -751,7 +751,7 @@ export default function ListingCardSearch({
                   key={p}
                   style={{
                     background: "#F1EEE8",
-                    color: "#374151",
+                    color: "#111",
                     padding: "4px 11px",
                     borderRadius: 999,
                     fontSize: 11,
@@ -781,7 +781,7 @@ export default function ListingCardSearch({
                 aria-label="Voir sur la carte"
                 style={{
                   background: "white",
-                  color: "#374151",
+                  color: "#111",
                   border: "1px solid #EAE6DF",
                   padding: "4px 11px",
                   borderRadius: 999,
@@ -840,7 +840,7 @@ export default function ListingCardSearch({
           <div style={{ textAlign: "center", lineHeight: 1.15 }}>
             <div style={{ fontSize: 22, fontWeight: 700, color: "#111", letterSpacing: "-0.3px" }}>
               {annonce.prix?.toLocaleString("fr-FR") ?? "—"} €
-              <span style={{ fontSize: 11, fontWeight: 400, color: "#9ca3af" }}> /mois</span>
+              <span style={{ fontSize: 11, fontWeight: 400, color: "#8a8477" }}> /mois</span>
             </div>
             <div style={{ fontSize: 11, color: "#6B6B6B", marginTop: 3 }}>{chargesLabel}</div>
           </div>
@@ -871,7 +871,7 @@ export default function ListingCardSearch({
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: "pointer",
-                color: "#374151",
+                color: "#111",
                 fontFamily: "inherit",
                 flexShrink: 0,
                 transition: "background 0.15s",

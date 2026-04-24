@@ -26,7 +26,7 @@ export default function Auth() {
 
 function AuthFallback() {
   return (
-    <main style={{ minHeight: "100vh", background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif", color: "#6b7280" }}>
+    <main style={{ minHeight: "100vh", background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif", color: "#8a8477" }}>
       Chargement...
     </main>
   )
@@ -159,10 +159,10 @@ function AuthContent() {
           </div>
 
           {/* Toggle connexion / inscription */}
-          <div style={{ display: "flex", background: "#f3f4f6", borderRadius: 14, padding: 4, marginBottom: 32 }}>
+          <div style={{ display: "flex", background: "#F7F4EF", borderRadius: 14, padding: 4, marginBottom: 32 }}>
             {(["connexion", "inscription"] as Mode[]).map(m => (
               <button key={m} onClick={() => switchMode(m)}
-                style={{ flex: 1, padding: "10px 0", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 14, fontFamily: "inherit", background: mode === m ? "white" : "transparent", color: mode === m ? "#111" : "#6b7280", boxShadow: mode === m ? "0 1px 4px rgba(0,0,0,0.1)" : "none", transition: "all 0.2s" }}>
+                style={{ flex: 1, padding: "10px 0", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 14, fontFamily: "inherit", background: mode === m ? "white" : "transparent", color: mode === m ? "#111" : "#8a8477", boxShadow: mode === m ? "0 1px 4px rgba(0,0,0,0.1)" : "none", transition: "all 0.2s" }}>
                 {m.charAt(0).toUpperCase() + m.slice(1)}
               </button>
             ))}
@@ -171,23 +171,23 @@ function AuthContent() {
           <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 8, letterSpacing: "-0.5px" }}>
             {mode === "connexion" ? "Bon retour" : "Créer un compte"}
           </h1>
-          <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 28 }}>
+          <p style={{ color: "#8a8477", fontSize: 14, marginBottom: 28 }}>
             {mode === "connexion" ? "Connecte-toi pour accéder à ton espace." : `Rejoins ${BRAND.name} gratuitement.`}
           </p>
 
           {/* Choix du rôle — seulement à l'inscription */}
           {mode === "inscription" && (
             <div style={{ marginBottom: 24 }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: "#6b7280", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.5px" }}>Je suis</p>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#8a8477", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.5px" }}>Je suis</p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 {[
                   { val: "locataire" as Role, label: "Locataire", desc: "Je cherche un logement" },
                   { val: "proprietaire" as Role, label: "Propriétaire", desc: "Je mets en location" },
                 ].map(r => (
                   <div key={r.val} onClick={() => setRole(r.val)}
-                    style={{ padding: "14px 16px", border: `2px solid ${role === r.val ? "#111" : "#e5e7eb"}`, borderRadius: 14, cursor: "pointer", background: role === r.val ? "#111" : "white", transition: "all 0.2s" }}>
+                    style={{ padding: "14px 16px", border: `2px solid ${role === r.val ? "#111" : "#EAE6DF"}`, borderRadius: 14, cursor: "pointer", background: role === r.val ? "#111" : "white", transition: "all 0.2s" }}>
                     <p style={{ fontWeight: 700, fontSize: 14, color: role === r.val ? "white" : "#111" }}>{r.label}</p>
-                    <p style={{ fontSize: 12, color: role === r.val ? "#9ca3af" : "#6b7280", marginTop: 2 }}>{r.desc}</p>
+                    <p style={{ fontSize: 12, color: role === r.val ? "#8a8477" : "#8a8477", marginTop: 2 }}>{r.desc}</p>
                   </div>
                 ))}
               </div>
@@ -198,7 +198,7 @@ function AuthContent() {
           <button
             onClick={() => signIn("google", { callbackUrl: role === "proprietaire" ? "/proprietaire" : "/profil" })}
             disabled={loading}
-            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "13px 0", border: "1.5px solid #e5e7eb", borderRadius: 999, background: "white", cursor: "pointer", fontWeight: 700, fontSize: 15, fontFamily: "inherit", marginBottom: 20, opacity: loading ? 0.6 : 1 }}>
+            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "13px 0", border: "1px solid #EAE6DF", borderRadius: 999, background: "white", cursor: "pointer", fontWeight: 700, fontSize: 15, fontFamily: "inherit", marginBottom: 20, opacity: loading ? 0.6 : 1 }}>
             <svg width="20" height="20" viewBox="0 0 48 48">
               <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
               <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
@@ -209,9 +209,9 @@ function AuthContent() {
           </button>
 
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-            <div style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
-            <span style={{ color: "#9ca3af", fontSize: 13 }}>ou</span>
-            <div style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
+            <div style={{ flex: 1, height: 1, background: "#EAE6DF" }} />
+            <span style={{ color: "#8a8477", fontSize: 13 }}>ou</span>
+            <div style={{ flex: 1, height: 1, background: "#EAE6DF" }} />
           </div>
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -219,7 +219,7 @@ function AuthContent() {
               <>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <div>
-                    <label htmlFor="signup-prenom" style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "block", color: "#6b7280" }}>Prénom</label>
+                    <label htmlFor="signup-prenom" style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "block", color: "#8a8477" }}>Prénom</label>
                     <input
                       id="signup-prenom"
                       type="text"
@@ -229,11 +229,11 @@ function AuthContent() {
                       onChange={handleChange("prenom")}
                       maxLength={80}
                       required
-                      style={{ width: "100%", padding: "12px 16px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                      style={{ width: "100%", padding: "12px 16px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
                     />
                   </div>
                   <div>
-                    <label htmlFor="signup-nom" style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "block", color: "#6b7280" }}>Nom de famille</label>
+                    <label htmlFor="signup-nom" style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "block", color: "#8a8477" }}>Nom de famille</label>
                     <input
                       id="signup-nom"
                       type="text"
@@ -243,7 +243,7 @@ function AuthContent() {
                       onChange={handleChange("nom")}
                       maxLength={80}
                       required
-                      style={{ width: "100%", padding: "12px 16px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                      style={{ width: "100%", padding: "12px 16px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
                     />
                   </div>
                 </div>
@@ -253,19 +253,19 @@ function AuthContent() {
               </>
             )}
             <div>
-              <label style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "block", color: "#6b7280" }}>Email</label>
+              <label style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "block", color: "#8a8477" }}>Email</label>
               <input
                 type="email"
                 placeholder="jean@exemple.fr"
                 value={form.email}
                 onChange={handleChange("email")}
                 required
-                style={{ width: "100%", padding: "12px 16px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                style={{ width: "100%", padding: "12px 16px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
               />
             </div>
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-                <label style={{ fontSize: 13, fontWeight: 700, color: "#6b7280" }}>Mot de passe</label>
+                <label style={{ fontSize: 13, fontWeight: 700, color: "#8a8477" }}>Mot de passe</label>
                 {mode === "connexion" && (
                   <button
                     type="button"
@@ -286,7 +286,7 @@ function AuthContent() {
             </div>
 
             {resetOpen && mode === "connexion" && (
-              <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 12, padding: 14 }}>
+              <div style={{ background: "#F7F4EF", border: "1px solid #EAE6DF", borderRadius: 12, padding: 14 }}>
                 {resetState === "sent" ? (
                   <div>
                     <p style={{ fontSize: 13, fontWeight: 700, color: "#15803d", margin: "0 0 6px" }}>Email envoyé</p>
@@ -305,9 +305,9 @@ function AuthContent() {
                       value={resetEmail}
                       onChange={e => setResetEmail(e.target.value)}
                       required
-                      style={{ width: "100%", padding: "10px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                      style={{ width: "100%", padding: "10px 14px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
                     />
-                    {resetError && <p style={{ fontSize: 12, color: "#dc2626", margin: 0 }}>{resetError}</p>}
+                    {resetError && <p style={{ fontSize: 12, color: "#b91c1c", margin: 0 }}>{resetError}</p>}
                     <div style={{ display: "flex", gap: 8 }}>
                       <button
                         type="submit"
@@ -318,7 +318,7 @@ function AuthContent() {
                       <button
                         type="button"
                         onClick={() => setResetOpen(false)}
-                        style={{ background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                        style={{ background: "white", color: "#111", border: "1px solid #EAE6DF", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
                         Annuler
                       </button>
                     </div>
@@ -328,13 +328,13 @@ function AuthContent() {
             )}
 
             {error && (
-              <p style={{ color: "#dc2626", fontSize: 13, margin: 0 }}>{error}</p>
+              <p style={{ color: "#b91c1c", fontSize: 13, margin: 0 }}>{error}</p>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              style={{ width: "100%", background: loading ? "#6b7280" : "#111", color: "white", border: "none", borderRadius: 999, padding: "14px 0", fontWeight: 800, fontSize: 15, cursor: loading ? "not-allowed" : "pointer", marginTop: 4, fontFamily: "inherit", transition: "background 0.2s" }}>
+              style={{ width: "100%", background: loading ? "#8a8477" : "#111", color: "white", border: "none", borderRadius: 999, padding: "14px 0", fontWeight: 800, fontSize: 15, cursor: loading ? "not-allowed" : "pointer", marginTop: 4, fontFamily: "inherit", transition: "background 0.2s" }}>
               {loading ? "Chargement..." : mode === "connexion" ? "Se connecter" : "Créer mon compte"}
             </button>
           </form>

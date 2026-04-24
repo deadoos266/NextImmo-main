@@ -51,7 +51,7 @@ export default function NotFound() {
         </h1>
 
         <p style={{
-          color: "#6b7280",
+          color: "#8a8477",
           fontSize: 14,
           lineHeight: 1.6,
           marginBottom: 28,
@@ -89,10 +89,10 @@ export default function NotFound() {
           ].map(l => (
             <Link key={l.href} href={l.href} style={{
               padding: "8px 16px",
-              border: "1.5px solid #e5e7eb",
+              border: "1px solid #EAE6DF",
               borderRadius: 999,
               textDecoration: "none",
-              color: "#374151",
+              color: "#111",
               fontWeight: 600,
               fontSize: 13,
             }}>

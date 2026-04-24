@@ -305,7 +305,7 @@ function FieldCheckbox({
         cursor: "pointer",
         padding: "10px 14px",
         borderRadius: 10,
-        background: checked ? "#f0fdf4" : "#fafafa",
+        background: checked ? "#F0FAEE" : "#F7F4EF",
         border: `1px solid ${checked ? "#86efac" : "#EAE6DF"}`,
         alignItems: "flex-start",
       }}
@@ -872,12 +872,12 @@ export default function BailPage() {
               marginBottom: 20,
             }}
           >
-            <p style={{ fontWeight: 700, fontSize: 14, margin: 0, color: locataireSigne ? "#15803d" : "#92400e" }}>
+            <p style={{ fontWeight: 700, fontSize: 14, margin: 0, color: locataireSigne ? "#15803d" : "#a16207" }}>
               {locataireSigne
                 ? `✓ Bail déjà signé par le locataire`
                 : `⚠ Un bail a déjà été envoyé au locataire`}
             </p>
-            <p style={{ fontSize: 12, color: locataireSigne ? "#15803d" : "#92400e", margin: "4px 0 8px", lineHeight: 1.6 }}>
+            <p style={{ fontSize: 12, color: locataireSigne ? "#15803d" : "#a16207", margin: "4px 0 8px", lineHeight: 1.6 }}>
               {locataireSigne
                 ? `Le locataire a signé ce bail. Pour toute modification, un avenant sera nécessaire (fonctionnalité à venir).${bailleurSigne ? " Vous avez également contresigné — le bail est pleinement signé." : ""}`
                 : `Envoyé le ${new Date(existingBailAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}. Si vous générez un nouveau bail, le précédent restera dans la conversation mais le locataire sera invité à signer la nouvelle version.`}
@@ -975,10 +975,10 @@ export default function BailPage() {
           }}
         >
           <div style={{ flex: 1, minWidth: 200 }}>
-            <p style={{ fontWeight: 700, color: "#1e40af", margin: 0, fontSize: 14 }}>
+            <p style={{ fontWeight: 700, color: "#1d4ed8", margin: 0, fontSize: 14 }}>
               Vous avez déjà votre bail en PDF ?
             </p>
-            <p style={{ fontSize: 12, color: "#1e40af", margin: "2px 0 0", opacity: 0.85 }}>
+            <p style={{ fontSize: 12, color: "#1d4ed8", margin: "2px 0 0", opacity: 0.85 }}>
               Avocat, autre application, modèle téléchargé… Importez votre document et passez directement à la signature.
             </p>
           </div>
@@ -1047,10 +1047,10 @@ export default function BailPage() {
             }}
           >
             <div style={{ flex: 1, minWidth: 200 }}>
-              <p style={{ fontWeight: 700, color: "#92400e", margin: 0, fontSize: 14 }}>
+              <p style={{ fontWeight: 700, color: "#a16207", margin: 0, fontSize: 14 }}>
                 Un brouillon de ce bail a été retrouvé.
               </p>
-              <p style={{ fontSize: 12, color: "#92400e", margin: "2px 0 0", opacity: 0.9 }}>
+              <p style={{ fontSize: 12, color: "#a16207", margin: "2px 0 0", opacity: 0.9 }}>
                 Vous pouvez reprendre votre saisie ou repartir de zéro.
               </p>
             </div>
@@ -1074,7 +1074,7 @@ export default function BailPage() {
               onClick={supprimerBrouillon}
               style={{
                 background: "white",
-                color: "#92400e",
+                color: "#a16207",
                 border: "1px solid #EADFC6",
                 borderRadius: 8,
                 padding: "8px 14px",
@@ -1190,7 +1190,7 @@ export default function BailPage() {
                   border: "1px solid #EAE6DF",
                   borderRadius: 10,
                   fontSize: 15,
-                  background: "#f9fafb",
+                  background: "#F7F4EF",
                   color: "#8a8477",
                   boxSizing: "border-box",
                   fontFamily: "inherit",
@@ -1331,7 +1331,7 @@ export default function BailPage() {
                 style={{
                   gridColumn: isMobile ? "auto" : "1 / -1",
                   background: "#FBF6EA",
-                  border: "1px solid #fed7aa",
+                  border: "1px solid #EADFC6",
                   borderRadius: 10,
                   padding: "10px 14px",
                   fontSize: 12,
@@ -1460,7 +1460,7 @@ export default function BailPage() {
               gap: 0,
               marginBottom: 18,
               borderRadius: 12,
-              background: "#fafafa",
+              background: "#F7F4EF",
               padding: "6px 14px",
             }}
           >
@@ -1509,7 +1509,7 @@ export default function BailPage() {
               style={{
                 marginTop: 16,
                 background: "#FBF6EA",
-                border: "1px solid #fed7aa",
+                border: "1px solid #EADFC6",
                 borderRadius: 12,
                 padding: 16,
               }}
@@ -1751,8 +1751,8 @@ export default function BailPage() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                background: equipementsOk ? "#f0fdf4" : "#FBF6EA",
-                border: `1px solid ${equipementsOk ? "#86efac" : "#fed7aa"}`,
+                background: equipementsOk ? "#F0FAEE" : "#FBF6EA",
+                border: `1px solid ${equipementsOk ? "#86efac" : "#EADFC6"}`,
                 borderRadius: 12,
                 padding: "12px 16px",
               }}
@@ -2004,7 +2004,7 @@ export default function BailPage() {
               padding: "12px 16px",
               marginBottom: 14,
               fontSize: 13,
-              color: "#92400e",
+              color: "#a16207",
               lineHeight: 1.6,
             }}
           >
@@ -2015,12 +2015,12 @@ export default function BailPage() {
 
         {/* Raisons pour lesquelles le bouton est désactivé — visible, pas silencieux */}
         {!form.dateDebut && (
-          <div style={{ background: "#FBF6EA", border: "1px solid #fed7aa", borderRadius: 10, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#9a3412" }}>
+          <div style={{ background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 10, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#9a3412" }}>
             ⚠ <strong>Date de début manquante</strong> — remplissez la section <em>« 6. Durée du bail & dates »</em> pour activer le bouton.
           </div>
         )}
         {!form.nomBailleur && (
-          <div style={{ background: "#FBF6EA", border: "1px solid #fed7aa", borderRadius: 10, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#9a3412" }}>
+          <div style={{ background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 10, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#9a3412" }}>
             ⚠ <strong>Nom du bailleur manquant</strong> — remplissez la section <em>« 2. Bailleur »</em>.
           </div>
         )}
@@ -2182,7 +2182,7 @@ export default function BailPage() {
           style={{
             marginTop: 16,
             padding: "8px 14px",
-            background: "#f0fdf4",
+            background: "#F0FAEE",
             border: "1px solid #86efac",
             borderRadius: 10,
             fontSize: 12,
@@ -2316,7 +2316,7 @@ export default function BailPage() {
                   gap: 12,
                   padding: "12px 14px",
                   borderRadius: 12,
-                  background: checked ? "#f0fdf4" : "#fafafa",
+                  background: checked ? "#F0FAEE" : "#F7F4EF",
                   border: `1px solid ${checked ? "#86efac" : "#EAE6DF"}`,
                   cursor: "pointer",
                   alignItems: "flex-start",

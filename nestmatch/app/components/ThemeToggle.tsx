@@ -42,7 +42,7 @@ export default function ThemeToggle() {
   return (
     <div>
       <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Apparence</p>
-      <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 10 }}>
+      <p style={{ fontSize: 12, color: "#8a8477", marginBottom: 10 }}>
         Choisissez l'apparence qui vous convient le mieux.
       </p>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -58,7 +58,7 @@ export default function ThemeToggle() {
               style={{
                 padding: "8px 16px",
                 borderRadius: 10,
-                border: `1.5px solid ${active ? "#111" : "#e5e7eb"}`,
+                border: `1px solid ${active ? "#111" : "#EAE6DF"}`,
                 background: active ? "#111" : "white",
                 color: active ? "white" : "#111",
                 fontSize: 13,

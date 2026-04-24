@@ -151,16 +151,16 @@ export default function SwipePage() {
   })()
 
   if (status === "loading" || loading) {
-    return <main style={{ minHeight: "calc(100vh - 72px)", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", color: "#6b7280" }}>Chargement…</main>
+    return <main style={{ minHeight: "calc(100vh - 72px)", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", color: "#8a8477" }}>Chargement…</main>
   }
 
   return (
     <main style={{ minHeight: "calc(100vh - 72px)", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: "20px 20px 40px", display: "flex", flexDirection: "column", alignItems: "center" }}>
       {/* Hero slogan */}
       <div style={{ textAlign: "center", marginBottom: 24, maxWidth: 440 }}>
-        <p style={{ fontSize: 11, fontWeight: 700, color: "#16a34a", textTransform: "uppercase", letterSpacing: "1.5px", margin: 0 }}>Mode swipe — beta</p>
+        <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "1.5px", margin: 0 }}>Mode swipe — beta</p>
         <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.5px", margin: "8px 0 4px", lineHeight: 1.15 }}>{SLOGAN}</h1>
-        <p style={{ fontSize: 14, color: "#6b7280", margin: 0 }}>{SUBLINE}</p>
+        <p style={{ fontSize: 14, color: "#8a8477", margin: 0 }}>{SUBLINE}</p>
       </div>
 
       {/* Stack zone */}
@@ -169,9 +169,9 @@ export default function SwipePage() {
         {!current && (
           <div style={{ position: "absolute", inset: 0, background: "white", borderRadius: 24, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32, textAlign: "center", boxShadow: "0 20px 48px rgba(0,0,0,0.08)" }}>
             <h2 style={{ fontSize: 22, fontWeight: 800, margin: 0, marginBottom: 10 }}>C&apos;est tout pour l&apos;instant</h2>
-            <p style={{ fontSize: 14, color: "#6b7280", margin: 0, marginBottom: 20 }}>
+            <p style={{ fontSize: 14, color: "#8a8477", margin: 0, marginBottom: 20 }}>
               {stats.liked > 0
-                ? <>Tu as mis <strong style={{ color: "#16a34a" }}>{stats.liked}</strong> coup{stats.liked > 1 ? "s" : ""} de cœur.<br />Retrouve-les dans tes favoris.</>
+                ? <>Tu as mis <strong style={{ color: "#15803d" }}>{stats.liked}</strong> coup{stats.liked > 1 ? "s" : ""} de cœur.<br />Retrouve-les dans tes favoris.</>
                 : <>Pas de nouveaux logements à te proposer pour l&apos;instant.</>
               }
             </p>
@@ -212,10 +212,10 @@ export default function SwipePage() {
             onClick={() => handleSwipe("left")}
             aria-label="Passer"
             disabled={!!exiting}
-            style={{ width: 56, height: 56, borderRadius: "50%", background: "white", border: "1.5px solid #e5e7eb", color: "#9ca3af", cursor: exiting ? "not-allowed" : "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.06)", transition: "transform 0.1s" }}>
+            style={{ width: 56, height: 56, borderRadius: "50%", background: "white", border: "1px solid #EAE6DF", color: "#8a8477", cursor: exiting ? "not-allowed" : "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.06)", transition: "transform 0.1s" }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>
-          <a href={`/annonces/${current.id}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "#6b7280", textDecoration: "underline", fontWeight: 600 }}>
+          <a href={`/annonces/${current.id}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "#8a8477", textDecoration: "underline", fontWeight: 600 }}>
             Voir la fiche
           </a>
           <button
@@ -223,16 +223,16 @@ export default function SwipePage() {
             onClick={() => handleSwipe("right")}
             aria-label="Coup de cœur"
             disabled={!!exiting}
-            style={{ width: 68, height: 68, borderRadius: "50%", background: "#dc2626", color: "white", border: "none", cursor: exiting ? "not-allowed" : "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px rgba(220,38,38,0.3)" }}>
+            style={{ width: 68, height: 68, borderRadius: "50%", background: "#b91c1c", color: "white", border: "none", cursor: exiting ? "not-allowed" : "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px rgba(220,38,38,0.3)" }}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="white" stroke="none" aria-hidden><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>
           </button>
         </div>
       )}
 
       {/* Stats session */}
-      <div style={{ display: "flex", gap: 24, fontSize: 12, color: "#9ca3af", fontWeight: 600, letterSpacing: "0.3px" }}>
-        <span>Coups de cœur : <strong style={{ color: "#dc2626" }}>{stats.liked}</strong></span>
-        <span>Passés : <strong style={{ color: "#374151" }}>{stats.skipped}</strong></span>
+      <div style={{ display: "flex", gap: 24, fontSize: 12, color: "#8a8477", fontWeight: 600, letterSpacing: "0.3px" }}>
+        <span>Coups de cœur : <strong style={{ color: "#b91c1c" }}>{stats.liked}</strong></span>
+        <span>Passés : <strong style={{ color: "#111" }}>{stats.skipped}</strong></span>
       </div>
     </main>
   )
@@ -285,18 +285,18 @@ function SwipeCardContent({ annonce, dragX }: { annonce: Annonce; dragX: number 
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(0,0,0,0.6) 0%, transparent 45%)" }} />
         {/* Badge compat */}
         {pct !== null && (
-          <span style={{ position: "absolute", top: 14, left: 14, background: pct >= 70 ? "#16a34a" : pct >= 40 ? "#ea580c" : "#6b7280", color: "white", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 800, letterSpacing: "0.3px" }}>
+          <span style={{ position: "absolute", top: 14, left: 14, background: pct >= 70 ? "#15803d" : pct >= 40 ? "#a16207" : "#8a8477", color: "white", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 800, letterSpacing: "0.3px" }}>
             {pct}% compat
           </span>
         )}
         {/* Label swipe en direct (LIKE / NOPE) */}
         {showLike && (
-          <span style={{ position: "absolute", top: 22, right: 22, background: "#16a34a", color: "white", padding: "10px 18px", borderRadius: 10, fontSize: 22, fontWeight: 900, letterSpacing: "2px", transform: "rotate(14deg)", border: "3px solid white" }}>
+          <span style={{ position: "absolute", top: 22, right: 22, background: "#15803d", color: "white", padding: "10px 18px", borderRadius: 10, fontSize: 22, fontWeight: 900, letterSpacing: "2px", transform: "rotate(14deg)", border: "3px solid white" }}>
             COUP DE COEUR
           </span>
         )}
         {showNope && (
-          <span style={{ position: "absolute", top: 22, left: 22, background: "#374151", color: "white", padding: "10px 18px", borderRadius: 10, fontSize: 22, fontWeight: 900, letterSpacing: "2px", transform: "rotate(-14deg)", border: "3px solid white" }}>
+          <span style={{ position: "absolute", top: 22, left: 22, background: "#111", color: "white", padding: "10px 18px", borderRadius: 10, fontSize: 22, fontWeight: 900, letterSpacing: "2px", transform: "rotate(-14deg)", border: "3px solid white" }}>
             PASSER
           </span>
         )}
@@ -310,16 +310,16 @@ function SwipeCardContent({ annonce, dragX }: { annonce: Annonce; dragX: number 
       {/* Corps */}
       <div style={{ padding: "18px 20px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
-          <span style={{ fontSize: 22, fontWeight: 800, color: "#111" }}>{annonce.prix} €<span style={{ fontSize: 12, fontWeight: 500, color: "#9ca3af" }}>/mois</span></span>
-          {annonce.dpe && <span style={{ fontSize: 11, fontWeight: 700, background: "#f3f4f6", padding: "3px 10px", borderRadius: 999, color: "#374151" }}>DPE {annonce.dpe}</span>}
+          <span style={{ fontSize: 22, fontWeight: 800, color: "#111" }}>{annonce.prix} €<span style={{ fontSize: 12, fontWeight: 500, color: "#8a8477" }}>/mois</span></span>
+          {annonce.dpe && <span style={{ fontSize: 11, fontWeight: 700, background: "#F7F4EF", padding: "3px 10px", borderRadius: 999, color: "#111" }}>DPE {annonce.dpe}</span>}
         </div>
-        <div style={{ display: "flex", gap: 10, fontSize: 13, color: "#6b7280", marginBottom: 12 }}>
+        <div style={{ display: "flex", gap: 10, fontSize: 13, color: "#8a8477", marginBottom: 12 }}>
           {annonce.surface && <span>{annonce.surface} m²</span>}
-          {annonce.pieces && <><span style={{ color: "#d1d5db" }}>·</span><span>{annonce.pieces} pièces</span></>}
-          {annonce.meuble && <><span style={{ color: "#d1d5db" }}>·</span><span>Meublé</span></>}
+          {annonce.pieces && <><span style={{ color: "#EAE6DF" }}>·</span><span>{annonce.pieces} pièces</span></>}
+          {annonce.meuble && <><span style={{ color: "#EAE6DF" }}>·</span><span>Meublé</span></>}
         </div>
         {annonce.description && (
-          <p style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5, margin: 0, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+          <p style={{ fontSize: 13, color: "#8a8477", lineHeight: 1.5, margin: 0, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
             {annonce.description}
           </p>
         )}

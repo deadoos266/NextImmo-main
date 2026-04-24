@@ -35,14 +35,14 @@ export default function MarketRentHint({ ville, surface, pieces, prix }: Props) 
   if (!ville || String(ville).trim().length < 2) return null
   if (loading) {
     return (
-      <div style={{ background: "#f9fafb", borderRadius: 12, padding: "10px 14px", fontSize: 12, color: "#9ca3af", marginTop: 8 }}>
+      <div style={{ background: "#F7F4EF", borderRadius: 12, padding: "10px 14px", fontSize: 12, color: "#8a8477", marginTop: 8 }}>
         Estimation du loyer de marché…
       </div>
     )
   }
   if (!result || result.median === null) {
     return (
-      <div style={{ background: "#f9fafb", borderRadius: 12, padding: "10px 14px", fontSize: 12, color: "#9ca3af", marginTop: 8 }}>
+      <div style={{ background: "#F7F4EF", borderRadius: 12, padding: "10px 14px", fontSize: 12, color: "#8a8477", marginTop: 8 }}>
         Pas encore assez de biens similaires à {ville} pour estimer un loyer de marché.
       </div>
     )
@@ -55,16 +55,16 @@ export default function MarketRentHint({ ville, surface, pieces, prix }: Props) 
     : diff > 0
       ? `+${Math.round(diff)}% au-dessus du marché`
       : `${Math.round(diff)}% en-dessous du marché`
-  const diffColor = Math.abs(diff) < 5 ? "#16a34a" : Math.abs(diff) < 15 ? "#ea580c" : "#dc2626"
+  const diffColor = Math.abs(diff) < 5 ? "#15803d" : Math.abs(diff) < 15 ? "#a16207" : "#b91c1c"
 
   return (
-    <div style={{ background: "#f0f9ff", border: "1px solid #bfdbfe", borderRadius: 12, padding: "10px 14px", fontSize: 13, color: "#111", marginTop: 8, lineHeight: 1.5 }}>
+    <div style={{ background: "#f0f9ff", border: "1px solid #D7E3F4", borderRadius: 12, padding: "10px 14px", fontSize: 13, color: "#111", marginTop: 8, lineHeight: 1.5 }}>
       <p style={{ margin: 0, fontWeight: 700 }}>
         Loyer médian sur {ville}{pieces ? ` · ${pieces} pièces` : ""} : <span style={{ color: "#1d4ed8" }}>{result.median} €/mois</span>
       </p>
-      <p style={{ margin: "4px 0 0", fontSize: 12, color: "#374151" }}>
+      <p style={{ margin: "4px 0 0", fontSize: 12, color: "#111" }}>
         Fourchette observée : {result.min} € à {result.max} €
-        {" "}<span style={{ color: "#6b7280" }}>({result.count} bien{result.count > 1 ? "s" : ""} similaire{result.count > 1 ? "s" : ""})</span>
+        {" "}<span style={{ color: "#8a8477" }}>({result.count} bien{result.count > 1 ? "s" : ""} similaire{result.count > 1 ? "s" : ""})</span>
       </p>
       {prixNum > 0 && (
         <p style={{ margin: "4px 0 0", fontSize: 12, fontWeight: 700, color: diffColor }}>

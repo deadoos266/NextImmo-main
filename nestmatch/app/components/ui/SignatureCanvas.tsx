@@ -113,7 +113,7 @@ export default function SignatureCanvas({
       <div
         style={{
           background: "white",
-          border: "2px dashed #e5e7eb",
+          border: "2px dashed #EAE6DF",
           borderRadius: 14,
           padding: 4,
           position: "relative",
@@ -148,7 +148,7 @@ export default function SignatureCanvas({
               alignItems: "center",
               justifyContent: "center",
               pointerEvents: "none",
-              color: "#d1d5db",
+              color: "#EAE6DF",
               fontSize: 14,
               fontStyle: "italic",
             }}
@@ -158,7 +158,7 @@ export default function SignatureCanvas({
         )}
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, alignItems: "center" }}>
-        <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>
+        <p style={{ fontSize: 11, color: "#8a8477", margin: 0 }}>
           {hasContent ? "✓ Signature capturée" : "Tracez votre signature sur la zone ci-dessus"}
         </p>
         <button
@@ -167,8 +167,8 @@ export default function SignatureCanvas({
           disabled={!hasContent}
           style={{
             background: "white",
-            color: hasContent ? "#6b7280" : "#d1d5db",
-            border: "1.5px solid #e5e7eb",
+            color: hasContent ? "#8a8477" : "#EAE6DF",
+            border: "1px solid #EAE6DF",
             borderRadius: 8,
             padding: "6px 14px",
             fontSize: 12,

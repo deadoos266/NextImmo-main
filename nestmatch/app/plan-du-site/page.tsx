@@ -22,10 +22,10 @@ export default function PlanDuSite() {
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: "40px 20px" }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <Link href="/" style={{ fontSize: 13, color: "#6b7280", textDecoration: "none" }}>← Retour à l&apos;accueil</Link>
+        <Link href="/" style={{ fontSize: 13, color: "#8a8477", textDecoration: "none" }}>← Retour à l&apos;accueil</Link>
 
         <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: "-0.5px", margin: "16px 0 6px" }}>Plan du site</h1>
-        <p style={{ fontSize: 14, color: "#6b7280", marginBottom: 28 }}>
+        <p style={{ fontSize: 14, color: "#8a8477", marginBottom: 28 }}>
           Toutes les pages publiques de KeyMatch, en un coup d&apos;œil.
         </p>
 

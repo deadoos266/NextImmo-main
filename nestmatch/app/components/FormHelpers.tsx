@@ -39,7 +39,7 @@ export function Toggle({
           width: 44,
           height: 24,
           borderRadius: 999,
-          background: toggles[k] ? "#111" : "#e5e7eb",
+          background: toggles[k] ? "#111" : "#EAE6DF",
           cursor: "pointer",
           position: "relative",
           transition: "background 0.2s",
@@ -77,7 +77,7 @@ export function Sec({ t, children }: { t: ReactNode; children: ReactNode }) {
 export function F({ l, children }: { l: ReactNode; children: ReactNode }) {
   return (
     <div style={{ marginBottom: 16 }}>
-      <label style={{ fontSize: 13, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 6 }}>{l}</label>
+      <label style={{ fontSize: 13, fontWeight: 600, color: "#8a8477", display: "block", marginBottom: 6 }}>{l}</label>
       {children}
     </div>
   )

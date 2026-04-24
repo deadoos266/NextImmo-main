@@ -47,11 +47,11 @@ const REPLY_REGEX = /^\[REPLY:(\d+)\]\n([\s\S]*)$/
 //   rejete   = visite "annulée" uniquement (aucune en cours)
 type StatutConv = "contact" | "dossier" | "visite" | "bail" | "rejete"
 const STATUT_CONV: Record<StatutConv, { label: string; color: string; bg: string }> = {
-  contact: { label: "Contact",           color: "#374151", bg: "#f3f4f6" },
-  dossier: { label: "Dossier envoyé",    color: "#15803d", bg: "#dcfce7" },
+  contact: { label: "Contact",           color: "#111", bg: "#F7F4EF" },
+  dossier: { label: "Dossier envoyé",    color: "#15803d", bg: "#F0FAEE" },
   visite:  { label: "Visite programmée", color: "#1d4ed8", bg: "#dbeafe" },
-  bail:    { label: "Bail signé",        color: "#ffffff", bg: "#16a34a" },
-  rejete:  { label: "Refusé",            color: "#b91c1c", bg: "#fee2e2" },
+  bail:    { label: "Bail signé",        color: "#ffffff", bg: "#15803d" },
+  rejete:  { label: "Refusé",            color: "#b91c1c", bg: "#FEECEC" },
 }
 
 // Statut candidat côté propriétaire — qualifie la RELATION (indép. du cycle)
@@ -60,7 +60,7 @@ const STATUT_CONV: Record<StatutConv, { label: string; color: string; bg: string
 //   locataire = bail signé, locataire en place
 type StatutCandidat = "standard" | "confirme" | "locataire"
 const CANDIDATE_STATUS: Record<StatutCandidat, { label: string; short: string; color: string; ring: string; dot: string }> = {
-  standard:  { label: "Candidat",          short: "Candidat",      color: "#6b7280", ring: "transparent", dot: "#9ca3af" },
+  standard:  { label: "Candidat",          short: "Candidat",      color: "#8a8477", ring: "transparent", dot: "#8a8477" },
   confirme:  { label: "Prêt à signer",     short: "Prêt à signer", color: "#b45309", ring: "#f59e0b",     dot: "#f59e0b" },
   locataire: { label: "Locataire actuel",  short: "Locataire",     color: "#111",    ring: "#111",        dot: "#111" },
 }
@@ -96,8 +96,8 @@ function formatVisiteDate(raw: unknown, opts: Intl.DateTimeFormatOptions = { day
 function DossierCard({ contenu, isMine, annonceId, bailDejaGenere }: { contenu: string; isMine: boolean; annonceId?: number | null; bailDejaGenere?: boolean }) {
   let data: any = {}
   try { data = JSON.parse(contenu.slice(DOSSIER_PREFIX.length)) } catch {}
-  const scoreColor = data.score >= 80 ? "#15803d" : data.score >= 50 ? "#c2410c" : "#b91c1c"
-  const scoreBg   = data.score >= 80 ? "#dcfce7" : data.score >= 50 ? "#fff7ed" : "#fee2e2"
+  const scoreColor = data.score >= 80 ? "#15803d" : data.score >= 50 ? "#a16207" : "#b91c1c"
+  const scoreBg   = data.score >= 80 ? "#F0FAEE" : data.score >= 50 ? "#FBF6EA" : "#FEECEC"
   return (
     <div style={{ background: isMine ? "#111" : "#fff", border: `1px solid ${isMine ? "#1a1a1a" : "#EAE6DF"}`, borderRadius: 16, padding: "14px 18px", minWidth: 220, maxWidth: 280, boxShadow: isMine ? "none" : "0 2px 8px rgba(17,17,17,0.04)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: `1px solid ${isMine ? "rgba(255,255,255,0.12)" : "#F2EEE6"}` }}>
@@ -158,11 +158,11 @@ function DemandeDossierCard({ isMine, dossierRecu, onEnvoyer, envoyant }: {
 }) {
   if (isMine) {
     return (
-      <div style={{ background: "#1a1a1a", border: "1.5px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 280 }}>
+      <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 280 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div>
             <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0 }}>Dossier demandé</p>
-            <p style={{ fontSize: 11, color: dossierRecu ? "#86efac" : "#9ca3af", margin: "2px 0 0" }}>
+            <p style={{ fontSize: 11, color: dossierRecu ? "#86efac" : "#8a8477", margin: "2px 0 0" }}>
               {dossierRecu ? "Dossier reçu" : "En attente de réponse..."}
             </p>
           </div>
@@ -220,11 +220,11 @@ function EdlCard({ contenu, isMine, signatures }: { contenu: string; isMine: boo
     // confirmation de l'EDL dans la messagerie tant que le locataire n'a
     // pas confirme."
     return (
-      <div style={{ background: "#1a1a1a", border: "1.5px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 300 }}>
+      <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 300 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: data.edlId ? 10 : 0 }}>
           <div style={{ flex: 1 }}>
             <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0 }}>État des lieux envoyé</p>
-            <p style={{ fontSize: 11, color: "#9ca3af", margin: "2px 0 0" }}>
+            <p style={{ fontSize: 11, color: "#8a8477", margin: "2px 0 0" }}>
               {data.bienTitre || "Bien"} — {dateLabel}
             </p>
           </div>
@@ -239,12 +239,12 @@ function EdlCard({ contenu, isMine, signatures }: { contenu: string; isMine: boo
               background: statutSig === "signe_complet" ? "#052e16"
                 : statutSig === "signe_locataire" ? "#422006"
                 : "#1f2937",
-              border: `1px solid ${statutSig === "signe_complet" ? "#14532d" : statutSig === "signe_locataire" ? "#78350f" : "#374151"}`,
+              border: `1px solid ${statutSig === "signe_complet" ? "#14532d" : statutSig === "signe_locataire" ? "#78350f" : "#111"}`,
               fontSize: 10,
               fontWeight: 700,
               color: statutSig === "signe_complet" ? "#4ade80"
                 : statutSig === "signe_locataire" ? "#fbbf24"
-                : "#9ca3af",
+                : "#8a8477",
               textAlign: "center",
               letterSpacing: "0.3px",
             }}>
@@ -395,14 +395,14 @@ function BailCard({
           : isExterne
             ? "Bail importé — en attente de signature du locataire"
             : "Bail envoyé — en attente de signature du locataire"
-    const statutColor = sigLocataire && sigBailleur ? "#a7f3d0" : sigLocataire ? "#fcd34d" : "#fde68a"
+    const statutColor = sigLocataire && sigBailleur ? "#a7f3d0" : sigLocataire ? "#fcd34d" : "#EADFC6"
     return (
-      <div style={{ background: "#1a1a1a", border: "1.5px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 320 }}>
+      <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 320 }}>
         <p style={{ fontSize: 11, fontWeight: 700, color: statutColor, textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>
           {statutLabel}
         </p>
         <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0 }}>{data.titreBien || "Bien"} — {data.villeBien}</p>
-        <p style={{ fontSize: 11, color: "#9ca3af", margin: "4px 0 8px" }}>Début {dateStr}{loyer > 0 ? ` · ${loyer} €/mois` : ""}</p>
+        <p style={{ fontSize: 11, color: "#8a8477", margin: "4px 0 8px" }}>Début {dateStr}{loyer > 0 ? ` · ${loyer} €/mois` : ""}</p>
 
         {sigLocataire && (
           <p style={{ fontSize: 11, color: "#a7f3d0", margin: "4px 0 0", fontWeight: 600 }}>{signatureBadge(sigLocataire)}</p>
@@ -446,7 +446,7 @@ function BailCard({
       </div>
       <p style={{ fontWeight: 600, fontSize: 14, color: "#111", margin: 0, letterSpacing: "-0.1px" }}>{data.titreBien || "Bien"}</p>
       <p style={{ fontSize: 12, color: "#8a8477", margin: "2px 0 10px" }}>{data.villeBien || ""}</p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#374151", lineHeight: 1.55 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#111", lineHeight: 1.55 }}>
         {dateStr && <div>Début : <strong style={{ fontWeight: 600 }}>{dateStr}</strong></div>}
         {loyer > 0 && <div>Loyer : <strong style={{ fontWeight: 600 }}>{loyer} €/mois</strong></div>}
         {data.duree && <div>Durée : <strong style={{ fontWeight: 600 }}>{data.duree} mois</strong></div>}
@@ -593,7 +593,7 @@ function AutoPaiementDemandeCard({
         </button>
       )}
       {confirmed && (
-        <p style={{ fontSize: 11, color: "#166534", margin: "10px 0 0", lineHeight: 1.55 }}>
+        <p style={{ fontSize: 11, color: "#15803d", margin: "10px 0 0", lineHeight: 1.55 }}>
           Les loyers seront automatiquement marqués payés chaque mois. Le proprio peut contester un mois individuellement si nécessaire.
         </p>
       )}
@@ -629,7 +629,7 @@ function LoyerPayeCard({ contenu, isMine }: { contenu: string; isMine: boolean }
       <p style={{ fontSize: 13, color: "#15803d", margin: "6px 0 0", fontWeight: 600 }}>
         {montant.toLocaleString("fr-FR")} € payé{isMine ? "" : "s"}
       </p>
-      <p style={{ fontSize: 12, color: "#166534", margin: "10px 0 0", lineHeight: 1.55 }}>
+      <p style={{ fontSize: 12, color: "#15803d", margin: "10px 0 0", lineHeight: 1.55 }}>
         {isMine
           ? "En attente de la quittance du propriétaire."
           : "Le locataire signale avoir payé. Envoyez-lui la quittance depuis l'onglet Statistiques."}
@@ -666,7 +666,7 @@ function VisiteDemandeCard({
   // reste en base neutre (handoff messages.jsx L344 : bg #fff + border KM.line)
   const accent =
     statut === "confirmée" ? "#15803d"
-    : statut === "annulée" ? "#dc2626"
+    : statut === "annulée" ? "#b91c1c"
     : "#1d4ed8"
   const badgeLabel =
     statut === "confirmée" ? "Confirmée"
@@ -687,7 +687,7 @@ function VisiteDemandeCard({
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: "#111", letterSpacing: "-0.1px" }}>{title}</div>
-          <div style={{ fontSize: 10, color: "#9ca3af", textTransform: "uppercase" as const, letterSpacing: "1px", fontWeight: 600 }}>
+          <div style={{ fontSize: 10, color: "#8a8477", textTransform: "uppercase" as const, letterSpacing: "1px", fontWeight: 600 }}>
             1 créneau · 30 min
           </div>
         </div>
@@ -698,7 +698,7 @@ function VisiteDemandeCard({
       {/* Slot tile (handoff L354-364) — grille prête pour 3 slots futurs */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
         <div style={{ padding: 12, background: "#FBF9F5", border: "1px solid #EAE6DF", borderRadius: 12, textAlign: "center" }}>
-          <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 3, textTransform: "uppercase" as const, letterSpacing: "0.5px", color: "#6b7280", fontWeight: 600 }}>
+          <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 3, textTransform: "uppercase" as const, letterSpacing: "0.5px", color: "#8a8477", fontWeight: 600 }}>
             {dayShort || "Date à confirmer"}
           </div>
           <div style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>
@@ -707,7 +707,7 @@ function VisiteDemandeCard({
         </div>
       </div>
       {data.message && (
-        <p style={{ fontSize: 12, color: "#374151", margin: "10px 0 0", fontStyle: "italic", lineHeight: 1.5 }}>
+        <p style={{ fontSize: 12, color: "#111", margin: "10px 0 0", fontStyle: "italic", lineHeight: 1.5 }}>
           « {data.message} »
         </p>
       )}
@@ -814,7 +814,7 @@ function LocationAccepteeCard({ contenu, isMine, bailDejaGenere }: { contenu: st
         {isMine ? "Vous avez accepté cette candidature." : "Votre candidature a été acceptée."}
         {data.bienTitre ? ` (${data.bienTitre})` : ""}
       </p>
-      <p style={{ fontSize: 12, color: "#166534", margin: "8px 0 0", lineHeight: 1.55 }}>
+      <p style={{ fontSize: 12, color: "#15803d", margin: "8px 0 0", lineHeight: 1.55 }}>
         {isMine
           ? "Le locataire peut désormais accéder à « Mon logement ». Générez le bail quand vous êtes prêt."
           : "Retrouvez votre logement, vos quittances et l'état des lieux dans « Mon logement »."}
@@ -863,10 +863,10 @@ function QuittanceCard({ contenu, isMine }: { contenu: string; isMine: boolean }
 
   if (isMine) {
     return (
-      <div style={{ background: "#1a1a1a", border: "1.5px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 300 }}>
+      <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 220, maxWidth: 300 }}>
         <p style={{ fontSize: 11, fontWeight: 700, color: "#a7f3d0", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>Quittance envoyée</p>
         <p style={{ fontWeight: 700, fontSize: 14, color: "white", margin: 0 }}>{data.bienTitre || "Bien"}</p>
-        <p style={{ fontSize: 12, color: "#9ca3af", margin: "4px 0 0" }}>
+        <p style={{ fontSize: 12, color: "#8a8477", margin: "4px 0 0" }}>
           {moisLabel}{montant > 0 ? ` · ${montant} €` : ""}
         </p>
       </div>
@@ -885,7 +885,7 @@ function QuittanceCard({ contenu, isMine }: { contenu: string; isMine: boolean }
         <p style={{ fontSize: 10, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0 }}>Quittance reçue</p>
       </div>
       <p style={{ fontWeight: 600, fontSize: 14, color: "#111", margin: 0, letterSpacing: "-0.1px" }}>{data.bienTitre || "Bien"}</p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#374151", marginTop: 10, lineHeight: 1.5 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#111", marginTop: 10, lineHeight: 1.5 }}>
         {moisLabel && <div>Mois : <strong style={{ fontWeight: 600 }}>{moisLabel}</strong></div>}
         {montant > 0 && <div>Loyer : <strong style={{ fontWeight: 600 }}>{montant} €</strong></div>}
         {dateConf && <div>Confirmé le <strong style={{ fontWeight: 600 }}>{dateConf}</strong></div>}
@@ -908,9 +908,9 @@ function CandidatureRetireeCard({ contenu, isMine }: { contenu: string; isMine: 
     ? new Date(data.retireLe).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
     : ""
   return (
-    <div style={{ background: "#fef2f2", border: "1.5px dashed #fca5a5", borderRadius: 14, padding: "12px 16px", minWidth: 220, maxWidth: 320 }}>
+    <div style={{ background: "#fef2f2", border: "1.5px dashed #F4C9C9", borderRadius: 14, padding: "12px 16px", minWidth: 220, maxWidth: 320 }}>
       <p style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 4px" }}>Candidature retirée</p>
-      <p style={{ fontSize: 13, color: "#991b1b", margin: 0, lineHeight: 1.4 }}>
+      <p style={{ fontSize: 13, color: "#b91c1c", margin: 0, lineHeight: 1.4 }}>
         {isMine ? "Vous avez retiré votre candidature" : "Le candidat a retiré sa candidature"}
         {data.bienTitre ? ` pour « ${data.bienTitre} »` : ""}.
       </p>
@@ -929,13 +929,13 @@ function Avatar({ email, image, size = 36 }: { email: string; image?: string | n
       <img
         src={image}
         alt=""
-        style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0, background: "#e5e7eb" }}
+        style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0, background: "#EAE6DF" }}
         referrerPolicy="no-referrer"
       />
     )
   }
   return (
-    <div style={{ width: size, height: size, borderRadius: "50%", background: "#e5e7eb", color: "#374151", display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 700, flexShrink: 0 }}>
+    <div style={{ width: size, height: size, borderRadius: "50%", background: "#EAE6DF", color: "#111", display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.42), fontWeight: 700, flexShrink: 0 }}>
       {initial}
     </div>
   )
@@ -2065,7 +2065,7 @@ function MessagesInner() {
   // 3 tiers stricts ≥80 vert / ≥60 orange / <60 rouge. Plus lisible que l'échelle
   // 5-tier du matching v3 pour un badge compact in-conv.
   function matchColor(pct: number): string {
-    return pct >= 80 ? "#16a34a" : pct >= 60 ? "#ea580c" : "#dc2626"
+    return pct >= 80 ? "#15803d" : pct >= 60 ? "#a16207" : "#b91c1c"
   }
   function compatBadge(score: number | null) {
     if (score === null) return null
@@ -2371,7 +2371,7 @@ function MessagesInner() {
             const isPending = v.statut === "proposée"
             const parMoi = (v.propose_par || "").toLowerCase() === (myEmail || "").toLowerCase()
             return (
-              <div key={v.id} style={{ display: "flex", flexDirection: "column", gap: 8, background: "white", borderRadius: 12, padding: "12px 14px", border: `1.5px solid ${s.border}` }}>
+              <div key={v.id} style={{ display: "flex", flexDirection: "column", gap: 8, background: "white", borderRadius: 12, padding: "12px 14px", border: `1px solid ${s.border}` }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: "#111" }}>
                     {formatVisiteDate(v.date_visite, { weekday: "short", day: "numeric", month: "short", year: "numeric" })} à {v.heure}
@@ -2380,13 +2380,13 @@ function MessagesInner() {
                     {s.label}
                   </span>
                   {isPending && (
-                    <span style={{ fontSize: 10, color: "#6b7280" }}>
+                    <span style={{ fontSize: 10, color: "#8a8477" }}>
                       {parMoi ? "Proposée par vous" : "Reçue"}
                     </span>
                   )}
                 </div>
                 {v.message && (
-                  <p style={{ fontSize: 12, color: "#6b7280", fontStyle: "italic", margin: 0, lineHeight: 1.5 }}>
+                  <p style={{ fontSize: 12, color: "#8a8477", fontStyle: "italic", margin: 0, lineHeight: 1.5 }}>
                     &ldquo;{v.message}&rdquo;
                   </p>
                 )}
@@ -2410,7 +2410,7 @@ function MessagesInner() {
                           setShowVisiteForm(true)
                           setVisitesModalOpen(false)
                         }}
-                        style={{ background: "white", border: "1.5px solid #111", color: "#111", borderRadius: 999, padding: "6px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+                        style={{ background: "white", border: "1px solid #111", color: "#111", borderRadius: 999, padding: "6px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
                       >
                         Contre-proposer
                       </button>
@@ -2419,7 +2419,7 @@ function MessagesInner() {
                           setVisiteCancelTarget({ v, mode: "refus" })
                           setVisitesModalOpen(false)
                         }}
-                        style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "6px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+                        style={{ background: "none", border: "1px solid #F4C9C9", color: "#b91c1c", borderRadius: 999, padding: "6px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
                       >
                         Refuser
                       </button>
@@ -2431,7 +2431,7 @@ function MessagesInner() {
                         setVisiteCancelTarget({ v, mode: "annulation" })
                         setVisitesModalOpen(false)
                       }}
-                      style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "6px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+                      style={{ background: "none", border: "1px solid #F4C9C9", color: "#b91c1c", borderRadius: 999, padding: "6px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
                     >
                       Annuler ma demande
                     </button>
@@ -2442,7 +2442,7 @@ function MessagesInner() {
                         setVisiteCancelTarget({ v, mode: "annulation" })
                         setVisitesModalOpen(false)
                       }}
-                      style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 999, padding: "6px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+                      style={{ background: "none", border: "1px solid #F4C9C9", color: "#b91c1c", borderRadius: 999, padding: "6px 12px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
                     >
                       Annuler la visite
                     </button>
@@ -2474,11 +2474,11 @@ function MessagesInner() {
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               {/* Actives */}
               <div>
-                <p style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 10px" }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 10px" }}>
                   Actives ({actives.length})
                 </p>
                 {actives.length === 0 ? (
-                  <div style={{ padding: "20px 14px", background: "#fafafa", borderRadius: 12, textAlign: "center", fontSize: 13, color: "#9ca3af" }}>
+                  <div style={{ padding: "20px 14px", background: "#F7F4EF", borderRadius: 12, textAlign: "center", fontSize: 13, color: "#8a8477" }}>
                     Aucune visite active.
                   </div>
                 ) : (
@@ -2500,14 +2500,14 @@ function MessagesInner() {
                       alignItems: "center",
                       justifyContent: "space-between",
                       padding: "8px 14px",
-                      background: "#f9fafb",
-                      border: "1.5px solid #e5e7eb",
+                      background: "#F7F4EF",
+                      border: "1px solid #EAE6DF",
                       borderRadius: 10,
                       cursor: "pointer",
                       fontFamily: "inherit",
                       fontSize: 12,
                       fontWeight: 700,
-                      color: "#6b7280",
+                      color: "#8a8477",
                     }}
                   >
                     <span>Historique annulées ({annulees.length})</span>
@@ -2538,8 +2538,8 @@ function MessagesInner() {
                     }, 120)
                   }}
                   style={{
-                    background: "#eff6ff",
-                    border: "1.5px solid #bfdbfe",
+                    background: "#EEF3FB",
+                    border: "1px solid #D7E3F4",
                     color: "#1d4ed8",
                     borderRadius: 12,
                     padding: "10px 18px",
@@ -2798,12 +2798,12 @@ function MessagesInner() {
                     const other = (conv.other || "").toLowerCase()
                     const meLower = (myEmail || "").toLowerCase()
                     if (other === locEmail || meLower === locEmail) {
-                      relBadge = { label: "Bail actif", bg: "#dcfce7", color: "#15803d" }
+                      relBadge = { label: "Bail actif", bg: "#F0FAEE", color: "#15803d" }
                     } else if (conv.annonceId) {
                       relBadge = { label: "Ancienne candidature", bg: "#F7F4EF", color: "#8a8477" }
                     }
                   } else if (conv.annonceId) {
-                    relBadge = { label: "Candidat", bg: "#eff6ff", color: "#1d4ed8" }
+                    relBadge = { label: "Candidat", bg: "#EEF3FB", color: "#1d4ed8" }
                   }
                 }
                 // Côté proprio : statut candidat (standard / confirme / locataire) via handoff
@@ -2814,7 +2814,7 @@ function MessagesInner() {
                 return (
                   <div key={conv.key}
                     onClick={() => { setConvActive(conv.key); setMenuConv(null); setVisitesConv([]); loadMessages(myEmail!, conv.other, conv.annonceId); loadVisitesConv(conv.other, conv.annonceId) }}
-                    style={{ padding: "14px 16px", cursor: "pointer", background: isActive ? "#F7F4EF" : "white", borderBottom: "1px solid #F2EEE6", borderLeft: isActive ? "3px solid #111" : conv.unread > 0 ? "3px solid #ef4444" : "3px solid transparent", position: "relative", transition: "background 160ms ease" }}
+                    style={{ padding: "14px 16px", cursor: "pointer", background: isActive ? "#F7F4EF" : "white", borderBottom: "1px solid #F2EEE6", borderLeft: isActive ? "3px solid #111" : conv.unread > 0 ? "3px solid #b91c1c" : "3px solid transparent", position: "relative", transition: "background 160ms ease" }}
                     onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "#FBF8F3"; const btn = e.currentTarget.querySelector(".menu-btn") as HTMLElement; if (btn) btn.style.opacity = "1" }}
                     onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "white"; if (menuConv !== conv.key) { const btn = e.currentTarget.querySelector(".menu-btn") as HTMLElement; if (btn) btn.style.opacity = "0" } }}
                   >
@@ -2835,7 +2835,7 @@ function MessagesInner() {
                           </div>
                         )}
                         {conv.unread > 0 && (
-                          <span style={{ position: "absolute", top: -4, right: -4, background: "#ef4444", color: "white", borderRadius: 999, fontSize: 9, fontWeight: 800, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: "2px solid white" }}>
+                          <span style={{ position: "absolute", top: -4, right: -4, background: "#b91c1c", color: "white", borderRadius: 999, fontSize: 9, fontWeight: 800, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: "2px solid white" }}>
                             {conv.unread}
                           </span>
                         )}
@@ -2889,7 +2889,7 @@ function MessagesInner() {
                     <button
                       className="menu-btn"
                       onClick={e => { e.stopPropagation(); setMenuConv(menuConv === conv.key ? null : conv.key) }}
-                      style={{ position: "absolute", top: 10, right: 10, opacity: menuConv === conv.key ? 1 : 0, background: "#f3f4f6", border: "none", borderRadius: 6, padding: "2px 8px", cursor: "pointer", fontSize: 16, color: "#6b7280", transition: "opacity 0.15s", lineHeight: 1, letterSpacing: 1 }}>
+                      style={{ position: "absolute", top: 10, right: 10, opacity: menuConv === conv.key ? 1 : 0, background: "#F7F4EF", border: "none", borderRadius: 6, padding: "2px 8px", cursor: "pointer", fontSize: 16, color: "#8a8477", transition: "opacity 0.15s", lineHeight: 1, letterSpacing: 1 }}>
                       ···
                     </button>
 
@@ -3030,7 +3030,7 @@ function MessagesInner() {
                             type="button"
                             onClick={() => setAccepterLocationOpen(true)}
                             title="Accepter ce locataire et marquer le bien comme loué"
-                            style={{ fontSize: 12, fontWeight: 800, color: "white", background: "#16a34a", border: "none", borderRadius: 999, padding: "6px 14px", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                            style={{ fontSize: 12, fontWeight: 800, color: "white", background: "#15803d", border: "none", borderRadius: 999, padding: "6px 14px", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
                             Louer à ce candidat
                           </button>
                         )
@@ -3089,7 +3089,7 @@ function MessagesInner() {
                   <div style={{ background: "#F7F4EF", borderBottom: "1px solid #EAE6DF", padding: "14px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#DCF5E4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }} aria-hidden>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#166534" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
                       </div>
@@ -3388,7 +3388,7 @@ function MessagesInner() {
                                       }
                                     }}
                                     style={{
-                                      borderLeft: `3px solid ${isMine ? "rgba(255,255,255,0.5)" : "#9ca3af"}`,
+                                      borderLeft: `3px solid ${isMine ? "rgba(255,255,255,0.5)" : "#8a8477"}`,
                                       padding: "4px 10px",
                                       marginBottom: 6,
                                       opacity: 0.75,
@@ -3406,7 +3406,7 @@ function MessagesInner() {
                                   </div>
                                 )}
                                 {isRelance && (
-                                  <span style={{ display: "inline-block", background: isMine ? "rgba(255,255,255,0.2)" : "#fef3c7", color: isMine ? "white" : "#92400e", fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.4px" }}>
+                                  <span style={{ display: "inline-block", background: isMine ? "rgba(255,255,255,0.2)" : "#fef3c7", color: isMine ? "white" : "#a16207", fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.4px" }}>
                                     Relance
                                   </span>
                                 )}
@@ -3446,7 +3446,7 @@ function MessagesInner() {
                                     }
                                   }}
                                   aria-label="Actions sur le message"
-                                  style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "50%", width: 26, height: 26, cursor: "pointer", fontSize: 14, color: "#6b7280", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, fontFamily: "inherit", lineHeight: 1, boxShadow: "0 2px 6px rgba(0,0,0,0.1)" }}
+                                  style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: "50%", width: 26, height: 26, cursor: "pointer", fontSize: 14, color: "#8a8477", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, fontFamily: "inherit", lineHeight: 1, boxShadow: "0 2px 6px rgba(0,0,0,0.1)" }}
                                 >
                                   ⋯
                                 </button>
@@ -3467,12 +3467,12 @@ function MessagesInner() {
                   const annulees = visitesConv.filter(v => v.statut === "annulée")
                   const enAttente = actives.filter(v => v.statut === "proposée" &&
                     (v.propose_par || "").toLowerCase() !== (myEmail || "").toLowerCase()).length
-                  const barBg = enAttente > 0 ? "#fff7ed" : actives.length > 0 ? "#f0fdf4" : "#f9fafb"
-                  const barBorder = enAttente > 0 ? "#fed7aa" : actives.length > 0 ? "#bbf7d0" : "#e5e7eb"
+                  const barBg = enAttente > 0 ? "#FBF6EA" : actives.length > 0 ? "#F0FAEE" : "#F7F4EF"
+                  const barBorder = enAttente > 0 ? "#EADFC6" : actives.length > 0 ? "#C6E9C0" : "#EAE6DF"
                   return (
                     <div
                       style={{
-                        borderTop: "1px solid #f3f4f6",
+                        borderTop: "1px solid #F7F4EF",
                         padding: "10px 20px",
                         background: barBg,
                         display: "flex",
@@ -3483,7 +3483,7 @@ function MessagesInner() {
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 12 }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#374151" }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#111" }}>
                           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                           <line x1="16" y1="2" x2="16" y2="6"/>
                           <line x1="8" y1="2" x2="8" y2="6"/>
@@ -3493,12 +3493,12 @@ function MessagesInner() {
                           {actives.length} visite{actives.length !== 1 ? "s" : ""} active{actives.length !== 1 ? "s" : ""}
                         </span>
                         {enAttente > 0 && (
-                          <span style={{ background: "#ea580c", color: "white", padding: "1px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700 }}>
+                          <span style={{ background: "#a16207", color: "white", padding: "1px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700 }}>
                             {enAttente} à traiter
                           </span>
                         )}
                         {annulees.length > 0 && (
-                          <span style={{ color: "#9ca3af", fontSize: 11 }}>
+                          <span style={{ color: "#8a8477", fontSize: 11 }}>
                             · {annulees.length} annulée{annulees.length > 1 ? "s" : ""}
                           </span>
                         )}
@@ -3508,7 +3508,7 @@ function MessagesInner() {
                         onClick={() => setVisitesModalOpen(true)}
                         style={{
                           background: "white",
-                          border: `1.5px solid ${barBorder}`,
+                          border: `1px solid ${barBorder}`,
                           color: "#111",
                           borderRadius: 999,
                           padding: "6px 14px",
@@ -3535,14 +3535,14 @@ function MessagesInner() {
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
                     {!proprietaireActive && (
                       <button onClick={envoyerDossier} disabled={envoyantDossier}
-                        style={{ background: "#fff", border: "1px solid #bbf7d0", color: "#15803d", borderRadius: 999, padding: "6px 14px", fontSize: 11.5, fontWeight: 600, cursor: envoyantDossier ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, opacity: envoyantDossier ? 0.6 : 1, letterSpacing: "0.1px" }}>
-                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#16a34a" }} />
+                        style={{ background: "#fff", border: "1px solid #C6E9C0", color: "#15803d", borderRadius: 999, padding: "6px 14px", fontSize: 11.5, fontWeight: 600, cursor: envoyantDossier ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, opacity: envoyantDossier ? 0.6 : 1, letterSpacing: "0.1px" }}>
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#15803d" }} />
                         {envoyantDossier ? "Envoi…" : "Envoyer mon dossier"}
                       </button>
                     )}
                     {proprietaireActive && (
                       <button onClick={demanderDossier} disabled={demandantDossier}
-                        style={{ background: "#fff", border: "1px solid #fde68a", color: "#b45309", borderRadius: 999, padding: "6px 14px", fontSize: 11.5, fontWeight: 600, cursor: demandantDossier ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, opacity: demandantDossier ? 0.6 : 1, letterSpacing: "0.1px" }}>
+                        style={{ background: "#fff", border: "1px solid #EADFC6", color: "#b45309", borderRadius: 999, padding: "6px 14px", fontSize: 11.5, fontWeight: 600, cursor: demandantDossier ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, opacity: demandantDossier ? 0.6 : 1, letterSpacing: "0.1px" }}>
                         <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#f59e0b" }} />
                         {demandantDossier ? "Envoi…" : "Demander le dossier"}
                       </button>
@@ -3553,7 +3553,7 @@ function MessagesInner() {
                         setCounterTarget(null)
                         setShowVisiteForm(true)
                       }}
-                        style={{ background: "#fff", border: "1px solid #bfdbfe", color: "#1d4ed8", borderRadius: 999, padding: "6px 14px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, letterSpacing: "0.1px" }}>
+                        style={{ background: "#fff", border: "1px solid #D7E3F4", color: "#1d4ed8", borderRadius: 999, padding: "6px 14px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, letterSpacing: "0.1px" }}>
                         <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#1d4ed8" }} />
                         Proposer une visite
                       </button>
@@ -3764,7 +3764,7 @@ function MessagesInner() {
                               </div>
                               {!last && <div style={{ width: 1, flex: 1, background: done ? "#111" : "#EAE6DF", minHeight: 18, marginTop: 2 }} />}
                             </div>
-                            <div style={{ paddingTop: 2, paddingBottom: 8, fontSize: 12, fontWeight: active ? 600 : 400, color: active ? "#111" : done ? "#6b7280" : "#9ca3af", lineHeight: 1.3 }}>
+                            <div style={{ paddingTop: 2, paddingBottom: 8, fontSize: 12, fontWeight: active ? 600 : 400, color: active ? "#111" : done ? "#8a8477" : "#8a8477", lineHeight: 1.3 }}>
                               {s.label}
                             </div>
                           </div>
@@ -3778,9 +3778,9 @@ function MessagesInner() {
                     </div>
                   </>
                 ) : (
-                  <div style={{ padding: 30, textAlign: "center" as const, color: "#9ca3af", fontSize: 13 }}>
+                  <div style={{ padding: 30, textAlign: "center" as const, color: "#8a8477", fontSize: 13 }}>
                     <div style={{ width: 60, height: 60, borderRadius: "50%", background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", margin: "40px auto 16px" }}>
-                      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#8a8477" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12 22s-8-4.5-8-11.8a8 8 0 0 1 16 0c0 7.3-8 11.8-8 11.8z"/>
                         <circle cx="12" cy="10" r="3"/>
                       </svg>
@@ -3799,27 +3799,27 @@ function MessagesInner() {
         if (!m) return null
         const close = () => { setMenuMsgId(null); setMenuAnchor(null) }
         const menuStyle: React.CSSProperties = menuAnchor.isMine
-          ? { position: "fixed", top: menuAnchor.top, left: menuAnchor.left, zIndex: 10001, background: "white", border: "1px solid #e5e7eb", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", minWidth: 170, overflow: "hidden" }
-          : { position: "fixed", top: menuAnchor.top, right: menuAnchor.right, zIndex: 10001, background: "white", border: "1px solid #e5e7eb", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", minWidth: 170, overflow: "hidden" }
+          ? { position: "fixed", top: menuAnchor.top, left: menuAnchor.left, zIndex: 10001, background: "white", border: "1px solid #EAE6DF", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", minWidth: 170, overflow: "hidden" }
+          : { position: "fixed", top: menuAnchor.top, right: menuAnchor.right, zIndex: 10001, background: "white", border: "1px solid #EAE6DF", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", minWidth: 170, overflow: "hidden" }
         return createPortal(
           <>
             <div onClick={close} style={{ position: "fixed", inset: 0, zIndex: 10000 }} />
             <div style={menuStyle}>
               <button onClick={() => { repondreMessage(m); close() }}
                 style={{ display: "block", width: "100%", padding: "10px 14px", background: "white", border: "none", textAlign: "left", fontSize: 13, color: "#111", cursor: "pointer", fontFamily: "inherit" }}
-                onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
+                onMouseEnter={e => (e.currentTarget.style.background = "#F7F4EF")}
                 onMouseLeave={e => (e.currentTarget.style.background = "white")}>
                 Répondre
               </button>
               <button onClick={() => { copierMessage(m.contenu); close() }}
                 style={{ display: "block", width: "100%", padding: "10px 14px", background: "white", border: "none", textAlign: "left", fontSize: 13, color: "#111", cursor: "pointer", fontFamily: "inherit" }}
-                onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
+                onMouseEnter={e => (e.currentTarget.style.background = "#F7F4EF")}
                 onMouseLeave={e => (e.currentTarget.style.background = "white")}>
                 Copier le texte
               </button>
               {menuAnchor.isMine && (
                 <button onClick={() => { supprimerMessage(m.id); close() }}
-                  style={{ display: "block", width: "100%", padding: "10px 14px", background: "white", border: "none", textAlign: "left", fontSize: 13, color: "#dc2626", cursor: "pointer", fontFamily: "inherit", borderTop: "1px solid #f3f4f6" }}
+                  style={{ display: "block", width: "100%", padding: "10px 14px", background: "white", border: "none", textAlign: "left", fontSize: 13, color: "#b91c1c", cursor: "pointer", fontFamily: "inherit", borderTop: "1px solid #F7F4EF" }}
                   onMouseEnter={e => (e.currentTarget.style.background = "#fef2f2")}
                   onMouseLeave={e => (e.currentTarget.style.background = "white")}>
                   Supprimer

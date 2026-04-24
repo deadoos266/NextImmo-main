@@ -107,7 +107,7 @@ export default function AddressAutocomplete({ value, onChange, onSelect, city, p
   const defaultStyle: React.CSSProperties = {
     width: "100%",
     padding: "11px 14px",
-    border: "1.5px solid #e5e7eb",
+    border: "1px solid #EAE6DF",
     borderRadius: 10,
     fontSize: 14,
     outline: "none",
@@ -138,7 +138,7 @@ export default function AddressAutocomplete({ value, onChange, onSelect, city, p
           left: 0,
           right: 0,
           background: "white",
-          border: "1.5px solid #e5e7eb",
+          border: "1px solid #EAE6DF",
           borderRadius: 10,
           maxHeight: 280,
           overflowY: "auto",
@@ -146,7 +146,7 @@ export default function AddressAutocomplete({ value, onChange, onSelect, city, p
           boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
         }}>
           {loading && suggestions.length === 0 && (
-            <div style={{ padding: "12px 14px", fontSize: 13, color: "#9ca3af" }}>Recherche d&apos;adresses…</div>
+            <div style={{ padding: "12px 14px", fontSize: 13, color: "#8a8477" }}>Recherche d&apos;adresses…</div>
           )}
           {suggestions.map((a, i) => (
             <div
@@ -157,14 +157,14 @@ export default function AddressAutocomplete({ value, onChange, onSelect, city, p
                 padding: "10px 14px",
                 cursor: "pointer",
                 fontSize: 14,
-                background: i === highlight ? "#f3f4f6" : "white",
+                background: i === highlight ? "#F7F4EF" : "white",
                 color: "#111",
                 fontFamily: "'DM Sans', sans-serif",
-                borderBottom: i < suggestions.length - 1 ? "1px solid #f9fafb" : "none",
+                borderBottom: i < suggestions.length - 1 ? "1px solid #F7F4EF" : "none",
               }}
             >
               <p style={{ margin: 0, fontWeight: 600 }}>{a.street || a.label}</p>
-              <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
+              <p style={{ margin: 0, fontSize: 12, color: "#8a8477" }}>
                 {a.postcode}{a.postcode && a.city ? " · " : ""}{a.city}
               </p>
             </div>

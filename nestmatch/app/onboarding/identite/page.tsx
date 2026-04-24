@@ -29,7 +29,7 @@ const T = {
   meta: "#666",
   soft: "#8a8477",
   mutedBg: "#FAF8F3",
-  danger: "#991b1b",
+  danger: "#b91c1c",
 }
 
 function IdentiteForm() {
@@ -108,7 +108,7 @@ function IdentiteForm() {
   const inputStyle: React.CSSProperties = {
     width: "100%",
     padding: "12px 14px",
-    border: `1.5px solid ${T.line}`,
+    border: `1px solid ${T.line}`,
     borderRadius: 10,
     fontSize: 15,
     outline: "none",
@@ -197,7 +197,7 @@ function IdentiteForm() {
             </label>
 
             {error && (
-              <p style={{ background: "#fee2e2", color: T.danger, padding: "10px 14px", borderRadius: 10, fontSize: 13, margin: "0 0 14px", lineHeight: 1.5 }}>
+              <p style={{ background: "#FEECEC", color: T.danger, padding: "10px 14px", borderRadius: 10, fontSize: 13, margin: "0 0 14px", lineHeight: 1.5 }}>
                 {error}
               </p>
             )}

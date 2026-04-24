@@ -8,8 +8,8 @@ import { geocodeCity } from "../../../lib/geocoding"
 const MapBien = dynamic(() => import("../../components/MapBien"), {
   ssr: false,
   loading: () => (
-    <div style={{ width: "100%", height: 320, borderRadius: 16, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <p style={{ color: "#9ca3af", fontSize: 13 }}>Chargement de la carte&hellip;</p>
+    <div style={{ width: "100%", height: 320, borderRadius: 16, background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <p style={{ color: "#8a8477", fontSize: 13 }}>Chargement de la carte&hellip;</p>
     </div>
   ),
 })
@@ -48,8 +48,8 @@ export default function MapBienWrapper(props: {
 
   if (!resolved) {
     return (
-      <div style={{ width: "100%", height: 320, borderRadius: 16, background: "#f9fafb", border: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <p style={{ color: "#9ca3af", fontSize: 13 }}>
+      <div style={{ width: "100%", height: 320, borderRadius: 16, background: "#F7F4EF", border: "1px solid #EAE6DF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p style={{ color: "#8a8477", fontSize: 13 }}>
           {geocoding ? "Chargement de la carte\u2026" : "Localisation indisponible"}
         </p>
       </div>

@@ -43,7 +43,7 @@ function Toggle({ checked, disabled, onChange }: { checked: boolean; disabled?: 
         height: 24,
         borderRadius: 999,
         border: "none",
-        background: checked ? "#111" : "#d1d5db",
+        background: checked ? "#111" : "#EAE6DF",
         position: "relative",
         cursor: disabled ? "not-allowed" : "pointer",
         transition: "background 0.2s ease",
@@ -80,7 +80,7 @@ function CategoryRow({ label, description, checked, disabled, onChange }: {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "12px 0", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
       <div style={{ flex: 1 }}>
         <p style={{ fontSize: 14, fontWeight: 700, color: "#111", margin: 0 }}>{label}</p>
-        <p style={{ fontSize: 12, color: "#6b7280", margin: "2px 0 0", lineHeight: 1.4 }}>{description}</p>
+        <p style={{ fontSize: 12, color: "#8a8477", margin: "2px 0 0", lineHeight: 1.4 }}>{description}</p>
       </div>
       <Toggle checked={checked} disabled={disabled} onChange={onChange} />
     </div>
@@ -233,7 +233,7 @@ export default function CookieBanner() {
           </div>
 
           {/* Description */}
-          <p style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.6, margin: "0 0 16px" }}>
+          <p style={{ fontSize: 13, color: "#8a8477", lineHeight: 1.6, margin: "0 0 16px" }}>
             KeyMatch utilise des cookies pour assurer le bon fonctionnement du site et améliorer votre expérience.
             Vous pouvez personnaliser vos choix à tout moment.{" "}
             <Link href="/cookies" style={{ color: "#111", fontWeight: 600, textDecoration: "underline", textUnderlineOffset: 2 }}>
@@ -305,7 +305,7 @@ export default function CookieBanner() {
                   onClick={() => setShowDetails(true)}
                   style={{
                     background: "none",
-                    border: "1.5px solid #e5e7eb",
+                    border: "1px solid #EAE6DF",
                     borderRadius: 999,
                     padding: "8px 20px",
                     fontWeight: 600,
@@ -316,7 +316,7 @@ export default function CookieBanner() {
                     transition: "border-color 0.2s ease",
                   }}
                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#111" }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#e5e7eb" }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#EAE6DF" }}
                 >
                   Personnaliser
                 </button>
@@ -329,14 +329,14 @@ export default function CookieBanner() {
                     fontWeight: 500,
                     fontSize: 13,
                     cursor: "pointer",
-                    color: "#9ca3af",
+                    color: "#8a8477",
                     fontFamily: "'DM Sans', sans-serif",
                     textDecoration: "underline",
                     textUnderlineOffset: 2,
                     transition: "color 0.2s ease",
                   }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#6b7280" }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "#9ca3af" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#8a8477" }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "#8a8477" }}
                 >
                   Tout refuser
                 </button>
@@ -366,7 +366,7 @@ export default function CookieBanner() {
                   onClick={handleAcceptAll}
                   style={{
                     background: "none",
-                    border: "1.5px solid #e5e7eb",
+                    border: "1px solid #EAE6DF",
                     borderRadius: 999,
                     padding: "8px 20px",
                     fontWeight: 600,
@@ -377,7 +377,7 @@ export default function CookieBanner() {
                     transition: "border-color 0.2s ease",
                   }}
                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#111" }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#e5e7eb" }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#EAE6DF" }}
                 >
                   Tout accepter
                 </button>

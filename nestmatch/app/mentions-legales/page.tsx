@@ -18,22 +18,22 @@ const sectionStyle: React.CSSProperties = {
 
 const h2: React.CSSProperties = { fontSize: 18, fontWeight: 800, marginBottom: 10, letterSpacing: "-0.3px" }
 const p: React.CSSProperties = { fontSize: 14, color: "#4b5563", lineHeight: 1.7, marginBottom: 10 }
-const todo: React.CSSProperties = { color: "#92400e", fontWeight: 700, background: "#fef3c7", padding: "1px 6px", borderRadius: 4 }
+const todo: React.CSSProperties = { color: "#a16207", fontWeight: 700, background: "#fef3c7", padding: "1px 6px", borderRadius: 4 }
 
 export default function MentionsLegales() {
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: "40px 20px" }}>
       <div style={{ maxWidth: 820, margin: "0 auto" }}>
-        <Link href="/" style={{ fontSize: 13, color: "#6b7280", textDecoration: "none" }}>← Retour à l&apos;accueil</Link>
+        <Link href="/" style={{ fontSize: 13, color: "#8a8477", textDecoration: "none" }}>← Retour à l&apos;accueil</Link>
 
         <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: "-0.5px", margin: "16px 0 4px" }}>
           Mentions légales
         </h1>
-        <p style={{ fontSize: 13, color: "#9ca3af", marginBottom: 28 }}>
+        <p style={{ fontSize: 13, color: "#8a8477", marginBottom: 28 }}>
           En vigueur au 18 avril 2026
         </p>
 
-        <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 14, padding: "14px 18px", marginBottom: 20 }}>
+        <div style={{ background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 14, padding: "14px 18px", marginBottom: 20 }}>
           <p style={{ fontSize: 13, color: "#9a3412", margin: 0, lineHeight: 1.6 }}>
             <strong>Note :</strong> cette page sera finalisée au lancement commercial de la plateforme avec les
             informations définitives d&apos;immatriculation de la société éditrice. Les champs marqués en surligné jaune

@@ -698,8 +698,8 @@ function StatsInner() {
 
   const statutMap: Record<string, { label: string; bg: string; color: string; border: string }> = {
     disponible: { label: "Disponible", bg: "#EEF3FB", color: "#1d4ed8", border: "#D7E3F4" },
-    "en visite": { label: "En visite", bg: "#FBF6EA", color: "#a16207", border: "#fed7aa" },
-    "réservé": { label: "Réservé", bg: "#fefce8", color: "#a16207", border: "#EADFC6" },
+    "en visite": { label: "En visite", bg: "#FBF6EA", color: "#a16207", border: "#EADFC6" },
+    "réservé": { label: "Réservé", bg: "#FBF6EA", color: "#a16207", border: "#EADFC6" },
     "loué": { label: "Loué", bg: "#F0FAEE", color: "#15803d", border: "#C6E9C0" },
   }
   const statutBadge = statutMap[bien.statut] || statutMap.disponible
@@ -812,7 +812,7 @@ function StatsInner() {
                       ...(edlStatut === "valide"
                         ? { background: "#F0FAEE", color: "#15803d", border: "1px solid #C6E9C0" }
                         : edlStatut === "envoye"
-                        ? { background: "#FBF6EA", color: "#a16207", border: "1px solid #fed7aa" }
+                        ? { background: "#FBF6EA", color: "#a16207", border: "1px solid #EADFC6" }
                         : edlStatut === "conteste"
                         ? { background: "#FEECEC", color: "#b91c1c", border: "1px solid #F4C9C9" }
                         : { background: "#EEF3FB", color: "#1d4ed8", border: "1px solid #D7E3F4" }),
@@ -908,7 +908,7 @@ function StatsInner() {
            ══════════════════════════════════════════════════════════════════════ */}
         {pendingLoyers.length > 0 && (
           <div style={{
-            background: "#FBF6EA", border: "1px solid #fed7aa", borderRadius: 14,
+            background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 14,
             padding: "12px 20px", marginBottom: 20,
             display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
             flexWrap: "wrap",
@@ -1122,7 +1122,7 @@ function StatsInner() {
             }}>
               {calendarMonths.map(m => {
                 const dotColor = m.status === "confirmé" ? "#15803d" : m.status === "déclaré" ? "#f97316" : "#EAE6DF"
-                const dotBg = m.status === "confirmé" ? "#F0FAEE" : m.status === "déclaré" ? "#FBF6EA" : "#f9fafb"
+                const dotBg = m.status === "confirmé" ? "#F0FAEE" : m.status === "déclaré" ? "#FBF6EA" : "#F7F4EF"
                 return (
                   <div key={m.key} style={{
                     display: "flex", flexDirection: "column", alignItems: "center",
@@ -1193,7 +1193,7 @@ function StatsInner() {
 
             {!valeurBien && (
               <div style={{ marginTop: 14, background: "#fffbeb", border: "1px solid #EADFC6", borderRadius: 10, padding: "10px 14px" }}>
-                <p style={{ fontSize: 12, color: "#92400e", fontWeight: 600, margin: 0 }}>
+                <p style={{ fontSize: 12, color: "#a16207", fontWeight: 600, margin: 0 }}>
                   Ajoutez la valeur du bien et la mensualite credit pour voir le ROI et le seuil de rentabilite
                 </p>
               </div>
@@ -1255,7 +1255,7 @@ function StatsInner() {
 
           {perPoints.length < 2 && (
             <div style={{ marginTop: 8, background: "#fffbeb", border: "1px solid #EADFC6", borderRadius: 10, padding: "10px 14px" }}>
-              <p style={{ fontSize: 12, color: "#92400e", fontWeight: 600, margin: 0 }}>
+              <p style={{ fontSize: 12, color: "#a16207", fontWeight: 600, margin: 0 }}>
                 Renseignez la date de debut du bail et la valeur du bien pour voir ce graphique
               </p>
             </div>
@@ -1319,15 +1319,15 @@ function StatsInner() {
                 const estConfirme = l.statut === "confirmé"
                 return (
                   <div key={l.id} style={{
-                    background: "#f9fafb", borderRadius: 14, padding: "14px 16px",
+                    background: "#F7F4EF", borderRadius: 14, padding: "14px 16px",
                     border: "1px solid #F7F4EF",
                   }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                       <span style={{ fontSize: 14, fontWeight: 700, textTransform: "capitalize" as const }}>{moisLabel}</span>
                       <span style={{
                         background: estConfirme ? "#F0FAEE" : "#FBF6EA",
-                        color: estConfirme ? "#15803d" : "#c2410c",
-                        border: `1px solid ${estConfirme ? "#C6E9C0" : "#fed7aa"}`,
+                        color: estConfirme ? "#15803d" : "#a16207",
+                        border: `1px solid ${estConfirme ? "#C6E9C0" : "#EADFC6"}`,
                         padding: "2px 9px", borderRadius: 999, fontSize: 11, fontWeight: 700,
                       }}>
                         {estConfirme ? "Confirme" : "En attente"}
@@ -1386,15 +1386,15 @@ function StatsInner() {
                   <div key={l.id} style={{
                     display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 0,
                     padding: "12px 16px", borderBottom: "1px solid #F7F4EF",
-                    background: i % 2 === 0 ? "white" : "#fafafa", alignItems: "center",
+                    background: i % 2 === 0 ? "white" : "#F7F4EF", alignItems: "center",
                   }}>
                     <span style={{ fontSize: 13, fontWeight: 600, textTransform: "capitalize" as const }}>{moisLabel}</span>
                     <span style={{ fontSize: 14, fontWeight: 700 }}>{l.montant.toLocaleString("fr-FR")} &euro;</span>
                     <span style={{ display: "inline-flex" }}>
                       <span style={{
                         background: estConfirme ? "#F0FAEE" : "#FBF6EA",
-                        color: estConfirme ? "#15803d" : "#c2410c",
-                        border: `1px solid ${estConfirme ? "#C6E9C0" : "#fed7aa"}`,
+                        color: estConfirme ? "#15803d" : "#a16207",
+                        border: `1px solid ${estConfirme ? "#C6E9C0" : "#EADFC6"}`,
                         padding: "2px 9px", borderRadius: 999, fontSize: 11, fontWeight: 700,
                       }}>
                         {estConfirme ? "Confirme" : "En attente"}

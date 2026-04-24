@@ -25,8 +25,8 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
   if (session && role === "proprietaire") {
     // Qualité uniquement sur sa propre annonce
     if (annonce.proprietaire_email === session.user?.email) return (
-      <div style={{ background: "#f9fafb", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
-        <p style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", marginBottom: 6 }}>Qualité de l'annonce</p>
+      <div style={{ background: "#F7F4EF", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+        <p style={{ fontSize: 12, fontWeight: 700, color: "#8a8477", marginBottom: 6 }}>Qualité de l'annonce</p>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           {[
             { label: "Photos", ok: false },
@@ -34,7 +34,7 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
             { label: "DPE renseigné", ok: !!annonce.dpe },
             { label: "Prix renseigné", ok: !!annonce.prix },
           ].map(item => (
-            <span key={item.label} style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 999, background: item.ok ? "#dcfce7" : "#f3f4f6", color: item.ok ? "#16a34a" : "#9ca3af" }}>
+            <span key={item.label} style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 999, background: item.ok ? "#F0FAEE" : "#F7F4EF", color: item.ok ? "#15803d" : "#8a8477" }}>
               {item.ok ? "✓" : "✗"} {item.label}
             </span>
           ))}
@@ -46,23 +46,23 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
   }
 
   if (loading) return (
-    <div style={{ background: "#f9fafb", borderRadius: 12, padding: "14px 16px", marginBottom: 16, textAlign: "center" }}>
-      <p style={{ fontSize: 13, color: "#9ca3af" }}>Calcul du score...</p>
+    <div style={{ background: "#F7F4EF", borderRadius: 12, padding: "14px 16px", marginBottom: 16, textAlign: "center" }}>
+      <p style={{ fontSize: 13, color: "#8a8477" }}>Calcul du score...</p>
     </div>
   )
 
   if (!session) return (
-    <div style={{ background: "#f9fafb", borderRadius: 12, padding: "14px 16px", marginBottom: 16, textAlign: "center" }}>
-      <p style={{ fontSize: 13, fontWeight: 700, color: "#6b7280", marginBottom: 6 }}>Score de compatibilité</p>
-      <p style={{ fontSize: 20, fontWeight: 900, color: "#d1d5db", marginBottom: 4 }}>•••</p>
+    <div style={{ background: "#F7F4EF", borderRadius: 12, padding: "14px 16px", marginBottom: 16, textAlign: "center" }}>
+      <p style={{ fontSize: 13, fontWeight: 700, color: "#8a8477", marginBottom: 6 }}>Score de compatibilité</p>
+      <p style={{ fontSize: 20, fontWeight: 900, color: "#EAE6DF", marginBottom: 4 }}>•••</p>
       <a href="/auth" style={{ fontSize: 12, fontWeight: 700, color: "#111", textDecoration: "underline" }}>Connectez-vous pour voir votre score</a>
     </div>
   )
 
   if (!profil) return (
-    <div style={{ background: "#fffbeb", borderRadius: 12, padding: "14px 16px", marginBottom: 16, textAlign: "center", border: "1px solid #fde68a" }}>
-      <p style={{ fontSize: 13, fontWeight: 700, color: "#92400e", marginBottom: 6 }}>Score de compatibilité</p>
-      <p style={{ fontSize: 12, color: "#92400e", marginBottom: 8 }}>Complétez votre profil pour voir votre score</p>
+    <div style={{ background: "#fffbeb", borderRadius: 12, padding: "14px 16px", marginBottom: 16, textAlign: "center", border: "1px solid #EADFC6" }}>
+      <p style={{ fontSize: 13, fontWeight: 700, color: "#a16207", marginBottom: 6 }}>Score de compatibilité</p>
+      <p style={{ fontSize: 12, color: "#a16207", marginBottom: 8 }}>Complétez votre profil pour voir votre score</p>
       <a href="/profil" style={{ display: "inline-block", background: "#111", color: "white", padding: "6px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700, textDecoration: "none" }}>Compléter mon profil</a>
     </div>
   )
@@ -95,13 +95,13 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
       {raisons.length > 0 && (
         <>
           <button onClick={() => setShowDetails(!showDetails)}
-            style={{ display: "block", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, color: "#6b7280", padding: 0, fontFamily: "inherit", textDecoration: "underline" }}>
+            style={{ display: "block", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, color: "#8a8477", padding: 0, fontFamily: "inherit", textDecoration: "underline" }}>
             {showDetails ? "Masquer les détails" : "Voir le détail du score"}
           </button>
           {showDetails && (
             <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 4 }}>
               {raisons.map((r, i) => (
-                <p key={i} style={{ fontSize: 12, color: r.startsWith("✓") ? "#16a34a" : "#dc2626", fontWeight: 500 }}>{r}</p>
+                <p key={i} style={{ fontSize: 12, color: r.startsWith("✓") ? "#15803d" : "#b91c1c", fontWeight: 500 }}>{r}</p>
               ))}
             </div>
           )}

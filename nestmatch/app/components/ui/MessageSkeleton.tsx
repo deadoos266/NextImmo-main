@@ -13,7 +13,7 @@ export default function MessageSkeleton() {
         alignItems: "center",
         gap: 12,
         padding: "12px 14px",
-        borderBottom: "1px solid #f3f4f6",
+        borderBottom: "1px solid #F7F4EF",
       }}
     >
       <Skeleton width={42} height={42} rounded="full" style={{ flexShrink: 0 }} />

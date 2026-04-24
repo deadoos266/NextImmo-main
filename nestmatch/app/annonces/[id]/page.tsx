@@ -136,7 +136,7 @@ export default async function Annonce({ params }: any) {
 
   // Le tracking des clics uniques est gere par le composant ViewTracker (client-side)
 
-  const dpeColor: any = { A: "#22c55e", B: "#84cc16", C: "#eab308", D: "#f97316", E: "#ef4444", F: "#dc2626", G: "#991b1b" }
+  const dpeColor: any = { A: "#22c55e", B: "#84cc16", C: "#eab308", D: "#f97316", E: "#b91c1c", F: "#b91c1c", G: "#b91c1c" }
   const photos: string[] = Array.isArray(annonce.photos) ? annonce.photos : []
   // Priorité : lat/lng précis sauvés depuis l'autocomplete BAN.
   // Fallback 1 : cityCoords statique. Fallback 2 (client) : geocoding Nominatim
@@ -305,34 +305,34 @@ export default async function Annonce({ params }: any) {
         {/* Breadcrumbs visibles (reflet du JSON-LD BreadcrumbList). Google
             affiche ça comme fil d'Ariane enrichi dans les SERP. */}
         <nav aria-label="Fil d'Ariane" style={{ marginBottom: 14 }}>
-          <ol style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexWrap: "wrap", gap: 6, fontSize: 13, color: "#6b7280" }}>
+          <ol style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexWrap: "wrap", gap: 6, fontSize: 13, color: "#8a8477" }}>
             <li>
-              <a href="/" style={{ color: "#6b7280", textDecoration: "none" }}>Accueil</a>
+              <a href="/" style={{ color: "#8a8477", textDecoration: "none" }}>Accueil</a>
             </li>
-            <li aria-hidden style={{ color: "#d1d5db" }}>›</li>
+            <li aria-hidden style={{ color: "#EAE6DF" }}>›</li>
             <li>
-              <a href="/annonces" style={{ color: "#6b7280", textDecoration: "none" }}>Annonces</a>
+              <a href="/annonces" style={{ color: "#8a8477", textDecoration: "none" }}>Annonces</a>
             </li>
             {annonce.ville && (
               <>
-                <li aria-hidden style={{ color: "#d1d5db" }}>›</li>
+                <li aria-hidden style={{ color: "#EAE6DF" }}>›</li>
                 <li>
-                  <a href={`/location/${encodeURIComponent(String(annonce.ville).toLowerCase())}`} style={{ color: "#6b7280", textDecoration: "none" }}>
+                  <a href={`/location/${encodeURIComponent(String(annonce.ville).toLowerCase())}`} style={{ color: "#8a8477", textDecoration: "none" }}>
                     Location {annonce.ville}
                   </a>
                 </li>
               </>
             )}
-            <li aria-hidden style={{ color: "#d1d5db" }}>›</li>
+            <li aria-hidden style={{ color: "#EAE6DF" }}>›</li>
             <li aria-current="page" style={{ color: "#111", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 340 }}>
               {annonce.titre}
             </li>
           </ol>
         </nav>
-        <a href="/annonces" style={{ fontSize: 14, color: "#6b7280", textDecoration: "none" }}>← Retour aux annonces</a>
+        <a href="/annonces" style={{ fontSize: 14, color: "#8a8477", textDecoration: "none" }}>← Retour aux annonces</a>
 
         {proprioVacances.actif && (
-          <div style={{ background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 14, padding: "14px 18px", margin: "16px 0 0", color: "#9a3412" }}>
+          <div style={{ background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 14, padding: "14px 18px", margin: "16px 0 0", color: "#9a3412" }}>
             <p style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>Délai de réponse prolongé</p>
             <p style={{ fontSize: 13, color: "#7c2d12", margin: "6px 0 0", lineHeight: 1.5 }}>
               {proprioVacances.message || "Le propriétaire indique un délai de réponse plus long que d'habitude. Vous pouvez quand même postuler."}
@@ -367,7 +367,7 @@ export default async function Annonce({ params }: any) {
             </h1>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, marginLeft: 16, marginTop: 8 }}>
-            <span style={{ background: annonce.dispo === "Disponible maintenant" ? "#dcfce7" : "#fff7ed", color: annonce.dispo === "Disponible maintenant" ? "#16a34a" : "#ea580c", padding: "6px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700, whiteSpace: "nowrap" }}>
+            <span style={{ background: annonce.dispo === "Disponible maintenant" ? "#F0FAEE" : "#FBF6EA", color: annonce.dispo === "Disponible maintenant" ? "#15803d" : "#a16207", padding: "6px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700, whiteSpace: "nowrap" }}>
               {annonce.dispo}
             </span>
             <ShareButton title={annonce.titre || "Logement à louer"} url={`${BASE_URL}/annonces/${id}`} />
@@ -376,22 +376,22 @@ export default async function Annonce({ params }: any) {
         </div>
 
         {annonce.statut === "loué" && (
-          <div style={{ background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 14, padding: "14px 18px", marginBottom: 16, color: "#991b1b", fontSize: 14, fontWeight: 600 }}>
+          <div style={{ background: "#fef2f2", border: "1px solid #F4C9C9", borderRadius: 14, padding: "14px 18px", marginBottom: 16, color: "#b91c1c", fontSize: 14, fontWeight: 600 }}>
             Cette annonce n&apos;est plus disponible — le bien a déjà été loué.
             {" "}
-            <a href="/annonces" style={{ color: "#991b1b", fontWeight: 700, textDecoration: "underline" }}>Voir d&apos;autres biens →</a>
+            <a href="/annonces" style={{ color: "#b91c1c", fontWeight: 700, textDecoration: "underline" }}>Voir d&apos;autres biens →</a>
           </div>
         )}
 
         {(nbVues >= 5 || nbCandidatures >= 2) && annonce.statut !== "loué" && (
           <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
             {nbVues >= 5 && (
-              <span style={{ background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1e40af", fontSize: 12, fontWeight: 700, padding: "4px 12px", borderRadius: 999 }}>
+              <span style={{ background: "#EEF3FB", border: "1px solid #D7E3F4", color: "#1d4ed8", fontSize: 12, fontWeight: 700, padding: "4px 12px", borderRadius: 999 }}>
                 {nbVues} personnes ont consulté ce bien
               </span>
             )}
             {nbCandidatures >= 2 && (
-              <span style={{ background: "#fff7ed", border: "1px solid #fed7aa", color: "#c2410c", fontSize: 12, fontWeight: 700, padding: "4px 12px", borderRadius: 999 }}>
+              <span style={{ background: "#FBF6EA", border: "1px solid #EADFC6", color: "#a16207", fontSize: 12, fontWeight: 700, padding: "4px 12px", borderRadius: 999 }}>
                 Plusieurs candidats déjà intéressés
               </span>
             )}
@@ -416,7 +416,7 @@ export default async function Annonce({ params }: any) {
               ))}
               {annonce.dpe && (
                 <div style={{ background: "white", borderRadius: 16, padding: "14px 18px", textAlign: "center", flex: 1, minWidth: 70, border: "1px solid #EAE6DF" }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: "white", background: dpeColor[annonce.dpe] || "#6b7280", width: 36, height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>{annonce.dpe}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "white", background: dpeColor[annonce.dpe] || "#8a8477", width: 36, height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>{annonce.dpe}</div>
                   <div style={{ fontSize: 11, color: "#666", marginTop: 6, fontWeight: 500, letterSpacing: "0.3px" }}>DPE</div>
                 </div>
               )}
@@ -436,14 +436,14 @@ export default async function Annonce({ params }: any) {
                   { label: "Ascenseur", val: annonce.ascenseur },
                 ].map(item => (
                   <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14 }}>
-                    <span aria-hidden style={{ width: 24, height: 24, borderRadius: "50%", background: item.val ? "#dcfce7" : "#f3f4f6", color: item.val ? "#16a34a" : "#9ca3af", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <span aria-hidden style={{ width: 24, height: 24, borderRadius: "50%", background: item.val ? "#F0FAEE" : "#F7F4EF", color: item.val ? "#15803d" : "#8a8477", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       {item.val ? (
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                       ) : (
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                       )}
                     </span>
-                    <span style={{ color: item.val ? "#111" : "#9ca3af" }}>{item.label}</span>
+                    <span style={{ color: item.val ? "#111" : "#8a8477" }}>{item.label}</span>
                   </div>
                 ))}
               </div>
@@ -459,7 +459,7 @@ export default async function Annonce({ params }: any) {
             {annonce.ville && (
               <div style={{ background: "white", borderRadius: 20, padding: 24 }}>
                 <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 6, letterSpacing: "-0.2px" }}>Localisation</h2>
-                <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 14 }}>
+                <p style={{ color: "#8a8477", fontSize: 13, marginBottom: 14 }}>
                   {annonce.localisation_exacte && annonce.adresse
                     ? `${annonce.adresse} · ${annonce.ville}`
                     : `${annonce.ville} — zone approximative`}
@@ -486,13 +486,13 @@ export default async function Annonce({ params }: any) {
               </div>
 
               {annonce.charges && (
-                <div style={{ background: "#f9fafb", borderRadius: 12, padding: "12px 16px", marginBottom: 16, fontSize: 13 }}>
+                <div style={{ background: "#F7F4EF", borderRadius: 12, padding: "12px 16px", marginBottom: 16, fontSize: 13 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                    <span style={{ color: "#6b7280" }}>Loyer CC</span>
+                    <span style={{ color: "#8a8477" }}>Loyer CC</span>
                     <span style={{ fontWeight: 700 }}>{Number(annonce.prix) + Number(annonce.charges)} €</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "#6b7280" }}>Dépôt de garantie</span>
+                    <span style={{ color: "#8a8477" }}>Dépôt de garantie</span>
                     <span style={{ fontWeight: 700 }}>{Number(annonce.caution || annonce.prix)} €</span>
                   </div>
                 </div>
@@ -504,9 +504,9 @@ export default async function Annonce({ params }: any) {
               <OwnerActions proprietaireEmail={annonce.proprietaire_email} annonceId={annonce.id} />
               <ViewTracker annonceId={annonce.id} />
 
-              <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 16 }}>
+              <div style={{ borderTop: "1px solid #F7F4EF", paddingTop: 16 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 44, height: 44, background: "#e5e7eb", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 18, flexShrink: 0 }}>
+                  <div style={{ width: 44, height: 44, background: "#EAE6DF", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 18, flexShrink: 0 }}>
                     {annonce.proprietaire?.[0] || "?"}
                   </div>
                   <div>
@@ -514,13 +514,13 @@ export default async function Annonce({ params }: any) {
                       <span style={{ fontWeight: 700, fontSize: 14 }}>{annonce.proprietaire || "Propriétaire"}</span>
                       {annonce.verifie && <span style={{ color: "#2563eb", fontSize: 12, fontWeight: 700 }}>✓ Vérifié</span>}
                     </div>
-                    <span style={{ color: "#9ca3af", fontSize: 12 }}>{annonce.membre}</span>
+                    <span style={{ color: "#8a8477", fontSize: 12 }}>{annonce.membre}</span>
                   </div>
                 </div>
                 {/* Bio publique du propriétaire — affichée aux visiteurs
                     pour humaniser le contact. Editable depuis /parametres > Profil. */}
                 {proprioBio && (
-                  <blockquote style={{ margin: "12px 0 0", padding: "10px 14px", background: "#F7F4EF", borderLeft: "3px solid #111", borderRadius: "0 10px 10px 0", fontSize: 13, lineHeight: 1.55, color: "#374151", fontStyle: "italic" }}>
+                  <blockquote style={{ margin: "12px 0 0", padding: "10px 14px", background: "#F7F4EF", borderLeft: "3px solid #111", borderRadius: "0 10px 10px 0", fontSize: 13, lineHeight: 1.55, color: "#111", fontStyle: "italic" }}>
                     &laquo;&nbsp;{proprioBio}&nbsp;&raquo;
                   </blockquote>
                 )}

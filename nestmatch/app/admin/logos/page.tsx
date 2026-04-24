@@ -30,7 +30,7 @@ export default function LogosPreview() {
     <main style={{ minHeight: "calc(100vh - 72px)", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: "40px 24px" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.5px", margin: 0 }}>Logos fenêtre — propositions</h1>
-        <p style={{ fontSize: 14, color: "#6b7280", marginTop: 6, marginBottom: 36, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 14, color: "#8a8477", marginTop: 6, marginBottom: 36, lineHeight: 1.6 }}>
           Deux variantes à comparer. Toutes les deux utilisent le dégradé orange→rouge de la marque pour cohérence
           avec le A actuel + les bandes emails. Choisis celle qui te plaît, je la plug partout (navbar + footer + emails + favicon).
         </p>
@@ -39,9 +39,9 @@ export default function LogosPreview() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28, marginBottom: 40 }}>
 
           {/* Variante A */}
-          <div style={{ background: "white", borderRadius: 24, padding: 32, border: "1px solid #f3f4f6" }}>
+          <div style={{ background: "white", borderRadius: 24, padding: 32, border: "1px solid #F7F4EF" }}>
             <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0, marginBottom: 6 }}>Variante A — Rond (hublot)</h2>
-            <p style={{ fontSize: 13, color: "#6b7280", margin: 0, marginBottom: 22 }}>Cercle avec croix interne (vertical court + horizontal long).</p>
+            <p style={{ fontSize: 13, color: "#8a8477", margin: 0, marginBottom: 22 }}>Cercle avec croix interne (vertical court + horizontal long).</p>
 
             <div style={{ display: "flex", gap: 24, alignItems: "center", justifyContent: "center", padding: 32, background: "#F7F4EF", borderRadius: 16 }}>
               <LogoFenetreRond size={120} />
@@ -62,9 +62,9 @@ export default function LogosPreview() {
           </div>
 
           {/* Variante B */}
-          <div style={{ background: "white", borderRadius: 24, padding: 32, border: "1px solid #f3f4f6" }}>
+          <div style={{ background: "white", borderRadius: 24, padding: 32, border: "1px solid #F7F4EF" }}>
             <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0, marginBottom: 6 }}>Variante B — Arche (fenêtre classique)</h2>
-            <p style={{ fontSize: 13, color: "#6b7280", margin: 0, marginBottom: 22 }}>Demi-cercle en haut + carré avec 3 traits (2 horizontaux, 1 vertical).</p>
+            <p style={{ fontSize: 13, color: "#8a8477", margin: 0, marginBottom: 22 }}>Demi-cercle en haut + carré avec 3 traits (2 horizontaux, 1 vertical).</p>
 
             <div style={{ display: "flex", gap: 24, alignItems: "center", justifyContent: "center", padding: 32, background: "#F7F4EF", borderRadius: 16 }}>
               <LogoFenetreArche size={120} />
@@ -85,15 +85,15 @@ export default function LogosPreview() {
           </div>
         </div>
 
-        <div style={{ background: "white", borderRadius: 20, padding: 24, border: "1px solid #f3f4f6" }}>
+        <div style={{ background: "white", borderRadius: 20, padding: 24, border: "1px solid #F7F4EF" }}>
           <h3 style={{ fontSize: 14, fontWeight: 800, margin: 0, marginBottom: 12 }}>Comment ça se propage si tu valides ?</h3>
-          <ul style={{ fontSize: 13, color: "#374151", lineHeight: 1.7, margin: 0, paddingLeft: 20 }}>
-            <li>Remplacement de l&apos;icône dans <code style={{ background: "#f3f4f6", padding: "0 5px", borderRadius: 4, fontSize: 11 }}>app/components/Logo.tsx</code> (navbar, footer, auth, hero, PDF, emails)</li>
-            <li>Update de <code style={{ background: "#f3f4f6", padding: "0 5px", borderRadius: 4, fontSize: 11 }}>lib/email/templates.ts</code> (logoSvg inline)</li>
-            <li>Update de <code style={{ background: "#f3f4f6", padding: "0 5px", borderRadius: 4, fontSize: 11 }}>app/icon.svg</code> + favicon + PNG generés (192/256/512)</li>
-            <li>Update du logo dans les PDFs bail/EDL via <code style={{ background: "#f3f4f6", padding: "0 5px", borderRadius: 4, fontSize: 11 }}>lib/brandPDF.ts</code></li>
+          <ul style={{ fontSize: 13, color: "#111", lineHeight: 1.7, margin: 0, paddingLeft: 20 }}>
+            <li>Remplacement de l&apos;icône dans <code style={{ background: "#F7F4EF", padding: "0 5px", borderRadius: 4, fontSize: 11 }}>app/components/Logo.tsx</code> (navbar, footer, auth, hero, PDF, emails)</li>
+            <li>Update de <code style={{ background: "#F7F4EF", padding: "0 5px", borderRadius: 4, fontSize: 11 }}>lib/email/templates.ts</code> (logoSvg inline)</li>
+            <li>Update de <code style={{ background: "#F7F4EF", padding: "0 5px", borderRadius: 4, fontSize: 11 }}>app/icon.svg</code> + favicon + PNG generés (192/256/512)</li>
+            <li>Update du logo dans les PDFs bail/EDL via <code style={{ background: "#F7F4EF", padding: "0 5px", borderRadius: 4, fontSize: 11 }}>lib/brandPDF.ts</code></li>
           </ul>
-          <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 14, margin: 0 }}>Dis-moi A ou B et je déploie partout.</p>
+          <p style={{ fontSize: 12, color: "#8a8477", marginTop: 14, margin: 0 }}>Dis-moi A ou B et je déploie partout.</p>
         </div>
       </div>
     </main>

@@ -47,7 +47,7 @@ export default function ContactPage() {
   const inp: React.CSSProperties = {
     width: "100%",
     padding: "12px 16px",
-    border: "1.5px solid #e5e7eb",
+    border: "1px solid #EAE6DF",
     borderRadius: 12,
     fontSize: 15,
     outline: "none",
@@ -60,7 +60,7 @@ export default function ContactPage() {
   const lbl: React.CSSProperties = {
     fontSize: 12,
     fontWeight: 700,
-    color: "#6b7280",
+    color: "#8a8477",
     textTransform: "uppercase",
     letterSpacing: "0.5px",
     display: "block",
@@ -72,13 +72,13 @@ export default function ContactPage() {
       <div style={{ maxWidth: 640, margin: "0 auto", padding: isMobile ? "32px 16px" : "56px 32px" }}>
 
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 12 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 12 }}>
             Contact
           </p>
           <h1 style={{ fontSize: isMobile ? 28 : 38, fontWeight: 800, letterSpacing: "-1px", marginBottom: 10 }}>
             Une question ? Écrivez-nous.
           </h1>
-          <p style={{ color: "#6b7280", fontSize: isMobile ? 14 : 15, lineHeight: 1.6 }}>
+          <p style={{ color: "#8a8477", fontSize: isMobile ? 14 : 15, lineHeight: 1.6 }}>
             Notre équipe revient vers vous sous 48 heures ouvrées.
           </p>
         </div>
@@ -86,7 +86,7 @@ export default function ContactPage() {
         {done ? (
           <div style={{ background: "white", borderRadius: 20, padding: isMobile ? "28px 20px" : "40px 32px", textAlign: "center", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
             <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 10, color: "#15803d" }}>Message envoyé</h2>
-            <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, marginBottom: 20 }}>
+            <p style={{ fontSize: 14, color: "#111", lineHeight: 1.6, marginBottom: 20 }}>
               Merci pour votre message. Un membre de l'équipe KeyMatch vous répondra par email sous 48 heures.
             </p>
             <button
@@ -146,7 +146,7 @@ export default function ContactPage() {
                 placeholder="Décrivez votre demande le plus précisément possible."
                 style={{ ...inp, resize: "vertical", minHeight: 140 }}
               />
-              <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 6 }}>
+              <p style={{ fontSize: 11, color: "#8a8477", marginTop: 6 }}>
                 {message.trim().length} / 4000 caractères
               </p>
             </div>
@@ -165,7 +165,7 @@ export default function ContactPage() {
             </div>
 
             {error && (
-              <div style={{ background: "#fee2e2", color: "#dc2626", padding: "10px 14px", borderRadius: 10, fontSize: 13, fontWeight: 600 }}>
+              <div style={{ background: "#FEECEC", color: "#b91c1c", padding: "10px 14px", borderRadius: 10, fontSize: 13, fontWeight: 600 }}>
                 {error}
               </div>
             )}
@@ -174,7 +174,7 @@ export default function ContactPage() {
               type="submit"
               disabled={loading}
               style={{
-                background: loading ? "#9ca3af" : "#111",
+                background: loading ? "#8a8477" : "#111",
                 color: "white",
                 border: "none",
                 borderRadius: 999,
@@ -189,7 +189,7 @@ export default function ContactPage() {
               {loading ? "Envoi..." : "Envoyer le message"}
             </button>
 
-            <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 4, lineHeight: 1.5 }}>
+            <p style={{ fontSize: 11, color: "#8a8477", marginTop: 4, lineHeight: 1.5 }}>
               Vos données ne sont utilisées que pour répondre à votre demande et conservées 12 mois.
               Conformément au RGPD, vous pouvez demander leur suppression à tout moment.
             </p>
@@ -197,7 +197,7 @@ export default function ContactPage() {
         )}
 
         <div style={{ marginTop: 32, textAlign: "center" }}>
-          <p style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.7 }}>
+          <p style={{ fontSize: 13, color: "#8a8477", lineHeight: 1.7 }}>
             Vous avez déjà un compte ? Les questions liées à une annonce ou à un utilisateur
             peuvent aussi être remontées via le bouton <strong>Signaler</strong> dans la plateforme.
           </p>

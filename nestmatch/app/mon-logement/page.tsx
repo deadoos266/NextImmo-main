@@ -622,7 +622,7 @@ export default function MonLogement() {
                         <p style={{ fontSize: 10, fontWeight: 700, color: "#1d4ed8", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: "1.2px" }}>
                           Loyer de {moisLabel}
                         </p>
-                        <p style={{ fontSize: 13, color: "#1e40af", margin: 0 }}>
+                        <p style={{ fontSize: 13, color: "#1d4ed8", margin: 0 }}>
                           {dejaDeclare
                             ? "Paiement signalé — en attente de confirmation par votre propriétaire."
                             : "Signalez votre paiement."}
@@ -756,7 +756,7 @@ export default function MonLogement() {
               </div>
 
               {doubleSigne && edls.length === 0 && (
-                <div style={{ marginTop: 16, padding: "14px 18px", background: "#EEF3FB", border: "1px solid #D7E3F4", borderRadius: 14, fontSize: 13, color: "#1e40af", lineHeight: 1.6 }}>
+                <div style={{ marginTop: 16, padding: "14px 18px", background: "#EEF3FB", border: "1px solid #D7E3F4", borderRadius: 14, fontSize: 13, color: "#1d4ed8", lineHeight: 1.6 }}>
                   <strong style={{ fontWeight: 600 }}>Prochaine étape :</strong> état des lieux d&apos;entrée avec votre propriétaire.
                   Vous le retrouverez ici dès qu&apos;il sera créé.
                 </div>

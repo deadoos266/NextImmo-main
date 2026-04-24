@@ -167,7 +167,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               leurs dépendances client (useSession, useRole, useResponsive).
               Le fallback préserve la hauteur pour éviter le CLS au mount.
               Voir investigation /annonces?ville=Paris 2026-04-21. */}
-          <MountedOnly fallback={<div style={{ height: 72, background: "white", borderBottom: "1px solid #e5e7eb" }} aria-hidden />}>
+          <MountedOnly fallback={<div style={{ height: 72, background: "white", borderBottom: "1px solid #EAE6DF" }} aria-hidden />}>
             <Navbar />
           </MountedOnly>
           {children}

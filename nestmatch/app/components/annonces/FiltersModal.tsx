@@ -223,12 +223,12 @@ export default function FiltersModal(props: FiltersModalProps) {
   if (!open) return null
 
   const DPE: Array<{ letter: string; color: string }> = [
-    { letter: "A", color: "#16a34a" },
+    { letter: "A", color: "#15803d" },
     { letter: "B", color: "#65a30d" },
     { letter: "C", color: "#eab308" },
     { letter: "D", color: "#f59e0b" },
-    { letter: "E", color: "#ea580c" },
-    { letter: "F", color: "#dc2626" },
+    { letter: "E", color: "#a16207" },
+    { letter: "F", color: "#b91c1c" },
     { letter: "G", color: "#7f1d1d" },
   ]
   const dpeMaxIdx = filtreDpeMax ? DPE.findIndex(d => d.letter === filtreDpeMax) : -1
@@ -547,8 +547,8 @@ export default function FiltersModal(props: FiltersModalProps) {
                   style={{
                     marginTop: 8,
                     background: animauxOverride ? "#F1EEE8" : "white",
-                    color: "#92400e",
-                    border: "1px solid #fde68a",
+                    color: "#a16207",
+                    border: "1px solid #EADFC6",
                     borderRadius: 999,
                     padding: "6px 14px",
                     fontSize: 12,

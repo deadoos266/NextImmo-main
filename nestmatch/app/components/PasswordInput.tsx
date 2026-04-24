@@ -34,7 +34,7 @@ export default function PasswordInput({ value, onChange, placeholder, required, 
         style={{
           width: "100%",
           padding: "12px 44px 12px 16px",
-          border: "1.5px solid #e5e7eb",
+          border: "1px solid #EAE6DF",
           borderRadius: 10,
           fontSize: 15,
           outline: "none",
@@ -64,11 +64,11 @@ export default function PasswordInput({ value, onChange, placeholder, required, 
           alignItems: "center",
           justifyContent: "center",
           padding: 0,
-          color: visible ? "#111" : "#9ca3af",
+          color: visible ? "#111" : "#8a8477",
           transition: "color 0.15s",
         }}
         onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#111" }}
-        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = visible ? "#111" : "#9ca3af" }}
+        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = visible ? "#111" : "#8a8477" }}
       >
         {visible ? (
           // Icone oeil ouvert (visible)

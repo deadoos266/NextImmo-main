@@ -43,7 +43,7 @@ export default function ActiverProprietaire() {
           <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.5px", marginBottom: 12 }}>
             Espace propriétaire
           </h1>
-          <p style={{ color: "#6b7280", fontSize: 15, lineHeight: 1.6, marginBottom: 32 }}>
+          <p style={{ color: "#8a8477", fontSize: 15, lineHeight: 1.6, marginBottom: 32 }}>
             Cet espace est réservé aux propriétaires qui souhaitent mettre leur bien en location.
             En activant ce mode, vous pourrez publier des annonces, recevoir des candidatures et gérer vos locations.
           </p>
@@ -54,9 +54,9 @@ export default function ActiverProprietaire() {
               { title: "Ciblez", desc: "Recevez des candidats compatibles" },
               { title: "Gérez", desc: "Messagerie et suivi des loyers" },
             ].map(item => (
-              <div key={item.title} style={{ background: "#f9fafb", borderRadius: 14, padding: "16px 12px" }}>
+              <div key={item.title} style={{ background: "#F7F4EF", borderRadius: 14, padding: "16px 12px" }}>
                 <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{item.title}</div>
-                <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.4 }}>{item.desc}</div>
+                <div style={{ fontSize: 12, color: "#8a8477", lineHeight: 1.4 }}>{item.desc}</div>
               </div>
             ))}
           </div>
@@ -70,12 +70,12 @@ export default function ActiverProprietaire() {
 
           <button
             onClick={() => router.push("/annonces")}
-            style={{ background: "none", border: "none", color: "#6b7280", fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
+            style={{ background: "none", border: "none", color: "#8a8477", fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
             Je suis locataire, retour aux annonces
           </button>
         </div>
 
-        <p style={{ textAlign: "center", marginTop: 16, fontSize: 12, color: "#9ca3af" }}>
+        <p style={{ textAlign: "center", marginTop: 16, fontSize: 12, color: "#8a8477" }}>
           Vous pourrez repasser en mode locataire à tout moment depuis la barre de navigation.
         </p>
       </div>

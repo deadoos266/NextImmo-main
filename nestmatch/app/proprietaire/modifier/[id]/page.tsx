@@ -98,7 +98,7 @@ export default function ModifierBien() {
 
   const set = (key: string) => (e: any) => setForm(f => ({ ...f, [key]: e.target.value }))
   const toInt = (v: string) => v ? parseInt(v) : null
-  const inp: any = { width: "100%", padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 16, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }
+  const inp: any = { width: "100%", padding: "11px 14px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 16, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }
   const sel: any = { ...inp, background: "white" }
   const dejaLoue = form.statut === "loué"
 
@@ -198,7 +198,7 @@ export default function ModifierBien() {
   }
 
   if (status === "loading" || loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif", color: "#6b7280" }}>Chargement...</div>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif", color: "#8a8477" }}>Chargement...</div>
   )
 
   if (notFound) return (
@@ -211,14 +211,14 @@ export default function ModifierBien() {
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 48px" }}>
-        <a href="/proprietaire" style={{ fontSize: 14, color: "#6b7280", textDecoration: "none" }}>← Retour au dashboard</a>
+        <a href="/proprietaire" style={{ fontSize: 14, color: "#8a8477", textDecoration: "none" }}>← Retour au dashboard</a>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "16px 0 4px" }}>
           <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.5px" }}>Modifier l'annonce</h1>
-          <a href={`/annonces/${bienId}`} style={{ fontSize: 13, color: "#6b7280", textDecoration: "none", padding: "7px 14px", border: "1.5px solid #e5e7eb", borderRadius: 999, fontWeight: 600 }}>
+          <a href={`/annonces/${bienId}`} style={{ fontSize: 13, color: "#8a8477", textDecoration: "none", padding: "7px 14px", border: "1px solid #EAE6DF", borderRadius: 999, fontWeight: 600 }}>
             Voir l'annonce publiée →
           </a>
         </div>
-        <p style={{ color: "#6b7280", marginBottom: 32, fontSize: 14 }}>Les modifications sont appliquées immédiatement après sauvegarde.</p>
+        <p style={{ color: "#8a8477", marginBottom: 32, fontSize: 14 }}>Les modifications sont appliquées immédiatement après sauvegarde.</p>
 
         <Sec t="Informations générales">
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
@@ -265,7 +265,7 @@ export default function ModifierBien() {
                 value={form.dispo && form.dispo !== "Disponible maintenant" && /^\d{4}-\d{2}-\d{2}$/.test(form.dispo) ? form.dispo : ""}
                 onChange={e => setForm(f => ({ ...f, dispo: e.target.value || "Disponible maintenant" }))}
               />
-              <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 6 }}>
+              <p style={{ fontSize: 11, color: "#8a8477", marginTop: 6 }}>
                 Laisser vide = &quot;Disponible maintenant&quot;
               </p>
             </F>
@@ -275,16 +275,16 @@ export default function ModifierBien() {
         {/* Photos */}
         <Sec t="Photos du bien">
           {photoError && (
-            <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <p style={{ fontSize: 13, color: "#dc2626" }}>{photoError}</p>
-              <button type="button" aria-label="Fermer le message d'erreur" onClick={() => setPhotoError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: 18 }}>×</button>
+            <div style={{ background: "#FEECEC", border: "1px solid #F4C9C9", borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <p style={{ fontSize: 13, color: "#b91c1c" }}>{photoError}</p>
+              <button type="button" aria-label="Fermer le message d'erreur" onClick={() => setPhotoError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#b91c1c", fontSize: 18 }}>×</button>
             </div>
           )}
 
           {photos.length > 0 && (
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
               {photos.map((url, idx) => (
-                <div key={idx} style={{ position: "relative", width: 120, height: 90, borderRadius: 10, overflow: "hidden", border: "1.5px solid #e5e7eb" }}>
+                <div key={idx} style={{ position: "relative", width: 120, height: 90, borderRadius: 10, overflow: "hidden", border: "1px solid #EAE6DF" }}>
                   <img src={url} alt={`Photo ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   <button onClick={() => removePhoto(idx)}
                     style={{ position: "absolute", top: 4, right: 4, background: "rgba(0,0,0,0.6)", border: "none", borderRadius: "50%", width: 22, height: 22, cursor: "pointer", color: "white", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -313,7 +313,7 @@ export default function ModifierBien() {
           <button
             onClick={() => photoInputRef.current?.click()}
             disabled={uploadingPhoto}
-            style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 20px", border: "2px dashed #d1d5db", borderRadius: 12, background: "transparent", cursor: uploadingPhoto ? "not-allowed" : "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: "#6b7280", opacity: uploadingPhoto ? 0.6 : 1 }}>
+            style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 20px", border: "2px dashed #EAE6DF", borderRadius: 12, background: "transparent", cursor: uploadingPhoto ? "not-allowed" : "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: "#8a8477", opacity: uploadingPhoto ? 0.6 : 1 }}>
             {uploadingPhoto ? <span>Upload en cours...</span> : <><span style={{ fontSize: 20 }}>+</span><span>Ajouter des photos — {photos.length}/10</span></>}
           </button>
         </Sec>
@@ -321,8 +321,8 @@ export default function ModifierBien() {
         {/* Champs loué */}
         {dejaLoue && (
           <Sec t="Informations de location en cours">
-            <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12, padding: "12px 16px", marginBottom: 20 }}>
-              <p style={{ fontSize: 13, color: "#16a34a", fontWeight: 600 }}>Ce bien est géré en mode privé et n'apparaît pas dans les annonces publiques.</p>
+            <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 12, padding: "12px 16px", marginBottom: 20 }}>
+              <p style={{ fontSize: 13, color: "#15803d", fontWeight: 600 }}>Ce bien est géré en mode privé et n'apparaît pas dans les annonces publiques.</p>
             </div>
             <div style={{ marginBottom: 20 }}>
               <LocataireEmailField value={form.locataire_email} onChange={v => setForm(f => ({ ...f, locataire_email: v }))} inputStyle={inp} />
@@ -341,7 +341,7 @@ export default function ModifierBien() {
                 <input style={inp} value={form.valeur_bien} onChange={set("valeur_bien")} type="number" placeholder="250000" />
               </F>
             </div>
-            <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 20, marginTop: 20 }}>
+            <div style={{ borderTop: "1px solid #F7F4EF", paddingTop: 20, marginTop: 20 }}>
               <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 14, color: "#111" }}>Charges annuelles du propriétaire</p>
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
                 <F l="Taxe foncière (€/an)">
@@ -400,7 +400,7 @@ export default function ModifierBien() {
 
         <Sec t={<>Confidentialité de la localisation <Tooltip text="Par défaut, seul un cercle autour de la ville est affiché sur la carte publique, ce qui protège votre adresse exacte. Activez cette option uniquement si vous souhaitez afficher la position précise du bien à tous les visiteurs de l'annonce." /></>}>
           <Toggle label="Afficher la localisation exacte du bien sur la carte publique" k="localisation_exacte" toggles={toggles} setToggles={setToggles} />
-          <p style={{ fontSize: 12, color: "#6b7280", marginTop: 6, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 12, color: "#8a8477", marginTop: 6, lineHeight: 1.5 }}>
             {toggles.localisation_exacte
               ? "Les visiteurs verront un marqueur précis à l'adresse du bien."
               : "Les visiteurs verront uniquement une zone approximative (cercle de 400 m autour de la ville). Recommandé."}
@@ -412,11 +412,11 @@ export default function ModifierBien() {
         </Sec>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <a href="/proprietaire" style={{ padding: "14px 28px", border: "1.5px solid #e5e7eb", borderRadius: 999, textDecoration: "none", color: "#111", fontWeight: 600, fontSize: 14 }}>
+          <a href="/proprietaire" style={{ padding: "14px 28px", border: "1px solid #EAE6DF", borderRadius: 999, textDecoration: "none", color: "#111", fontWeight: 600, fontSize: 14 }}>
             Annuler
           </a>
           <button onClick={sauvegarder} disabled={saving || saved}
-            style={{ background: saved ? "#16a34a" : saving ? "#9ca3af" : "#111", color: "white", border: "none", borderRadius: 999, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: saving || saved ? "not-allowed" : "pointer", fontFamily: "inherit", transition: "background 0.2s" }}>
+            style={{ background: saved ? "#15803d" : saving ? "#8a8477" : "#111", color: "white", border: "none", borderRadius: 999, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: saving || saved ? "not-allowed" : "pointer", fontFamily: "inherit", transition: "background 0.2s" }}>
             {saved ? "Sauvegardé ✓" : saving ? "Sauvegarde..." : "Sauvegarder les modifications"}
           </button>
         </div>

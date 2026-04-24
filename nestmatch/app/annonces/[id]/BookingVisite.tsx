@@ -10,10 +10,10 @@ const HEURES = [
 ]
 
 const STATUT_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  "proposée":  { bg: "#fff7ed", color: "#c2410c", label: "En attente de confirmation" },
-  "confirmée": { bg: "#dcfce7", color: "#15803d", label: "Confirmée" },
-  "annulée":   { bg: "#fee2e2", color: "#dc2626", label: "Annulée" },
-  "effectuée": { bg: "#f3f4f6", color: "#374151", label: "Effectuée" },
+  "proposée":  { bg: "#FBF6EA", color: "#a16207", label: "En attente de confirmation" },
+  "confirmée": { bg: "#F0FAEE", color: "#15803d", label: "Confirmée" },
+  "annulée":   { bg: "#FEECEC", color: "#b91c1c", label: "Annulée" },
+  "effectuée": { bg: "#F7F4EF", color: "#111", label: "Effectuée" },
 }
 
 export default function BookingVisite({
@@ -127,7 +127,7 @@ export default function BookingVisite({
   if (!session || isOwner || loading || !proprietaireEmail) return null
 
   const inp: any = {
-    width: "100%", padding: "10px 14px", border: "1.5px solid #e5e7eb",
+    width: "100%", padding: "10px 14px", border: "1px solid #EAE6DF",
     borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box",
     fontFamily: "inherit", background: "white",
   }
@@ -136,22 +136,22 @@ export default function BookingVisite({
   if (existante && existante.statut !== "annulée") {
     const style = STATUT_STYLE[existante.statut] ?? STATUT_STYLE["proposée"]
     return (
-      <div style={{ background: "white", borderRadius: 20, padding: "20px 24px", border: "1.5px solid #e5e7eb", marginTop: 16 }}>
+      <div style={{ background: "white", borderRadius: 20, padding: "20px 24px", border: "1px solid #EAE6DF", marginTop: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
           <p style={{ fontWeight: 700, fontSize: 15 }}>Votre visite</p>
           <span style={{ marginLeft: "auto", background: style.bg, color: style.color, fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>
             {style.label}
           </span>
         </div>
-        <p style={{ fontSize: 14, color: "#374151" }}>
+        <p style={{ fontSize: 14, color: "#111" }}>
           <strong>{new Date(existante.date_visite).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</strong> à <strong>{existante.heure}</strong>
         </p>
         {existante.message && (
-          <p style={{ fontSize: 13, color: "#6b7280", marginTop: 6, fontStyle: "italic" }}>"{existante.message}"</p>
+          <p style={{ fontSize: 13, color: "#8a8477", marginTop: 6, fontStyle: "italic" }}>"{existante.message}"</p>
         )}
         {existante.statut === "proposée" && (
           <button onClick={annuler}
-            style={{ marginTop: 12, fontSize: 13, fontWeight: 600, color: "#dc2626", background: "none", border: "1.5px solid #fecaca", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontFamily: "inherit" }}>
+            style={{ marginTop: 12, fontSize: 13, fontWeight: 600, color: "#b91c1c", background: "none", border: "1px solid #F4C9C9", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontFamily: "inherit" }}>
             Annuler la visite
           </button>
         )}
@@ -163,7 +163,7 @@ export default function BookingVisite({
     <div style={{ marginTop: 16 }}>
       {!open ? (
         <button onClick={() => setOpen(true)}
-          style={{ width: "100%", padding: "13px 0", background: "#f0fdf4", border: "1.5px solid #bbf7d0", color: "#15803d", borderRadius: 14, fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          style={{ width: "100%", padding: "13px 0", background: "#F0FAEE", border: "1px solid #C6E9C0", color: "#15803d", borderRadius: 14, fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
           Proposer une visite
         </button>
       ) : (
@@ -172,12 +172,12 @@ export default function BookingVisite({
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 14 }}>
             <div>
-              <label style={{ fontSize: 13, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 6 }}>Date *</label>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "#8a8477", display: "block", marginBottom: 6 }}>Date *</label>
               <input type="date" style={inp} value={date} onChange={e => setDate(e.target.value)}
                 min={new Date().toISOString().split("T")[0]} />
             </div>
             <div>
-              <label style={{ fontSize: 13, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 6 }}>Créneau *</label>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "#8a8477", display: "block", marginBottom: 6 }}>Créneau *</label>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
                 {HEURES.map(h => (
                   <button
@@ -188,7 +188,7 @@ export default function BookingVisite({
                       padding: "12px 0",
                       minHeight: 44,
                       borderRadius: 8,
-                      border: heure === h ? "2px solid #111" : "1.5px solid #e5e7eb",
+                      border: heure === h ? "2px solid #111" : "1px solid #EAE6DF",
                       background: heure === h ? "#111" : "white",
                       color: heure === h ? "white" : "#111",
                       fontSize: 14,
@@ -205,20 +205,20 @@ export default function BookingVisite({
           </div>
 
           <div style={{ marginBottom: 14 }}>
-            <label style={{ fontSize: 13, fontWeight: 600, color: "#6b7280", display: "block", marginBottom: 6 }}>Message (optionnel)</label>
+            <label style={{ fontSize: 13, fontWeight: 600, color: "#8a8477", display: "block", marginBottom: 6 }}>Message (optionnel)</label>
             <textarea style={{ ...inp, resize: "vertical", minHeight: 70 }} value={message}
               onChange={e => setMessage(e.target.value)} placeholder="Présentez-vous brièvement..." />
           </div>
 
           {erreur && (
-            <div style={{ background: "#fee2e2", color: "#dc2626", padding: "8px 14px", borderRadius: 8, fontSize: 13, fontWeight: 600, marginBottom: 14 }}>
+            <div style={{ background: "#FEECEC", color: "#b91c1c", padding: "8px 14px", borderRadius: 8, fontSize: 13, fontWeight: 600, marginBottom: 14 }}>
               {erreur}
             </div>
           )}
 
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={() => { setOpen(false); setErreur("") }}
-              style={{ flex: 1, padding: "10px 0", background: "none", border: "1.5px solid #e5e7eb", borderRadius: 999, cursor: "pointer", fontWeight: 600, fontSize: 14, fontFamily: "inherit" }}>
+              style={{ flex: 1, padding: "10px 0", background: "none", border: "1px solid #EAE6DF", borderRadius: 999, cursor: "pointer", fontWeight: 600, fontSize: 14, fontFamily: "inherit" }}>
               Annuler
             </button>
             <button onClick={proposer} disabled={saving}

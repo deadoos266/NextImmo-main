@@ -283,9 +283,9 @@ const STYLES = {
   field: {
     wrap: { marginBottom: 18 } as React.CSSProperties,
     label: { display: "block", fontSize: 11, fontWeight: 700, color: T.soft, marginBottom: 8, textTransform: "uppercase", letterSpacing: "1.4px" } as React.CSSProperties,
-    input: (isMobile: boolean): React.CSSProperties => ({ width: "100%", padding: "11px 14px", border: `1.5px solid ${T.line}`, borderRadius: 10, fontSize: isMobile ? 16 : 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box", background: T.white, color: T.ink, fontVariantNumeric: "tabular-nums" }),
+    input: (isMobile: boolean): React.CSSProperties => ({ width: "100%", padding: "11px 14px", border: `1px solid ${T.line}`, borderRadius: 10, fontSize: isMobile ? 16 : 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box", background: T.white, color: T.ink, fontVariantNumeric: "tabular-nums" }),
     inputDisabled: { background: T.mutedBg, color: T.soft } as React.CSSProperties,
-    textarea: (isMobile: boolean): React.CSSProperties => ({ width: "100%", padding: "14px 16px", border: `1.5px solid ${T.line}`, borderRadius: 14, fontSize: isMobile ? 16 : 14.5, fontFamily: "'DM Sans', sans-serif", fontStyle: "italic", fontWeight: 400, outline: "none", resize: "vertical", boxSizing: "border-box", lineHeight: 1.55, color: "#222", background: T.mutedBg }),
+    textarea: (isMobile: boolean): React.CSSProperties => ({ width: "100%", padding: "14px 16px", border: `1px solid ${T.line}`, borderRadius: 14, fontSize: isMobile ? 16 : 14.5, fontFamily: "'DM Sans', sans-serif", fontStyle: "italic", fontWeight: 400, outline: "none", resize: "vertical", boxSizing: "border-box", lineHeight: 1.55, color: "#222", background: T.mutedBg }),
   },
 
   chip: {
@@ -293,7 +293,7 @@ const STYLES = {
     base: (active: boolean): React.CSSProperties => ({
       padding: "8px 14px",
       borderRadius: 999,
-      border: "1.5px solid",
+      border: "1px solid",
       cursor: "pointer",
       fontFamily: "inherit",
       fontSize: 13,
@@ -314,7 +314,7 @@ const STYLES = {
       padding: "12px 14px",
       background: checked ? T.successBg : T.mutedBg,
       borderRadius: 12,
-      border: `1.5px solid ${checked ? T.successLine : T.hairline}`,
+      border: `1px solid ${checked ? T.successLine : T.hairline}`,
       transition: "all 0.15s",
     }),
     track: (checked: boolean): React.CSSProperties => ({
@@ -353,7 +353,7 @@ const STYLES = {
       padding: 14,
       borderRadius: 14,
       background: drag ? "#EEF3FB" : done ? T.successBg : T.mutedBg,
-      border: `1.5px solid ${drag ? T.ink : done ? T.successLine : T.line}`,
+      border: `1px solid ${drag ? T.ink : done ? T.successLine : T.line}`,
       outline: drag ? `1.5px dashed ${T.ink}` : "none",
       outlineOffset: drag ? -4 : 0,
       display: "flex",
@@ -371,7 +371,7 @@ const STYLES = {
       borderRadius: "50%",
       background: done ? T.success : T.white,
       color: done ? T.white : T.soft,
-      border: done ? "none" : `1.5px solid ${T.line}`,
+      border: done ? "none" : `1px solid ${T.line}`,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -595,7 +595,7 @@ function LockedInput({ value }: { value: string }) {
           width: "100%",
           padding: "11px 40px 11px 14px",
           background: T.mutedBg,
-          border: `1.5px solid ${T.line}`,
+          border: `1px solid ${T.line}`,
           borderRadius: 10,
           fontSize: 15,
           color: T.ink,
@@ -1966,7 +1966,7 @@ export default function Dossier() {
                     <TextInput type="number" value={form.revenus_mensuels} onChange={v => setForm(f => ({ ...f, revenus_mensuels: v }))} placeholder="2 500" isMobile={isMobile} />
                   </Field>
                   <Field label={<>Loyer max recommandé <Tooltip text="Règle des 33% (ou règle du tiers) : on considère qu'un locataire est solvable si son loyer charges comprises ne dépasse pas 33 % de ses revenus nets. C'est une pratique du marché, pas une obligation légale." /></>}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 14px", background: T.mutedBg, borderRadius: 10, fontSize: 14, fontWeight: 600, color: T.ink, border: `1.5px solid ${T.line}`, boxSizing: "border-box" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 14px", background: T.mutedBg, borderRadius: 10, fontSize: 14, fontWeight: 600, color: T.ink, border: `1px solid ${T.line}`, boxSizing: "border-box" }}>
                       {Number(form.revenus_mensuels) > 0 ? (
                         <>
                           <span style={{ fontSize: 18, fontWeight: 400, color: T.success, fontVariantNumeric: "tabular-nums" }}>
@@ -2033,7 +2033,7 @@ export default function Dossier() {
                         style={{
                           padding: "10px 22px",
                           borderRadius: 999,
-                          border: "1.5px solid",
+                          border: "1px solid",
                           cursor: "pointer",
                           fontFamily: "inherit",
                           fontSize: 14,

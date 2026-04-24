@@ -68,11 +68,11 @@ function useFrenchLeaflet() {
 function scoreToMarkerColor(score: number | null): { bg: string; border: string; text: string } {
   if (score === null) return { bg: "#111", border: "#111", text: "white" }
   const pct = Math.round(score / 10)
-  if (pct >= 80) return { bg: "#16a34a", border: "#15803d", text: "white" }
+  if (pct >= 80) return { bg: "#15803d", border: "#15803d", text: "white" }
   if (pct >= 65) return { bg: "#65a30d", border: "#4d7c0f", text: "white" }
   if (pct >= 50) return { bg: "#ca8a04", border: "#a16207", text: "white" }
-  if (pct >= 30) return { bg: "#ea580c", border: "#c2410c", text: "white" }
-  return { bg: "#dc2626", border: "#b91c1c", text: "white" }
+  if (pct >= 30) return { bg: "#a16207", border: "#a16207", text: "white" }
+  return { bg: "#b91c1c", border: "#b91c1c", text: "white" }
 }
 
 function priceMarker(prix: number, selected: boolean, score: number | null) {
@@ -188,8 +188,8 @@ export default function MapAnnonces({
   const initialZoom = centerHint ? 11 : (withCoords.length > 0 ? 9 : 6)
 
   if (withCoords.length === 0 && !centerHint) return (
-    <div style={{ width: "100%", height: "100%", background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <p style={{ color: "#9ca3af", fontSize: 14, textAlign: "center" }}>Aucune annonce avec coordonnées disponibles pour cette recherche</p>
+    <div style={{ width: "100%", height: "100%", background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <p style={{ color: "#8a8477", fontSize: 14, textAlign: "center" }}>Aucune annonce avec coordonnées disponibles pour cette recherche</p>
     </div>
   )
   const tile = TILES[mapType]
@@ -275,7 +275,7 @@ export default function MapAnnonces({
                           onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.12)" }}
                           onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)" }}
                         >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill={isFavori ? "#dc2626" : "none"} stroke={isFavori ? "#dc2626" : "#6b7280"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill={isFavori ? "#b91c1c" : "none"} stroke={isFavori ? "#b91c1c" : "#8a8477"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                           </svg>
                         </button>
@@ -283,7 +283,7 @@ export default function MapAnnonces({
                     </div>
                   )}
                   <p style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{a.titre}</p>
-                  <p style={{ color: "#6b7280", fontSize: 12 }}>{a.surface} m&sup2; &middot; {a.pieces} p. &middot; {a.ville}</p>
+                  <p style={{ color: "#8a8477", fontSize: 12 }}>{a.surface} m&sup2; &middot; {a.pieces} p. &middot; {a.ville}</p>
                   <p style={{ fontWeight: 800, fontSize: 14, margin: "6px 0" }}>{a.prix} &euro;/mois</p>
                   <a href={`/annonces/${a.id}`} style={{ fontSize: 12, fontWeight: 600, color: "#111" }}>Voir l'annonce &rarr;</a>
                 </div>
@@ -326,18 +326,18 @@ export default function MapAnnonces({
       {/* v5.4 : Légende compatibilité déplacée en haut (top-right, sous le
           selecteur de type de carte) — plus accessible, évite d'être hors
           viewport quand la carte occupe toute la hauteur dispo. */}
-      <div style={{ position: "absolute", top: 64, right: 12, zIndex: 1000, background: "white", borderRadius: 10, boxShadow: "0 2px 12px rgba(0,0,0,0.15)", padding: "8px 12px", border: "1px solid #e5e7eb", display: "flex", flexDirection: "column", gap: 4 }}>
+      <div style={{ position: "absolute", top: 64, right: 12, zIndex: 1000, background: "white", borderRadius: 10, boxShadow: "0 2px 12px rgba(0,0,0,0.15)", padding: "8px 12px", border: "1px solid #EAE6DF", display: "flex", flexDirection: "column", gap: 4 }}>
         <p style={{ fontSize: 10, fontWeight: 700, color: "#111", marginBottom: 2, textTransform: "uppercase", letterSpacing: "0.5px" }}>Compatibilit&eacute;</p>
         {[
-          { color: "#16a34a", label: "80% +" },
+          { color: "#15803d", label: "80% +" },
           { color: "#65a30d", label: "65\u201379%" },
           { color: "#ca8a04", label: "50\u201364%" },
-          { color: "#ea580c", label: "30\u201349%" },
-          { color: "#dc2626", label: "< 30%" },
+          { color: "#a16207", label: "30\u201349%" },
+          { color: "#b91c1c", label: "< 30%" },
         ].map(l => (
           <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <div style={{ width: 12, height: 12, borderRadius: 999, background: l.color, border: `2px solid ${l.color}` }} />
-            <span style={{ fontSize: 11, color: "#6b7280", fontFamily: "'DM Sans',sans-serif" }}>{l.label}</span>
+            <span style={{ fontSize: 11, color: "#8a8477", fontFamily: "'DM Sans',sans-serif" }}>{l.label}</span>
           </div>
         ))}
       </div>
@@ -347,7 +347,7 @@ export default function MapAnnonces({
       <div style={{
         position: "absolute", top: 16, right: 12, zIndex: 1000,
         background: "white", borderRadius: 10, boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
-        display: "flex", overflow: "hidden", border: "1px solid #e5e7eb"
+        display: "flex", overflow: "hidden", border: "1px solid #EAE6DF"
       }}>
         {(Object.keys(TILES) as MapType[]).map((t, i) => (
           <button key={t} onClick={() => setMapType(t)}
@@ -355,8 +355,8 @@ export default function MapAnnonces({
               padding: "7px 12px", border: "none", cursor: "pointer",
               fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 600,
               background: mapType === t ? "#111" : "white",
-              color: mapType === t ? "white" : "#374151",
-              borderRight: i < 2 ? "1px solid #e5e7eb" : "none",
+              color: mapType === t ? "white" : "#111",
+              borderRight: i < 2 ? "1px solid #EAE6DF" : "none",
               transition: "all 0.15s",
             }}>
             {TILES[t].label}

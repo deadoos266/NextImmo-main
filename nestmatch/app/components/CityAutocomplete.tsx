@@ -154,7 +154,7 @@ export default function CityAutocomplete({ value, onChange, onSelect, placeholde
   const defaultStyle: React.CSSProperties = {
     width: "100%",
     padding: "11px 14px",
-    border: "1.5px solid #e5e7eb",
+    border: "1px solid #EAE6DF",
     borderRadius: 10,
     fontSize: 14,
     outline: "none",
@@ -192,7 +192,7 @@ export default function CityAutocomplete({ value, onChange, onSelect, placeholde
           left: 0,
           right: 0,
           background: "white",
-          border: "1.5px solid #e5e7eb",
+          border: "1px solid #EAE6DF",
           borderRadius: 10,
           maxHeight: 280,
           overflowY: "auto",
@@ -208,21 +208,21 @@ export default function CityAutocomplete({ value, onChange, onSelect, placeholde
                 padding: "10px 14px",
                 cursor: "pointer",
                 fontSize: 14,
-                background: i === highlight ? "#f3f4f6" : "white",
+                background: i === highlight ? "#F7F4EF" : "white",
                 color: "#111",
                 fontFamily: "'DM Sans', sans-serif",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
                 gap: 10,
-                borderBottom: i < suggestions.length - 1 ? "1px solid #f9fafb" : "none",
+                borderBottom: i < suggestions.length - 1 ? "1px solid #F7F4EF" : "none",
               }}
             >
               <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {s.nom}
               </span>
               {s.codePostaux.length > 0 && (
-                <span style={{ fontSize: 12, color: "#6b7280", fontWeight: 500, flexShrink: 0 }}>
+                <span style={{ fontSize: 12, color: "#8a8477", fontWeight: 500, flexShrink: 0 }}>
                   {displayCP(s.codePostaux)}
                 </span>
               )}
@@ -237,12 +237,12 @@ export default function CityAutocomplete({ value, onChange, onSelect, placeholde
           left: 0,
           right: 0,
           background: "white",
-          border: "1.5px solid #e5e7eb",
+          border: "1px solid #EAE6DF",
           borderRadius: 10,
           zIndex: 100,
           padding: "12px 14px",
           fontSize: 13,
-          color: "#6b7280",
+          color: "#8a8477",
           boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
         }}>
           Aucune commune trouvée. {isNumericQuery(trimmed) ? "Vérifiez le code postal." : "Essayez un autre nom ou un code postal."}
@@ -255,12 +255,12 @@ export default function CityAutocomplete({ value, onChange, onSelect, placeholde
           left: 0,
           right: 0,
           background: "white",
-          border: "1.5px solid #e5e7eb",
+          border: "1px solid #EAE6DF",
           borderRadius: 10,
           zIndex: 100,
           padding: "12px 14px",
           fontSize: 13,
-          color: "#9ca3af",
+          color: "#8a8477",
           boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
         }}>
           Recherche…

@@ -45,8 +45,8 @@ export default function PipelineFunnel({ biens, candidatures, visites, clicsParB
     { label: "Intéressés",              count: totalClics,         color: "#2563eb", desc: "Clics uniques sur vos annonces" },
     { label: "Candidatures",            count: totalCandidatures,  color: "#7c3aed", desc: "Messages reçus" },
     { label: "Dossiers partagés",       count: dossiersCount ?? 0, color: "#db2777", desc: "Candidats ayant envoyé leur dossier" },
-    { label: "Visites",                 count: totalVisites,       color: "#ea580c", desc: "Visites organisées" },
-    { label: "Baux signés",             count: baux,               color: "#16a34a", desc: "Biens effectivement loués" },
+    { label: "Visites",                 count: totalVisites,       color: "#a16207", desc: "Visites organisées" },
+    { label: "Baux signés",             count: baux,               color: "#15803d", desc: "Biens effectivement loués" },
   ]
 
   // Largeur relative au max pour le funnel (toutes les étapes > 0 gardent au moins 18% de largeur pour rester lisibles)
@@ -69,11 +69,11 @@ export default function PipelineFunnel({ biens, candidatures, visites, clicsParB
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 4, letterSpacing: "-0.3px" }}>Pipeline candidats</h2>
-          <p style={{ fontSize: 13, color: "#6b7280" }}>Parcours global depuis la publication jusqu&apos;à la signature du bail</p>
+          <p style={{ fontSize: 13, color: "#8a8477" }}>Parcours global depuis la publication jusqu&apos;à la signature du bail</p>
         </div>
         <div style={{ textAlign: "right" }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px" }}>Conversion globale</p>
-          <p style={{ fontSize: 22, fontWeight: 800, color: baux > 0 ? "#16a34a" : "#9ca3af", letterSpacing: "-0.5px" }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "0.5px" }}>Conversion globale</p>
+          <p style={{ fontSize: 22, fontWeight: 800, color: baux > 0 ? "#15803d" : "#8a8477", letterSpacing: "-0.5px" }}>
             {totalClics > 0 ? `${Math.round((baux / totalClics) * 100)}%` : "—"}
           </p>
         </div>
@@ -117,10 +117,10 @@ export default function PipelineFunnel({ biens, candidatures, visites, clicsParB
                 {convLabel ? (
                   <>
                     <p style={{ fontSize: 15, fontWeight: 800, color: stage.color, lineHeight: 1 }}>{convLabel}</p>
-                    <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>vs étape précédente</p>
+                    <p style={{ fontSize: 10, color: "#8a8477", marginTop: 2 }}>vs étape précédente</p>
                   </>
                 ) : (
-                  <p style={{ fontSize: 10, color: "#d1d5db" }}>départ</p>
+                  <p style={{ fontSize: 10, color: "#EAE6DF" }}>départ</p>
                 )}
               </div>
             </div>
@@ -129,8 +129,8 @@ export default function PipelineFunnel({ biens, candidatures, visites, clicsParB
       </div>
 
       {totalClics === 0 && (
-        <div style={{ marginTop: 16, padding: "12px 16px", background: "#f9fafb", borderRadius: 12, textAlign: "center" }}>
-          <p style={{ fontSize: 13, color: "#6b7280" }}>
+        <div style={{ marginTop: 16, padding: "12px 16px", background: "#F7F4EF", borderRadius: 12, textAlign: "center" }}>
+          <p style={{ fontSize: 13, color: "#8a8477" }}>
             Pas encore de trafic sur vos annonces. Vos données apparaîtront ici dès les premières visites sur la plateforme.
           </p>
         </div>

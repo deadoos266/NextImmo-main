@@ -17,12 +17,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 /* ── Paragraph ── */
 function P({ children }: { children: React.ReactNode }) {
-  return <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.75, margin: "0 0 12px" }}>{children}</p>
+  return <p style={{ fontSize: 14, color: "#111", lineHeight: 1.75, margin: "0 0 12px" }}>{children}</p>
 }
 
 /* ── Cookie table row ── */
 function CookieTableRow({ category, purpose, duration, legal }: { category: string; purpose: string; duration: string; legal: string }) {
-  const cellStyle: React.CSSProperties = { padding: "12px 14px", fontSize: 13, color: "#374151", lineHeight: 1.5, borderBottom: "1px solid #f3f4f6" }
+  const cellStyle: React.CSSProperties = { padding: "12px 14px", fontSize: 13, color: "#111", lineHeight: 1.5, borderBottom: "1px solid #F7F4EF" }
   return (
     <tr>
       <td style={{ ...cellStyle, fontWeight: 700, color: "#111" }}>{category}</td>
@@ -61,10 +61,10 @@ export default function CookiesPage() {
     padding: "12px 14px",
     fontSize: 11,
     fontWeight: 800,
-    color: "#6b7280",
+    color: "#8a8477",
     textTransform: "uppercase",
     letterSpacing: "0.5px",
-    borderBottom: "2px solid #e5e7eb",
+    borderBottom: "2px solid #EAE6DF",
     textAlign: "left",
   }
 
@@ -76,14 +76,14 @@ export default function CookiesPage() {
         <div style={{ marginBottom: 40 }}>
           <Link
             href="/"
-            style={{ fontSize: 13, color: "#6b7280", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 20 }}
+            style={{ fontSize: 13, color: "#8a8477", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 20 }}
           >
             <span style={{ fontSize: 16 }}>←</span> Retour à l&apos;accueil
           </Link>
           <h1 style={{ fontSize: isMobile ? 28 : 36, fontWeight: 800, color: "#111", margin: "0 0 8px", letterSpacing: "-0.5px" }}>
             Politique de cookies
           </h1>
-          <p style={{ fontSize: 14, color: "#6b7280", margin: 0 }}>En vigueur au 18 avril 2026</p>
+          <p style={{ fontSize: 14, color: "#8a8477", margin: 0 }}>En vigueur au 18 avril 2026</p>
         </div>
 
         {/* Content card */}
@@ -168,7 +168,7 @@ export default function CookiesPage() {
                 { name: "Safari", url: "Préférences > Confidentialité" },
                 { name: "Microsoft Edge", url: "edge://settings/privacy" },
               ].map(b => (
-                <li key={b.name} style={{ fontSize: 14, color: "#374151", lineHeight: 2 }}>
+                <li key={b.name} style={{ fontSize: 14, color: "#111", lineHeight: 2 }}>
                   <strong>{b.name}</strong> : {b.url}
                 </li>
               ))}
@@ -185,16 +185,16 @@ export default function CookiesPage() {
               Certains services tiers intégrés à KeyMatch peuvent déposer leurs propres cookies :
             </P>
             <ul style={{ paddingLeft: 20, margin: "8px 0 16px" }}>
-              <li style={{ fontSize: 14, color: "#374151", lineHeight: 2 }}>
+              <li style={{ fontSize: 14, color: "#111", lineHeight: 2 }}>
                 <strong>Google OAuth</strong> — L&apos;authentification via Google implique le dépôt de cookies
                 par Google pour gérer la session d&apos;authentification. Ces cookies sont strictement nécessaires
                 à la connexion avec votre compte Google.
               </li>
-              <li style={{ fontSize: 14, color: "#374151", lineHeight: 2 }}>
+              <li style={{ fontSize: 14, color: "#111", lineHeight: 2 }}>
                 <strong>Base de données</strong> — Notre base de données utilise des mécanismes techniques de gestion
                 de session. Aucun cookie de suivi n&apos;est déposé.
               </li>
-              <li style={{ fontSize: 14, color: "#374151", lineHeight: 2 }}>
+              <li style={{ fontSize: 14, color: "#111", lineHeight: 2 }}>
                 <strong>OpenStreetMap</strong> — L&apos;affichage des cartes peut impliquer le chargement
                 de tuiles depuis les serveurs OpenStreetMap, susceptibles de déposer des cookies techniques.
               </li>
@@ -216,7 +216,7 @@ export default function CookiesPage() {
                 "Droit d'opposition : vous opposer au traitement de vos données pour des motifs légitimes.",
                 "Droit à la portabilité : recevoir vos données dans un format structuré et lisible.",
               ].map(d => (
-                <li key={d} style={{ fontSize: 14, color: "#374151", lineHeight: 2 }}>{d}</li>
+                <li key={d} style={{ fontSize: 14, color: "#111", lineHeight: 2 }}>{d}</li>
               ))}
             </ul>
             <P>
@@ -247,7 +247,7 @@ export default function CookiesPage() {
           </Section>
 
           {/* Divider */}
-          <div style={{ height: 1, background: "#e5e7eb", margin: "32px 0" }} />
+          <div style={{ height: 1, background: "#EAE6DF", margin: "32px 0" }} />
 
           {/* Preferences section */}
           {!prefsOpened ? (
@@ -272,7 +272,7 @@ export default function CookiesPage() {
                 href="/"
                 style={{
                   background: "none",
-                  border: "1.5px solid #e5e7eb",
+                  border: "1px solid #EAE6DF",
                   borderRadius: 999,
                   padding: "8px 20px",
                   fontWeight: 600,
@@ -318,7 +318,7 @@ export default function CookiesPage() {
                   onClick={() => setPrefsOpened(false)}
                   style={{
                     background: "none",
-                    border: "1.5px solid #e5e7eb",
+                    border: "1px solid #EAE6DF",
                     borderRadius: 999,
                     padding: "8px 20px",
                     fontWeight: 600,
@@ -348,10 +348,10 @@ function PreferenceRow({ label, description, checked, disabled, onChange }: {
   onChange?: (v: boolean) => void
 }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "12px 0", borderBottom: "1px solid #f3f4f6" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "12px 0", borderBottom: "1px solid #F7F4EF" }}>
       <div style={{ flex: 1 }}>
         <p style={{ fontSize: 14, fontWeight: 700, color: "#111", margin: 0 }}>{label}</p>
-        <p style={{ fontSize: 12, color: "#6b7280", margin: "2px 0 0" }}>{description}</p>
+        <p style={{ fontSize: 12, color: "#8a8477", margin: "2px 0 0" }}>{description}</p>
       </div>
       <button
         type="button"
@@ -364,7 +364,7 @@ function PreferenceRow({ label, description, checked, disabled, onChange }: {
           height: 24,
           borderRadius: 999,
           border: "none",
-          background: checked ? "#111" : "#d1d5db",
+          background: checked ? "#111" : "#EAE6DF",
           position: "relative",
           cursor: disabled ? "not-allowed" : "pointer",
           transition: "background 0.2s ease",

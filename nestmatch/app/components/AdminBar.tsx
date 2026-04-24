@@ -29,7 +29,7 @@ export default function AdminBar() {
       fontFamily: "'DM Sans', sans-serif",
       flexWrap: "wrap",
     }}>
-      <span style={{ background: "#dc2626", color: "white", padding: "2px 10px", borderRadius: 999, fontWeight: 700, letterSpacing: "0.5px" }}>ADMIN</span>
+      <span style={{ background: "#b91c1c", color: "white", padding: "2px 10px", borderRadius: 999, fontWeight: 700, letterSpacing: "0.5px" }}>ADMIN</span>
 
       <span style={{ opacity: 0.8 }}>Voir le site en tant que :</span>
 

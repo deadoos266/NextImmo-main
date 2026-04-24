@@ -92,7 +92,7 @@ export default function MesVisites() {
   const prochaine = visites.find(v => v.statut === "confirmée" && new Date(v.date_visite) >= new Date())
 
   if (status === "loading" || loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif", color: "#6b7280" }}>Chargement...</div>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif", color: "#8a8477" }}>Chargement...</div>
   )
 
   return (
@@ -132,7 +132,7 @@ export default function MesVisites() {
               <p style={{ fontWeight: 600, fontSize: 16, color: "#111", margin: "4px 0 2px", letterSpacing: "-0.2px" }}>
                 {annonces[prochaine.annonce_id]?.titre || "Bien"}
               </p>
-              <p style={{ fontSize: 13, color: "#166534", margin: 0, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 13, color: "#15803d", margin: 0, lineHeight: 1.5 }}>
                 {formatDate(prochaine.date_visite)} à {prochaine.heure}
                 <span style={{ marginLeft: 10, background: "#DCF5E4", color: "#15803d", fontSize: 10, fontWeight: 700, padding: "2px 10px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "1.2px" }}>
                   {jours(prochaine.date_visite)}

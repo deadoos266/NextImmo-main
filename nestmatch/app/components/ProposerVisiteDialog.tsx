@@ -88,7 +88,7 @@ export default function ProposerVisiteDialog({
 
   const photo = Array.isArray(annonce?.photos) && annonce!.photos!.length > 0 ? annonce!.photos![0] : null
   const matchColor = typeof matchPct === "number"
-    ? (matchPct >= 80 ? "#16a34a" : matchPct >= 60 ? "#ea580c" : "#dc2626")
+    ? (matchPct >= 80 ? "#15803d" : matchPct >= 60 ? "#a16207" : "#b91c1c")
     : "#8a8477"
 
   return (

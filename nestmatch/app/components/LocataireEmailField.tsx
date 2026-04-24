@@ -41,7 +41,7 @@ export default function LocataireEmailField({
 
   return (
     <div>
-      <label style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6 }}>Email du locataire</label>
+      <label style={{ fontSize: 12, fontWeight: 700, color: "#8a8477", display: "block", marginBottom: 6 }}>Email du locataire</label>
       <input
         style={inputStyle}
         value={value}
@@ -52,37 +52,37 @@ export default function LocataireEmailField({
 
       {/* Status badge */}
       {statut === "checking" && (
-        <p style={{ fontSize: 11, color: "#6b7280", marginTop: 6 }}>Verification...</p>
+        <p style={{ fontSize: 11, color: "#8a8477", marginTop: 6 }}>Verification...</p>
       )}
       {statut === "found" && (
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
-          <span style={{ background: "#dcfce7", color: "#16a34a", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>
+          <span style={{ background: "#F0FAEE", color: "#15803d", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>
             ✓ Compte KeyMatch trouve
           </span>
-          <span style={{ fontSize: 11, color: "#16a34a" }}>Tout sera connecte automatiquement</span>
+          <span style={{ fontSize: 11, color: "#15803d" }}>Tout sera connecte automatiquement</span>
         </div>
       )}
       {statut === "not_found" && value.includes("@") && (
         <div style={{ marginTop: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-            <span style={{ background: "#fff7ed", color: "#ea580c", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>
+            <span style={{ background: "#FBF6EA", color: "#a16207", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>
               Pas encore inscrit sur KeyMatch
             </span>
           </div>
-          <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 10, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 12, color: "#8a8477", marginBottom: 10, lineHeight: 1.5 }}>
             Votre locataire pourra s'inscrire avec cette adresse email. Tout se connectera automatiquement (messages, EDL, quittances).
           </p>
           <button onClick={copierInvitation}
             style={{
               display: "flex", alignItems: "center", gap: 8,
-              padding: "9px 16px", background: copied ? "#dcfce7" : "#eff6ff",
-              border: `1.5px solid ${copied ? "#bbf7d0" : "#bfdbfe"}`,
+              padding: "9px 16px", background: copied ? "#F0FAEE" : "#EEF3FB",
+              border: `1px solid ${copied ? "#C6E9C0" : "#D7E3F4"}`,
               borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
-              fontSize: 12, fontWeight: 700, color: copied ? "#16a34a" : "#1d4ed8",
+              fontSize: 12, fontWeight: 700, color: copied ? "#15803d" : "#1d4ed8",
             }}>
             {copied ? "✓ Invitation copiee !" : "Copier le message d'invitation"}
           </button>
-          <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 6 }}>
+          <p style={{ fontSize: 11, color: "#8a8477", marginTop: 6 }}>
             Envoyez ce message par SMS, WhatsApp ou email a votre locataire
           </p>
         </div>

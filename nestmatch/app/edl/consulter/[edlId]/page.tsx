@@ -22,7 +22,7 @@ const ETAT_STYLE: Record<Etat, { bg: string; color: string; border: string }> = 
   "Bon":      { bg: "#EEF3FB", color: "#1d4ed8", border: "#D7E3F4" },
   "Usage":    { bg: "#FBF6EA", color: "#a16207", border: "#EADFC6" },
   "Mauvais":  { bg: "#FEECEC", color: "#b91c1c", border: "#F4C9C9" },
-  "Degrade":  { bg: "#FEECEC", color: "#991b1b", border: "#F4C9C9" },
+  "Degrade":  { bg: "#FEECEC", color: "#b91c1c", border: "#F4C9C9" },
 }
 
 type ElementData = { etat: Etat; observation: string }
@@ -414,17 +414,17 @@ export default function ConsulterEdlPage() {
 
         {statut === "valide" && (
           <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
-            <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: 0 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: "#15803d", margin: 0 }}>
               État des lieux validé {edl.date_validation ? `le ${new Date(edl.date_validation).toLocaleDateString("fr-FR")}` : ""}
             </p>
           </div>
         )}
 
         {statut === "conteste" && (
-          <div style={{ background: "#fefce8", border: "1px solid #fde68a", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
-            <p style={{ fontSize: 14, fontWeight: 700, color: "#92400e", margin: edl.commentaire_locataire ? "0 0 8px" : 0 }}>État des lieux contesté — en attente de révision par le propriétaire</p>
+          <div style={{ background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: "#a16207", margin: edl.commentaire_locataire ? "0 0 8px" : 0 }}>État des lieux contesté — en attente de révision par le propriétaire</p>
             {edl.commentaire_locataire && (
-              <p style={{ fontSize: 13, color: "#92400e", margin: "4px 0 0", fontStyle: "italic" }}>
+              <p style={{ fontSize: 13, color: "#a16207", margin: "4px 0 0", fontStyle: "italic" }}>
                 "{edl.commentaire_locataire}"
               </p>
             )}
@@ -564,14 +564,14 @@ export default function ConsulterEdlPage() {
               </div>
             ) : (
               <div>
-                <p style={{ fontSize: 13, fontWeight: 600, color: "#92400e", marginBottom: 10 }}>Décrivez les points que vous contestez :</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: "#a16207", marginBottom: 10 }}>Décrivez les points que vous contestez :</p>
                 <textarea
                   value={commentaire}
                   onChange={e => setCommentaire(e.target.value)}
                   placeholder="Indiquez les éléments que vous souhaitez contester et pourquoi..."
                   rows={4}
                   style={{
-                    width: "100%", padding: "12px 14px", border: "1px solid #fde68a", borderRadius: 12,
+                    width: "100%", padding: "12px 14px", border: "1px solid #EADFC6", borderRadius: 12,
                     fontSize: 14, outline: "none", fontFamily: "inherit", boxSizing: "border-box" as const,
                     resize: "vertical", marginBottom: 12,
                   }}
@@ -646,7 +646,7 @@ export default function ConsulterEdlPage() {
 
         {/* Statut signatures */}
         {signatures.length > 0 && (
-          <div style={{ ...cardS, background: "#f0fdf4", border: "1px solid #86efac" }}>
+          <div style={{ ...cardS, background: "#F0FAEE", border: "1px solid #86efac" }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 10px" }}>
               Signatures électroniques
             </p>

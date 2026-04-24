@@ -660,8 +660,8 @@ export default function Proprietaire() {
         {onglet === "Statistiques" && (
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 12 : 18, marginBottom: 24 }}>
             {[
-              { label: "Biens disponibles", val: biensDispos, color: "#15803d", bg: "#f0fdf4", targetOnglet: "Mes biens" as const },
-              { label: "Biens loués",       val: biensLoues, color: "#8a8477", bg: "#f9fafb", targetOnglet: "Locataires" as const },
+              { label: "Biens disponibles", val: biensDispos, color: "#15803d", bg: "#F0FAEE", targetOnglet: "Mes biens" as const },
+              { label: "Biens loués",       val: biensLoues, color: "#8a8477", bg: "#F7F4EF", targetOnglet: "Locataires" as const },
               { label: "Loyers à confirmer", val: loyersAttendus, color: "#a16207", bg: loyersAttendus > 0 ? "#FBF6EA" : "white", targetOnglet: "Locataires" as const },
               { label: "Loyers confirmés",  val: loyersConfirmes, color: "#15803d", bg: "white", targetOnglet: "Locataires" as const },
             ].map(s => (
@@ -894,9 +894,9 @@ export default function Proprietaire() {
                   return (
                     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: isMobile ? 12 : 18, marginBottom: 24 }}>
                       {[
-                        { label: "Revenus confirmés", val: `${revenusConfirmes.toLocaleString("fr-FR")} €`, sub: "cumul toutes périodes", color: "#15803d", bg: "#f0fdf4" },
+                        { label: "Revenus confirmés", val: `${revenusConfirmes.toLocaleString("fr-FR")} €`, sub: "cumul toutes périodes", color: "#15803d", bg: "#F0FAEE" },
                         { label: "Loyers mensuels", val: `${loyerTheoriqueTotal.toLocaleString("fr-FR")} €`, sub: `${biens.filter((b: any) => b.statut === "loué").length} bien(s) loué(s)`, color: "#111", bg: "white" },
-                        { label: "Cashflow mensuel", val: `${cashflowMensuelTotal >= 0 ? "+" : ""}${cashflowMensuelTotal.toLocaleString("fr-FR")} €`, sub: "après crédit", color: cashflowMensuelTotal >= 0 ? "#15803d" : "#b91c1c", bg: cashflowMensuelTotal >= 0 ? "#f0fdf4" : "#fef2f2" },
+                        { label: "Cashflow mensuel", val: `${cashflowMensuelTotal >= 0 ? "+" : ""}${cashflowMensuelTotal.toLocaleString("fr-FR")} €`, sub: "après crédit", color: cashflowMensuelTotal >= 0 ? "#15803d" : "#b91c1c", bg: cashflowMensuelTotal >= 0 ? "#F0FAEE" : "#fef2f2" },
                         { label: "Valeur patrimoine", val: patrimoineTotal > 0 ? `${Math.round(patrimoineTotal / 1000)} k€` : "—", sub: "somme des biens", color: "#111", bg: "white" },
                       ].map(s => (
                         <div key={s.label} style={{ background: s.bg, borderRadius: 20, padding: isMobile ? "18px 20px" : "22px 26px", border: "1px solid #F7F4EF" }}>
@@ -940,7 +940,7 @@ export default function Proprietaire() {
                   <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
                     {/* Header */}
                     {!isMobile && (
-                      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 40px", gap: 12, padding: "10px 16px", background: "#f9fafb", borderRadius: "10px 10px 0 0" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 40px", gap: 12, padding: "10px 16px", background: "#F7F4EF", borderRadius: "10px 10px 0 0" }}>
                         {["Bien", "Clics uniques", "Messages", "Visites", "Taux conv.", ""].map((h, i) => (
                           <span key={i} style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>{h}</span>
                         ))}
@@ -967,7 +967,7 @@ export default function Proprietaire() {
                                 { label: "Visites", val: vis, color: "#a16207" },
                                 { label: "Conv.", val: `${tauxConv}%`, color: tauxConv >= 5 ? "#15803d" : "#8a8477" },
                               ].map(s => (
-                                <div key={s.label} style={{ background: "#f9fafb", borderRadius: 8, padding: "6px 12px", textAlign: "center" }}>
+                                <div key={s.label} style={{ background: "#F7F4EF", borderRadius: 8, padding: "6px 12px", textAlign: "center" }}>
                                   <div style={{ fontSize: 16, fontWeight: 800, color: s.color }}>{s.val}</div>
                                   <div style={{ fontSize: 10, color: "#8a8477" }}>{s.label}</div>
                                 </div>
@@ -980,7 +980,7 @@ export default function Proprietaire() {
                       return (
                         <a key={b.id} href={`/proprietaire/stats?id=${b.id}`}
                           style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 40px", gap: 12, padding: "14px 16px", borderBottom: "1px solid #F7F4EF", alignItems: "center", textDecoration: "none", color: "#111", cursor: "pointer", transition: "background 0.15s" }}
-                          onMouseEnter={e => (e.currentTarget.style.background = "#f9fafb")}
+                          onMouseEnter={e => (e.currentTarget.style.background = "#F7F4EF")}
                           onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                           <div>
                             <p style={{ fontWeight: 700, fontSize: 14 }}>{b.titre}</p>
@@ -1017,7 +1017,7 @@ export default function Proprietaire() {
                     {biens.filter((b: any) => !b.description || b.description.length < 100).length > 0 && (
                       <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#EEF3FB", borderRadius: 12, border: "1px solid #D7E3F4" }}>
                         <div>
-                          <p style={{ fontSize: 13, fontWeight: 700, color: "#1e40af" }}>Enrichissez vos descriptions</p>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: "#1d4ed8" }}>Enrichissez vos descriptions</p>
                           <p style={{ fontSize: 12, color: "#1d4ed8" }}>{biens.filter((b: any) => !b.description || b.description.length < 100).length} bien(s) sans description détaillée — une bonne description augmente les contacts de 40%</p>
                         </div>
                       </div>
@@ -1025,7 +1025,7 @@ export default function Proprietaire() {
                     {biens.filter((b: any) => !b.dpe).length > 0 && (
                       <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#F0FAEE", borderRadius: 12, border: "1px solid #C6E9C0" }}>
                         <div>
-                          <p style={{ fontSize: 13, fontWeight: 700, color: "#166534" }}>Renseignez le DPE</p>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: "#15803d" }}>Renseignez le DPE</p>
                           <p style={{ fontSize: 12, color: "#15803d" }}>{biens.filter((b: any) => !b.dpe).length} bien(s) sans DPE — le DPE est obligatoire et rassure les locataires</p>
                         </div>
                       </div>
@@ -1033,7 +1033,7 @@ export default function Proprietaire() {
                     {biens.every((b: any) => b.photos && Array.isArray(b.photos) && b.photos.length >= 3 && b.description && b.description.length >= 100 && b.dpe) && (
                       <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "12px 16px", background: "#F0FAEE", borderRadius: 12, border: "1px solid #C6E9C0" }}>
                         <div>
-                          <p style={{ fontSize: 13, fontWeight: 700, color: "#166534" }}>Vos annonces sont optimisées !</p>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: "#15803d" }}>Vos annonces sont optimisées !</p>
                           <p style={{ fontSize: 12, color: "#15803d" }}>Tous vos biens ont des photos, descriptions et DPE — continuez comme ça</p>
                         </div>
                       </div>
@@ -1088,9 +1088,9 @@ export default function Proprietaire() {
                         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 12 }}>
                           {/* Bail */}
                           <a href={`/proprietaire/bail/${b.id}`}
-                            style={{ background: "#f9fafb", borderRadius: 14, padding: "16px 18px", textDecoration: "none", color: "#111", border: "1px solid #F7F4EF", transition: "all 0.15s", display: "block" }}
+                            style={{ background: "#F7F4EF", borderRadius: 14, padding: "16px 18px", textDecoration: "none", color: "#111", border: "1px solid #F7F4EF", transition: "all 0.15s", display: "block" }}
                             onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#111"; (e.currentTarget as HTMLAnchorElement).style.color = "white" }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#f9fafb"; (e.currentTarget as HTMLAnchorElement).style.color = "#111" }}>
+                            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#F7F4EF"; (e.currentTarget as HTMLAnchorElement).style.color = "#111" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                               <p style={{ fontSize: 14, fontWeight: 800 }}>Bail de location</p>
@@ -1103,9 +1103,9 @@ export default function Proprietaire() {
 
                           {/* EDL entrée */}
                           <a href={`/proprietaire/edl/${b.id}?type=entree`}
-                            style={{ background: "#f9fafb", borderRadius: 14, padding: "16px 18px", textDecoration: "none", color: "#111", border: "1px solid #F7F4EF", transition: "all 0.15s", display: "block" }}
+                            style={{ background: "#F7F4EF", borderRadius: 14, padding: "16px 18px", textDecoration: "none", color: "#111", border: "1px solid #F7F4EF", transition: "all 0.15s", display: "block" }}
                             onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#111"; (e.currentTarget as HTMLAnchorElement).style.color = "white" }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#f9fafb"; (e.currentTarget as HTMLAnchorElement).style.color = "#111" }}>
+                            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#F7F4EF"; (e.currentTarget as HTMLAnchorElement).style.color = "#111" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                               <p style={{ fontSize: 14, fontWeight: 800 }}>État des lieux d&apos;entrée</p>
@@ -1118,9 +1118,9 @@ export default function Proprietaire() {
 
                           {/* EDL sortie */}
                           <a href={`/proprietaire/edl/${b.id}?type=sortie`}
-                            style={{ background: "#f9fafb", borderRadius: 14, padding: "16px 18px", textDecoration: "none", color: "#111", border: "1px solid #F7F4EF", transition: "all 0.15s", display: "block" }}
+                            style={{ background: "#F7F4EF", borderRadius: 14, padding: "16px 18px", textDecoration: "none", color: "#111", border: "1px solid #F7F4EF", transition: "all 0.15s", display: "block" }}
                             onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#111"; (e.currentTarget as HTMLAnchorElement).style.color = "white" }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#f9fafb"; (e.currentTarget as HTMLAnchorElement).style.color = "#111" }}>
+                            onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#F7F4EF"; (e.currentTarget as HTMLAnchorElement).style.color = "#111" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l-3 3 3 3"/><path d="M22 12H6"/><path d="M22 4v16"/></svg>
                               <p style={{ fontSize: 14, fontWeight: 800 }}>État des lieux de sortie</p>

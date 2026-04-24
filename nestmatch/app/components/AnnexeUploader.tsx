@@ -66,8 +66,8 @@ export default function AnnexeUploader({
   return (
     <div
       style={{
-        border: `1.5px solid ${current ? "#86efac" : required ? "#fed7aa" : "#e5e7eb"}`,
-        background: current ? "#f0fdf4" : required ? "#fff7ed" : "#fafafa",
+        border: `1px solid ${current ? "#86efac" : required ? "#EADFC6" : "#EAE6DF"}`,
+        background: current ? "#F0FAEE" : required ? "#FBF6EA" : "#F7F4EF",
         borderRadius: 12,
         padding: "12px 14px",
       }}
@@ -76,10 +76,10 @@ export default function AnnexeUploader({
         <div style={{ flex: 1, minWidth: 180 }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: "#111", margin: 0 }}>
             {label}
-            {required && <span style={{ color: "#dc2626", marginLeft: 4 }}>*</span>}
+            {required && <span style={{ color: "#b91c1c", marginLeft: 4 }}>*</span>}
           </p>
           {description && (
-            <p style={{ fontSize: 11, color: "#6b7280", margin: "2px 0 0", lineHeight: 1.5 }}>
+            <p style={{ fontSize: 11, color: "#8a8477", margin: "2px 0 0", lineHeight: 1.5 }}>
               {description}
             </p>
           )}
@@ -97,7 +97,7 @@ export default function AnnexeUploader({
             style={{
               background: current ? "white" : "#111",
               color: current ? "#111" : "white",
-              border: `1.5px solid ${current ? "#111" : "#111"}`,
+              border: `1px solid ${current ? "#111" : "#111"}`,
               borderRadius: 8,
               padding: "6px 12px",
               fontSize: 12,
@@ -122,7 +122,7 @@ export default function AnnexeUploader({
               href={current.url}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ background: "white", color: "#111", border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textDecoration: "none" }}
+              style={{ background: "white", color: "#111", border: "1px solid #EAE6DF", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textDecoration: "none" }}
             >
               Voir
             </a>
@@ -131,7 +131,7 @@ export default function AnnexeUploader({
             <button
               type="button"
               onClick={() => onChange(null)}
-              style={{ background: "white", color: "#dc2626", border: "1.5px solid #fecaca", borderRadius: 8, padding: "6px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+              style={{ background: "white", color: "#b91c1c", border: "1px solid #F4C9C9", borderRadius: 8, padding: "6px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
             >
               ✕
             </button>

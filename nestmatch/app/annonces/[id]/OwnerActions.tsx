@@ -63,7 +63,7 @@ export default function OwnerActions({
           </Link>
           <Link
             href={`/proprietaire/stats?id=${annonceId}`}
-            style={{ ...btnStyle, background: "#eff6ff", color: "#1d4ed8", border: "1.5px solid #bfdbfe" }}
+            style={{ ...btnStyle, background: "#EEF3FB", color: "#1d4ed8", border: "1px solid #D7E3F4" }}
           >
             Statistiques
           </Link>
@@ -76,7 +76,7 @@ export default function OwnerActions({
           type="button"
           onClick={supprimerAdmin}
           disabled={deleting}
-          style={{ ...btnStyle, background: "#fee2e2", color: "#991b1b", border: "1.5px solid #fca5a5", fontWeight: 800, opacity: deleting ? 0.6 : 1 }}
+          style={{ ...btnStyle, background: "#FEECEC", color: "#b91c1c", border: "1px solid #F4C9C9", fontWeight: 800, opacity: deleting ? 0.6 : 1 }}
           title="Suppression en tant qu'admin — la page /admin > onglet Annonces permet la même action"
         >
           {deleting ? "Suppression…" : "Supprimer (admin)"}

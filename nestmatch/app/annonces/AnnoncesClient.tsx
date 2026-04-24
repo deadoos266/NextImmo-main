@@ -819,8 +819,8 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                 <a href="/proprietaire" style={{ fontSize: 12, fontWeight: 700, color: "#111", textDecoration: "none", padding: "5px 14px", border: "1px solid #EAE6DF", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0 }}>Mes biens</a>
               </div>
             ) : (
-              <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 16, padding: isMobile ? "10px 14px" : "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                <span style={{ fontSize: isMobile ? 12 : 13, fontWeight: 500, color: "#92400e" }}>
+              <div style={{ background: "#fffbeb", border: "1px solid #EADFC6", borderRadius: 16, padding: isMobile ? "10px 14px" : "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                <span style={{ fontSize: isMobile ? 12 : 13, fontWeight: 500, color: "#a16207" }}>
                   {isMobile ? "Connectez-vous pour le matching" : "Connectez-vous pour activer le score de compatibilité"}
                 </span>
                 <a href="/auth" style={{ background: "#111", color: "white", padding: "6px 16px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 12, flexShrink: 0 }}>Connexion</a>

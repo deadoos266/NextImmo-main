@@ -45,8 +45,8 @@ export default function PhotoCarousel({ photos }: { photos: string[] }) {
   }, [lightboxOpen, photos.length])
 
   if (!photos || photos.length === 0) return (
-    <div style={{ height: 380, background: "linear-gradient(135deg, #e5e7eb, #d1d5db)", borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 28 }}>
-      <span style={{ color: "#9ca3af", fontSize: 16 }}>Aucune photo disponible</span>
+    <div style={{ height: 380, background: "linear-gradient(135deg, #EAE6DF, #EAE6DF)", borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 28 }}>
+      <span style={{ color: "#8a8477", fontSize: 16 }}>Aucune photo disponible</span>
     </div>
   )
 

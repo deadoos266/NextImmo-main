@@ -47,7 +47,7 @@ export default function ShareButton({ title, url }: Props) {
     display: "flex", alignItems: "center", gap: 10,
     padding: "10px 14px", borderRadius: 10,
     textDecoration: "none", color: "#111", fontSize: 14, fontWeight: 600,
-    background: "white", border: "1px solid #e5e7eb", cursor: "pointer",
+    background: "white", border: "1px solid #EAE6DF", cursor: "pointer",
     fontFamily: "inherit", width: "100%", textAlign: "left",
   }
 
@@ -59,7 +59,7 @@ export default function ShareButton({ title, url }: Props) {
         aria-label="Partager cette annonce"
         style={{
           background: "white",
-          border: "1.5px solid #e5e7eb",
+          border: "1px solid #EAE6DF",
           borderRadius: 999,
           padding: "8px 14px",
           cursor: "pointer",
@@ -95,7 +95,7 @@ export default function ShareButton({ title, url }: Props) {
               background: "white",
               borderRadius: 14,
               boxShadow: "0 8px 28px rgba(0,0,0,0.12)",
-              border: "1px solid #e5e7eb",
+              border: "1px solid #EAE6DF",
               padding: 8,
               zIndex: 999,
               display: "flex",

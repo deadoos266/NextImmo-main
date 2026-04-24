@@ -113,8 +113,8 @@ export default function NotificationBell() {
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} non lues)` : ""}`}
         style={{
           position: "relative",
-          background: open ? "#f3f4f6" : "white",
-          border: "1.5px solid #e5e7eb",
+          background: open ? "#F7F4EF" : "white",
+          border: "1px solid #EAE6DF",
           borderRadius: 999,
           width: 40,
           height: 40,
@@ -137,7 +137,7 @@ export default function NotificationBell() {
               position: "absolute",
               top: -4,
               right: -4,
-              background: "#ef4444",
+              background: "#b91c1c",
               color: "white",
               borderRadius: 999,
               fontSize: 10,
@@ -163,7 +163,7 @@ export default function NotificationBell() {
             right: 0,
             background: "white",
             borderRadius: 16,
-            border: "1.5px solid #e5e7eb",
+            border: "1px solid #EAE6DF",
             boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
             width: 340,
             maxWidth: "calc(100vw - 32px)",
@@ -172,7 +172,7 @@ export default function NotificationBell() {
             fontFamily: "'DM Sans', sans-serif",
           }}
         >
-          <div style={{ padding: "14px 16px", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ padding: "14px 16px", borderBottom: "1px solid #F7F4EF", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <p style={{ fontSize: 14, fontWeight: 800, margin: 0 }}>Notifications</p>
             {unreadCount > 0 && (
               <button
@@ -187,7 +187,7 @@ export default function NotificationBell() {
 
           {notifs.length === 0 ? (
             <div style={{ padding: "32px 16px", textAlign: "center" }}>
-              <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>Aucune notification.</p>
+              <p style={{ fontSize: 13, color: "#8a8477", margin: 0 }}>Aucune notification.</p>
             </div>
           ) : (
             <div style={{ maxHeight: 400, overflowY: "auto" }}>
@@ -202,24 +202,24 @@ export default function NotificationBell() {
                     textAlign: "left",
                     padding: "12px 16px",
                     border: "none",
-                    background: n.lu ? "white" : "#fefce8",
-                    borderBottom: "1px solid #f9fafb",
+                    background: n.lu ? "white" : "#FBF6EA",
+                    borderBottom: "1px solid #F7F4EF",
                     cursor: n.href ? "pointer" : "default",
                     fontFamily: "inherit",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
                     {!n.lu && (
-                      <span aria-hidden style={{ width: 8, height: 8, borderRadius: 999, background: "#ef4444", marginTop: 6, flexShrink: 0 }} />
+                      <span aria-hidden style={{ width: 8, height: 8, borderRadius: 999, background: "#b91c1c", marginTop: 6, flexShrink: 0 }} />
                     )}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: 13, fontWeight: n.lu ? 600 : 800, color: "#111", margin: 0 }}>{n.title}</p>
                       {n.body && (
-                        <p style={{ fontSize: 12, color: "#6b7280", margin: "2px 0 0", lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                        <p style={{ fontSize: 12, color: "#8a8477", margin: "2px 0 0", lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
                           {n.body}
                         </p>
                       )}
-                      <p style={{ fontSize: 11, color: "#9ca3af", margin: "4px 0 0" }}>{timeAgo(n.created_at)}</p>
+                      <p style={{ fontSize: 11, color: "#8a8477", margin: "4px 0 0" }}>{timeAgo(n.created_at)}</p>
                     </div>
                   </div>
                 </button>

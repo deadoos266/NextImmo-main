@@ -253,7 +253,7 @@ export default function SavedSearchesPopover({
                         <p style={{ fontSize: 13, fontWeight: 600, color: "#111", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {s.name}
                         </p>
-                        <p style={{ fontSize: 10, color: "#9ca3af", margin: "2px 0 0" }}>
+                        <p style={{ fontSize: 10, color: "#8a8477", margin: "2px 0 0" }}>
                           {new Date(s.savedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
                         </p>
                       </button>
@@ -275,8 +275,8 @@ export default function SavedSearchesPopover({
                           transition: "background 0.15s, color 0.15s",
                         }}
                         onMouseEnter={e => {
-                          e.currentTarget.style.background = "#fee2e2"
-                          e.currentTarget.style.color = "#dc2626"
+                          e.currentTarget.style.background = "#FEECEC"
+                          e.currentTarget.style.color = "#b91c1c"
                         }}
                         onMouseLeave={e => {
                           e.currentTarget.style.background = "transparent"

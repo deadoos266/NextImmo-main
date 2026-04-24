@@ -94,7 +94,7 @@ export default function PhoneInput({ value, onChange, placeholder }: Props) {
           alignItems: "center",
           gap: 6,
           padding: "10px 14px",
-          border: "1.5px solid #e5e7eb",
+          border: "1px solid #EAE6DF",
           borderRight: "none",
           borderRadius: "10px 0 0 10px",
           background: "white",
@@ -108,8 +108,8 @@ export default function PhoneInput({ value, onChange, placeholder }: Props) {
         }}
       >
         <span>{country.label}</span>
-        <span style={{ color: "#6b7280", fontSize: 13 }}>{country.code}</span>
-        <span style={{ fontSize: 10, color: "#9ca3af" }}>▾</span>
+        <span style={{ color: "#8a8477", fontSize: 13 }}>{country.code}</span>
+        <span style={{ fontSize: 10, color: "#8a8477" }}>▾</span>
       </button>
 
       {/* Input numéro */}
@@ -125,7 +125,7 @@ export default function PhoneInput({ value, onChange, placeholder }: Props) {
         style={{
           flex: 1,
           padding: "10px 14px",
-          border: "1.5px solid #e5e7eb",
+          border: "1px solid #EAE6DF",
           borderRadius: "0 10px 10px 0",
           fontSize: 14,
           outline: "none",
@@ -146,7 +146,7 @@ export default function PhoneInput({ value, onChange, placeholder }: Props) {
             top: "calc(100% + 4px)",
             left: 0,
             background: "white",
-            border: "1.5px solid #e5e7eb",
+            border: "1px solid #EAE6DF",
             borderRadius: 10,
             width: 260,
             maxHeight: 320,
@@ -170,19 +170,19 @@ export default function PhoneInput({ value, onChange, placeholder }: Props) {
                   gap: 10,
                   padding: "10px 14px",
                   border: "none",
-                  background: country.code === c.code ? "#f3f4f6" : "white",
+                  background: country.code === c.code ? "#F7F4EF" : "white",
                   cursor: "pointer",
                   fontFamily: "inherit",
                   fontSize: 13,
                   textAlign: "left",
                   color: "#111",
                 }}
-                onMouseEnter={e => { if (country.code !== c.code) (e.currentTarget as HTMLButtonElement).style.background = "#f9fafb" }}
+                onMouseEnter={e => { if (country.code !== c.code) (e.currentTarget as HTMLButtonElement).style.background = "#F7F4EF" }}
                 onMouseLeave={e => { if (country.code !== c.code) (e.currentTarget as HTMLButtonElement).style.background = "white" }}
               >
                 <span style={{ fontWeight: 700, minWidth: 30 }}>{c.label}</span>
-                <span style={{ color: "#6b7280", minWidth: 50 }}>{c.code}</span>
-                <span style={{ color: "#374151", flex: 1 }}>{c.name}</span>
+                <span style={{ color: "#8a8477", minWidth: 50 }}>{c.code}</span>
+                <span style={{ color: "#111", flex: 1 }}>{c.name}</span>
               </button>
             ))}
           </div>

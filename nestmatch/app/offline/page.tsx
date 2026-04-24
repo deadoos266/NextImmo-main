@@ -65,7 +65,7 @@ export default function OfflinePage() {
         <p
           style={{
             fontSize: 14,
-            color: "#6b7280",
+            color: "#8a8477",
             margin: "0 0 24px",
             lineHeight: 1.6,
           }}

@@ -135,7 +135,7 @@ export default function UploadBailModal({
             disabled={uploading}
             style={{
               background: "white",
-              border: "1.5px solid #e5e7eb",
+              border: "1px solid #EAE6DF",
               color: "#111",
               borderRadius: 999,
               padding: "10px 22px",
@@ -151,8 +151,8 @@ export default function UploadBailModal({
             onClick={submit}
             disabled={!canSubmit}
             style={{
-              background: canSubmit ? "#111" : "#e5e7eb",
-              color: canSubmit ? "white" : "#9ca3af",
+              background: canSubmit ? "#111" : "#EAE6DF",
+              color: canSubmit ? "white" : "#8a8477",
               border: "none",
               borderRadius: 999,
               padding: "10px 22px",
@@ -167,7 +167,7 @@ export default function UploadBailModal({
         </>
       }
     >
-      <p style={{ marginTop: 0, color: "#6b7280", fontSize: 13 }}>
+      <p style={{ marginTop: 0, color: "#8a8477", fontSize: 13 }}>
         Utilisez cette option si vous avez déjà rédigé votre bail ailleurs (avocat,
         autre application, modèle téléchargé). Le PDF sera envoyé au locataire qui
         pourra le télécharger et le signer électroniquement.
@@ -176,16 +176,16 @@ export default function UploadBailModal({
       <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 16 }}>
         {/* File input */}
         <div>
-          <label style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 8 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: "#8a8477", display: "block", marginBottom: 8 }}>
             Fichier PDF *
           </label>
           <div
             style={{
-              border: `2px dashed ${file ? "#86efac" : "#e5e7eb"}`,
+              border: `2px dashed ${file ? "#86efac" : "#EAE6DF"}`,
               borderRadius: 14,
               padding: "20px 16px",
               textAlign: "center",
-              background: file ? "#f0fdf4" : "#fafafa",
+              background: file ? "#F0FAEE" : "#F7F4EF",
               cursor: "pointer",
               position: "relative",
             }}
@@ -215,7 +215,7 @@ export default function UploadBailModal({
                 <div style={{ fontSize: 14, fontWeight: 700, color: "#111" }}>
                   Cliquez pour sélectionner un PDF
                 </div>
-                <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
+                <div style={{ fontSize: 11, color: "#8a8477", marginTop: 4 }}>
                   Jusqu&apos;à 15 Mo
                 </div>
               </>
@@ -225,7 +225,7 @@ export default function UploadBailModal({
 
         {/* Type */}
         <div>
-          <label style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 8 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: "#8a8477", display: "block", marginBottom: 8 }}>
             Type de bail
           </label>
           <div style={{ display: "flex", gap: 8 }}>
@@ -243,7 +243,7 @@ export default function UploadBailModal({
                   borderRadius: 10,
                   background: type === t ? "#111" : "white",
                   color: type === t ? "white" : "#111",
-                  border: `1.5px solid ${type === t ? "#111" : "#e5e7eb"}`,
+                  border: `1px solid ${type === t ? "#111" : "#EAE6DF"}`,
                   fontSize: 13,
                   fontWeight: 700,
                   cursor: "pointer",
@@ -259,7 +259,7 @@ export default function UploadBailModal({
         {/* Dates */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6 }}>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#8a8477", display: "block", marginBottom: 6 }}>
               Date de début *
             </label>
             <input
@@ -269,7 +269,7 @@ export default function UploadBailModal({
               style={{
                 width: "100%",
                 padding: "10px 12px",
-                border: "1.5px solid #e5e7eb",
+                border: "1px solid #EAE6DF",
                 borderRadius: 10,
                 fontSize: 14,
                 outline: "none",
@@ -281,7 +281,7 @@ export default function UploadBailModal({
             />
           </div>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6 }}>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#8a8477", display: "block", marginBottom: 6 }}>
               Durée
             </label>
             <select
@@ -290,7 +290,7 @@ export default function UploadBailModal({
               style={{
                 width: "100%",
                 padding: "10px 12px",
-                border: "1.5px solid #e5e7eb",
+                border: "1px solid #EAE6DF",
                 borderRadius: 10,
                 fontSize: 14,
                 outline: "none",
@@ -319,12 +319,12 @@ export default function UploadBailModal({
         <div
           style={{
             padding: "10px 14px",
-            background: "#f9fafb",
+            background: "#F7F4EF",
             borderRadius: 10,
             fontSize: 13,
           }}
         >
-          <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 2 }}>Sera envoyé à</div>
+          <div style={{ fontSize: 11, color: "#8a8477", marginBottom: 2 }}>Sera envoyé à</div>
           <div style={{ fontWeight: 700, color: "#111" }}>{locataireEmail || "(aucun locataire défini)"}</div>
         </div>
 
@@ -333,7 +333,7 @@ export default function UploadBailModal({
             style={{
               padding: "10px 14px",
               background: "#fef2f2",
-              border: "1.5px solid #fecaca",
+              border: "1px solid #F4C9C9",
               borderRadius: 10,
               fontSize: 13,
               color: "#b91c1c",

@@ -302,7 +302,7 @@ export default function Carnet() {
           <div style={{ display: "flex", background: "white", borderRadius: 10, padding: 4, gap: 2 }}>
             {(["tous", "planifié", "en cours", "terminé"] as const).map(s => (
               <button key={s} onClick={() => setFiltreStatut(s)}
-                style={{ padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, background: filtreStatut === s ? "#111" : "transparent", color: filtreStatut === s ? "white" : "#6b7280" }}>
+                style={{ padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, background: filtreStatut === s ? "#111" : "transparent", color: filtreStatut === s ? "white" : "#8a8477" }}>
                 {s.charAt(0).toUpperCase() + s.slice(1)}
               </button>
             ))}
@@ -318,7 +318,7 @@ export default function Carnet() {
             <div style={{ display: "flex", background: "white", borderRadius: 10, padding: 4, gap: 2 }}>
               {(["tous", "proprio", "locataire"] as const).map(s => (
                 <button key={s} onClick={() => setFiltreSource(s)}
-                  style={{ padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, background: filtreSource === s ? "#111" : "transparent", color: filtreSource === s ? "white" : "#6b7280" }}>
+                  style={{ padding: "6px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, background: filtreSource === s ? "#111" : "transparent", color: filtreSource === s ? "white" : "#8a8477" }}>
                   {s === "tous" ? "Tous" : s === "proprio" ? "Mes ajouts" : `Signalements (${nbLocataireSignals})`}
                 </button>
               ))}
@@ -341,7 +341,7 @@ export default function Carnet() {
               const locataireProfil = locataires[e.locataire_email]
               const canEdit = proprietaireActive || e.locataire_email === session?.user?.email
               return (
-                <div key={e.id} style={{ background: "white", borderRadius: 16, padding: "18px 22px", display: "flex", alignItems: "flex-start", gap: 16, border: isLocataireEntry && proprietaireActive ? "1.5px solid #fde68a" : "1.5px solid transparent" }}>
+                <div key={e.id} style={{ background: "white", borderRadius: 16, padding: "18px 22px", display: "flex", alignItems: "flex-start", gap: 16, border: isLocataireEntry && proprietaireActive ? "1px solid #EADFC6" : "1px solid transparent" }}>
                   <div style={{ flexShrink: 0, background: "#F7F4EF", borderRadius: 10, padding: "6px 10px", fontSize: 11, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "0.5px" }}>{TYPE_LABELS[e.type as TypeEvent] ?? "Autre"}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>

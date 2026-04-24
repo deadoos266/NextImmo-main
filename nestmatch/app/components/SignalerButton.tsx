@@ -78,8 +78,8 @@ export default function SignalerButton({ type, targetId, label = "Signaler", com
   }
 
   const btnStyle: React.CSSProperties = compact
-    ? { background: "none", border: "none", color: "#6b7280", fontSize: 12, cursor: "pointer", textDecoration: "underline", padding: 0, fontFamily: "inherit" }
-    : { background: "white", border: "1.5px solid #e5e7eb", color: "#6b7280", borderRadius: 999, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }
+    ? { background: "none", border: "none", color: "#8a8477", fontSize: 12, cursor: "pointer", textDecoration: "underline", padding: 0, fontFamily: "inherit" }
+    : { background: "white", border: "1px solid #EAE6DF", color: "#8a8477", borderRadius: 999, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }
 
   const modal = open ? (
     <>
@@ -106,34 +106,34 @@ export default function SignalerButton({ type, targetId, label = "Signaler", com
         {done ? (
           <>
             <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8, color: "#15803d" }}>Signalement envoyé</h2>
-            <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.6 }}>
+            <p style={{ fontSize: 14, color: "#8a8477", lineHeight: 1.6 }}>
               Merci. Notre équipe de modération va examiner votre signalement et prendra les mesures appropriées.
             </p>
           </>
         ) : (
           <>
             <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4, letterSpacing: "-0.3px" }}>Signaler ce contenu</h2>
-            <p style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.6, marginBottom: 20 }}>
+            <p style={{ fontSize: 13, color: "#8a8477", lineHeight: 1.6, marginBottom: 20 }}>
               Votre signalement est confidentiel. Il sera examiné par notre équipe.
             </p>
 
             <form onSubmit={submit}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: 8 }}>
-                Motif <span style={{ color: "#dc2626" }}>*</span>
+              <label style={{ fontSize: 12, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: 8 }}>
+                Motif <span style={{ color: "#b91c1c" }}>*</span>
               </label>
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 18 }}>
                 {RAISONS.map(r => (
-                  <label key={r.code} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 14px", border: `1.5px solid ${raison === r.code ? "#111" : "#e5e7eb"}`, borderRadius: 12, cursor: "pointer", background: raison === r.code ? "#f9fafb" : "white" }}>
+                  <label key={r.code} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 14px", border: `1px solid ${raison === r.code ? "#111" : "#EAE6DF"}`, borderRadius: 12, cursor: "pointer", background: raison === r.code ? "#F7F4EF" : "white" }}>
                     <input type="radio" name="raison" value={r.code} checked={raison === r.code} onChange={() => setRaison(r.code)} style={{ marginTop: 3 }} />
                     <div>
                       <p style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>{r.label}</p>
-                      <p style={{ fontSize: 12, color: "#6b7280", margin: "2px 0 0", lineHeight: 1.4 }}>{r.desc}</p>
+                      <p style={{ fontSize: 12, color: "#8a8477", margin: "2px 0 0", lineHeight: 1.4 }}>{r.desc}</p>
                     </div>
                   </label>
                 ))}
               </div>
 
-              <label style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: 6 }}>
                 Détails (optionnel)
               </label>
               <textarea
@@ -142,18 +142,18 @@ export default function SignalerButton({ type, targetId, label = "Signaler", com
                 placeholder="Donnez des détails pour aider notre équipe à comprendre..."
                 rows={3}
                 maxLength={1000}
-                style={{ width: "100%", padding: "10px 14px", border: "1.5px solid #e5e7eb", borderRadius: 12, fontSize: 14, outline: "none", fontFamily: "inherit", resize: "vertical", boxSizing: "border-box", color: "#111", background: "white" }}
+                style={{ width: "100%", padding: "10px 14px", border: "1px solid #EAE6DF", borderRadius: 12, fontSize: 14, outline: "none", fontFamily: "inherit", resize: "vertical", boxSizing: "border-box", color: "#111", background: "white" }}
               />
 
-              {error && <p style={{ color: "#dc2626", fontSize: 13, marginTop: 10 }}>{error}</p>}
+              {error && <p style={{ color: "#b91c1c", fontSize: 13, marginTop: 10 }}>{error}</p>}
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
                 <button type="button" onClick={() => setOpen(false)} disabled={loading}
-                  style={{ background: "white", border: "1.5px solid #e5e7eb", color: "#111", borderRadius: 999, padding: "10px 22px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
+                  style={{ background: "white", border: "1px solid #EAE6DF", color: "#111", borderRadius: 999, padding: "10px 22px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
                   Annuler
                 </button>
                 <button type="submit" disabled={loading || !raison}
-                  style={{ background: loading || !raison ? "#e5e7eb" : "#dc2626", color: loading || !raison ? "#9ca3af" : "white", border: "none", borderRadius: 999, padding: "10px 22px", fontWeight: 700, fontSize: 14, cursor: loading || !raison ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+                  style={{ background: loading || !raison ? "#EAE6DF" : "#b91c1c", color: loading || !raison ? "#8a8477" : "white", border: "none", borderRadius: 999, padding: "10px 22px", fontWeight: 700, fontSize: 14, cursor: loading || !raison ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
                   {loading ? "Envoi…" : "Envoyer le signalement"}
                 </button>
               </div>

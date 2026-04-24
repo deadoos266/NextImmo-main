@@ -594,10 +594,10 @@ export default function EdlPage() {
 
         {/* ─── Status banners ─── */}
         {statut === "conteste" && (
-          <div style={{ background: "#fefce8", border: "1px solid #EADFC6", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
+          <div style={{ background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: edlExistant?.commentaire_locataire ? 10 : 0 }}>
               <span style={{ fontSize: 18 }}>⚠</span>
-              <p style={{ fontSize: 14, fontWeight: 700, color: "#92400e", margin: 0 }}>Le locataire a contesté cet état des lieux</p>
+              <p style={{ fontSize: 14, fontWeight: 700, color: "#a16207", margin: 0 }}>Le locataire a contesté cet état des lieux</p>
             </div>
             {edlExistant?.commentaire_locataire && (
               <div style={{ background: "white", borderRadius: 10, padding: "10px 14px", border: "1px solid #EADFC6" }}>
@@ -693,7 +693,7 @@ export default function EdlPage() {
                   {Object.entries(piece.elements).map(([elem, val]) => {
                     const st = ETAT_STYLE[val.etat]
                     return (
-                      <div key={elem} style={{ padding: "8px 0", borderBottom: "1px solid #f9fafb", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      <div key={elem} style={{ padding: "8px 0", borderBottom: "1px solid #F7F4EF", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                         <span style={{ fontSize: 13, fontWeight: 600, color: "#111", flex: 1, minWidth: 120 }}>{elem}</span>
                         <span style={{ background: st.bg, color: st.color, border: `1px solid ${st.color}`, fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 999 }}>
                           {val.etat}
@@ -796,7 +796,7 @@ export default function EdlPage() {
                   )}
                 </div>
               ) : (
-                <div style={{ background: "#FBF6EA", border: "1px solid #fed7aa", borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
+                <div style={{ background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
                   <p style={{ fontSize: 13, fontWeight: 700, color: "#9a3412", margin: 0 }}>Aucun locataire rattache a ce bien</p>
                   <p style={{ fontSize: 12, color: "#a16207", margin: "4px 0 0" }}>
                     Renseignez l'email du locataire dans les parametres du bien (bouton "Modifier les donnees") pour pouvoir envoyer l'EDL via la plateforme.
@@ -809,7 +809,7 @@ export default function EdlPage() {
                 <div><label style={lbl}>Nom</label><input style={inp} value={nomLocataire} onChange={e => setNomLocataire(e.target.value)} placeholder="Nom de famille" /></div>
                 <div>
                   <label style={lbl}>Email (compte plateforme)</label>
-                  <input value={emailLocataire} disabled style={{ ...inp, background: "#f9fafb", color: bien.locataire_email ? "#111" : "#8a8477" }} />
+                  <input value={emailLocataire} disabled style={{ ...inp, background: "#F7F4EF", color: bien.locataire_email ? "#111" : "#8a8477" }} />
                 </div>
               </div>
             </div>
@@ -844,7 +844,7 @@ export default function EdlPage() {
                   {Object.entries(piece.elements).map(([elem, val]) => {
                     const st = ETAT_STYLE[val.etat]
                     return (
-                      <div key={elem} style={{ padding: "10px 0", borderBottom: "1px solid #f9fafb" }}>
+                      <div key={elem} style={{ padding: "10px 0", borderBottom: "1px solid #F7F4EF" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                           <span style={{ fontSize: 13, fontWeight: 600, color: "#111", flex: 1 }}>{elem}</span>
                           <button onClick={() => removeElement(pieceIdx, elem)}
@@ -862,7 +862,7 @@ export default function EdlPage() {
                                 style={{
                                   padding: isMobile ? "5px 8px" : "4px 10px", borderRadius: 999,
                                   fontSize: isMobile ? 10 : 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                                  background: active ? s.bg : "#f9fafb",
+                                  background: active ? s.bg : "#F7F4EF",
                                   color: active ? s.color : "#8a8477",
                                   border: active ? `1px solid ${s.color}` : "1px solid transparent",
                                 }}>
@@ -1009,12 +1009,12 @@ export default function EdlPage() {
                   {sending ? "Envoi en cours..." : sent ? "Envoye a " + bien.locataire_email + " !" : "Envoyer a " + bien.locataire_email}
                 </button>
               ) : bien.locataire_email && !locataireVerifie ? (
-                <div style={{ flex: 1, padding: "14px 20px", background: "#FBF6EA", borderRadius: 16, border: "1px solid #fed7aa", textAlign: "center" }}>
+                <div style={{ flex: 1, padding: "14px 20px", background: "#FBF6EA", borderRadius: 16, border: "1px solid #EADFC6", textAlign: "center" }}>
                   <p style={{ fontSize: 13, color: "#a16207", fontWeight: 600, margin: 0 }}>Envoi impossible — {bien.locataire_email} pas encore inscrit</p>
                   <p style={{ fontSize: 11, color: "#8a8477", margin: "4px 0 0" }}>Invitez-le depuis les parametres du bien. Le PDF reste telechargeable.</p>
                 </div>
               ) : (
-                <div style={{ flex: 1, padding: "14px 20px", background: "#f9fafb", borderRadius: 16, border: "1.5px dashed #EAE6DF", textAlign: "center" }}>
+                <div style={{ flex: 1, padding: "14px 20px", background: "#F7F4EF", borderRadius: 16, border: "1.5px dashed #EAE6DF", textAlign: "center" }}>
                   <p style={{ fontSize: 13, color: "#8a8477", fontWeight: 600, margin: 0 }}>Rattachez un locataire pour envoyer l&apos;EDL</p>
                 </div>
               )}

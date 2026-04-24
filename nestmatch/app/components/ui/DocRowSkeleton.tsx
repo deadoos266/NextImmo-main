@@ -15,7 +15,7 @@ export default function DocRowSkeleton() {
         display: "flex",
         alignItems: "center",
         gap: 12,
-        border: "1px solid #f3f4f6",
+        border: "1px solid #F7F4EF",
       }}
     >
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>

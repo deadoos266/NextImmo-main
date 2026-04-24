@@ -140,7 +140,7 @@ export default function BailSignatureModal({
         disabled={submitting}
         style={{
           background: "white",
-          border: "1.5px solid #e5e7eb",
+          border: "1px solid #EAE6DF",
           color: "#111",
           borderRadius: 999,
           padding: "10px 22px",
@@ -190,8 +190,8 @@ export default function BailSignatureModal({
               onClick={() => setStep(3)}
               disabled={!accepte}
               style={{
-                background: accepte ? "#111" : "#e5e7eb",
-                color: accepte ? "white" : "#9ca3af",
+                background: accepte ? "#111" : "#EAE6DF",
+                color: accepte ? "white" : "#8a8477",
                 border: "none",
                 borderRadius: 999,
                 padding: "10px 22px",
@@ -211,8 +211,8 @@ export default function BailSignatureModal({
               onClick={submit}
               disabled={!signaturePng || submitting}
               style={{
-                background: signaturePng && !submitting ? "#15803d" : "#e5e7eb",
-                color: signaturePng && !submitting ? "white" : "#9ca3af",
+                background: signaturePng && !submitting ? "#15803d" : "#EAE6DF",
+                color: signaturePng && !submitting ? "white" : "#8a8477",
                 border: "none",
                 borderRadius: 999,
                 padding: "10px 22px",
@@ -237,7 +237,7 @@ export default function BailSignatureModal({
               flex: 1,
               height: 4,
               borderRadius: 2,
-              background: s <= step ? "#111" : "#e5e7eb",
+              background: s <= step ? "#111" : "#EAE6DF",
               transition: "background 0.2s",
             }}
           />
@@ -250,13 +250,13 @@ export default function BailSignatureModal({
           <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 14px" }}>
             1. Récapitulatif du bail
           </h3>
-          <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 20, lineHeight: 1.6 }}>
+          <p style={{ color: "#8a8477", fontSize: 13, marginBottom: 20, lineHeight: 1.6 }}>
             Lisez attentivement les termes du bail avant de signer.
           </p>
 
           <div
             style={{
-              background: "#f9fafb",
+              background: "#F7F4EF",
               borderRadius: 14,
               padding: "16px 20px",
               fontSize: 14,
@@ -267,36 +267,36 @@ export default function BailSignatureModal({
               alignItems: "center",
             }}
           >
-            <span style={{ color: "#6b7280", fontSize: 12 }}>Bien</span>
+            <span style={{ color: "#8a8477", fontSize: 12 }}>Bien</span>
             <span style={{ fontWeight: 700 }}>
               {bailData.titreBien} — {bailData.villeBien}
             </span>
 
-            <span style={{ color: "#6b7280", fontSize: 12 }}>Type</span>
+            <span style={{ color: "#8a8477", fontSize: 12 }}>Type</span>
             <span>
               {bailData.type === "meuble"
                 ? "Bail meublé"
                 : "Bail non meublé (vide)"}
             </span>
 
-            <span style={{ color: "#6b7280", fontSize: 12 }}>Durée</span>
+            <span style={{ color: "#8a8477", fontSize: 12 }}>Durée</span>
             <span>{dureeAns}</span>
 
-            <span style={{ color: "#6b7280", fontSize: 12 }}>Début</span>
+            <span style={{ color: "#8a8477", fontSize: 12 }}>Début</span>
             <span>{dateDebut}</span>
 
-            <span style={{ color: "#6b7280", fontSize: 12 }}>Loyer (CC)</span>
+            <span style={{ color: "#8a8477", fontSize: 12 }}>Loyer (CC)</span>
             <span style={{ fontWeight: 700 }}>
               {loyer.toLocaleString("fr-FR")} €/mois
             </span>
 
-            <span style={{ color: "#6b7280", fontSize: 12 }}>Dépôt garantie</span>
+            <span style={{ color: "#8a8477", fontSize: 12 }}>Dépôt garantie</span>
             <span>{(bailData.caution || 0).toLocaleString("fr-FR")} €</span>
 
-            <span style={{ color: "#6b7280", fontSize: 12 }}>Bailleur</span>
+            <span style={{ color: "#8a8477", fontSize: 12 }}>Bailleur</span>
             <span>{bailData.nomBailleur}</span>
 
-            <span style={{ color: "#6b7280", fontSize: 12 }}>Locataire</span>
+            <span style={{ color: "#8a8477", fontSize: 12 }}>Locataire</span>
             <span>{bailData.nomLocataire || bailData.emailLocataire}</span>
           </div>
 
@@ -304,11 +304,11 @@ export default function BailSignatureModal({
             style={{
               marginTop: 18,
               padding: "12px 16px",
-              background: "#eff6ff",
-              border: "1.5px solid #bfdbfe",
+              background: "#EEF3FB",
+              border: "1px solid #D7E3F4",
               borderRadius: 12,
               fontSize: 12,
-              color: "#1e40af",
+              color: "#1d4ed8",
               lineHeight: 1.6,
             }}
           >
@@ -326,7 +326,7 @@ export default function BailSignatureModal({
           <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 14px" }}>
             2. Acceptation des termes
           </h3>
-          <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 20, lineHeight: 1.6 }}>
+          <p style={{ color: "#8a8477", fontSize: 13, marginBottom: 20, lineHeight: 1.6 }}>
             Confirmez avoir lu le bail et accepter ses clauses.
           </p>
 
@@ -336,8 +336,8 @@ export default function BailSignatureModal({
               gap: 12,
               padding: "16px 18px",
               borderRadius: 14,
-              background: accepte ? "#f0fdf4" : "#fafafa",
-              border: `1.5px solid ${accepte ? "#86efac" : "#e5e7eb"}`,
+              background: accepte ? "#F0FAEE" : "#F7F4EF",
+              border: `1px solid ${accepte ? "#86efac" : "#EAE6DF"}`,
               cursor: "pointer",
               alignItems: "flex-start",
             }}
@@ -366,7 +366,7 @@ export default function BailSignatureModal({
                 paddingLeft: 18,
                 margin: 0,
                 fontSize: 13,
-                color: "#374151",
+                color: "#111",
                 lineHeight: 1.7,
               }}
             >
@@ -420,7 +420,7 @@ export default function BailSignatureModal({
           <h3 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 14px" }}>
             3. Signez votre bail
           </h3>
-          <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 20, lineHeight: 1.6 }}>
+          <p style={{ color: "#8a8477", fontSize: 13, marginBottom: 20, lineHeight: 1.6 }}>
             Confirmez votre identité, reproduisez la mention manuscrite, et
             signez dans le cadre.
           </p>
@@ -431,7 +431,7 @@ export default function BailSignatureModal({
                 style={{
                   fontSize: 12,
                   fontWeight: 700,
-                  color: "#6b7280",
+                  color: "#8a8477",
                   display: "block",
                   marginBottom: 6,
                 }}
@@ -445,7 +445,7 @@ export default function BailSignatureModal({
                 style={{
                   width: "100%",
                   padding: "11px 14px",
-                  border: "1.5px solid #e5e7eb",
+                  border: "1px solid #EAE6DF",
                   borderRadius: 10,
                   fontSize: 15,
                   outline: "none",
@@ -462,7 +462,7 @@ export default function BailSignatureModal({
                 style={{
                   fontSize: 12,
                   fontWeight: 700,
-                  color: "#6b7280",
+                  color: "#8a8477",
                   display: "block",
                   marginBottom: 6,
                 }}
@@ -476,7 +476,7 @@ export default function BailSignatureModal({
                 style={{
                   width: "100%",
                   padding: "11px 14px",
-                  border: "1.5px solid #e5e7eb",
+                  border: "1px solid #EAE6DF",
                   borderRadius: 10,
                   fontSize: 15,
                   outline: "none",
@@ -487,7 +487,7 @@ export default function BailSignatureModal({
                   fontStyle: "italic",
                 }}
               />
-              <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 4, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 11, color: "#8a8477", marginTop: 4, lineHeight: 1.5 }}>
                 Recopiez exactement : <em>Lu et approuvé, bon pour accord</em>
                 {role === "garant" && " — ajoutez 'caution solidaire à hauteur de [montant] €'"}
               </p>
@@ -498,7 +498,7 @@ export default function BailSignatureModal({
                 style={{
                   fontSize: 12,
                   fontWeight: 700,
-                  color: "#6b7280",
+                  color: "#8a8477",
                   display: "block",
                   marginBottom: 8,
                 }}
@@ -513,7 +513,7 @@ export default function BailSignatureModal({
                 style={{
                   padding: "10px 14px",
                   background: "#fef2f2",
-                  border: "1.5px solid #fecaca",
+                  border: "1px solid #F4C9C9",
                   borderRadius: 10,
                   fontSize: 13,
                   color: "#b91c1c",
@@ -526,10 +526,10 @@ export default function BailSignatureModal({
             <div
               style={{
                 padding: "10px 14px",
-                background: "#f9fafb",
+                background: "#F7F4EF",
                 borderRadius: 10,
                 fontSize: 11,
-                color: "#6b7280",
+                color: "#8a8477",
                 lineHeight: 1.6,
               }}
             >

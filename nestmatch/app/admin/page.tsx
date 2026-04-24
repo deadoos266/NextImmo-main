@@ -387,7 +387,7 @@ export default function Admin() {
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
                 <thead>
-                  <tr style={{ background: "#f9fafb" }}>
+                  <tr style={{ background: "#F7F4EF" }}>
                     {["ID", "Titre", "Ville", "Prix", "Statut", "Propriétaire", "Action"].map(h => (
                       <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "0.5px" }}>{h}</th>
                     ))}
@@ -433,7 +433,7 @@ export default function Admin() {
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
                 <thead>
-                  <tr style={{ background: "#f9fafb" }}>
+                  <tr style={{ background: "#F7F4EF" }}>
                     {["Nom", "Email", "Rôle", "Admin", "Inscription", "Actions"].map(h => (
                       <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "0.5px" }}>{h}</th>
                     ))}
@@ -463,7 +463,7 @@ export default function Admin() {
                           {u.email !== session.user.email && (
                             <>
                               <button onClick={() => togglerAdmin(u.email, !!u.is_admin)}
-                                style={{ background: u.is_admin ? "#fef3c7" : "#F0FAEE", color: u.is_admin ? "#92400e" : "#15803d", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                                style={{ background: u.is_admin ? "#fef3c7" : "#F0FAEE", color: u.is_admin ? "#a16207" : "#15803d", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                                 {u.is_admin ? "Retirer admin" : "Promouvoir admin"}
                               </button>
                               {u.is_banned ? (
@@ -504,7 +504,7 @@ export default function Admin() {
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
                 <thead>
-                  <tr style={{ background: "#f9fafb" }}>
+                  <tr style={{ background: "#F7F4EF" }}>
                     {["De", "À", "Message", "Date", "Lu", ""].map(h => (
                       <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "0.5px" }}>{h}</th>
                     ))}
@@ -566,7 +566,7 @@ export default function Admin() {
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
                     <thead>
-                      <tr style={{ background: "#f9fafb" }}>
+                      <tr style={{ background: "#F7F4EF" }}>
                         {["Score", "Titre", "Ville", "Description", "Photos", "Problèmes", ""].map(h => (
                           <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "0.5px" }}>{h}</th>
                         ))}
@@ -646,7 +646,7 @@ export default function Admin() {
                         </div>
                         <p style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>{getRaisonLabel(s.raison)}</p>
                         {s.description && (
-                          <p style={{ fontSize: 13, color: "#111", lineHeight: 1.5, marginBottom: 8, fontStyle: "italic", background: "#f9fafb", padding: "8px 12px", borderRadius: 8 }}>
+                          <p style={{ fontSize: 13, color: "#111", lineHeight: 1.5, marginBottom: 8, fontStyle: "italic", background: "#F7F4EF", padding: "8px 12px", borderRadius: 8 }}>
                             &laquo; {s.description} &raquo;
                           </p>
                         )}
@@ -673,7 +673,7 @@ export default function Admin() {
                           </>
                         ) : (
                           <button onClick={() => traiterSignalement(s.id, "ouvert")}
-                            style={{ background: "white", color: "#a16207", border: "1px solid #fed7aa", borderRadius: 999, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                            style={{ background: "white", color: "#a16207", border: "1px solid #EADFC6", borderRadius: 999, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                             Rouvrir
                           </button>
                         )}
@@ -732,7 +732,7 @@ export default function Admin() {
                           <p style={{ fontSize: 12, color: "#8a8477", marginBottom: 10 }}>
                             <a href={`mailto:${c.email}`} style={{ color: "#1d4ed8", textDecoration: "none" }}>{c.email}</a>
                           </p>
-                          <p style={{ fontSize: 14, color: "#111", lineHeight: 1.6, whiteSpace: "pre-wrap", background: "#f9fafb", padding: "12px 14px", borderRadius: 10 }}>
+                          <p style={{ fontSize: 14, color: "#111", lineHeight: 1.6, whiteSpace: "pre-wrap", background: "#F7F4EF", padding: "12px 14px", borderRadius: 10 }}>
                             {expanded || c.message.length <= 280 ? c.message : c.message.slice(0, 280) + "…"}
                           </p>
                           {c.message.length > 280 && (
@@ -768,7 +768,7 @@ export default function Admin() {
                           )}
                           {c.statut === "resolu" && (
                             <button onClick={() => patchContact(c.id, { statut: "ouvert" })}
-                              style={{ background: "white", color: "#a16207", border: "1px solid #fed7aa", borderRadius: 999, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                              style={{ background: "white", color: "#a16207", border: "1px solid #EADFC6", borderRadius: 999, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                               Rouvrir
                             </button>
                           )}
@@ -824,7 +824,7 @@ export default function Admin() {
               {sorted.length === 0 ? <p style={{ color: "#8a8477", fontSize: 13 }}>Aucune activité.</p> : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {sorted.map((e, i) => (
-                    <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start", padding: "8px 0", borderBottom: i < sorted.length - 1 ? "1px solid #f9fafb" : "none" }}>
+                    <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start", padding: "8px 0", borderBottom: i < sorted.length - 1 ? "1px solid #F7F4EF" : "none" }}>
                       <div style={{ width: 8, height: 8, borderRadius: "50%", background: e.color, marginTop: 7, flexShrink: 0 }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ fontSize: 13, fontWeight: 600, margin: 0 }}>{e.label}</p>

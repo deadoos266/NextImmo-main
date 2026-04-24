@@ -42,7 +42,7 @@ const SORTS: { k: SortKey; l: string }[] = [
 ]
 
 function scoreColor(n: number) {
-  return n >= 85 ? "#16a34a" : n >= 70 ? "#ea580c" : "#6b7280"
+  return n >= 85 ? "#15803d" : n >= 70 ? "#a16207" : "#8a8477"
 }
 function initialsOf(profil: ScreeningProfil | null, email: string): string {
   const p = (profil?.prenom || "").trim()
@@ -251,7 +251,7 @@ export default function CandidaturesParAnnonce() {
       <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: 48 }}>
         <div style={{ maxWidth: 600, margin: "0 auto", background: "#fff", borderRadius: 20, padding: 32, textAlign: "center" }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: "0 0 8px" }}>Annonce introuvable</h1>
-          <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 18 }}>Cette annonce n&apos;existe pas ou vous n&apos;en êtes pas le propriétaire.</p>
+          <p style={{ color: "#8a8477", fontSize: 14, marginBottom: 18 }}>Cette annonce n&apos;existe pas ou vous n&apos;en êtes pas le propriétaire.</p>
           <Link href="/proprietaire" style={{ background: "#111", color: "#fff", padding: "10px 22px", borderRadius: 999, textDecoration: "none", fontSize: 13, fontWeight: 700 }}>
             Retour au tableau de bord
           </Link>

@@ -105,31 +105,31 @@ function VerifierEmailForm() {
       <div style={{ maxWidth: 440, width: "100%", background: "white", borderRadius: 24, padding: "36px 32px", boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
         {success ? (
           <div style={{ textAlign: "center" }}>
-            <div style={{ width: 56, height: 56, margin: "0 auto 18px", background: "#dcfce7", color: "#15803d", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 56, height: 56, margin: "0 auto 18px", background: "#F0FAEE", color: "#15803d", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
             </div>
             <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.3px", margin: 0, marginBottom: 6 }}>Email confirmé</h1>
-            <p style={{ fontSize: 14, color: "#6b7280", margin: 0 }}>Redirection vers la connexion…</p>
+            <p style={{ fontSize: 14, color: "#8a8477", margin: 0 }}>Redirection vers la connexion…</p>
           </div>
         ) : (
           <>
             <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.5px", margin: 0, marginBottom: 6 }}>Confirme ton email</h1>
-            <p style={{ fontSize: 14, color: "#6b7280", marginBottom: 22, lineHeight: 1.55 }}>
+            <p style={{ fontSize: 14, color: "#8a8477", marginBottom: 22, lineHeight: 1.55 }}>
               Entre le code à 6 chiffres reçu dans ton inbox. Il est valide 15 minutes.
             </p>
 
             <form onSubmit={submit}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: 6 }}>Email</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: 6 }}>Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="ton@email.com"
                 autoComplete="email"
-                style={{ width: "100%", padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit", marginBottom: 18 }}
+                style={{ width: "100%", padding: "11px 14px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit", marginBottom: 18 }}
               />
 
-              <label style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: 8 }}>Code de vérification</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: 8 }}>Code de vérification</label>
               <div style={{ display: "flex", gap: 8, marginBottom: 18, justifyContent: "space-between" }}>
                 {digits.map((d, i) => (
                   <input
@@ -145,7 +145,7 @@ function VerifierEmailForm() {
                     aria-label={`Chiffre ${i + 1}`}
                     style={{
                       width: 46, height: 56,
-                      border: `1.5px solid ${d ? "#111" : "#e5e7eb"}`,
+                      border: `1px solid ${d ? "#111" : "#EAE6DF"}`,
                       borderRadius: 10,
                       fontSize: 24, fontWeight: 800, textAlign: "center",
                       outline: "none", fontFamily: "'DM Mono', ui-monospace, monospace",
@@ -156,19 +156,19 @@ function VerifierEmailForm() {
               </div>
 
               {error && (
-                <p style={{ background: "#fee2e2", color: "#991b1b", padding: "10px 14px", borderRadius: 10, fontSize: 13, marginBottom: 16, lineHeight: 1.4 }}>
+                <p style={{ background: "#FEECEC", color: "#b91c1c", padding: "10px 14px", borderRadius: 10, fontSize: 13, marginBottom: 16, lineHeight: 1.4 }}>
                   {error}
                 </p>
               )}
 
               <button type="submit" disabled={submitting}
-                style={{ width: "100%", padding: "13px 20px", background: submitting ? "#9ca3af" : "#111", color: "white", border: "none", borderRadius: 999, fontWeight: 700, fontSize: 15, cursor: submitting ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+                style={{ width: "100%", padding: "13px 20px", background: submitting ? "#8a8477" : "#111", color: "white", border: "none", borderRadius: 999, fontWeight: 700, fontSize: 15, cursor: submitting ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
                 {submitting ? "Vérification…" : "Vérifier mon email"}
               </button>
             </form>
 
-            <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #f3f4f6", textAlign: "center" }}>
-              <p style={{ fontSize: 12, color: "#9ca3af", margin: 0, marginBottom: 8, lineHeight: 1.5 }}>
+            <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #F7F4EF", textAlign: "center" }}>
+              <p style={{ fontSize: 12, color: "#8a8477", margin: 0, marginBottom: 8, lineHeight: 1.5 }}>
                 Pas de code reçu ? Vérifie tes spams ou demande un nouvel envoi.
               </p>
               <button
@@ -202,12 +202,12 @@ function VerifierEmailForm() {
                 {resending ? "Envoi…" : "Renvoyer un code"}
               </button>
               {resendMsg && (
-                <p style={{ fontSize: 12, color: resendMsg.startsWith("Un nouveau") ? "#15803d" : "#991b1b", marginTop: 8, marginBottom: 0 }}>
+                <p style={{ fontSize: 12, color: resendMsg.startsWith("Un nouveau") ? "#15803d" : "#b91c1c", marginTop: 8, marginBottom: 0 }}>
                   {resendMsg}
                 </p>
               )}
-              <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 14, margin: "14px 0 0" }}>
-                <a href="/auth" style={{ color: "#6b7280", textDecoration: "underline" }}>Retour à la connexion</a>
+              <p style={{ fontSize: 12, color: "#8a8477", marginTop: 14, margin: "14px 0 0" }}>
+                <a href="/auth" style={{ color: "#8a8477", textDecoration: "underline" }}>Retour à la connexion</a>
               </p>
             </div>
           </>

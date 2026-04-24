@@ -38,7 +38,7 @@ export default function MapBien({
   // Par defaut on ne montre pas l'adresse exacte : cercle de 400m autour du point
   // pour proteger la vie privee du proprietaire.
   return (
-    <div style={{ width: "100%", height: 320, borderRadius: 16, overflow: "hidden", border: "1px solid #e5e7eb" }}>
+    <div style={{ width: "100%", height: 320, borderRadius: 16, overflow: "hidden", border: "1px solid #EAE6DF" }}>
       <MapContainer
         center={[lat, lng]}
         zoom={14}
