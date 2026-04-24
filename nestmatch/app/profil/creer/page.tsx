@@ -7,6 +7,7 @@ import { useResponsive } from "../../hooks/useResponsive"
 import CityAutocomplete from "../../components/CityAutocomplete"
 import Tooltip from "../../components/Tooltip"
 import { Toggle, F } from "../../components/FormHelpers"
+import { KMButton, KMButtonOutline, KMEyebrow, KMHeading } from "../../components/ui/km"
 
 /**
  * Wizard step-by-step de création du profil locataire — inspiré du principe
@@ -72,35 +73,8 @@ const STEPS = [
 const inp: React.CSSProperties = { width: "100%", padding: "12px 14px", border: "1px solid #EAE6DF", borderRadius: 12, fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit", background: "#fff", color: "#111" }
 const sel: React.CSSProperties = { ...inp, background: "white", appearance: "none", backgroundImage: "url('data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'12\\' height=\\'8\\' viewBox=\\'0 0 12 8\\' fill=\\'none\\'><path d=\\'M1 1l5 5 5-5\\' stroke=\\'%23111\\' stroke-width=\\'1.5\\' stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\'/></svg>')", backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center", paddingRight: 36 }
 
-/** Bouton CTA principal noir pilule. */
-function CTAButton({ children, onClick, disabled, type = "button" }: { children: ReactNode; onClick?: () => void; disabled?: boolean; type?: "button" | "submit" }) {
-  return (
-    <button type={type} onClick={onClick} disabled={disabled}
-      style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "14px 32px", fontWeight: 700, fontSize: 13, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.6px" }}>
-      {children}
-    </button>
-  )
-}
-
-/** Bouton secondaire outline pilule. */
-function SecondaryButton({ children, onClick, disabled }: { children: ReactNode; onClick?: () => void; disabled?: boolean }) {
-  return (
-    <button type="button" onClick={onClick} disabled={disabled}
-      style={{ background: "white", color: "#111", border: "1px solid #111", borderRadius: 999, padding: "13px 28px", fontWeight: 600, fontSize: 13, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.4 : 1, fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.6px" }}>
-      {children}
-    </button>
-  )
-}
-
-/** Eyebrow typographique — 10–12 px uppercase tracked. */
-function Eyebrow({ children }: { children: ReactNode }) {
-  return <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.6px", margin: "0 0 10px" }}>{children}</p>
-}
-
-/** Heading éditorial Fraunces italic. */
-function Heading({ children, size = 32 }: { children: ReactNode; size?: number }) {
-  return <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: size, letterSpacing: "-0.6px", color: "#111", margin: "0 0 8px", lineHeight: 1.1 }}>{children}</h1>
-}
+// Les primitives KMButton/KMButtonOutline/KMEyebrow/KMHeading viennent
+// désormais de components/ui/km.tsx — source de vérité partagée.
 
 /** Barre de progression horizontale pill. */
 function StepBar({ current, total, isMobile }: { current: number; total: number; isMobile: boolean }) {
@@ -308,8 +282,8 @@ export default function CreerProfil() {
 
         <StepBar current={step} total={STEPS.length} isMobile={isMobile} />
 
-        <Eyebrow>{current.eyebrow}</Eyebrow>
-        <Heading size={isMobile ? 26 : 34}>{current.title}</Heading>
+        <KMEyebrow style={{ marginBottom: 10 }}>{current.eyebrow}</KMEyebrow>
+        <KMHeading size={isMobile ? 26 : 34} style={{ marginBottom: 8 }}>{current.title}</KMHeading>
         <p style={{ fontSize: 14, color: "#8a8477", margin: "0 0 28px", lineHeight: 1.6 }}>{current.sub}</p>
 
         {/* Carte principale de l'étape */}
@@ -448,18 +422,18 @@ export default function CreerProfil() {
 
         {/* Navigation bas : Précédent / Suivant ou Sauvegarder */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <SecondaryButton onClick={() => step > 1 ? setStep(step - 1) : router.push("/profil")} disabled={saving}>
+          <KMButtonOutline size="lg" onClick={() => step > 1 ? setStep(step - 1) : router.push("/profil")} disabled={saving}>
             {step > 1 ? "← Précédent" : "Annuler"}
-          </SecondaryButton>
+          </KMButtonOutline>
 
           {step < STEPS.length ? (
-            <CTAButton onClick={() => setStep(step + 1)} disabled={!canNext}>
+            <KMButton size="lg" onClick={() => setStep(step + 1)} disabled={!canNext}>
               Suivant →
-            </CTAButton>
+            </KMButton>
           ) : (
-            <CTAButton onClick={sauvegarder} disabled={saving}>
+            <KMButton size="lg" onClick={sauvegarder} disabled={saving}>
               {saving ? "Sauvegarde…" : "Terminer et sauvegarder"}
-            </CTAButton>
+            </KMButton>
           )}
         </div>
       </div>
