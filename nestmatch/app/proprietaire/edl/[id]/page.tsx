@@ -17,12 +17,12 @@ const ETATS = ["Neuf", "Tres bon", "Bon", "Usage", "Mauvais", "Degrade"] as cons
 type Etat = typeof ETATS[number]
 
 const ETAT_STYLE: Record<Etat, { bg: string; color: string; icon: string }> = {
-  "Neuf":    { bg: "#dcfce7", color: "#16a34a", icon: "★" },
-  "Tres bon":{ bg: "#dcfce7", color: "#16a34a", icon: "●" },
-  "Bon":     { bg: "#eff6ff", color: "#1d4ed8", icon: "●" },
-  "Usage":   { bg: "#fff7ed", color: "#ea580c", icon: "●" },
-  "Mauvais": { bg: "#fee2e2", color: "#dc2626", icon: "●" },
-  "Degrade": { bg: "#fee2e2", color: "#991b1b", icon: "✗" },
+  "Neuf":    { bg: "#F0FAEE", color: "#15803d", icon: "★" },
+  "Tres bon":{ bg: "#F0FAEE", color: "#15803d", icon: "●" },
+  "Bon":     { bg: "#EEF3FB", color: "#1d4ed8", icon: "●" },
+  "Usage":   { bg: "#FBF6EA", color: "#a16207", icon: "●" },
+  "Mauvais": { bg: "#FEECEC", color: "#b91c1c", icon: "●" },
+  "Degrade": { bg: "#FEECEC", color: "#b91c1c", icon: "✗" },
 }
 
 // Elements specifiques par type de piece
@@ -562,7 +562,7 @@ export default function EdlPage() {
   const totalPhotos = pieces.reduce((s, p) => s + p.photos.length, 0)
 
   if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif", color: "#6b7280" }}>Chargement...</div>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif", color: "#8a8477" }}>Chargement...</div>
   )
   if (!bien) return null
 
@@ -570,9 +570,9 @@ export default function EdlPage() {
   const isReadOnly = statut === "envoye" || statut === "valide"
   const isLocked = statut === "valide"
 
-  const inp: any = { width: "100%", padding: "10px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 16, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }
+  const inp: any = { width: "100%", padding: "10px 14px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 16, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }
   const cardS: any = { background: "white", borderRadius: 20, padding: isMobile ? 18 : 28, marginBottom: 20 }
-  const lbl: any = { fontSize: 12, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6 }
+  const lbl: any = { fontSize: 12, fontWeight: 700, color: "#8a8477", display: "block", marginBottom: 6 }
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
@@ -583,25 +583,25 @@ export default function EdlPage() {
             if (typeof window !== "undefined" && window.history.length > 1) router.back()
             else router.push("/proprietaire")
           }}
-          style={{ fontSize: 13, color: "#6b7280", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}>
+          style={{ fontSize: 13, color: "#8a8477", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}>
           ← Retour
         </button>
 
         <div style={{ marginTop: 16, marginBottom: 28 }}>
           <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, letterSpacing: "-0.5px" }}>État des lieux</h1>
-          <p style={{ color: "#6b7280", marginTop: 4, fontSize: 14 }}>{bien.titre} — {bien.ville} — {bien.surface} m²</p>
+          <p style={{ color: "#8a8477", marginTop: 4, fontSize: 14 }}>{bien.titre} — {bien.ville} — {bien.surface} m²</p>
         </div>
 
         {/* ─── Status banners ─── */}
         {statut === "conteste" && (
-          <div style={{ background: "#fefce8", border: "1.5px solid #fde68a", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
+          <div style={{ background: "#fefce8", border: "1px solid #EADFC6", borderRadius: 14, padding: "14px 20px", marginBottom: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: edlExistant?.commentaire_locataire ? 10 : 0 }}>
               <span style={{ fontSize: 18 }}>⚠</span>
               <p style={{ fontSize: 14, fontWeight: 700, color: "#92400e", margin: 0 }}>Le locataire a contesté cet état des lieux</p>
             </div>
             {edlExistant?.commentaire_locataire && (
-              <div style={{ background: "white", borderRadius: 10, padding: "10px 14px", border: "1px solid #fde68a" }}>
-                <p style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", margin: "0 0 4px" }}>Commentaire du locataire :</p>
+              <div style={{ background: "white", borderRadius: 10, padding: "10px 14px", border: "1px solid #EADFC6" }}>
+                <p style={{ fontSize: 12, fontWeight: 600, color: "#8a8477", margin: "0 0 4px" }}>Commentaire du locataire :</p>
                 <p style={{ fontSize: 13, color: "#111", margin: 0, lineHeight: 1.5 }}>{edlExistant.commentaire_locataire}</p>
               </div>
             )}
@@ -609,22 +609,22 @@ export default function EdlPage() {
         )}
 
         {statut === "envoye" && (
-          <div style={{ background: "#dcfce7", border: "1.5px solid #bbf7d0", borderRadius: 14, padding: "14px 20px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+          <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 14, padding: "14px 20px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 18 }}>📩</span>
-              <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: 0 }}>État des lieux envoyé au locataire — en attente de validation</p>
+              <p style={{ fontSize: 14, fontWeight: 700, color: "#15803d", margin: 0 }}>État des lieux envoyé au locataire — en attente de validation</p>
             </div>
             <button onClick={remettreEnBrouillon}
-              style={{ background: "none", border: "none", color: "#6b7280", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textDecoration: "underline" }}>
+              style={{ background: "none", border: "none", color: "#8a8477", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textDecoration: "underline" }}>
               Remettre en brouillon
             </button>
           </div>
         )}
 
         {statut === "valide" && (
-          <div style={{ background: "#dcfce7", border: "1.5px solid #bbf7d0", borderRadius: 14, padding: "14px 20px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 14, padding: "14px 20px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 18 }}>✓</span>
-            <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: 0 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: "#15803d", margin: 0 }}>
               État des lieux valide le {edlExistant?.date_validation ? new Date(edlExistant.date_validation).toLocaleDateString("fr-FR") : "—"}
             </p>
           </div>
@@ -633,14 +633,14 @@ export default function EdlPage() {
         {/* Recap barre */}
         <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
           {[
-            { label: "Pieces", val: pieces.length, bg: "#eff6ff", color: "#1d4ed8" },
-            { label: "Elements", val: totalElements, bg: "#f3f4f6", color: "#374151" },
-            { label: "Modifies", val: elementsRemplis, bg: elementsRemplis > 0 ? "#fff7ed" : "#f3f4f6", color: elementsRemplis > 0 ? "#ea580c" : "#9ca3af" },
-            { label: "Photos", val: totalPhotos, bg: totalPhotos > 0 ? "#dcfce7" : "#f3f4f6", color: totalPhotos > 0 ? "#16a34a" : "#9ca3af" },
+            { label: "Pieces", val: pieces.length, bg: "#EEF3FB", color: "#1d4ed8" },
+            { label: "Elements", val: totalElements, bg: "#F7F4EF", color: "#111" },
+            { label: "Modifies", val: elementsRemplis, bg: elementsRemplis > 0 ? "#FBF6EA" : "#F7F4EF", color: elementsRemplis > 0 ? "#a16207" : "#8a8477" },
+            { label: "Photos", val: totalPhotos, bg: totalPhotos > 0 ? "#F0FAEE" : "#F7F4EF", color: totalPhotos > 0 ? "#15803d" : "#8a8477" },
           ].map(s => (
             <div key={s.label} style={{ background: s.bg, borderRadius: 12, padding: "10px 16px", flex: 1, minWidth: 70, textAlign: "center" }}>
               <div style={{ fontSize: 20, fontWeight: 800, color: s.color }}>{s.val}</div>
-              <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{s.label}</div>
+              <div style={{ fontSize: 11, color: "#8a8477", marginTop: 2 }}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -688,18 +688,18 @@ export default function EdlPage() {
             {pieces.map((piece, pieceIdx) => (
               <div key={pieceIdx} style={cardS}>
                 <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{piece.nom}</h2>
-                <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 14 }}>{Object.keys(piece.elements).length} elements</p>
+                <p style={{ fontSize: 12, color: "#8a8477", marginBottom: 14 }}>{Object.keys(piece.elements).length} elements</p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
                   {Object.entries(piece.elements).map(([elem, val]) => {
                     const st = ETAT_STYLE[val.etat]
                     return (
                       <div key={elem} style={{ padding: "8px 0", borderBottom: "1px solid #f9fafb", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: "#374151", flex: 1, minWidth: 120 }}>{elem}</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#111", flex: 1, minWidth: 120 }}>{elem}</span>
                         <span style={{ background: st.bg, color: st.color, border: `1px solid ${st.color}`, fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 999 }}>
                           {val.etat}
                         </span>
                         {val.observation && (
-                          <span style={{ fontSize: 12, color: "#6b7280", fontStyle: "italic" }}>{val.observation}</span>
+                          <span style={{ fontSize: 12, color: "#8a8477", fontStyle: "italic" }}>{val.observation}</span>
                         )}
                       </div>
                     )
@@ -708,7 +708,7 @@ export default function EdlPage() {
                 {piece.photos.length > 0 && (
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
                     {piece.photos.map((url, photoIdx) => (
-                      <div key={photoIdx} style={{ width: 72, height: 72, borderRadius: 10, overflow: "hidden", border: "1.5px solid #e5e7eb" }}>
+                      <div key={photoIdx} style={{ width: 72, height: 72, borderRadius: 10, overflow: "hidden", border: "1px solid #EAE6DF" }}>
                         <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       </div>
                     ))}
@@ -720,7 +720,7 @@ export default function EdlPage() {
             {observations && (
               <div style={cardS}>
                 <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>Observations generales</h2>
-                <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.6, margin: 0 }}>{observations}</p>
+                <p style={{ fontSize: 14, color: "#111", lineHeight: 1.6, margin: 0 }}>{observations}</p>
               </div>
             )}
             {/* Actions read-only */}
@@ -729,7 +729,7 @@ export default function EdlPage() {
                 style={{
                   flex: "1 1 200px", padding: "16px 24px",
                   background: "#111", color: "white",
-                  border: "1.5px solid #111", borderRadius: 16, fontWeight: 800, fontSize: 15,
+                  border: "1px solid #111", borderRadius: 16, fontWeight: 800, fontSize: 15,
                   cursor: "pointer", fontFamily: "inherit",
                 }}>
                 Telecharger le PDF
@@ -738,7 +738,7 @@ export default function EdlPage() {
                 style={{
                   flex: "1 1 200px", padding: "16px 24px",
                   background: "white", color: "#111",
-                  border: "1.5px solid #111", borderRadius: 16, fontWeight: 700, fontSize: 15,
+                  border: "1px solid #111", borderRadius: 16, fontWeight: 700, fontSize: 15,
                   cursor: "pointer", fontFamily: "inherit",
                 }}>
                 Telecharger les photos (.zip)
@@ -757,7 +757,7 @@ export default function EdlPage() {
                     style={{
                       flex: 1, padding: "14px 20px", borderRadius: 14, cursor: "pointer", fontFamily: "inherit", textAlign: "center",
                       background: type === t ? "#111" : "white", color: type === t ? "white" : "#111",
-                      border: type === t ? "1.5px solid #111" : "1.5px solid #e5e7eb", fontWeight: 700, fontSize: 14,
+                      border: type === t ? "1px solid #111" : "1px solid #EAE6DF", fontWeight: 700, fontSize: 14,
                     }}>
                     {t === "entree" ? "Entree" : "Sortie"}
                   </button>
@@ -772,7 +772,7 @@ export default function EdlPage() {
             {/* Le Bailleur */}
             <div style={cardS}>
               <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>Le bailleur</h2>
-              <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16 }}>Pre-rempli depuis votre profil — modifiable</p>
+              <p style={{ fontSize: 12, color: "#8a8477", marginBottom: 16 }}>Pre-rempli depuis votre profil — modifiable</p>
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
                 <div><label style={lbl}>Prenom</label><input style={inp} value={prenomBailleur} onChange={e => setPrenomBailleur(e.target.value)} placeholder="Prenom" /></div>
                 <div><label style={lbl}>Nom</label><input style={inp} value={nomBailleur} onChange={e => setNomBailleur(e.target.value)} placeholder="Nom de famille" /></div>
@@ -786,30 +786,30 @@ export default function EdlPage() {
               {bien.locataire_email ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
                   {locataireVerifie === true && (
-                    <span style={{ background: "#dcfce7", color: "#16a34a", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>✓ Compte verifie : {bien.locataire_email}</span>
+                    <span style={{ background: "#F0FAEE", color: "#15803d", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>✓ Compte verifie : {bien.locataire_email}</span>
                   )}
                   {locataireVerifie === false && (
-                    <span style={{ background: "#fff7ed", color: "#ea580c", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>{bien.locataire_email} — pas encore inscrit (l'envoi via messagerie sera possible apres inscription)</span>
+                    <span style={{ background: "#FBF6EA", color: "#a16207", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>{bien.locataire_email} — pas encore inscrit (l'envoi via messagerie sera possible apres inscription)</span>
                   )}
                   {locataireVerifie === null && (
-                    <span style={{ background: "#f3f4f6", color: "#6b7280", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>Verification en cours...</span>
+                    <span style={{ background: "#F7F4EF", color: "#8a8477", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>Verification en cours...</span>
                   )}
                 </div>
               ) : (
-                <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
+                <div style={{ background: "#FBF6EA", border: "1px solid #fed7aa", borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
                   <p style={{ fontSize: 13, fontWeight: 700, color: "#9a3412", margin: 0 }}>Aucun locataire rattache a ce bien</p>
-                  <p style={{ fontSize: 12, color: "#ea580c", margin: "4px 0 0" }}>
+                  <p style={{ fontSize: 12, color: "#a16207", margin: "4px 0 0" }}>
                     Renseignez l'email du locataire dans les parametres du bien (bouton "Modifier les donnees") pour pouvoir envoyer l'EDL via la plateforme.
                   </p>
                 </div>
               )}
-              <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16 }}>Completez nom et prenom pour le document officiel (ou laissez vide pour remplir a la main)</p>
+              <p style={{ fontSize: 12, color: "#8a8477", marginBottom: 16 }}>Completez nom et prenom pour le document officiel (ou laissez vide pour remplir a la main)</p>
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
                 <div><label style={lbl}>Prenom</label><input style={inp} value={prenomLocataire} onChange={e => setPrenomLocataire(e.target.value)} placeholder="Prenom" /></div>
                 <div><label style={lbl}>Nom</label><input style={inp} value={nomLocataire} onChange={e => setNomLocataire(e.target.value)} placeholder="Nom de famille" /></div>
                 <div>
                   <label style={lbl}>Email (compte plateforme)</label>
-                  <input value={emailLocataire} disabled style={{ ...inp, background: "#f9fafb", color: bien.locataire_email ? "#111" : "#9ca3af" }} />
+                  <input value={emailLocataire} disabled style={{ ...inp, background: "#f9fafb", color: bien.locataire_email ? "#111" : "#8a8477" }} />
                 </div>
               </div>
             </div>
@@ -830,14 +830,14 @@ export default function EdlPage() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                   <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{piece.nom}</h2>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <span style={{ fontSize: 11, color: "#9ca3af" }}>{Object.keys(piece.elements).length} elements</span>
+                    <span style={{ fontSize: 11, color: "#8a8477" }}>{Object.keys(piece.elements).length} elements</span>
                     <button onClick={() => removePiece(pieceIdx)}
-                      style={{ background: "none", border: "1.5px solid #fecaca", color: "#dc2626", borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                      style={{ background: "none", border: "1px solid #F4C9C9", color: "#b91c1c", borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
                       Retirer
                     </button>
                   </div>
                 </div>
-                <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16 }}>Type : {piece.type}</p>
+                <p style={{ fontSize: 12, color: "#8a8477", marginBottom: 16 }}>Type : {piece.type}</p>
 
                 {/* Elements */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
@@ -846,9 +846,9 @@ export default function EdlPage() {
                     return (
                       <div key={elem} style={{ padding: "10px 0", borderBottom: "1px solid #f9fafb" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: "#374151", flex: 1 }}>{elem}</span>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: "#111", flex: 1 }}>{elem}</span>
                           <button onClick={() => removeElement(pieceIdx, elem)}
-                            style={{ background: "none", border: "none", color: "#d1d5db", fontSize: 16, cursor: "pointer", padding: "0 4px", lineHeight: 1 }}
+                            style={{ background: "none", border: "none", color: "#EAE6DF", fontSize: 16, cursor: "pointer", padding: "0 4px", lineHeight: 1 }}
                             title="Retirer cet element">
                             ×
                           </button>
@@ -863,8 +863,8 @@ export default function EdlPage() {
                                   padding: isMobile ? "5px 8px" : "4px 10px", borderRadius: 999,
                                   fontSize: isMobile ? 10 : 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
                                   background: active ? s.bg : "#f9fafb",
-                                  color: active ? s.color : "#9ca3af",
-                                  border: active ? `1.5px solid ${s.color}` : "1.5px solid transparent",
+                                  color: active ? s.color : "#8a8477",
+                                  border: active ? `1px solid ${s.color}` : "1px solid transparent",
                                 }}>
                                 {etat}
                               </button>
@@ -875,7 +875,7 @@ export default function EdlPage() {
                           value={val.observation}
                           onChange={e => updateElement(pieceIdx, elem, "observation", e.target.value)}
                           placeholder="Observation (tache, rayure, manque...)..."
-                          style={{ width: "100%", padding: "6px 10px", border: "1.5px solid #f3f4f6", borderRadius: 8, fontSize: 12, outline: "none", fontFamily: "inherit", boxSizing: "border-box" as const, marginTop: 4 }}
+                          style={{ width: "100%", padding: "6px 10px", border: "1px solid #F7F4EF", borderRadius: 8, fontSize: 12, outline: "none", fontFamily: "inherit", boxSizing: "border-box" as const, marginTop: 4 }}
                         />
                       </div>
                     )
@@ -889,18 +889,18 @@ export default function EdlPage() {
                     onChange={e => setNewElemName(prev => ({ ...prev, [pieceIdx]: e.target.value }))}
                     onKeyDown={e => e.key === "Enter" && addElement(pieceIdx)}
                     placeholder="Ajouter un element..."
-                    style={{ flex: 1, padding: "7px 10px", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: 12, outline: "none", fontFamily: "inherit" }}
+                    style={{ flex: 1, padding: "7px 10px", border: "1px solid #EAE6DF", borderRadius: 8, fontSize: 12, outline: "none", fontFamily: "inherit" }}
                   />
                   <button onClick={() => addElement(pieceIdx)}
-                    style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", color: "#374151" }}>
+                    style={{ background: "#F7F4EF", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", color: "#111" }}>
                     +
                   </button>
                 </div>
 
                 {/* Photos */}
-                <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #f3f4f6" }}>
+                <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #F7F4EF" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "#6b7280" }}>Photos ({piece.photos.length}/5)</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#8a8477" }}>Photos ({piece.photos.length}/5)</span>
                     <input
                       ref={el => { photoRefs.current[pieceIdx] = el }}
                       type="file" accept="image/*" multiple
@@ -911,7 +911,7 @@ export default function EdlPage() {
                       <button onClick={() => photoRefs.current[pieceIdx]?.click()}
                         disabled={uploadingPiece === pieceIdx}
                         style={{
-                          background: "#eff6ff", border: "1.5px solid #bfdbfe", color: "#1d4ed8",
+                          background: "#EEF3FB", border: "1px solid #D7E3F4", color: "#1d4ed8",
                           borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700,
                           cursor: uploadingPiece === pieceIdx ? "not-allowed" : "pointer",
                           fontFamily: "inherit", opacity: uploadingPiece === pieceIdx ? 0.6 : 1,
@@ -923,7 +923,7 @@ export default function EdlPage() {
                   {piece.photos.length > 0 && (
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       {piece.photos.map((url, photoIdx) => (
-                        <div key={photoIdx} style={{ position: "relative", width: 80, height: 80, borderRadius: 10, overflow: "hidden", border: "1.5px solid #e5e7eb" }}>
+                        <div key={photoIdx} style={{ position: "relative", width: 80, height: 80, borderRadius: 10, overflow: "hidden", border: "1px solid #EAE6DF" }}>
                           <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                           <button onClick={() => removePhoto(pieceIdx, photoIdx)}
                             style={{ position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,0.6)", color: "white", border: "none", borderRadius: "50%", width: 20, height: 20, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
@@ -943,7 +943,7 @@ export default function EdlPage() {
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
                 {PIECES_PROPOSEES.filter(p => p !== "Autre").map(p => (
                   <button key={p} onClick={() => addPiece(p)}
-                    style={{ padding: "7px 14px", background: "#f3f4f6", border: "none", borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: "#374151" }}>
+                    style={{ padding: "7px 14px", background: "#F7F4EF", border: "none", borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: "#111" }}>
                     + {p}
                   </button>
                 ))}
@@ -952,7 +952,7 @@ export default function EdlPage() {
                 <input value={customPieceName} onChange={e => setCustomPieceName(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && customPieceName.trim() && addPiece("Autre", customPieceName.trim())}
                   placeholder="Nom personnalise (ex: Dressing, Cellier...)"
-                  style={{ flex: 1, padding: "9px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 13, outline: "none", fontFamily: "inherit" }} />
+                  style={{ flex: 1, padding: "9px 14px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 13, outline: "none", fontFamily: "inherit" }} />
                 <button onClick={() => customPieceName.trim() && addPiece("Autre", customPieceName.trim())}
                   style={{ background: "#111", color: "white", border: "none", borderRadius: 10, padding: "9px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
                   Ajouter
@@ -974,7 +974,7 @@ export default function EdlPage() {
               <button onClick={() => sauvegarderEdl()} disabled={saving}
                 style={{
                   flex: 1, padding: "16px 32px",
-                  background: saved ? "#16a34a" : saving ? "#9ca3af" : "#111", color: "white",
+                  background: saved ? "#15803d" : saving ? "#8a8477" : "#111", color: "white",
                   border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16,
                   cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit",
                 }}>
@@ -984,7 +984,7 @@ export default function EdlPage() {
                 style={{
                   flex: 1, padding: "16px 32px",
                   background: "white", color: "#111",
-                  border: "1.5px solid #111", borderRadius: 16, fontWeight: 800, fontSize: 16,
+                  border: "1px solid #111", borderRadius: 16, fontWeight: 800, fontSize: 16,
                   cursor: "pointer", fontFamily: "inherit",
                 }}>
                 Telecharger le PDF
@@ -993,7 +993,7 @@ export default function EdlPage() {
                 style={{
                   flex: 1, padding: "16px 32px",
                   background: "white", color: "#111",
-                  border: "1.5px solid #111", borderRadius: 16, fontWeight: 700, fontSize: 15,
+                  border: "1px solid #111", borderRadius: 16, fontWeight: 700, fontSize: 15,
                   cursor: "pointer", fontFamily: "inherit",
                 }}>
                 Photos (.zip)
@@ -1002,20 +1002,20 @@ export default function EdlPage() {
                 <button onClick={envoyerAuLocataire} disabled={sending}
                   style={{
                     flex: 1, padding: "16px 32px",
-                    background: sent ? "#16a34a" : sending ? "#9ca3af" : "#1d4ed8", color: "white",
+                    background: sent ? "#15803d" : sending ? "#8a8477" : "#1d4ed8", color: "white",
                     border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16,
                     cursor: sending ? "not-allowed" : "pointer", fontFamily: "inherit",
                   }}>
                   {sending ? "Envoi en cours..." : sent ? "Envoye a " + bien.locataire_email + " !" : "Envoyer a " + bien.locataire_email}
                 </button>
               ) : bien.locataire_email && !locataireVerifie ? (
-                <div style={{ flex: 1, padding: "14px 20px", background: "#fff7ed", borderRadius: 16, border: "1.5px solid #fed7aa", textAlign: "center" }}>
-                  <p style={{ fontSize: 13, color: "#ea580c", fontWeight: 600, margin: 0 }}>Envoi impossible — {bien.locataire_email} pas encore inscrit</p>
-                  <p style={{ fontSize: 11, color: "#9ca3af", margin: "4px 0 0" }}>Invitez-le depuis les parametres du bien. Le PDF reste telechargeable.</p>
+                <div style={{ flex: 1, padding: "14px 20px", background: "#FBF6EA", borderRadius: 16, border: "1px solid #fed7aa", textAlign: "center" }}>
+                  <p style={{ fontSize: 13, color: "#a16207", fontWeight: 600, margin: 0 }}>Envoi impossible — {bien.locataire_email} pas encore inscrit</p>
+                  <p style={{ fontSize: 11, color: "#8a8477", margin: "4px 0 0" }}>Invitez-le depuis les parametres du bien. Le PDF reste telechargeable.</p>
                 </div>
               ) : (
-                <div style={{ flex: 1, padding: "14px 20px", background: "#f9fafb", borderRadius: 16, border: "1.5px dashed #d1d5db", textAlign: "center" }}>
-                  <p style={{ fontSize: 13, color: "#9ca3af", fontWeight: 600, margin: 0 }}>Rattachez un locataire pour envoyer l&apos;EDL</p>
+                <div style={{ flex: 1, padding: "14px 20px", background: "#f9fafb", borderRadius: 16, border: "1.5px dashed #EAE6DF", textAlign: "center" }}>
+                  <p style={{ fontSize: 13, color: "#8a8477", fontWeight: 600, margin: 0 }}>Rattachez un locataire pour envoyer l&apos;EDL</p>
                 </div>
               )}
             </div>
@@ -1023,18 +1023,18 @@ export default function EdlPage() {
         )}
 
         {edlExistant && !isReadOnly && (
-          <div style={{ background: "#dcfce7", border: "1.5px solid #bbf7d0", borderRadius: 12, padding: "12px 16px", marginTop: 16, display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 12, padding: "12px 16px", marginTop: 16, display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 16 }}>✓</span>
             <div>
-              <p style={{ fontSize: 13, fontWeight: 700, color: "#166534", margin: 0 }}>État des lieux sauvegardé</p>
-              <p style={{ fontSize: 12, color: "#16a34a", margin: "2px 0 0" }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#15803d", margin: 0 }}>État des lieux sauvegardé</p>
+              <p style={{ fontSize: 12, color: "#15803d", margin: "2px 0 0" }}>
                 {edlExistant.type === "entree" ? "Entree" : "Sortie"} — {new Date(edlExistant.date_edl || edlExistant.created_at).toLocaleDateString("fr-FR")}
               </p>
             </div>
           </div>
         )}
 
-        <p style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", marginTop: 12, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 12, color: "#8a8477", textAlign: "center", marginTop: 12, lineHeight: 1.6 }}>
           Document contradictoire — a signer par les deux parties.{totalPhotos > 0 ? ` ${totalPhotos} photo(s) jointes en annexe.` : ""}
         </p>
       </div>

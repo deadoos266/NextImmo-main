@@ -166,14 +166,14 @@ function makeInitialForm(): FormState {
 const labelStyle = {
   fontSize: 12,
   fontWeight: 700,
-  color: "#6b7280",
+  color: "#8a8477",
   display: "block",
   marginBottom: 6,
 } as const
 
 const helpStyle = {
   fontSize: 11,
-  color: "#9ca3af",
+  color: "#8a8477",
   marginTop: 4,
   lineHeight: 1.5,
 } as const
@@ -195,7 +195,7 @@ const h2Style = {
 
 const h2SubStyle = {
   fontSize: 12,
-  color: "#6b7280",
+  color: "#8a8477",
   marginBottom: 18,
   lineHeight: 1.5,
 } as const
@@ -228,7 +228,7 @@ function FieldInput({
         style={{
           width: "100%",
           padding: "11px 14px",
-          border: "1.5px solid #e5e7eb",
+          border: "1px solid #EAE6DF",
           borderRadius: 10,
           fontSize: 15,
           outline: "none",
@@ -269,7 +269,7 @@ function FieldTextarea({
         style={{
           width: "100%",
           padding: "11px 14px",
-          border: "1.5px solid #e5e7eb",
+          border: "1px solid #EAE6DF",
           borderRadius: 10,
           fontSize: 14,
           outline: "none",
@@ -306,7 +306,7 @@ function FieldCheckbox({
         padding: "10px 14px",
         borderRadius: 10,
         background: checked ? "#f0fdf4" : "#fafafa",
-        border: `1.5px solid ${checked ? "#86efac" : "#e5e7eb"}`,
+        border: `1px solid ${checked ? "#86efac" : "#EAE6DF"}`,
         alignItems: "flex-start",
       }}
     >
@@ -319,7 +319,7 @@ function FieldCheckbox({
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>{label}</div>
         {help && (
-          <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 11, color: "#8a8477", marginTop: 2, lineHeight: 1.5 }}>
             {help}
           </div>
         )}
@@ -356,7 +356,7 @@ function SegmentedPicker<T extends string>({
               textAlign: "left",
               background: active ? "#111" : "white",
               color: active ? "white" : "#111",
-              border: `1.5px solid ${active ? "#111" : "#e5e7eb"}`,
+              border: `1px solid ${active ? "#111" : "#EAE6DF"}`,
             }}
           >
             <div style={{ fontSize: 14, fontWeight: 700 }}>{o.label}</div>
@@ -797,7 +797,7 @@ export default function BailPage() {
           justifyContent: "center",
           height: "100vh",
           fontFamily: "'DM Sans', sans-serif",
-          color: "#6b7280",
+          color: "#8a8477",
         }}
       >
         Chargement…
@@ -834,7 +834,7 @@ export default function BailPage() {
           onClick={() => router.push("/proprietaire")}
           style={{
             fontSize: 13,
-            color: "#6b7280",
+            color: "#8a8477",
             background: "none",
             border: "none",
             cursor: "pointer",
@@ -856,7 +856,7 @@ export default function BailPage() {
           >
             Générateur de bail
           </h1>
-          <p style={{ color: "#6b7280", marginTop: 4, fontSize: 14 }}>
+          <p style={{ color: "#8a8477", marginTop: 4, fontSize: 14 }}>
             {bien.titre} — {bien.ville}
           </p>
         </div>
@@ -865,8 +865,8 @@ export default function BailPage() {
         {existingBailAt && (
           <div
             style={{
-              background: locataireSigne ? "#dcfce7" : "#fef3c7",
-              border: `1.5px solid ${locataireSigne ? "#86efac" : "#fde68a"}`,
+              background: locataireSigne ? "#F0FAEE" : "#fef3c7",
+              border: `1px solid ${locataireSigne ? "#86efac" : "#EADFC6"}`,
               borderRadius: 14,
               padding: "14px 18px",
               marginBottom: 20,
@@ -963,8 +963,8 @@ export default function BailPage() {
         {/* Import bail externe — raccourci en haut */}
         <div
           style={{
-            background: "#eff6ff",
-            border: "1.5px solid #bfdbfe",
+            background: "#EEF3FB",
+            border: "1px solid #D7E3F4",
             borderRadius: 14,
             padding: "14px 18px",
             marginBottom: 20,
@@ -998,8 +998,8 @@ export default function BailPage() {
             }}
             disabled={!(bien.locataire_email || "").trim() || locataireSigne}
             style={{
-              background: (bien.locataire_email || "").trim() && !locataireSigne ? "#1d4ed8" : "#e5e7eb",
-              color: (bien.locataire_email || "").trim() && !locataireSigne ? "white" : "#9ca3af",
+              background: (bien.locataire_email || "").trim() && !locataireSigne ? "#1d4ed8" : "#EAE6DF",
+              color: (bien.locataire_email || "").trim() && !locataireSigne ? "white" : "#8a8477",
               border: "none",
               borderRadius: 999,
               padding: "9px 18px",
@@ -1017,8 +1017,8 @@ export default function BailPage() {
         {uploadSuccess && (
           <div
             style={{
-              background: "#dcfce7",
-              border: "1.5px solid #86efac",
+              background: "#F0FAEE",
+              border: "1px solid #86efac",
               borderRadius: 14,
               padding: "14px 18px",
               marginBottom: 20,
@@ -1036,7 +1036,7 @@ export default function BailPage() {
           <div
             style={{
               background: "#fef3c7",
-              border: "1.5px solid #fde68a",
+              border: "1px solid #EADFC6",
               borderRadius: 14,
               padding: "14px 18px",
               marginBottom: 20,
@@ -1057,7 +1057,7 @@ export default function BailPage() {
             <button
               onClick={restaurerBrouillon}
               style={{
-                background: "#f59e0b",
+                background: "#a16207",
                 color: "white",
                 border: "none",
                 borderRadius: 8,
@@ -1075,7 +1075,7 @@ export default function BailPage() {
               style={{
                 background: "white",
                 color: "#92400e",
-                border: "1.5px solid #fde68a",
+                border: "1px solid #EADFC6",
                 borderRadius: 8,
                 padding: "8px 14px",
                 fontSize: 13,
@@ -1187,11 +1187,11 @@ export default function BailPage() {
                 style={{
                   width: "100%",
                   padding: "11px 14px",
-                  border: "1.5px solid #e5e7eb",
+                  border: "1px solid #EAE6DF",
                   borderRadius: 10,
                   fontSize: 15,
                   background: "#f9fafb",
-                  color: "#6b7280",
+                  color: "#8a8477",
                   boxSizing: "border-box",
                   fontFamily: "inherit",
                 }}
@@ -1256,7 +1256,7 @@ export default function BailPage() {
                 cursor: "pointer",
                 fontSize: 14,
                 fontWeight: 700,
-                color: form.garantActif ? "#15803d" : "#6b7280",
+                color: form.garantActif ? "#15803d" : "#8a8477",
               }}
             >
               <input
@@ -1330,8 +1330,8 @@ export default function BailPage() {
               <div
                 style={{
                   gridColumn: isMobile ? "auto" : "1 / -1",
-                  background: "#fff7ed",
-                  border: "1.5px solid #fed7aa",
+                  background: "#FBF6EA",
+                  border: "1px solid #fed7aa",
                   borderRadius: 10,
                   padding: "10px 14px",
                   fontSize: 12,
@@ -1420,7 +1420,7 @@ export default function BailPage() {
                 style={{
                   width: "100%",
                   padding: "11px 14px",
-                  border: "1.5px solid #e5e7eb",
+                  border: "1px solid #EAE6DF",
                   borderRadius: 10,
                   fontSize: 15,
                   outline: "none",
@@ -1483,7 +1483,7 @@ export default function BailPage() {
                   borderBottom: i < arr.length - 1 ? "1px solid #eee" : "none",
                 }}
               >
-                <span style={{ fontSize: 14, color: "#6b7280" }}>{r.label}</span>
+                <span style={{ fontSize: 14, color: "#8a8477" }}>{r.label}</span>
                 <span
                   style={{
                     fontSize: 14,
@@ -1508,8 +1508,8 @@ export default function BailPage() {
             <div
               style={{
                 marginTop: 16,
-                background: "#fff7ed",
-                border: "1.5px solid #fed7aa",
+                background: "#FBF6EA",
+                border: "1px solid #fed7aa",
                 borderRadius: 12,
                 padding: 16,
               }}
@@ -1604,7 +1604,7 @@ export default function BailPage() {
                 style={{
                   width: "100%",
                   padding: "11px 14px",
-                  border: "1.5px solid #e5e7eb",
+                  border: "1px solid #EAE6DF",
                   borderRadius: 10,
                   fontSize: 15,
                   outline: "none",
@@ -1751,8 +1751,8 @@ export default function BailPage() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                background: equipementsOk ? "#f0fdf4" : "#fff7ed",
-                border: `1.5px solid ${equipementsOk ? "#86efac" : "#fed7aa"}`,
+                background: equipementsOk ? "#f0fdf4" : "#FBF6EA",
+                border: `1px solid ${equipementsOk ? "#86efac" : "#fed7aa"}`,
                 borderRadius: 12,
                 padding: "12px 16px",
               }}
@@ -1771,7 +1771,7 @@ export default function BailPage() {
                   {!equipementsOk &&
                     ` — ${EQUIPEMENTS_MEUBLE_ALUR.length - form.equipementsMeuble.filter(e => EQUIPEMENTS_MEUBLE_ALUR.includes(e as (typeof EQUIPEMENTS_MEUBLE_ALUR)[number])).length} obligatoire(s) manquant(s)`}
                 </div>
-                <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+                <div style={{ fontSize: 12, color: "#8a8477", marginTop: 2 }}>
                   Les 11 équipements ALUR doivent être cochés pour un meublé conforme.
                 </div>
               </div>
@@ -1871,7 +1871,7 @@ export default function BailPage() {
               style={{
                 background: "white",
                 color: "#111",
-                border: "1.5px solid #111",
+                border: "1px solid #111",
                 borderRadius: 8,
                 padding: "9px 16px",
                 fontSize: 13,
@@ -1898,7 +1898,7 @@ export default function BailPage() {
                 <span
                   key={titre}
                   style={{
-                    background: "#f3f4f6",
+                    background: "#F7F4EF",
                     color: "#111",
                     borderRadius: 999,
                     padding: "6px 12px",
@@ -1918,7 +1918,7 @@ export default function BailPage() {
                       background: "none",
                       border: "none",
                       cursor: "pointer",
-                      color: "#6b7280",
+                      color: "#8a8477",
                       fontSize: 14,
                       padding: 0,
                       lineHeight: 1,
@@ -1989,7 +1989,7 @@ export default function BailPage() {
               onChange={v => set("annexeNotice")(v)}
             />
           </div>
-          <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 14, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 11, color: "#8a8477", marginTop: 14, lineHeight: 1.6 }}>
             💡 Besoin de générer un DPE ou un ERP ? Utilisez le service officiel (georisques.gouv.fr pour ERP, diagnostiqueur certifié pour DPE).
           </p>
         </div>
@@ -1999,7 +1999,7 @@ export default function BailPage() {
           <div
             style={{
               background: "#fef3c7",
-              border: "1.5px solid #fde68a",
+              border: "1px solid #EADFC6",
               borderRadius: 12,
               padding: "12px 16px",
               marginBottom: 14,
@@ -2015,12 +2015,12 @@ export default function BailPage() {
 
         {/* Raisons pour lesquelles le bouton est désactivé — visible, pas silencieux */}
         {!form.dateDebut && (
-          <div style={{ background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 10, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#9a3412" }}>
+          <div style={{ background: "#FBF6EA", border: "1px solid #fed7aa", borderRadius: 10, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#9a3412" }}>
             ⚠ <strong>Date de début manquante</strong> — remplissez la section <em>« 6. Durée du bail & dates »</em> pour activer le bouton.
           </div>
         )}
         {!form.nomBailleur && (
-          <div style={{ background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 10, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#9a3412" }}>
+          <div style={{ background: "#FBF6EA", border: "1px solid #fed7aa", borderRadius: 10, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#9a3412" }}>
             ⚠ <strong>Nom du bailleur manquant</strong> — remplissez la section <em>« 2. Bailleur »</em>.
           </div>
         )}
@@ -2056,13 +2056,13 @@ export default function BailPage() {
                 width: "100%",
                 padding: "18px 32px",
                 background: bloque
-                  ? "#e5e7eb"
+                  ? "#EAE6DF"
                   : confirmRegen
-                    ? "#ea580c"
+                    ? "#a16207"
                     : actif
                       ? "#111"
-                      : "#e5e7eb",
-                color: actif ? "white" : "#9ca3af",
+                      : "#EAE6DF",
+                color: actif ? "white" : "#8a8477",
                 border: "none",
                 borderRadius: 16,
                 fontWeight: 800,
@@ -2080,7 +2080,7 @@ export default function BailPage() {
           <p
             style={{
               fontSize: 12,
-              color: "#ea580c",
+              color: "#a16207",
               textAlign: "center",
               marginTop: 10,
               fontWeight: 600,
@@ -2097,7 +2097,7 @@ export default function BailPage() {
               style={{
                 background: "none",
                 border: "none",
-                color: "#6b7280",
+                color: "#8a8477",
                 textDecoration: "underline",
                 cursor: "pointer",
                 fontFamily: "inherit",
@@ -2129,7 +2129,7 @@ export default function BailPage() {
         <p
           style={{
             fontSize: 11,
-            color: "#9ca3af",
+            color: "#8a8477",
             textAlign: "center",
             marginTop: 18,
             lineHeight: 1.6,
@@ -2140,7 +2140,7 @@ export default function BailPage() {
           Pour un litige ou une situation complexe, faites-le relire par un
           professionnel du droit.
           <br />
-          <em style={{ color: "#9ca3af" }}>
+          <em style={{ color: "#8a8477" }}>
             Votre saisie est sauvegardée automatiquement dans ce navigateur.
           </em>
         </p>
@@ -2172,7 +2172,7 @@ export default function BailPage() {
           </button>
         }
       >
-        <p style={{ marginTop: 0, color: "#6b7280", fontSize: 13 }}>
+        <p style={{ marginTop: 0, color: "#8a8477", fontSize: 13 }}>
           Le <strong>décret n°2015-981</strong> liste les 11 équipements
           obligatoires pour un meublé. Les équipements de confort sont
           facultatifs mais valorisent le bien.
@@ -2183,7 +2183,7 @@ export default function BailPage() {
             marginTop: 16,
             padding: "8px 14px",
             background: "#f0fdf4",
-            border: "1.5px solid #86efac",
+            border: "1px solid #86efac",
             borderRadius: 10,
             fontSize: 12,
             color: "#15803d",
@@ -2207,10 +2207,10 @@ export default function BailPage() {
           style={{
             marginTop: 20,
             padding: "8px 14px",
-            background: "#f3f4f6",
+            background: "#F7F4EF",
             borderRadius: 10,
             fontSize: 12,
-            color: "#6b7280",
+            color: "#8a8477",
             fontWeight: 700,
           }}
         >
@@ -2246,7 +2246,7 @@ export default function BailPage() {
             style={{
               background: "white",
               color: "#15803d",
-              border: "1.5px solid #86efac",
+              border: "1px solid #86efac",
               borderRadius: 8,
               padding: "8px 14px",
               fontSize: 12,
@@ -2262,8 +2262,8 @@ export default function BailPage() {
             onClick={() => setForm(f => ({ ...f, equipementsMeuble: [] }))}
             style={{
               background: "white",
-              color: "#6b7280",
-              border: "1.5px solid #e5e7eb",
+              color: "#8a8477",
+              border: "1px solid #EAE6DF",
               borderRadius: 8,
               padding: "8px 14px",
               fontSize: 12,
@@ -2301,7 +2301,7 @@ export default function BailPage() {
           </button>
         }
       >
-        <p style={{ marginTop: 0, color: "#6b7280", fontSize: 13 }}>
+        <p style={{ marginTop: 0, color: "#8a8477", fontSize: 13 }}>
           Cochez les clauses à insérer dans votre bail. Vous pouvez aussi
           rédiger vos propres clauses en texte libre.
         </p>
@@ -2317,7 +2317,7 @@ export default function BailPage() {
                   padding: "12px 14px",
                   borderRadius: 12,
                   background: checked ? "#f0fdf4" : "#fafafa",
-                  border: `1.5px solid ${checked ? "#86efac" : "#e5e7eb"}`,
+                  border: `1px solid ${checked ? "#86efac" : "#EAE6DF"}`,
                   cursor: "pointer",
                   alignItems: "flex-start",
                 }}
@@ -2335,7 +2335,7 @@ export default function BailPage() {
                   <div
                     style={{
                       fontSize: 12,
-                      color: "#6b7280",
+                      color: "#8a8477",
                       marginTop: 4,
                       lineHeight: 1.6,
                     }}
@@ -2361,7 +2361,7 @@ export default function BailPage() {
           agglomérations), le loyer d&apos;un logement ne peut pas dépasser un
           <strong> loyer de référence majoré</strong> fixé par arrêté préfectoral.
         </p>
-        <ul style={{ paddingLeft: 18, marginTop: 12, color: "#374151" }}>
+        <ul style={{ paddingLeft: 18, marginTop: 12, color: "#111" }}>
           <li>
             <strong>Loyer de référence</strong> : loyer médian du secteur (€/m²).
           </li>
@@ -2375,7 +2375,7 @@ export default function BailPage() {
             dernier étage, haute qualité de prestation…).
           </li>
         </ul>
-        <p style={{ marginTop: 14, fontSize: 13, color: "#6b7280" }}>
+        <p style={{ marginTop: 14, fontSize: 13, color: "#8a8477" }}>
           💡 Pour connaître les valeurs de votre secteur, consultez le site de
           l&apos;observatoire local des loyers (OLL) ou la préfecture.
         </p>
