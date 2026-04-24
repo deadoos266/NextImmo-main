@@ -3,44 +3,29 @@ import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
 /**
- * StickyInfoCard — R10.20 (JS-driven, bulletproof)
+ * StickyInfoCard — R10.21 (NUKE : toujours fixée, peu importe le viewport)
  *
- * Après plusieurs tentatives CSS cassées par le filter dark-mode sur <body>,
- * on passe à une approche JS pure : la position de l'aside est calculée et
- * appliquée en JavaScript à chaque scroll. Aucun risque de containing block
- * puisqu'on ne dépend plus de `position: fixed` pour rester au viewport.
+ * Abandon définitif de toute logique responsive côté composant.
+ * L'aside est TOUJOURS portal'd hors <body>, TOUJOURS positionnée en
+ * position:fixed ET renforcée par un scroll-listener JS qui force
+ * `style.top = 80px` à chaque frame. Impossible à casser :
  *
- * STRATÉGIE
- * ---------
- * 1. React Portal vers un <div> enfant direct de <html> (hors <body>).
- *    → Aucun ancêtre filtrant entre l'aside et le viewport.
- * 2. Aside en `position: absolute` (pas fixed), initial containing block
- *    = viewport (parent du portal target n'a aucune style positionnelle).
- * 3. Scroll listener rAF-throttled qui update `style.top = scrollY + 80px`.
- *    → L'aside suit le scroll manuellement, reste visuellement ancrée
- *       à 80 px du haut du viewport en permanence.
- * 4. Resize listener pour recalculer la gutter `right`.
+ *   - Si un ancêtre a filter/transform → on est déjà hors <body> via portal
+ *   - Si le CSS fixed foirait quand même → le JS rattrape au frame suivant
+ *   - Si le viewport est petit → la card se réduit à min(360px, 92vw) au
+ *     lieu de disparaître
  *
- * GUARDS
- * ------
- * - Breakpoint 1024 px : en-dessous, fallback flow normal (sidebar stacke
- *   naturellement sous le contenu principal via la media query de page.tsx).
- * - SSR : avant mount, même fallback flow normal — pas de hydration mismatch.
- * - Dark mode : filter d'inversion ré-appliqué à l'aside (perdu en sortant
- *   de <body>).
+ * Le seul cas où on revient au fallback flow = SSR (pas de DOM côté serveur).
  *
- * DIAGNOSTICS
- * -----------
- * `data-nm-sticky-version="R10.20"` + `data-nm-sticky-mode="{flow|portal}"`
- * sur l'élément — permet de vérifier de l'extérieur (DevTools, script
- * utilisateur) quelle branche est active sans mot de passe de debug.
+ * La card reste donc toujours visible, toujours à 80 px du haut du viewport,
+ * toujours alignée à droite. L'utilisateur voit ses cards sans jamais
+ * qu'elles descendent au scroll.
  */
 
 const NAV_OFFSET = 80
-const CARD_WIDTH = 360
-const BREAKPOINT = 1024
+const MAX_CARD_WIDTH = 360
 const PORTAL_TARGET_ID = "nm-fixed-portal-root"
-const VERSION = "R10.20"
+const VERSION = "R10.21"
 
 function getOrCreatePortalTarget(): HTMLElement {
   let el = document.getElementById(PORTAL_TARGET_ID)
@@ -53,25 +38,28 @@ function getOrCreatePortalTarget(): HTMLElement {
 }
 
 function computeRightOffset(): number {
-  // Même logique que `max(24px, calc((100vw - 1280px) / 2 + 24px))`
-  // en JS pour contrôler la position au pixel près.
   if (typeof window === "undefined") return 24
-  return Math.max(24, Math.floor((window.innerWidth - 1280) / 2 + 24))
+  // Sur viewport ≥1280 : aligne sur container 1280 avec gutter 24. Sinon
+  // colle à 12 px du bord droit.
+  if (window.innerWidth >= 1280) {
+    return Math.floor((window.innerWidth - 1280) / 2 + 24)
+  }
+  return 12
+}
+
+function computeCardWidth(): number {
+  if (typeof window === "undefined") return MAX_CARD_WIDTH
+  return Math.min(MAX_CARD_WIDTH, Math.floor(window.innerWidth * 0.92))
 }
 
 export default function StickyInfoCard({ children }: { children: React.ReactNode }) {
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null)
-  const [isDesktop, setIsDesktop] = useState<boolean>(true)
   const [isDark, setIsDark] = useState<boolean>(false)
   const asideRef = useRef<HTMLElement | null>(null)
 
+  // Init portal target + dark-mode observer
   useEffect(() => {
     setPortalTarget(getOrCreatePortalTarget())
-
-    const mql = window.matchMedia(`(min-width: ${BREAKPOINT}px)`)
-    const updateDesktop = () => setIsDesktop(mql.matches)
-    updateDesktop()
-    mql.addEventListener("change", updateDesktop)
 
     const checkDark = () => {
       setIsDark(document.documentElement.getAttribute("data-theme") === "dark")
@@ -79,25 +67,37 @@ export default function StickyInfoCard({ children }: { children: React.ReactNode
     checkDark()
     const observer = new MutationObserver(checkDark)
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] })
-
-    return () => {
-      mql.removeEventListener("change", updateDesktop)
-      observer.disconnect()
-    }
+    return () => observer.disconnect()
   }, [])
 
-  // Scroll + resize listener : met à jour top/right du aside
-  // rAF-throttled pour rester smooth.
+  // Scroll + resize listener — renforce la position même si position:fixed
+  // CSS était mystérieusement cassé. rAF-throttled, passive.
   useEffect(() => {
-    if (!portalTarget || !isDesktop) return
+    if (!portalTarget) return
     let raf: number | null = null
 
     function apply() {
       raf = null
       const el = asideRef.current
       if (!el) return
-      el.style.top = `${window.scrollY + NAV_OFFSET}px`
+      // On met BOTH position:fixed (naturel via CSS) ET un top absolu.
+      // Si fixed marche, top:80 reste à 80 au viewport.
+      // Si fixed était cassé (body contenant block à cause d'un filter),
+      // on force position:absolute + top:scrollY+80 pour compenser.
+      // Détection : on mesure le rect ; si top dérive du 80 attendu au
+      // scroll, on bascule en mode absolute-compensated.
+      const rect = el.getBoundingClientRect()
+      const drift = Math.abs(rect.top - NAV_OFFSET)
+      if (drift > 2) {
+        // position:fixed est cassée. Bascule absolute-compensated.
+        el.style.position = "absolute"
+        el.style.top = `${window.scrollY + NAV_OFFSET}px`
+      } else {
+        el.style.position = "fixed"
+        el.style.top = `${NAV_OFFSET}px`
+      }
       el.style.right = `${computeRightOffset()}px`
+      el.style.width = `${computeCardWidth()}px`
     }
 
     function schedule() {
@@ -105,7 +105,7 @@ export default function StickyInfoCard({ children }: { children: React.ReactNode
       raf = requestAnimationFrame(apply)
     }
 
-    apply() // position initiale
+    apply()
     window.addEventListener("scroll", schedule, { passive: true })
     window.addEventListener("resize", schedule)
     return () => {
@@ -113,15 +113,15 @@ export default function StickyInfoCard({ children }: { children: React.ReactNode
       window.removeEventListener("resize", schedule)
       if (raf !== null) cancelAnimationFrame(raf)
     }
-  }, [portalTarget, isDesktop])
+  }, [portalTarget])
 
-  // Fallback pre-mount / mobile : flow normal stacké.
-  if (!portalTarget || !isDesktop) {
+  // SSR / pré-mount : flow normal le temps que le client boote.
+  if (!portalTarget) {
     return (
       <div
         id="r-sticky-card-target"
         data-nm-sticky-version={VERSION}
-        data-nm-sticky-mode="flow"
+        data-nm-sticky-mode="flow-ssr"
         style={{ width: "100%", display: "flex", flexDirection: "column", gap: 16 }}
       >
         {children}
@@ -137,17 +137,20 @@ export default function StickyInfoCard({ children }: { children: React.ReactNode
       data-nm-sticky-mode="portal"
       aria-label="Informations et actions du logement"
       style={{
-        position: "absolute", // top/right sont driven par le scroll listener
+        position: "fixed",
         top: NAV_OFFSET,
         right: computeRightOffset(),
-        width: CARD_WIDTH,
+        width: computeCardWidth(),
         zIndex: 9998,
         display: "flex",
         flexDirection: "column",
         gap: 16,
         fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
         color: "#111",
+        // Dark mode : ré-applique l'inversion perdue en sortant de <body>.
         filter: isDark ? "invert(0.92) hue-rotate(180deg)" : undefined,
+        // Pas de maxHeight / overflow (règle user : pas de scroll dans le
+        // scroll). Si les cards dépassent le viewport, cutoff bas assumé.
       }}
     >
       {children}
