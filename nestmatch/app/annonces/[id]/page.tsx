@@ -279,11 +279,21 @@ export default async function Annonce({ params }: any) {
           éviter tout souci d'hydration React avec des children texte
           dans un <style>. */}
       <style dangerouslySetInnerHTML={{ __html: `
+        /* R10.7 — stack mobile+tablette sous 1024px ; 2 colonnes sticky ≥1024px.
+           La sticky info card n'a de sens qu'avec une viewport large, sinon
+           elle écrase le contenu principal. */
         @media (max-width: 767px) {
           .r-detail-h1 { font-size: 28px !important; letter-spacing: -0.8px !important; }
           .r-container { padding: 20px 16px !important; }
+        }
+        @media (max-width: 1023px) {
           .r-detail-layout { flex-direction: column !important; }
-          .r-detail-sidebar { width: 100% !important; }
+          .r-detail-sidebar { width: 100% !important; position: static !important; }
+          .r-detail-sidebar .r-detail-stickycard {
+            position: static !important;
+            max-height: none !important;
+            overflow: visible !important;
+          }
         }
         @media (min-width: 768px) and (max-width: 1023px) {
           .r-detail-h1 { font-size: 36px !important; letter-spacing: -1.1px !important; }
@@ -475,7 +485,23 @@ export default async function Annonce({ params }: any) {
           </div>
 
           <div className="r-detail-sidebar" style={{ width: 360, flexShrink: 0 }}>
-            <div style={{ background: "white", borderRadius: 20, padding: 28, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", position: "sticky", top: 80 }}>
+            {/* R10.7 — sticky info card ≥1024px, avec maxHeight pour éviter que
+                la carte dépasse la viewport sur petits écrans laptop. Scrollable
+                si le contenu excède l'espace dispo. */}
+            <div
+              className="r-detail-stickycard"
+              style={{
+                background: "white",
+                borderRadius: 20,
+                padding: 28,
+                boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
+                position: "sticky",
+                top: 80,
+                maxHeight: "calc(100vh - 110px)",
+                overflowY: "auto",
+                WebkitOverflowScrolling: "touch",
+              }}
+            >
               <div style={{ marginBottom: 16 }}>
                 <span style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-0.8px" }}>{annonce.prix} €</span>
                 <span style={{ color: "#888", fontSize: 15, marginLeft: 4 }}>/mois</span>
