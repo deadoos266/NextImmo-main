@@ -15,6 +15,7 @@ import { Toggle, F } from "../../components/FormHelpers"
 import { km, KMButton, KMButtonOutline, KMEyebrow, KMHeading } from "../../components/ui/km"
 import { StepBar } from "../../components/ui/StepBar"
 import Lightbox from "../../components/ui/Lightbox"
+import ImageCropModal from "../../components/ui/ImageCropModal"
 
 // ─── Draft storage (compat v1 — pas de bump pour préserver les brouillons) ──
 const DRAFT_VERSION = 1
@@ -670,6 +671,44 @@ function Step5Recit({
     setForm(f => ({ ...f, [key]: e.target.value }))
   const descLen = (form.description || "").length
   const [lightbox, setLightbox] = useState<{ open: boolean; index: number }>({ open: false, index: 0 })
+  // File d'attente pour crop : user peut sélectionner plusieurs fichiers,
+  // on les traite 1 par 1. `cropFile` = fichier en cours de crop, `cropQueue`
+  // = les suivants à traiter séquentiellement.
+  const [cropFile, setCropFile] = useState<File | null>(null)
+  const [cropQueue, setCropQueue] = useState<File[]>([])
+
+  async function handleFilesSelected(files: File[]) {
+    if (files.length === 0) return
+    setCropFile(files[0])
+    setCropQueue(files.slice(1))
+  }
+
+  function advanceQueue() {
+    setCropQueue(q => {
+      if (q.length === 0) { setCropFile(null); return [] }
+      setCropFile(q[0])
+      return q.slice(1)
+    })
+  }
+
+  async function onCropValidated(blob: Blob, originalName: string) {
+    const ext = blob.type === "image/jpeg" ? ".jpg" : blob.type === "image/png" ? ".png" : ".jpg"
+    const base = originalName.replace(/\.[^.]+$/, "")
+    const file = new File([blob], `${base}-crop${ext}`, { type: blob.type })
+    await uploadPhoto(file)
+    advanceQueue()
+  }
+
+  async function onSkipCrop() {
+    if (cropFile) await uploadPhoto(cropFile)
+    advanceQueue()
+  }
+
+  function onCancelCrop() {
+    // Annuler ne upload pas le fichier courant, mais poursuit la file
+    advanceQueue()
+  }
+
   return (
     <>
       <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 14px" }}>
@@ -716,9 +755,9 @@ function Step5Recit({
         multiple
         style={{ display: "none" }}
         ref={photoInputRef}
-        onChange={async e => {
+        onChange={e => {
           const files = Array.from(e.target.files || [])
-          for (const file of files) await uploadPhoto(file)
+          handleFilesSelected(files)
           e.target.value = ""
         }}
       />
@@ -734,7 +773,17 @@ function Step5Recit({
         }}>
         {uploadingPhoto ? <span>Upload en cours…</span> : <><span style={{ fontSize: 20 }}>+</span><span>Ajouter des photos (JPG, PNG)</span></>}
       </button>
-      <p style={{ fontSize: 12, color: km.muted, marginTop: 8 }}>La première photo sera la photo principale de l'annonce.</p>
+      <p style={{ fontSize: 12, color: km.muted, marginTop: 8 }}>
+        La première photo sera la photo principale. Après sélection, vous pourrez recadrer chaque image (4:3 recommandé).
+      </p>
+
+      <ImageCropModal
+        file={cropFile}
+        onCancel={onCancelCrop}
+        onCropped={onCropValidated}
+        onSkipCrop={onSkipCrop}
+        defaultRatio={4 / 3}
+      />
 
       <div style={{ borderTop: `1px solid ${km.beige}`, paddingTop: 22, marginTop: 28 }}>
         <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 14px" }}>Description</p>

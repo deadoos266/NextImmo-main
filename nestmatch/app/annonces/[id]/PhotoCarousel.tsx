@@ -55,10 +55,16 @@ export default function PhotoCarousel({ photos }: { photos: string[] }) {
   // On force donc le layout carousel classique tant que `mounted` est
   // false. Après mount, on bascule sur 2/1 si desktop + ≥3 photos.
   if (!mounted || isMobile || photos.length < 3) {
+    // Hero adaptatif : object-fit: contain + fond éditorial beige pour
+    // garantir que l'image est visible en entière sans coupe brutale,
+    // quel que soit son ratio (portrait, paysage, carré). Hauteur étendue
+    // 70vh desktop / 50vh mobile — plus haute qu'avant, CLS neutre car
+    // height fixe réservée avant chargement image.
+    const heroHeight = isMobile ? "min(50vh, 380px)" : "min(70vh, 620px)"
     return (
       <>
         <div
-          style={{ position: "relative", height: isMobile ? 280 : 420, borderRadius: 20, overflow: "hidden", marginBottom: 28, background: "#000", cursor: "zoom-in" }}
+          style={{ position: "relative", height: heroHeight, borderRadius: 20, overflow: "hidden", marginBottom: 28, background: "#F7F4EF", cursor: "zoom-in" }}
           onMouseEnter={e => e.currentTarget.querySelectorAll<HTMLButtonElement>(".pnav").forEach(b => (b.style.opacity = "1"))}
           onMouseLeave={e => e.currentTarget.querySelectorAll<HTMLButtonElement>(".pnav").forEach(b => (b.style.opacity = "0"))}
           onClick={() => openLightboxAt(idx)}
@@ -67,9 +73,9 @@ export default function PhotoCarousel({ photos }: { photos: string[] }) {
             src={photos[idx]}
             alt={`Photo ${idx + 1}`}
             fill
-            sizes="(max-width: 768px) 100vw, 800px"
+            sizes="(max-width: 768px) 100vw, 1100px"
             priority={idx === 0}
-            style={{ objectFit: "cover", display: "block" }}
+            style={{ objectFit: "contain", display: "block" }}
           />
 
           {photos.length > 1 && (
@@ -114,6 +120,10 @@ export default function PhotoCarousel({ photos }: { photos: string[] }) {
   }
 
   // ─── Desktop/tablet + ≥3 photos : layout 2/1 ────────────────────────
+  // Hauteur étendue (de 480 → 560) pour voir plus de l'image principale.
+  // Photo principale passe en object-fit: contain + fond éditorial beige
+  // pour garantir qu'elle soit visible en entière (portrait/paysage/carré),
+  // sans coupe brutale. Les vignettes restent en cover (mosaïque).
   const extraCount = photos.length - 3 // photos supplémentaires au-delà des 3 visibles
   return (
     <>
@@ -121,13 +131,13 @@ export default function PhotoCarousel({ photos }: { photos: string[] }) {
         display: "grid",
         gridTemplateColumns: "2fr 1fr",
         gap: 12,
-        height: 480,
+        height: "min(70vh, 560px)",
         marginBottom: 28,
       }}>
-        {/* Grande photo gauche */}
+        {/* Grande photo gauche — contain + fond beige pour voir l'image entière */}
         <div
           onClick={() => openLightboxAt(0)}
-          style={{ position: "relative", borderRadius: 20, overflow: "hidden", cursor: "zoom-in", background: "#000" }}
+          style={{ position: "relative", borderRadius: 20, overflow: "hidden", cursor: "zoom-in", background: "#F7F4EF" }}
         >
           <Image
             src={photos[0]}
@@ -135,9 +145,9 @@ export default function PhotoCarousel({ photos }: { photos: string[] }) {
             fill
             sizes="(max-width: 1200px) 60vw, 800px"
             priority
-            style={{ objectFit: "cover" }}
+            style={{ objectFit: "contain" }}
           />
-          <span style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.55)", color: "white", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 999, pointerEvents: "none" }}>
+          <span style={{ position: "absolute", top: 14, right: 14, background: "rgba(17,17,17,0.72)", color: "white", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 999, pointerEvents: "none" }}>
             Cliquez pour agrandir
           </span>
         </div>

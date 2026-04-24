@@ -11,6 +11,8 @@ import AddressAutocomplete from "../../../components/AddressAutocomplete"
 import Tooltip from "../../../components/Tooltip"
 
 import { Toggle, Sec, F } from "../../../components/FormHelpers"
+import Lightbox from "../../../components/ui/Lightbox"
+import ImageCropModal from "../../../components/ui/ImageCropModal"
 
 export default function ModifierBien() {
   const { data: session, status } = useSession()
@@ -137,6 +139,37 @@ export default function ModifierBien() {
 
   function removePhoto(idx: number) {
     setPhotos(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  // Crop upload queue (R10.5) : traite les fichiers sélectionnés 1 par 1,
+  // chaque un passant par ImageCropModal avant l'upload.
+  const [cropFile, setCropFile] = useState<File | null>(null)
+  const [cropQueue, setCropQueue] = useState<File[]>([])
+  const [lightbox, setLightbox] = useState<{ open: boolean; index: number }>({ open: false, index: 0 })
+
+  function advanceCropQueue() {
+    setCropQueue(q => {
+      if (q.length === 0) { setCropFile(null); return [] }
+      setCropFile(q[0])
+      return q.slice(1)
+    })
+  }
+
+  async function onCropValidated(blob: Blob, originalName: string) {
+    const ext = blob.type === "image/jpeg" ? ".jpg" : blob.type === "image/png" ? ".png" : ".jpg"
+    const base = originalName.replace(/\.[^.]+$/, "")
+    const croppedFile = new File([blob], `${base}-crop${ext}`, { type: blob.type })
+    await uploadPhoto(croppedFile)
+    advanceCropQueue()
+  }
+
+  async function onSkipCrop() {
+    if (cropFile) await uploadPhoto(cropFile)
+    advanceCropQueue()
+  }
+
+  function onCancelCrop() {
+    advanceCropQueue()
   }
 
   async function sauvegarder() {
@@ -284,14 +317,16 @@ export default function ModifierBien() {
           {photos.length > 0 && (
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
               {photos.map((url, idx) => (
-                <div key={idx} style={{ position: "relative", width: 120, height: 90, borderRadius: 10, overflow: "hidden", border: "1px solid #EAE6DF" }}>
+                <div key={idx}
+                  onClick={() => setLightbox({ open: true, index: idx })}
+                  style={{ position: "relative", width: 120, height: 90, borderRadius: 10, overflow: "hidden", border: "1px solid #EAE6DF", cursor: "zoom-in" }}>
                   <img src={url} alt={`Photo ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  <button onClick={() => removePhoto(idx)}
+                  <button onClick={(e) => { e.stopPropagation(); removePhoto(idx) }}
                     style={{ position: "absolute", top: 4, right: 4, background: "rgba(0,0,0,0.6)", border: "none", borderRadius: "50%", width: 22, height: 22, cursor: "pointer", color: "white", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     ×
                   </button>
                   {idx === 0 && (
-                    <span style={{ position: "absolute", bottom: 4, left: 4, background: "#111", color: "white", fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4 }}>Principale</span>
+                    <span style={{ position: "absolute", bottom: 4, left: 4, background: "#111", color: "white", fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, pointerEvents: "none" }}>Principale</span>
                   )}
                 </div>
               ))}
@@ -304,9 +339,11 @@ export default function ModifierBien() {
             multiple
             style={{ display: "none" }}
             ref={photoInputRef}
-            onChange={async e => {
+            onChange={e => {
               const files = Array.from(e.target.files || [])
-              for (const file of files) await uploadPhoto(file)
+              if (files.length === 0) return
+              setCropFile(files[0])
+              setCropQueue(files.slice(1))
               e.target.value = ""
             }}
           />
@@ -316,6 +353,23 @@ export default function ModifierBien() {
             style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 20px", border: "2px dashed #EAE6DF", borderRadius: 12, background: "transparent", cursor: uploadingPhoto ? "not-allowed" : "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: "#8a8477", opacity: uploadingPhoto ? 0.6 : 1 }}>
             {uploadingPhoto ? <span>Upload en cours...</span> : <><span style={{ fontSize: 20 }}>+</span><span>Ajouter des photos — {photos.length}/10</span></>}
           </button>
+          <p style={{ fontSize: 12, color: "#8a8477", marginTop: 8 }}>
+            Après sélection, vous pourrez recadrer chaque image (4:3 recommandé).
+          </p>
+
+          <Lightbox
+            photos={photos}
+            initialIndex={lightbox.index}
+            open={lightbox.open}
+            onClose={() => setLightbox(s => ({ ...s, open: false }))}
+          />
+          <ImageCropModal
+            file={cropFile}
+            onCancel={onCancelCrop}
+            onCropped={onCropValidated}
+            onSkipCrop={onSkipCrop}
+            defaultRatio={4 / 3}
+          />
         </Sec>
 
         {/* Champs loué */}
