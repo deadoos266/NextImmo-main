@@ -14,6 +14,7 @@ import MarketRentHint from "./MarketRentHint"
 import { Toggle, F } from "../../components/FormHelpers"
 import { km, KMButton, KMButtonOutline, KMEyebrow, KMHeading } from "../../components/ui/km"
 import { StepBar } from "../../components/ui/StepBar"
+import Lightbox from "../../components/ui/Lightbox"
 
 // ─── Draft storage (compat v1 — pas de bump pour préserver les brouillons) ──
 const DRAFT_VERSION = 1
@@ -668,6 +669,7 @@ function Step5Recit({
   const set = (key: keyof AnnonceForm) => (e: { target: { value: string } }) =>
     setForm(f => ({ ...f, [key]: e.target.value }))
   const descLen = (form.description || "").length
+  const [lightbox, setLightbox] = useState<{ open: boolean; index: number }>({ open: false, index: 0 })
   return (
     <>
       <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 14px" }}>
@@ -684,21 +686,29 @@ function Step5Recit({
       {photos.length > 0 && (
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
           {photos.map((url, idx) => (
-            <div key={idx} style={{ position: "relative", width: 120, height: 90, borderRadius: 10, overflow: "hidden", border: `1px solid ${km.line}` }}>
+            <div key={idx} style={{ position: "relative", width: 120, height: 90, borderRadius: 10, overflow: "hidden", border: `1px solid ${km.line}`, cursor: "zoom-in" }}
+              onClick={() => setLightbox({ open: true, index: idx })}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={url} alt={`Photo ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              <button onClick={() => removePhoto(idx)}
+              <button onClick={(e) => { e.stopPropagation(); removePhoto(idx) }}
                 aria-label={`Supprimer la photo ${idx + 1}`}
                 style={{ position: "absolute", top: 4, right: 4, background: "rgba(0,0,0,0.6)", border: "none", borderRadius: "50%", width: 22, height: 22, cursor: "pointer", color: km.white, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit" }}>
                 ×
               </button>
               {idx === 0 && (
-                <span style={{ position: "absolute", bottom: 4, left: 4, background: km.ink, color: km.white, fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, textTransform: "uppercase", letterSpacing: "0.8px" }}>Principale</span>
+                <span style={{ position: "absolute", bottom: 4, left: 4, background: km.ink, color: km.white, fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, textTransform: "uppercase", letterSpacing: "0.8px", pointerEvents: "none" }}>Principale</span>
               )}
             </div>
           ))}
         </div>
       )}
+
+      <Lightbox
+        photos={photos}
+        initialIndex={lightbox.index}
+        open={lightbox.open}
+        onClose={() => setLightbox(s => ({ ...s, open: false }))}
+      />
 
       <input
         type="file"
@@ -971,6 +981,7 @@ function Step7Publier({
 // ─── Modal de prévisualisation (inchangée, migrée aux tokens km) ───────────
 function PreviewModal({ form, toggles, photos, onClose }: { form: AnnonceForm; toggles: AnnonceToggles; photos: string[]; onClose: () => void }) {
   const loyerTotal = (parseInt(form.prix || "0", 10) || 0) + (parseInt(form.charges || "0", 10) || 0)
+  const [lightbox, setLightbox] = useState<{ open: boolean; index: number }>({ open: false, index: 0 })
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, overflow: "auto" }}>
       <div onClick={e => e.stopPropagation()} style={{ background: km.white, borderRadius: 20, width: "min(720px, 100%)", maxHeight: "90vh", overflow: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif" }}>
@@ -980,7 +991,12 @@ function PreviewModal({ form, toggles, photos, onClose }: { form: AnnonceForm; t
         </div>
         <div style={{ padding: "20px 24px" }}>
           {photos.length > 0 ? (
-            <div style={{ height: 280, background: `url(${photos[0]}) center/cover no-repeat`, borderRadius: 14, marginBottom: 18 }} />
+            <div
+              onClick={() => setLightbox({ open: true, index: 0 })}
+              style={{ height: 280, background: `url(${photos[0]}) center/cover no-repeat`, borderRadius: 14, marginBottom: 18, cursor: "zoom-in" }}
+              role="button"
+              aria-label="Agrandir la photo principale"
+            />
           ) : (
             <div style={{ height: 280, background: `linear-gradient(135deg, ${km.beige}, ${km.line})`, borderRadius: 14, marginBottom: 18, display: "flex", alignItems: "center", justifyContent: "center", color: km.muted, fontSize: 13 }}>
               Aucune photo — ajoutez-en pour maximiser l&apos;intérêt
@@ -1021,6 +1037,12 @@ function PreviewModal({ form, toggles, photos, onClose }: { form: AnnonceForm; t
           </p>
         </div>
       </div>
+      <Lightbox
+        photos={photos}
+        initialIndex={lightbox.index}
+        open={lightbox.open}
+        onClose={() => setLightbox(s => ({ ...s, open: false }))}
+      />
     </div>
   )
 }

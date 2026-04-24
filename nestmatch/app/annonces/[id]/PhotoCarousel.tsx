@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
-import { createPortal } from "react-dom"
 import Image from "next/image"
+import Lightbox from "../../components/ui/Lightbox"
 import { useResponsive } from "../../hooks/useResponsive"
 
 /**
@@ -14,9 +14,9 @@ import { useResponsive } from "../../hooks/useResponsive"
  *    photos pour indiquer qu'il y en a plus (cliquer ouvre la lightbox).
  *  - Desktop/tablet + <3 photos : fallback layout mobile (1 grande photo).
  *
- * Toujours : clic n'importe où → lightbox fullscreen via createPortal,
- * navigation clavier (Escape / ← / →), prevent scroll body. next/image
- * optimisé sur la grande photo (priority=first paint).
+ * Toujours : clic n'importe où → Lightbox générique (composant réutilisable
+ * app/components/ui/Lightbox.tsx). next/image optimisé sur la grande photo
+ * (priority=first paint).
  */
 export default function PhotoCarousel({ photos }: { photos: string[] }) {
   const [idx, setIdx] = useState(0)
@@ -26,23 +26,6 @@ export default function PhotoCarousel({ photos }: { photos: string[] }) {
   const { isMobile } = useResponsive()
 
   useEffect(() => { setMounted(true) }, [])
-
-  // Navigation clavier quand lightbox ouverte
-  useEffect(() => {
-    if (!lightboxOpen) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setLightboxOpen(false)
-      else if (e.key === "ArrowLeft") setLightboxIdx(i => (i - 1 + photos.length) % photos.length)
-      else if (e.key === "ArrowRight") setLightboxIdx(i => (i + 1) % photos.length)
-    }
-    window.addEventListener("keydown", onKey)
-    const prev = document.body.style.overflow
-    document.body.style.overflow = "hidden"
-    return () => {
-      window.removeEventListener("keydown", onKey)
-      document.body.style.overflow = prev
-    }
-  }, [lightboxOpen, photos.length])
 
   if (!photos || photos.length === 0) return (
     <div style={{ height: 380, background: "linear-gradient(135deg, #EAE6DF, #EAE6DF)", borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 28 }}>
@@ -55,54 +38,14 @@ export default function PhotoCarousel({ photos }: { photos: string[] }) {
     setLightboxOpen(true)
   }
 
-  // ─── Lightbox (identique quel que soit le mode) ────────────────────
-  const lightbox = mounted && lightboxOpen ? createPortal(
-    <div
-      role="dialog"
-      aria-label="Galerie photos"
-      onClick={() => setLightboxOpen(false)}
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'DM Sans', sans-serif" }}
-    >
-      <button
-        aria-label="Fermer"
-        onClick={e => { e.stopPropagation(); setLightboxOpen(false) }}
-        style={{ position: "absolute", top: 20, right: 20, background: "rgba(255,255,255,0.15)", border: "none", borderRadius: "50%", width: 44, height: 44, color: "white", fontSize: 24, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit" }}
-      >
-        ×
-      </button>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={photos[lightboxIdx]}
-        alt={`Photo ${lightboxIdx + 1}`}
-        onClick={e => e.stopPropagation()}
-        style={{ maxWidth: "94vw", maxHeight: "88vh", objectFit: "contain", borderRadius: 8, boxShadow: "0 12px 48px rgba(0,0,0,0.5)" }}
-      />
-      {photos.length > 1 && (
-        <>
-          <button
-            aria-label="Précédent"
-            onClick={e => { e.stopPropagation(); setLightboxIdx(i => (i - 1 + photos.length) % photos.length) }}
-            style={{ position: "absolute", left: 20, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.15)", border: "none", borderRadius: "50%", width: 52, height: 52, color: "white", fontSize: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit" }}
-          >
-            ‹
-          </button>
-          <button
-            aria-label="Suivant"
-            onClick={e => { e.stopPropagation(); setLightboxIdx(i => (i + 1) % photos.length) }}
-            style={{ position: "absolute", right: 20, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.15)", border: "none", borderRadius: "50%", width: 52, height: 52, color: "white", fontSize: 28, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit" }}
-          >
-            ›
-          </button>
-          <div style={{ position: "absolute", bottom: 24, left: 0, right: 0, display: "flex", justifyContent: "center" }}>
-            <span style={{ background: "rgba(0,0,0,0.6)", color: "white", fontSize: 13, fontWeight: 700, padding: "6px 14px", borderRadius: 999 }}>
-              {lightboxIdx + 1} / {photos.length}
-            </span>
-          </div>
-        </>
-      )}
-    </div>,
-    document.body
-  ) : null
+  const lightbox = (
+    <Lightbox
+      photos={photos}
+      initialIndex={lightboxIdx}
+      open={lightboxOpen}
+      onClose={() => setLightboxOpen(false)}
+    />
+  )
 
   // ─── Mode mobile OU fallback <3 photos : carousel classique ──────
   // Important : avant mount, `useResponsive` renvoie width=1200 (SSR défaut)

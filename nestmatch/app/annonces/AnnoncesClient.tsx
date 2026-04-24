@@ -1209,6 +1209,7 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
         score={quickViewId !== null ? (annoncesEnrichies.find(a => a.id === quickViewId)?.scoreMatching ?? null) : null}
         favori={quickViewId !== null ? favoris.includes(quickViewId) : false}
         onToggleFavori={() => { if (quickViewId !== null) handleToggleFavoriId(quickViewId) }}
+        userVille={activeVille || profil?.ville_souhaitee || null}
       />
 
       {/* ── R10.2 — Compare tray (sticky bas d'écran) ─────────────────── */}
