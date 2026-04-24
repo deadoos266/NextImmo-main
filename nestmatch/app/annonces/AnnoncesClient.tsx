@@ -18,6 +18,7 @@ import FiltersModal from "../components/annonces/FiltersModal"
 import ListingCardSearch from "../components/annonces/ListingCardSearch"
 import SavedSearchesPopover from "../components/annonces/SavedSearchesPopover"
 import BandeauDossier from "../components/annonces/BandeauDossier"
+import { km, KMButton, KMButtonOutline, KMEyebrow, KMHeading } from "../components/ui/km"
 
 // IMPORTANT : pas de `dynamic(..., { ssr: false })` au niveau module.
 // Ça émet `<template data-dgst="BAILOUT_TO_CLIENT_SIDE_RENDERING">` au SSR,
@@ -724,8 +725,8 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   return (
     <div
       style={{
-        background: "#F7F4EF",
-        fontFamily: "'DM Sans', sans-serif",
+        background: km.beige,
+        fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
         // Mode Liste+Carte desktop : outer = flex column height viewport-navbar,
         // overflow hidden → la zone LC prend l'espace restant via flex:1.
         // Mode grid/tablette/mobile : scroll document naturel.
@@ -759,21 +760,21 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
 
         {/* ── Header éditorial — scroll normal (pas sticky) ────────────── */}
         {isMobileV5 ? (
-          /* Mobile simplifié : h1 24 + sous-titre 12, sans eyebrow ni popover */
+          /* Mobile simplifié : h2 Fraunces italic 26 + sous-titre 12, sans popover */
           <div style={{ padding: "16px 0 4px" }}>
-            <h2 style={{ fontSize: 24, fontWeight: 500, lineHeight: 1.12, margin: 0, color: "#111", letterSpacing: "-0.3px" }}>
+            <KMHeading as="h2" size={26}>
               {loading
                 ? (activeVille ? `Logements à ${activeVille}` : "Logements à louer")
                 : `${annoncesTraitees.length} logement${annoncesTraitees.length > 1 ? "s" : ""} ${activeVille ? `à ${activeVille}` : ""}`.trim()}
-            </h2>
-            <p style={{ fontSize: 12, color: "#666", margin: "3px 0 0" }}>
+            </KMHeading>
+            <p style={{ fontSize: 12, color: "#666", margin: "6px 0 0", letterSpacing: "0.2px" }}>
               {isProprietaire ? "Mode propriétaire" : "Tri par compatibilité"}
             </p>
           </div>
         ) : (
-          /* v5.3 : header compact 1 ligne — h2 compact à gauche, lien sauvegarde
-             à droite. Eyebrow "Annonces" et sous-titre "Mis à jour en direct"
-             retirés pour gagner de la verticale (gain ~100px). */
+          /* v5.3 : header compact 1 ligne — h2 Fraunces italic à gauche, lien
+             sauvegarde à droite. Eyebrow et sous-titre retirés pour gagner
+             de la verticale (gain ~100px). */
           <div style={{
             padding: "10px 0 4px",
             display: "flex",
@@ -782,11 +783,11 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
             gap: 16,
             flexWrap: "wrap",
           }}>
-            <h2 style={{ fontSize: 22, fontWeight: 500, lineHeight: 1.2, margin: 0, color: "#111", letterSpacing: "-0.3px" }}>
+            <KMHeading as="h2" size={24}>
               {loading
                 ? (activeVille ? `Logements à ${activeVille}` : "Logements à louer")
                 : `${annoncesTraitees.length} logement${annoncesTraitees.length > 1 ? "s" : ""} ${activeVille ? `à ${activeVille}` : "disponible" + (annoncesTraitees.length > 1 ? "s" : "")}`}
-            </h2>
+            </KMHeading>
             {/* Lien de sauvegarde — popover attaché, inline à droite */}
             {!isProprietaire && session?.user?.email && (
               <SavedSearchesPopover
@@ -812,18 +813,19 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
         {(isProprietaire || status === "unauthenticated") && (
           <div style={{ padding: isMobile ? "10px 0" : "8px 0" }}>
             {isProprietaire ? (
-              <div style={{ background: "white", borderRadius: 16, padding: isMobile ? "10px 14px" : "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid #EAE6DF", gap: 10 }}>
+              <div style={{ background: km.white, borderRadius: 16, padding: isMobile ? "10px 14px" : "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", border: `1px solid ${km.line}`, gap: 10 }}>
                 <span style={{ fontSize: isMobile ? 12 : 13, color: "#666" }}>
-                  <strong style={{ color: "#111" }}>Mode propriétaire</strong>{!isMobile && " — scores de compatibilité non applicables"}
+                  <KMEyebrow style={{ display: "inline", marginRight: 8 }}>Mode propriétaire</KMEyebrow>
+                  {!isMobile && " — scores de compatibilité non applicables"}
                 </span>
-                <a href="/proprietaire" style={{ fontSize: 12, fontWeight: 700, color: "#111", textDecoration: "none", padding: "5px 14px", border: "1px solid #EAE6DF", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0 }}>Mes biens</a>
+                <a href="/proprietaire" style={{ fontSize: 10, fontWeight: 700, color: km.ink, textDecoration: "none", padding: "6px 16px", border: `1px solid ${km.line}`, borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0, textTransform: "uppercase", letterSpacing: "0.6px" }}>Mes biens</a>
               </div>
             ) : (
-              <div style={{ background: "#fffbeb", border: "1px solid #EADFC6", borderRadius: 16, padding: isMobile ? "10px 14px" : "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                <span style={{ fontSize: isMobile ? 12 : 13, fontWeight: 500, color: "#a16207" }}>
+              <div style={{ background: km.warnBg, border: `1px solid ${km.warnLine}`, borderRadius: 16, padding: isMobile ? "10px 14px" : "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                <span style={{ fontSize: isMobile ? 12 : 13, fontWeight: 500, color: km.warnText }}>
                   {isMobile ? "Connectez-vous pour le matching" : "Connectez-vous pour activer le score de compatibilité"}
                 </span>
-                <a href="/auth" style={{ background: "#111", color: "white", padding: "6px 16px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 12, flexShrink: 0 }}>Connexion</a>
+                <a href="/auth" style={{ background: km.ink, color: km.white, padding: "7px 18px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 10, flexShrink: 0, textTransform: "uppercase", letterSpacing: "0.6px" }}>Connexion</a>
               </div>
             )}
           </div>
@@ -859,14 +861,17 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
         {/* ── Toggle Liste/Carte tablette (640-767) — mobile <768 utilise FAB */}
         {isSmall && !isMobileV5 && !gridMode && (
           <div style={{ display: "flex", gap: 8, padding: "12px 0 0", flexShrink: 0 }}>
-            <button onClick={() => setShowMap(false)}
-              style={{ flex: 1, padding: "9px 14px", background: !showMap ? "#111" : "white", color: !showMap ? "white" : "#666", border: `1px solid ${!showMap ? "#111" : "#EAE6DF"}`, borderRadius: 999, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
-              Liste
-            </button>
-            <button onClick={() => setShowMap(true)}
-              style={{ flex: 1, padding: "9px 14px", background: showMap ? "#111" : "white", color: showMap ? "white" : "#666", border: `1px solid ${showMap ? "#111" : "#EAE6DF"}`, borderRadius: 999, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
-              Carte
-            </button>
+            {!showMap ? (
+              <>
+                <KMButton size="sm" style={{ flex: 1 }}>Liste</KMButton>
+                <KMButtonOutline size="sm" onClick={() => setShowMap(true)} style={{ flex: 1 }}>Carte</KMButtonOutline>
+              </>
+            ) : (
+              <>
+                <KMButtonOutline size="sm" onClick={() => setShowMap(false)} style={{ flex: 1 }}>Liste</KMButtonOutline>
+                <KMButton size="sm" style={{ flex: 1 }}>Carte</KMButton>
+              </>
+            )}
           </div>
         )}
 
@@ -1006,7 +1011,7 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                     width: "100%",
                     borderRadius: isMobile ? 0 : 20,
                     overflow: "hidden",
-                    border: isMobile ? "none" : "1px solid #EAE6DF",
+                    border: isMobile ? "none" : `1px solid ${km.line}`,
                   }}
                 >
                   {MapComp ? (
@@ -1039,13 +1044,15 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
             left: "50%",
             transform: "translateX(-50%)",
             zIndex: 7200,
-            background: "#111",
-            color: "white",
+            background: km.ink,
+            color: km.white,
             border: "none",
             borderRadius: 999,
             padding: "12px 22px",
-            fontSize: 14,
-            fontWeight: 600,
+            fontSize: 11,
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "0.6px",
             fontFamily: "inherit",
             cursor: "pointer",
             boxShadow: "0 6px 20px rgba(0,0,0,0.25)",
@@ -1073,7 +1080,7 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
             position: "fixed",
             inset: 0,
             zIndex: 7400,
-            background: "#F7F4EF",
+            background: km.beige,
             display: "flex",
             flexDirection: "column",
           }}
@@ -1082,8 +1089,8 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           <div style={{
             flexShrink: 0,
             padding: "14px 16px",
-            background: "white",
-            borderBottom: "1px solid #EAE6DF",
+            background: km.white,
+            borderBottom: `1px solid ${km.line}`,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -1094,13 +1101,15 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
               onClick={() => setShowMap(false)}
               aria-label="Retour à la liste"
               style={{
-                background: "white",
-                color: "#111",
-                border: "1px solid #EAE6DF",
+                background: km.white,
+                color: km.ink,
+                border: `1px solid ${km.line}`,
                 borderRadius: 999,
                 padding: "8px 16px",
-                fontSize: 13,
-                fontWeight: 600,
+                fontSize: 11,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.6px",
                 fontFamily: "inherit",
                 cursor: "pointer",
                 display: "inline-flex",
