@@ -3561,16 +3561,39 @@ function MessagesInner() {
             const statut = deriveStatut(convActiveData)
             const matchPct = compatBadge(computeConvScore(convActiveData))?.pct ?? null
             // Étapes timeline dérivées du statut (handoff L489-493)
+            // EDL d'entrée ajouté entre "Bail signé" et "Emménagement" — étape
+            // légale obligatoire. On détecte son état via les [EDL_CARD] de la
+            // conv + edlSignatures (double signature locataire + bailleur).
             type Step = { n: number; label: string; state: "done" | "active" | "todo" }
             const stepsOrder: Array<{ n: number; label: string }> = [
               { n: 1, label: "Candidature envoyée" },
               { n: 2, label: "Dossier partagé" },
               { n: 3, label: "Visite programmée" },
               { n: 4, label: "Bail signé" },
-              { n: 5, label: "Emménagement" },
+              { n: 5, label: "État des lieux" },
+              { n: 6, label: "Emménagement" },
             ]
+            // Scan des [EDL_CARD] de la conv courante + leurs signatures
+            let edlFullySigned = false
+            for (const m of messages) {
+              if (typeof m.contenu === "string" && m.contenu.startsWith(EDL_PREFIX)) {
+                try {
+                  const payload = JSON.parse(m.contenu.slice(EDL_PREFIX.length))
+                  const edlId = payload?.edlId ? Number(payload.edlId) : null
+                  if (edlId) {
+                    const sig = edlSignatures[edlId]
+                    if (sig?.locataire && sig?.bailleur) { edlFullySigned = true; break }
+                  }
+                } catch { /* ignore */ }
+              }
+            }
+            // Quand le bail est signé (statut="bail") :
+            //   - EDL non lancé → étape 4 (Bail signé) marquée "done", étape 5 (EDL) active
+            //   - EDL lancé mais non doublement signé → étape 5 active
+            //   - EDL validé par les 2 parties → étape 6 (Emménagement) active
+            const bailActiveIdx = edlFullySigned ? 5 : 4
             const activeIdxByStatut: Record<StatutConv, number> = {
-              contact: 0, dossier: 1, visite: 2, bail: 3, rejete: 0,
+              contact: 0, dossier: 1, visite: 2, bail: bailActiveIdx, rejete: 0,
             }
             const activeIdx = activeIdxByStatut[statut]
             const steps: Step[] = stepsOrder.map((s, i) => ({
