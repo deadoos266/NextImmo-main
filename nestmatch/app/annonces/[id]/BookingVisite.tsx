@@ -44,7 +44,7 @@ export default function BookingVisite({
       .eq("locataire_email", myEmail)
       .order("created_at", { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle() // 0 résultat = data null (sans .maybeSingle, .single() jette 406)
       .then(({ data }) => {
         if (data) setExistante(data)
         setLoading(false)
