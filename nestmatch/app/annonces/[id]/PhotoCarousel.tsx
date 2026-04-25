@@ -169,79 +169,97 @@ export default function PhotoCarousel({ photos }: { photos: string[] }) {
     )
   }
 
-  // ─── Desktop/tablet + ≥3 photos : layout 2/1 ────────────────────────
-  // Hauteur étendue (de 480 → 560) pour voir plus de l'image principale.
-  // Photo principale passe en object-fit: contain + fond éditorial beige
-  // pour garantir qu'elle soit visible en entière (portrait/paysage/carré),
-  // sans coupe brutale. Les vignettes restent en cover (mosaïque).
-  const extraCount = photos.length - 3 // photos supplémentaires au-delà des 3 visibles
+  // ─── Desktop/tablet + ≥3 photos : layout vignettes verticales gauche + grande droite ──
+  // Style Airbnb/Amazon : colonne étroite (88px) à gauche avec toutes les
+  // miniatures empilées verticalement, scrollable si trop nombreuses. Cliquer
+  // une miniature change la photo principale (sans ouvrir la lightbox).
+  // Cliquer la photo principale → lightbox.
   return (
     <>
       <div style={{
         display: "grid",
-        gridTemplateColumns: "2fr 1fr",
+        gridTemplateColumns: "88px 1fr",
         gap: 12,
         width: "100%",
-        height: 440,
+        height: 480,
         marginBottom: 20,
       }}>
-        {/* Grande photo gauche — contain + fond beige pour voir l'image entière */}
+        {/* Colonne miniatures verticales gauche */}
         <div
-          onClick={() => openLightboxAt(0)}
-          style={{ position: "relative", borderRadius: 20, overflow: "hidden", cursor: "zoom-in", background: "#F7F4EF" }}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            overflowY: "auto",
+            overflowX: "hidden",
+            paddingRight: 4,
+            scrollbarWidth: "thin",
+          }}
+          aria-label="Miniatures des photos"
         >
-          <Image
-            src={photos[0]}
-            alt="Photo principale"
-            fill
-            sizes="(max-width: 1200px) 60vw, 800px"
-            priority
-            style={{ objectFit: "contain" }}
-          />
-          <span style={{ position: "absolute", top: 14, right: 14, background: "rgba(17,17,17,0.72)", color: "white", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 999, pointerEvents: "none" }}>
-            Cliquez pour agrandir
-          </span>
+          {photos.map((src, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setIdx(i)}
+              aria-label={`Voir photo ${i + 1}`}
+              aria-pressed={i === idx}
+              style={{
+                position: "relative",
+                width: "100%",
+                aspectRatio: "1 / 1",
+                borderRadius: 12,
+                overflow: "hidden",
+                padding: 0,
+                border: i === idx ? "2px solid #111" : "2px solid transparent",
+                background: "#F7F4EF",
+                cursor: "pointer",
+                flexShrink: 0,
+                transition: "border-color 0.15s, opacity 0.15s",
+                opacity: i === idx ? 1 : 0.78,
+              }}
+              onMouseEnter={e => { if (i !== idx) e.currentTarget.style.opacity = "1" }}
+              onMouseLeave={e => { if (i !== idx) e.currentTarget.style.opacity = "0.78" }}
+            >
+              <Image
+                src={src}
+                alt={`Vignette ${i + 1}`}
+                fill
+                sizes="88px"
+                style={{ objectFit: "cover" }}
+              />
+            </button>
+          ))}
         </div>
 
-        {/* 2 vignettes droite, stackées verticalement */}
-        <div style={{ display: "grid", gridTemplateRows: "1fr 1fr", gap: 12 }}>
-          <div
-            onClick={() => openLightboxAt(1)}
-            style={{ position: "relative", borderRadius: 20, overflow: "hidden", cursor: "zoom-in", background: "#000" }}
-          >
-            <Image
-              src={photos[1]}
-              alt="Photo 2"
-              fill
-              sizes="(max-width: 1200px) 30vw, 400px"
-              style={{ objectFit: "cover" }}
-            />
-          </div>
-          <div
-            onClick={() => openLightboxAt(2)}
-            style={{ position: "relative", borderRadius: 20, overflow: "hidden", cursor: "zoom-in", background: "#000" }}
-          >
-            <Image
-              src={photos[2]}
-              alt="Photo 3"
-              fill
-              sizes="(max-width: 1200px) 30vw, 400px"
-              style={{ objectFit: "cover" }}
-            />
-            {/* Overlay "+N" si plus de 3 photos */}
-            {extraCount > 0 && (
-              <div style={{
-                position: "absolute", inset: 0,
-                background: "rgba(0,0,0,0.55)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: "white",
-                fontSize: 24, fontWeight: 700, letterSpacing: "-0.3px",
-                pointerEvents: "none",
-              }}>
-                +{extraCount}
-              </div>
-            )}
-          </div>
+        {/* Grande photo principale droite */}
+        <div
+          onClick={() => openLightboxAt(idx)}
+          style={{
+            position: "relative",
+            borderRadius: 20,
+            overflow: "hidden",
+            cursor: "zoom-in",
+            background: "#F7F4EF",
+            height: "100%",
+          }}
+        >
+          <Image
+            src={photos[idx]}
+            alt={`Photo ${idx + 1}`}
+            fill
+            sizes="(max-width: 1200px) 70vw, 900px"
+            priority={idx === 0}
+            style={{ objectFit: "contain" }}
+          />
+          <span style={{
+            position: "absolute", top: 14, right: 14,
+            background: "rgba(17,17,17,0.72)", color: "white",
+            fontSize: 11, fontWeight: 700, padding: "4px 10px",
+            borderRadius: 999, pointerEvents: "none",
+          }}>
+            {idx + 1} / {photos.length} · Cliquez pour agrandir
+          </span>
         </div>
       </div>
       {lightbox}

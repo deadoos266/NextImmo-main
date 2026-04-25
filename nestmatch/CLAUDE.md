@@ -16,6 +16,7 @@ Next.js 15 App Router · Supabase (anon key, RLS désactivée sur visites/carnet
 - **Inline styles uniquement** — aucun fichier `.css`, aucune className Tailwind
 - Les server components Next.js ne peuvent pas importer des modules client (`"use client"`)
 - Toujours utiliser `supabase` depuis `lib/supabase.ts` (client browser)
+- **Clarifier les mots ambigus AVANT de coder** — "fixe / sticky / propre / rapide / que ça reste" → toujours proposer 2 options A/B en 2 lignes avant d'écrire la moindre ligne de code. Coût récent : 3h sur sticky card en mauvais sens (cf `memory/feedback_clarify_ambiguous_2026-04-25.md`).
 
 ## Architecture des rôles
 - `proprietaireActive` (boolean) depuis `useRole()` dans `app/providers.tsx`
