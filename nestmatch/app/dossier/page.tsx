@@ -2,12 +2,23 @@
 import { useSession } from "next-auth/react"
 import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
+import dynamic from "next/dynamic"
 import { supabase } from "../../lib/supabase"
 import { validateDocument } from "../../lib/fileValidation"
 import Tooltip from "../components/Tooltip"
 import PhoneInput from "../components/PhoneInput"
-import SharePanel from "./SharePanel"
-import AccessLogPanel from "./AccessLogPanel"
+
+// Lazy : SharePanel + AccessLogPanel sont en bas de la page (after upload form),
+// 99 % des users ne scrollent pas jusqu'en bas avant plusieurs jours.
+// Économie estimée ~8-12 kB sur First Load JS.
+const SharePanel = dynamic(() => import("./SharePanel"), {
+  ssr: false,
+  loading: () => <div style={{ height: 240 }} aria-hidden="true" />,
+})
+const AccessLogPanel = dynamic(() => import("./AccessLogPanel"), {
+  ssr: false,
+  loading: () => <div style={{ height: 120 }} aria-hidden="true" />,
+})
 import UndoToast from "../components/ui/UndoToast"
 import { useUndo } from "../components/ui/useUndo"
 import DocRowSkeleton from "../components/ui/DocRowSkeleton"
