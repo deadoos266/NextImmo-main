@@ -1,7 +1,6 @@
 "use client"
 import { useSession } from "next-auth/react"
 import { useState, useRef, useEffect } from "react"
-import dynamic from "next/dynamic"
 import { useRouter, useParams } from "next/navigation"
 import { supabase } from "../../../../lib/supabase"
 import { validateImage } from "../../../../lib/fileValidation"
@@ -12,61 +11,6 @@ import AddressAutocomplete from "../../../components/AddressAutocomplete"
 import Tooltip from "../../../components/Tooltip"
 
 import { Toggle, Sec, F } from "../../../components/FormHelpers"
-import Lightbox from "../../../components/ui/Lightbox"
-
-// ImageCropModal lazy : embarque react-easy-crop (~50 kB minified). La modale
-// n'apparaît qu'au clic sur "recadrer" → évite de le charger d'emblée.
-// Audit perf #3.
-const ImageCropModal = dynamic(() => import("../../../components/ui/ImageCropModal"), {
-  ssr: false,
-})
-
-// R10.6 — tri-state côté propriétaire (Indifférent / Oui / Non).
-type TriPolitique = "indifferent" | "oui" | "non"
-
-// R10.6 — étages courants (pills) + saisie libre acceptée.
-const ETAGES_COMMUNS = ["Sous-sol", "Rez-de-chaussée", "1er", "2e", "3e", "4e", "5e", "6e", "7e+"] as const
-// R10.6 — DPE : pills A-G + « Non renseigné ». Saisie libre si valeur non standard.
-const DPE_VALUES = ["A", "B", "C", "D", "E", "F", "G", "Non renseigné"] as const
-
-// R10.6 — équipements étendus (stockés dans jsonb equipements_extras).
-const EQUIP_EXTRAS_GROUPS: Array<{ title: string; items: Array<{ k: string; label: string }> }> = [
-  {
-    title: "Électroménager",
-    items: [
-      { k: "lave_linge",     label: "Lave-linge" },
-      { k: "seche_linge",    label: "Sèche-linge" },
-      { k: "lave_vaisselle", label: "Lave-vaisselle" },
-      { k: "four",           label: "Four" },
-      { k: "micro_ondes",    label: "Micro-ondes" },
-      { k: "frigo",          label: "Réfrigérateur" },
-      { k: "congelateur",    label: "Congélateur" },
-      { k: "plaques",        label: "Plaques de cuisson" },
-      { k: "hotte",          label: "Hotte aspirante" },
-    ],
-  },
-  {
-    title: "Confort",
-    items: [
-      { k: "wifi",            label: "Wifi inclus" },
-      { k: "climatisation",   label: "Climatisation" },
-      { k: "cheminee",        label: "Cheminée" },
-      { k: "interphone",      label: "Interphone" },
-      { k: "gardien",         label: "Gardien" },
-      { k: "rangements",      label: "Rangements / placards" },
-      { k: "double_vitrage",  label: "Double vitrage" },
-      { k: "cuisine_equipee", label: "Cuisine équipée" },
-    ],
-  },
-  {
-    title: "Exposition & vue",
-    items: [
-      { k: "exposition_sud", label: "Exposition sud" },
-      { k: "vue_degagee",    label: "Vue dégagée" },
-      { k: "traversant",     label: "Traversant" },
-    ],
-  },
-]
 
 export default function ModifierBien() {
   const { data: session, status } = useSession()
@@ -92,18 +36,12 @@ export default function ModifierBien() {
     locataire_email: "", date_debut_bail: "", mensualite_credit: "", valeur_bien: "", duree_credit: "",
     taxe_fonciere: "", assurance_pno: "", charges_copro_annuelles: "",
     lat: null as number | null, lng: null as number | null,
-    // R10.6 — critères candidats v2 (non discriminants, bonus matching).
-    age_min: "", age_max: "", max_occupants: "",
-    animaux_politique: "indifferent" as TriPolitique,
-    fumeur_politique: "indifferent" as TriPolitique,
   })
   const [toggles, setToggles] = useState({
     meuble: false, animaux: false, parking: false, cave: false,
     fibre: false, balcon: false, terrasse: false, jardin: false, ascenseur: false,
     localisation_exacte: false,
   })
-  // R10.6 — équipements étendus jsonb (indépendants des colonnes boolean historiques).
-  const [equipExtras, setEquipExtras] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     if (status === "unauthenticated") { router.push("/auth"); return }
@@ -147,15 +85,6 @@ export default function ModifierBien() {
       charges_copro_annuelles: data.charges_copro_annuelles ? String(data.charges_copro_annuelles) : "",
       lat: typeof data.lat === "number" ? data.lat : null,
       lng: typeof data.lng === "number" ? data.lng : null,
-      age_min: data.age_min != null ? String(data.age_min) : "",
-      age_max: data.age_max != null ? String(data.age_max) : "",
-      max_occupants: data.max_occupants != null ? String(data.max_occupants) : "",
-      animaux_politique: (["oui", "non", "indifferent"].includes(data.animaux_politique)
-        ? data.animaux_politique
-        : "indifferent") as TriPolitique,
-      fumeur_politique: (["oui", "non", "indifferent"].includes(data.fumeur_politique)
-        ? data.fumeur_politique
-        : "indifferent") as TriPolitique,
     })
     setToggles({
       meuble: !!data.meuble, animaux: !!data.animaux, parking: !!data.parking,
@@ -163,17 +92,13 @@ export default function ModifierBien() {
       terrasse: !!data.terrasse, jardin: !!data.jardin, ascenseur: !!data.ascenseur,
       localisation_exacte: !!data.localisation_exacte,
     })
-    // R10.6 — équipements jsonb (si colonne absente en DB, reste vide sans casser).
-    if (data.equipements_extras && typeof data.equipements_extras === "object") {
-      setEquipExtras(data.equipements_extras as Record<string, boolean>)
-    }
     if (Array.isArray(data.photos)) setPhotos(data.photos)
     setLoading(false)
   }
 
   const set = (key: string) => (e: any) => setForm(f => ({ ...f, [key]: e.target.value }))
   const toInt = (v: string) => v ? parseInt(v) : null
-  const inp: any = { width: "100%", padding: "11px 14px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 16, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }
+  const inp: any = { width: "100%", padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: 10, fontSize: 16, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }
   const sel: any = { ...inp, background: "white" }
   const dejaLoue = form.statut === "loué"
 
@@ -214,37 +139,6 @@ export default function ModifierBien() {
     setPhotos(prev => prev.filter((_, i) => i !== idx))
   }
 
-  // Crop upload queue (R10.5) : traite les fichiers sélectionnés 1 par 1,
-  // chaque un passant par ImageCropModal avant l'upload.
-  const [cropFile, setCropFile] = useState<File | null>(null)
-  const [cropQueue, setCropQueue] = useState<File[]>([])
-  const [lightbox, setLightbox] = useState<{ open: boolean; index: number }>({ open: false, index: 0 })
-
-  function advanceCropQueue() {
-    setCropQueue(q => {
-      if (q.length === 0) { setCropFile(null); return [] }
-      setCropFile(q[0])
-      return q.slice(1)
-    })
-  }
-
-  async function onCropValidated(blob: Blob, originalName: string) {
-    const ext = blob.type === "image/jpeg" ? ".jpg" : blob.type === "image/png" ? ".png" : ".jpg"
-    const base = originalName.replace(/\.[^.]+$/, "")
-    const croppedFile = new File([blob], `${base}-crop${ext}`, { type: blob.type })
-    await uploadPhoto(croppedFile)
-    advanceCropQueue()
-  }
-
-  async function onSkipCrop() {
-    if (cropFile) await uploadPhoto(cropFile)
-    advanceCropQueue()
-  }
-
-  function onCancelCrop() {
-    advanceCropQueue()
-  }
-
   async function sauvegarder() {
     if (!form.titre || !form.ville || !form.prix) { alert("Remplis au minimum le titre, la ville et le loyer."); return }
     if (form.titre.length > 120) { alert("Le titre doit faire 120 caractères maximum."); return }
@@ -274,18 +168,8 @@ export default function ModifierBien() {
       description: form.description, type_bien: form.type_bien,
       photos: photos.length > 0 ? photos : null,
       lat: form.lat, lng: form.lng,
-      // R10.6 — critères candidats v2 (fallback si migration 025 pas appliquée).
-      age_min: toInt(form.age_min),
-      age_max: toInt(form.age_max),
-      max_occupants: toInt(form.max_occupants),
-      animaux_politique: form.animaux_politique === "indifferent" ? null : form.animaux_politique,
-      fumeur_politique: form.fumeur_politique === "indifferent" ? null : form.fumeur_politique,
-      equipements_extras: Object.keys(equipExtras).length > 0 ? equipExtras : null,
       ...toggles,
     }
-    // R10.6 — dérive la colonne legacy boolean `animaux` de la politique tri-state.
-    if (form.animaux_politique === "oui") updates.animaux = true
-    else if (form.animaux_politique === "non") updates.animaux = false
 
     if (dejaLoue) {
       updates.locataire_email = form.locataire_email ? form.locataire_email.trim().toLowerCase() : null
@@ -298,27 +182,13 @@ export default function ModifierBien() {
       updates.charges_copro_annuelles = toInt(form.charges_copro_annuelles)
     }
 
-    // Fallback progressif si colonnes absentes :
-    //   (1) update complet → (2) sans lat/lng → (3) sans critères R10.6 v2.
+    // Tentative avec lat/lng. Si colonnes absentes en DB, on retire et on retente.
     let { error } = await supabase.from("annonces").update(updates).eq("id", bienId)
     if (error && /lat|lng|column.*does not exist/i.test(error.message || "")) {
       const updatesNoCoords = { ...updates }
       delete updatesNoCoords.lat
       delete updatesNoCoords.lng
       const retry = await supabase.from("annonces").update(updatesNoCoords).eq("id", bienId)
-      error = retry.error
-    }
-    if (error && /age_min|age_max|max_occupants|animaux_politique|fumeur_politique|equipements_extras|column.*does not exist/i.test(error.message || "")) {
-      const updatesNoV2 = { ...updates }
-      delete updatesNoV2.age_min
-      delete updatesNoV2.age_max
-      delete updatesNoV2.max_occupants
-      delete updatesNoV2.animaux_politique
-      delete updatesNoV2.fumeur_politique
-      delete updatesNoV2.equipements_extras
-      delete updatesNoV2.lat
-      delete updatesNoV2.lng
-      const retry = await supabase.from("annonces").update(updatesNoV2).eq("id", bienId)
       error = retry.error
     }
     setSaving(false)
@@ -328,7 +198,7 @@ export default function ModifierBien() {
   }
 
   if (status === "loading" || loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif", color: "#8a8477" }}>Chargement...</div>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif", color: "#6b7280" }}>Chargement...</div>
   )
 
   if (notFound) return (
@@ -341,14 +211,14 @@ export default function ModifierBien() {
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 48px" }}>
-        <a href="/proprietaire" style={{ fontSize: 14, color: "#8a8477", textDecoration: "none" }}>← Retour au dashboard</a>
+        <a href="/proprietaire" style={{ fontSize: 14, color: "#6b7280", textDecoration: "none" }}>← Retour au dashboard</a>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "16px 0 4px" }}>
           <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.5px" }}>Modifier l'annonce</h1>
-          <a href={`/annonces/${bienId}`} style={{ fontSize: 13, color: "#8a8477", textDecoration: "none", padding: "7px 14px", border: "1px solid #EAE6DF", borderRadius: 999, fontWeight: 600 }}>
+          <a href={`/annonces/${bienId}`} style={{ fontSize: 13, color: "#6b7280", textDecoration: "none", padding: "7px 14px", border: "1.5px solid #e5e7eb", borderRadius: 999, fontWeight: 600 }}>
             Voir l'annonce publiée →
           </a>
         </div>
-        <p style={{ color: "#8a8477", marginBottom: 32, fontSize: 14 }}>Les modifications sont appliquées immédiatement après sauvegarde.</p>
+        <p style={{ color: "#6b7280", marginBottom: 32, fontSize: 14 }}>Les modifications sont appliquées immédiatement après sauvegarde.</p>
 
         <Sec t="Informations générales">
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
@@ -395,7 +265,7 @@ export default function ModifierBien() {
                 value={form.dispo && form.dispo !== "Disponible maintenant" && /^\d{4}-\d{2}-\d{2}$/.test(form.dispo) ? form.dispo : ""}
                 onChange={e => setForm(f => ({ ...f, dispo: e.target.value || "Disponible maintenant" }))}
               />
-              <p style={{ fontSize: 11, color: "#8a8477", marginTop: 6 }}>
+              <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 6 }}>
                 Laisser vide = &quot;Disponible maintenant&quot;
               </p>
             </F>
@@ -405,25 +275,23 @@ export default function ModifierBien() {
         {/* Photos */}
         <Sec t="Photos du bien">
           {photoError && (
-            <div style={{ background: "#FEECEC", border: "1px solid #F4C9C9", borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <p style={{ fontSize: 13, color: "#b91c1c" }}>{photoError}</p>
-              <button type="button" aria-label="Fermer le message d'erreur" onClick={() => setPhotoError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#b91c1c", fontSize: 18 }}>×</button>
+            <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <p style={{ fontSize: 13, color: "#dc2626" }}>{photoError}</p>
+              <button type="button" aria-label="Fermer le message d'erreur" onClick={() => setPhotoError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: 18 }}>×</button>
             </div>
           )}
 
           {photos.length > 0 && (
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
               {photos.map((url, idx) => (
-                <div key={idx}
-                  onClick={() => setLightbox({ open: true, index: idx })}
-                  style={{ position: "relative", width: 120, height: 90, borderRadius: 10, overflow: "hidden", border: "1px solid #EAE6DF", cursor: "zoom-in" }}>
+                <div key={idx} style={{ position: "relative", width: 120, height: 90, borderRadius: 10, overflow: "hidden", border: "1.5px solid #e5e7eb" }}>
                   <img src={url} alt={`Photo ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  <button onClick={(e) => { e.stopPropagation(); removePhoto(idx) }}
+                  <button onClick={() => removePhoto(idx)}
                     style={{ position: "absolute", top: 4, right: 4, background: "rgba(0,0,0,0.6)", border: "none", borderRadius: "50%", width: 22, height: 22, cursor: "pointer", color: "white", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     ×
                   </button>
                   {idx === 0 && (
-                    <span style={{ position: "absolute", bottom: 4, left: 4, background: "#111", color: "white", fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, pointerEvents: "none" }}>Principale</span>
+                    <span style={{ position: "absolute", bottom: 4, left: 4, background: "#111", color: "white", fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4 }}>Principale</span>
                   )}
                 </div>
               ))}
@@ -432,48 +300,29 @@ export default function ModifierBien() {
 
           <input
             type="file"
-            accept=".jpg,.jpeg,.png,.webp"
+            accept="image/jpeg,image/png,image/webp"
             multiple
             style={{ display: "none" }}
             ref={photoInputRef}
-            onChange={e => {
+            onChange={async e => {
               const files = Array.from(e.target.files || [])
-              if (files.length === 0) return
-              setCropFile(files[0])
-              setCropQueue(files.slice(1))
+              for (const file of files) await uploadPhoto(file)
               e.target.value = ""
             }}
           />
           <button
             onClick={() => photoInputRef.current?.click()}
             disabled={uploadingPhoto}
-            style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 20px", border: "2px dashed #EAE6DF", borderRadius: 12, background: "transparent", cursor: uploadingPhoto ? "not-allowed" : "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: "#8a8477", opacity: uploadingPhoto ? 0.6 : 1 }}>
+            style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 20px", border: "2px dashed #d1d5db", borderRadius: 12, background: "transparent", cursor: uploadingPhoto ? "not-allowed" : "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: "#6b7280", opacity: uploadingPhoto ? 0.6 : 1 }}>
             {uploadingPhoto ? <span>Upload en cours...</span> : <><span style={{ fontSize: 20 }}>+</span><span>Ajouter des photos — {photos.length}/10</span></>}
           </button>
-          <p style={{ fontSize: 12, color: "#8a8477", marginTop: 8 }}>
-            Après sélection, vous pourrez recadrer chaque image (4:3 recommandé).
-          </p>
-
-          <Lightbox
-            photos={photos}
-            initialIndex={lightbox.index}
-            open={lightbox.open}
-            onClose={() => setLightbox(s => ({ ...s, open: false }))}
-          />
-          <ImageCropModal
-            file={cropFile}
-            onCancel={onCancelCrop}
-            onCropped={onCropValidated}
-            onSkipCrop={onSkipCrop}
-            defaultRatio={4 / 3}
-          />
         </Sec>
 
         {/* Champs loué */}
         {dejaLoue && (
           <Sec t="Informations de location en cours">
-            <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 12, padding: "12px 16px", marginBottom: 20 }}>
-              <p style={{ fontSize: 13, color: "#15803d", fontWeight: 600 }}>Ce bien est géré en mode privé et n'apparaît pas dans les annonces publiques.</p>
+            <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12, padding: "12px 16px", marginBottom: 20 }}>
+              <p style={{ fontSize: 13, color: "#16a34a", fontWeight: 600 }}>Ce bien est géré en mode privé et n'apparaît pas dans les annonces publiques.</p>
             </div>
             <div style={{ marginBottom: 20 }}>
               <LocataireEmailField value={form.locataire_email} onChange={v => setForm(f => ({ ...f, locataire_email: v }))} inputStyle={inp} />
@@ -492,7 +341,7 @@ export default function ModifierBien() {
                 <input style={inp} value={form.valeur_bien} onChange={set("valeur_bien")} type="number" placeholder="250000" />
               </F>
             </div>
-            <div style={{ borderTop: "1px solid #F7F4EF", paddingTop: 20, marginTop: 20 }}>
+            <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 20, marginTop: 20 }}>
               <p style={{ fontSize: 13, fontWeight: 800, marginBottom: 14, color: "#111" }}>Charges annuelles du propriétaire</p>
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
                 <F l="Taxe foncière (€/an)">
@@ -518,216 +367,40 @@ export default function ModifierBien() {
         </Sec>
 
         <Sec t="Caractéristiques">
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: 16, marginBottom: 22 }}>
-            <F l="Surface (m²)"><input style={inp} type="number" min={0} value={form.surface} onChange={set("surface")} placeholder="38" /></F>
-            <F l="Pièces"><input style={inp} type="number" min={0} max={20} value={form.pieces} onChange={set("pieces")} placeholder="Ex : 2" /></F>
-            <F l="Chambres"><input style={inp} type="number" min={0} max={20} value={form.chambres} onChange={set("chambres")} placeholder="Ex : 1" /></F>
-          </div>
-
-          <div style={{ marginBottom: 22 }}>
-            <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 10px" }}>Étage</p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-              {ETAGES_COMMUNS.map(v => {
-                const active = form.etage === v
-                return (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, etage: v }))}
-                    style={{
-                      padding: "8px 14px", borderRadius: 999, fontFamily: "inherit", fontSize: 12.5, fontWeight: 500, cursor: "pointer",
-                      border: `1.5px solid ${active ? "#111" : "#EAE6DF"}`,
-                      background: active ? "#111" : "white",
-                      color: active ? "white" : "#111",
-                    }}
-                  >{v}</button>
-                )
-              })}
-            </div>
-            <input
-              style={{ ...inp, maxWidth: 240 }}
-              type="text"
-              placeholder="Ou saisie libre (ex : 12e)"
-              value={(ETAGES_COMMUNS as readonly string[]).includes(form.etage) ? "" : form.etage}
-              onChange={set("etage")}
-            />
-          </div>
-
-          <div>
-            <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 10px" }}>
-              DPE
-              {" "}<Tooltip text="Le DPE est obligatoire depuis 2007. A = très économe, G = passoire thermique. Les logements F et G sont progressivement interdits à la location." />
-            </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-              {DPE_VALUES.map((v, i) => {
-                const active = form.dpe === v
-                const isLetter = v.length === 1
-                const letterColors = ["#2E7D32", "#66BB6A", "#AED581", "#FFEE58", "#FFA726", "#EF5350", "#C62828"]
-                return (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, dpe: v }))}
-                    style={{
-                      padding: isLetter ? "10px 18px" : "10px 14px",
-                      borderRadius: 10,
-                      fontFamily: "inherit",
-                      fontSize: isLetter ? 14 : 12.5,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      border: `2px solid ${active ? "#111" : "transparent"}`,
-                      background: isLetter ? letterColors[i] : "white",
-                      color: isLetter ? "white" : "#111",
-                      boxShadow: active ? "0 0 0 1px inset rgba(255,255,255,0.3)" : "none",
-                      letterSpacing: isLetter ? "0.5px" : "0.3px",
-                      minWidth: isLetter ? 44 : "auto",
-                      textAlign: "center",
-                      outline: !isLetter ? `1px solid ${active ? "#111" : "#EAE6DF"}` : "none",
-                    }}
-                  >{v}</button>
-                )
-              })}
-            </div>
-            {!(DPE_VALUES as readonly string[]).includes(form.dpe) && (
-              <input
-                style={{ ...inp, maxWidth: 280 }}
-                type="text"
-                placeholder="Ou saisie libre (ex : En attente)"
-                value={form.dpe}
-                onChange={set("dpe")}
-              />
-            )}
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: 16 }}>
+            <F l="Surface (m²)"><input style={inp} type="number" value={form.surface} onChange={set("surface")} placeholder="38" /></F>
+            <F l="Pièces">
+              <select style={sel} value={form.pieces} onChange={set("pieces")}>{["","1","2","3","4","5","6","7+"].map(v => <option key={v} value={v}>{v || "Sélectionner"}</option>)}</select>
+            </F>
+            <F l="Chambres">
+              <select style={sel} value={form.chambres} onChange={set("chambres")}>{["","0","1","2","3","4","5+"].map(v => <option key={v} value={v}>{v === "" ? "Sélectionner" : v}</option>)}</select>
+            </F>
+            <F l="Étage">
+              <select style={sel} value={form.etage} onChange={set("etage")}>{["","Rez-de-chaussée","1er","2e","3e","4e","5e","6e","7e","8e","9e","10e+"].map(v => <option key={v} value={v}>{v || "Sélectionner"}</option>)}</select>
+            </F>
+            <F l="DPE">
+              <select style={sel} value={form.dpe} onChange={set("dpe")}>{["A","B","C","D","E","F","G"].map(v => <option key={v}>{v}</option>)}</select>
+            </F>
           </div>
         </Sec>
 
         <Sec t="Équipements">
-          <div style={{ marginBottom: 22 }}>
-            <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 14px" }}>Général</p>
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 4 }}>
-              <Toggle label="Meublé" k="meuble" toggles={toggles} setToggles={setToggles} />
-              <Toggle label="Parking" k="parking" toggles={toggles} setToggles={setToggles} />
-              <Toggle label="Cave" k="cave" toggles={toggles} setToggles={setToggles} />
-              <Toggle label="Fibre optique" k="fibre" toggles={toggles} setToggles={setToggles} />
-              <Toggle label="Balcon" k="balcon" toggles={toggles} setToggles={setToggles} />
-              <Toggle label="Terrasse" k="terrasse" toggles={toggles} setToggles={setToggles} />
-              <Toggle label="Jardin" k="jardin" toggles={toggles} setToggles={setToggles} />
-              <Toggle label="Ascenseur" k="ascenseur" toggles={toggles} setToggles={setToggles} />
-            </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
+            <Toggle label="Meublé" k="meuble" toggles={toggles} setToggles={setToggles} />
+            <Toggle label="Animaux acceptés" k="animaux" toggles={toggles} setToggles={setToggles} />
+            <Toggle label="Parking" k="parking" toggles={toggles} setToggles={setToggles} />
+            <Toggle label="Cave" k="cave" toggles={toggles} setToggles={setToggles} />
+            <Toggle label="Fibre" k="fibre" toggles={toggles} setToggles={setToggles} />
+            <Toggle label="Balcon" k="balcon" toggles={toggles} setToggles={setToggles} />
+            <Toggle label="Terrasse" k="terrasse" toggles={toggles} setToggles={setToggles} />
+            <Toggle label="Jardin" k="jardin" toggles={toggles} setToggles={setToggles} />
+            <Toggle label="Ascenseur" k="ascenseur" toggles={toggles} setToggles={setToggles} />
           </div>
-
-          {EQUIP_EXTRAS_GROUPS.map(group => (
-            <div key={group.title} style={{ marginBottom: 22 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 10px" }}>{group.title}</p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {group.items.map(it => {
-                  const active = !!equipExtras[it.k]
-                  return (
-                    <button
-                      key={it.k}
-                      type="button"
-                      onClick={() => setEquipExtras(prev => ({ ...prev, [it.k]: !prev[it.k] }))}
-                      style={{
-                        padding: "8px 14px", borderRadius: 999, fontFamily: "inherit", fontSize: 12.5, fontWeight: 500, cursor: "pointer",
-                        border: `1.5px solid ${active ? "#111" : "#EAE6DF"}`,
-                        background: active ? "#111" : "white",
-                        color: active ? "white" : "#111",
-                      }}
-                    >{it.label}</button>
-                  )
-                })}
-              </div>
-            </div>
-          ))}
-
-          <p style={{ fontSize: 11, color: "#8a8477", lineHeight: 1.5, margin: 0, fontStyle: "italic" }}>
-            Plus vous cochez d&apos;équipements, plus le matching locataire est précis.
-          </p>
-        </Sec>
-
-        <Sec t="Critères candidats (optionnel)">
-          <div style={{
-            padding: "14px 18px", background: "#F7F4EF", border: "1px solid #EAE6DF",
-            borderRadius: 14, fontSize: 12.5, color: "#111", lineHeight: 1.6, marginBottom: 20,
-          }}>
-            Ces critères ne sont <strong>pas discriminants</strong> — ils nous aident simplement à calculer le score de match et à prioriser les dossiers compatibles.
-          </div>
-
-          <div style={{ marginBottom: 22 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 10px" }}>Nombre maximum d&apos;occupants</p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {[
-                { v: "", label: "Indifférent" },
-                { v: "1", label: "1" }, { v: "2", label: "2" }, { v: "3", label: "3" }, { v: "4", label: "4" }, { v: "5", label: "5 +" },
-              ].map(p => {
-                const active = form.max_occupants === p.v
-                return (
-                  <button
-                    key={p.v || "any"}
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, max_occupants: p.v }))}
-                    style={{
-                      padding: "9px 16px", borderRadius: 999, fontFamily: "inherit", fontSize: 12.5, fontWeight: 500, cursor: "pointer",
-                      border: `1.5px solid ${active ? "#111" : "#EAE6DF"}`,
-                      background: active ? "#111" : "white",
-                      color: active ? "white" : "#111",
-                      minWidth: p.v === "" ? "auto" : 48,
-                    }}
-                  >{p.label}</button>
-                )
-              })}
-            </div>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 22 }}>
-            <F l="Âge minimum candidat">
-              <input style={inp} type="number" min={18} max={99} value={form.age_min} onChange={set("age_min")} placeholder="18" />
-            </F>
-            <F l="Âge maximum candidat">
-              <input style={inp} type="number" min={18} max={99} value={form.age_max} onChange={set("age_max")} placeholder="99" />
-            </F>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 18 }}>
-            {(["animaux_politique", "fumeur_politique"] as const).map(key => {
-              const label = key === "animaux_politique" ? "Animaux" : "Fumeur toléré"
-              return (
-                <div key={key}>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 10px" }}>{label}</p>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    {([
-                      { v: "indifferent", label: "Indifférent" },
-                      { v: "oui", label: "Oui" },
-                      { v: "non", label: "Non" },
-                    ] as Array<{ v: TriPolitique; label: string }>).map(o => {
-                      const active = form[key] === o.v
-                      return (
-                        <button
-                          key={o.v}
-                          type="button"
-                          onClick={() => setForm(f => ({ ...f, [key]: o.v }))}
-                          style={{
-                            flex: 1, padding: "9px 12px", borderRadius: 10, fontFamily: "inherit", fontSize: 12.5, fontWeight: 500, cursor: "pointer",
-                            border: `1.5px solid ${active ? "#111" : "#EAE6DF"}`,
-                            background: active ? "#111" : "white",
-                            color: active ? "white" : "#111",
-                          }}
-                        >{o.label}</button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          <p style={{ fontSize: 11, color: "#8a8477", lineHeight: 1.5, margin: "18px 0 0", fontStyle: "italic" }}>
-            La loi française interdit toute discrimination sur l&apos;origine, le sexe, la situation familiale, l&apos;apparence, le handicap, les opinions politiques ou religieuses, l&apos;orientation sexuelle, l&apos;âge ou le patronyme (loi 2002-73). Les filtres ci-dessus ne génèrent que des préférences de matching, jamais de rejet automatique.
-          </p>
         </Sec>
 
         <Sec t={<>Confidentialité de la localisation <Tooltip text="Par défaut, seul un cercle autour de la ville est affiché sur la carte publique, ce qui protège votre adresse exacte. Activez cette option uniquement si vous souhaitez afficher la position précise du bien à tous les visiteurs de l'annonce." /></>}>
           <Toggle label="Afficher la localisation exacte du bien sur la carte publique" k="localisation_exacte" toggles={toggles} setToggles={setToggles} />
-          <p style={{ fontSize: 12, color: "#8a8477", marginTop: 6, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 12, color: "#6b7280", marginTop: 6, lineHeight: 1.5 }}>
             {toggles.localisation_exacte
               ? "Les visiteurs verront un marqueur précis à l'adresse du bien."
               : "Les visiteurs verront uniquement une zone approximative (cercle de 400 m autour de la ville). Recommandé."}
@@ -739,11 +412,11 @@ export default function ModifierBien() {
         </Sec>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <a href="/proprietaire" style={{ padding: "14px 28px", border: "1px solid #EAE6DF", borderRadius: 999, textDecoration: "none", color: "#111", fontWeight: 600, fontSize: 14 }}>
+          <a href="/proprietaire" style={{ padding: "14px 28px", border: "1.5px solid #e5e7eb", borderRadius: 999, textDecoration: "none", color: "#111", fontWeight: 600, fontSize: 14 }}>
             Annuler
           </a>
           <button onClick={sauvegarder} disabled={saving || saved}
-            style={{ background: saved ? "#15803d" : saving ? "#8a8477" : "#111", color: "white", border: "none", borderRadius: 999, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: saving || saved ? "not-allowed" : "pointer", fontFamily: "inherit", transition: "background 0.2s" }}>
+            style={{ background: saved ? "#16a34a" : saving ? "#9ca3af" : "#111", color: "white", border: "none", borderRadius: 999, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: saving || saved ? "not-allowed" : "pointer", fontFamily: "inherit", transition: "background 0.2s" }}>
             {saved ? "Sauvegardé ✓" : saving ? "Sauvegarde..." : "Sauvegarder les modifications"}
           </button>
         </div>
