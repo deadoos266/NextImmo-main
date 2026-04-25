@@ -1442,26 +1442,20 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
  * Container de la vue Grille v5.3 — scale -15% pour densite (2026-04-23).
  *  - Cards 442px FIXE rectangulaire (photo landscape 16/10). Etait 520.
  *  - Gap 20px, auto-fill (pas auto-fit -> zero stretch). Etait 24.
- * v6 — cards plus grandes esprit éditorial (Idealista premium, pas SeLoger
- * dense). `auto-fill, minmax(440px, 1fr)` :
- *   - 1700px viewport → 3-4 cards/ligne
- *   - 1280px viewport → 2-3 cards/ligne
- *   -  900px viewport → 2 cards/ligne
- *   -  600px viewport → 1 card pleine largeur
- * Le `1fr` laisse les cards s'étendre pour éviter les vides à droite, et
- * `auto-fill` calcule le nombre de colonnes automatiquement (vs `auto-fit`
- * qui collapse à 0 quand vide). Plus généreux que le handoff (240px → 4-5
- * cards) — choix user explicite "cards plus grandes qui prennent toute la
- * page" + override "prends le handoff comme source de vérité" : compromis
- * éditorial entre les deux.
+ * v7 — densité handoff stricte (`app.jsx` ListingsScreen l. 522-524) :
+ *   `gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16`
+ *
+ * Donne ~4 cards à 1280px, ~5 à 1600px, ~6 à 1920px. Esprit Airbnb
+ * mosaïque, pas Idealista large. Reverts l'écart v6 → strictement aligné
+ * Claude Design.
  */
 function GridContainer({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(440px, 1fr))",
-        gap: 20,
+        gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+        gap: 16,
         width: "100%",
         margin: "0 auto",
       }}

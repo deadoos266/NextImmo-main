@@ -516,17 +516,17 @@ export default function ListingCardSearch({
         )}
       </div>
 
-      {/* ═══ Footer infos ═══ */}
-      <div style={{ padding: "16px 18px 18px" }}>
+      {/* ═══ Footer infos — densité handoff stricte (app.jsx ListingCard) ═══ */}
+      <div style={{ padding: 14 }}>
         {loc && (
           <div
             style={{
               fontSize: 10.5,
-              fontWeight: 700,
+              fontWeight: 600,
               color: "#6B6B6B",
               textTransform: "uppercase",
               letterSpacing: "1.1px",
-              marginBottom: 6,
+              marginBottom: 4,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
@@ -538,10 +538,10 @@ export default function ListingCardSearch({
 
         <h3
           style={{
-            fontSize: 15,
+            fontSize: 14,
             fontWeight: 500,
-            margin: "0 0 12px",
-            lineHeight: 1.3,
+            margin: "0 0 10px",
+            lineHeight: 1.25,
             letterSpacing: "-0.15px",
             color: "#111",
             overflow: "hidden",
@@ -549,26 +549,26 @@ export default function ListingCardSearch({
             WebkitLineClamp: 2,
             WebkitBoxOrient: "vertical",
             // Réserve 2 lignes pour stabiliser la hauteur même quand le titre est court.
-            minHeight: "2.6em",
+            minHeight: "2.5em",
           }}
         >
           {titre}
         </h3>
 
-        {/* Separator + ligne specs/prix tabular */}
+        {/* Separator + ligne specs/prix tabular — handoff fontSize 11.5/13.5 */}
         <div
           style={{
             borderTop: "1px solid #EAE6DF",
-            paddingTop: 11,
+            paddingTop: 9,
             display: "flex",
             justifyContent: "space-between",
             alignItems: "baseline",
-            gap: 10,
-            fontSize: 12,
+            gap: 8,
+            fontSize: 11.5,
             color: "#8a8477",
           }}
         >
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {annonce.surface != null && <span>{annonce.surface} m²</span>}
             {annonce.surface != null && annonce.pieces != null && <span style={{ color: "#EAE6DF" }}>·</span>}
             {annonce.pieces != null && <span>{annonce.pieces} p.</span>}
@@ -583,20 +583,20 @@ export default function ListingCardSearch({
             style={{
               fontWeight: 700,
               color: "#111",
-              fontSize: 17,
+              fontSize: 13.5,
               fontVariantNumeric: "tabular-nums",
-              letterSpacing: "-0.3px",
+              letterSpacing: "-0.2px",
               flexShrink: 0,
             }}
           >
             {annonce.prix?.toLocaleString("fr-FR") ?? "—"} €
-            <span style={{ fontWeight: 400, color: "#8a8477", fontSize: 11 }}>/mois</span>
+            <span style={{ fontWeight: 400, color: "#8a8477", fontSize: 10 }}>/mois</span>
           </span>
         </div>
 
-        {/* R10.2 — Aperçu / Comparer (sous le récap) */}
+        {/* R10.2 — Aperçu / Comparer (sous le récap, discret) */}
         {(onQuickView || onToggleCompare) && (
-          <div style={{ display: "flex", gap: 6, marginTop: 12, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 5, marginTop: 9, flexWrap: "wrap" }}>
             {onQuickView && (
               <button
                 type="button"
@@ -606,22 +606,22 @@ export default function ListingCardSearch({
                   background: "white",
                   color: "#111",
                   border: "1px solid #EAE6DF",
-                  padding: "6px 12px",
+                  padding: "4px 9px",
                   borderRadius: 999,
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: 500,
                   whiteSpace: "nowrap",
                   cursor: "pointer",
                   fontFamily: "inherit",
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: 5,
+                  gap: 4,
                   transition: "background 0.15s",
                 }}
                 onMouseEnter={e => { e.currentTarget.style.background = "#F7F4EF" }}
                 onMouseLeave={e => { e.currentTarget.style.background = "white" }}
               >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                   <circle cx="12" cy="12" r="3" />
                 </svg>
@@ -640,9 +640,9 @@ export default function ListingCardSearch({
                   background: compared ? "#111" : "white",
                   color: compared ? "white" : "#111",
                   border: compared ? "1px solid #111" : "1px solid #EAE6DF",
-                  padding: "6px 12px",
+                  padding: "4px 9px",
                   borderRadius: 999,
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: 600,
                   whiteSpace: "nowrap",
                   cursor: !compared && compareDisabled ? "not-allowed" : "pointer",
@@ -650,11 +650,11 @@ export default function ListingCardSearch({
                   fontFamily: "inherit",
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: 5,
+                  gap: 4,
                   transition: "background 0.15s",
                 }}
               >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   {compared ? (
                     <polyline points="20 6 9 17 4 12" />
                   ) : (
