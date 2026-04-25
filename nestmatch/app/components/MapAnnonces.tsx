@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useState, useRef } from "react"
+import type { ReactNode } from "react"
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
@@ -148,6 +149,108 @@ function BoundsWatcher({ onMoved }: { onMoved: (bounds: L.LatLngBounds) => void 
   return null
 }
 
+// HoverableMarker — wrapper React qui ouvre le popup au survol du marker
+// (et le ferme avec un délai de 250ms au mouseout, le temps pour l'user de
+// glisser vers le popup pour cliquer dedans). Le click déclenche aussi
+// onSelect comme avant. Pattern handoff app.jsx:642-663 (MapSplit).
+function HoverableMarker({
+  position,
+  icon,
+  onSelect,
+  popupContent,
+}: {
+  position: [number, number]
+  icon: L.DivIcon
+  onSelect: () => void
+  popupContent: ReactNode
+}) {
+  const markerRef = useRef<L.Marker | null>(null)
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  return (
+    <Marker
+      ref={(ref) => { markerRef.current = ref }}
+      position={position}
+      icon={icon}
+      eventHandlers={{
+        click: () => onSelect(),
+        mouseover: () => {
+          if (closeTimer.current) {
+            clearTimeout(closeTimer.current)
+            closeTimer.current = null
+          }
+          onSelect()
+          markerRef.current?.openPopup()
+        },
+        mouseout: () => {
+          // Délai pour permettre à l'user de glisser sur le popup sans
+          // qu'il se ferme. Si le pointeur ne revient pas, ferme à 250ms.
+          if (closeTimer.current) clearTimeout(closeTimer.current)
+          closeTimer.current = setTimeout(() => {
+            markerRef.current?.closePopup()
+            closeTimer.current = null
+          }, 250)
+        },
+      }}
+    >
+      <Popup
+        closeButton={false}
+        autoPan={false}
+        maxWidth={240}
+        minWidth={240}
+        offset={[0, -8]}
+        className="km-hover-popup"
+      >
+        {popupContent}
+      </Popup>
+    </Marker>
+  )
+}
+
+// Boutons zoom custom +/- (handoff app.jsx:666-670) : pill blanc top-right,
+// 32×32, fontsize 18, bordure beige légère, shadow douce. Remplace le
+// zoomControl Leaflet par défaut (top-left) pour cohérence visuelle KM.
+function ZoomControls() {
+  const map = useMap()
+  const btn: React.CSSProperties = {
+    width: 32, height: 32, border: "none",
+    background: "#fff", color: "#111",
+    fontSize: 18, fontWeight: 600,
+    cursor: "pointer", fontFamily: "inherit",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    transition: "background 120ms ease",
+  }
+  return (
+    <div style={{
+      position: "absolute", top: 16, right: 16, zIndex: 1000,
+      background: "#fff",
+      borderRadius: 12,
+      border: "1px solid #EAE6DF",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+      overflow: "hidden",
+      display: "flex", flexDirection: "column",
+    }}>
+      <button
+        type="button"
+        onClick={() => map.zoomIn()}
+        aria-label="Zoomer"
+        title="Zoomer"
+        style={{ ...btn, borderBottom: "1px solid #EAE6DF" }}
+        onMouseEnter={e => (e.currentTarget.style.background = "#F7F4EF")}
+        onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
+      >+</button>
+      <button
+        type="button"
+        onClick={() => map.zoomOut()}
+        aria-label="Dézoomer"
+        title="Dézoomer"
+        style={btn}
+        onMouseEnter={e => (e.currentTarget.style.background = "#F7F4EF")}
+        onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
+      >−</button>
+    </div>
+  )
+}
+
 // Recentre la carte quand le centerHint change (ville URL/profil qui change
 // sans devoir remount tout le MapContainer)
 function CenterOnHint({ centerHint }: { centerHint?: [number, number] | null }) {
@@ -233,11 +336,28 @@ export default function MapAnnonces({
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
+      {/* Style global pour neutraliser le wrapper Leaflet sur le popup hover :
+          radius 14, shadow handoff app.jsx:646-648, padding 0 (le contenu
+          gère son propre padding pour avoir la photo flush avec les bords). */}
+      <style>{`
+        .leaflet-popup.km-hover-popup .leaflet-popup-content-wrapper {
+          padding: 0; border-radius: 14px;
+          box-shadow: 0 20px 50px rgba(0,0,0,0.18), 0 4px 10px rgba(0,0,0,0.06);
+          overflow: hidden; background: #fff;
+        }
+        .leaflet-popup.km-hover-popup .leaflet-popup-content {
+          margin: 8px 10px 10px; line-height: 1.45; min-width: 240px; width: 240px;
+        }
+        .leaflet-popup.km-hover-popup .leaflet-popup-tip {
+          box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+        }
+      `}</style>
       <MapContainer
         center={center}
         zoom={initialZoom}
         style={{ height: "100%", width: "100%" }}
         scrollWheelZoom={true}
+        zoomControl={false} // Remplacé par controls custom top-right (handoff app.jsx:666-670)
       >
         <TileLayer
           key={mapType}
@@ -247,6 +367,7 @@ export default function MapAnnonces({
         <BoundsWatcher onMoved={handleMoved} />
         <FrenchLeafletLocale />
         <CenterOnHint centerHint={centerHint} />
+        <ZoomControls />
         <MarkerClusterGroup
           chunkedLoading
           showCoverageOnHover={false}
@@ -279,21 +400,37 @@ export default function MapAnnonces({
           const firstPhoto = Array.isArray(a.photos) && a.photos.length > 0 ? a.photos[0] : null
           const isFavori = Array.isArray(favoris) && favoris.includes(a.id)
           const canFavori = typeof onToggleFavori === "function"
+          const matchPct = a.scoreMatching != null ? Math.round(a.scoreMatching / 10) : null
+          const prixM2 = a.prix && a.surface ? Math.round(a.prix / a.surface) : null
+          // Popup hover style handoff app.jsx:642-663 :
+          //   - 240px width, photo 16/10 top, padding 12/14, radius 14
+          //   - eyebrow VILLE · QUARTIER, titre 14/600, specs+prix inline
+          //   - chip match top-left photo si scoreMatching présent
+          //   - bouton favori top-right photo
           return (
-            <Marker
+            <HoverableMarker
               key={a.id}
               position={[a._lat, a._lng]}
               icon={priceMarker(a.prix, selectedId === a.id, a.scoreMatching ?? null)}
-              eventHandlers={{
-                click: () => onSelect(a.id),
-                mouseover: () => onSelect(a.id),
-              }}
-            >
-              <Popup>
-                <div style={{ fontFamily: "'DM Sans',sans-serif", minWidth: 180 }}>
+              onSelect={() => onSelect(a.id)}
+              popupContent={
+                <div style={{ fontFamily: "'DM Sans',sans-serif", width: 240 }}>
                   {firstPhoto && (
-                    <div style={{ margin: "-8px -12px 10px", height: 110, overflow: "hidden", borderRadius: "8px 8px 0 0", position: "relative" }}>
-                      <img src={firstPhoto} alt={a.titre} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <div style={{ margin: "-8px -10px 0", aspectRatio: "16 / 10", overflow: "hidden", borderRadius: "10px 10px 0 0", position: "relative", background: "#EAE6DF" }}>
+                      <img src={firstPhoto} alt={a.titre} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                      {matchPct !== null && (
+                        <span style={{
+                          position: "absolute", top: 10, left: 10,
+                          background: "#DCFCE7", color: "#16A34A",
+                          padding: "3px 9px", borderRadius: 999,
+                          fontSize: 10.5, fontWeight: 700, letterSpacing: "0.4px",
+                          display: "inline-flex", alignItems: "center", gap: 5,
+                          boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
+                        }}>
+                          <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#16A34A" }} />
+                          {matchPct}% match
+                        </span>
+                      )}
                       {canFavori && (
                         <button
                           type="button"
@@ -305,39 +442,76 @@ export default function MapAnnonces({
                           aria-label={isFavori ? "Retirer des favoris" : "Ajouter aux favoris"}
                           title={isFavori ? "Retirer des favoris" : "Ajouter aux favoris"}
                           style={{
-                            position: "absolute",
-                            top: 8,
-                            right: 8,
-                            width: 30,
-                            height: 30,
-                            borderRadius: 999,
+                            position: "absolute", top: 8, right: 8,
+                            width: 30, height: 30, borderRadius: 999,
                             background: "rgba(255,255,255,0.95)",
-                            border: "none",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
+                            border: "none", cursor: "pointer",
+                            display: "flex", alignItems: "center", justifyContent: "center",
                             boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                            padding: 0,
-                            transition: "transform 0.12s ease",
+                            padding: 0, transition: "transform 0.12s ease",
                           }}
                           onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.12)" }}
                           onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)" }}
                         >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill={isFavori ? "#b91c1c" : "none"} stroke={isFavori ? "#b91c1c" : "#8a8477"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill={isFavori ? "#b91c1c" : "none"} stroke={isFavori ? "#b91c1c" : "#8a8477"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                           </svg>
                         </button>
                       )}
                     </div>
                   )}
-                  <p style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{a.titre}</p>
-                  <p style={{ color: "#8a8477", fontSize: 12 }}>{a.surface} m&sup2; &middot; {a.pieces} p. &middot; {a.ville}</p>
-                  <p style={{ fontWeight: 800, fontSize: 14, margin: "6px 0" }}>{a.prix} &euro;/mois</p>
-                  <a href={`/annonces/${a.id}`} style={{ fontSize: 12, fontWeight: 600, color: "#111" }}>Voir l'annonce &rarr;</a>
+                  <div style={{ padding: "12px 4px 6px" }}>
+                    <p style={{
+                      fontSize: 10.5, fontWeight: 700, color: "#6B6B6B",
+                      textTransform: "uppercase", letterSpacing: "1.1px",
+                      margin: 0, marginBottom: 4,
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    }}>
+                      {[a.ville, a.quartier].filter(Boolean).join(" · ").toUpperCase() || a.ville?.toUpperCase() || ""}
+                    </p>
+                    <p style={{
+                      fontSize: 14, fontWeight: 600, margin: 0, marginBottom: 8,
+                      lineHeight: 1.3, color: "#111", letterSpacing: "-0.15px",
+                      overflow: "hidden",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                    }}>
+                      {a.titre || "Sans titre"}
+                    </p>
+                    <div style={{
+                      display: "flex", justifyContent: "space-between", alignItems: "baseline",
+                      paddingTop: 8, borderTop: "1px solid #EAE6DF",
+                    }}>
+                      <span style={{ fontSize: 11, color: "#6B6B6B" }}>
+                        {[
+                          a.surface ? `${a.surface} m²` : null,
+                          a.pieces ? `${a.pieces} p.` : null,
+                          a.dpe ? `DPE ${String(a.dpe).toUpperCase()}` : null,
+                        ].filter(Boolean).join(" · ")}
+                      </span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#111", fontVariantNumeric: "tabular-nums" }}>
+                        {a.prix ? a.prix.toLocaleString("fr-FR") : "—"}
+                        <span style={{ fontSize: 10, fontWeight: 500, color: "#8a8477", marginLeft: 2 }}>€/mois</span>
+                      </span>
+                    </div>
+                    {prixM2 !== null && (
+                      <p style={{ fontSize: 10.5, color: "#8a8477", margin: "6px 0 0", textAlign: "right" }}>
+                        ≈ {prixM2.toLocaleString("fr-FR")} €/m²
+                      </p>
+                    )}
+                    <a href={`/annonces/${a.id}`} style={{
+                      display: "block", marginTop: 10, padding: "9px 0",
+                      background: "#111", color: "#fff",
+                      fontSize: 12, fontWeight: 700, textAlign: "center",
+                      borderRadius: 999, textDecoration: "none", letterSpacing: "0.3px",
+                    }}>
+                      Voir l&apos;annonce
+                    </a>
+                  </div>
                 </div>
-              </Popup>
-            </Marker>
+              }
+            />
           )
         })}
         </MarkerClusterGroup>

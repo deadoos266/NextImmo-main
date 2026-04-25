@@ -994,6 +994,46 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           </div>
         )}
 
+        {/* ── Header éditorial handoff app.jsx:489-496 ──────────────────
+            Eyebrow ANNONCES + H1 Fraunces italic 34px/500/-1px + sous-titre
+            meta. Affiché uniquement en desktop (mobile = espace contraint,
+            FiltersBar suffit). Style strictement aligné design system KM. */}
+        {!isSmall && (
+          <div style={{
+            padding: "8px 0 14px",
+            borderBottom: `1px solid ${km.line}`,
+            marginBottom: gridMode ? 16 : 0,
+          }}>
+            <p style={{
+              fontSize: 11, fontWeight: 700, color: km.muted,
+              textTransform: "uppercase", letterSpacing: "1.6px",
+              margin: 0, marginBottom: 4,
+            }}>
+              Annonces
+            </p>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 14, flexWrap: "wrap" }}>
+              <h1 style={{
+                fontFamily: "var(--font-fraunces), 'Fraunces', Georgia, serif",
+                fontStyle: "italic",
+                fontSize: 34, fontWeight: 500,
+                letterSpacing: "-1px",
+                margin: 0, color: km.ink, lineHeight: 1.05,
+              }}>
+                {loading
+                  ? "Logements disponibles"
+                  : `${annoncesTraitees.length} ${annoncesTraitees.length > 1 ? "logements disponibles" : "logement disponible"}`}
+              </h1>
+              {!loading && tri === "match" && annoncesTraitees.length > 0 && (
+                <span style={{
+                  fontSize: 13, color: km.muted, letterSpacing: "0.1px",
+                }}>
+                  Triés par compatibilité
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ── FiltersBar sticky — top dynamique selon mode scroll ─────
             Mode liste desktop : scroll isolé dans outer (overflow:auto),
               sticky top:0 → colle au top de l'outer (qui est sous Navbar).
@@ -1112,7 +1152,7 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           <div
             style={{
               display: "flex",
-              gap: isSmall ? 0 : 16,
+              gap: isSmall ? 0 : 20,
               padding: isMobile ? "12px 0 24px" : "16px 0 0",
               flexDirection: isSmall ? "column" : "row",
               alignItems: "flex-start",
