@@ -25,6 +25,7 @@ export default function BookingVisite({
 }) {
   const { data: session } = useSession()
   const [open, setOpen] = useState(false)
+  const [format, setFormat] = useState<"physique" | "visio">("physique")
   const [date, setDate] = useState("")
   const [heure, setHeure] = useState("")
   const [message, setMessage] = useState("")
@@ -65,6 +66,7 @@ export default function BookingVisite({
       proprietaire_email: proprio,
       date_visite: date,
       heure,
+      format,
       message: message || null,
       statut: "proposée",
       propose_par: me,
@@ -81,7 +83,8 @@ export default function BookingVisite({
     const dateFormat = new Date(date + "T12:00:00").toLocaleDateString("fr-FR", {
       weekday: "long", day: "numeric", month: "long",
     })
-    const contenu = `Demande de visite : ${dateFormat} à ${heure}${message.trim() ? ` — « ${message.trim()} »` : ""}`
+    const formatLabel = format === "visio" ? "visio" : "sur place"
+    const contenu = `Demande de visite (${formatLabel}) : ${dateFormat} à ${heure}${message.trim() ? ` — « ${message.trim()} »` : ""}`
     await supabase.from("messages").insert([{
       from_email: me,
       to_email: proprio,
@@ -145,6 +148,11 @@ export default function BookingVisite({
         </div>
         <p style={{ fontSize: 14, color: "#111" }}>
           <strong>{new Date(existante.date_visite).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</strong> à <strong>{existante.heure}</strong>
+          {existante.format === "visio" && (
+            <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: "#1d4ed8", background: "#EAF2FF", padding: "2px 8px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              Visio
+            </span>
+          )}
         </p>
         {existante.message && (
           <p style={{ fontSize: 13, color: "#8a8477", marginTop: 6, fontStyle: "italic" }}>"{existante.message}"</p>
@@ -171,6 +179,38 @@ export default function BookingVisite({
           <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 18 }}>Proposer une visite</h3>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 14 }}>
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "#8a8477", display: "block", marginBottom: 6 }}>Format *</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                {([
+                  { v: "physique" as const, label: "Sur place", desc: "Visite physique du bien" },
+                  { v: "visio" as const, label: "En visio", desc: "Appel vidéo à distance" },
+                ]).map(opt => {
+                  const active = format === opt.v
+                  return (
+                    <button
+                      key={opt.v}
+                      type="button"
+                      onClick={() => setFormat(opt.v)}
+                      aria-pressed={active}
+                      style={{
+                        padding: "12px 14px", minHeight: 56,
+                        borderRadius: 12,
+                        border: active ? "2px solid #111" : "1px solid #EAE6DF",
+                        background: active ? "#111" : "white",
+                        color: active ? "white" : "#111",
+                        cursor: "pointer", fontFamily: "inherit",
+                        textAlign: "left",
+                        display: "flex", flexDirection: "column", gap: 2,
+                      }}
+                    >
+                      <span style={{ fontSize: 14, fontWeight: 700 }}>{opt.label}</span>
+                      <span style={{ fontSize: 11, opacity: active ? 0.85 : 0.6 }}>{opt.desc}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
             <div>
               <label style={{ fontSize: 13, fontWeight: 600, color: "#8a8477", display: "block", marginBottom: 6 }}>Date *</label>
               <input type="date" style={inp} value={date} onChange={e => setDate(e.target.value)}

@@ -280,6 +280,11 @@ export default function MesVisites() {
                         <span style={{ fontSize: isMobile ? 12.5 : 13.5, fontWeight: 600, color: km.ink, letterSpacing: "-0.1px" }}>
                           {formatDate(v.date_visite)} à {v.heure}
                         </span>
+                        {v.format === "visio" && (
+                          <span style={{ fontSize: 10, background: "#EAF2FF", color: "#1d4ed8", padding: "2px 10px", borderRadius: 999, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
+                            Visio
+                          </span>
+                        )}
                         {future && v.statut !== "annulée" && (
                           <span style={{ fontSize: 10, background: km.beige, color: km.muted, border: `1px solid ${km.line}`, padding: "2px 10px", borderRadius: 999, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
                             {jours(v.date_visite)}
