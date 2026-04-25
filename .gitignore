@@ -19,5 +19,8 @@ desktop.ini
 # ─── Logs divers ─────────────────────────────────────────────────────────────
 *.log
 
+# ─── Next.js build artifacts à la racine du worktree ─────────────────────────
+.next/
+
 # ─── Dossier de test/reference (clone outil externe, pas code du projet) ────
 everything-claude-code-main/
