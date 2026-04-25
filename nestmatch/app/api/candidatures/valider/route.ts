@@ -112,5 +112,18 @@ export async function POST(req: Request) {
     created_at: nowIso,
   }])
 
+  // 3. Notif cloche locataire — débloque la proposition de visite (Paul 2026-04-26)
+  await supabaseAdmin.from("notifications").insert([{
+    user_email: locataireEmail,
+    type: "candidature_validee",
+    title: "Votre candidature a été validée",
+    body: annonce.titre
+      ? `Le propriétaire de « ${annonce.titre} » vous invite à proposer une visite.`
+      : "Le propriétaire vous invite à proposer une visite.",
+    href: `/messages?with=${encodeURIComponent(proprietaireEmail)}&annonce=${annonce.id}`,
+    related_id: String(annonce.id),
+    created_at: nowIso,
+  }])
+
   return NextResponse.json({ ok: true, validatedAt: nowIso })
 }

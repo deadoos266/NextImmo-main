@@ -108,5 +108,18 @@ export async function POST(req: Request) {
     created_at: nowIso,
   }])
 
+  // Notif cloche locataire (Paul 2026-04-26)
+  await supabaseAdmin.from("notifications").insert([{
+    user_email: locataireEmail,
+    type: "candidature_retiree",
+    title: "Candidature non retenue",
+    body: annonce.titre
+      ? `Le propriétaire de « ${annonce.titre} » a choisi un autre dossier.`
+      : "Le propriétaire a choisi un autre dossier.",
+    href: "/annonces",
+    related_id: String(annonce.id),
+    created_at: nowIso,
+  }])
+
   return NextResponse.json({ ok: true, refusedAt: nowIso })
 }
