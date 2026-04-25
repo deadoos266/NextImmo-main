@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState, useCallback, type ComponentType } from "react"
+import { useEffect, useState, useCallback, useRef, type ComponentType } from "react"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import type { MapAnnoncesProps } from "../components/MapAnnonces"
@@ -164,15 +164,19 @@ const NAVBAR_HEIGHT = 72
 // Largeur max mode Grille v5 : élargi 1440→1700 pour remplir mieux les
 // grands écrans tout en gardant des marges latérales (pas edge-to-edge).
 const GRID_MAX_WIDTH = 1700
-// Mode Liste+Carte v5.5 : la colonne liste prend ~40% du viewport (60% carte).
-// Bump 35→40 pour permettre l'anatomie 3 colonnes (photo 200 + flex centre +
-// prix 180 = ~530px minimum). Sous 530px → fallback variant="grid" (sinon
-// le centre flex devient trop étroit pour titre + chips + "Voir carte").
-// Équivalences : 1920→768, 1440→576, 1280→512 (fallback grid), 1024→stack.
+// Mode Liste+Carte v6 : la colonne liste prend ~40% du viewport (60% carte).
+// Plus de variant compact — single layout aligné Claude Design handoff.
 const LIST_COLUMN_RATIO = 0.40
-const COMPACT_LIST_MIN_COL = 530
-// Breakpoint mobile strict v5 — modale carte + filtres plein écran.
+// Breakpoint mobile strict — modale carte + filtres plein écran.
 const MOBILE_BREAKPOINT = 768
+
+// ── Infinite scroll : chunk initial + incrément
+//   16 cards initial = bon trade-off LCP/CLS (8 visibles above-the-fold sur
+//   un viewport 1280×900 avec aspect 4/5). +12 par chunk (sentinel scroll).
+//   sessionStorage : on persiste l'offset + scrollY par querystring pour que
+//   le user qui clique sur une annonce + revient atterrisse à sa position.
+const PAGE_INITIAL = 16
+const PAGE_INCREMENT = 12
 
 // ═══════════════════════════════════════════════════════════════════════
 // Entry — délégation server→client sans Suspense (prop initialSearchParams)
@@ -710,14 +714,108 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   const showBandeauDossier =
     completudeProfil !== null && completudeProfil < 80
 
-  // ── Card variant auto selon largeur viewport (mode Liste desktop)
-  //   colonne liste = viewportW × 0.40
-  //   si colonne ≥ 530px → cards horizontales 3 colonnes (photo + info + prix)
-  //   sinon (viewport < ~1325) → fallback variant="grid" (centre flex trop étroit
-  //   pour 3 colonnes avec titre + chips amenities)
-  const listColumnWidth = viewportW * LIST_COLUMN_RATIO
-  const listCardVariant: "compact" | "grid" =
-    isSmall ? "grid" : listColumnWidth >= COMPACT_LIST_MIN_COL ? "compact" : "grid"
+  // v6 : single-variant card aligné handoff Claude Design.
+  // Plus besoin de variant compact/grid — la card unique aspect 4/5
+  // s'adapte naturellement à toutes les largeurs (1 col mobile, 2 col tablette,
+  // 2-4 cols desktop selon viewport).
+  void LIST_COLUMN_RATIO
+
+  // ── Infinite scroll state ─────────────────────────────────────────────
+  //   displayCount : nombre d'annonces affichées (≤ annoncesTraitees.length).
+  //   isAppending : true pendant qu'on incrémente (skeleton de fin).
+  //   La pagination se fait CÔTÉ CLIENT sur annoncesTraitees (déjà fetché
+  //   en bloc). Pour scaler à des milliers d'annonces, il faudra passer
+  //   en cursor-based côté API — tracé dans /api/annonces. À ce stade,
+  //   le filtrage côté client reste le bon trade-off (UX réactive).
+  const [displayCount, setDisplayCount] = useState(PAGE_INITIAL)
+  const [isAppending, setIsAppending] = useState(false)
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
+
+  // Reset du compteur quand la liste filtrée change radicalement (changement
+  // de filtre/ville/tri). Sans ça, on resterait sur l'offset précédent et
+  // l'infinite scroll croirait qu'il a déjà tout chargé.
+  // On utilise length comme proxy : un filtre qui change la taille du résultat
+  // déclenche un reset. Pour un changement qui garde la même taille (ex tri),
+  // on accepte de garder le scroll position — UX fluide.
+  const filteredLen = annoncesTraitees.length
+  const lastFilteredLenRef = useRef(filteredLen)
+  useEffect(() => {
+    if (lastFilteredLenRef.current !== filteredLen) {
+      lastFilteredLenRef.current = filteredLen
+      setDisplayCount(PAGE_INITIAL)
+    }
+  }, [filteredLen])
+
+  // IntersectionObserver — append +PAGE_INCREMENT quand le sentinel passe le viewport.
+  // Threshold 0.1 + rootMargin 200px : on précharge avant que le user atteigne le bas.
+  // Note : root par défaut = viewport. En mode liste+carte desktop le scroll est
+  // isolé dans la colonne liste (overflow-y:auto) → on bind le root sur ce scroller
+  // via ref ci-dessous.
+  const listScrollerRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!sentinelRef.current) return
+    if (displayCount >= filteredLen) return
+    const target = sentinelRef.current
+    // root = scroller de la liste si dispo (mode liste+carte desktop scroll isolé),
+    // sinon viewport (mode grille document scroll).
+    // gridMode déclaré ci-dessous mais on inline ici pour éviter une TDZ.
+    const isGrid = view === "grid"
+    const root = !isGrid && !isSmall ? listScrollerRef.current : null
+    const observer = new IntersectionObserver(
+      entries => {
+        const entry = entries[0]
+        if (entry.isIntersecting) {
+          setIsAppending(true)
+          // setTimeout 100ms pour laisser le skeleton apparaître (UX feedback).
+          // Sinon le bump est trop rapide à voir, l'user a l'impression que rien
+          // ne charge même quand de nouvelles cards arrivent.
+          setTimeout(() => {
+            setDisplayCount(c => Math.min(c + PAGE_INCREMENT, filteredLen))
+            setIsAppending(false)
+          }, 100)
+        }
+      },
+      { root, rootMargin: "200px", threshold: 0.1 }
+    )
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [displayCount, filteredLen, view, isSmall])
+
+  // sessionStorage : restaure scroll position quand le user revient depuis
+  // une fiche annonce (back nav). Clé = querystring filtres pour ne pas
+  // cross-pollute entre recherches différentes.
+  const sessionKey = `km_annonces_state:${typeof window !== "undefined" ? window.location.search : ""}`
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    if (loading) return
+    try {
+      const raw = sessionStorage.getItem(sessionKey)
+      if (!raw) return
+      const saved = JSON.parse(raw) as { count?: number; scrollY?: number }
+      if (typeof saved.count === "number" && saved.count > PAGE_INITIAL) {
+        setDisplayCount(Math.min(saved.count, filteredLen))
+      }
+      if (typeof saved.scrollY === "number") {
+        // Wait next paint pour que les cards soient render avant le scrollTo
+        requestAnimationFrame(() => window.scrollTo(0, saved.scrollY!))
+      }
+      sessionStorage.removeItem(sessionKey)
+    } catch { /* noop */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading])
+  // Persist au unmount (back nav vers /annonces/[id])
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    return () => {
+      try {
+        sessionStorage.setItem(sessionKey, JSON.stringify({
+          count: displayCount,
+          scrollY: window.scrollY,
+        }))
+      } catch { /* noop */ }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayCount])
 
   // ═══════════════════════════════════════════════════════════════════════
   // Render — Scroll isolé :
@@ -956,35 +1054,56 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                 onSecondaryCtaClick={activeVille ? () => onChangeVille("") : undefined}
               />
             ) : (
-              <GridContainer>
-                {annoncesTraitees.map(a => {
-                  const score = a.scoreMatching
-                  const info = !isProprietaire && score !== null ? labelScore(score) : null
-                  const isOwn = isProprietaire && a.proprietaire_email === session?.user?.email
-                  const isSelected = selectedId === a.id
-                  const isCompared = compareIds.includes(a.id)
-                  return (
-                    <ListingCardSearch
-                      key={a.id}
-                      annonce={a}
-                      score={score}
-                      info={info}
-                      isOwn={isOwn}
-                      isSelected={isSelected}
-                      favori={favoris.includes(a.id)}
-                      onToggleFavori={e => handleToggleFavori(e, a.id)}
-                      onMouseEnter={() => setSelectedId(a.id)}
-                      onMouseLeave={() => setSelectedId(null)}
-                      motCle={motCle}
-                      variant="grid"
-                      onQuickView={() => setQuickViewId(a.id)}
-                      compared={isCompared}
-                      onToggleCompare={handleToggleCompare}
-                      compareDisabled={compareIds.length >= COMPARE_MAX}
-                    />
-                  )
-                })}
-              </GridContainer>
+              <>
+                <GridContainer>
+                  {annoncesTraitees.slice(0, displayCount).map(a => {
+                    const score = a.scoreMatching
+                    const info = !isProprietaire && score !== null ? labelScore(score) : null
+                    const isOwn = isProprietaire && a.proprietaire_email === session?.user?.email
+                    const isSelected = selectedId === a.id
+                    const isCompared = compareIds.includes(a.id)
+                    return (
+                      <ListingCardSearch
+                        key={a.id}
+                        annonce={a}
+                        score={score}
+                        info={info}
+                        isOwn={isOwn}
+                        isSelected={isSelected}
+                        favori={favoris.includes(a.id)}
+                        onToggleFavori={e => handleToggleFavori(e, a.id)}
+                        onMouseEnter={() => setSelectedId(a.id)}
+                        onMouseLeave={() => setSelectedId(null)}
+                        motCle={motCle}
+                        onQuickView={() => setQuickViewId(a.id)}
+                        compared={isCompared}
+                        onToggleCompare={handleToggleCompare}
+                        compareDisabled={compareIds.length >= COMPARE_MAX}
+                      />
+                    )
+                  })}
+                  {/* Skeletons d'append pendant le fetch infinite scroll */}
+                  {isAppending && [1, 2, 3, 4].map(i => <AnnonceSkeleton key={`skel-append-${i}`} />)}
+                </GridContainer>
+
+                {/* Sentinel infinite scroll + message de fin éditorial */}
+                {displayCount < annoncesTraitees.length ? (
+                  <div ref={sentinelRef} aria-hidden="true" style={{ height: 1, marginTop: 24 }} />
+                ) : annoncesTraitees.length > PAGE_INITIAL ? (
+                  <p style={{
+                    textAlign: "center",
+                    margin: "40px 0 8px",
+                    color: km.muted,
+                    fontFamily: "var(--font-fraunces), 'Fraunces', Georgia, serif",
+                    fontStyle: "italic",
+                    fontSize: 15,
+                    fontWeight: 400,
+                    letterSpacing: "-0.1px",
+                  }}>
+                    Vous avez vu toutes les annonces correspondant à votre recherche.
+                  </p>
+                ) : null}
+              </>
             )}
           </div>
         ) : (
@@ -1006,6 +1125,7 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           >
             {/* ── Colonne Liste — 40% desktop, 100% mobile/tablet ──────── */}
             <div
+              ref={listScrollerRef}
               style={{
                 flex: isSmall ? 1 : "0 0 calc(40% - 8px)",
                 minWidth: 0,
@@ -1041,7 +1161,7 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                 />
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {annoncesTraitees.map(a => {
+                  {annoncesTraitees.slice(0, displayCount).map(a => {
                     const score = a.scoreMatching
                     const info = !isProprietaire && score !== null ? labelScore(score) : null
                     const isOwn = isProprietaire && a.proprietaire_email === session?.user?.email
@@ -1060,7 +1180,6 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                         onMouseEnter={() => setSelectedId(a.id)}
                         onMouseLeave={() => setSelectedId(null)}
                         motCle={motCle}
-                        variant={listCardVariant}
                         onQuickView={() => setQuickViewId(a.id)}
                         compared={isCompared}
                         onToggleCompare={handleToggleCompare}
@@ -1068,6 +1187,24 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                       />
                     )
                   })}
+                  {/* Skeletons d'append pendant le fetch infinite scroll */}
+                  {isAppending && [1, 2, 3].map(i => <AnnonceSkeleton key={`skel-list-${i}`} />)}
+                  {/* Sentinel + message de fin */}
+                  {displayCount < annoncesTraitees.length ? (
+                    <div ref={sentinelRef} aria-hidden="true" style={{ height: 1 }} />
+                  ) : annoncesTraitees.length > PAGE_INITIAL ? (
+                    <p style={{
+                      textAlign: "center",
+                      margin: "20px 0 8px",
+                      color: km.muted,
+                      fontFamily: "var(--font-fraunces), 'Fraunces', Georgia, serif",
+                      fontStyle: "italic",
+                      fontSize: 14,
+                      fontWeight: 400,
+                    }}>
+                      Vous avez vu toutes les annonces correspondant à votre recherche.
+                    </p>
+                  ) : null}
                 </div>
               )}
             </div>
@@ -1305,17 +1442,25 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
  * Container de la vue Grille v5.3 — scale -15% pour densite (2026-04-23).
  *  - Cards 442px FIXE rectangulaire (photo landscape 16/10). Etait 520.
  *  - Gap 20px, auto-fill (pas auto-fit -> zero stretch). Etait 24.
- *  - `justify-content: center` pour centrer dans le container parent.
- *  - Objectif : densite plus rapprochee handoff design, moins de blanc.
- *  - Responsive : >=1386 = 3 cols (3x442+2x20), 924-1385 = 2 cols, <924 = 1 col.
+ * v6 — cards plus grandes esprit éditorial (Idealista premium, pas SeLoger
+ * dense). `auto-fill, minmax(440px, 1fr)` :
+ *   - 1700px viewport → 3-4 cards/ligne
+ *   - 1280px viewport → 2-3 cards/ligne
+ *   -  900px viewport → 2 cards/ligne
+ *   -  600px viewport → 1 card pleine largeur
+ * Le `1fr` laisse les cards s'étendre pour éviter les vides à droite, et
+ * `auto-fill` calcule le nombre de colonnes automatiquement (vs `auto-fit`
+ * qui collapse à 0 quand vide). Plus généreux que le handoff (240px → 4-5
+ * cards) — choix user explicite "cards plus grandes qui prennent toute la
+ * page" + override "prends le handoff comme source de vérité" : compromis
+ * éditorial entre les deux.
  */
 function GridContainer({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, 442px)",
-        justifyContent: "center",
+        gridTemplateColumns: "repeat(auto-fill, minmax(440px, 1fr))",
         gap: 20,
         width: "100%",
         margin: "0 auto",
