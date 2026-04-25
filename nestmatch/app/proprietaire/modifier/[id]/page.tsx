@@ -1,6 +1,7 @@
 "use client"
 import { useSession } from "next-auth/react"
 import { useState, useRef, useEffect } from "react"
+import dynamic from "next/dynamic"
 import { useRouter, useParams } from "next/navigation"
 import { supabase } from "../../../../lib/supabase"
 import { validateImage } from "../../../../lib/fileValidation"
@@ -12,7 +13,13 @@ import Tooltip from "../../../components/Tooltip"
 
 import { Toggle, Sec, F } from "../../../components/FormHelpers"
 import Lightbox from "../../../components/ui/Lightbox"
-import ImageCropModal from "../../../components/ui/ImageCropModal"
+
+// ImageCropModal lazy : embarque react-easy-crop (~50 kB minified). La modale
+// n'apparaît qu'au clic sur "recadrer" → évite de le charger d'emblée.
+// Audit perf #3.
+const ImageCropModal = dynamic(() => import("../../../components/ui/ImageCropModal"), {
+  ssr: false,
+})
 
 // R10.6 — tri-state côté propriétaire (Indifférent / Oui / Non).
 type TriPolitique = "indifferent" | "oui" | "non"

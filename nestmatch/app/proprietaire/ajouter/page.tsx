@@ -1,6 +1,7 @@
 "use client"
 import { useSession } from "next-auth/react"
 import { useState, useRef, useEffect, ReactNode } from "react"
+import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../../lib/supabase"
 import { validateImage } from "../../../lib/fileValidation"
@@ -15,7 +16,13 @@ import { Toggle, F } from "../../components/FormHelpers"
 import { km, KMButton, KMButtonOutline, KMEyebrow, KMHeading } from "../../components/ui/km"
 import { StepBar } from "../../components/ui/StepBar"
 import Lightbox from "../../components/ui/Lightbox"
-import ImageCropModal from "../../components/ui/ImageCropModal"
+
+// ImageCropModal lazy : embarque react-easy-crop (~50 kB minified). La modale
+// n'apparaît qu'au clic sur "recadrer" → on évite de le charger d'emblée
+// lors de la création d'annonce. Audit perf #3.
+const ImageCropModal = dynamic(() => import("../../components/ui/ImageCropModal"), {
+  ssr: false,
+})
 
 // ─── Draft storage (compat v1 — pas de bump pour préserver les brouillons) ──
 const DRAFT_VERSION = 1

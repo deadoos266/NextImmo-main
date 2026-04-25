@@ -16,15 +16,18 @@ import EmptyState from "../components/ui/EmptyState"
 import AnnonceSkeleton from "../components/ui/AnnonceSkeleton"
 import FiltersBar from "../components/annonces/FiltersBar"
 import ListingCardSearch from "../components/annonces/ListingCardSearch"
-import SavedSearchesPopover from "../components/annonces/SavedSearchesPopover"
 import BandeauDossier from "../components/annonces/BandeauDossier"
-import QuickViewModal from "../components/annonces/QuickViewModal"
-import CompareTray from "../components/annonces/CompareTray"
 import { km, KMButton, KMButtonOutline, KMEyebrow, KMHeading } from "../components/ui/km"
 
-// FiltersModal : ouvert via bouton "Filtres" — pas dans le rendu initial.
-// Lazy pour économiser ~3-5 kB sur le bundle initial /annonces.
+// Tous lazy : ouverts via interaction utilisateur (pas dans le rendu initial).
+// Audit perf #6, #7 : SavedSearchesPopover (304 LoC), QuickViewModal (378 LoC,
+// embarque Lightbox), CompareTray (135 LoC, visible uniquement quand ≥1 ajouté).
+// FiltersModal : ouvert via bouton "Filtres". Gain combiné estimé ~10-15 kB
+// sur le bundle initial /annonces.
 const FiltersModal = dynamic(() => import("../components/annonces/FiltersModal"), { ssr: false })
+const SavedSearchesPopover = dynamic(() => import("../components/annonces/SavedSearchesPopover"), { ssr: false })
+const QuickViewModal = dynamic(() => import("../components/annonces/QuickViewModal"), { ssr: false })
+const CompareTray = dynamic(() => import("../components/annonces/CompareTray"), { ssr: false })
 
 // R10.2 — max simultané d'annonces dans le comparateur.
 const COMPARE_MAX = 3
@@ -44,6 +47,7 @@ function useLazyMap() {
     // reste instantané pour les users qui le déclenchent. Fallback setTimeout
     // pour Safari qui n'a pas (encore) requestIdleCallback.
     const win = window as Window & { requestIdleCallback?: (cb: () => void) => number }
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
     const trigger = () => {
       import("../components/MapAnnonces").then((mod) => {
         if (alive) setComp(() => mod.default)
@@ -52,9 +56,14 @@ function useLazyMap() {
     if (typeof win.requestIdleCallback === "function") {
       win.requestIdleCallback(trigger)
     } else {
-      setTimeout(trigger, 200)
+      // Stocker le timeout et l'annuler au unmount évite que `trigger`
+      // ne s'exécute sur un composant démonté (audit silent-failure-hunter #13).
+      timeoutId = setTimeout(trigger, 200)
     }
-    return () => { alive = false }
+    return () => {
+      alive = false
+      if (timeoutId !== null) clearTimeout(timeoutId)
+    }
   }, [])
   return Comp
 }
@@ -152,7 +161,6 @@ interface SavedSearch {
 // Constantes layout (centralisées pour le scroll isolé)
 // ═══════════════════════════════════════════════════════════════════════
 const NAVBAR_HEIGHT = 72
-const FILTERS_BAR_HEIGHT = 64
 // Largeur max mode Grille v5 : élargi 1440→1700 pour remplir mieux les
 // grands écrans tout en gardant des marges latérales (pas edge-to-edge).
 const GRID_MAX_WIDTH = 1700

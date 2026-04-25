@@ -15,11 +15,10 @@ import ContactButton from "./ContactButton"
  *
  * Contenu : prix CC + score compat (chip vert/orange/gris) + bouton Contacter.
  *
- * Trigger (R10.13) : useHeroPassed hook partagé avec StickyInfoCard. Ancien
- * IntersectionObserver sur la card sticky droite retiré — incompatible avec
- * la card devenue `position: fixed` (toujours visible au viewport). Le scroll-
- * position trigger sert aussi de signal au StickyInfoCard pour clamper son
- * maxHeight et laisser respirer le bandeau (zéro overlap).
+ * Trigger : useHeroPassed hook (déclenché quand on quitte la zone hero).
+ * Ancien IntersectionObserver retiré au profit d'une mesure de scroll-
+ * position plus simple et plus compatible mobile (R12 — sticky card
+ * supprimée, plus besoin de coordonner les deux sticky).
  *
  * a11y :
  *   - role="complementary" + aria-label descriptif
@@ -30,7 +29,7 @@ import ContactButton from "./ContactButton"
  * droite), le tout gère le viewport height iOS via padding-bottom safe-area.
  */
 export default function StickyCTABanner({ annonce }: { annonce: any }) {
-  const { data: session, status } = useSession()
+  const { data: session } = useSession()
   const { role } = useRole()
   const [profil, setProfil] = useState<any>(null)
   const visible = useHeroPassed()
@@ -55,8 +54,6 @@ export default function StickyCTABanner({ annonce }: { annonce: any }) {
     if (pct >= 50) return { bg: "#FFF4E5", color: "#a16207", text: `${pct} % compat.` }
     return { bg: "#EAE6DF", color: "#8a8477", text: `${pct} % compat.` }
   })()
-
-  const statusLabel = status === "loading" ? null : null
 
   return (
     <>
@@ -139,7 +136,6 @@ export default function StickyCTABanner({ annonce }: { annonce: any }) {
             <ContactButton annonce={annonce} />
           </div>
         </div>
-        {statusLabel}
       </div>
     </>
   )

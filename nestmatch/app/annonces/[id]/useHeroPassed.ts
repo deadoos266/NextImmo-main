@@ -2,12 +2,13 @@
 import { useEffect, useState } from "react"
 
 /**
- * useHeroPassed — R10.13
+ * useHeroPassed
  *
- * Hook partagé : indique quand le user a scrollé au-delà du bas du hero image
- * (PhotoCarousel). Sert de trigger commun pour :
- *   - StickyCTABanner (affichage du bandeau bas)
- *   - StickyInfoCard (clamp du maxHeight pour ne pas chevaucher le bandeau)
+ * Indique quand le user a scrollé au-delà du bas du hero image
+ * (PhotoCarousel). Trigger pour le StickyCTABanner — depuis la
+ * suppression de la sticky info card (R12), c'est l'unique consommateur
+ * du hook, mais il reste isolé ici pour pouvoir resservir si on
+ * réintroduit une sticky TOC plus tard.
  *
  * Cible DOM : élément avec l'id passé en arg (défaut "#r-hero-photo"). Si
  * introuvable (page pas encore hydratée), fallback scroll threshold 600 px.

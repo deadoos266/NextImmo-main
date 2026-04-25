@@ -19,10 +19,15 @@ const BASE_URL = process.env.NEXT_PUBLIC_URL || BRAND.url
 // qui causait le React #418 en prod Vercel. Float React 19 déplaçait ce meta du
 // body vers head au SSR, créant un mismatch à l'hydration. Le tradeoff (léger CLS
 // au swap swap→DM Sans) est acceptable vs. un Sentry qui crie sur toutes les pages.
+//
+// Audit performance-optimizer (2026-04-25) : style 'italic' supprimé sur
+// DM Sans, le seul usage (1 textarea du dossier) bascule sur l'italic
+// synthétique du navigateur, indiscernable visuellement à 14.5px.
+// Gain ~25-40 kB de woff2 (weights × italic).
 const dmSans = DM_Sans({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700', '800'],
-  style: ['normal', 'italic'],
+  weight: ['400', '500', '600', '700'],
+  style: ['normal'],
   display: 'swap',
   variable: '--font-dm-sans',
   adjustFontFallback: false,
@@ -32,10 +37,13 @@ const dmSans = DM_Sans({
 // (KMHeading + KMMatchRing). Sans cet import, les titres tombaient en fallback
 // Georgia — les commits "Fraunces italic" ne rendaient donc jamais la vraie
 // police en prod. Exposee en CSS variable consommee par km.tsx.
+//
+// Weight 300 ajouté (utilisé par dossier/page.tsx pour les gros titres 88px).
+// Style 'normal' conservé : dossier l'utilise pour les chiffres tabulaires.
 const fraunces = Fraunces({
   subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  style: ['normal', 'italic'],
+  weight: ['300', '400', '500', '600'],
+  style: ['italic', 'normal'],
   display: 'swap',
   variable: '--font-fraunces',
   adjustFontFallback: false,

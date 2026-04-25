@@ -185,7 +185,9 @@ export default async function Annonce({ params }: any) {
 
   // Le tracking des clics uniques est gere par le composant ViewTracker (client-side)
 
-  const dpeColor: any = { A: "#22c55e", B: "#84cc16", C: "#eab308", D: "#f97316", E: "#b91c1c", F: "#b91c1c", G: "#b91c1c" }
+  // Réutilise DPE_COLORS déclaré ligne 57. Le mapping local précédent
+  // ("dpeColor") incluait une nuance différente pour E/F/G ; on aligne
+  // sur la palette officielle pour cohérence avec les cards de liste.
   const photos: string[] = Array.isArray(annonce.photos) ? annonce.photos : []
   // Priorité : lat/lng précis sauvés depuis l'autocomplete BAN.
   // Fallback 1 : cityCoords statique. Fallback 2 (client) : geocoding Nominatim
@@ -479,7 +481,7 @@ export default async function Annonce({ params }: any) {
               ))}
               {annonce.dpe && (
                 <div style={{ background: "white", borderRadius: 16, padding: "14px 18px", textAlign: "center", flex: 1, minWidth: 70, border: "1px solid #EAE6DF" }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: "white", background: dpeColor[annonce.dpe] || "#8a8477", width: 36, height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>{annonce.dpe}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "white", background: DPE_COLORS[annonce.dpe] || "#8a8477", width: 36, height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>{annonce.dpe}</div>
                   <div style={{ fontSize: 11, color: "#666", marginTop: 6, fontWeight: 500, letterSpacing: "0.3px" }}>DPE</div>
                 </div>
               )}
