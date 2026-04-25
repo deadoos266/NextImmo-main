@@ -1420,7 +1420,11 @@ function MessagesInner() {
   }, [convActive, myEmail, conversations])
 
   async function loadConversations() {
-    const email = session!.user!.email!
+    // Audit silent-failure-hunter HIGH#5 : trois non-null assertions
+    // crashaient la page si la session disparaît entre le useEffect et
+    // l'appel (NextAuth status flicker au mount). Guard explicite.
+    const email = session?.user?.email
+    if (!email) return
     const { data } = await supabase.from("messages")
       .select("*")
       .or(`from_email.eq.${email},to_email.eq.${email}`)
@@ -1701,30 +1705,41 @@ function MessagesInner() {
       created_at: new Date().toISOString(),
     }
     if (conv.annonceId) msg.annonce_id = conv.annonceId
-    const { data } = await supabase.from("messages").insert([msg]).select().single()
-    if (data) {
-      setMessages(prev => [...prev, data])
-      setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: data } : c))
-      // Notif cloche pour le destinataire (n'apparaît pas si lui-même est sur /messages — géré côté UI)
-      void postNotif({
-        userEmail: conv.other,
-        type: "message",
-        title: "Nouveau message",
-        body: nouveau.trim().slice(0, 120),
-        href: "/messages",
-        relatedId: data?.id != null ? String(data.id) : null,
-      })
-      // Email de notification au destinataire (respecte les préfs + rate-limit)
-      void fetch("/api/notifications/new-message", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: conv.other,
-          preview: nouveau.trim(),
-          convUrl: "/messages",
-        }),
-      }).catch(() => { /* silent */ })
+    // On garde le contenu en mémoire avant clear : si l'insert échoue,
+    // on le restitue dans l'input pour ne pas perdre le message du user.
+    const draftBackup = nouveau
+    const { data, error } = await supabase.from("messages").insert([msg]).select().single()
+    if (error || !data) {
+      // Silent failure historique (audit silent-failure-hunter HIGH#1) :
+      // l'utilisateur croyait son message envoyé alors qu'aucun row n'était
+      // inséré (RLS, réseau). On signale clairement et on remet le draft.
+      console.error("[messages] envoyer: insert failed", error)
+      setNouveau(draftBackup)
+      setEnvoi(false)
+      alert("Votre message n'a pas pu être envoyé. Vérifiez votre connexion et réessayez.")
+      return
     }
+    setMessages(prev => [...prev, data])
+    setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: data } : c))
+    // Notif cloche pour le destinataire (n'apparaît pas si lui-même est sur /messages — géré côté UI)
+    void postNotif({
+      userEmail: conv.other,
+      type: "message",
+      title: "Nouveau message",
+      body: nouveau.trim().slice(0, 120),
+      href: "/messages",
+      relatedId: data?.id != null ? String(data.id) : null,
+    })
+    // Email de notification au destinataire (respecte les préfs + rate-limit)
+    void fetch("/api/notifications/new-message", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: conv.other,
+        preview: nouveau.trim(),
+        convUrl: "/messages",
+      }),
+    }).catch(() => { /* silent */ })
     setNouveau("")
     setReplyTo(null)
     setEnvoi(false)

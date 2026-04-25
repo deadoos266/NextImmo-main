@@ -79,7 +79,15 @@ export async function POST(req: NextRequest) {
   try {
     await sendEmail({ to: email, subject, html, text })
   } catch (err) {
+    // Silent failure historique (audit silent-failure-hunter HIGH#12) :
+    // l'utilisateur voyait "Code renvoyé" mais ne recevait jamais l'email,
+    // bloquant la vérification de son compte. On remonte 503 maintenant
+    // pour qu'il puisse réessayer en connaissance de cause.
     console.error("[resend-verify-code] sendEmail failed", err)
+    return NextResponse.json(
+      { success: false, error: "Le code n'a pas pu être envoyé. Réessayez dans quelques instants." },
+      { status: 503 },
+    )
   }
 
   return NextResponse.json({ success: true })

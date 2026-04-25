@@ -130,11 +130,19 @@ export async function POST(request: NextRequest) {
   const base = process.env.NEXT_PUBLIC_URL || "http://localhost:3000"
   const verifyUrl = `${base}/api/auth/verify-email?token=${verifyToken}`
   const { subject, html, text } = verifyEmailTemplate({ userName: fullName, verifyUrl, code: verifyToken })
+  let emailSent = true
   try {
     await sendEmail({ to: email.toLowerCase(), subject, html, text })
   } catch (err) {
+    // Compte créé en DB mais email de vérif non envoyé : on prévient le
+    // client pour qu'il propose un "Renvoyer le code" depuis l'écran OTP.
+    // Avant : success: true silent (silent-failure-hunter HIGH#12).
     console.error("[register] sendEmail failed", err)
+    emailSent = false
   }
 
-  return NextResponse.json({ success: true, data: { id: user.id, email: user.email } }, { status: 201 })
+  return NextResponse.json(
+    { success: true, emailSent, data: { id: user.id, email: user.email } },
+    { status: 201 },
+  )
 }

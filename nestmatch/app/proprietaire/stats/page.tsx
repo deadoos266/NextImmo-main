@@ -392,9 +392,19 @@ function StatsInner() {
   }
 
   async function confirmerLoyer(id: string) {
-    // 1. Passe le loyer en "confirmé"
+    // 1. Passe le loyer en "confirmé". On vérifie l'erreur AVANT toute
+    // mise à jour optimiste — sinon le proprio voit "confirmé" alors que
+    // la DB est restée "en attente" (silent-failure-hunter HIGH#3).
     const nowIso = new Date().toISOString()
-    await supabase.from("loyers").update({ statut: "confirmé", date_confirmation: nowIso }).eq("id", id)
+    const { error: updateErr } = await supabase
+      .from("loyers")
+      .update({ statut: "confirmé", date_confirmation: nowIso })
+      .eq("id", id)
+    if (updateErr) {
+      console.error("[stats] confirmerLoyer: update failed", updateErr)
+      alert("Impossible de confirmer le loyer pour le moment. Vérifiez votre connexion et réessayez.")
+      return
+    }
     setLoyers(prev => prev.map(l => l.id === id ? { ...l, statut: "confirmé", date_confirmation: nowIso } : l))
 
     // 2. Envoie la quittance au locataire via la messagerie (card cliquable)
@@ -412,7 +422,7 @@ function StatsInner() {
       montant: loyer.montant,
       dateConfirmation: nowIso,
     }
-    const { data: msg } = await supabase.from("messages").insert([{
+    const { data: msg, error: msgErr } = await supabase.from("messages").insert([{
       from_email: proprietaireEmail,
       to_email: locataireEmail,
       contenu: `[QUITTANCE_CARD]${JSON.stringify(payload)}`,
@@ -420,6 +430,15 @@ function StatsInner() {
       annonce_id: bien.id,
       created_at: nowIso,
     }]).select().single()
+
+    if (msgErr) {
+      // Loyer confirmé mais quittance non envoyée — on alerte le proprio
+      // pour qu'il puisse renvoyer manuellement plutôt que penser que
+      // tout s'est passé.
+      console.error("[stats] quittance message insert failed", msgErr)
+      alert("Le loyer a été confirmé mais la quittance n'a pas pu être envoyée au locataire.")
+      return
+    }
 
     // 3. Trace l'envoi côté loyer
     if (msg?.id) {
@@ -446,9 +465,16 @@ function StatsInner() {
       assurance_pno: editForm.assurance_pno ? Number(editForm.assurance_pno) : null,
       charges_copro_annuelles: editForm.charges_copro_annuelles ? Number(editForm.charges_copro_annuelles) : null,
     }
-    await supabase.from("annonces").update(updates).eq("id", bienId)
-    setBien((prev: any) => ({ ...prev, ...updates }))
+    const { error } = await supabase.from("annonces").update(updates).eq("id", bienId)
     setSaving(false)
+    if (error) {
+      // Sans ce check, le bandeau "Enregistré" s'affichait même quand
+      // la mise à jour avait échoué (silent-failure-hunter HIGH#4).
+      console.error("[stats] sauvegarderBien: update failed", error)
+      alert("Les modifications n'ont pas pu être enregistrées. Vérifiez votre connexion et réessayez.")
+      return
+    }
+    setBien((prev: any) => ({ ...prev, ...updates }))
     setSavedOk(true)
     setTimeout(() => setSavedOk(false), 3000)
   }
