@@ -14,7 +14,6 @@ import ShareButton from "./ShareButton"
 import LocataireMatchCard from "./LocataireMatchCard"
 import PartagerCard from "./PartagerCard"
 import StickyCTABanner from "./StickyCTABanner"
-import StickyInfoCard from "./StickyInfoCard"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -764,14 +763,19 @@ export default async function Annonce({ params }: any) {
           </div>
 
           <div className="r-detail-sidebar" style={{ width: 360, flexShrink: 0 }}>
-            {/* R10.17 — widget fixed qui contient TOUTES les cards de la
-                colonne droite (booking + profil recherché + activité +
-                budget + partager), empilées en flex-column gap:16. Hauteur
-                auto, ZÉRO overflow, ZÉRO maxHeight. Si le contenu dépasse
-                le viewport, tant pis — c'est le choix assumé. Mobile <1024 :
-                aside retombe en flow normal. "Autres biens" reste en
-                bandeau full-width sous le layout. */}
-            <StickyInfoCard>
+            {/* Sidebar droite : booking + profil recherché + activité + budget
+                + partager, empilés en flex-column gap:16. Flow normal — défile
+                avec la page (R12, scroll classique). Mobile <1024 : retombe
+                en pleine largeur via media query (.r-detail-sidebar). */}
+            <div
+              id="r-sticky-card-target"
+              style={{
+                width: "100%",
+                display: "flex",
+                flexDirection: "column",
+                gap: 16,
+              }}
+            >
             <div
               className="r-detail-stickycard"
               style={{
@@ -914,7 +918,7 @@ export default async function Annonce({ params }: any) {
             )}
 
             <PartagerCard url={`${BASE_URL}/annonces/${id}`} titre={annonce.titre || "Bien à louer"} />
-            </StickyInfoCard>
+            </div>
           </div>
         </div>
 
