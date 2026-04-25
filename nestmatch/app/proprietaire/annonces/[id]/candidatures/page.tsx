@@ -446,10 +446,12 @@ function CandidatureCard({
   const [refusing, setRefusing] = useState(false)
   const isValidated = statutCandidature === "validee"
   const isRefused = statutCandidature === "refusee"
-  // Boutons visibles tant qu'on n'a pas pris de décision OU qu'on n'est pas
-  // déjà sur le bail. Un "rejete" historique (autre candidat retenu) cache
-  // la rangée car la décision est de facto déjà prise.
-  const canDecide = !isValidated && !isRefused && statut !== "rejete" && statut !== "bail"
+  // Boutons visibles tant qu'on n'a pas pris de décision explicite ET qu'on
+  // n'est pas le candidat ayant signé le bail (statut="bail"). On laisse
+  // visible même sur statut="rejete" (= autre candidat a signé) pour que
+  // le proprio puisse valider une candidature de remplacement en
+  // anticipation d'une fin de bail (Paul 2026-04-26).
+  const canDecide = !isValidated && !isRefused && statut !== "bail"
   async function valider() {
     if (validating || refusing) return
     setValidating(true)

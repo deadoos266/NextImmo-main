@@ -3205,6 +3205,48 @@ function MessagesInner() {
                         </div>
                         <p style={{ fontSize: 12, color: "#8a8477", margin: "2px 0 0", letterSpacing: "0.1px" }}>{annonceActive.ville} &middot; {displayName(convActiveData.other, annonceActive.proprietaire)}</p>
                       </Link>
+                      {/* Bouton "Valider la candidature" — proprio uniquement, étape
+                         intermédiaire qui débloque la proposition de visite côté
+                         locataire (Paul 2026-04-26). Caché si déjà validée ou
+                         si le bail est signé pour ce candidat. */}
+                      {proprietaireActive && annonceActive && convActiveData?.annonceId && !candidatureValidee && !(annonceActive.statut === "loué" && (annonceActive.locataire_email || "").toLowerCase() === convActiveData.other.toLowerCase()) && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const res = await fetch("/api/candidatures/valider", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                annonceId: convActiveData.annonceId,
+                                locataireEmail: convActiveData.other,
+                              }),
+                            })
+                            const json = await res.json().catch(() => ({}))
+                            if (!res.ok || !json.ok) {
+                              alert(`Validation échouée : ${json.error || res.statusText}`)
+                              return
+                            }
+                            // Optimistic : injecter un message [CANDIDATURE_VALIDEE]
+                            // local pour mettre à jour le flag immédiatement.
+                            // À défaut on recharge la conv au prochain re-render.
+                            location.reload()
+                          }}
+                          title="Présélectionner ce candidat — débloque sa demande de visite"
+                          style={{ fontSize: 12, fontWeight: 700, color: "#15803d", background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 999, padding: "6px 14px", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                          Valider la candidature
+                        </button>
+                      )}
+                      {/* Badge "Validée" si décision prise */}
+                      {proprietaireActive && candidatureValidee && annonceActive?.statut !== "loué" && (
+                        <span
+                          aria-label="Candidature déjà validée"
+                          title="Cette candidature a été validée. Le candidat peut proposer une visite."
+                          style={{ fontSize: 11, fontWeight: 700, color: "#15803d", background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 999, padding: "5px 12px", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 5, letterSpacing: "0.3px" }}
+                        >
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                          Validée
+                        </span>
+                      )}
                       {/* Bouton "Louer à ce candidat" — côté proprio uniquement.
                          Cache si la location est déjà actée pour ce candidat. */}
                       {proprietaireActive && annonceActive && (
