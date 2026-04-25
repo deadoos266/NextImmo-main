@@ -14,15 +14,18 @@ export interface VisiteSlot {
   heure: string  // HH:MM
 }
 
+export type VisiteFormat = "physique" | "visio"
+
 interface Props {
   open: boolean
   onClose: () => void
   /**
-   * Callback au submit. Le payload propose jusqu'à 5 créneaux (R10.8).
+   * Callback au submit. Le payload propose jusqu'à 5 créneaux (R10.8) +
+   * un format global (physique / visio) pour la demande entière.
    * Le parent insère une visite DB (avec le 1er slot comme colonne primaire)
-   * et fait voyager les autres créneaux dans la carte message.
+   * et fait voyager les autres créneaux + le format dans la carte message.
    */
-  onConfirm: (p: { slots: VisiteSlot[]; message: string }) => Promise<void> | void
+  onConfirm: (p: { slots: VisiteSlot[]; message: string; format: VisiteFormat }) => Promise<void> | void
   /** Annonce concernée pour le rail preview. */
   annonce?: AnnoncePreview | null
   /** Si contre-proposition : libellé de la proposition qui va être annulée. */
@@ -60,12 +63,14 @@ export default function ProposerVisiteDialog({
 }: Props) {
   const [slots, setSlots] = useState<VisiteSlot[]>([{ date: "", heure: "10:00" }])
   const [message, setMessage] = useState("")
+  const [format, setFormat] = useState<VisiteFormat>("physique")
 
   // Reset à chaque ouverture (pré-remplissage du 1er slot si initial* fournis).
   useEffect(() => {
     if (open) {
       setSlots([{ date: initialDate || "", heure: initialHeure || "10:00" }])
       setMessage("")
+      setFormat("physique")
     }
   }, [open, initialDate, initialHeure])
 
@@ -98,7 +103,7 @@ export default function ProposerVisiteDialog({
     e.preventDefault()
     if (!canSubmit) return
     // On n'envoie que les slots valides (au moins 1 garanti par canSubmit).
-    await onConfirm({ slots: validSlots, message: message.trim() })
+    await onConfirm({ slots: validSlots, message: message.trim(), format })
   }
 
   const photo = Array.isArray(annonce?.photos) && annonce!.photos!.length > 0 ? annonce!.photos![0] : null
@@ -233,6 +238,46 @@ export default function ProposerVisiteDialog({
                 ? <>La proposition initiale (<strong style={{ color: "#111" }}>{counterTargetLabel}</strong>) sera annulée. Vous pouvez proposer un ou plusieurs créneaux de remplacement.</>
                 : "Ajoutez jusqu'à 5 créneaux. Le candidat en choisira un — les autres seront automatiquement rejetés."}
             </p>
+          </div>
+
+          {/* Sélecteur format : sur place vs visio (Paul 2026-04-25) */}
+          <div>
+            <label style={{
+              fontSize: 10, fontWeight: 700, color: "#8a8477",
+              textTransform: "uppercase", letterSpacing: "1.2px",
+              display: "block", marginBottom: 8,
+            }}>
+              Format
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {([
+                { v: "physique" as const, label: "Sur place", desc: "Visite physique du bien" },
+                { v: "visio" as const, label: "En visio", desc: "Appel vidéo à distance" },
+              ]).map(opt => {
+                const active = format === opt.v
+                return (
+                  <button
+                    key={opt.v}
+                    type="button"
+                    onClick={() => setFormat(opt.v)}
+                    aria-pressed={active}
+                    style={{
+                      padding: "10px 14px", minHeight: 56,
+                      borderRadius: 12,
+                      border: active ? "2px solid #111" : "1px solid #EAE6DF",
+                      background: active ? "#111" : "#fff",
+                      color: active ? "#fff" : "#111",
+                      cursor: "pointer", fontFamily: "inherit",
+                      textAlign: "left",
+                      display: "flex", flexDirection: "column", gap: 2,
+                    }}
+                  >
+                    <span style={{ fontSize: 13.5, fontWeight: 700 }}>{opt.label}</span>
+                    <span style={{ fontSize: 11, opacity: active ? 0.85 : 0.6 }}>{opt.desc}</span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {/* Liste des slots */}

@@ -2031,7 +2031,7 @@ function MessagesInner() {
     }
   }
 
-  async function proposerVisite(params?: { slots?: Array<{ date: string; heure: string }>; date?: string; heure?: string; message?: string }) {
+  async function proposerVisite(params?: { slots?: Array<{ date: string; heure: string }>; date?: string; heure?: string; message?: string; format?: "physique" | "visio" }) {
     // R10.8 — accepte jusqu'à 5 créneaux via `slots[]`. Pour rétro-compat,
     // un couple { date, heure } isolé est promu en slot unique.
     const slots: Array<{ date: string; heure: string }> = (() => {
@@ -2043,6 +2043,7 @@ function MessagesInner() {
     })()
     const primary = slots[0]
     const vMessage = params?.message ?? visiteMessage
+    const vFormat: "physique" | "visio" = params?.format || "physique"
     if (!convActiveData?.annonceId || !myEmail || !primary) return
     setEnvoyantVisite(true)
     const isCounter = !!counterTarget
@@ -2077,6 +2078,7 @@ function MessagesInner() {
       locataire_email: locEmail.toLowerCase(),
       date_visite: primary.date,
       heure: primary.heure,
+      format: vFormat,
       message: vMessage.trim() || null,
       statut: "proposée",
       propose_par: myEmail.toLowerCase(),
@@ -2093,6 +2095,7 @@ function MessagesInner() {
         dateFormatee,
         message: vMessage.trim() || null,
         isCounter,
+        format: vFormat,
         slots: slots.length > 1 ? slots : undefined,
       })
       const contenu = `${VISITE_DEMANDE_PREFIX}${payload}`
@@ -2109,11 +2112,12 @@ function MessagesInner() {
         setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: msg } : c))
       }
       const countHint = slots.length > 1 ? ` (${slots.length} créneaux)` : ""
+      const formatHint = vFormat === "visio" ? " — visio" : ""
       void postNotif({
         userEmail: convActiveData.other,
         type: "visite_proposee",
         title: isCounter ? "Contre-proposition de visite" : "Nouvelle demande de visite",
-        body: `${dateFormatee} à ${primary.heure}${countHint}`,
+        body: `${dateFormatee} à ${primary.heure}${countHint}${formatHint}`,
         href: "/visites",
         relatedId: String(visite.id),
       })

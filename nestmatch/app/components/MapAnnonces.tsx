@@ -3,6 +3,10 @@ import { useEffect, useState, useRef } from "react"
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
+// Clustering : regroupe les markers proches en bulles avec compteur. Au-delà
+// d'un certain zoom, le cluster s'éclate en markers individuels. Style
+// SeLoger / Idealista. La lib gère elle-même le CSS de leaflet.markercluster.
+import MarkerClusterGroup from "react-leaflet-cluster"
 
 type MapType = "plan" | "satellite" | "standard"
 
@@ -243,6 +247,34 @@ export default function MapAnnonces({
         <BoundsWatcher onMoved={handleMoved} />
         <FrenchLeafletLocale />
         <CenterOnHint centerHint={centerHint} />
+        <MarkerClusterGroup
+          chunkedLoading
+          showCoverageOnHover={false}
+          spiderfyOnMaxZoom={true}
+          maxClusterRadius={60}
+          iconCreateFunction={(cluster: L.MarkerCluster) => {
+            const count = cluster.getChildCount()
+            // Tailles graduées selon densité (palette KeyMatch noir/beige)
+            const size = count >= 100 ? 56 : count >= 25 ? 48 : 40
+            return L.divIcon({
+              html: `<div style="
+                width:${size}px;height:${size}px;
+                border-radius:50%;
+                background:#111;
+                color:#fff;
+                font-family:'DM Sans',sans-serif;
+                font-weight:700;
+                font-size:${count >= 100 ? 14 : 13}px;
+                display:flex;align-items:center;justify-content:center;
+                border:3px solid rgba(255,255,255,0.92);
+                box-shadow:0 6px 16px rgba(0,0,0,0.32);
+                cursor:pointer;
+              ">${count}</div>`,
+              className: "",
+              iconSize: [size, size],
+            })
+          }}
+        >
         {withCoords.map(a => {
           const firstPhoto = Array.isArray(a.photos) && a.photos.length > 0 ? a.photos[0] : null
           const isFavori = Array.isArray(favoris) && favoris.includes(a.id)
@@ -308,6 +340,7 @@ export default function MapAnnonces({
             </Marker>
           )
         })}
+        </MarkerClusterGroup>
       </MapContainer>
 
       {/* Overlay "0 annonce" — la carte reste visible, on affiche juste un message */}
