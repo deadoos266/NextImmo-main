@@ -33,6 +33,7 @@ const SITUATIONS = ["CDI", "CDD", "Intérim", "Indépendant / Freelance", "Fonct
 const TYPES_GARANT = ["Personne physique", "Organisme Visale", "Action Logement", "Caution bancaire", "Aucun garant"]
 const SITUATIONS_FAMILIALES = ["Célibataire", "En couple", "Marié·e", "PACS", "Divorcé·e", "Veuf·ve"]
 const LOGEMENT_TYPES = ["Locataire", "Propriétaire", "Hébergé", "Foyer / résidence", "Colocation", "Chez mes parents", "Autre"]
+const CIVILITES = ["M.", "Mme"]
 
 type DocKey =
   | "identite" | "bulletins" | "avis_imposition" | "contrat" | "quittances"
@@ -1196,6 +1197,7 @@ export default function Dossier() {
   const [form, setForm] = useState({
     // Identité
     prenom: "", nom: "", telephone: "",
+    civilite: "", // "M." | "Mme" | "" — masculin par défaut, accord nationalité
     identite_verrouillee: false,
     date_naissance: "",
     nationalite: "",
@@ -1321,6 +1323,7 @@ export default function Dossier() {
       setForm({
         prenom: data.prenom || "",
         nom: data.nom || "",
+        civilite: data.civilite || "",
         identite_verrouillee: data.identite_verrouillee === true,
         telephone: data.telephone || "",
         date_naissance: data.date_naissance || "",
@@ -1510,6 +1513,7 @@ export default function Dossier() {
       telephone: form.telephone, situation_pro: form.situation_pro,
       revenus_mensuels: form.revenus_mensuels ? Number(form.revenus_mensuels) : null,
       garant: form.garant, type_garant: form.type_garant, nb_occupants: form.nb_occupants,
+      civilite: form.civilite || null,
       date_naissance: form.date_naissance || null,
       nationalite: form.nationalite || null,
       situation_familiale: form.situation_familiale || null,
@@ -1526,8 +1530,8 @@ export default function Dossier() {
     if (error) {
       const code = (error as { code?: string }).code
       const msg = error.message || ""
-      if (code === "42703" || /column.*(presentation|date_naissance|nationalite|situation_familiale|employeur_nom|date_embauche|logement_actuel|a_apl|mobilite_pro|nb_enfants)/i.test(msg)) {
-        setUploadError("Enregistrement partiel : certaines colonnes n'existent pas en base. La migration 007 doit être appliquée puis forcer un reload schema (NOTIFY pgrst, 'reload schema').")
+      if (code === "42703" || /column.*(presentation|date_naissance|nationalite|civilite|situation_familiale|employeur_nom|date_embauche|logement_actuel|a_apl|mobilite_pro|nb_enfants)/i.test(msg)) {
+        setUploadError("Enregistrement partiel : certaines colonnes n'existent pas en base. Appliquer migrations 007 et 018 (civilite) puis forcer un reload schema (NOTIFY pgrst, 'reload schema').")
       } else if (code === "23502" || /null value.*not-null/i.test(msg)) {
         setUploadError("Contrainte NOT NULL violée. Appliquez la migration 009 (drop NOT NULL sur nom, telephone…).")
       } else {
@@ -1957,6 +1961,9 @@ export default function Dossier() {
                 </Field>
                 <Field label="Email">
                   <TextInput value={session?.user?.email || ""} disabled isMobile={isMobile} />
+                </Field>
+                <Field label={<>Civilité <span style={{ fontWeight: 400, color: T.soft, textTransform: "none", letterSpacing: 0 }}>(facultatif)</span> <Tooltip text="Permet d'accorder le rendu de votre nationalité (Français/Française) et adresser votre dossier. Aucune obligation, par défaut masculin." /></>}>
+                  <ChipGroup value={form.civilite} options={CIVILITES} onChange={v => setForm(f => ({ ...f, civilite: v }))} />
                 </Field>
                 <Row2 isMobile={isMobile}>
                   <Field label={<>Date de naissance <Tooltip text="Obligatoire car elle conditionne la capacité juridique à signer un bail (majorité). C'est la seule donnée d'état civil que le propriétaire peut légitimement demander." /></>}>
