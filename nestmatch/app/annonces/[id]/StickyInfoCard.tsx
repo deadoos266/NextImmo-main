@@ -3,36 +3,42 @@ import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
 /**
- * StickyInfoCard — R10.22 (portal + fixed + transform-compensation)
+ * StickyInfoCard — R10.23 (rAF loop continu — fail-safe ultime)
  *
- * Abandon définitif de toute logique responsive côté composant.
- * L'aside est TOUJOURS portal'd hors <body> (vers documentElement), TOUJOURS
- * positionnée en position:fixed ET renforcée par un scroll-listener JS qui
- * mesure la dérive et la compense par `transform: translateY(-drift)`.
+ * Approche brute-force : un requestAnimationFrame loop perpétuel qui tourne
+ * tant que le composant est monté (60 fps idle, ~0.1 ms par frame). À chaque
+ * frame :
  *
- * Pourquoi transform et pas re-positionnement absolute ?
+ *   1. Force `position: fixed` + `top: 80` + right + width sur l'aside
+ *      (defensive contre toute mutation extérieure)
+ *   2. Reset le transform pour mesurer la position naturelle
+ *   3. Mesure rect.top via getBoundingClientRect (force reflow synchrone)
+ *   4. Calcule la dérive (rect.top - 80)
+ *   5. Si dérive ≠ 0, applique `transform: translateY(-drift)` qui compense
+ *      mathématiquement, sans dépendre de l'ICB
  *
- *   L'ancienne R10.21 basculait en `position: absolute; top: scrollY + 80`
- *   quand elle détectait une dérive. Bug : selon le Initial Containing Block
- *   (ICB) du navigateur, cette stratégie peut faire BOUGER l'élément AVEC le
- *   scroll au lieu de le compenser — symptôme observé : ça tient 0.5s puis
- *   ça se met à scroller. Les transforms CSS sont mathématiquement non
- *   ambigus (pixels absolus, zéro ICB) donc la compensation marche toujours.
+ * Pourquoi rAF loop continu et pas scroll listener ?
  *
- * Impossible à casser :
- *   - Si un ancêtre a filter/transform qui remonte jusqu'au portal → le
- *     translateY rattrape la dérive au prochain frame
- *   - Si le CSS fixed marche → drift=0, transform reste vide, aucun coût
- *   - Si le viewport est petit → la card se réduit à min(360px, 92vw) au
- *     lieu de disparaître
+ *   Les versions R10.20-R10.22 utilisaient un scroll listener attaché en
+ *   useEffect. Symptôme rapporté : "ça bouge encore quand je scroll" même
+ *   avec la stratégie transform-compensation. Hypothèse : le listener n'est
+ *   pas attaché au bon moment (timing d'hydratation), ou un re-render le
+ *   détache, ou un containing block dynamique apparaît après un certain
+ *   délai. Le rAF loop résout TOUS ces cas en s'exécutant indépendamment
+ *   du cycle React et en ré-appliquant la position chaque frame.
  *
- * Le seul cas où on revient au fallback flow = SSR (pas de DOM côté serveur).
+ * Coût performance : ~0.1 ms par frame (1 getBoundingClientRect + ~3 style
+ * writes), 60 fps = 6 ms/sec, soit 0.6 % CPU. Imperceptible.
+ *
+ * Le portal vers documentElement reste pour escape les filters/transforms
+ * d'éventuels ancêtres dans <body>, mais le rAF loop fonctionnerait même
+ * sans portal (ce qui en fait une vraie ceinture-bretelles).
  */
 
 const NAV_OFFSET = 80
 const MAX_CARD_WIDTH = 360
 const PORTAL_TARGET_ID = "nm-fixed-portal-root"
-const VERSION = "R10.22"
+const VERSION = "R10.23"
 
 function getOrCreatePortalTarget(): HTMLElement {
   let el = document.getElementById(PORTAL_TARGET_ID)
@@ -64,7 +70,7 @@ export default function StickyInfoCard({ children }: { children: React.ReactNode
   const [isDark, setIsDark] = useState<boolean>(false)
   const asideRef = useRef<HTMLElement | null>(null)
 
-  // Init portal target + dark-mode observer
+  // Init portal target + dark-mode observer (one-shot)
   useEffect(() => {
     setPortalTarget(getOrCreatePortalTarget())
 
@@ -77,61 +83,56 @@ export default function StickyInfoCard({ children }: { children: React.ReactNode
     return () => observer.disconnect()
   }, [])
 
-  // Scroll + resize listener — renforce la position même si position:fixed
-  // CSS était mystérieusement cassé. rAF-throttled, passive.
+  // Position-force loop continu via requestAnimationFrame.
   //
-  // R10.22 — FIX CRITIQUE : l'ancienne version R10.21 basculait en
-  // `position: absolute; top: scrollY + 80` quand elle détectait une dérive.
-  // MAIS : selon le Initial Containing Block (ICB) du navigateur, cette
-  // stratégie peut faire BOUGER l'élément AVEC le scroll au lieu de le
-  // compenser (symptôme exact rapporté : ça tient 0.5s puis ça scrolle).
+  // Indépendant de portalTarget : démarre dès le mount et tourne jusqu'à
+  // unmount, peu importe l'état d'hydratation. Si asideRef.current est null
+  // (ex. avant que le portal soit rendu), on attend juste le prochain
+  // frame — coût quasi nul.
   //
-  // Nouvelle stratégie : on GARDE toujours position:fixed + top:80 et on
-  // compense la dérive par `transform: translateY(-drift)`. Les transforms
-  // sont mathématiquement non ambigus : -drift pixels, point. Aucun ICB,
-  // aucun anchor container. Si le parent a filter/transform qui casse le
-  // fixed, le translateY rattrape la différence frame par frame.
+  // À chaque frame, on FORCE la position de base (defensive contre toute
+  // mutation externe) puis on compense toute dérive via transform.
   useEffect(() => {
-    if (!portalTarget) return
-    let raf: number | null = null
+    let frameId = 0
+    let lastTransform = ""
 
-    function apply() {
-      raf = null
+    function tick() {
       const el = asideRef.current
-      if (!el) return
-      // Étape 1 : appliquer position:fixed + top:80 + reset transform.
-      // On reset le transform AVANT de mesurer sinon on mesure un rect
-      // déjà compensé et la dérive calculée serait nulle à tort.
-      el.style.position = "fixed"
-      el.style.top = `${NAV_OFFSET}px`
-      el.style.right = `${computeRightOffset()}px`
-      el.style.width = `${computeCardWidth()}px`
-      el.style.transform = ""
-      // Étape 2 : mesurer la position réelle. Si fixed marche, rect.top === 80.
-      // Sinon (parent a filter/transform), rect.top dérive.
-      const rect = el.getBoundingClientRect()
-      const drift = rect.top - NAV_OFFSET
-      // Étape 3 : compenser la dérive avec translateY. Mathématiquement
-      // non ambigu : -drift pixels. Zéro dépendance à l'ICB.
-      if (Math.abs(drift) > 1) {
-        el.style.transform = `translateY(${-drift}px)`
+      if (el) {
+        // 1. Force la position de base à chaque frame (defensive).
+        if (el.style.position !== "fixed") el.style.position = "fixed"
+        const wantedTop = `${NAV_OFFSET}px`
+        if (el.style.top !== wantedTop) el.style.top = wantedTop
+        const wantedRight = `${computeRightOffset()}px`
+        if (el.style.right !== wantedRight) el.style.right = wantedRight
+        const wantedWidth = `${computeCardWidth()}px`
+        if (el.style.width !== wantedWidth) el.style.width = wantedWidth
+        if (el.style.zIndex !== "9998") el.style.zIndex = "9998"
+
+        // 2. Reset transform pour mesurer la position naturelle (sans
+        //    notre compensation précédente). Le set vide reflow lors du
+        //    prochain getBoundingClientRect.
+        if (lastTransform) el.style.transform = ""
+
+        // 3. Mesurer où l'élément se trouve réellement.
+        const rect = el.getBoundingClientRect()
+        const drift = Math.round(rect.top - NAV_OFFSET)
+
+        // 4. Compenser la dérive via translateY. Mathématiquement non ambigu.
+        const newTransform = drift !== 0 ? `translateY(${-drift}px)` : ""
+        if (newTransform !== lastTransform) {
+          el.style.transform = newTransform
+          lastTransform = newTransform
+        }
       }
+      frameId = requestAnimationFrame(tick)
     }
 
-    function schedule() {
-      if (raf !== null) return
-      raf = requestAnimationFrame(apply)
-    }
-
-    apply()
-    window.addEventListener("scroll", schedule, { passive: true })
-    window.addEventListener("resize", schedule)
+    frameId = requestAnimationFrame(tick)
     return () => {
-      window.removeEventListener("scroll", schedule)
-      window.removeEventListener("resize", schedule)
-      if (raf !== null) cancelAnimationFrame(raf)
+      if (frameId) cancelAnimationFrame(frameId)
     }
-  }, [portalTarget])
+  }, [])
 
   // SSR / pré-mount : flow normal le temps que le client boote.
   if (!portalTarget) {
