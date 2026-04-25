@@ -24,7 +24,7 @@ import { useRole } from "../../providers"
  */
 export default function LocataireMatchCard({ annonce }: { annonce: any }) {
   const { data: session, status } = useSession()
-  const { role } = useRole()
+  const { role, mounted } = useRole()
   const [profil, setProfil] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
@@ -46,7 +46,14 @@ export default function LocataireMatchCard({ annonce }: { annonce: any }) {
   )
   const loyerCC = Number(annonce.prix || 0) + Number(annonce.charges || 0)
 
-  if (role === "proprietaire" && session?.user?.email === annonce.proprietaire_email) return null
+  // Masque cette card pour le proprio (il connaît déjà ses critères) — robuste
+  // même si l'utilisateur est admin en mode "Voir le site en tant que proprio".
+  // Le check sur l'email de l'annonce est doublé d'un check role pour couvrir
+  // les proprios qui browse les annonces des AUTRES proprios.
+  // mounted=true requis pour éviter le flash SSR→CSR (role default "locataire").
+  if (!mounted) return null
+  const isOwnerOfThisListing = !!session?.user?.email && session.user.email === annonce.proprietaire_email
+  if (isOwnerOfThisListing) return null
   if (role === "proprietaire") return null
   if (loading) return null
   if (!hasCriteres && !loyerCC) return null
@@ -141,10 +148,10 @@ export default function LocataireMatchCard({ annonce }: { annonce: any }) {
   return (
     <div style={{ background: "white", borderRadius: 20, padding: 22, boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
       <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0, marginBottom: 8 }}>
-        Profil recherché
+        Votre compatibilité
       </p>
       <h3 style={{ fontSize: 16, fontWeight: 400, fontStyle: "italic", fontFamily: "'Fraunces', 'DM Sans', serif", letterSpacing: "-0.3px", margin: 0, marginBottom: 14, color: "#111" }}>
-        Critères du propriétaire
+        Le propriétaire recherche…
       </h3>
 
       {rows.length > 0 && (
