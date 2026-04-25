@@ -203,12 +203,10 @@ export default function MapAnnonces({
   // - ville précise : 11 (vue agglomération, pas rue par rue)
   const initialZoom = centerHint ? 11 : (withCoords.length > 0 ? 9 : 6)
 
-  if (withCoords.length === 0 && !centerHint) return (
-    <div style={{ width: "100%", height: "100%", background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <p style={{ color: "#8a8477", fontSize: 14, textAlign: "center" }}>Aucune annonce avec coordonnées disponibles pour cette recherche</p>
-    </div>
-  )
   const tile = TILES[mapType]
+  // Overlay "0 annonce" : montré tant que la carte n'a pas été déplacée
+  // par l'user. Dès qu'il bouge, on laisse la place au bouton "Rechercher ici".
+  const showEmptyOverlay = annonces.length === 0 && !searchHere
 
   // Quand la carte bouge : on garde les bounds en attente et on affiche le bouton
   const handleMoved = (bounds: L.LatLngBounds) => {
@@ -311,6 +309,34 @@ export default function MapAnnonces({
           )
         })}
       </MapContainer>
+
+      {/* Overlay "0 annonce" — la carte reste visible, on affiche juste un message */}
+      {showEmptyOverlay && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: "absolute",
+            top: 16,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 1000,
+            background: "white",
+            border: "1px solid #e5e7eb",
+            borderRadius: 12,
+            padding: "12px 18px",
+            fontFamily: "'DM Sans',sans-serif",
+            fontSize: 13,
+            fontWeight: 500,
+            color: "#111",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+            maxWidth: "calc(100% - 32px)",
+            textAlign: "center",
+          }}
+        >
+          0 annonce dans cette zone&nbsp;— élargis ta recherche ou déplace la carte
+        </div>
+      )}
 
       {/* Bouton "Rechercher dans cette zone" — apparait apres deplacement */}
       {searchHere && (
