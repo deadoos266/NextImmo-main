@@ -24,7 +24,10 @@ import { useUndo } from "../components/ui/useUndo"
 import DocRowSkeleton from "../components/ui/DocRowSkeleton"
 import { useRole } from "../providers"
 import { formatNomComplet, buildMailtoModifIdentite } from "../../lib/profilHelpers"
-import { filterNationalites } from "../../lib/nationalites"
+// `filterNationalites` est lazy-loadé à la première ouverture du combobox
+// nationalités (cf. NationaliteAutocomplete). Économie ~4-6 kB sur le bundle
+// initial /dossier.
+type FilterNationalitesFn = (query: string, limit?: number) => string[]
 
 const SITUATIONS = ["CDI", "CDD", "Intérim", "Indépendant / Freelance", "Fonctionnaire", "Alternance", "Étudiant", "Retraité", "Sans emploi"]
 const TYPES_GARANT = ["Personne physique", "Organisme Visale", "Action Logement", "Caution bancaire", "Aucun garant"]
@@ -681,6 +684,7 @@ function NationaliteAutocomplete({
   const [query, setQuery] = useState(value)
   const [open, setOpen] = useState(false)
   const [highlight, setHighlight] = useState(0)
+  const [filterFn, setFilterFn] = useState<FilterNationalitesFn | null>(null)
   const listId = "nationalite-listbox"
   const containerRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
@@ -697,7 +701,15 @@ function NationaliteAutocomplete({
     return () => document.removeEventListener("mousedown", onDocClick)
   }, [])
 
-  const options = open ? filterNationalites(query, 60) : []
+  // Charge la lib `nationalites` (~5 kB) à la première ouverture du combobox
+  // pour ne pas la mettre dans le bundle initial. Ne charge qu'une fois.
+  useEffect(() => {
+    if (open && !filterFn) {
+      import("../../lib/nationalites").then(m => setFilterFn(() => m.filterNationalites))
+    }
+  }, [open, filterFn])
+
+  const options = open && filterFn ? filterFn(query, 60) : []
 
   // Garde l'option highlightée visible dans la liste scrollable.
   useEffect(() => {
