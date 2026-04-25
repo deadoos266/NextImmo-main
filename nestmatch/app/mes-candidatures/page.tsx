@@ -202,8 +202,7 @@ export default function MesCandidatures() {
   )
 
   return (
-    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,500&display=swap');`}</style>
+    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px" }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 10px" }}>
           Locataire
@@ -217,9 +216,15 @@ export default function MesCandidatures() {
 
         {candidatures.length === 0 ? (
           <EmptyState
+            icon={
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            }
             title="Aucune candidature pour le moment"
-            description="Contactez un propriétaire depuis une annonce pour qu'elle apparaisse ici."
-            ctaLabel="Voir les annonces"
+            description="Contactez un propriétaire depuis une annonce, et votre candidature apparaîtra ici avec son statut."
+            ctaLabel="Parcourir les annonces"
             ctaHref="/annonces"
           />
         ) : (

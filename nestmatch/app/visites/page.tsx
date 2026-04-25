@@ -81,6 +81,11 @@ export default function MesVisites() {
     if (res.ok) {
       setVisites(prev => prev.map(x => x.id === v.id ? { ...x, statut: "annulée" } : x))
       setCancelTarget(null)
+    } else {
+      // Silent failure historique — on signale clairement la panne au lieu
+      // de laisser l'utilisateur penser que l'annulation est passée.
+      console.error("[visites] annulation failed", res)
+      alert("L'annulation n'a pas pu être enregistrée. Vérifiez votre connexion et réessayez.")
     }
   }
 
@@ -96,7 +101,7 @@ export default function MesVisites() {
   )
 
   return (
-    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px 48px" }}>
+    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px 48px" }}>
       <AnnulerVisiteDialog
         open={!!cancelTarget}
         mode={cancelTarget?.statut === "confirmée" ? "annulation" : "annulation"}
@@ -104,8 +109,6 @@ export default function MesVisites() {
         onConfirm={handleAnnulation}
       />
       <div style={{ maxWidth: 860, margin: "0 auto" }}>
-
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,500&display=swap');`}</style>
 
         {/* Header — titre editorial Fraunces italic */}
         <div style={{ marginBottom: 32, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 14 }}>
@@ -196,9 +199,17 @@ export default function MesVisites() {
         {/* Liste */}
         {filtrées.length === 0 ? (
           <EmptyState
+            icon={
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+            }
             title={filtre === "toutes" ? "Aucune visite demandée" : "Aucune visite dans cette catégorie"}
-            description={filtre === "toutes" ? "Trouvez un bien et proposez une visite depuis la fiche annonce." : undefined}
-            ctaLabel={filtre === "toutes" ? "Voir les annonces" : undefined}
+            description={filtre === "toutes" ? "Trouvez un bien et proposez une visite depuis la fiche annonce. Vous verrez ici tous vos rendez-vous à venir." : undefined}
+            ctaLabel={filtre === "toutes" ? "Parcourir les annonces" : undefined}
             ctaHref={filtre === "toutes" ? "/annonces" : undefined}
           />
         ) : (

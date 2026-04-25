@@ -54,24 +54,47 @@ export default function EmptyState({
     fontFamily: "inherit",
     letterSpacing: "0.3px",
   }
+  // Fraunces est déjà chargé globalement via next/font dans app/layout.tsx,
+  // pas besoin de @import url redondant qui ralentit le first paint.
   return (
     <>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,500&display=swap');`}</style>
       <div style={{
         background: "#fff",
         border: "1px solid #EAE6DF",
         borderRadius: 20,
-        padding: "48px 32px",
+        padding: "56px 32px",
         textAlign: "center",
-        fontFamily: "'DM Sans', sans-serif",
+        fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
         boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
       }}>
-        {icon && <div style={{ marginBottom: 16, color: "#8a8477", display: "flex", justifyContent: "center" }}>{icon}</div>}
+        {icon && (
+          <div style={{
+            marginBottom: 18,
+            color: "#8a8477",
+            display: "flex",
+            justifyContent: "center",
+            // Cercle beige clair derrière l'icône pour donner de la présence
+            // visuelle sans casser la palette éditoriale.
+          }}>
+            <div style={{
+              width: 64,
+              height: 64,
+              borderRadius: "50%",
+              background: "#F7F4EF",
+              border: "1px solid #EAE6DF",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}>
+              {icon}
+            </div>
+          </div>
+        )}
         <h3 style={{
-          fontFamily: "'Fraunces', Georgia, serif",
+          fontFamily: "var(--font-fraunces), 'Fraunces', Georgia, serif",
           fontStyle: "italic",
           fontWeight: 500,
-          fontSize: 22,
+          fontSize: 24,
           lineHeight: 1.2,
           color: "#111",
           margin: "0 0 10px",

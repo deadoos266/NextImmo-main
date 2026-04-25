@@ -67,8 +67,7 @@ export default function Favoris() {
   const annoncesAvecGeo = annoncesAvecCoords.filter(a => a._lat && a._lng)
 
   return (
-    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px 48px" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,500&display=swap');`}</style>
+    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px 48px" }}>
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
 
         <div style={{ marginBottom: 28, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
@@ -109,9 +108,14 @@ export default function Favoris() {
           </div>
         ) : annonces.length === 0 ? (
           <EmptyState
-            title="Aucun favori"
-            description="Cliquez sur le cœur d'une annonce pour la sauvegarder ici."
-            ctaLabel="Voir les annonces"
+            icon={
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+            }
+            title="Aucun favori pour le moment"
+            description="Cliquez sur le cœur d'une annonce pour la sauvegarder ici. Vos favoris sont visibles uniquement par vous."
+            ctaLabel="Parcourir les annonces"
             ctaHref="/annonces"
           />
         ) : showMap ? (
