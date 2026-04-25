@@ -58,8 +58,42 @@ export default function Hero({
 
   function handleSearch(e?: FormEvent) {
     e?.preventDefault()
+    const raw = ville.trim()
+    if (!raw) {
+      router.push("/annonces")
+      return
+    }
     const params = new URLSearchParams()
-    if (ville.trim()) params.set("ville", ville.trim())
+    // Recherche multi-champs : on detecte intelligemment l'intention.
+    // - 5 chiffres -> code postal (CityAutocomplete a déjà résolu en nom de
+    //   ville via geo.api.gouv.fr, donc raw est le NOM. Fallback CP géré par
+    //   AnnoncesClient lignes 536-548 pour les cas non résolus.)
+    // - "T1"/"T2"/.../"Studio"/"Maison"/"Appartement" (insensible casse) -> ?type
+    // - sinon -> ?ville (priorité matching) ET ?q (fallback mot-clé sur
+    //   titre+description+adresse pour ne rien manquer si la ville n'est
+    //   pas pré-référencée).
+    const TYPE_KEYS = ["studio", "t1", "t2", "t3", "t4", "t5", "maison", "appartement", "loft", "duplex"]
+    const lower = raw.toLowerCase()
+    const matchedType = TYPE_KEYS.find(t => lower === t || lower === t.toUpperCase())
+    const isCP = /^\d{5}$/.test(raw)
+    const wordCount = raw.split(/\s+/).filter(Boolean).length
+    if (matchedType) {
+      // Type seul -> filtre type. L'user peut affiner ville sur /annonces.
+      params.set("type", matchedType)
+    } else if (isCP) {
+      // Code postal -> ville (AnnoncesClient gère le fallback CP -> dept)
+      params.set("ville", raw)
+    } else if (wordCount > 2) {
+      // Phrase free-text type "Un 2 pièces à Paris avec balcon" -> mot-clé
+      // (le haystack `q` matche titre + description + ville + adresse,
+      // donc on capte la ville mentionnée dans la phrase comme bonus)
+      params.set("q", raw)
+    } else {
+      // Mot court isolé -> ville prioritaire + mot-clé fallback. Si la ville
+      // n'est pas reconnue (ex: "rue Pasteur"), le filtre q sauve la requête.
+      params.set("ville", raw)
+      params.set("q", raw)
+    }
     const qs = params.toString()
     router.push(qs ? `/annonces?${qs}` : "/annonces")
   }
