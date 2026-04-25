@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useState, useCallback, type ComponentType } from "react"
 import { useRouter } from "next/navigation"
+import dynamic from "next/dynamic"
 import type { MapAnnoncesProps } from "../components/MapAnnonces"
 import { supabase } from "../../lib/supabase"
 import { calculerScore, estExclu, labelScore } from "../../lib/matching"
@@ -14,13 +15,16 @@ import { useResponsive } from "../hooks/useResponsive"
 import EmptyState from "../components/ui/EmptyState"
 import AnnonceSkeleton from "../components/ui/AnnonceSkeleton"
 import FiltersBar from "../components/annonces/FiltersBar"
-import FiltersModal from "../components/annonces/FiltersModal"
 import ListingCardSearch from "../components/annonces/ListingCardSearch"
 import SavedSearchesPopover from "../components/annonces/SavedSearchesPopover"
 import BandeauDossier from "../components/annonces/BandeauDossier"
 import QuickViewModal from "../components/annonces/QuickViewModal"
 import CompareTray from "../components/annonces/CompareTray"
 import { km, KMButton, KMButtonOutline, KMEyebrow, KMHeading } from "../components/ui/km"
+
+// FiltersModal : ouvert via bouton "Filtres" — pas dans le rendu initial.
+// Lazy pour économiser ~3-5 kB sur le bundle initial /annonces.
+const FiltersModal = dynamic(() => import("../components/annonces/FiltersModal"), { ssr: false })
 
 // R10.2 — max simultané d'annonces dans le comparateur.
 const COMPARE_MAX = 3
@@ -35,9 +39,21 @@ function useLazyMap() {
   const [Comp, setComp] = useState<ComponentType<MapAnnoncesProps> | null>(null)
   useEffect(() => {
     let alive = true
-    import("../components/MapAnnonces").then((mod) => {
-      if (alive) setComp(() => mod.default)
-    })
+    // requestIdleCallback : on charge MapAnnonces après que le navigateur ait
+    // peint le contenu critique (LCP) et soit idle. Le toggle Liste/Carte
+    // reste instantané pour les users qui le déclenchent. Fallback setTimeout
+    // pour Safari qui n'a pas (encore) requestIdleCallback.
+    const win = window as Window & { requestIdleCallback?: (cb: () => void) => number }
+    const trigger = () => {
+      import("../components/MapAnnonces").then((mod) => {
+        if (alive) setComp(() => mod.default)
+      })
+    }
+    if (typeof win.requestIdleCallback === "function") {
+      win.requestIdleCallback(trigger)
+    } else {
+      setTimeout(trigger, 200)
+    }
     return () => { alive = false }
   }, [])
   return Comp
