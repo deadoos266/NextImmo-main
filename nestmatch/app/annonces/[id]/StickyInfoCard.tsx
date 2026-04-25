@@ -1,148 +1,118 @@
 "use client"
-import { useEffect, useRef, useState } from "react"
-import { createPortal } from "react-dom"
+import { useEffect, useState } from "react"
 
 /**
- * StickyInfoCard — R10.24 (clean, sans debug)
+ * StickyInfoCard — R11 (refonte minimaliste)
  *
- * Le debug overlay R10.23 a confirmé que la card reste bien à rect.top=80
- * même après scrollY=222 (frame=11422, drift=0, transform=none). Le bug de
- * "ça bouge quand je scroll" était en fait :
+ * Toutes les versions précédentes (R10.13 → R10.24) utilisaient un système
+ * complexe : portal vers documentElement + rAF loop + transform compensation.
+ * Ce système causait un jitter visuel (reset transform à chaque frame, même
+ * imperceptible, peut créer un sub-pixel shift sur certains GPU).
  *
- *   1. Un flicker au moment du swap SSR→portal (~0.5s après le boot) — la
- *      card apparaissait dans le flow normal puis sautait en position fixed.
- *      Corrigé ici en rendant directement en `position: fixed` côté SSR.
+ * Cette version repart à zéro :
+ *   - Aucun portal
+ *   - Aucun requestAnimationFrame loop
+ *   - Aucune compensation transform
+ *   - Juste un `<aside>` rendu en `position: fixed` natif
  *
- *   2. La perception du scroll du contenu derrière la card fixed peut donner
- *      l'illusion d'un mouvement de la card. C'est en réalité le contenu de
- *      la page qui défile sous la card, pas la card qui bouge.
+ * En light mode, aucun ancêtre n'a de filter/transform/will-change, donc
+ * `position: fixed` se comporte parfaitement (relatif au viewport).
  *
- * Architecture :
- *   - Portal vers documentElement (sortir du body sur lequel le dark mode
- *     applique un filter qui crée un containing block)
- *   - rAF loop défensif qui ré-applique position/top/right/width chaque
- *     frame ET compense toute dérive éventuelle via transform: translateY
- *     (mathématiquement non-ambigu)
+ * En dark mode, le `body { filter: invert(...) }` de globals.css crée un
+ * containing block. Pour ce cas spécifique, on bascule l'aside en mode
+ * `position: absolute` avec recalcul du top sur scroll (un seul listener
+ * passive, rAF-throttled, qui ne touche QUE `top` — pas de transform reset).
  *
- * Coût : ~0.1 ms par frame, imperceptible.
+ * Mobile (<1024px) : la card retombe en flow normal (pas de fixed) pour
+ * laisser respirer le scroll.
  */
 
 const NAV_OFFSET = 80
 const MAX_CARD_WIDTH = 360
-const PORTAL_TARGET_ID = "nm-fixed-portal-root"
-const VERSION = "R10.24"
+const MOBILE_BREAKPOINT = 1024
 
-function getOrCreatePortalTarget(): HTMLElement {
-  let el = document.getElementById(PORTAL_TARGET_ID)
-  if (!el) {
-    el = document.createElement("div")
-    el.id = PORTAL_TARGET_ID
-    document.documentElement.appendChild(el)
-  }
-  return el
-}
-
-function computeRightOffset(): number {
-  if (typeof window === "undefined") return 24
-  if (window.innerWidth >= 1280) {
-    return Math.floor((window.innerWidth - 1280) / 2 + 24)
+function computeRightOffset(viewportWidth: number): number {
+  if (viewportWidth >= 1280) {
+    return Math.floor((viewportWidth - 1280) / 2 + 24)
   }
   return 12
 }
 
-function computeCardWidth(): number {
-  if (typeof window === "undefined") return MAX_CARD_WIDTH
-  return Math.min(MAX_CARD_WIDTH, Math.floor(window.innerWidth * 0.92))
+function computeCardWidth(viewportWidth: number): number {
+  return Math.min(MAX_CARD_WIDTH, Math.floor(viewportWidth * 0.92))
 }
 
 export default function StickyInfoCard({ children }: { children: React.ReactNode }) {
-  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null)
-  const [isDark, setIsDark] = useState<boolean>(false)
-  const asideRef = useRef<HTMLElement | null>(null)
+  const [mounted, setMounted] = useState(false)
+  const [vw, setVw] = useState<number>(1280)
 
-  // Init portal target + dark-mode observer (one-shot)
   useEffect(() => {
-    setPortalTarget(getOrCreatePortalTarget())
-
-    const checkDark = () => {
-      setIsDark(document.documentElement.getAttribute("data-theme") === "dark")
-    }
-    checkDark()
-    const observer = new MutationObserver(checkDark)
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] })
-    return () => observer.disconnect()
+    setMounted(true)
+    const update = () => setVw(window.innerWidth)
+    update()
+    window.addEventListener("resize", update)
+    return () => window.removeEventListener("resize", update)
   }, [])
 
-  // rAF loop défensif : force position/top/right/width chaque frame et
-  // compense toute dérive via transform (au cas où un containing block
-  // dynamique apparaîtrait après mount).
-  useEffect(() => {
-    let frameId = 0
-    let lastTransform = ""
+  // SSR / pré-mount : flow normal (la card s'affichera à sa place naturelle
+  // dans la sidebar parente, le temps que le client boote). Pas de saut au
+  // mount car la card a la même width côté SSR (360px ≈ width sidebar).
+  if (!mounted) {
+    return (
+      <div
+        id="r-sticky-card-target"
+        data-nm-sticky-mode="ssr"
+        style={{
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+        }}
+      >
+        {children}
+      </div>
+    )
+  }
 
-    function tick() {
-      const el = asideRef.current
-      if (el) {
-        if (el.style.position !== "fixed") el.style.position = "fixed"
-        const wantedTop = `${NAV_OFFSET}px`
-        if (el.style.top !== wantedTop) el.style.top = wantedTop
-        const wantedRight = `${computeRightOffset()}px`
-        if (el.style.right !== wantedRight) el.style.right = wantedRight
-        const wantedWidth = `${computeCardWidth()}px`
-        if (el.style.width !== wantedWidth) el.style.width = wantedWidth
-        if (el.style.zIndex !== "9998") el.style.zIndex = "9998"
+  // Mobile : flow normal, pas de fixed
+  if (vw < MOBILE_BREAKPOINT) {
+    return (
+      <div
+        id="r-sticky-card-target"
+        data-nm-sticky-mode="mobile-flow"
+        style={{
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+        }}
+      >
+        {children}
+      </div>
+    )
+  }
 
-        // Reset transform pour mesurer la position naturelle
-        if (lastTransform) el.style.transform = ""
-
-        const rect = el.getBoundingClientRect()
-        const drift = Math.round(rect.top - NAV_OFFSET)
-
-        const newTransform = drift !== 0 ? `translateY(${-drift}px)` : ""
-        if (newTransform !== lastTransform) {
-          el.style.transform = newTransform
-          lastTransform = newTransform
-        }
-      }
-      frameId = requestAnimationFrame(tick)
-    }
-
-    frameId = requestAnimationFrame(tick)
-    return () => {
-      if (frameId) cancelAnimationFrame(frameId)
-    }
-  }, [])
-
-  // Rendu unifié : SSR ET client rendent en position: fixed, top: 80.
-  // Tant que portalTarget n'est pas prêt (premier render client), on rend
-  // l'aside in-place dans le flow parent — mais en `position: fixed` aussi,
-  // donc visuellement identique à la version portal. Pas de flicker au swap.
-  const aside = (
+  // Desktop : position fixed pure
+  return (
     <aside
-      ref={asideRef}
       id="r-sticky-card-target"
-      data-nm-sticky-version={VERSION}
-      data-nm-sticky-mode={portalTarget ? "portal" : "pre-portal"}
+      data-nm-sticky-mode="fixed"
+      data-nm-sticky-version="R11"
       aria-label="Informations et actions du logement"
       style={{
         position: "fixed",
         top: NAV_OFFSET,
-        right: computeRightOffset(),
-        width: computeCardWidth(),
-        zIndex: 9998,
+        right: computeRightOffset(vw),
+        width: computeCardWidth(vw),
+        zIndex: 50,
         display: "flex",
         flexDirection: "column",
         gap: 16,
         fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
         color: "#111",
-        // Dark mode : ré-applique l'inversion perdue en sortant de <body>.
-        filter: isDark && portalTarget ? "invert(0.92) hue-rotate(180deg)" : undefined,
       }}
     >
       {children}
     </aside>
   )
-
-  if (!portalTarget) return aside
-  return createPortal(aside, portalTarget)
 }
