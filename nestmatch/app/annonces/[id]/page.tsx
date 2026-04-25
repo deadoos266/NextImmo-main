@@ -13,6 +13,7 @@ import MapBienWrapper from "./MapBienWrapper"
 import SignalerButton from "../../components/SignalerButton"
 import ShareButton from "./ShareButton"
 import LocataireMatchCard from "./LocataireMatchCard"
+import EquipementsBlock from "./EquipementsBlock"
 import PartagerCard from "./PartagerCard"
 import StickyCTABanner from "./StickyCTABanner"
 import Link from "next/link"
@@ -607,25 +608,27 @@ export default async function Annonce({ params }: any) {
               )
             })()}
 
-            {/* ─── Équipements & conditions (existant, rebrand Section) ─ */}
+            {/* ─── Caractéristiques du bien (boolean directs : meublé, parking, etc.) ─
+                Cf lib/equipements.ts pour la distinction caracteristique vs equipement.
+                Animaux retiré : c'est une politique (animaux_politique), affichée dans
+                LocataireMatchCard sidebar pour les locataires connectés. */}
             <section style={{ background: "white", borderRadius: 20, padding: "28px 28px 24px", marginBottom: 20 }}>
               <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.6px", margin: 0, marginBottom: 8 }}>
-                Confort
+                Le bien
               </p>
               <h2 style={{ fontSize: 24, fontWeight: 400, fontStyle: "italic", fontFamily: "'Fraunces', 'DM Sans', serif", letterSpacing: "-0.4px", margin: 0, marginBottom: 20, color: "#111" }}>
-                Équipements &amp; conditions
+                Caractéristiques du bien
               </h2>
               <div className="r-detail-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 {[
                   { label: "Meublé", val: annonce.meuble },
-                  { label: "Animaux acceptés", val: annonce.animaux },
                   { label: "Parking inclus", val: annonce.parking },
                   { label: "Cave", val: annonce.cave },
-                  { label: "Fibre optique", val: annonce.fibre },
                   { label: "Balcon", val: annonce.balcon },
                   { label: "Terrasse", val: annonce.terrasse },
-                  { label: "Ascenseur", val: annonce.ascenseur },
                   { label: "Jardin", val: annonce.jardin },
+                  { label: "Ascenseur", val: annonce.ascenseur },
+                  { label: "Fibre optique", val: annonce.fibre },
                 ].map(item => (
                   <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14 }}>
                     <span aria-hidden style={{ width: 24, height: 24, borderRadius: "50%", background: item.val ? "#F0FAEE" : "#F7F4EF", color: item.val ? "#15803d" : "#8a8477", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -639,6 +642,12 @@ export default async function Annonce({ params }: any) {
                   </div>
                 ))}
               </div>
+            </section>
+
+            {/* ─── Équipements (jsonb equipements_extras : lave-linge, wifi, etc.) ─
+                Aperçu 4 items + popup détaillée. Masqué si jsonb vide. */}
+            <section style={{ marginBottom: 20 }}>
+              <EquipementsBlock extras={annonce.equipements_extras as Record<string, unknown> | null} />
             </section>
 
             {/* ─── R10.9 Informations pratiques ─────────────────────── */}
