@@ -1052,10 +1052,16 @@ function MessagesInner() {
   const [peerTyping, setPeerTyping] = useState(false)
   const [envoyantDossier, setEnvoyantDossier] = useState(false)
   const [recherche, setRecherche] = useState("")
-  // Onglet de filtrage des conversations : "actifs" (bail en cours) vs
-  // "candidats" (visite/dossier en cours). Côté proprio : biens loués vs
-  // candidatures. Côté locataire : son logement vs ses candidatures.
-  const [messagesTab, setMessagesTab] = useState<"actifs" | "candidats">("actifs")
+  // Onglet de filtrage des conversations.
+  // Côté proprio : 4 onglets stricts (Paul 2026-04-26) :
+  //   - "candidat"  = candidature non validée
+  //   - "valide"    = candidature explicitement validée par le proprio
+  //   - "locataire" = bail signé en cours (ce qu'on appelait "actifs")
+  //   - "autre"     = conv libre sans annonce OU candidature refusée
+  // Côté locataire : 2 onglets historiques (Mon bail / Mes candidatures)
+  // mappés sur "locataire" / "candidat" pour réutiliser la même mécanique.
+  type MessagesTab = "candidat" | "valide" | "locataire" | "autre"
+  const [messagesTab, setMessagesTab] = useState<MessagesTab>("locataire")
   // Filtre par statut (handoff messages.jsx L154-179) : 6 pills
   const [statusFilter, setStatusFilter] = useState<"all" | StatutConv>("all")
   // Derivation statut : flag [DOSSIER_CARD] par conv + visites batchées par conv
@@ -2307,11 +2313,32 @@ function MessagesInner() {
     return false
   }
 
+  // getTab() — classifie une conv dans 1 des 4 onglets (Paul 2026-04-26).
+  // Sémantique "Autre" : sans annonce_id OU statut dérivé "rejete" (refus
+  // historique = autre candidat a signé).
+  const getTab = (conv: { key: string; other: string; annonceId: number | null }): MessagesTab => {
+    if (isActiveBail(conv)) return "locataire"
+    if (!conv.annonceId) return "autre"
+    if (deriveStatut(conv) === "rejete") return "autre"
+    if (convCandidatureValideeFlag[conv.key]) return "valide"
+    return "candidat"
+  }
+
   const convsFiltrees = conversations
-    .filter(c => messagesTab === "actifs" ? isActiveBail(c) : !isActiveBail(c))
+    // Onglet primaire : 4 onglets stricts côté proprio (candidat/valide/locataire/autre).
+    // Côté locataire on conserve la dichotomie 2-onglets en mappant
+    // "locataire"=mon bail, le reste=mes candidatures (incluant validées et autre).
+    .filter(c => {
+      const t = getTab(c)
+      if (proprietaireActive) return t === messagesTab
+      // Locataire : "locataire" = mon bail, sinon = mes candidatures (toutes)
+      if (messagesTab === "locataire") return t === "locataire"
+      return t !== "locataire"
+    })
     .filter(c => showArchived ? archivedKeys.has(c.key) : !archivedKeys.has(c.key))
     .filter(c => bienFilter === "all" ? true : c.annonceId === bienFilter)
-    // Filtre par statut dérivé (handoff : 6 pills all/contact/dossier/visite/bail/rejete)
+    // Filtre par statut dérivé (pills) — pertinent surtout dans onglet "candidat"
+    // ou "autre" ; dans "locataire"/"valide" le statut est implicite.
     .filter(c => statusFilter === "all" ? true : deriveStatut(c) === statusFilter)
     .filter(c => {
       if (!recherche) return true
@@ -2333,15 +2360,27 @@ function MessagesInner() {
       return db - da
     })
 
-  const countActifs = conversations.filter(c => isActiveBail(c) && !archivedKeys.has(c.key)).length
-  const countCandidats = conversations.filter(c => !isActiveBail(c) && !archivedKeys.has(c.key)).length
+  // Compteurs par onglet (Paul 2026-04-26) — exclut les archivés.
+  const countByTab: Record<MessagesTab, number> = { candidat: 0, valide: 0, locataire: 0, autre: 0 }
+  for (const c of conversations) {
+    if (archivedKeys.has(c.key)) continue
+    countByTab[getTab(c)] += 1
+  }
+  // Compat noms historiques utilisés ailleurs dans le fichier (auto-bascule).
+  const countActifs = countByTab.locataire
+  const countCandidats = countByTab.candidat + countByTab.valide + countByTab.autre
   const countArchived = conversations.filter(c => archivedKeys.has(c.key)).length
 
   // Pool pour compter les pills de statut — on applique tab + archive + bien,
   // mais pas la recherche ni le statusFilter lui-meme (pour afficher la vraie
   // distribution). Handoff : messages.jsx L156-161.
   const statutPool = conversations
-    .filter(c => messagesTab === "actifs" ? isActiveBail(c) : !isActiveBail(c))
+    .filter(c => {
+      const t = getTab(c)
+      if (proprietaireActive) return t === messagesTab
+      if (messagesTab === "locataire") return t === "locataire"
+      return t !== "locataire"
+    })
     .filter(c => showArchived ? archivedKeys.has(c.key) : !archivedKeys.has(c.key))
     .filter(c => bienFilter === "all" ? true : c.annonceId === bienFilter)
   const statutCounts: Record<StatutConv | "all", number> = {
@@ -2352,14 +2391,20 @@ function MessagesInner() {
     statutCounts[s] = (statutCounts[s] || 0) + 1
   }
 
-  // Default tab intelligent : au premier load, si aucun bail actif → candidatures
+  // Default tab intelligent : priorité Locataire > Candidat > Validé > Autre
+  // selon ce qui n'est pas vide. Évite la liste vide au premier load.
   useEffect(() => {
     if (tabInitialized || loading) return
     if (conversations.length > 0) {
-      if (countActifs === 0 && countCandidats > 0) setMessagesTab("candidats")
+      const order: MessagesTab[] = ["locataire", "candidat", "valide", "autre"]
+      const firstNonEmpty = order.find(t => countByTab[t] > 0)
+      if (firstNonEmpty && countByTab[messagesTab] === 0) {
+        setMessagesTab(firstNonEmpty)
+      }
       setTabInitialized(true)
     }
-  }, [conversations.length, countActifs, countCandidats, loading, tabInitialized])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversations.length, loading, tabInitialized])
 
   const dossierDejaEnvoye = messages.some(m =>
     typeof m.contenu === "string" && m.contenu.startsWith(DOSSIER_PREFIX)
@@ -2796,11 +2841,18 @@ function MessagesInner() {
 
           {/* ── Colonne gauche : conversations ── */}
           <div style={{ width: isMobile ? "100%" : 300, flexShrink: 0, background: "white", borderRadius: isMobile ? 0 : 20, display: isMobile && convActiveData ? "none" : "flex", flexDirection: "column", overflow: "hidden", boxShadow: isMobile ? "none" : "0 2px 12px rgba(0,0,0,0.06)" }}>
-            {/* Onglets Biens loués / Candidatures — palette handoff */}
-            <div style={{ display: "flex", padding: "12px 12px 0", gap: 6, borderBottom: "1px solid #EAE6DF" }}>
-              {([
-                { k: "actifs" as const,    label: proprietaireActive ? "Biens loués" : "Mon bail", count: countActifs },
-                { k: "candidats" as const, label: proprietaireActive ? "Candidatures" : "Mes candidatures", count: countCandidats },
+            {/* Onglets sidebar — proprio = 4 onglets stricts (Paul 2026-04-26),
+                locataire = 2 onglets historiques (Mon bail / Mes candidatures).
+                Compteurs entre parenthèses. Wrap si écran étroit. */}
+            <div style={{ display: "flex", flexWrap: "wrap", padding: "12px 12px 4px", gap: 6, borderBottom: "1px solid #EAE6DF" }}>
+              {(proprietaireActive ? [
+                { k: "candidat" as const,  label: "Candidat",  count: countByTab.candidat },
+                { k: "valide" as const,    label: "Validé",    count: countByTab.valide },
+                { k: "locataire" as const, label: "Locataire", count: countByTab.locataire },
+                { k: "autre" as const,     label: "Autre",     count: countByTab.autre },
+              ] : [
+                { k: "locataire" as const, label: "Mon bail",         count: countByTab.locataire },
+                { k: "candidat" as const,  label: "Mes candidatures", count: countByTab.candidat + countByTab.valide + countByTab.autre },
               ]).map(t => {
                 const active = messagesTab === t.k
                 return (
@@ -2808,8 +2860,8 @@ function MessagesInner() {
                     key={t.k}
                     onClick={() => setMessagesTab(t.k)}
                     style={{
-                      flex: 1,
-                      padding: "9px 8px",
+                      flex: proprietaireActive ? "1 1 calc(50% - 3px)" : 1,
+                      padding: "8px 10px",
                       background: active ? "#111" : "#fff",
                       color: active ? "white" : "#111",
                       border: `1px solid ${active ? "#111" : "#EAE6DF"}`,
@@ -2819,8 +2871,9 @@ function MessagesInner() {
                       letterSpacing: "0.1px",
                       cursor: "pointer",
                       fontFamily: "inherit",
-                      marginBottom: 12,
+                      marginBottom: 8,
                       transition: "background 160ms ease, color 160ms ease, border-color 160ms ease",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     {t.label}{t.count > 0 && <span style={{ marginLeft: 6, fontSize: 10, opacity: active ? 0.8 : 0.5, fontVariantNumeric: "tabular-nums" as const }}>({t.count})</span>}
