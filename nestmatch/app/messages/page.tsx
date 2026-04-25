@@ -2783,6 +2783,8 @@ function MessagesInner() {
                   <path d="m21 21-4.3-4.3" />
                 </svg>
                 <input
+                  type="search"
+                  aria-label="Rechercher une conversation"
                   value={recherche} onChange={e => setRecherche(e.target.value)}
                   placeholder="Rechercher une conversation"
                   onFocus={e => { e.currentTarget.style.borderColor = "#111"; e.currentTarget.style.background = "#fff" }}
@@ -3721,6 +3723,7 @@ function MessagesInner() {
                   <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F7F4EF", borderRadius: 24, padding: "6px 6px 6px 18px", border: "1px solid #EAE6DF" }}>
                     <input ref={inputRef} value={nouveau} onChange={e => { setNouveau(e.target.value); signalTyping() }}
                       onKeyDown={e => e.key === "Enter" && !e.shiftKey && envoyer()}
+                      aria-label={replyTo ? "Saisir votre réponse" : "Saisir un message"}
                       placeholder={replyTo ? "Votre réponse…" : "Votre message… (↵ pour envoyer)"}
                       style={{ flex: 1, padding: "10px 0", border: "none", background: "transparent", fontSize: 14, outline: "none", fontFamily: "inherit", color: "#111", letterSpacing: "-0.1px" }} />
                     <button onClick={envoyer} disabled={envoi || !nouveau.trim()}

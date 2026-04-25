@@ -124,6 +124,21 @@ export default function Navbar() {
     setMenuOpen(false)
   }, [isSmall])
 
+  // Escape ferme les dropdowns ouverts (a11y WCAG 2.1.2 — utilisateurs
+  // clavier doivent pouvoir refermer un menu sans tab-out manuel).
+  useEffect(() => {
+    if (!espaceOpen && !menuOpen && !mobileOpen) return
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setEspaceOpen(false)
+        setMenuOpen(false)
+        setMobileOpen(false)
+      }
+    }
+    window.addEventListener("keydown", handleKey)
+    return () => window.removeEventListener("keydown", handleKey)
+  }, [espaceOpen, menuOpen, mobileOpen])
+
   const espaceLinks = proprietaireActive ? [
     { href: "/profil",               label: "Mon profil",         desc: "Informations personnelles" },
     { href: "/proprietaire",         label: "Mes biens",          desc: "Gestion de mes annonces" },
@@ -171,7 +186,11 @@ export default function Navbar() {
               {/* Mon espace dropdown */}
               <div style={{ position: "relative" }}>
                 <button
+                  type="button"
                   onClick={() => setEspaceOpen(!espaceOpen)}
+                  aria-expanded={espaceOpen}
+                  aria-haspopup="menu"
+                  aria-controls="navbar-espace-menu"
                   onMouseEnter={e => { if (!espaceActif) e.currentTarget.style.background = km.beige }}
                   onMouseLeave={e => { if (!espaceActif) e.currentTarget.style.background = "transparent" }}
                   style={{ ...linkStyle("/profil"), background: espaceActif ? km.beige : "transparent", color: espaceActif ? km.ink : km.muted, fontWeight: espaceActif ? 700 : 500, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit" }}>
@@ -181,13 +200,13 @@ export default function Navbar() {
                       {badgeVisites}
                     </span>
                   )}
-                  <span style={{ fontSize: 10, color: km.muted }}>▼</span>
+                  <span aria-hidden="true" style={{ fontSize: 10, color: km.muted }}>▼</span>
                 </button>
 
                 {espaceOpen && (
                   <>
-                    <div onClick={() => setEspaceOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 150 }} />
-                    <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, background: km.white, borderRadius: 16, border: `1px solid ${km.line}`, boxShadow: "0 8px 32px rgba(0,0,0,0.12)", minWidth: 240, zIndex: 200, overflow: "hidden" }}>
+                    <div aria-hidden="true" onClick={() => setEspaceOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 150 }} />
+                    <div id="navbar-espace-menu" role="menu" aria-label="Mon espace" style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, background: km.white, borderRadius: 16, border: `1px solid ${km.line}`, boxShadow: "0 8px 32px rgba(0,0,0,0.12)", minWidth: 240, zIndex: 200, overflow: "hidden" }}>
                       {espaceLinksAvecBadge.map(item => (
                         <Link key={item.href} href={item.href} onClick={() => setEspaceOpen(false)}
                           style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", textDecoration: "none", color: km.ink, borderBottom: `1px solid ${km.beige}` }}
@@ -228,28 +247,34 @@ export default function Navbar() {
           {session && <NotificationBell />}
           {session ? (
             <div style={{ position: "relative" }}>
-              <div onClick={() => setMenuOpen(!menuOpen)}
-                style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "6px 12px", borderRadius: 999, border: `1px solid ${km.line}`, background: menuOpen ? km.beige : km.white, transition: "background 200ms ease" }}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen(!menuOpen)}
+                aria-expanded={menuOpen}
+                aria-haspopup="menu"
+                aria-controls="navbar-user-menu"
+                aria-label={`Menu de ${session.user?.name || "votre compte"}`}
+                style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "6px 12px", borderRadius: 999, border: `1px solid ${km.line}`, background: menuOpen ? km.beige : km.white, transition: "background 200ms ease", fontFamily: "inherit" }}>
                 {avatarSrc
-                  ? <img src={avatarSrc} alt="avatar" referrerPolicy="no-referrer" style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }} />
-                  : <div style={{ width: 40, height: 40, borderRadius: "50%", background: km.ink, display: "flex", alignItems: "center", justifyContent: "center", color: km.white, fontWeight: 700, fontSize: 16 }}>{session.user?.name?.[0]}</div>
+                  ? <img src={avatarSrc} alt="" referrerPolicy="no-referrer" style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }} />
+                  : <div aria-hidden="true" style={{ width: 40, height: 40, borderRadius: "50%", background: km.ink, display: "flex", alignItems: "center", justifyContent: "center", color: km.white, fontWeight: 700, fontSize: 16 }}>{session.user?.name?.[0]}</div>
                 }
                 <span style={{ fontSize: 14, fontWeight: 600 }}>{session.user?.name?.split(" ")[0]}</span>
-                <span style={{ fontSize: 10, color: km.muted }}>▼</span>
-              </div>
+                <span aria-hidden="true" style={{ fontSize: 10, color: km.muted }}>▼</span>
+              </button>
 
               {menuOpen && (
                 <>
-                  <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 150 }} />
-                  <div style={{ position: "absolute", top: "calc(100% + 12px)", right: 0, background: km.white, borderRadius: 14, border: `1px solid ${km.line}`, boxShadow: "0 12px 32px -8px rgba(0,0,0,0.18)", minWidth: 260, zIndex: 200, overflow: "visible", fontFamily: "inherit" }}>
+                  <div aria-hidden="true" onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 150 }} />
+                  <div id="navbar-user-menu" role="menu" aria-label="Menu utilisateur" style={{ position: "absolute", top: "calc(100% + 12px)", right: 0, background: km.white, borderRadius: 14, border: `1px solid ${km.line}`, boxShadow: "0 12px 32px -8px rgba(0,0,0,0.18)", minWidth: 260, zIndex: 200, overflow: "visible", fontFamily: "inherit" }}>
                     {/* Flèche pointeur vers le trigger */}
                     <div style={{ position: "absolute", top: -6, right: 24, width: 10, height: 10, background: km.white, borderLeft: `1px solid ${km.line}`, borderTop: `1px solid ${km.line}`, transform: "rotate(45deg)" }} />
 
                     {/* Header avec avatar + name + email */}
                     <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderBottom: `1px solid ${km.line}` }}>
                       {avatarSrc
-                        ? <img src={avatarSrc} alt="avatar" referrerPolicy="no-referrer" style={{ width: 34, height: 34, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-                        : <div style={{ width: 34, height: 34, borderRadius: "50%", background: km.ink, display: "flex", alignItems: "center", justifyContent: "center", color: km.white, fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{session.user?.name?.[0]}</div>
+                        ? <img src={avatarSrc} alt="" referrerPolicy="no-referrer" style={{ width: 34, height: 34, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                        : <div aria-hidden="true" style={{ width: 34, height: 34, borderRadius: "50%", background: km.ink, display: "flex", alignItems: "center", justifyContent: "center", color: km.white, fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{session.user?.name?.[0]}</div>
                       }
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <p style={{ fontWeight: 700, fontSize: 13, color: km.ink, letterSpacing: "-0.2px", lineHeight: 1.2, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{session.user?.name}</p>
