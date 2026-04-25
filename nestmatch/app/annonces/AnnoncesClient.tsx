@@ -1442,19 +1442,29 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
  * Container de la vue Grille v5.3 — scale -15% pour densite (2026-04-23).
  *  - Cards 442px FIXE rectangulaire (photo landscape 16/10). Etait 520.
  *  - Gap 20px, auto-fill (pas auto-fit -> zero stretch). Etait 24.
- * v7 — densité handoff stricte (`app.jsx` ListingsScreen l. 522-524) :
- *   `gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16`
+ * v7.1 — densité cible user "4 par ligne, 3 sur écran moyen" :
+ *   `gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16`
  *
- * Donne ~4 cards à 1280px, ~5 à 1600px, ~6 à 1920px. Esprit Airbnb
- * mosaïque, pas Idealista large. Reverts l'écart v6 → strictement aligné
- * Claude Design.
+ * Math :
+ *   - 1636px container → floor(1636/(300+16)) = 5 cards/row (~308px each)
+ *   - 1280px container → floor(1280/(300+16)) = 4 cards/row (~308px each)
+ *   - 980px container  → floor(980/(300+16))  = 3 cards/row (~316px each)
+ *   - 760px container  → floor(760/(300+16))  = 2 cards/row (~370px each)
+ *
+ * Le handoff `app.jsx ListingsScreen` propose 240px (→ 6 cards à 1636px,
+ * trop dense). Le user a explicité une cible plus aérée 4-5 cards desktop
+ * avec retour à 3 sur écran moyen. 300px est le compromis qui matche cette
+ * cible sans casser l'esprit éditorial mosaïque du handoff.
+ *
+ * `auto-fill` strict (pas auto-fit) : les tracks vides ne collapsent pas,
+ * la 2e row d'une page peu remplie ne stretche pas en 2 cards immenses.
  */
 function GridContainer({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+        gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
         gap: 16,
         width: "100%",
         margin: "0 auto",
