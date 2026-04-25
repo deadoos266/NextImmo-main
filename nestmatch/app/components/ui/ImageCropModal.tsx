@@ -117,6 +117,7 @@ export default function ImageCropModal({
     }
     initialFileRef.current = file
     setError(null)
+    setBusy(false) // reset au cas où le file précédent a laissé busy=true
     setZoom(1)
     setCrop({ x: 0, y: 0 })
     setRatio(defaultRatio)
@@ -157,6 +158,10 @@ export default function ImageCropModal({
     } catch (e) {
       console.error("[crop] validation failed", e)
       setError("Le recadrage a échoué, veuillez réessayer ou cliquer sur « Sans recadrer ».")
+    } finally {
+      // Important : reset busy dans tous les cas pour pouvoir enchaîner sur le
+      // fichier suivant de la queue (multi-upload). Sans ça, le bouton EXPORT
+      // restait coincé en "EXPORT…" et bloquait toute la file de photos.
       setBusy(false)
     }
   }
