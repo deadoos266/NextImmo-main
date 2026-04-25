@@ -30,43 +30,8 @@ const ETAGES_COMMUNS = ["Sous-sol", "Rez-de-chaussée", "1er", "2e", "3e", "4e",
 const DPE_VALUES = ["A", "B", "C", "D", "E", "F", "G", "Non renseigné"] as const
 
 // R10.6 — équipements étendus (stockés dans jsonb equipements_extras).
-const EQUIP_EXTRAS_GROUPS: Array<{ title: string; items: Array<{ k: string; label: string }> }> = [
-  {
-    title: "Électroménager",
-    items: [
-      { k: "lave_linge",     label: "Lave-linge" },
-      { k: "seche_linge",    label: "Sèche-linge" },
-      { k: "lave_vaisselle", label: "Lave-vaisselle" },
-      { k: "four",           label: "Four" },
-      { k: "micro_ondes",    label: "Micro-ondes" },
-      { k: "frigo",          label: "Réfrigérateur" },
-      { k: "congelateur",    label: "Congélateur" },
-      { k: "plaques",        label: "Plaques de cuisson" },
-      { k: "hotte",          label: "Hotte aspirante" },
-    ],
-  },
-  {
-    title: "Confort",
-    items: [
-      { k: "wifi",            label: "Wifi inclus" },
-      { k: "climatisation",   label: "Climatisation" },
-      { k: "cheminee",        label: "Cheminée" },
-      { k: "interphone",      label: "Interphone" },
-      { k: "gardien",         label: "Gardien" },
-      { k: "rangements",      label: "Rangements / placards" },
-      { k: "double_vitrage",  label: "Double vitrage" },
-      { k: "cuisine_equipee", label: "Cuisine équipée" },
-    ],
-  },
-  {
-    title: "Exposition & vue",
-    items: [
-      { k: "exposition_sud", label: "Exposition sud" },
-      { k: "vue_degagee",    label: "Vue dégagée" },
-      { k: "traversant",     label: "Traversant" },
-    ],
-  },
-]
+// Source unique de vérité partagée — cf lib/equipements.ts
+import { EQUIP_EXTRAS_GROUPS } from "../../../../lib/equipements"
 
 export default function ModifierBien() {
   const { data: session, status } = useSession()
