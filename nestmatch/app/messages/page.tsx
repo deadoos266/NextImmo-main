@@ -4,19 +4,24 @@ import { useEffect, useState, useRef, useCallback } from "react"
 import { createPortal } from "react-dom"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
+import dynamic from "next/dynamic"
 import { supabase } from "../../lib/supabase"
 import { useRole } from "../providers"
 import { Suspense } from "react"
 import { useResponsive } from "../hooks/useResponsive"
 import { displayName } from "../../lib/privacy"
 import { formatNomComplet } from "../../lib/profilHelpers"
-import AnnulerVisiteDialog from "../components/AnnulerVisiteDialog"
-import ProposerVisiteDialog from "../components/ProposerVisiteDialog"
 import { annulerVisite, STATUT_VISITE_STYLE as STATUT_VISITE } from "../../lib/visitesHelpers"
 import { postNotif } from "../../lib/notificationsClient"
 import MessageSkeleton from "../components/ui/MessageSkeleton"
-import BailSignatureModal from "../components/BailSignatureModal"
 import Modal from "../components/ui/Modal"
+
+// Lazy : modals/dialogs ouverts à la demande (1-2× / session). Économie
+// estimée ~10-15 kB sur First Load JS de /messages (cible 270 kB,
+// baseline 288 kB).
+const AnnulerVisiteDialog = dynamic(() => import("../components/AnnulerVisiteDialog"), { ssr: false })
+const ProposerVisiteDialog = dynamic(() => import("../components/ProposerVisiteDialog"), { ssr: false })
+const BailSignatureModal = dynamic(() => import("../components/BailSignatureModal"), { ssr: false })
 import type { BailData } from "../../lib/bailPDF"
 import { calculerScore, type Profil as MatchingProfil, type Annonce as MatchingAnnonce } from "../../lib/matching"
 
