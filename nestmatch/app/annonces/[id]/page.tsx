@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { supabase } from "../../../lib/supabase"
 import { getCityCoords } from "../../../lib/cityCoords"
+import { DPE_COLORS } from "../../../lib/dpeColors"
 import ScoreBlock from "./ScoreBlock"
 import ContactButton from "./ContactButton"
 import PhotoCarousel from "./PhotoCarousel"
@@ -52,11 +53,6 @@ function deduirePointsForts(a: Record<string, unknown>): string[] {
   if (dpe && ["A", "B", "C"].includes(dpe)) atouts.push(`Classe énergie ${dpe} — bonne isolation`)
   if (a.verifie) atouts.push("Propriétaire vérifié")
   return atouts
-}
-
-const DPE_COLORS: Record<string, string> = {
-  A: "#22c55e", B: "#84cc16", C: "#eab308",
-  D: "#f97316", E: "#dc2626", F: "#b91c1c", G: "#7f1d1d",
 }
 
 export async function generateMetadata({ params }: any): Promise<Metadata> {
@@ -185,9 +181,9 @@ export default async function Annonce({ params }: any) {
 
   // Le tracking des clics uniques est gere par le composant ViewTracker (client-side)
 
-  // Réutilise DPE_COLORS déclaré ligne 57. Le mapping local précédent
-  // ("dpeColor") incluait une nuance différente pour E/F/G ; on aligne
-  // sur la palette officielle pour cohérence avec les cards de liste.
+  // DPE_COLORS importé depuis lib/dpeColors.ts (palette canonique partagée
+  // avec ListingCardSearch — supprime la divergence visuelle entre liste
+  // et fiche détail qui existait jusqu'au cleanup #10).
   const photos: string[] = Array.isArray(annonce.photos) ? annonce.photos : []
   // Priorité : lat/lng précis sauvés depuis l'autocomplete BAN.
   // Fallback 1 : cityCoords statique. Fallback 2 (client) : geocoding Nominatim

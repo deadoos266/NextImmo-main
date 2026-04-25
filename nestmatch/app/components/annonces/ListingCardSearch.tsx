@@ -2,6 +2,7 @@
 import { useState, type ReactNode } from "react"
 import Image from "next/image"
 import { CARD_GRADIENTS as GRADIENTS } from "../../../lib/cardGradients"
+import { dpeColorFor } from "../../../lib/dpeColors"
 import { highlightMatch } from "./highlight"
 
 /**
@@ -55,15 +56,8 @@ interface Props {
 
 // ─── Helpers exportables (DpeBadge, ScoreMatchDonut…) ──────────────────
 // Hors du composant = pas de re-render inutile, pas de perte de focus.
-
-function dpeColorFor(letter: string): string {
-  const L = letter?.toUpperCase?.() || ""
-  const map: Record<string, string> = {
-    A: "#16A34A", B: "#65A30D", C: "#EAB308",
-    D: "#F59E0B", E: "#EA580C", F: "#DC2626", G: "#7F1D1D",
-  }
-  return map[L] || "#8a8477"
-}
+// dpeColorFor importé depuis lib/dpeColors.ts (cleanup #10 — palette unifiée
+// avec la fiche détail).
 
 /**
  * Pastille DPE (A…G) aux couleurs officielles handoff Claude.
