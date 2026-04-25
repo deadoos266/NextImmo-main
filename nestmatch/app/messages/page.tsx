@@ -50,10 +50,11 @@ const REPLY_REGEX = /^\[REPLY:(\d+)\]\n([\s\S]*)$/
 //   visite   = visite statut "proposée" / "confirmée" / "effectuée"
 //   bail     = annonce.statut === "loué" + locataire_email match
 //   rejete   = visite "annulée" uniquement (aucune en cours)
-type StatutConv = "contact" | "dossier" | "visite" | "bail" | "rejete"
+type StatutConv = "contact" | "dossier" | "validee" | "visite" | "bail" | "rejete"
 const STATUT_CONV: Record<StatutConv, { label: string; color: string; bg: string }> = {
   contact: { label: "Contact",           color: "#111", bg: "#F7F4EF" },
   dossier: { label: "Dossier envoyé",    color: "#15803d", bg: "#F0FAEE" },
+  validee: { label: "Candidature validée", color: "#15803d", bg: "#DCFCE7" },
   visite:  { label: "Visite programmée", color: "#1d4ed8", bg: "#dbeafe" },
   bail:    { label: "Bail signé",        color: "#ffffff", bg: "#15803d" },
   rejete:  { label: "Refusé",            color: "#b91c1c", bg: "#FEECEC" },
@@ -1059,6 +1060,10 @@ function MessagesInner() {
   const [statusFilter, setStatusFilter] = useState<"all" | StatutConv>("all")
   // Derivation statut : flag [DOSSIER_CARD] par conv + visites batchées par conv
   const [convDossierFlag, setConvDossierFlag] = useState<Record<string, boolean>>({})
+  // Flag par conv : la candidature a été validée (statut_candidature='validee'
+  // sur le 1er message type='candidature' de la conv). Calculé en même temps
+  // que convDossierFlag depuis la query messages globale.
+  const [convCandidatureValideeFlag, setConvCandidatureValideeFlag] = useState<Record<string, boolean>>({})
   const [convVisitesMap, setConvVisitesMap] = useState<Record<string, Array<{ statut: string }>>>({})
   // Filtre par bien (proprio uniquement) — persist localStorage
   const [bienFilter, setBienFilter] = useState<number | "all">("all")
@@ -1433,6 +1438,7 @@ function MessagesInner() {
     const convMap = new Map<string, any>()
     const searchBuckets = new Map<string, string[]>()
     const dossierFlags = new Map<string, boolean>()
+    const candidatureValideeFlags = new Map<string, boolean>()
     if (data) {
       data.forEach((m: any) => {
         const other = m.from_email === email ? m.to_email : m.from_email
@@ -1451,6 +1457,12 @@ function MessagesInner() {
         // Flag "dossier envoyé" : au moins 1 message [DOSSIER_CARD] dans la conv
         // (envoyé ou reçu). Utilisé par la dérivation de statut `dossier`.
         if (raw.startsWith(DOSSIER_PREFIX)) dossierFlags.set(key, true)
+        // Flag "candidature validée" : au moins 1 message type='candidature' avec
+        // statut_candidature='validee' dans la conv. Utilisé par deriveStatut
+        // pour afficher la pill "Validée" dans la sidebar (Paul 2026-04-26).
+        if (m.type === "candidature" && m.statut_candidature === "validee") {
+          candidatureValideeFlags.set(key, true)
+        }
         const plain = raw
           .replace(/^\[REPLY:\d+\]\n/, "")
           .replace(/^\[\w+[:\]][^\]]*\]/, "")
@@ -1465,6 +1477,9 @@ function MessagesInner() {
     const dossierFlagsObj: Record<string, boolean> = {}
     for (const [k, v] of dossierFlags) dossierFlagsObj[k] = v
     setConvDossierFlag(dossierFlagsObj)
+    const candidatureValideeFlagsObj: Record<string, boolean> = {}
+    for (const [k, v] of candidatureValideeFlags) candidatureValideeFlagsObj[k] = v
+    setConvCandidatureValideeFlag(candidatureValideeFlagsObj)
     const nextIndex: Record<string, string> = {}
     for (const [k, arr] of searchBuckets) nextIndex[k] = arr.join(" ")
     setSearchIndex(nextIndex)
@@ -2252,9 +2267,11 @@ function MessagesInner() {
     if (actives.length > 0) return "visite"
     // 3. rejete — visites existent mais toutes annulées
     if (visites.length > 0 && visites.every(v => v.statut === "annulée")) return "rejete"
-    // 4. dossier — [DOSSIER_CARD] détecté
+    // 4. validee — candidature explicitement validée par le proprio (mig 022)
+    if (convCandidatureValideeFlag[conv.key]) return "validee"
+    // 5. dossier — [DOSSIER_CARD] détecté
     if (convDossierFlag[conv.key]) return "dossier"
-    // 5. contact — par défaut
+    // 6. contact — par défaut
     return "contact"
   }
 
@@ -2328,7 +2345,7 @@ function MessagesInner() {
     .filter(c => showArchived ? archivedKeys.has(c.key) : !archivedKeys.has(c.key))
     .filter(c => bienFilter === "all" ? true : c.annonceId === bienFilter)
   const statutCounts: Record<StatutConv | "all", number> = {
-    all: statutPool.length, contact: 0, dossier: 0, visite: 0, bail: 0, rejete: 0,
+    all: statutPool.length, contact: 0, dossier: 0, validee: 0, visite: 0, bail: 0, rejete: 0,
   }
   for (const c of statutPool) {
     const s = deriveStatut(c)
@@ -2829,12 +2846,14 @@ function MessagesInner() {
                   style={{ width: "100%", padding: "9px 12px 9px 34px", border: "1px solid #EAE6DF", background: "#F7F4EF", color: "#111", borderRadius: 999, fontSize: 13, outline: "none", fontFamily: "inherit", boxSizing: "border-box", transition: "border-color 160ms ease, background 160ms ease" }}
                 />
               </div>
-              {/* Filtre par statut — 6 pills (handoff messages.jsx L154-179) */}
+              {/* Filtre par statut — 7 pills (handoff messages.jsx L154-179)
+                  + Validée (Paul 2026-04-26) entre Dossier et Visite */}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {([
                   ["all",     "Toutes",  null as null | StatutConv],
                   ["contact", "Contact", "contact" as StatutConv],
                   ["dossier", "Dossier", "dossier" as StatutConv],
+                  ["validee", "Validée", "validee" as StatutConv],
                   ["visite",  "Visite",  "visite"  as StatutConv],
                   ["bail",    "Bail",    "bail"    as StatutConv],
                   ["rejete",  "Refusé",  "rejete"  as StatutConv],
@@ -3831,7 +3850,7 @@ function MessagesInner() {
             //   - EDL validé par les 2 parties → étape 6 (Emménagement) active
             const bailActiveIdx = edlFullySigned ? 5 : 4
             const activeIdxByStatut: Record<StatutConv, number> = {
-              contact: 0, dossier: 1, visite: 2, bail: bailActiveIdx, rejete: 0,
+              contact: 0, dossier: 1, validee: 1, visite: 2, bail: bailActiveIdx, rejete: 0,
             }
             const activeIdx = activeIdxByStatut[statut]
             const steps: Step[] = stepsOrder.map((s, i) => ({
