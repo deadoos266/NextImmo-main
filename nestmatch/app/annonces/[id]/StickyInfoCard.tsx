@@ -95,8 +95,23 @@ export default function StickyInfoCard({ children }: { children: React.ReactNode
   useEffect(() => {
     let frameId = 0
     let lastTransform = ""
+    let frameCount = 0
+
+    // Debug overlay : DOM direct (pas React state) pour zéro re-render à 60fps.
+    // Affiche en temps réel : compteur de frames, rect.top mesuré, scrollY,
+    // dérive, transform appliqué, position style. À retirer une fois le bug
+    // résolu.
+    const debugDiv = document.createElement("div")
+    debugDiv.id = "nm-sticky-debug"
+    debugDiv.style.cssText =
+      "position:fixed;top:80px;left:8px;background:#FF4A1C;color:white;" +
+      "font:11px monospace;padding:6px 10px;z-index:99999;white-space:pre;" +
+      "border-radius:6px;line-height:1.4;pointer-events:none;max-width:380px"
+    debugDiv.textContent = "DEBUG R10.23 — boot..."
+    document.documentElement.appendChild(debugDiv)
 
     function tick() {
+      frameCount++
       const el = asideRef.current
       if (el) {
         // 1. Force la position de base à chaque frame (defensive).
@@ -124,6 +139,18 @@ export default function StickyInfoCard({ children }: { children: React.ReactNode
           el.style.transform = newTransform
           lastTransform = newTransform
         }
+
+        // 5. Mise à jour overlay debug.
+        const parent = el.parentElement
+        const parentInfo = parent ? `${parent.tagName}#${parent.id || "?"}` : "null"
+        debugDiv.textContent =
+          `R10.23 frame=${frameCount}\n` +
+          `rect.top=${rect.top.toFixed(1)} scrollY=${window.scrollY}\n` +
+          `drift=${drift} transform=${newTransform || "none"}\n` +
+          `pos=${el.style.position} top=${el.style.top}\n` +
+          `parent=${parentInfo}`
+      } else {
+        debugDiv.textContent = `R10.23 frame=${frameCount} — asideRef null`
       }
       frameId = requestAnimationFrame(tick)
     }
@@ -131,6 +158,7 @@ export default function StickyInfoCard({ children }: { children: React.ReactNode
     frameId = requestAnimationFrame(tick)
     return () => {
       if (frameId) cancelAnimationFrame(frameId)
+      debugDiv.remove()
     }
   }, [])
 
