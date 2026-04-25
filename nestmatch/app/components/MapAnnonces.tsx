@@ -64,39 +64,55 @@ function useFrenchLeaflet() {
   return null
 }
 
-// Couleur du marqueur = degrade selon score (vert -> orange -> rouge)
-function scoreToMarkerColor(score: number | null): { bg: string; border: string; text: string } {
-  if (score === null) return { bg: "#111", border: "#111", text: "white" }
-  const pct = Math.round(score / 10)
-  if (pct >= 80) return { bg: "#15803d", border: "#15803d", text: "white" }
-  if (pct >= 65) return { bg: "#65a30d", border: "#4d7c0f", text: "white" }
-  if (pct >= 50) return { bg: "#ca8a04", border: "#a16207", text: "white" }
-  if (pct >= 30) return { bg: "#a16207", border: "#a16207", text: "white" }
-  return { bg: "#b91c1c", border: "#b91c1c", text: "white" }
-}
-
-function priceMarker(prix: number, selected: boolean, score: number | null) {
-  const c = selected
-    ? { bg: "#111", border: "#111", text: "white" }
-    : scoreToMarkerColor(score)
+// Pill prix style Claude Design handoff (app.jsx MapSplit l. 619-639) :
+//   - Default : background blanc, border noir 1.5px, prix noir tabular-nums
+//   - Active  : background noir, border noir 2px, prix blanc, scale 1.08
+//               + arrow bottom-center (carr\u00e9 10\u00d710 rotated 45\u00b0)
+//   - Dot vert "live" \u00e0 gauche du prix (annonce dispo)
+//
+// Le score n'est PLUS encod\u00e9 dans la couleur du marker (\u00e7a vit sur la card,
+// pill match% top-left photo). Marker = info g\u00e9o + prix point d'ancrage.
+function priceMarker(prix: number, selected: boolean, _score: number | null) {
+  void _score
   const price = prix ? prix.toLocaleString("fr-FR") + " \u20ac" : "\u2014"
+  const bg = selected ? "#111" : "#fff"
+  const text = selected ? "#fff" : "#111"
+  const borderW = selected ? 2 : 1.5
+  const scale = selected ? 1.08 : 1
+  const dotColor = "#16A34A"
+  // Arrow bottom-center : div 10\u00d710 rotated 45deg en absolute, juste sous le pill
+  const arrow = selected
+    ? `<span style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%) rotate(45deg);width:10px;height:10px;background:#111;"></span>`
+    : ""
   return L.divIcon({
     html: `<div style="
-      background:${c.bg};
-      color:${c.text};
-      border:2px solid ${c.border};
-      padding:4px 10px;
+      position:relative;
+      transform:scale(${scale});
+      transform-origin:center bottom;
+      background:${bg};
+      color:${text};
+      border:${borderW}px solid #111;
+      padding:6px 12px 6px 10px;
       border-radius:999px;
       font-weight:700;
-      font-size:12px;
+      font-size:13px;
       font-family:'DM Sans',sans-serif;
+      font-variant-numeric:tabular-nums;
       white-space:nowrap;
-      box-shadow:0 2px 8px rgba(0,0,0,0.25);
+      box-shadow:${selected ? "0 12px 28px rgba(0,0,0,0.28)" : "0 4px 12px rgba(0,0,0,0.14)"};
       cursor:pointer;
-    ">${price}</div>`,
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      transition:transform 180ms ease, background 180ms ease, color 180ms ease;
+    ">
+      <span style="width:6px;height:6px;border-radius:50%;background:${dotColor};flex-shrink:0;"></span>
+      ${price}
+      ${arrow}
+    </div>`,
     className: "",
-    iconSize: [72, 26],
-    iconAnchor: [36, 26],
+    iconSize: [80, 30],
+    iconAnchor: [40, 30],
   })
 }
 
@@ -238,7 +254,10 @@ export default function MapAnnonces({
               key={a.id}
               position={[a._lat, a._lng]}
               icon={priceMarker(a.prix, selectedId === a.id, a.scoreMatching ?? null)}
-              eventHandlers={{ click: () => onSelect(a.id) }}
+              eventHandlers={{
+                click: () => onSelect(a.id),
+                mouseover: () => onSelect(a.id),
+              }}
             >
               <Popup>
                 <div style={{ fontFamily: "'DM Sans',sans-serif", minWidth: 180 }}>
@@ -323,23 +342,32 @@ export default function MapAnnonces({
         </button>
       )}
 
-      {/* v5.4 : Légende compatibilité déplacée en haut (top-right, sous le
-          selecteur de type de carte) — plus accessible, évite d'être hors
-          viewport quand la carte occupe toute la hauteur dispo. */}
-      <div style={{ position: "absolute", top: 64, right: 12, zIndex: 1000, background: "white", borderRadius: 10, boxShadow: "0 2px 12px rgba(0,0,0,0.15)", padding: "8px 12px", border: "1px solid #EAE6DF", display: "flex", flexDirection: "column", gap: 4 }}>
-        <p style={{ fontSize: 10, fontWeight: 700, color: "#111", marginBottom: 2, textTransform: "uppercase", letterSpacing: "0.5px" }}>Compatibilit&eacute;</p>
-        {[
-          { color: "#15803d", label: "80% +" },
-          { color: "#65a30d", label: "65\u201379%" },
-          { color: "#ca8a04", label: "50\u201364%" },
-          { color: "#a16207", label: "30\u201349%" },
-          { color: "#b91c1c", label: "< 30%" },
-        ].map(l => (
-          <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{ width: 12, height: 12, borderRadius: 999, background: l.color, border: `2px solid ${l.color}` }} />
-            <span style={{ fontSize: 11, color: "#8a8477", fontFamily: "'DM Sans',sans-serif" }}>{l.label}</span>
-          </div>
-        ))}
+      {/* Pill bottom-left "X biens · France" (handoff l. 671-674) — info
+          discrète sur le contenu actuel. Remplace la legend score, devenue
+          obsolète depuis que les markers sont blanc/noir (le score vit sur
+          la card en pill match%, plus dans le marker). */}
+      <div style={{
+        position: "absolute",
+        left: 18,
+        bottom: 18,
+        zIndex: 1000,
+        background: "white",
+        borderRadius: 999,
+        padding: "8px 14px",
+        fontSize: 11,
+        fontWeight: 600,
+        color: "#6B6B6B",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        fontFamily: "'DM Sans',sans-serif",
+      }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <circle cx="12" cy="10" r="3" />
+          <path d="M12 21l-5.5-7a7 7 0 1 1 11 0L12 21z" />
+        </svg>
+        {withCoords.length} bien{withCoords.length > 1 ? "s" : ""} &middot; France
       </div>
 
       {/* v5.4 : Sélecteur Plan/Satellite/Détaillé déplacé en haut (top-right).

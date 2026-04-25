@@ -1,32 +1,38 @@
 "use client"
-import { useState, useRef, type ReactNode, type CSSProperties } from "react"
+import { useState, useRef, type CSSProperties } from "react"
 import Image from "next/image"
 import { CARD_GRADIENTS as GRADIENTS } from "../../../lib/cardGradients"
-import { dpeColorFor } from "../../../lib/dpeColors"
-import { highlightMatch } from "./highlight"
 
 /**
- * Card annonce pour la page /annonces — layout unique aligné Claude Design
- * handoff (`ListingCard` dans app.jsx ListingsScreen).
+ * Card annonce pour la grille `/annonces` — fidélité Claude Design handoff
+ * (`app.jsx` ListingCard lignes 234-288).
  *
  * Structure :
- *   - Photo aspect 4/5 portrait (handoff strict)
- *   - Top-left badges  : NOUVEAU (ink) si created_at < 7j + {n}% match (blur/white)
- *   - Top-right        : favori 38×38 (rouge si actif, blur sinon)
- *   - Footer           : eyebrow VILLE · QUARTIER (10.5px tracked 1.1px),
- *                        titre 14-15px weight 500 clamp 2, separator 1px,
- *                        surface m² · pièces p. · DPE  +  prix tabular
- *   - R10.2 inline     : Aperçu / Comparer (sous le récap)
+ *   - Photo aspect 4/5 portrait
+ *   - Top-left : badge NOUVEAU (#111/#fff) + pill match% (white blur)
+ *   - Top-right : favori 38×38 rond (#DC2626 si actif, white blur sinon)
+ *   - **Photo indicator = barre segmentée** (handoff l. 273-277) — N segments
+ *     hauteur 2px qui se partagent la largeur (flex:1), actif #fff opaque,
+ *     autres rgba(255,255,255,0.4). Style Stories/YouTube Shorts.
+ *   - Footer padding 14 :
+ *       · Eyebrow VILLE · QUARTIER 10.5px/600/letterSpacing 1.1px uppercase
+ *       · Titre h3 14px/500 clamp 2 lignes letterSpacing -0.15px
+ *       · Separator 1px + UNE SEULE LIGNE inline :
+ *         `surface m² · pieces p. · DPE C` (gauche, 11.5px muted)
+ *         `1180 €/mois` (droite, 13.5px/700 + /mois 10px soft)
+ *   - Hover : translateY(-4px) + boxShadow 0 20px 40px
+ *   - Stagger entrance : animDelay = i * 50, animation km-fade 600ms
  *
  * Photos :
- *   - PAS d'auto-rotation (retirée v4, feedback user explicite "trop agressif")
+ *   - PAS d'auto-rotation (feedback user historique)
  *   - Flèches manuelles visibles au hover desktop
- *   - Touch swipe horizontal sur mobile
- *   - Dots cliquables + indicator "1/5" discret en bas
+ *   - Touch swipe horizontal mobile (threshold 50px)
+ *   - Limite 6 photos (perf)
  *
- * Accessibilité :
- *   - Le wrapper est un <a> cliquable → href annonce
- *   - Boutons internes (favori, flèches, dots, R10.2) stoppent la propagation
+ * R10.2 (QuickView/Compare) : props conservées dans l'API pour ne pas casser
+ * AnnoncesClient, mais pas rendues dans la UI (handoff strict — pas de
+ * boutons Aperçu/Comparer dans la card du grid). Si on veut les remettre
+ * plus tard, ajouter un slot footer optionnel.
  */
 
 interface Props {
@@ -40,42 +46,13 @@ interface Props {
   onMouseEnter: () => void
   onMouseLeave: () => void
   motCle: string
-  /** R10.2 — handler aperçu rapide (modal). Si absent, bouton masqué. */
+  /** Index dans la liste rendue — pilote l'animation km-fade stagger. */
+  index?: number
+  /** R10.2 — props gardées pour compat appel mais non rendues côté handoff strict. */
   onQuickView?: (annonceId: number) => void
-  /** R10.2 — état « cochée pour comparaison ». Default false. */
   compared?: boolean
-  /** R10.2 — toggle comparer. Si absent, case masquée. */
   onToggleCompare?: (annonceId: number) => void
-  /** R10.2 — true quand la tray est pleine (≥ max) : empêche cocher en plus. */
   compareDisabled?: boolean
-}
-
-// ─── Helpers (hors composant : pas de re-render inutile, pas de perte focus) ─
-
-function DpeBadge({ letter }: { letter: string | null | undefined }) {
-  if (!letter) return null
-  return (
-    <span
-      title={`DPE ${letter.toUpperCase()}`}
-      style={{
-        minWidth: 20,
-        height: 20,
-        padding: "0 6px",
-        borderRadius: 4,
-        background: dpeColorFor(letter),
-        color: "white",
-        fontSize: 11,
-        fontWeight: 700,
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-        lineHeight: 1,
-      }}
-    >
-      {letter.toUpperCase()}
-    </span>
-  )
 }
 
 function isNewAnnonce(createdAt: string | null | undefined): boolean {
@@ -94,21 +71,10 @@ function formatLocalisationFull(annonce: any): string {
   return ""
 }
 
-// ─── CardPhoto : carousel photos in-card (handoff fidèle) ────────────────────
-//   - desktop : flèches visibles au hover du conteneur
-//   - mobile  : touch swipe horizontal (threshold 50px)
-//   - dots cliquables + indicator "i/N" en bas-droit (apparait au hover/touch)
-//   - lazy loading natif <Image> Next.js (priority sur la 1ère card via prop si besoin)
-function CardPhoto({
-  annonce,
-  priority,
-}: {
-  annonce: any
-  priority?: boolean
-}) {
+// ─── CardPhoto : carousel + barre segmentée style handoff ────────────────────
+function CardPhoto({ annonce }: { annonce: any }) {
   const [idx, setIdx] = useState(0)
   const realPhotos: string[] = Array.isArray(annonce.photos) && annonce.photos.length > 0 ? annonce.photos : []
-  // Limite à 6 photos visibles (perf + spec user "4-6 photos max").
   const photos = realPhotos.slice(0, 6)
   const total = photos.length > 0 ? photos.length : 1
   const base = GRADIENTS[annonce.id % GRADIENTS.length]
@@ -116,19 +82,12 @@ function CardPhoto({
   const touchEndX = useRef<number | null>(null)
 
   function prev(e: React.MouseEvent) {
-    e.preventDefault()
-    e.stopPropagation()
+    e.preventDefault(); e.stopPropagation()
     setIdx(i => (i - 1 + total) % total)
   }
   function next(e: React.MouseEvent) {
-    e.preventDefault()
-    e.stopPropagation()
+    e.preventDefault(); e.stopPropagation()
     setIdx(i => (i + 1) % total)
-  }
-  function goto(e: React.MouseEvent, i: number) {
-    e.preventDefault()
-    e.stopPropagation()
-    setIdx(i)
   }
   function onTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX
@@ -164,11 +123,11 @@ function CardPhoto({
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
       onMouseEnter={e => {
-        const ctrls = e.currentTarget.querySelectorAll<HTMLElement>(".card-photo-ctrl")
+        const ctrls = e.currentTarget.querySelectorAll<HTMLElement>(".card-photo-arrow")
         ctrls.forEach(b => (b.style.opacity = "1"))
       }}
       onMouseLeave={e => {
-        const ctrls = e.currentTarget.querySelectorAll<HTMLElement>(".card-photo-ctrl")
+        const ctrls = e.currentTarget.querySelectorAll<HTMLElement>(".card-photo-arrow")
         ctrls.forEach(b => (b.style.opacity = "0"))
       }}
     >
@@ -177,33 +136,15 @@ function CardPhoto({
           src={currentPhoto}
           alt={annonce.titre || "Photo logement"}
           fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 440px"
+          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 33vw, 320px"
           style={{ objectFit: "cover", display: "block" }}
-          priority={priority}
         />
-      ) : (
-        <span
-          style={{
-            position: "absolute",
-            inset: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "rgba(0,0,0,0.25)",
-            fontSize: 13,
-            fontWeight: 500,
-            fontFamily: "var(--font-fraunces), 'Fraunces', Georgia, serif",
-            fontStyle: "italic",
-          }}
-        >
-          Pas de photo
-        </span>
-      )}
+      ) : null}
 
       {photos.length > 1 && (
         <>
           <button
-            className="card-photo-ctrl"
+            className="card-photo-arrow"
             onClick={prev}
             aria-label="Photo précédente"
             style={{
@@ -214,10 +155,10 @@ function CardPhoto({
               background: "rgba(255,255,255,0.94)",
               border: "none",
               borderRadius: "50%",
-              width: 30,
-              height: 30,
+              width: 28,
+              height: 28,
               cursor: "pointer",
-              fontSize: 15,
+              fontSize: 14,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -233,7 +174,7 @@ function CardPhoto({
             ‹
           </button>
           <button
-            className="card-photo-ctrl"
+            className="card-photo-arrow"
             onClick={next}
             aria-label="Photo suivante"
             style={{
@@ -244,10 +185,10 @@ function CardPhoto({
               background: "rgba(255,255,255,0.94)",
               border: "none",
               borderRadius: "50%",
-              width: 30,
-              height: 30,
+              width: 28,
+              height: 28,
               cursor: "pointer",
-              fontSize: 15,
+              fontSize: 14,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -263,69 +204,39 @@ function CardPhoto({
             ›
           </button>
 
-          {/* Dots + counter */}
+          {/* ── Barre segmentée handoff (l. 273-277) ── */}
           <div
             style={{
               position: "absolute",
               bottom: 12,
-              left: 0,
-              right: 0,
+              left: 14,
+              right: 14,
               display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
               gap: 4,
+              pointerEvents: "none",
               zIndex: 2,
             }}
           >
             {photos.map((_, i) => (
-              <button
+              <div
                 key={i}
-                type="button"
-                onClick={e => goto(e, i)}
-                aria-label={`Photo ${i + 1} sur ${total}`}
                 style={{
-                  width: i === idx ? 16 : 6,
-                  height: 6,
+                  flex: 1,
+                  height: 2,
+                  background: i === idx ? "#fff" : "rgba(255,255,255,0.4)",
                   borderRadius: 999,
-                  background: i === idx ? "white" : "rgba(255,255,255,0.5)",
-                  transition: "all 0.2s",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: 0,
+                  transition: "background 200ms",
                 }}
               />
             ))}
           </div>
-
-          {/* Indicator "i/N" — toujours visible en bas-droit */}
-          <span
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              bottom: 10,
-              right: 12,
-              background: "rgba(0,0,0,0.55)",
-              color: "white",
-              padding: "2px 8px",
-              borderRadius: 999,
-              fontSize: 10,
-              fontWeight: 600,
-              fontVariantNumeric: "tabular-nums",
-              letterSpacing: "0.3px",
-              backdropFilter: "blur(4px)",
-              zIndex: 2,
-              pointerEvents: "none",
-            }}
-          >
-            {idx + 1}/{total}
-          </span>
         </>
       )}
     </div>
   )
 }
 
-// ─── ListingCardSearch (export principal) ────────────────────────────────────
+// ─── Export principal ───────────────────────────────────────────────────────
 export default function ListingCardSearch({
   annonce,
   score,
@@ -336,28 +247,29 @@ export default function ListingCardSearch({
   onToggleFavori,
   onMouseEnter,
   onMouseLeave,
-  motCle,
-  onQuickView,
-  compared = false,
-  onToggleCompare,
-  compareDisabled = false,
+  motCle: _motCle,
+  index = 0,
+  // R10.2 props gardées pour compat appel — pas rendues (handoff strict)
+  onQuickView: _onQuickView,
+  compared: _compared,
+  onToggleCompare: _onToggleCompare,
+  compareDisabled: _compareDisabled,
 }: Props) {
+  // Marque les unused intentionnellement (compat API maintenue).
+  void _info; void _motCle
+  void _onQuickView; void _compared; void _onToggleCompare; void _compareDisabled
+
   const showNew = isNewAnnonce(annonce.created_at)
   const matchPct = score !== null && !isOwn ? Math.round(score / 10) : null
   const loc = formatLocalisationFull(annonce)
-  const locHighlighted: ReactNode = motCle.trim() ? highlightMatch(loc, motCle) : loc
-  const titre: ReactNode = motCle.trim() ? highlightMatch(annonce.titre || "", motCle) : annonce.titre
+  const animDelay = index * 50
 
-  function handleQuickView(e: React.MouseEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    if (onQuickView) onQuickView(annonce.id)
-  }
-  function handleCompareToggle(e: React.MouseEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    if (onToggleCompare && (compared || !compareDisabled)) onToggleCompare(annonce.id)
-  }
+  // Specs ligne inline : "54 m² · 2 p. · DPE C" — texte plat, pas de chip
+  const specsParts: string[] = []
+  if (annonce.surface != null) specsParts.push(`${annonce.surface} m²`)
+  if (annonce.pieces != null) specsParts.push(`${annonce.pieces} p.`)
+  if (annonce.dpe) specsParts.push(`DPE ${String(annonce.dpe).toUpperCase()}`)
+  const specsLine = specsParts.join(" · ")
 
   const baseStyle: CSSProperties = {
     display: "block",
@@ -369,6 +281,8 @@ export default function ListingCardSearch({
     overflow: "hidden",
     boxShadow: isSelected ? "0 14px 32px rgba(0,0,0,0.10)" : "0 1px 3px rgba(0,0,0,0.04)",
     transition: "transform 300ms cubic-bezier(.2,.8,.2,1), box-shadow 300ms, border-color 200ms",
+    animation: `km-fade 600ms ease-out ${animDelay}ms both`,
+    fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
   }
 
   return (
@@ -388,6 +302,10 @@ export default function ListingCardSearch({
       }}
       style={baseStyle}
     >
+      {/* Style global keyframes — injecté une fois par card mais le browser
+          dédupe par nom (km-fade), pas de duplication CSS effective. */}
+      <style>{`@keyframes km-fade { from { opacity: 0; transform: translateY(20px) } to { opacity: 1; transform: translateY(0) } }`}</style>
+
       {/* ═══ Photo + badges + favori ═══ */}
       <div style={{ position: "relative" }}>
         <CardPhoto annonce={annonce} />
@@ -452,7 +370,7 @@ export default function ListingCardSearch({
           )}
         </div>
 
-        {/* Top-right : favori (Airbnb-like) */}
+        {/* Top-right : favori 38×38 (handoff strict) */}
         <button
           onClick={onToggleFavori}
           aria-label={favori ? "Retirer des favoris" : "Ajouter aux favoris"}
@@ -491,32 +409,9 @@ export default function ListingCardSearch({
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
           </svg>
         </button>
-
-        {/* Statut "Disponible maintenant" — chip discret bottom-left, hors zone dots */}
-        {annonce.dispo === "Disponible maintenant" && (
-          <span
-            style={{
-              position: "absolute",
-              bottom: 14,
-              left: 14,
-              padding: "4px 9px",
-              background: "rgba(21,128,61,0.94)",
-              color: "white",
-              borderRadius: 999,
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.6px",
-              backdropFilter: "blur(6px)",
-              zIndex: 2,
-              pointerEvents: "none",
-            }}
-          >
-            DISPONIBLE
-          </span>
-        )}
       </div>
 
-      {/* ═══ Footer infos — densité handoff stricte (app.jsx ListingCard) ═══ */}
+      {/* ═══ Footer infos — handoff strict (eyebrow + titre + separator + 1 ligne) ═══ */}
       <div style={{ padding: 14 }}>
         {loc && (
           <div
@@ -532,7 +427,7 @@ export default function ListingCardSearch({
               whiteSpace: "nowrap",
             }}
           >
-            {locHighlighted}
+            {loc}
           </div>
         )}
 
@@ -548,36 +443,27 @@ export default function ListingCardSearch({
             display: "-webkit-box",
             WebkitLineClamp: 2,
             WebkitBoxOrient: "vertical",
-            // Réserve 2 lignes pour stabiliser la hauteur même quand le titre est court.
             minHeight: "2.5em",
           }}
         >
-          {titre}
+          {annonce.titre || "Sans titre"}
         </h3>
 
-        {/* Separator + ligne specs/prix tabular — handoff fontSize 11.5/13.5 */}
+        {/* Separator + UNE SEULE LIGNE inline (handoff strict l. 281-284) */}
         <div
           style={{
-            borderTop: "1px solid #EAE6DF",
-            paddingTop: 9,
             display: "flex",
             justifyContent: "space-between",
             alignItems: "baseline",
-            gap: 8,
+            paddingTop: 9,
+            borderTop: "1px solid #EAE6DF",
             fontSize: 11.5,
             color: "#8a8477",
+            gap: 8,
           }}
         >
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {annonce.surface != null && <span>{annonce.surface} m²</span>}
-            {annonce.surface != null && annonce.pieces != null && <span style={{ color: "#EAE6DF" }}>·</span>}
-            {annonce.pieces != null && <span>{annonce.pieces} p.</span>}
-            {annonce.dpe && (
-              <>
-                <span style={{ color: "#EAE6DF" }}>·</span>
-                <DpeBadge letter={annonce.dpe} />
-              </>
-            )}
+          <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {specsLine}
           </span>
           <span
             style={{
@@ -593,84 +479,6 @@ export default function ListingCardSearch({
             <span style={{ fontWeight: 400, color: "#8a8477", fontSize: 10 }}>/mois</span>
           </span>
         </div>
-
-        {/* R10.2 — Aperçu / Comparer (sous le récap, discret) */}
-        {(onQuickView || onToggleCompare) && (
-          <div style={{ display: "flex", gap: 5, marginTop: 9, flexWrap: "wrap" }}>
-            {onQuickView && (
-              <button
-                type="button"
-                onClick={handleQuickView}
-                aria-label="Aperçu rapide"
-                style={{
-                  background: "white",
-                  color: "#111",
-                  border: "1px solid #EAE6DF",
-                  padding: "4px 9px",
-                  borderRadius: 999,
-                  fontSize: 10,
-                  fontWeight: 500,
-                  whiteSpace: "nowrap",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                  transition: "background 0.15s",
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#F7F4EF" }}
-                onMouseLeave={e => { e.currentTarget.style.background = "white" }}
-              >
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-                Aperçu
-              </button>
-            )}
-            {onToggleCompare && (
-              <button
-                type="button"
-                onClick={handleCompareToggle}
-                aria-label={compared ? "Retirer du comparateur" : "Ajouter au comparateur"}
-                aria-pressed={compared}
-                disabled={!compared && compareDisabled}
-                title={!compared && compareDisabled ? "Maximum atteint — retirez une annonce pour en ajouter une autre" : undefined}
-                style={{
-                  background: compared ? "#111" : "white",
-                  color: compared ? "white" : "#111",
-                  border: compared ? "1px solid #111" : "1px solid #EAE6DF",
-                  padding: "4px 9px",
-                  borderRadius: 999,
-                  fontSize: 10,
-                  fontWeight: 600,
-                  whiteSpace: "nowrap",
-                  cursor: !compared && compareDisabled ? "not-allowed" : "pointer",
-                  opacity: !compared && compareDisabled ? 0.5 : 1,
-                  fontFamily: "inherit",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                  transition: "background 0.15s",
-                }}
-              >
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  {compared ? (
-                    <polyline points="20 6 9 17 4 12" />
-                  ) : (
-                    <>
-                      <rect x="3" y="3" width="7" height="7" />
-                      <rect x="14" y="3" width="7" height="7" />
-                      <rect x="3" y="14" width="7" height="7" />
-                      <rect x="14" y="14" width="7" height="7" />
-                    </>
-                  )}
-                </svg>
-                {compared ? "Ajouté" : "Comparer"}
-              </button>
-            )}
-          </div>
-        )}
       </div>
     </a>
   )

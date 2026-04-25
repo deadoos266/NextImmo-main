@@ -16,6 +16,7 @@ import EmptyState from "../components/ui/EmptyState"
 import AnnonceSkeleton from "../components/ui/AnnonceSkeleton"
 import FiltersBar from "../components/annonces/FiltersBar"
 import ListingCardSearch from "../components/annonces/ListingCardSearch"
+import ListingCardCompact from "../components/annonces/ListingCardCompact"
 import BandeauDossier from "../components/annonces/BandeauDossier"
 import { km, KMButton, KMButtonOutline, KMEyebrow, KMHeading } from "../components/ui/km"
 
@@ -1123,98 +1124,143 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
               width: isDesktopListCarte ? "100%" : undefined,
             }}
           >
-            {/* ── Colonne Liste — 40% desktop, 100% mobile/tablet ──────── */}
+            {/* ── Colonne Aside — 420px desktop (handoff strict), 100% mobile/tablet ──
+                Sur tablette+desktop ≥1024 : layout grid `420px 1fr`. La aside
+                est une card blanche radius 20 avec header pill (live indicator)
+                et items horizontaux compacts (ListingCardCompact). */}
             <div
               ref={listScrollerRef}
               style={{
-                flex: isSmall ? 1 : "0 0 calc(40% - 8px)",
+                flex: isSmall ? 1 : "0 0 420px",
                 minWidth: 0,
                 width: isSmall ? "100%" : undefined,
-                // Mobile v5 : liste toujours visible (carte = modale plein écran).
-                // Tablette : liste cachée si showMap (inline toggle).
-                display: isMobileV5 ? "block" : (isSmall && showMap ? "none" : "block"),
-                // Scroll interne uniquement sur desktop
+                display: isMobileV5 ? "block" : (isSmall && showMap ? "none" : "flex"),
+                flexDirection: "column",
                 height: isSmall ? undefined : "100%",
-                overflowY: isSmall ? "visible" : "auto",
-                // Padding pour éviter que le scroll mange les bords des cards
-                paddingRight: isSmall ? 0 : 4,
-                // Mobile : padding-bottom pour ne pas cacher dernière card sous FAB
+                overflow: isSmall ? "visible" : "hidden",
+                background: isSmall ? "transparent" : km.white,
+                border: isSmall ? "none" : `1px solid ${km.line}`,
+                borderRadius: isSmall ? 0 : 20,
                 paddingBottom: isMobileV5 ? 80 : undefined,
               }}
             >
-              {loading ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {[1, 2, 3, 4, 5].map(i => <AnnonceSkeleton key={i} />)}
-                </div>
-              ) : annoncesTraitees.length === 0 ? (
-                <EmptyState
-                  title="Aucun logement trouvé"
-                  description={mapBounds
-                    ? "Essayez d'élargir la zone de recherche sur la carte."
-                    : activeVille
-                      ? `Aucun résultat à ${activeVille} pour ces critères. Élargissez la recherche ou effacez la ville.`
-                      : "Ajustez vos filtres pour voir plus de résultats."}
-                  ctaLabel={mapBounds ? "Élargir la zone" : activeFilterCount > 0 ? "Réinitialiser les filtres" : undefined}
-                  onCtaClick={mapBounds ? () => setMapBounds(null) : activeFilterCount > 0 ? onResetAll : undefined}
-                  secondaryCtaLabel={activeVille && !mapBounds ? "Voir toutes les villes" : undefined}
-                  onSecondaryCtaClick={activeVille && !mapBounds ? () => onChangeVille("") : undefined}
-                />
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {annoncesTraitees.slice(0, displayCount).map(a => {
-                    const score = a.scoreMatching
-                    const info = !isProprietaire && score !== null ? labelScore(score) : null
-                    const isOwn = isProprietaire && a.proprietaire_email === session?.user?.email
-                    const isSelected = selectedId === a.id
-                    const isCompared = compareIds.includes(a.id)
-                    return (
-                      <ListingCardSearch
-                        key={a.id}
-                        annonce={a}
-                        score={score}
-                        info={info}
-                        isOwn={isOwn}
-                        isSelected={isSelected}
-                        favori={favoris.includes(a.id)}
-                        onToggleFavori={e => handleToggleFavori(e, a.id)}
-                        onMouseEnter={() => setSelectedId(a.id)}
-                        onMouseLeave={() => setSelectedId(null)}
-                        motCle={motCle}
-                        onQuickView={() => setQuickViewId(a.id)}
-                        compared={isCompared}
-                        onToggleCompare={handleToggleCompare}
-                        compareDisabled={compareIds.length >= COMPARE_MAX}
-                      />
-                    )
-                  })}
-                  {/* Skeletons d'append pendant le fetch infinite scroll */}
-                  {isAppending && [1, 2, 3].map(i => <AnnonceSkeleton key={`skel-list-${i}`} />)}
-                  {/* Sentinel + message de fin */}
-                  {displayCount < annoncesTraitees.length ? (
-                    <div ref={sentinelRef} aria-hidden="true" style={{ height: 1 }} />
-                  ) : annoncesTraitees.length > PAGE_INITIAL ? (
-                    <p style={{
-                      textAlign: "center",
-                      margin: "20px 0 8px",
-                      color: km.muted,
-                      fontFamily: "var(--font-fraunces), 'Fraunces', Georgia, serif",
-                      fontStyle: "italic",
-                      fontSize: 14,
-                      fontWeight: 400,
-                    }}>
-                      Vous avez vu toutes les annonces correspondant à votre recherche.
-                    </p>
-                  ) : null}
+              {/* Header pill (handoff l. 566-572) — count + Live pulse vert.
+                  Style intégré à l'aside card sur desktop, masqué mobile. */}
+              {!isSmall && (
+                <div style={{
+                  padding: "14px 18px",
+                  borderBottom: `1px solid ${km.line}`,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "#6B6B6B",
+                  textTransform: "uppercase",
+                  letterSpacing: "1.4px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexShrink: 0,
+                }}>
+                  <span>
+                    {loading
+                      ? "Chargement…"
+                      : `${annoncesTraitees.length} bien${annoncesTraitees.length > 1 ? "s" : ""}${tri === "match" ? " · triés par match" : ""}`}
+                  </span>
+                  <span style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    textTransform: "none",
+                    letterSpacing: 0,
+                    color: "#16A34A",
+                    fontSize: 11,
+                  }}>
+                    <span style={{
+                      width: 6,
+                      height: 6,
+                      background: "#16A34A",
+                      borderRadius: "50%",
+                      animation: "km-pulse 2s ease-in-out infinite",
+                    }}/>
+                    Live
+                  </span>
                 </div>
               )}
+
+              <style>{`@keyframes km-pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.4 } }`}</style>
+
+              {/* Scrollable inner — la aside elle-même est flex column, ce inner
+                  gère le scroll des items. */}
+              <div style={{
+                flex: isSmall ? undefined : 1,
+                minHeight: 0,
+                overflowY: isSmall ? "visible" : "auto",
+                padding: isSmall ? 0 : 10,
+              }}>
+                {loading ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: isSmall ? 0 : 0 }}>
+                    {[1, 2, 3, 4, 5].map(i => <AnnonceSkeleton key={i} />)}
+                  </div>
+                ) : annoncesTraitees.length === 0 ? (
+                  <EmptyState
+                    title="Aucun logement trouvé"
+                    description={mapBounds
+                      ? "Essayez d'élargir la zone de recherche sur la carte."
+                      : activeVille
+                        ? `Aucun résultat à ${activeVille} pour ces critères. Élargissez la recherche ou effacez la ville.`
+                        : "Ajustez vos filtres pour voir plus de résultats."}
+                    ctaLabel={mapBounds ? "Élargir la zone" : activeFilterCount > 0 ? "Réinitialiser les filtres" : undefined}
+                    onCtaClick={mapBounds ? () => setMapBounds(null) : activeFilterCount > 0 ? onResetAll : undefined}
+                    secondaryCtaLabel={activeVille && !mapBounds ? "Voir toutes les villes" : undefined}
+                    onSecondaryCtaClick={activeVille && !mapBounds ? () => onChangeVille("") : undefined}
+                  />
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    {annoncesTraitees.slice(0, displayCount).map(a => {
+                      const score = a.scoreMatching
+                      const isOwn = isProprietaire && a.proprietaire_email === session?.user?.email
+                      const matchPct = score !== null && !isOwn ? Math.round(score / 10) : null
+                      return (
+                        <ListingCardCompact
+                          key={a.id}
+                          annonce={a}
+                          active={selectedId === a.id}
+                          favori={favoris.includes(a.id)}
+                          match={matchPct}
+                          onMouseEnter={() => setSelectedId(a.id)}
+                          onMouseLeave={() => setSelectedId(null)}
+                          onToggleFavori={e => handleToggleFavori(e, a.id)}
+                        />
+                      )
+                    })}
+                    {/* Skeletons d'append pendant le fetch infinite scroll */}
+                    {isAppending && [1, 2, 3].map(i => <AnnonceSkeleton key={`skel-list-${i}`} />)}
+                    {/* Sentinel + message de fin */}
+                    {displayCount < annoncesTraitees.length ? (
+                      <div ref={sentinelRef} aria-hidden="true" style={{ height: 1 }} />
+                    ) : annoncesTraitees.length > PAGE_INITIAL ? (
+                      <p style={{
+                        textAlign: "center",
+                        margin: "20px 0 8px",
+                        color: km.muted,
+                        fontFamily: "var(--font-fraunces), 'Fraunces', Georgia, serif",
+                        fontStyle: "italic",
+                        fontSize: 14,
+                        fontWeight: 400,
+                      }}>
+                        Vous avez vu toutes les annonces correspondant à votre recherche.
+                      </p>
+                    ) : null}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* ── Colonne Carte — 60% desktop, 100% si showMap tablette ──
+            {/* ── Colonne Carte — 1fr desktop (handoff `420px 1fr`), 100% si showMap tablette ──
                 Mobile v5 : carte absente inline (rendue en modale plein écran) */}
             {mounted && !isMobileV5 && (
               <div
                 style={{
-                  flex: isSmall ? 1 : "0 0 calc(60% - 8px)",
+                  flex: isSmall ? 1 : 1,
                   width: isSmall ? "100%" : undefined,
                   display: isSmall && !showMap ? "none" : "block",
                   height: isSmall ? "calc(100vh - 200px)" : "100%",
