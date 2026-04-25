@@ -24,6 +24,8 @@ export type NotifType =
   | "edl_envoye"
   | "dossier_consulte"
   | "candidature_retiree"
+  | "candidature_validee"
+  | "carnet_signalement"
 
 export type NotifArgs = {
   userEmail: string
@@ -68,6 +70,8 @@ export const NOTIF_TYPES: readonly NotifType[] = [
   "edl_envoye",
   "dossier_consulte",
   "candidature_retiree",
+  "candidature_validee",
+  "carnet_signalement",
 ] as const
 
 export function isNotifType(x: unknown): x is NotifType {

@@ -9,12 +9,13 @@ import { useResponsive } from "../hooks/useResponsive"
 import EmptyState from "../components/ui/EmptyState"
 import Image from "next/image"
 import { formatNomComplet } from "../../lib/profilHelpers"
+import { postNotif } from "../../lib/notificationsClient"
 
 type Statut = "planifié" | "en cours" | "terminé"
-type TypeEvent = "chaudière" | "plomberie" | "électricité" | "travaux" | "serrurerie" | "nuisibles" | "autre"
+type TypeEvent = "urgence" | "chaudière" | "plomberie" | "électricité" | "travaux" | "serrurerie" | "nuisibles" | "autre"
 
 const TYPE_LABELS: Record<TypeEvent, string> = {
-  "chaudière": "Chaud.", "plomberie": "Plomb.", "électricité": "Élec.",
+  "urgence": "URG.", "chaudière": "Chaud.", "plomberie": "Plomb.", "électricité": "Élec.",
   "travaux": "Trav.", "serrurerie": "Serr.", "nuisibles": "Nuis.", "autre": "Autre",
 }
 const STATUT_STYLE: Record<Statut, { bg: string; color: string; border: string }> = {
@@ -80,20 +81,46 @@ export default function Carnet() {
         }
       }
     } else {
-      // Locataire : trouver les visites confirmées pour obtenir les biens
-      const { data: visites } = await supabase
-        .from("visites")
-        .select("annonce_id, proprietaire_email")
-        .eq("locataire_email", email)
-        .in("statut", ["confirmée", "effectuée"])
-      if (!visites || visites.length === 0) { setLoading(false); return }
-
-      const annonceIds = [...new Set(visites.map((v: any) => v.annonce_id))]
-      const [{ data: b }, { data: e }] = await Promise.all([
-        supabase.from("annonces").select("id, titre, ville, photos, proprietaire_email").in("id", annonceIds),
-        supabase.from("carnet_entretien").select("*").in("annonce_id", annonceIds).order("date_evenement", { ascending: false }),
+      // Locataire : on aggrège 2 sources d'éligibilité au carnet :
+      //   (a) bail signé/en cours → annonces.locataire_email = me (priorité)
+      //   (b) visite confirmée/effectuée pour les futurs locataires qui veulent
+      //       déjà signaler un problème en amont.
+      // Avant : seulement (b) — un locataire avec bail mais sans visite préalable
+      // ne voyait RIEN dans son carnet (bug Paul 2026-04-26).
+      const [{ data: bailAnnonces }, { data: visites }] = await Promise.all([
+        supabase.from("annonces")
+          .select("id, titre, ville, photos, proprietaire_email")
+          .eq("locataire_email", email),
+        supabase.from("visites")
+          .select("annonce_id, proprietaire_email")
+          .eq("locataire_email", email)
+          .in("statut", ["confirmée", "effectuée"]),
       ])
-      setBiens(b || [])
+      const annonceIds = new Set<number>()
+      const biensMap = new Map<number, any>()
+      ;(bailAnnonces || []).forEach((b: any) => {
+        annonceIds.add(b.id)
+        biensMap.set(b.id, b)
+      })
+      const visiteIds = (visites || []).map((v: any) => v.annonce_id).filter(Boolean)
+      const missingFromBail = visiteIds.filter(id => !annonceIds.has(id))
+      if (missingFromBail.length > 0) {
+        const { data: visiteAnnonces } = await supabase
+          .from("annonces")
+          .select("id, titre, ville, photos, proprietaire_email")
+          .in("id", missingFromBail)
+        ;(visiteAnnonces || []).forEach((b: any) => {
+          annonceIds.add(b.id)
+          biensMap.set(b.id, b)
+        })
+      }
+      if (annonceIds.size === 0) { setLoading(false); return }
+      const { data: e } = await supabase
+        .from("carnet_entretien")
+        .select("*")
+        .in("annonce_id", Array.from(annonceIds))
+        .order("date_evenement", { ascending: false })
+      setBiens(Array.from(biensMap.values()))
       setEvenements(e || [])
     }
     setLoading(false)
@@ -123,7 +150,24 @@ export default function Carnet() {
 
     const { data, error } = await supabase.from("carnet_entretien").insert(payload).select().single()
     if (error) { setErreur("L'enregistrement a echoue. Veuillez reessayer.") }
-    else if (data) { setEvenements(prev => [data, ...prev]); setForm(EMPTY_FORM); setShowForm(false) }
+    else if (data) {
+      setEvenements(prev => [data, ...prev])
+      setForm(EMPTY_FORM)
+      setShowForm(false)
+      // Notif cloche proprio quand le locataire signale un problème (Paul 2026-04-26)
+      // Particulier urgent si type === "urgence" → titre adapté.
+      if (!proprietaireActive && proprioEmail) {
+        const isUrgent = form.type === "urgence"
+        void postNotif({
+          userEmail: proprioEmail,
+          type: "carnet_signalement",
+          title: isUrgent ? "Urgence signalée" : "Nouvelle entrée carnet",
+          body: `${form.titre}${bien?.titre ? ` — ${bien.titre}` : ""}`,
+          href: `/carnet`,
+          relatedId: String(data.id),
+        })
+      }
+    }
     setSaving(false)
   }
 
@@ -341,8 +385,8 @@ export default function Carnet() {
               const locataireProfil = locataires[e.locataire_email]
               const canEdit = proprietaireActive || e.locataire_email === session?.user?.email
               return (
-                <div key={e.id} style={{ background: "white", borderRadius: 16, padding: "18px 22px", display: "flex", alignItems: "flex-start", gap: 16, border: isLocataireEntry && proprietaireActive ? "1px solid #EADFC6" : "1px solid transparent" }}>
-                  <div style={{ flexShrink: 0, background: "#F7F4EF", borderRadius: 10, padding: "6px 10px", fontSize: 11, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "0.5px" }}>{TYPE_LABELS[e.type as TypeEvent] ?? "Autre"}</div>
+                <div key={e.id} style={{ background: "white", borderRadius: 16, padding: "18px 22px", display: "flex", alignItems: "flex-start", gap: 16, border: e.type === "urgence" ? "1.5px solid #b91c1c" : (isLocataireEntry && proprietaireActive ? "1px solid #EADFC6" : "1px solid transparent") }}>
+                  <div style={{ flexShrink: 0, background: e.type === "urgence" ? "#FEECEC" : "#F7F4EF", borderRadius: 10, padding: "6px 10px", fontSize: 11, fontWeight: 700, color: e.type === "urgence" ? "#b91c1c" : "#111", textTransform: "uppercase", letterSpacing: "0.5px" }}>{TYPE_LABELS[e.type as TypeEvent] ?? "Autre"}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>
                       <div>
