@@ -249,15 +249,13 @@ export default function ListingCardSearch({
   onMouseLeave,
   motCle: _motCle,
   index = 0,
-  // R10.2 props gardées pour compat appel — pas rendues (handoff strict)
-  onQuickView: _onQuickView,
-  compared: _compared,
-  onToggleCompare: _onToggleCompare,
-  compareDisabled: _compareDisabled,
+  // Aperçu (QuickView) + Comparer : restaurés sur demande Paul (avril 2026)
+  onQuickView,
+  compared,
+  onToggleCompare,
+  compareDisabled,
 }: Props) {
-  // Marque les unused intentionnellement (compat API maintenue).
   void _info; void _motCle
-  void _onQuickView; void _compared; void _onToggleCompare; void _compareDisabled
 
   const showNew = isNewAnnonce(annonce.created_at)
   const matchPct = score !== null && !isOwn ? Math.round(score / 10) : null
@@ -370,45 +368,87 @@ export default function ListingCardSearch({
           )}
         </div>
 
-        {/* Top-right : favori 38×38 (handoff strict) */}
-        <button
-          onClick={onToggleFavori}
-          aria-label={favori ? "Retirer des favoris" : "Ajouter aux favoris"}
-          style={{
-            position: "absolute",
-            top: 12,
-            right: 12,
-            zIndex: 5,
-            width: 38,
-            height: 38,
-            borderRadius: "50%",
-            background: favori ? "#DC2626" : "rgba(255,255,255,0.94)",
-            color: favori ? "white" : "#111",
-            border: "none",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backdropFilter: "blur(6px)",
-            transition: "transform 200ms",
-          }}
-          onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.10)")}
-          onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill={favori ? "white" : "none"}
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
+        {/* Top-right : pile d'actions (favori + Aperçu + Comparer) */}
+        <div style={{ position: "absolute", top: 12, right: 12, zIndex: 5, display: "flex", flexDirection: "column", gap: 8 }}>
+          <button
+            onClick={onToggleFavori}
+            aria-label={favori ? "Retirer des favoris" : "Ajouter aux favoris"}
+            style={{
+              width: 38, height: 38, borderRadius: "50%",
+              background: favori ? "#DC2626" : "rgba(255,255,255,0.94)",
+              color: favori ? "white" : "#111",
+              border: "none", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              backdropFilter: "blur(6px)", transition: "transform 200ms",
+            }}
+            onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.10)")}
+            onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
           >
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-          </svg>
-        </button>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill={favori ? "white" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+            </svg>
+          </button>
+
+          {/* Aperçu (QuickView) — affiche la modale détail sans quitter la liste */}
+          {onQuickView && (
+            <button
+              onClick={e => { e.preventDefault(); e.stopPropagation(); onQuickView(annonce.id) }}
+              aria-label="Aperçu rapide de l'annonce"
+              title="Aperçu rapide"
+              style={{
+                width: 38, height: 38, borderRadius: "50%",
+                background: "rgba(255,255,255,0.94)", color: "#111",
+                border: "none", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                backdropFilter: "blur(6px)", transition: "transform 200ms",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.10)")}
+              onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+          )}
+
+          {/* Comparer — toggle dans la pile compare (CompareTray sticky bas) */}
+          {onToggleCompare && (
+            <button
+              onClick={e => { e.preventDefault(); e.stopPropagation(); if (!compareDisabled || compared) onToggleCompare(annonce.id) }}
+              disabled={!compared && compareDisabled}
+              aria-label={compared ? "Retirer de la comparaison" : "Ajouter à la comparaison"}
+              aria-pressed={compared}
+              title={compared ? "Retirer de la comparaison" : (compareDisabled ? "Maximum atteint" : "Comparer cette annonce")}
+              style={{
+                width: 38, height: 38, borderRadius: "50%",
+                background: compared ? "#111" : "rgba(255,255,255,0.94)",
+                color: compared ? "white" : "#111",
+                border: "none",
+                cursor: !compared && compareDisabled ? "not-allowed" : "pointer",
+                opacity: !compared && compareDisabled ? 0.55 : 1,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                backdropFilter: "blur(6px)", transition: "transform 200ms",
+              }}
+              onMouseEnter={e => { if (compared || !compareDisabled) e.currentTarget.style.transform = "scale(1.10)" }}
+              onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
+            >
+              {compared ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  {/* Échelle/balance — symbole comparaison */}
+                  <line x1="12" y1="3" x2="12" y2="21" />
+                  <line x1="3" y1="9" x2="21" y2="9" />
+                  <path d="M3 9 6 15 9 9" />
+                  <path d="M15 9 18 15 21 9" />
+                </svg>
+              )}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ═══ Footer infos — handoff strict (eyebrow + titre + separator + 1 ligne) ═══ */}
