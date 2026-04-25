@@ -541,13 +541,22 @@ export default function Proprietaire() {
         quittance_message_id: msg.id,
       }).eq("id", id)
     }
+
+    // Génération PDF serveur + upload Storage + email Resend au locataire
+    // (best-effort, ne bloque pas si l'API échoue : la card chat reste OK).
+    fetch("/api/loyers/quittance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ loyerId: id }),
+    }).catch(err => console.error("[confirmerLoyer] quittance API failed", err))
+
     // Notif cloche locataire : quittance reçue (loyer confirmé)
     void postNotif({
       userEmail: locataireEmail,
       type: "bail_genere",
       title: "Quittance reçue",
       body: `Loyer ${loyer.mois} confirmé pour « ${bien.titre } »`,
-      href: "/mon-logement",
+      href: "/mes-quittances",
       relatedId: String(id),
     })
   }

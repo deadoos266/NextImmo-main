@@ -447,6 +447,15 @@ function StatsInner() {
         quittance_message_id: msg.id,
       }).eq("id", id)
     }
+
+    // 4. Génération PDF serveur + upload Storage + email Resend au locataire
+    // (best-effort — si l'API échoue, la card chat reste OK et le proprio
+    // peut toujours utiliser le bouton "Quittance PDF" en download client).
+    fetch("/api/loyers/quittance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ loyerId: id }),
+    }).catch(err => console.error("[stats] quittance API failed", err))
   }
 
   async function sauvegarderBien() {

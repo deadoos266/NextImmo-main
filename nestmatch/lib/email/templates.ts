@@ -320,3 +320,59 @@ Voir les annonces : ${params.annoncesUrl}
     text,
   }
 }
+
+export function quittanceTemplate(params: {
+  bienTitre: string
+  ville?: string | null
+  periode: string  // "septembre 2026"
+  loyerCC: number
+  pdfUrl: string
+}): { subject: string; html: string; text: string } {
+  const contexte = params.ville
+    ? `${escapeHtml(params.bienTitre)} à ${escapeHtml(params.ville)}`
+    : escapeHtml(params.bienTitre)
+  const body = `
+    <h1 style="font-size:24px;font-weight:800;letter-spacing:-0.5px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      Votre quittance de loyer est disponible
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Le propriétaire de <strong style="color:${PALETTE.text};">${contexte}</strong> a confirmé la réception de votre loyer pour <strong>${escapeHtml(params.periode)}</strong>.
+    </p>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 8px;">
+      <tr>
+        <td style="background:${PALETTE.bg};border-left:3px solid ${PALETTE.accentMid};border-radius:12px;padding:16px 18px;">
+          <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:${PALETTE.textSubtle};text-transform:uppercase;letter-spacing:1px;">Période concernée</p>
+          <p style="margin:0 0 12px;font-size:15px;font-weight:600;color:${PALETTE.text};">${escapeHtml(params.periode)}</p>
+          <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:${PALETTE.textSubtle};text-transform:uppercase;letter-spacing:1px;">Total acquitté</p>
+          <p style="margin:0;font-size:18px;font-weight:800;color:${PALETTE.text};">${params.loyerCC.toLocaleString("fr-FR")} €</p>
+        </td>
+      </tr>
+    </table>
+
+    ${button(params.pdfUrl, "Télécharger la quittance (PDF)")}
+
+    <p style="margin:24px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
+      Conservez ce document : c'est votre preuve de paiement officielle. Vous le retrouverez aussi dans votre espace KeyMatch (Mes quittances).
+    </p>
+  `
+  const html = wrap(`Quittance de loyer pour ${params.periode}`, body, "quittance")
+  const text = `Bonjour,
+
+Le propriétaire de ${params.bienTitre}${params.ville ? " à " + params.ville : ""} a confirmé la réception de votre loyer pour ${params.periode}.
+
+Total acquitté : ${params.loyerCC.toLocaleString("fr-FR")} €
+
+Téléchargez votre quittance (PDF) : ${params.pdfUrl}
+
+Conservez ce document : c'est votre preuve de paiement officielle.
+
+Cordialement,
+— L'équipe KeyMatch
+Louer, sans intermédiaire.`
+  return {
+    subject: `Quittance de loyer — ${params.periode}`,
+    html,
+    text,
+  }
+}

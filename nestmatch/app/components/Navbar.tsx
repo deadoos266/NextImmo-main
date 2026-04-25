@@ -148,11 +148,12 @@ export default function Navbar() {
     { href: "/profil",        label: "Mon profil",         desc: "Critères de recherche & matching" },
     { href: "/dossier",       label: "Mon dossier",        desc: "Documents & complétion" },
     { href: "/mon-logement",  label: "Mon logement",       desc: "Bail actif, loyer, documents" },
+    { href: "/mes-quittances", label: "Mes quittances",    desc: "Archives mensuelles" },
     { href: "/visites",       label: "Mes visites",        desc: "Demandes & confirmations", badge: badgeVisites },
     { href: "/carnet",        label: "Carnet d'entretien", desc: "Historique des travaux" },
   ]
 
-  const espaceActif = isActive("/profil") || isActive("/dossier") || isActive("/mon-logement") || isActive("/proprietaire") || isActive("/carnet") || isActive("/visites")
+  const espaceActif = isActive("/profil") || isActive("/dossier") || isActive("/mon-logement") || isActive("/mes-quittances") || isActive("/proprietaire") || isActive("/carnet") || isActive("/visites")
   const espaceLinksAvecBadge = proprietaireActive
     ? espaceLinks.map(l => l.href === "/proprietaire" ? { ...l, badge: badgeVisites } : l)
     : espaceLinks
