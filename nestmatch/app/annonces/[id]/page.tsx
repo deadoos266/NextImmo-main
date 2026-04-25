@@ -822,7 +822,7 @@ export default async function Annonce({ params }: any) {
               <ScoreBlock annonce={annonce} />
               <ContactButton annonce={annonce} />
               <BookingVisite annonceId={annonce.id} proprietaireEmail={annonce.proprietaire_email} />
-              <OwnerActions proprietaireEmail={annonce.proprietaire_email} annonceId={annonce.id} />
+              <OwnerActions proprietaireEmail={annonce.proprietaire_email} annonceId={annonce.id} statut={annonce.statut} />
               <ViewTracker annonceId={annonce.id} />
 
               <div style={{ borderTop: "1px solid #F7F4EF", paddingTop: 16 }}>

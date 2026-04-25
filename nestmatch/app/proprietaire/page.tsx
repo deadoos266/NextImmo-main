@@ -22,7 +22,7 @@ import { km } from "../components/ui/km"
 // 4 onglets (refonte 2026-04-24) : ancien onglet global "Candidatures" retire
 // — les candidatures sont gerees par bien via /proprietaire/annonces/[id]/candidatures
 // (bouton "Candidatures" sur chaque carte de bien dans l'onglet Mes biens).
-const ONGLETS = ["Mes biens", "Visites", "Locataires", "Statistiques"] as const
+const ONGLETS = ["Mes biens", "Visites", "Locataires", "Anciens biens", "Statistiques"] as const
 type Onglet = typeof ONGLETS[number]
 
 /**
@@ -567,6 +567,7 @@ export default function Proprietaire() {
 
   const biensDispos = biens.filter(b => !b.statut || b.statut === "disponible").length
   const biensLoues = biens.filter(b => b.statut === "loué").length
+  const biensAnciens = biens.filter(b => b.statut === "loue_termine")
   const biensAttenteSignature = biens.filter(b => b.statut === "bail_envoye").length
   const loyersAttendus = loyers.filter(l => l.statut === "déclaré").length
   const loyersConfirmes = loyers.filter(l => l.statut === "confirmé").length
@@ -704,14 +705,14 @@ export default function Proprietaire() {
         {/* MES BIENS */}
         {onglet === "Mes biens" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {biens.length === 0 ? (
+            {biens.filter(b => b.statut !== "loue_termine").length === 0 ? (
               <EmptyState
                 title="Aucun bien publié"
                 description="Commencez par créer votre première annonce pour recevoir des candidatures."
                 ctaLabel="Ajouter un bien"
                 ctaHref="/proprietaire/ajouter"
               />
-            ) : biens.map(b => {
+            ) : biens.filter(b => b.statut !== "loue_termine").map(b => {
               const statutKey = b.statut || "disponible"
               const badgeStyle = statutColor[statutKey] || statutColor["disponible"]
               const nbCand = candidatures.filter((c: any) => c.annonce_id === b.id).length
@@ -795,6 +796,54 @@ export default function Proprietaire() {
                 </div>
               </div>
             )})}
+          </div>
+        )}
+
+        {/* ─── ANCIENS BIENS — annonces avec statut loue_termine ──────────
+             L'historique reste consultable : liens vers stats, EDL, messages.
+             Pas de bouton "Modifier" — un bail terminé ne se réédite pas. */}
+        {onglet === "Anciens biens" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {biensAnciens.length === 0 ? (
+              <EmptyState
+                title="Aucun ancien bien"
+                description="Vos biens dont le bail a pris fin apparaîtront ici. Vous pourrez consulter l'historique des locataires, échanges et documents."
+              />
+            ) : biensAnciens.map(b => {
+              const fin = b.bail_termine_at
+                ? new Date(b.bail_termine_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+                : "—"
+              return (
+                <div key={b.id} style={{ background: km.white, border: "1px solid #EAE6DF", borderRadius: 20, padding: isMobile ? 20 : 26, fontFamily: "'DM Sans', sans-serif", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+                  <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "stretch" : "flex-start", gap: 16 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
+                        <h3 style={{ fontSize: isMobile ? 16 : 18, fontWeight: 600, margin: 0, letterSpacing: "-0.2px", color: km.ink }}>{b.titre}</h3>
+                        <span style={{ background: km.beige, color: "#6b6559", border: `1px solid ${km.line}`, padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
+                          Bail terminé
+                        </span>
+                      </div>
+                      <p style={{ color: km.muted, fontSize: 13, margin: 0 }}>{b.adresse} · {b.ville}</p>
+                      <p style={{ color: "#6b6559", fontSize: 12, margin: "10px 0 0" }}>
+                        Fin de bail : <strong>{fin}</strong>
+                        {b.locataire_email_at_end && <> · Dernier locataire : {b.locataire_email_at_end}</>}
+                      </p>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: 8, flexWrap: "wrap" }}>
+                      <a href={`/proprietaire/stats?id=${b.id}`} style={{ textAlign: "center", padding: "9px 16px", border: "1px solid #EAE6DF", borderRadius: 999, textDecoration: "none", color: km.ink, fontSize: 11, fontWeight: 600, letterSpacing: "0.3px", background: km.white }}>
+                        Historique loyers
+                      </a>
+                      <a href={`/messages?annonce=${b.id}`} style={{ textAlign: "center", padding: "9px 16px", border: "1px solid #EAE6DF", borderRadius: 999, textDecoration: "none", color: km.ink, fontSize: 11, fontWeight: 600, letterSpacing: "0.3px", background: km.white }}>
+                        Messages archivés
+                      </a>
+                      <a href={`/annonces/${b.id}`} style={{ textAlign: "center", padding: "9px 16px", border: "1px solid #EAE6DF", borderRadius: 999, textDecoration: "none", color: km.muted, fontSize: 11, fontWeight: 600, letterSpacing: "0.3px", background: km.white }}>
+                        Voir la fiche
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
 
