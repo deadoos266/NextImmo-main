@@ -364,9 +364,13 @@ export default function CandidaturesParAnnonce() {
               visite={e.visite}
               statutCandidature={e.c.statut_candidature ?? null}
               onValidated={() => {
-                // Optimistic : marque le statut sans refetch complet
                 setCandidatures(prev => prev.map(c =>
                   c.id === e.c.id ? { ...c, statut_candidature: "validee" } : c
+                ))
+              }}
+              onRefused={() => {
+                setCandidatures(prev => prev.map(c =>
+                  c.id === e.c.id ? { ...c, statut_candidature: "refusee" } : c
                 ))
               }}
             />
@@ -423,6 +427,7 @@ function CandidatureCard({
   visite,
   statutCandidature,
   onValidated,
+  onRefused,
 }: {
   email: string
   contenu: string | null
@@ -435,12 +440,18 @@ function CandidatureCard({
   visite: VisiteRow | null
   statutCandidature: "en_attente" | "validee" | "refusee" | null
   onValidated: () => void
+  onRefused: () => void
 }) {
   const [validating, setValidating] = useState(false)
+  const [refusing, setRefusing] = useState(false)
   const isValidated = statutCandidature === "validee"
-  const canValidate = !isValidated && statut !== "rejete" && statut !== "bail"
+  const isRefused = statutCandidature === "refusee"
+  // Boutons visibles tant qu'on n'a pas pris de décision OU qu'on n'est pas
+  // déjà sur le bail. Un "rejete" historique (autre candidat retenu) cache
+  // la rangée car la décision est de facto déjà prise.
+  const canDecide = !isValidated && !isRefused && statut !== "rejete" && statut !== "bail"
   async function valider() {
-    if (validating) return
+    if (validating || refusing) return
     setValidating(true)
     try {
       const res = await fetch("/api/candidatures/valider", {
@@ -456,6 +467,32 @@ function CandidatureCard({
       onValidated()
     } finally {
       setValidating(false)
+    }
+  }
+  async function refuser() {
+    if (validating || refusing) return
+    const motif = window.prompt(
+      "Refuser cette candidature ?\n\n" +
+      "Un message sera envoyé au locataire pour l'informer.\n" +
+      "Vous pouvez ajouter un motif (optionnel) :",
+      ""
+    )
+    if (motif === null) return // annulé
+    setRefusing(true)
+    try {
+      const res = await fetch("/api/candidatures/refuser", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ annonceId, locataireEmail: email, motif }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.ok) {
+        alert(`Refus échoué : ${json.error || res.statusText}`)
+        return
+      }
+      onRefused()
+    } finally {
+      setRefusing(false)
     }
   }
   const meta = STATUT_META[statut]
@@ -547,16 +584,27 @@ function CandidatureCard({
 
       {/* Actions */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
-        {canValidate && (
-          <button
-            type="button"
-            onClick={valider}
-            disabled={validating}
-            title="Présélection : débloque le droit pour ce candidat de proposer une visite"
-            style={{ padding: "10px 18px", background: "#15803d", color: "#fff", border: "none", borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: validating ? "not-allowed" : "pointer", whiteSpace: "nowrap", letterSpacing: "0.3px", fontFamily: "inherit", opacity: validating ? 0.6 : 1 }}
-          >
-            {validating ? "Validation…" : "Valider la candidature"}
-          </button>
+        {canDecide && (
+          <>
+            <button
+              type="button"
+              onClick={valider}
+              disabled={validating || refusing}
+              title="Présélection : débloque le droit pour ce candidat de proposer une visite"
+              style={{ padding: "10px 18px", background: "#15803d", color: "#fff", border: "none", borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: (validating || refusing) ? "not-allowed" : "pointer", whiteSpace: "nowrap", letterSpacing: "0.3px", fontFamily: "inherit", opacity: validating ? 0.6 : 1 }}
+            >
+              {validating ? "Validation…" : "Valider la candidature"}
+            </button>
+            <button
+              type="button"
+              onClick={refuser}
+              disabled={validating || refusing}
+              title="Refuser cette candidature et envoyer un message au locataire"
+              style={{ padding: "9px 18px", background: "#fff", color: "#b91c1c", border: "1px solid #F4C9C9", borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: (validating || refusing) ? "not-allowed" : "pointer", whiteSpace: "nowrap", letterSpacing: "0.3px", fontFamily: "inherit", opacity: refusing ? 0.6 : 1 }}
+            >
+              {refusing ? "Refus…" : "Refuser"}
+            </button>
+          </>
         )}
         {isValidated && (
           <span
@@ -565,6 +613,15 @@ function CandidatureCard({
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
             Validée
+          </span>
+        )}
+        {isRefused && (
+          <span
+            aria-label="Candidature refusée"
+            style={{ padding: "8px 14px", background: "#FEECEC", color: "#b91c1c", border: "1px solid #F4C9C9", borderRadius: 999, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", letterSpacing: "0.3px", display: "inline-flex", alignItems: "center", gap: 6 }}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            Refusée
           </span>
         )}
         <Link

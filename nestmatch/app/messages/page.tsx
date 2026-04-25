@@ -3713,15 +3713,33 @@ function MessagesInner() {
                       </button>
                     )}
                     {convActiveData?.annonceId && (
-                      <button onClick={() => {
-                        // Bouton = ouvre la modale (ProposerVisiteDialog en bas de page).
-                        setCounterTarget(null)
-                        setShowVisiteForm(true)
-                      }}
-                        style={{ background: "#fff", border: "1px solid #D7E3F4", color: "#1d4ed8", borderRadius: 999, padding: "6px 14px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, letterSpacing: "0.1px" }}>
-                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#1d4ed8" }} />
-                        Proposer une visite
-                      </button>
+                      candidatureValidee ? (
+                        <button onClick={() => {
+                          // Bouton = ouvre la modale (ProposerVisiteDialog en bas de page).
+                          setCounterTarget(null)
+                          setShowVisiteForm(true)
+                        }}
+                          style={{ background: "#fff", border: "1px solid #D7E3F4", color: "#1d4ed8", borderRadius: 999, padding: "6px 14px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, letterSpacing: "0.1px" }}>
+                          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#1d4ed8" }} />
+                          Proposer une visite
+                        </button>
+                      ) : (
+                        // Locataire avec candidature non validée : bouton grisé qui
+                        // ouvre la même modale en mode locked (popup explicatif).
+                        <button onClick={() => {
+                          setCounterTarget(null)
+                          setShowVisiteForm(true)
+                        }}
+                          aria-label="Proposer une visite — verrouillé tant que la candidature n'est pas validée"
+                          title="Le propriétaire doit d'abord valider votre candidature"
+                          style={{ background: "#F7F4EF", border: "1px solid #EAE6DF", color: "#8a8477", borderRadius: 999, padding: "6px 14px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, letterSpacing: "0.1px" }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <rect x="3" y="11" width="18" height="11" rx="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                          </svg>
+                          Proposer une visite
+                        </button>
+                      )
                     )}
                     {/* Messages préfaits retirés — préférer un message personnalisé. */}
                   </div>

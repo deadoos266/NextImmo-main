@@ -503,15 +503,20 @@ export default async function Annonce({ params }: any) {
               )}
             </section>
 
-            {/* ─── R10.9 Caractéristiques détaillées ─────────────────── */}
+            {/* ─── Caractéristiques (fusion dl + checks, suppression doublon Paul 2026-04-26)
+                Avant : 2 sections "Caractéristiques" + "Caractéristiques du bien"
+                qui doublonnaient (notamment "Meublé"). Maintenant 1 seule section
+                avec tableau dl en haut (dimensions/type) et grille de checks en bas
+                (équipements inclus directs). "Meublé" sort du dl pour rester en
+                check (cohérent avec parking/cave/etc.). */}
             <section style={{ background: "white", borderRadius: 20, padding: "28px 28px 22px", marginBottom: 20 }}>
               <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.6px", margin: 0, marginBottom: 8 }}>
-                Détails
+                Le bien
               </p>
               <h2 style={{ fontSize: 24, fontWeight: 400, fontStyle: "italic", fontFamily: "'Fraunces', 'DM Sans', serif", letterSpacing: "-0.4px", margin: 0, marginBottom: 18, color: "#111" }}>
                 Caractéristiques
               </h2>
-              <dl className="r-detail-dl" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 32, rowGap: 0, margin: 0 }}>
+              <dl className="r-detail-dl" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 32, rowGap: 0, margin: "0 0 20px" }}>
                 {(() => {
                   const publieLe = annonce.created_at
                     ? new Date(annonce.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
@@ -522,7 +527,6 @@ export default async function Annonce({ params }: any) {
                     ["Nombre de pièces", annonce.pieces ? String(annonce.pieces) : null],
                     ["Nombre de chambres", annonce.chambres !== null && annonce.chambres !== undefined ? String(annonce.chambres) : null],
                     ["Étage", annonce.etage || null],
-                    ["Meublé", typeof annonce.meuble === "boolean" ? (annonce.meuble ? "Oui" : "Non") : null],
                     ["Disponibilité", annonce.dispo || null],
                     ["Publié le", publieLe],
                   ]
@@ -536,6 +540,29 @@ export default async function Annonce({ params }: any) {
                     ))
                 })()}
               </dl>
+              <div className="r-detail-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, paddingTop: 4, borderTop: "1px solid #F7F4EF" }}>
+                {[
+                  { label: "Meublé", val: annonce.meuble },
+                  { label: "Parking inclus", val: annonce.parking },
+                  { label: "Cave", val: annonce.cave },
+                  { label: "Balcon", val: annonce.balcon },
+                  { label: "Terrasse", val: annonce.terrasse },
+                  { label: "Jardin", val: annonce.jardin },
+                  { label: "Ascenseur", val: annonce.ascenseur },
+                  { label: "Fibre optique", val: annonce.fibre },
+                ].map(item => (
+                  <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, paddingTop: 12 }}>
+                    <span aria-hidden style={{ width: 24, height: 24, borderRadius: "50%", background: item.val ? "#F0FAEE" : "#F7F4EF", color: item.val ? "#15803d" : "#8a8477", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {item.val ? (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                      ) : (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                      )}
+                    </span>
+                    <span style={{ color: item.val ? "#111" : "#8a8477" }}>{item.label}</span>
+                  </div>
+                ))}
+              </div>
             </section>
 
             {/* ─── R10.9 Diagnostic énergétique (DPE bars) ──────────── */}
@@ -607,42 +634,6 @@ export default async function Annonce({ params }: any) {
                 </section>
               )
             })()}
-
-            {/* ─── Caractéristiques du bien (boolean directs : meublé, parking, etc.) ─
-                Cf lib/equipements.ts pour la distinction caracteristique vs equipement.
-                Animaux retiré : c'est une politique (animaux_politique), affichée dans
-                LocataireMatchCard sidebar pour les locataires connectés. */}
-            <section style={{ background: "white", borderRadius: 20, padding: "28px 28px 24px", marginBottom: 20 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.6px", margin: 0, marginBottom: 8 }}>
-                Le bien
-              </p>
-              <h2 style={{ fontSize: 24, fontWeight: 400, fontStyle: "italic", fontFamily: "'Fraunces', 'DM Sans', serif", letterSpacing: "-0.4px", margin: 0, marginBottom: 20, color: "#111" }}>
-                Caractéristiques du bien
-              </h2>
-              <div className="r-detail-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                {[
-                  { label: "Meublé", val: annonce.meuble },
-                  { label: "Parking inclus", val: annonce.parking },
-                  { label: "Cave", val: annonce.cave },
-                  { label: "Balcon", val: annonce.balcon },
-                  { label: "Terrasse", val: annonce.terrasse },
-                  { label: "Jardin", val: annonce.jardin },
-                  { label: "Ascenseur", val: annonce.ascenseur },
-                  { label: "Fibre optique", val: annonce.fibre },
-                ].map(item => (
-                  <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14 }}>
-                    <span aria-hidden style={{ width: 24, height: 24, borderRadius: "50%", background: item.val ? "#F0FAEE" : "#F7F4EF", color: item.val ? "#15803d" : "#8a8477", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      {item.val ? (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                      ) : (
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                      )}
-                    </span>
-                    <span style={{ color: item.val ? "#111" : "#8a8477" }}>{item.label}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
 
             {/* ─── Équipements (jsonb equipements_extras : lave-linge, wifi, etc.) ─
                 Aperçu 4 items + popup détaillée. Masqué si jsonb vide. */}
