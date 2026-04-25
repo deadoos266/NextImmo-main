@@ -86,7 +86,7 @@ export default function PhotoCarousel({ photos }: { photos: string[] }) {
   // viewport) différerait du HTML client post-mesure → React error #418.
   // On force donc le layout carousel classique tant que `mounted` est
   // false. Après mount, on bascule sur 2/1 si desktop + ≥3 photos.
-  if (!mounted || isMobile || photos.length < 3) {
+  if (!mounted || isMobile || photos.length < 2) {
     // Hero bornes — photo DANS la colonne gauche du grid 2-col (≤800px de large
     // desktop, full-width stack en mobile) :
     //   - aspect-ratio dérivé de la vraie image (clampé 3/4 ↔ 16/9)
@@ -169,7 +169,7 @@ export default function PhotoCarousel({ photos }: { photos: string[] }) {
     )
   }
 
-  // ─── Desktop/tablet + ≥3 photos : layout vignettes verticales gauche + grande droite ──
+  // ─── Desktop/tablet + ≥2 photos : layout vignettes verticales gauche + grande droite ──
   // Style Airbnb/Amazon : colonne étroite (88px) à gauche avec toutes les
   // miniatures empilées verticalement, scrollable si trop nombreuses. Cliquer
   // une miniature change la photo principale (sans ouvrir la lightbox).
