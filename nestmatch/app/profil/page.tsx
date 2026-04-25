@@ -22,9 +22,10 @@ type FormShape = {
   pieces_min: string; chambres_min: string; dpe_min: string; type_bail: string
   situation_pro: string; revenus_mensuels: string; type_garant: string
   nb_occupants: string; profil_locataire: string
+  meuble_pref: string
 }
 type TogglesShape = {
-  animaux: boolean; meuble: boolean; parking: boolean; cave: boolean
+  animaux: boolean; parking: boolean; cave: boolean
   fibre: boolean; balcon: boolean; terrasse: boolean; jardin: boolean
   ascenseur: boolean; rez_de_chaussee_ok: boolean; fumeur: boolean
   proximite_metro: boolean; proximite_ecole: boolean
@@ -47,8 +48,9 @@ const SECTIONS: Array<{
   {
     id: "equipements",
     label: "Équipements",
-    formKeys: [],
-    toggleKeys: ["meuble", "animaux", "parking", "cave", "fibre", "balcon", "terrasse", "jardin", "ascenseur"],
+    // meuble géré séparément (3-state form.meuble_pref → DB boolean nullable)
+    formKeys: ["meuble_pref"],
+    toggleKeys: ["animaux", "parking", "cave", "fibre", "balcon", "terrasse", "jardin", "ascenseur"],
   },
   {
     id: "proximites",
@@ -114,9 +116,11 @@ function Profil() {
     dpe_min: "D", type_bail: "longue durée",
     situation_pro: "CDI", revenus_mensuels: "", type_garant: "",
     nb_occupants: "1", profil_locataire: "jeune actif",
+    // 3-state : "peu_importe" | "oui" | "non". Mappé en DB sur boolean nullable.
+    meuble_pref: "peu_importe",
   })
   const [toggles, setToggles] = useState<TogglesShape>({
-    animaux: false, meuble: false, parking: false, cave: false,
+    animaux: false, parking: false, cave: false,
     fibre: false, balcon: false, terrasse: false, jardin: false,
     ascenseur: false, rez_de_chaussee_ok: true,
     fumeur: false, proximite_metro: false, proximite_ecole: false,
@@ -147,9 +151,12 @@ function Profil() {
               type_garant: data.type_garant || "",
               nb_occupants: data.nb_occupants?.toString() || "1",
               profil_locataire: data.profil_locataire || "jeune actif",
+              meuble_pref: data.meuble === null || data.meuble === undefined
+                ? "peu_importe"
+                : data.meuble ? "oui" : "non",
             })
             setToggles({
-              animaux: !!data.animaux, meuble: !!data.meuble,
+              animaux: !!data.animaux,
               parking: !!data.parking, cave: !!data.cave,
               fibre: !!data.fibre, balcon: !!data.balcon,
               terrasse: !!data.terrasse, jardin: !!data.jardin,
@@ -178,6 +185,7 @@ function Profil() {
     setSaving(true)
     setErreur("")
     const toInt = (v: string) => v ? parseInt(v) : null
+    const meubleDb = form.meuble_pref === "peu_importe" ? null : form.meuble_pref === "oui"
     const data: any = {
       email: session?.user?.email,
       ville_souhaitee: form.ville_souhaitee,
@@ -196,6 +204,7 @@ function Profil() {
       type_garant: form.type_garant,
       nb_occupants: toInt(form.nb_occupants),
       profil_locataire: form.profil_locataire,
+      meuble: meubleDb,
       ...toggles,
     }
     const { error } = await supabase.from("profils").upsert(data, { onConflict: "email" })
@@ -233,6 +242,9 @@ function Profil() {
       // Colonnes int en base : on cast, sinon on laisse string/ville_souhaitee.
       if (["budget_min", "budget_max", "surface_min", "surface_max", "pieces_min", "chambres_min", "nb_occupants", "revenus_mensuels"].includes(k)) {
         patch[k] = toInt(raw)
+      } else if (k === "meuble_pref") {
+        // 3-state UI → DB boolean nullable
+        patch.meuble = raw === "peu_importe" ? null : raw === "oui"
       } else {
         patch[k] = raw
       }
@@ -461,8 +473,41 @@ function Profil() {
           t="Équipements souhaités"
           footer={<SectionSaveBtn sectionId="equipements" saving={savingSection === "equipements"} onSave={() => saveSection("equipements")} />}
         >
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: "#111", display: "block", marginBottom: 8 }}>
+              Meublé <span style={{ fontWeight: 400, color: "#6b7280" }}>— ta préférence</span>
+            </label>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {[
+                { v: "peu_importe", l: "Peu importe" },
+                { v: "oui", l: "Meublé" },
+                { v: "non", l: "Non meublé" },
+              ].map(opt => {
+                const active = form.meuble_pref === opt.v
+                return (
+                  <button
+                    key={opt.v}
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, meuble_pref: opt.v }))}
+                    style={{
+                      padding: "9px 16px",
+                      borderRadius: 999,
+                      border: `1.5px solid ${active ? "#111" : "#e5e7eb"}`,
+                      background: active ? "#111" : "white",
+                      color: active ? "white" : "#111",
+                      fontWeight: 600,
+                      fontSize: 13,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    {opt.l}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
-            <Toggle label="Meublé" k="meuble" toggles={toggles} setToggles={setToggles} />
             <Toggle label="Animaux acceptés" k="animaux" toggles={toggles} setToggles={setToggles} />
             <Toggle label="Parking" k="parking" toggles={toggles} setToggles={setToggles} />
             <Toggle label="Cave" k="cave" toggles={toggles} setToggles={setToggles} />

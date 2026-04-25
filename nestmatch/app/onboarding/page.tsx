@@ -30,7 +30,7 @@ export default function Onboarding() {
   const [budgetMax, setBudgetMax] = useState("")
   const [pieces, setPieces] = useState("2")
   const [surfaceMin, setSurfaceMin] = useState("")
-  const [meuble, setMeuble] = useState(false)
+  const [meublePref, setMeublePref] = useState<"peu_importe" | "oui" | "non">("peu_importe")
   const [animaux, setAnimaux] = useState(false)
   const [parking, setParking] = useState(false)
   const [exterieur, setExterieur] = useState(false)
@@ -48,7 +48,7 @@ export default function Onboarding() {
       budget_max: budgetMax ? parseInt(budgetMax) : null,
       pieces_min: pieces,
       surface_min: surfaceMin ? parseInt(surfaceMin) : null,
-      meuble,
+      meuble: meublePref === "peu_importe" ? null : meublePref === "oui",
       animaux,
       parking,
       balcon: exterieur,
@@ -152,8 +152,28 @@ export default function Onboarding() {
                 Indiquez ce qui compte vraiment pour vous. Vous pourrez ajuster tout ça plus tard dans votre profil.
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {/* Meublé : 3 options (peu importe / oui / non) — évite de pénaliser
+                    le locataire sans avis (cf. lib/matching.ts toBool null = neutre). */}
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: km.ink, marginBottom: 8 }}>Meublé</p>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {[
+                      { v: "peu_importe" as const, l: "Peu importe" },
+                      { v: "oui" as const, l: "Meublé" },
+                      { v: "non" as const, l: "Non meublé" },
+                    ].map(opt => {
+                      const active = meublePref === opt.v
+                      return (
+                        <button key={opt.v} type="button" onClick={() => setMeublePref(opt.v)}
+                          aria-pressed={active}
+                          style={{ padding: "10px 16px", borderRadius: 999, border: `1px solid ${active ? km.ink : km.line}`, background: active ? km.ink : km.white, color: active ? km.white : km.ink, cursor: "pointer", fontWeight: 600, fontSize: 13, fontFamily: "inherit" }}>
+                          {opt.l}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
                 {[
-                  { val: meuble, set: setMeuble, label: "Meublé" },
                   { val: animaux, set: setAnimaux, label: "J'ai un animal" },
                   { val: parking, set: setParking, label: "Parking nécessaire" },
                   { val: exterieur, set: setExterieur, label: "Extérieur (balcon ou terrasse)" },
