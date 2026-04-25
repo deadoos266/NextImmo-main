@@ -340,3 +340,96 @@ export function KMCard({
     }}>{children}</div>
   )
 }
+
+// ─── Segmented control : pills noir/transparent (Liste/Carte, filtres…) ───
+// Pattern répété sur /favoris, /mes-candidatures, /visites — extrait ici
+// pour cohérence visuelle stricte. Active = ink/white, inactive = transparent
+// /muted. Le "active" n'utilise pas border car le wrapper en a déjà un.
+export function KMToggle<T extends string>({
+  options,
+  value,
+  onChange,
+  size = "md",
+  ariaLabel,
+  style,
+}: {
+  // NoInfer empêche les littéraux de l'array de figer T côté inférence —
+  // T est piloté par `value` / `onChange` (généralement une union de
+  // littéraux du state). Sans ça, TS résoudrait T = string et casserait
+  // le typage de setVue/setFiltre côté appelant.
+  options: ReadonlyArray<{ value: NoInfer<T>; label: ReactNode }>
+  value: T
+  onChange: (v: T) => void
+  size?: "sm" | "md"
+  ariaLabel?: string
+  style?: CSSProperties
+}) {
+  const pad = size === "sm" ? "7px 16px" : "8px 20px"
+  const font = size === "sm" ? 11 : 11
+  return (
+    <div role="tablist" aria-label={ariaLabel}
+      style={{
+        display: "inline-flex", background: km.white,
+        border: `1px solid ${km.line}`, borderRadius: 999, padding: 4, gap: 2,
+        boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
+        ...style,
+      }}>
+      {options.map(opt => {
+        const active = opt.value === value
+        return (
+          <button key={opt.value} type="button" role="tab" aria-selected={active}
+            onClick={() => onChange(opt.value)}
+            style={{
+              padding: pad, borderRadius: 999, border: "none", cursor: "pointer",
+              fontFamily: "inherit", fontSize: font, fontWeight: 600,
+              background: active ? km.ink : "transparent",
+              color: active ? km.white : km.muted,
+              textTransform: "uppercase", letterSpacing: "0.3px",
+              whiteSpace: "nowrap", flexShrink: 0,
+              transition: "background 200ms ease, color 200ms ease",
+            }}>
+            {opt.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── PageHeader : eyebrow + heading Fraunces + sous-titre — pattern ─────────
+// récurrent en haut des pages locataire/proprio. Slot droite optionnel pour
+// CTA (export ICS, toggle vue, etc.). isMobile drive le size du heading.
+export function KMPageHeader({
+  eyebrow,
+  title,
+  subtitle,
+  right,
+  isMobile,
+  style,
+}: {
+  eyebrow?: ReactNode
+  title: ReactNode
+  subtitle?: ReactNode
+  right?: ReactNode
+  isMobile?: boolean
+  style?: CSSProperties
+}) {
+  return (
+    <div style={{
+      display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+      flexWrap: "wrap", gap: 16, marginBottom: 28,
+      ...style,
+    }}>
+      <div style={{ minWidth: 0 }}>
+        {eyebrow && <KMEyebrow style={{ marginBottom: 10 }}>{eyebrow}</KMEyebrow>}
+        <KMHeading size={isMobile ? 32 : 40}>{title}</KMHeading>
+        {subtitle && (
+          <p style={{ color: km.muted, marginTop: 8, marginBottom: 0, fontSize: 14, lineHeight: 1.55, maxWidth: 520 }}>
+            {subtitle}
+          </p>
+        )}
+      </div>
+      {right && <div style={{ flexShrink: 0 }}>{right}</div>}
+    </div>
+  )
+}
