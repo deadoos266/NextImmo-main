@@ -3,6 +3,7 @@ import { useSession } from "next-auth/react"
 import { useState, useEffect } from "react"
 import { supabase } from "../../../lib/supabase"
 import { postNotif } from "../../../lib/notificationsClient"
+import { getCandidatureStatut, peutProposerVisite, type CandidatureStatut } from "../../../lib/candidatureStatus"
 
 const HEURES = [
   "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
@@ -33,24 +34,30 @@ export default function BookingVisite({
   const [erreur, setErreur] = useState("")
   const [existante, setExistante] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
+  const [candStatut, setCandStatut] = useState<CandidatureStatut>(null)
+  const [showLockedPopup, setShowLockedPopup] = useState(false)
 
   const myEmail = session?.user?.email
   const isOwner = myEmail === proprietaireEmail
 
   useEffect(() => {
     if (!myEmail || isOwner) { setLoading(false); return }
-    supabase.from("visites")
-      .select("*")
-      .eq("annonce_id", annonceId)
-      .eq("locataire_email", myEmail)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle() // 0 résultat = data null (sans .maybeSingle, .single() jette 406)
-      .then(({ data }) => {
-        if (data) setExistante(data)
-        setLoading(false)
-      })
-  }, [myEmail, annonceId])
+    Promise.all([
+      supabase.from("visites")
+        .select("*")
+        .eq("annonce_id", annonceId)
+        .eq("locataire_email", myEmail)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      // Statut candidature pour gating "Proposer une visite" (Paul 2026-04-25)
+      getCandidatureStatut(annonceId, myEmail, proprietaireEmail),
+    ]).then(([{ data }, statut]) => {
+      if (data) setExistante(data)
+      setCandStatut(statut)
+      setLoading(false)
+    })
+  }, [myEmail, annonceId, isOwner, proprietaireEmail])
 
   async function proposer() {
     if (!date) { setErreur("Choisissez une date"); return }
@@ -167,13 +174,30 @@ export default function BookingVisite({
     )
   }
 
+  const peutProposer = peutProposerVisite(candStatut)
   return (
     <div style={{ marginTop: 16 }}>
       {!open ? (
-        <button onClick={() => setOpen(true)}
-          style={{ width: "100%", padding: "13px 0", background: "#F0FAEE", border: "1px solid #C6E9C0", color: "#15803d", borderRadius: 14, fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          Proposer une visite
-        </button>
+        peutProposer ? (
+          <button onClick={() => setOpen(true)}
+            style={{ width: "100%", padding: "13px 0", background: "#F0FAEE", border: "1px solid #C6E9C0", color: "#15803d", borderRadius: 14, fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            Proposer une visite
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowLockedPopup(true)}
+            aria-label="Proposer une visite — verrouillé tant que la candidature n'est pas validée"
+            title="La candidature doit être validée par le propriétaire"
+            style={{ width: "100%", padding: "13px 0", background: "#F7F4EF", border: "1px solid #EAE6DF", color: "#8a8477", borderRadius: 14, fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            Proposer une visite
+          </button>
+        )
       ) : (
         <div style={{ background: "white", borderRadius: 20, padding: "20px 24px", border: "2px solid #111" }}>
           <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 18 }}>Proposer une visite</h3>
@@ -265,6 +289,51 @@ export default function BookingVisite({
               style={{ flex: 2, padding: "10px 0", background: "#111", color: "white", border: "none", borderRadius: 999, cursor: saving ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 14, fontFamily: "inherit", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Envoi..." : "Envoyer la demande"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Popup verrouillage : la candidature doit être validée par le proprio
+          avant que le locataire puisse proposer une visite (Paul 2026-04-25). */}
+      {showLockedPopup && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setShowLockedPopup(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(17,17,17,0.55)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5000, padding: 16, fontFamily: "'DM Sans',sans-serif" }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: "#fff", borderRadius: 24, maxWidth: 460, width: "100%", padding: "32px 28px 24px", boxShadow: "0 24px 48px rgba(0,0,0,0.25)" }}
+          >
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#FBF6EA", color: "#a16207", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            </div>
+            <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 6px" }}>
+              Candidature en attente
+            </p>
+            <h3 style={{ fontSize: 20, fontWeight: 400, fontStyle: "italic", fontFamily: "'Fraunces','DM Sans',serif", letterSpacing: "-0.3px", margin: "0 0 12px", color: "#111", lineHeight: 1.25 }}>
+              Le propriétaire doit d&apos;abord valider votre candidature
+            </h3>
+            <p style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.55, margin: "0 0 20px" }}>
+              {candStatut === null
+                ? "Postulez à cette annonce avant de proposer une visite. Une fois votre candidature reçue, le propriétaire pourra la valider et vous pourrez alors organiser un créneau."
+                : candStatut === "refusee"
+                  ? "Votre candidature a été refusée par le propriétaire pour ce bien. Continuez votre recherche sur les annonces qui vous correspondent."
+                  : "Votre candidature a bien été envoyée. Le propriétaire la consulte avec son dossier — vous serez notifié dès qu'il la valide, et vous pourrez alors proposer un créneau de visite."}
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setShowLockedPopup(false)}
+                style={{ padding: "10px 20px", background: "#111", color: "#fff", border: "none", borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                Compris
+              </button>
+            </div>
           </div>
         </div>
       )}

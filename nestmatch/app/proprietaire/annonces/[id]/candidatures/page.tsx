@@ -76,6 +76,8 @@ type CandidatureRow = {
   created_at: string
   type: string | null
   lu: boolean | null
+  /** Migration 022 : statut explicite posé par le proprio (debloque visite). */
+  statut_candidature?: "en_attente" | "validee" | "refusee" | null
 }
 
 type VisiteRow = {
@@ -360,6 +362,13 @@ export default function CandidaturesParAnnonce() {
               compatPct={e.compatPct}
               statut={e.statut}
               visite={e.visite}
+              statutCandidature={e.c.statut_candidature ?? null}
+              onValidated={() => {
+                // Optimistic : marque le statut sans refetch complet
+                setCandidatures(prev => prev.map(c =>
+                  c.id === e.c.id ? { ...c, statut_candidature: "validee" } : c
+                ))
+              }}
             />
           ))}
         </div>
@@ -412,6 +421,8 @@ function CandidatureCard({
   compatPct,
   statut,
   visite,
+  statutCandidature,
+  onValidated,
 }: {
   email: string
   contenu: string | null
@@ -422,7 +433,31 @@ function CandidatureCard({
   compatPct: number | null
   statut: StatutCand
   visite: VisiteRow | null
+  statutCandidature: "en_attente" | "validee" | "refusee" | null
+  onValidated: () => void
 }) {
+  const [validating, setValidating] = useState(false)
+  const isValidated = statutCandidature === "validee"
+  const canValidate = !isValidated && statut !== "rejete" && statut !== "bail"
+  async function valider() {
+    if (validating) return
+    setValidating(true)
+    try {
+      const res = await fetch("/api/candidatures/valider", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ annonceId, locataireEmail: email }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.ok) {
+        alert(`Validation échouée : ${json.error || res.statusText}`)
+        return
+      }
+      onValidated()
+    } finally {
+      setValidating(false)
+    }
+  }
   const meta = STATUT_META[statut]
   const initials = initialsOf(profil, email)
   const displayName = profil?.prenom || profil?.nom
@@ -512,6 +547,26 @@ function CandidatureCard({
 
       {/* Actions */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
+        {canValidate && (
+          <button
+            type="button"
+            onClick={valider}
+            disabled={validating}
+            title="Présélection : débloque le droit pour ce candidat de proposer une visite"
+            style={{ padding: "10px 18px", background: "#15803d", color: "#fff", border: "none", borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: validating ? "not-allowed" : "pointer", whiteSpace: "nowrap", letterSpacing: "0.3px", fontFamily: "inherit", opacity: validating ? 0.6 : 1 }}
+          >
+            {validating ? "Validation…" : "Valider la candidature"}
+          </button>
+        )}
+        {isValidated && (
+          <span
+            aria-label="Candidature validée"
+            style={{ padding: "8px 14px", background: "#F0FAEE", color: "#15803d", border: "1px solid #C6E9C0", borderRadius: 999, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", letterSpacing: "0.3px", display: "inline-flex", alignItems: "center", gap: 6 }}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+            Validée
+          </span>
+        )}
         <Link
           href={`/messages?with=${encodeURIComponent(email)}&annonce=${annonceId}`}
           style={{ padding: "10px 18px", background: "#111", color: "#fff", borderRadius: 999, fontSize: 11, fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap", letterSpacing: "0.3px", fontFamily: "inherit" }}

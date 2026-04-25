@@ -2191,6 +2191,23 @@ function MessagesInner() {
   const convActiveData = conversations.find(c => c.key === convActive)
   const annonceActive = convActiveData?.annonceId ? annonces[convActiveData.annonceId] : null
 
+  // Gating "Proposer une visite" côté locataire : tant que statut_candidature
+  // n'est pas 'validee' sur le 1er message candidature, le locataire ne peut
+  // pas proposer de visite. La modal s'ouvre en mode locked + popup explicatif.
+  // Le proprio est exempté (il propose à ses candidats).
+  const candidatureValidee = (() => {
+    if (proprietaireActive) return true
+    if (!convActiveData?.annonceId) return true
+    // Cherche le 1er message type="candidature" du locataire dans cette conv
+    // qui porte le statut. messages est l'array de la conv active.
+    const candMsg = messages.find(m =>
+      (m as { type?: string }).type === "candidature" &&
+      (m.from_email || "").toLowerCase() === (myEmail || "").toLowerCase()
+    )
+    if (!candMsg) return false
+    return (candMsg as { statut_candidature?: string }).statut_candidature === "validee"
+  })()
+
   // Score compat de la conv active — cote locataire = annonce vs myProfile,
   // cote proprio = annonce vs profil candidat (peerProfile). Null si donnees
   // manquantes (pas d'annonce liee, ou profil vide).
@@ -2485,6 +2502,7 @@ function MessagesInner() {
         })()}
         initialDate={counterTarget?.date_visite || null}
         initialHeure={counterTarget?.heure || null}
+        locked={!candidatureValidee}
       />
       {signatureModal.open && signatureModal.bailData && signatureModal.annonceId && (
         <BailSignatureModal

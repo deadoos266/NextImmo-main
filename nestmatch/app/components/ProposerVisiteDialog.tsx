@@ -37,6 +37,13 @@ interface Props {
   /** Pré-remplissage slot initial — utilisé en contre-proposition. */
   initialDate?: string | null
   initialHeure?: string | null
+  /**
+   * Si true, la modal s'affiche en mode "verrouillé" : message d'explication
+   * "le proprio doit valider la candidature" au lieu du formulaire (Paul
+   * 2026-04-25). Côté proprio cette prop est false ; côté locataire elle
+   * vaut true tant que statut_candidature !== 'validee'.
+   */
+  locked?: boolean
 }
 
 const MAX_SLOTS = 5
@@ -60,6 +67,7 @@ export default function ProposerVisiteDialog({
   matchPct,
   initialDate,
   initialHeure,
+  locked = false,
 }: Props) {
   const [slots, setSlots] = useState<VisiteSlot[]>([{ date: "", heure: "10:00" }])
   const [message, setMessage] = useState("")
@@ -217,7 +225,38 @@ export default function ProposerVisiteDialog({
           </div>
         )}
 
-        {/* Body */}
+        {/* Mode verrouillé : candidature pas encore validée par le proprio */}
+        {locked && (
+          <div style={{ flex: 1, padding: "32px 28px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#FBF6EA", color: "#a16207", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            </div>
+            <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0 }}>
+              Candidature en attente
+            </p>
+            <h2 className="km-visite-serif" style={{ fontSize: 24, fontWeight: 500, letterSpacing: "-0.4px", margin: 0, color: "#111", lineHeight: 1.25 }}>
+              Le propriétaire doit d&apos;abord valider votre candidature
+            </h2>
+            <p style={{ fontSize: 14, color: "#4b5563", margin: 0, lineHeight: 1.6 }}>
+              Tant que votre candidature n&apos;a pas été validée, vous ne pouvez pas proposer de créneau. Le propriétaire reçoit votre dossier — vous serez notifié dès qu&apos;il valide votre candidature.
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+              <button
+                type="button"
+                onClick={onClose}
+                style={{ padding: "10px 20px", background: "#111", color: "#fff", border: "none", borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                Compris
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Body normal (formulaire de demande) — masqué si locked */}
+        {!locked && (
         <form onSubmit={submit} style={{
           flex: 1, overflowY: "auto", padding: "24px 24px 8px",
           display: "flex", flexDirection: "column", gap: 18,
@@ -406,8 +445,10 @@ export default function ProposerVisiteDialog({
             </span>
           </div>
         </form>
+        )}
 
-        {/* Footer */}
+        {/* Footer (formulaire normal uniquement — locked a son propre footer) */}
+        {!locked && (
         <div style={{
           display: "flex", justifyContent: "flex-end", gap: 10,
           padding: "16px 24px", borderTop: "1px solid #EAE6DF", background: "#fff",
@@ -448,6 +489,7 @@ export default function ProposerVisiteDialog({
                 : (isCounter ? "Envoyer la contre-proposition" : "Envoyer la demande")}
           </button>
         </div>
+        )}
       </div>
     </>
   )

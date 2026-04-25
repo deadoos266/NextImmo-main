@@ -99,9 +99,11 @@ export default function MesCandidatures() {
     const email = session.user.email
     setLoadError(null)
     // 1. Tous les messages envoyés par le locataire vers un proprio
+    // Inclut statut_candidature pour afficher le badge "Validée" si le proprio
+    // a explicitement validé la candidature (migration 022, Paul 2026-04-25).
     const { data: msgs, error: msgsErr } = await supabase
       .from("messages")
-      .select("id, to_email, annonce_id, contenu, created_at")
+      .select("id, to_email, annonce_id, contenu, created_at, type, statut_candidature")
       .eq("from_email", email)
       .not("annonce_id", "is", null)
       .order("created_at", { ascending: false })
@@ -119,6 +121,14 @@ export default function MesCandidatures() {
     for (const m of msgs || []) {
       if (!candidatsMap.has(m.annonce_id)) {
         candidatsMap.set(m.annonce_id, { annonce_id: m.annonce_id, proprietaire: m.to_email, premier_contact: m.created_at })
+      }
+      // Si on rencontre un message type=candidature avec statut_candidature='validee',
+      // on l'enregistre sur la candidature (le statut est porté par le 1er msg).
+      const t = (m as { type?: string }).type
+      const sc = (m as { statut_candidature?: string }).statut_candidature
+      if (t === "candidature" && sc === "validee") {
+        const c = candidatsMap.get(m.annonce_id)
+        if (c) c.statut_candidature = "validee"
       }
     }
 
@@ -323,6 +333,12 @@ export default function MesCandidatures() {
                       <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`, fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "1.2px" }}>
                         {s.label}
                       </span>
+                      {(c as { statut_candidature?: string }).statut_candidature === "validee" && (
+                        <span title="Le propriétaire a validé votre candidature — vous pouvez proposer une visite" style={{ background: "#F0FAEE", color: "#15803d", border: "1px solid #C6E9C0", fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "1.2px", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                          Validée
+                        </span>
+                      )}
                     </div>
                     <p style={{ fontSize: 13, color: km.muted, margin: 0 }}>
                       {ann?.ville}{ann?.prix ? <> <span style={{ color: km.line }}>·</span> {ann.prix} €/mois</> : ""}
