@@ -1197,44 +1197,87 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                   flexDirection: "column",
                   gap: 12,
                 }}>
-                  {/* Ligne 1 : eyebrow + h1 + Live indicator */}
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{
-                      fontSize: 10.5,
-                      fontWeight: 700,
-                      color: "#6B6B6B",
-                      textTransform: "uppercase" as const,
-                      letterSpacing: "1.4px",
-                      marginBottom: 4,
-                    }}>
-                      Annonces
+                  {/* Ligne 1 : eyebrow + h1 + Live indicator + ViewToggle.
+                      Pattern handoff (3) `app.jsx` l. 632-642 — flex
+                      space-between : bloc gauche (eyebrow/h1/live) + bloc
+                      droite (ViewToggle Grille/Carte). En mode liste+carte,
+                      "Carte" est l'état actif. Click "Grille" → setView("grid")
+                      → bascule en grille pleine page. Sans ce toggle, le mode
+                      grille était inaccessible depuis ici (FiltersBar masqué). */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{
+                        fontSize: 10.5,
+                        fontWeight: 700,
+                        color: "#6B6B6B",
+                        textTransform: "uppercase" as const,
+                        letterSpacing: "1.4px",
+                        marginBottom: 4,
+                      }}>
+                        Annonces
+                      </div>
+                      <h2 style={{
+                        fontSize: 22,
+                        fontWeight: 600,
+                        letterSpacing: "-0.6px",
+                        margin: 0,
+                        lineHeight: 1.2,
+                        color: km.ink,
+                      }}>
+                        {loading ? "Chargement…" : `${annoncesTraitees.length} logement${annoncesTraitees.length > 1 ? "s" : ""}`}
+                      </h2>
+                      <div style={{
+                        fontSize: 11.5,
+                        color: "#6B6B6B",
+                        marginTop: 3,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}>
+                        <span style={{
+                          width: 5,
+                          height: 5,
+                          background: "#16A34A",
+                          borderRadius: "50%",
+                          animation: "km-pulse 2s ease-in-out infinite",
+                        }} />
+                        Mis à jour à l&apos;instant
+                      </div>
                     </div>
-                    <h2 style={{
-                      fontSize: 22,
-                      fontWeight: 600,
-                      letterSpacing: "-0.6px",
-                      margin: 0,
-                      lineHeight: 1.2,
-                      color: km.ink,
-                    }}>
-                      {loading ? "Chargement…" : `${annoncesTraitees.length} logement${annoncesTraitees.length > 1 ? "s" : ""}`}
-                    </h2>
-                    <div style={{
-                      fontSize: 11.5,
-                      color: "#6B6B6B",
-                      marginTop: 3,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                    }}>
-                      <span style={{
-                        width: 5,
-                        height: 5,
-                        background: "#16A34A",
-                        borderRadius: "50%",
-                        animation: "km-pulse 2s ease-in-out infinite",
-                      }} />
-                      Mis à jour à l&apos;instant
+                    {/* ViewToggle Grille/Carte — fidèle handoff (3) `app.jsx`
+                        l. 586-605. Mode courant = "Carte" (split list+map),
+                        click "Grille" bascule vers la grille pleine page. */}
+                    <div style={{ display: "inline-flex", background: km.white, border: `1px solid ${km.line}`, borderRadius: 999, padding: 4, gap: 2, flexShrink: 0 }}>
+                      <button
+                        type="button"
+                        onClick={() => setView("grid")}
+                        aria-label="Mode grille"
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 6,
+                          padding: "6px 12px", borderRadius: 999, border: "none", cursor: "pointer",
+                          fontFamily: "inherit", fontSize: 11.5, fontWeight: 600,
+                          background: "transparent", color: "#6B6B6B",
+                          transition: "all 200ms",
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.color = km.ink }}
+                        onMouseLeave={e => { e.currentTarget.style.color = "#6B6B6B" }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                        Grille
+                      </button>
+                      <span
+                        aria-current="page"
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 6,
+                          padding: "6px 12px", borderRadius: 999,
+                          fontFamily: "inherit", fontSize: 11.5, fontWeight: 700,
+                          background: km.ink, color: km.white,
+                          cursor: "default",
+                        }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+                        Carte
+                      </span>
                     </div>
                   </div>
 
