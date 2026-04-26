@@ -331,50 +331,67 @@ function StatsInner() {
     bail: number
   }>({ vues: 0, candidatures: 0, dossiers: 0, visites: 0, bail: 0 })
 
+  // Erreur de chargement — affichée si au moins une query échoue.
+  // Avant : silent failure dans Promise.all → setLoading(false) jamais
+  // appelé → page bloquée sur "Chargement…" (audit 2026-04-26).
+  const [loadError, setLoadError] = useState<string | null>(null)
+
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth")
     if (session && bienId) loadData()
   }, [session, status, bienId])
 
   async function loadData() {
+    setLoadError(null)
+    setLoading(true)
     const me = (session?.user?.email || "").toLowerCase()
-    const [
-      { data: b }, { data: l }, { data: travaux }, { data: edlData },
-      vuesRes, candidaturesRes, dossiersRes, visitesRes, signaturesRes,
-    ] = await Promise.all([
-      supabase.from("annonces").select("*").eq("id", bienId).single(),
-      supabase.from("loyers").select("*").eq("annonce_id", bienId).order("mois"),
-      supabase.from("carnet_entretien").select("cout").eq("annonce_id", bienId),
-      supabase.from("etats_des_lieux").select("statut").eq("annonce_id", bienId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      // Pipeline funnel — head:true pour ne payer que le count, pas les rows.
-      supabase.from("clics_annonces").select("annonce_id", { count: "exact", head: true }).eq("annonce_id", bienId),
-      supabase.from("messages").select("id", { count: "exact", head: true }).eq("to_email", me).eq("annonce_id", bienId).eq("type", "candidature"),
-      // Dossiers reçus = messages [DOSSIER_CARD] envoyés par le candidat au proprio.
-      supabase.from("messages").select("id", { count: "exact", head: true }).eq("to_email", me).eq("annonce_id", bienId).like("contenu", "[DOSSIER_CARD]%"),
-      supabase.from("visites").select("id", { count: "exact", head: true }).eq("annonce_id", bienId).in("statut", ["proposée", "confirmée", "effectuée"]),
-      // Bail signé = présence de 2 signataire_role distincts (bailleur + locataire).
-      supabase.from("bail_signatures").select("signataire_role").eq("annonce_id", bienId),
-    ])
-    setEdlStatut(edlData?.statut || null)
-    if (travaux) setTravauxCout(travaux.reduce((s: number, t: any) => s + (Number(t.cout) || 0), 0))
+    try {
+      const [
+        bienRes, loyersRes, travauxRes, edlRes,
+        vuesRes, candidaturesRes, dossiersRes, visitesRes, signaturesRes,
+      ] = await Promise.all([
+        // .maybeSingle() au lieu de .single() : ne throw plus si bien
+        // introuvable (cas où l'URL ?id= pointe sur un bien supprimé ou
+        // qui n'appartient pas au user). On gère le bien null après.
+        supabase.from("annonces").select("*").eq("id", bienId).maybeSingle(),
+        supabase.from("loyers").select("*").eq("annonce_id", bienId).order("mois"),
+        supabase.from("carnet_entretien").select("cout").eq("annonce_id", bienId),
+        supabase.from("etats_des_lieux").select("statut").eq("annonce_id", bienId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+        // Pipeline funnel — head:true pour ne payer que le count, pas les rows.
+        supabase.from("clics_annonces").select("annonce_id", { count: "exact", head: true }).eq("annonce_id", bienId),
+        supabase.from("messages").select("id", { count: "exact", head: true }).eq("to_email", me).eq("annonce_id", bienId).eq("type", "candidature"),
+        supabase.from("messages").select("id", { count: "exact", head: true }).eq("to_email", me).eq("annonce_id", bienId).like("contenu", "[DOSSIER_CARD]%"),
+        supabase.from("visites").select("id", { count: "exact", head: true }).eq("annonce_id", bienId).in("statut", ["proposée", "confirmée", "effectuée"]),
+        supabase.from("bail_signatures").select("signataire_role").eq("annonce_id", bienId),
+      ])
 
-    // Pipeline counts. `signaturesRes` retourne les rows pour compter les
-    // rôles distincts ; bail "signé" requiert bailleur + locataire (2 rôles).
-    const distinctRoles = new Set<string>()
-    if (Array.isArray(signaturesRes.data)) {
-      signaturesRes.data.forEach((s: { signataire_role?: string | null }) => {
-        if (s.signataire_role) distinctRoles.add(s.signataire_role)
+      const b = bienRes.data
+      if (!b) {
+        setLoadError("Ce bien est introuvable ou n'est pas accessible avec votre compte.")
+        return
+      }
+
+      const l = loyersRes.data
+      const travaux = travauxRes.data
+      const edlData = edlRes.data
+
+      setEdlStatut(edlData?.statut || null)
+      if (travaux) setTravauxCout(travaux.reduce((s: number, t: any) => s + (Number(t.cout) || 0), 0))
+
+      const distinctRoles = new Set<string>()
+      if (Array.isArray(signaturesRes.data)) {
+        signaturesRes.data.forEach((s: { signataire_role?: string | null }) => {
+          if (s.signataire_role) distinctRoles.add(s.signataire_role)
+        })
+      }
+      const bailFullySigned = distinctRoles.has("bailleur") && distinctRoles.has("locataire") ? 1 : 0
+      setPipeline({
+        vues: vuesRes.count ?? 0,
+        candidatures: candidaturesRes.count ?? 0,
+        dossiers: dossiersRes.count ?? 0,
+        visites: visitesRes.count ?? 0,
+        bail: bailFullySigned,
       })
-    }
-    const bailFullySigned = distinctRoles.has("bailleur") && distinctRoles.has("locataire") ? 1 : 0
-    setPipeline({
-      vues: vuesRes.count ?? 0,
-      candidatures: candidaturesRes.count ?? 0,
-      dossiers: dossiersRes.count ?? 0,
-      visites: visitesRes.count ?? 0,
-      bail: bailFullySigned,
-    })
-    if (b) {
       setBien(b)
       setEditForm({
         titre: b.titre || "",
@@ -390,9 +407,14 @@ function StatsInner() {
         assurance_pno: b.assurance_pno || "",
         charges_copro_annuelles: b.charges_copro_annuelles || "",
       })
+      if (l) setLoyers(l)
+    } catch (err) {
+      // Network, RLS, parse error... on log et on affiche un message.
+      console.error("[stats] loadData failed", err)
+      setLoadError("Impossible de charger les statistiques pour le moment. Vérifiez votre connexion et réessayez.")
+    } finally {
+      setLoading(false)
     }
-    if (l) setLoyers(l)
-    setLoading(false)
   }
 
   async function ajouterOuMettreAJourLoyer() {
@@ -540,9 +562,25 @@ function StatsInner() {
   }
 
   if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "'DM Sans', sans-serif", color: "#8a8477" }}>
       Chargement...
     </div>
+  )
+  if (loadError) return (
+    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ background: "#fff", border: "1px solid #F4C9C9", borderRadius: 20, padding: "32px 36px", maxWidth: 460, textAlign: "center", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", textTransform: "uppercase", letterSpacing: "1.4px", margin: 0, marginBottom: 12 }}>Erreur de chargement</p>
+        <p style={{ fontSize: 14, color: "#111", lineHeight: 1.55, margin: 0, marginBottom: 22 }}>{loadError}</p>
+        <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+          <button type="button" onClick={() => loadData()} style={{ background: "#111", color: "#fff", border: "none", borderRadius: 999, padding: "10px 22px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", letterSpacing: "0.3px" }}>
+            Réessayer
+          </button>
+          <a href="/proprietaire" style={{ background: "#fff", color: "#111", border: "1px solid #EAE6DF", borderRadius: 999, padding: "10px 22px", fontWeight: 600, fontSize: 12, textDecoration: "none", fontFamily: "inherit", letterSpacing: "0.3px" }}>
+            Retour au dashboard
+          </a>
+        </div>
+      </div>
+    </main>
   )
   if (!bien) return null
 
@@ -1031,7 +1069,7 @@ function StatsInner() {
               fontSize: isMobile ? 26 : 30, fontWeight: 800, letterSpacing: "-1px", lineHeight: 1.1, margin: "4px 0 10px",
               color: cashflowMensuel >= 0 ? "#15803d" : "#b91c1c",
             }}>
-              {cashflowMensuel >= 0 ? "+" : ""}{cashflowMensuel.toLocaleString("fr-FR")} &euro;
+              {cashflowMensuel >= 0 ? "+" : ""}{cashflowMensuel.toLocaleString("fr-FR")} €
             </p>
             {/* Mini progress bar */}
             <div style={{ background: "#F7F4EF", borderRadius: 6, height: 6, overflow: "hidden", marginBottom: 6 }}>
@@ -1077,7 +1115,7 @@ function StatsInner() {
               fontSize: isMobile ? 26 : 30, fontWeight: 800, letterSpacing: "-1px", lineHeight: 1.1, margin: "4px 0 10px",
               color: "#111",
             }}>
-              {revenuAnnuelReel.toLocaleString("fr-FR")} &euro;
+              {revenuAnnuelReel.toLocaleString("fr-FR")} €
             </p>
             {/* Progress toward annual target */}
             <div style={{ background: "#F7F4EF", borderRadius: 6, height: 6, overflow: "hidden", marginBottom: 6 }}>
@@ -1089,7 +1127,7 @@ function StatsInner() {
               }} />
             </div>
             <p style={{ fontSize: 11, color: "#8a8477", margin: 0 }}>
-              {pctObjectif}% de l'objectif ({revenuAnnuelTheorique.toLocaleString("fr-FR")} &euro;)
+              {pctObjectif}% de l'objectif ({revenuAnnuelTheorique.toLocaleString("fr-FR")} €)
             </p>
           </div>
         </div>
@@ -1102,7 +1140,7 @@ function StatsInner() {
           <div style={{ ...cardStyle, padding: isMobile ? "14px 16px" : "16px 22px" }}>
             <p style={{ ...labelStyle, marginBottom: 4 }}>Loyer mensuel</p>
             <p style={{ fontSize: 20, fontWeight: 800, color: "#111", margin: "2px 0", letterSpacing: "-0.5px" }}>
-              {loyerMensuel.toLocaleString("fr-FR")} &euro;
+              {loyerMensuel.toLocaleString("fr-FR")} €
             </p>
             <p style={{ fontSize: 11, color: "#8a8477", margin: 0 }}>
               {charges > 0 ? `+ ${charges} charges = ${revenuMensuel} CC` : "charges non incluses"}
@@ -1180,11 +1218,11 @@ function StatsInner() {
           }}>
             <div>
               <p style={{ fontSize: 10, color: "#8a8477", fontWeight: 700, textTransform: "uppercase" as const, margin: "0 0 2px" }}>Total encaisse</p>
-              <p style={{ fontSize: 16, fontWeight: 800, color: "#111", margin: 0 }}>{totalEncaisse.toLocaleString("fr-FR")} &euro;</p>
+              <p style={{ fontSize: 16, fontWeight: 800, color: "#111", margin: 0 }}>{totalEncaisse.toLocaleString("fr-FR")} €</p>
             </div>
             <div>
               <p style={{ fontSize: 10, color: "#8a8477", fontWeight: 700, textTransform: "uppercase" as const, margin: "0 0 2px" }}>Confirme {currentYear}</p>
-              <p style={{ fontSize: 16, fontWeight: 800, color: "#15803d", margin: 0 }}>{totalConfirmeAnnee.toLocaleString("fr-FR")} &euro;</p>
+              <p style={{ fontSize: 16, fontWeight: 800, color: "#15803d", margin: 0 }}>{totalConfirmeAnnee.toLocaleString("fr-FR")} €</p>
             </div>
             <div>
               <p style={{ fontSize: 10, color: "#8a8477", fontWeight: 700, textTransform: "uppercase" as const, margin: "0 0 2px" }}>vs Objectif</p>
@@ -1491,7 +1529,7 @@ function StatsInner() {
                       </span>
                     </div>
                     <p style={{ fontSize: 20, fontWeight: 800, color: "#111", margin: "0 0 10px" }}>
-                      {l.montant.toLocaleString("fr-FR")} &euro;
+                      {l.montant.toLocaleString("fr-FR")} €
                     </p>
                     <div style={{ display: "flex", gap: 8 }}>
                       {!estConfirme && (
@@ -1546,7 +1584,7 @@ function StatsInner() {
                     background: i % 2 === 0 ? "white" : "#F7F4EF", alignItems: "center",
                   }}>
                     <span style={{ fontSize: 13, fontWeight: 600, textTransform: "capitalize" as const }}>{moisLabel}</span>
-                    <span style={{ fontSize: 14, fontWeight: 700 }}>{l.montant.toLocaleString("fr-FR")} &euro;</span>
+                    <span style={{ fontSize: 14, fontWeight: 700 }}>{l.montant.toLocaleString("fr-FR")} €</span>
                     <span style={{ display: "inline-flex" }}>
                       <span style={{
                         background: estConfirme ? "#F0FAEE" : "#FBF6EA",
@@ -1613,7 +1651,7 @@ function StatsInner() {
                         : null
                       return (
                         <div key={yr.year} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                          <p style={{ fontSize: 12, fontWeight: 800, margin: 0 }}>{yr.total.toLocaleString("fr-FR")} &euro;</p>
+                          <p style={{ fontSize: 12, fontWeight: 800, margin: 0 }}>{yr.total.toLocaleString("fr-FR")} €</p>
                           {pct !== null && (
                             <p style={{ fontSize: 10, color: pct >= 90 ? "#15803d" : "#a16207", margin: 0 }}>{pct}% objectif</p>
                           )}
@@ -1622,13 +1660,13 @@ function StatsInner() {
                             <div style={{ width: 28, height: hConf, background: "#15803d", borderRadius: "4px 4px 0 0" }} title="Confirme" />
                           </div>
                           <p style={{ fontSize: 12, color: "#8a8477", fontWeight: 700, margin: 0 }}>{yr.year}</p>
-                          <p style={{ fontSize: 10, color: "#15803d", margin: 0 }}>{yr.confirmed.toLocaleString("fr-FR")} &euro;</p>
+                          <p style={{ fontSize: 10, color: "#15803d", margin: 0 }}>{yr.confirmed.toLocaleString("fr-FR")} €</p>
                         </div>
                       )
                     })}
                     <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                       <p style={{ fontSize: 12, fontWeight: 800, color: "#8a8477", margin: 0 }}>
-                        {revenuAnnuelTheorique.toLocaleString("fr-FR")} &euro;
+                        {revenuAnnuelTheorique.toLocaleString("fr-FR")} €
                       </p>
                       <p style={{ fontSize: 10, color: "#8a8477", margin: 0 }}>100% objectif</p>
                       <div style={{ width: "100%", display: "flex", alignItems: "flex-end", height: BAR_H, justifyContent: "center" }}>

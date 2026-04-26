@@ -3377,16 +3377,29 @@ function MessagesInner() {
                 const photo = Array.isArray(ann?.photos) && ann.photos.length > 0 ? ann.photos[0] : null
                 const isActive = convActive === conv.key
                 const rawPreview = conv.lastMsg?.contenu || ""
+                // Audit 2026-04-26 : `[CANDIDATURE_VALIDEE]{"bienTitre":...}`
+                // fuyait en JSON brut dans la liste des conv. Tous les
+                // préfixes système ont maintenant un preview lisible. Un
+                // nouveau prefix ajouté sans entrée ici tombera sur
+                // "Message système" plutôt que de fuiter du JSON.
                 const previewText = rawPreview.startsWith(DOSSIER_PREFIX) ? "Dossier envoyé"
                   : rawPreview.startsWith(DEMANDE_DOSSIER_PREFIX) ? "Dossier demandé"
                   : rawPreview.startsWith(EDL_PREFIX) ? "État des lieux envoyé"
                   : rawPreview.startsWith(BAIL_PREFIX) ? "Bail généré"
+                  : rawPreview.startsWith(BAIL_SIGNE_PREFIX) ? "Bail signé ✓"
+                  : rawPreview.startsWith(EDL_A_PLANIFIER_PREFIX) ? "État des lieux à planifier"
+                  : rawPreview.startsWith(VISITE_CONFIRMEE_PREFIX) ? "Visite confirmée ✓"
+                  : rawPreview.startsWith(VISITE_DEMANDE_PREFIX) ? "Demande de visite"
+                  : rawPreview.startsWith(AUTO_PAIEMENT_DEMANDE_PREFIX) ? "Paiement automatique proposé"
+                  : rawPreview.startsWith(LOYER_PAYE_PREFIX) ? "Loyer payé ✓"
                   : rawPreview.startsWith(QUITTANCE_PREFIX) ? "Quittance reçue"
                   : rawPreview.startsWith(RETRAIT_PREFIX) ? "Candidature retirée"
+                  : rawPreview.startsWith(VALIDEE_PREFIX) ? "Candidature validée ✓"
                   : rawPreview.startsWith(DEVALIDEE_PREFIX) ? "Validation retirée"
                   : rawPreview.startsWith(REFUS_PREFIX) ? "Candidature non retenue"
                   : rawPreview.startsWith(RELANCE_PREFIX) ? "Relance : " + rawPreview.slice(RELANCE_PREFIX.length)
                   : rawPreview.startsWith(LOCATION_PREFIX) ? "Location acceptée ✓"
+                  : rawPreview.startsWith("[") ? "Message système" // fallback prefix non géré
                   : parseReply(rawPreview).text // ignore le préfixe [REPLY:id]
                 const preview = rawPreview
                   ? (previewText.length > 35 ? previewText.slice(0, 35) + "…" : previewText)

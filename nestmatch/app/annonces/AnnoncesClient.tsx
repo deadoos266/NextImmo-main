@@ -550,7 +550,12 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
         if (!vA.includes(vF) && !vF.includes(vA)) return false
       }
     }
-    if (activeBudget && a.prix && a.prix > activeBudget * 1.20) return false
+    // Filter strict : si user demande ≤ 800 €, on ne laisse pas passer 950 €.
+    // Avant : `* 1.20` (marge 20% pour matching tolérant) → contradiction
+    // avec le label UI "≤ 800 €" qui affichait des biens à 960 € (audit
+    // 2026-04-26). La tolérance de matching reste appliquée côté score
+    // (lib/matching.ts), pas au filtre.
+    if (activeBudget && a.prix && a.prix > activeBudget) return false
     if (activeType && a.type_bien) {
       if (!a.type_bien.toLowerCase().includes(activeType.toLowerCase())) return false
     }
