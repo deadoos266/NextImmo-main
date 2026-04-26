@@ -103,6 +103,18 @@ function BarChart({
           )
         })}
       </svg>
+      {/* Légende sous le graph — fidèle handoff (3) `pages.jsx` StatsScreen
+          l. 819-822. Carrés couleur 10×10 + label, fontSize 11, gap 18. */}
+      <div style={{ display: "flex", gap: 18, marginTop: 14, fontSize: 11, color: "#666" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span aria-hidden style={{ width: 10, height: 10, background: "#15803d", borderRadius: 2 }} />
+          Confirmé
+        </span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span aria-hidden style={{ width: 10, height: 10, background: "#f97316", borderRadius: 2 }} />
+          En attente
+        </span>
+      </div>
     </div>
   )
 }
