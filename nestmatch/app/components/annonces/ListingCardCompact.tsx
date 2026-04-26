@@ -130,9 +130,9 @@ export default function ListingCardCompact({
       onMouseLeave={onMouseLeave}
       style={{
         display: "grid",
-        gridTemplateColumns: "150px 1fr",
+        gridTemplateColumns: "180px 1fr",
         gap: 0,
-        marginBottom: 10,
+        marginBottom: 12,
         background: "#fff",
         borderRadius: 14,
         overflow: "hidden",
@@ -154,7 +154,7 @@ export default function ListingCardCompact({
           position: "relative",
           overflow: "hidden",
           background: currentPhoto ? "#000" : base,
-          minHeight: 180,
+          minHeight: 210,
         }}
       >
         {currentPhoto ? (
@@ -162,7 +162,7 @@ export default function ListingCardCompact({
             src={currentPhoto}
             alt={annonce.titre || "Photo logement"}
             fill
-            sizes="150px"
+            sizes="180px"
             style={{ objectFit: "cover", display: "block" }}
           />
         ) : null}
