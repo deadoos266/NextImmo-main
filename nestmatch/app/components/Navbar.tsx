@@ -148,10 +148,11 @@ export default function Navbar() {
   // ⇒ pas de Mon logement / Carnet / Quittances ; pas d'ancien bail terminé
   // ⇒ pas d'Anciens logements). Routes accessibles en direct (EmptyState).
   const espaceLinks = proprietaireActive ? [
-    { href: "/profil",               label: "Mon profil",         desc: "Informations personnelles" },
-    { href: "/proprietaire",         label: "Mes biens",          desc: "Gestion de mes annonces" },
-    { href: "/proprietaire/ajouter", label: "Publier un bien",    desc: "Ajouter une nouvelle annonce" },
-    { href: "/carnet",               label: "Carnet d'entretien", desc: "Historique des travaux" },
+    { href: "/profil",                 label: "Mon profil",         desc: "Informations personnelles" },
+    { href: "/proprietaire",           label: "Mes biens",          desc: "Gestion de mes annonces" },
+    { href: "/proprietaire/ajouter",   label: "Publier un bien",    desc: "Ajouter une nouvelle annonce" },
+    { href: "/proprietaire/estimateur",label: "Estimer un loyer",   desc: "Comparer avec le marché avant de publier" },
+    { href: "/carnet",                 label: "Carnet d'entretien", desc: "Historique des travaux" },
   ] : [
     { href: "/profil",        label: "Mon profil",         desc: "Critères de recherche & matching" },
     { href: "/dossier",       label: "Mon dossier",        desc: "Documents & complétion" },
