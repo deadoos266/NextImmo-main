@@ -748,6 +748,11 @@ export default function Proprietaire() {
         {/* MES BIENS — grille 2 cols cards photo hero 16/10 fidèle handoff (3) pages.jsx l. 741-770 */}
         {onglet === "Mes biens" && (
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 14 }}>
+            {/* Style global :has() — quand le menu ⋯ d'une card est ouvert,
+                on bump le z-index de cette card pour que son dropdown passe
+                au-dessus de la card sœur dans la grille. Sans ça, le menu
+                était visible mais clipé/recouvert par la voisine. */}
+            <style dangerouslySetInnerHTML={{ __html: `.km-bien-card:has(details[open]) { z-index: 50; }` }} />
             {biens.filter(b => b.statut !== "loue_termine").length === 0 ? (
               <div style={{ gridColumn: isMobile ? "1" : "1 / -1" }}>
                 <EmptyState
@@ -763,9 +768,12 @@ export default function Proprietaire() {
               const nbCand = candidatures.filter((c: any) => c.annonce_id === b.id).length
               const photoHero = Array.isArray(b.photos) && b.photos.length > 0 ? b.photos[0] : null
               return (
-              <div key={b.id} style={{ background: km.white, border: "1px solid #EAE6DF", borderRadius: 20, fontFamily: "'DM Sans', sans-serif", boxShadow: "0 1px 2px rgba(0,0,0,0.02)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+              <div key={b.id} className="km-bien-card" style={{ background: km.white, border: "1px solid #EAE6DF", borderRadius: 20, fontFamily: "'DM Sans', sans-serif", boxShadow: "0 1px 2px rgba(0,0,0,0.02)", display: "flex", flexDirection: "column", position: "relative" }}>
+                {/* overflow:hidden retiré du card root (clippait le dropdown ⋯ — bug Paul 2026-04-26).
+                    Borderradius top-only délégué à la photo hero, le footer
+                    actions hérite naturellement du radius bottom du card. */}
                 {/* Photo hero 16/10 + pill statut overlay top-left + badge candidatures overlay top-right */}
-                <div style={{ position: "relative", aspectRatio: "16 / 10", background: photoHero ? `#000 url(${photoHero}) center/cover no-repeat` : `linear-gradient(135deg, ${km.beige}, ${km.line})` }}>
+                <div style={{ position: "relative", aspectRatio: "16 / 10", background: photoHero ? `#000 url(${photoHero}) center/cover no-repeat` : `linear-gradient(135deg, ${km.beige}, ${km.line})`, borderRadius: "20px 20px 0 0", overflow: "hidden" }}>
                   <span style={{ position: "absolute", top: 14, left: 14, background: badgeStyle.bg, color: badgeStyle.color, border: `1px solid ${badgeStyle.border || km.line}`, padding: "5px 12px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
                     {statutLabel[b.statut || ""] || b.statut || "disponible"}
                   </span>
@@ -807,11 +815,14 @@ export default function Proprietaire() {
                     const hasVisiteForBien = visites.some((v: any) => v.annonce_id === b.id && (v.statut === "confirmée" || v.statut === "effectuée"))
                     const isLoue = b.statut === "loué" && !!b.locataire_email
                     const hasBailGenere = !!(b.bail_genere_at || isLoue || b.statut === "bail_envoye")
-                    // Active step = première étape non-done (capped)
+                    // Active step = première étape non-done (capped). Visite est
+                    // forcée done si bien loué : impossible de louer sans visite,
+                    // l'historique de la table `visites` peut avoir été purgé
+                    // après la signature (Paul 2026-04-26).
                     const stepDone = [
                       true, // Publié (toujours)
                       nbCand > 0,
-                      hasVisiteForBien,
+                      hasVisiteForBien || isLoue,
                       hasBailGenere,
                       isLoue,
                     ]
@@ -878,7 +889,7 @@ export default function Proprietaire() {
                       <summary style={{ padding: "9px 12px", border: "1px solid #EAE6DF", borderRadius: 999, color: km.muted, fontSize: 11, fontWeight: 600, cursor: "pointer", listStyle: "none", background: km.white, userSelect: "none" as const }}>
                         ⋯
                       </summary>
-                      <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", background: km.white, border: "1px solid #EAE6DF", borderRadius: 12, padding: 6, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 10, minWidth: 180, display: "flex", flexDirection: "column", gap: 2 }}>
+                      <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", background: km.white, border: "1px solid #EAE6DF", borderRadius: 12, padding: 6, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 100, minWidth: 180, display: "flex", flexDirection: "column", gap: 2 }}>
                         <a href={`/proprietaire/stats?id=${b.id}`} style={{ padding: "8px 12px", borderRadius: 8, textDecoration: "none", color: km.ink, fontSize: 12, fontWeight: 600 }}>Statistiques</a>
                         <a href={`/annonces/${b.id}`} style={{ padding: "8px 12px", borderRadius: 8, textDecoration: "none", color: km.ink, fontSize: 12, fontWeight: 600 }}>Voir l&apos;annonce</a>
                         <div style={{ height: 1, background: km.line, margin: "4px 0" }} />

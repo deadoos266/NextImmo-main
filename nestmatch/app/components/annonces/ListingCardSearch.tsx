@@ -2,6 +2,7 @@
 import { useState, useRef, type CSSProperties } from "react"
 import Image from "next/image"
 import { CARD_GRADIENTS as GRADIENTS } from "../../../lib/cardGradients"
+import { dpeColorFor } from "../../../lib/dpeColors"
 
 /**
  * Card annonce pour la grille `/annonces` — fidélité Claude Design handoff
@@ -262,12 +263,14 @@ export default function ListingCardSearch({
   const loc = formatLocalisationFull(annonce)
   const animDelay = index * 50
 
-  // Specs ligne inline : "54 m² · 2 p. · DPE C" — texte plat, pas de chip
+  // Specs ligne inline : "54 m² · 2 p." + chip DPE coloré séparé.
+  // La lettre DPE n'est plus en texte plat : pastille colorée selon la
+  // palette officielle ADEME (vert A → rouge G), cf `lib/dpeColors.ts`.
   const specsParts: string[] = []
   if (annonce.surface != null) specsParts.push(`${annonce.surface} m²`)
   if (annonce.pieces != null) specsParts.push(`${annonce.pieces} p.`)
-  if (annonce.dpe) specsParts.push(`DPE ${String(annonce.dpe).toUpperCase()}`)
   const specsLine = specsParts.join(" · ")
+  const dpeLetter = annonce.dpe ? String(annonce.dpe).toUpperCase() : null
 
   const baseStyle: CSSProperties = {
     display: "block",
@@ -502,8 +505,31 @@ export default function ListingCardSearch({
             gap: 8,
           }}
         >
-          <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 }}>
             {specsLine}
+            {dpeLetter && (
+              <span
+                aria-label={`DPE ${dpeLetter}`}
+                title={`Classe énergie ${dpeLetter}`}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: dpeColorFor(dpeLetter),
+                  color: "#fff",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  width: 18,
+                  height: 18,
+                  borderRadius: 4,
+                  letterSpacing: 0,
+                  lineHeight: 1,
+                  flexShrink: 0,
+                }}
+              >
+                {dpeLetter}
+              </span>
+            )}
           </span>
           <span
             style={{
