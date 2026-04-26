@@ -1173,6 +1173,10 @@ function MessagesInner() {
   const [candidatNotes, setCandidatNotes] = useState<Record<string, string>>({})
   const [noteEditKey, setNoteEditKey] = useState<string | null>(null)
   const [accepterLocationOpen, setAccepterLocationOpen] = useState(false)
+  // Bandeau success post-acceptation : affiche un CTA fort "Générer le bail"
+  // pendant la session, se clear quand le proprio clique le bouton OU passe
+  // sur une autre conv (commit 3 du flow plan).
+  const [justAcceptedAnnonceId, setJustAcceptedAnnonceId] = useState<number | null>(null)
   const [accepteEnCours, setAccepteEnCours] = useState(false)
   const [noteDraft, setNoteDraft] = useState("")
   // Reply-to : infos du message auquel on répond (null = pas de reply)
@@ -1189,7 +1193,7 @@ function MessagesInner() {
   const [visitesModalOpen, setVisitesModalOpen] = useState<boolean>(false)
   // Historique annulées dans la modale : collapsible local (fermé par défaut).
   const [historiqueAnnOuvert, setHistoriqueAnnOuvert] = useState<boolean>(false)
-  useEffect(() => { setHistoriqueAnnOuvert(false) }, [convActive])
+  useEffect(() => { setHistoriqueAnnOuvert(false); setJustAcceptedAnnonceId(null) }, [convActive])
   const [showVisiteForm, setShowVisiteForm] = useState(false)
   const [visiteDate, setVisiteDate] = useState("")
   const [visiteHeure, setVisiteHeure] = useState("10:00")
@@ -1326,6 +1330,8 @@ function MessagesInner() {
     }).catch(() => { /* silent */ })
     setAccepteEnCours(false)
     setAccepterLocationOpen(false)
+    // Affiche le bandeau success "Générer le bail maintenant →" en haut.
+    setJustAcceptedAnnonceId(annId)
   }
 
   // Désactive la restauration auto du scroll par le navigateur sur /messages
@@ -3704,6 +3710,43 @@ function MessagesInner() {
                     </div>
                   )
                 })()}
+
+                {/* Bandeau success post-acceptation — CTA fort vers /proprietaire/bail/[id] (commit 3 du flow plan) */}
+                {justAcceptedAnnonceId !== null && proprietaireActive && (
+                  <div style={{ background: "#15803d", color: "#fff", padding: "14px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.2px" }}>
+                          Locataire accepté ! Le bien est marqué loué.
+                        </div>
+                        <div style={{ fontSize: 12, opacity: 0.85, marginTop: 2 }}>
+                          Prochaine étape : générer le bail.
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                      <a
+                        href={`/proprietaire/bail/${justAcceptedAnnonceId}`}
+                        style={{ background: "#fff", color: "#15803d", padding: "9px 18px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 12, letterSpacing: "0.3px", textTransform: "uppercase" as const, whiteSpace: "nowrap" }}
+                      >
+                        Générer le bail →
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => setJustAcceptedAnnonceId(null)}
+                        aria-label="Fermer"
+                        style={{ background: "rgba(255,255,255,0.18)", color: "#fff", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", fontSize: 18, lineHeight: 1, fontFamily: "inherit", flexShrink: 0 }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Confirmation inline : louer à ce candidat — palette douce (vert subtil sur fond beige pour s'aligner sur le reste du site) */}
                 {accepterLocationOpen && proprietaireActive && convActiveData && (
