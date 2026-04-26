@@ -3312,7 +3312,11 @@ function MessagesInner() {
                          intermédiaire qui débloque la proposition de visite côté
                          locataire (Paul 2026-04-26). Caché si déjà validée ou
                          si le bail est signé pour ce candidat. */}
-                      {proprietaireActive && annonceActive && convActiveData?.annonceId && !isCandidatureValideeDB && !(annonceActive.statut === "loué" && (annonceActive.locataire_email || "").toLowerCase() === convActiveData.other.toLowerCase()) && (
+                      {/* Bouton "Valider" : on n'exige PAS annonceActive (peut être null
+                          si annonces map pas encore hydraté) — on a juste besoin de
+                          convActiveData.annonceId. La 2e condition utilise optional
+                          chaining pour ne pas crash si annonceActive null. */}
+                      {proprietaireActive && convActiveData?.annonceId && !isCandidatureValideeDB && !(annonceActive?.statut === "loué" && (annonceActive?.locataire_email || "").toLowerCase() === convActiveData.other.toLowerCase()) && (
                         <button
                           type="button"
                           onClick={async () => {
