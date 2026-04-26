@@ -2954,10 +2954,36 @@ function MessagesInner() {
           </>
         )}
 
-        <div style={{ display: "flex", gap: isMobile && convActiveData ? 0 : 16, height: isMobile ? "calc(100vh - 72px)" : "76vh" }}>
+        {/* Wrapper unifié 3 colonnes — fidèle handoff messages.jsx l. 142.
+            Avant : 3 cards séparées avec gap 16, chacune son borderRadius 20
+            et son boxShadow → effet "panneaux flottants". Maintenant : 1 seul
+            card unique avec border + radius 24 + shadow xs, séparateurs
+            internes via borderRight/borderLeft. Donne l'aspect "messagerie
+            premium intégrée" du handoff (Linear, Notion, Apple Mail-like).
+            Mobile : stack inchangée (chaque panneau prend toute la largeur). */}
+        <div style={{
+          display: isMobile ? "flex" : "flex",
+          gap: isMobile && convActiveData ? 0 : isMobile ? 16 : 0,
+          height: isMobile ? "calc(100vh - 72px)" : "76vh",
+          background: isMobile ? "transparent" : "#fff",
+          border: isMobile ? "none" : "1px solid #EAE6DF",
+          borderRadius: isMobile ? 0 : 24,
+          overflow: isMobile ? "visible" : "hidden",
+          boxShadow: isMobile ? "none" : "0 1px 3px rgba(0,0,0,0.04)",
+        }}>
 
           {/* ── Colonne gauche : conversations ── */}
-          <div style={{ width: isMobile ? "100%" : 300, flexShrink: 0, background: "white", borderRadius: isMobile ? 0 : 20, display: isMobile && convActiveData ? "none" : "flex", flexDirection: "column", overflow: "hidden", boxShadow: isMobile ? "none" : "0 2px 12px rgba(0,0,0,0.06)" }}>
+          <div style={{
+            width: isMobile ? "100%" : 300,
+            flexShrink: 0,
+            background: isMobile ? "white" : "transparent",
+            borderRadius: isMobile ? 0 : 0,
+            borderRight: isMobile ? "none" : "1px solid #EAE6DF",
+            display: isMobile && convActiveData ? "none" : "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            boxShadow: isMobile ? "none" : "none",
+          }}>
             {/* Onglets sidebar — proprio = 4 onglets stricts (Paul 2026-04-26),
                 locataire = 2 onglets historiques (Mon bail / Mes candidatures).
                 Compteurs entre parenthèses. Wrap si écran étroit. */}
@@ -3291,8 +3317,16 @@ function MessagesInner() {
             </div>
           </div>
 
-          {/* ── Colonne droite : chat ── */}
-          <div style={{ flex: 1, background: "white", borderRadius: isMobile ? 0 : 20, display: isMobile && !convActiveData ? "none" : "flex", flexDirection: "column", overflow: "hidden", boxShadow: isMobile ? "none" : "0 2px 12px rgba(0,0,0,0.06)" }}>
+          {/* ── Colonne centrale : chat (thread) — wrapper unifié, plus de bordure individuelle ── */}
+          <div style={{
+            flex: 1,
+            background: "white",
+            borderRadius: isMobile ? 0 : 0,
+            display: isMobile && !convActiveData ? "none" : "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            boxShadow: "none",
+          }}>
             {!convActiveData ? (
               <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", color: "#8a8477", gap: 14, padding: 24, textAlign: "center" }}>
                 {/* Icône enveloppe discrète sur pastille beige — handoff EmptyThread */}
@@ -4264,7 +4298,18 @@ function MessagesInner() {
               }
             }
             return (
-              <aside style={{ width: 300, flexShrink: 0, background: "white", borderRadius: 20, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.06)", display: "flex", flexDirection: "column", overflowY: "auto" }}>
+              <aside style={{
+                width: 300,
+                flexShrink: 0,
+                background: "white",
+                borderRadius: 0,
+                borderLeft: "1px solid #EAE6DF",
+                overflow: "hidden",
+                boxShadow: "none",
+                display: "flex",
+                flexDirection: "column",
+                overflowY: "auto",
+              }}>
                 {ann ? (
                   <>
                     {/* Photo 4/3 + badge MATCH overlay (handoff L453-455) */}
