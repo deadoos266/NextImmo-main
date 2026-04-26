@@ -320,6 +320,16 @@ function StatsInner() {
   const [savingLoyer, setSavingLoyer] = useState(false)
   const [travauxCout, setTravauxCout] = useState(0)
   const [edlStatut, setEdlStatut] = useState<string | null>(null)
+  // Pipeline candidatures (5 étapes, count exact via head:true). Funnel
+  // handoff (3) `pages.jsx` StatsScreen l. 825-848 — version vraie data
+  // (vs handoff fictif 14/8/5/3/1).
+  const [pipeline, setPipeline] = useState<{
+    vues: number
+    candidatures: number
+    dossiers: number
+    visites: number
+    bail: number
+  }>({ vues: 0, candidatures: 0, dossiers: 0, visites: 0, bail: 0 })
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth")
@@ -327,14 +337,43 @@ function StatsInner() {
   }, [session, status, bienId])
 
   async function loadData() {
-    const [{ data: b }, { data: l }, { data: travaux }, { data: edlData }] = await Promise.all([
+    const me = (session?.user?.email || "").toLowerCase()
+    const [
+      { data: b }, { data: l }, { data: travaux }, { data: edlData },
+      vuesRes, candidaturesRes, dossiersRes, visitesRes, signaturesRes,
+    ] = await Promise.all([
       supabase.from("annonces").select("*").eq("id", bienId).single(),
       supabase.from("loyers").select("*").eq("annonce_id", bienId).order("mois"),
       supabase.from("carnet_entretien").select("cout").eq("annonce_id", bienId),
       supabase.from("etats_des_lieux").select("statut").eq("annonce_id", bienId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      // Pipeline funnel — head:true pour ne payer que le count, pas les rows.
+      supabase.from("clics_annonces").select("annonce_id", { count: "exact", head: true }).eq("annonce_id", bienId),
+      supabase.from("messages").select("id", { count: "exact", head: true }).eq("to_email", me).eq("annonce_id", bienId).eq("type", "candidature"),
+      // Dossiers reçus = messages [DOSSIER_CARD] envoyés par le candidat au proprio.
+      supabase.from("messages").select("id", { count: "exact", head: true }).eq("to_email", me).eq("annonce_id", bienId).like("contenu", "[DOSSIER_CARD]%"),
+      supabase.from("visites").select("id", { count: "exact", head: true }).eq("annonce_id", bienId).in("statut", ["proposée", "confirmée", "effectuée"]),
+      // Bail signé = présence de 2 signataire_role distincts (bailleur + locataire).
+      supabase.from("bail_signatures").select("signataire_role").eq("annonce_id", bienId),
     ])
     setEdlStatut(edlData?.statut || null)
     if (travaux) setTravauxCout(travaux.reduce((s: number, t: any) => s + (Number(t.cout) || 0), 0))
+
+    // Pipeline counts. `signaturesRes` retourne les rows pour compter les
+    // rôles distincts ; bail "signé" requiert bailleur + locataire (2 rôles).
+    const distinctRoles = new Set<string>()
+    if (Array.isArray(signaturesRes.data)) {
+      signaturesRes.data.forEach((s: { signataire_role?: string | null }) => {
+        if (s.signataire_role) distinctRoles.add(s.signataire_role)
+      })
+    }
+    const bailFullySigned = distinctRoles.has("bailleur") && distinctRoles.has("locataire") ? 1 : 0
+    setPipeline({
+      vues: vuesRes.count ?? 0,
+      candidatures: candidaturesRes.count ?? 0,
+      dossiers: dossiersRes.count ?? 0,
+      visites: visitesRes.count ?? 0,
+      bail: bailFullySigned,
+    })
     if (b) {
       setBien(b)
       setEditForm({
@@ -1152,6 +1191,77 @@ function StatsInner() {
               <p style={{ fontSize: 16, fontWeight: 800, color: pctObjectif >= 90 ? "#15803d" : "#a16207", margin: 0 }}>{pctObjectif}%</p>
             </div>
           </div>
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════════════════
+            5b. PIPELINE CANDIDATURES — funnel handoff (3) `pages.jsx` l. 825-848
+                Vraie data DB (vs handoff fictif 14/8/5/3/1).
+                Largeur de barre normalisée sur le max de toutes les étapes.
+           ══════════════════════════════════════════════════════════════════════ */}
+        <div style={{ ...cardStyle, marginBottom: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+            <div>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase" as const, letterSpacing: "1.6px", margin: 0, marginBottom: 6 }}>
+                Pipeline candidatures
+              </p>
+              <h3 style={{ fontSize: isMobile ? 14 : 15, fontWeight: 800, margin: 0 }}>
+                Du clic à la signature
+              </h3>
+            </div>
+            {pipeline.candidatures > 0 && pipeline.vues > 0 && (
+              <span style={{ fontSize: 11, color: "#8a8477", fontVariantNumeric: "tabular-nums" as const }}>
+                Taux de conversion vues → candidatures :{" "}
+                <strong style={{ color: "#111", fontWeight: 700 }}>
+                  {Math.round((pipeline.candidatures / pipeline.vues) * 100)}%
+                </strong>
+              </span>
+            )}
+          </div>
+          {(() => {
+            // Pipeline étapes — chaque étape porte sa propre couleur sémantique.
+            // Si vues > 0, on l'utilise comme dénominateur. Sinon on utilise
+            // candidatures (cas où le tracking de clics n'a pas démarré).
+            const steps: Array<{ label: string; count: number; bg: string; bar: string; fg: string }> = [
+              { label: "Vues", count: pipeline.vues, bg: "#F7F4EF", bar: "#EAE6DF", fg: "#111" },
+              { label: "Candidatures", count: pipeline.candidatures, bg: "#F0FAEE", bar: "#15803d", fg: "#15803d" },
+              { label: "Dossiers reçus", count: pipeline.dossiers, bg: "#EEF3FB", bar: "#1d4ed8", fg: "#1d4ed8" },
+              { label: "Visites programmées", count: pipeline.visites, bg: "#FBF6EA", bar: "#a16207", fg: "#a16207" },
+              { label: "Bail signé", count: pipeline.bail, bg: "#111", bar: "#111", fg: "#fff" },
+            ]
+            const maxCount = Math.max(1, ...steps.map(s => s.count))
+            return (
+              <>
+                {steps.map((s, i) => {
+                  const widthPct = Math.round((s.count / maxCount) * 100)
+                  const isInkBar = s.label === "Bail signé"
+                  return (
+                    <div key={s.label} style={{ marginBottom: i === steps.length - 1 ? 0 : 14 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}>
+                        <span style={{ fontWeight: 600, color: "#111" }}>{s.label}</span>
+                        <span style={{ color: "#8a8477", fontVariantNumeric: "tabular-nums" as const, fontWeight: 700 }}>{s.count}</span>
+                      </div>
+                      <div style={{ height: 8, background: isInkBar ? "#F7F4EF" : "#F5F2EC", borderRadius: 999, overflow: "hidden" }}>
+                        <div
+                          style={{
+                            width: `${widthPct}%`,
+                            height: "100%",
+                            background: s.bar,
+                            borderRadius: 999,
+                            transition: "width 600ms cubic-bezier(0.4, 0, 0.2, 1)",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+                {pipeline.vues === 0 && pipeline.candidatures === 0 && (
+                  <p style={{ fontSize: 12, color: "#8a8477", marginTop: 14, marginBottom: 0, lineHeight: 1.5 }}>
+                    Aucune activité enregistrée pour ce bien. Le pipeline se remplira dès que des locataires consulteront l&apos;annonce et candidateront.
+                  </p>
+                )}
+              </>
+            )
+          })()}
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════════
