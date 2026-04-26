@@ -1274,7 +1274,13 @@ function Step7Publier({
           « le estimer le loyer n'apparaît pas »). Rendu live basé sur les
           annonces similaires (lib/marketRent). Disparaît silencieusement
           si pas assez de données ou ville vide. */}
-      <MarketRentHint ville={form.ville} surface={form.surface} pieces={form.pieces} prix={form.prix} />
+      <MarketRentHint
+        ville={form.ville}
+        surface={form.surface}
+        pieces={form.pieces}
+        prix={form.prix}
+        onUseMedian={(median) => setForm(f => ({ ...f, prix: String(median) }))}
+      />
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: 16, marginTop: 16 }}>
         <F l="Loyer mensuel (€)"><input style={inp} type="number" value={form.prix} onChange={set("prix")} placeholder="1100" /></F>
         <F l="Charges (€/mois)"><input style={inp} type="number" value={form.charges} onChange={set("charges")} placeholder="80" /></F>

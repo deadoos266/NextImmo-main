@@ -12,9 +12,11 @@ interface Props {
   surface: string | number
   pieces: string | number
   prix: string | number
+  /** Optionnel : permet de pré-remplir le champ Prix au click sur le médian. */
+  onUseMedian?: (median: number) => void
 }
 
-export default function MarketRentHint({ ville, surface, pieces, prix }: Props) {
+export default function MarketRentHint({ ville, surface, pieces, prix, onUseMedian }: Props) {
   const [result, setResult] = useState<{ median: number | null; count: number; min: number | null; max: number | null } | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -57,20 +59,45 @@ export default function MarketRentHint({ ville, surface, pieces, prix }: Props) 
       : `${Math.round(diff)}% en-dessous du marché`
   const diffColor = Math.abs(diff) < 5 ? "#15803d" : Math.abs(diff) < 15 ? "#a16207" : "#b91c1c"
 
+  const median = result.median
   return (
     <div style={{ background: "#f0f9ff", border: "1px solid #D7E3F4", borderRadius: 12, padding: "10px 14px", fontSize: 13, color: "#111", marginTop: 8, lineHeight: 1.5 }}>
-      <p style={{ margin: 0, fontWeight: 700 }}>
-        Loyer médian sur {ville}{pieces ? ` · ${pieces} pièces` : ""} : <span style={{ color: "#1d4ed8" }}>{result.median} €/mois</span>
-      </p>
-      <p style={{ margin: "4px 0 0", fontSize: 12, color: "#111" }}>
-        Fourchette observée : {result.min} € à {result.max} €
-        {" "}<span style={{ color: "#8a8477" }}>({result.count} bien{result.count > 1 ? "s" : ""} similaire{result.count > 1 ? "s" : ""})</span>
-      </p>
-      {prixNum > 0 && (
-        <p style={{ margin: "4px 0 0", fontSize: 12, fontWeight: 700, color: diffColor }}>
-          Votre prix est {diffLabel}
-        </p>
-      )}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <p style={{ margin: 0, fontWeight: 700 }}>
+            Loyer médian sur {ville}{pieces ? ` · ${pieces} pièces` : ""} : <span style={{ color: "#1d4ed8" }}>{median} €/mois</span>
+          </p>
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#111" }}>
+            Fourchette observée : {result.min} € à {result.max} €
+            {" "}<span style={{ color: "#8a8477" }}>({result.count} bien{result.count > 1 ? "s" : ""} similaire{result.count > 1 ? "s" : ""})</span>
+          </p>
+          {prixNum > 0 && (
+            <p style={{ margin: "4px 0 0", fontSize: 12, fontWeight: 700, color: diffColor }}>
+              Votre prix est {diffLabel}
+            </p>
+          )}
+        </div>
+        {/* Bouton click-to-fill — pré-remplit le champ Prix avec la médiane.
+            Visible uniquement si callback fourni ET prix actuel ≠ médian
+            (sinon redondant). */}
+        {onUseMedian && median !== null && Number(prix) !== median && (
+          <button
+            type="button"
+            onClick={() => onUseMedian(median)}
+            style={{
+              background: "#1d4ed8", color: "#fff", border: "none",
+              borderRadius: 999, padding: "6px 14px",
+              fontSize: 11, fontWeight: 700,
+              cursor: "pointer", fontFamily: "inherit",
+              whiteSpace: "nowrap", letterSpacing: "0.3px",
+              flexShrink: 0,
+            }}
+            title="Utiliser cette estimation comme loyer"
+          >
+            Utiliser {median} €
+          </button>
+        )}
+      </div>
     </div>
   )
 }

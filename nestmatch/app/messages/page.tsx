@@ -2162,6 +2162,11 @@ function MessagesInner() {
     setDemandantDossier(true)
     const conv = conversations.find(c => c.key === convActive)
     if (!conv) { setDemandantDossier(false); return }
+    // Garde-fou anti-doublon : si la conv a déjà un [DEMANDE_DOSSIER] dans
+    // les messages chargés, ne ré-envoie pas (évite les spams si l'URL
+    // ?action=demande-dossier est triggered plusieurs fois).
+    const dejaDemande = messages.some(m => m.contenu === DEMANDE_DOSSIER_PREFIX && m.from_email === myEmail && (m.annonce_id ?? null) === (conv.annonceId ?? null))
+    if (dejaDemande) { setDemandantDossier(false); return }
     const msg = {
       from_email: myEmail,
       to_email: conv.other,
@@ -2177,6 +2182,26 @@ function MessagesInner() {
     }
     setDemandantDossier(false)
   }
+
+  // Auto-trigger demande dossier si arrivée depuis /proprietaire/annonces/.../candidatures
+  // avec ?action=demande-dossier. Une seule fois par session : le query param
+  // est nettoyé après trigger pour éviter ré-envois au refresh ou changement
+  // de conv. Garde-fou supplémentaire dans `demanderDossier` (skip si déjà
+  // un [DEMANDE_DOSSIER] dans les messages courants).
+  useEffect(() => {
+    const action = searchParams.get("action")
+    if (action !== "demande-dossier") return
+    if (!convActive || !myEmail || demandantDossier) return
+    if (messages.length === 0) return // attend le chargement des messages
+    void (async () => {
+      await demanderDossier()
+      // Nettoie l'URL : remplace l'historique sans le query param `action`
+      const qs = new URLSearchParams(searchParams.toString())
+      qs.delete("action")
+      router.replace(`/messages?${qs.toString()}`, { scroll: false })
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [convActive, myEmail, messages.length, searchParams])
 
   async function changerStatutVisite(id: string, statut: string) {
     if (!myEmail) return
@@ -3417,7 +3442,24 @@ function MessagesInner() {
                           </div>
                         )}
                         {conv.unread > 0 && (
-                          <span style={{ position: "absolute", top: -4, right: -4, background: "#b91c1c", color: "white", borderRadius: 999, fontSize: 9, fontWeight: 800, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: "2px solid white" }}>
+                          // Pinned + unread = surlevage visuel : border ink au lieu
+                          // de white + scale 1.08 + ring beige autour pour
+                          // distinguer une priorité épinglée d'une simple unread.
+                          <span style={{
+                            position: "absolute", top: -4, right: -4,
+                            background: pinnedHere ? "#111" : "#b91c1c",
+                            color: "white",
+                            borderRadius: 999,
+                            fontSize: 9, fontWeight: 800,
+                            minWidth: pinnedHere ? 18 : 16,
+                            height: pinnedHere ? 18 : 16,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            padding: "0 3px",
+                            border: pinnedHere ? "2px solid #fff" : "2px solid white",
+                            boxShadow: pinnedHere ? "0 0 0 2px #b91c1c, 0 2px 6px rgba(17,17,17,0.3)" : "none",
+                            transform: pinnedHere ? "scale(1.08)" : "scale(1)",
+                            transition: "transform 160ms ease",
+                          }}>
                             {conv.unread}
                           </span>
                         )}
