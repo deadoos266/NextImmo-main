@@ -1269,12 +1269,17 @@ function Step7Publier({
   return (
     <>
       <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 14px" }}>Loyer & charges</p>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: 16 }}>
+      {/* Estimateur de loyer marché — remonté AVANT les champs pour aider
+          le proprio à fixer un prix avant qu'il ne tape (Paul 2026-04-26
+          « le estimer le loyer n'apparaît pas »). Rendu live basé sur les
+          annonces similaires (lib/marketRent). Disparaît silencieusement
+          si pas assez de données ou ville vide. */}
+      <MarketRentHint ville={form.ville} surface={form.surface} pieces={form.pieces} prix={form.prix} />
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: 16, marginTop: 16 }}>
         <F l="Loyer mensuel (€)"><input style={inp} type="number" value={form.prix} onChange={set("prix")} placeholder="1100" /></F>
         <F l="Charges (€/mois)"><input style={inp} type="number" value={form.charges} onChange={set("charges")} placeholder="80" /></F>
         <F l="Dépôt de garantie (€)"><input style={inp} type="number" value={form.caution} onChange={set("caution")} placeholder="1100" /></F>
       </div>
-      <MarketRentHint ville={form.ville} surface={form.surface} pieces={form.pieces} prix={form.prix} />
 
       {/* Bloc gestion locative si statut = déjà loué */}
       {dejaLoue && (
