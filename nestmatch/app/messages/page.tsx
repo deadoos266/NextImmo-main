@@ -2895,10 +2895,10 @@ function MessagesInner() {
                 Compteurs entre parenthèses. Wrap si écran étroit. */}
             <div style={{ display: "flex", flexWrap: "wrap", padding: "12px 12px 4px", gap: 6, borderBottom: "1px solid #EAE6DF" }}>
               {(proprietaireActive ? [
-                { k: "candidat" as const,  label: "Candidat",  count: countByTab.candidat },
-                { k: "valide" as const,    label: "Validé",    count: countByTab.valide },
-                { k: "locataire" as const, label: "Locataire", count: countByTab.locataire },
-                { k: "autre" as const,     label: "Autre",     count: countByTab.autre },
+                { k: "candidat" as const,  label: "Candidat",          count: countByTab.candidat },
+                { k: "valide" as const,    label: "Validé",            count: countByTab.valide },
+                { k: "locataire" as const, label: "Locataire",         count: countByTab.locataire },
+                { k: "autre" as const,     label: "Anciens locataires", count: countByTab.autre },
               ] : [
                 { k: "locataire" as const, label: "Mon bail",         count: countByTab.locataire },
                 { k: "candidat" as const,  label: "Mes candidatures", count: countByTab.candidat + countByTab.valide + countByTab.autre },
@@ -3355,8 +3355,11 @@ function MessagesInner() {
                         </span>
                       )}
                       {/* Bouton "Louer à ce candidat" — côté proprio uniquement.
-                         Cache si la location est déjà actée pour ce candidat. */}
-                      {proprietaireActive && annonceActive && (
+                         Workflow strict : la candidature DOIT être validée
+                         (isCandidatureValideeDB=true) avant de pouvoir louer.
+                         Empêche de sauter l'étape Valider → Visite → Bail.
+                         Cache aussi si location déjà actée pour ce candidat. */}
+                      {proprietaireActive && annonceActive && isCandidatureValideeDB && (
                         (annonceActive.statut !== "loué" || (annonceActive.locataire_email || "").toLowerCase() !== convActiveData.other.toLowerCase()) && (
                           <button
                             type="button"
