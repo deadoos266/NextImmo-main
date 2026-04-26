@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useRole } from "../providers"
 import { supabase } from "../../lib/supabase"
 import { useResponsive } from "../hooks/useResponsive"
+import { useUserHousingState } from "../hooks/useUserHousingState"
 import Logo from "./Logo"
 import NotificationBell from "./NotificationBell"
 import { km } from "./ui/km"
@@ -39,6 +40,9 @@ export default function Navbar() {
   const [photoCustom, setPhotoCustom] = useState<string | null>(null)
   const { isMobile, isTablet } = useResponsive()
   const isSmall = isMobile || isTablet
+  // Gating des entrées "Mon logement / Carnet / Quittances / Anciens logements"
+  // selon l'état réel du locataire. Pas de gate côté proprio (espace inchangé).
+  const { hasCurrentHousing, hasPastHousing } = useUserHousingState()
   // Priorité photo : custom uploadée > Google (session). Si la colonne n'existe
   // pas (migration 008 pas appliquée), on retombe silencieusement sur session.
   const avatarSrc = photoCustom || session?.user?.image || null
@@ -139,6 +143,10 @@ export default function Navbar() {
     return () => window.removeEventListener("keydown", handleKey)
   }, [espaceOpen, menuOpen, mobileOpen])
 
+  // Gating locataire — masque les entrées qui n'ont aucune raison d'apparaître
+  // tant que l'état correspondant n'existe pas (avant signature : 0 logement
+  // ⇒ pas de Mon logement / Carnet / Quittances ; pas d'ancien bail terminé
+  // ⇒ pas d'Anciens logements). Routes accessibles en direct (EmptyState).
   const espaceLinks = proprietaireActive ? [
     { href: "/profil",               label: "Mon profil",         desc: "Informations personnelles" },
     { href: "/proprietaire",         label: "Mes biens",          desc: "Gestion de mes annonces" },
@@ -147,12 +155,18 @@ export default function Navbar() {
   ] : [
     { href: "/profil",        label: "Mon profil",         desc: "Critères de recherche & matching" },
     { href: "/dossier",       label: "Mon dossier",        desc: "Documents & complétion" },
-    { href: "/mon-logement",  label: "Mon logement",       desc: "Bail actif, loyer, documents" },
-    { href: "/mes-documents", label: "Mes documents",      desc: "Hub central — dossier, bail, EDL, quittances" },
-    { href: "/mes-quittances", label: "Mes quittances",    desc: "Archives mensuelles" },
-    { href: "/anciens-logements", label: "Anciens logements", desc: "Historique des baux passés" },
+    ...(hasCurrentHousing ? [
+      { href: "/mon-logement",   label: "Mon logement",       desc: "Bail actif, loyer, documents" },
+      { href: "/mes-documents",  label: "Mes documents",      desc: "Hub central — dossier, bail, EDL, quittances" },
+      { href: "/mes-quittances", label: "Mes quittances",     desc: "Archives mensuelles" },
+    ] : []),
+    ...(hasPastHousing ? [
+      { href: "/anciens-logements", label: "Anciens logements", desc: "Historique des baux passés" },
+    ] : []),
     { href: "/visites",       label: "Mes visites",        desc: "Demandes & confirmations", badge: badgeVisites },
-    { href: "/carnet",        label: "Carnet d'entretien", desc: "Historique des travaux" },
+    ...(hasCurrentHousing ? [
+      { href: "/carnet",        label: "Carnet d'entretien", desc: "Historique des travaux" },
+    ] : []),
   ]
 
   const espaceActif = isActive("/profil") || isActive("/dossier") || isActive("/mon-logement") || isActive("/mes-documents") || isActive("/mes-quittances") || isActive("/anciens-logements") || isActive("/proprietaire") || isActive("/carnet") || isActive("/visites")

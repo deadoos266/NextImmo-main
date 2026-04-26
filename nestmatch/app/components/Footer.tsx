@@ -2,6 +2,7 @@
 import { usePathname } from "next/navigation"
 import { useResponsive } from "../hooks/useResponsive"
 import { useRole } from "../providers"
+import { useUserHousingState } from "../hooks/useUserHousingState"
 import Logo from "./Logo"
 
 /**
@@ -22,6 +23,9 @@ export default function Footer() {
   const pathname = usePathname()
   const { isMobile, isTablet } = useResponsive()
   const { proprietaireActive } = useRole()
+  // Gating locataire : Mon logement / Anciens logements n'apparaissent que
+  // si l'état correspondant existe. Cohérent avec le menu Navbar.
+  const { hasCurrentHousing, hasPastHousing } = useUserHousingState()
 
   // Masqué sur /annonces (scroll isolé, layout plein viewport)
   if (pathname === "/annonces" || pathname?.startsWith("/annonces?")) return null
@@ -154,7 +158,12 @@ export default function Footer() {
                 <a href="/dossier" style={linkBase} onMouseEnter={hoverInk} onMouseLeave={hoverMeta}>Mon dossier</a>
                 <a href="/mes-candidatures" style={linkBase} onMouseEnter={hoverInk} onMouseLeave={hoverMeta}>Mes candidatures</a>
                 <a href="/visites" style={linkBase} onMouseEnter={hoverInk} onMouseLeave={hoverMeta}>Mes visites</a>
-                <a href="/mon-logement" style={linkBase} onMouseEnter={hoverInk} onMouseLeave={hoverMeta}>Mon logement</a>
+                {hasCurrentHousing && (
+                  <a href="/mon-logement" style={linkBase} onMouseEnter={hoverInk} onMouseLeave={hoverMeta}>Mon logement</a>
+                )}
+                {hasPastHousing && (
+                  <a href="/anciens-logements" style={linkBase} onMouseEnter={hoverInk} onMouseLeave={hoverMeta}>Anciens logements</a>
+                )}
               </>
             )}
           </div>
