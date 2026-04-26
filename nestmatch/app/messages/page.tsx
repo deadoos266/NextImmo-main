@@ -4130,7 +4130,26 @@ function MessagesInner() {
                         </button>
                       )
                     )}
-                    {/* Messages préfaits retirés — préférer un message personnalisé. */}
+                    {/* QuickReply "Question sur le loyer" — handoff messages.jsx l. 399.
+                       Pré-remplit le composer pour aider l'user à formuler une
+                       question récurrente. Visible des deux côtés (locataire qui
+                       demande un détail, proprio qui clarifie). Garde-fou : ne
+                       remplace pas le draft si déjà tapé (concat seulement si vide). */}
+                  {convActiveData && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (nouveau.trim().length === 0) {
+                          setNouveau("Bonjour, j'aurais une question concernant le loyer et les charges. ")
+                          inputRef.current?.focus()
+                        }
+                      }}
+                      title="Insérer une question type sur le loyer"
+                      style={{ background: "#fff", border: "1px solid #EAE6DF", color: "#6b6b6b", borderRadius: 999, padding: "6px 14px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, letterSpacing: "0.1px" }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#6b6b6b" }} />
+                      Question sur le loyer
+                    </button>
+                  )}
                   </div>
                   {/* NOTE : Formulaire visite inline retiré — migré vers <ProposerVisiteDialog>
                       monté en bas de page (calque handoff modals.jsx VisitRequestModal). */}
