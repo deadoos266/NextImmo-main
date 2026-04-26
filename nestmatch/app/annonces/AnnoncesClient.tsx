@@ -924,6 +924,24 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
         width: isDesktopListCarte ? "100%" : undefined,
       }}>
 
+        {/* ── Bandeau dossier incitatif — REMONTÉ AVANT le header h2 pour que
+             le user locataire voie immédiatement à l'arrivée s'il lui manque
+             quelque chose dans son dossier. Visible dans tous les modes
+             (grille + liste+carte) : en liste+carte desktop, il s'insère
+             dans le flex column outer au-dessus de la zone LC qui prend
+             flex:1. Avant : rendu APRÈS le header h2, et masqué en
+             liste+carte → invisible alors que c'est l'incitation principale. */}
+        {showBandeauDossier && completudeProfil !== null && (
+          <div style={{
+            padding: isMobile ? "10px 0" : "14px 0 6px",
+            paddingLeft: isDesktopListCarte ? containerPadH : 0,
+            paddingRight: isDesktopListCarte ? containerPadH : 0,
+            flexShrink: 0,
+          }}>
+            <BandeauDossier completude={completudeProfil} isMobile={isMobile} />
+          </div>
+        )}
+
         {/* ── Header éditorial — scroll normal (pas sticky)
              En mode liste+carte desktop : MASQUÉ. La page est immersive
              (carte + aside edge-to-edge), l'aside a son propre h1 22px
@@ -971,12 +989,7 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           </div>
         ))}
 
-        {/* ── Bandeau dossier incitatif (card premium) — MASQUÉ en mode liste+carte desktop ─ */}
-        {!isDesktopListCarte && showBandeauDossier && completudeProfil !== null && (
-          <div style={{ padding: isMobile ? "10px 0" : "14px 0 6px" }}>
-            <BandeauDossier completude={completudeProfil} isMobile={isMobile} />
-          </div>
-        )}
+        {/* Bandeau dossier — déplacé AU-DESSUS du header h2 (cf bloc plus haut). */}
 
         {/* ── Bandeau statut compact — MASQUÉ en mode liste+carte desktop ── */}
         {!isDesktopListCarte && (isProprietaire || status === "unauthenticated") && (

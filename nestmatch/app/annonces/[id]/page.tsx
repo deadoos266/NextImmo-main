@@ -540,29 +540,37 @@ export default async function Annonce({ params }: any) {
                     ))
                 })()}
               </dl>
-              <div className="r-detail-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, paddingTop: 4, borderTop: "1px solid #F7F4EF" }}>
-                {[
-                  { label: "Meublé", val: annonce.meuble },
-                  { label: "Parking inclus", val: annonce.parking },
-                  { label: "Cave", val: annonce.cave },
-                  { label: "Balcon", val: annonce.balcon },
-                  { label: "Terrasse", val: annonce.terrasse },
-                  { label: "Jardin", val: annonce.jardin },
-                  { label: "Ascenseur", val: annonce.ascenseur },
-                  { label: "Fibre optique", val: annonce.fibre },
-                ].map(item => (
-                  <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, paddingTop: 12 }}>
-                    <span aria-hidden style={{ width: 24, height: 24, borderRadius: "50%", background: item.val ? "#F0FAEE" : "#F7F4EF", color: item.val ? "#15803d" : "#8a8477", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      {item.val ? (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                      ) : (
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                      )}
-                    </span>
-                    <span style={{ color: item.val ? "#111" : "#8a8477" }}>{item.label}</span>
+              {(() => {
+                // R10.10b — N'afficher QUE les équipements présents (cochés)
+                // dans le bien. Avant : grille avec coches + croix grisées
+                // pour les absents → pollution visuelle. Maintenant : seuls
+                // les "true" rendent une ligne, croisillon vert. Si rien
+                // n'est coché, on omet entièrement la grille (le tableau dl
+                // au-dessus suffit). Bug Paul 2026-04-26.
+                const items = [
+                  { label: "Meublé", val: !!annonce.meuble },
+                  { label: "Parking inclus", val: !!annonce.parking },
+                  { label: "Cave", val: !!annonce.cave },
+                  { label: "Balcon", val: !!annonce.balcon },
+                  { label: "Terrasse", val: !!annonce.terrasse },
+                  { label: "Jardin", val: !!annonce.jardin },
+                  { label: "Ascenseur", val: !!annonce.ascenseur },
+                  { label: "Fibre optique", val: !!annonce.fibre },
+                ].filter(i => i.val)
+                if (items.length === 0) return null
+                return (
+                  <div className="r-detail-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, paddingTop: 4, borderTop: "1px solid #F7F4EF" }}>
+                    {items.map(item => (
+                      <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, paddingTop: 12 }}>
+                        <span aria-hidden style={{ width: 24, height: 24, borderRadius: "50%", background: "#F0FAEE", color: "#15803d", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                        </span>
+                        <span style={{ color: "#111" }}>{item.label}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )
+              })()}
             </section>
 
             {/* ─── R10.9 Diagnostic énergétique (DPE bars) ──────────── */}
