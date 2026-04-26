@@ -2571,10 +2571,24 @@ function MessagesInner() {
       if ((searchIndex[c.key] || "").includes(needle)) return true
       return false
     })
-    // Tri : conversations non lues en premier, puis par date du dernier message (recent d'abord)
+    // Tri composite (priorité décroissante) :
+    //   1. Pinned-first  : convs épinglées toujours en haut (commit 9ceb581).
+    //                      Sans cette priorité, le sort qui suivait mettait
+    //                      les non-lus avant les pinned → bug Paul 2026-04-26
+    //                      « épingler ne fait pas remonter ».
+    //   2. Muted-last    : convs en sourdine en bas, indépendamment de unread.
+    //   3. Unread-first  : non-lus avant lus (sauf entre deux mutées).
+    //   4. Date DESC     : récent d'abord.
     .slice()
     .sort((a, b) => {
-      if ((a.unread > 0) !== (b.unread > 0)) return a.unread > 0 ? -1 : 1
+      const pa = convPrefs[a.key]?.pinned ? 1 : 0
+      const pb = convPrefs[b.key]?.pinned ? 1 : 0
+      if (pa !== pb) return pb - pa
+      const ma = convPrefs[a.key]?.muted ? 1 : 0
+      const mb = convPrefs[b.key]?.muted ? 1 : 0
+      if (ma !== mb) return ma - mb
+      // Unread-first n'a pas de sens entre deux mutées (pas de signal d'urgence).
+      if (!ma && !mb && (a.unread > 0) !== (b.unread > 0)) return a.unread > 0 ? -1 : 1
       const da = a.lastMsg?.created_at ? new Date(a.lastMsg.created_at).getTime() : 0
       const db = b.lastMsg?.created_at ? new Date(b.lastMsg.created_at).getTime() : 0
       return db - da
