@@ -148,6 +148,25 @@ export async function POST(req: Request) {
   // Persist URL sur loyers
   await supabaseAdmin.from("loyers").update({ quittance_pdf_url: publicUrl }).eq("id", loyer.id)
 
+  // Notif cloche locataire — quittance disponible (en plus de l'email Resend
+  // qui rate parfois selon la config). Le locataire voit la cloche → 1 clic
+  // → /mes-quittances. Best-effort, on n'échoue pas la requête si la notif
+  // ne passe pas.
+  try {
+    await supabaseAdmin.from("notifications").insert([{
+      user_email: loyer.locataire_email,
+      type: "quittance_disponible",
+      title: "Quittance disponible",
+      body: `Votre quittance ${moisLabel}${annonce.titre ? ` pour « ${annonce.titre} »` : ""} est prête à télécharger.`,
+      href: "/mes-quittances",
+      related_id: String(loyer.id),
+      lu: false,
+      created_at: new Date().toISOString(),
+    }])
+  } catch (notifErr) {
+    console.error("[quittance] notif insert failed", notifErr)
+  }
+
   // Envoi email locataire (best-effort, ne bloque pas si Resend indisponible)
   const { subject, html, text } = quittanceTemplate({
     bienTitre: annonce.titre || "Logement",

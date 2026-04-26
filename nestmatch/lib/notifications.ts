@@ -23,6 +23,7 @@ export type NotifType =
   | "bail_a_signer"
   | "bail_signe"
   | "edl_envoye"
+  | "quittance_disponible"
   | "dossier_consulte"
   | "candidature_retiree"
   | "candidature_validee"
@@ -70,6 +71,7 @@ export const NOTIF_TYPES: readonly NotifType[] = [
   "bail_a_signer",
   "bail_signe",
   "edl_envoye",
+  "quittance_disponible",
   "dossier_consulte",
   "candidature_retiree",
   "candidature_validee",
