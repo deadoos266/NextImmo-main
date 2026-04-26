@@ -251,7 +251,21 @@ function VerifierEmailForm() {
                   {resendMsg}
                 </p>
               )}
-              <p style={{ fontSize: 11, color: km.muted, margin: "16px 0 0", textTransform: "uppercase", letterSpacing: "1.2px", fontWeight: 600 }}>
+              {/* Échappatoire UX : si le user ne reçoit pas l'email
+                  (provider lent, spam, typo) il peut continuer en mode
+                  consultation seule. Les actions sensibles (publier,
+                  candidater, dossier) re-prompteront la vérification —
+                  le user n'est jamais bloqué hors du site (audit 2026-04-26).
+                  Lien discret pour ne pas inciter à skip systématiquement. */}
+              <p style={{ fontSize: 12, color: km.muted, margin: "20px 0 0", lineHeight: 1.55, textAlign: "center" }}>
+                Pas de code après 5 min ?
+                {" "}
+                <a href="/annonces" style={{ color: km.ink, fontWeight: 600, textDecoration: "underline", textUnderlineOffset: 3 }}>
+                  Vérifier plus tard
+                </a>
+                {" "}— vous pouvez consulter les annonces, la vérification sera demandée au moment de candidater.
+              </p>
+              <p style={{ fontSize: 11, color: km.muted, margin: "12px 0 0", textTransform: "uppercase", letterSpacing: "1.2px", fontWeight: 600, textAlign: "center" }}>
                 <a href="/auth" style={{ color: km.muted, textDecoration: "underline", textUnderlineOffset: 3 }}>Retour à la connexion</a>
               </p>
             </div>
