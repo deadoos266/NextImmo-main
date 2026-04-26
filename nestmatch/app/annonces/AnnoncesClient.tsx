@@ -1331,6 +1331,10 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                           onMouseEnter={() => setSelectedId(a.id)}
                           onMouseLeave={() => setSelectedId(null)}
                           onToggleFavori={e => handleToggleFavori(e, a.id)}
+                          onPreview={() => setQuickViewId(a.id)}
+                          compared={compareIds.includes(a.id)}
+                          onToggleCompare={handleToggleCompare}
+                          compareDisabled={compareIds.length >= COMPARE_MAX}
                         />
                       )
                     })}
