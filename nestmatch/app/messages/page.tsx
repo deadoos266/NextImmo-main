@@ -2203,6 +2203,26 @@ function MessagesInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [convActive, myEmail, messages.length, searchParams])
 
+  // Auto-pré-remplir le composer avec un texte de relance quand le proprio
+  // arrive depuis /proprietaire/annonces/.../candidatures avec ?action=relance.
+  // Cible : candidatures ouvertes (statut contact/dossier) sans réponse depuis
+  // ≥7j. Le proprio peut éditer avant d'envoyer (pas d'envoi automatique).
+  useEffect(() => {
+    const action = searchParams.get("action")
+    if (action !== "relance") return
+    if (!convActive || !myEmail) return
+    if (nouveau) return // ne pas écraser un brouillon en cours
+    const conv = conversations.find(c => c.key === convActive)
+    const ann = conv?.annonceId ? annonces[conv.annonceId] : null
+    const titre = ann?.titre || "votre candidature"
+    setNouveau(`Bonjour, je relance suite à votre candidature pour « ${titre} ». Pouvez-vous me confirmer votre intérêt et compléter votre dossier si ce n'est pas déjà fait ? Merci !`)
+    // Nettoie l'URL pour éviter de re-pré-remplir au refresh
+    const qs = new URLSearchParams(searchParams.toString())
+    qs.delete("action")
+    router.replace(`/messages?${qs.toString()}`, { scroll: false })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [convActive, myEmail, searchParams])
+
   async function changerStatutVisite(id: string, statut: string) {
     if (!myEmail) return
     const visite = visitesConv.find(v => v.id === id)

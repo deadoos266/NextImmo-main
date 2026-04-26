@@ -674,6 +674,28 @@ function CandidatureCard({
             Demander le dossier
           </Link>
         )}
+        {/* Relancer — visible si candidature ouverte (contact/dossier) et
+            silence >= 7j depuis la candidature initiale. Redirige vers la
+            conv avec ?action=relance pour pré-charger le quick-reply. */}
+        {(() => {
+          if (statut !== "contact" && statut !== "dossier") return null
+          if (isRefused || isValidated) return null
+          const joursDepuis = Math.floor((Date.now() - new Date(createdAt).getTime()) / 86400000)
+          if (joursDepuis < 7) return null
+          return (
+            <Link
+              href={`/messages?with=${encodeURIComponent(email)}&annonce=${annonceId}&action=relance`}
+              title={`Candidature reçue il y a ${joursDepuis} jours · relancer`}
+              style={{ padding: "9px 18px", background: "#fff", color: "#a16207", border: "1px solid #EADFC6", borderRadius: 999, fontSize: 11, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap", letterSpacing: "0.3px", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 6 }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M21 12a9 9 0 1 1-3-6.7L21 8" />
+                <polyline points="21 3 21 8 16 8" />
+              </svg>
+              Relancer ({joursDepuis}j)
+            </Link>
+          )
+        })()}
         <Link
           href={`/messages?with=${encodeURIComponent(email)}&annonce=${annonceId}`}
           style={{ padding: "10px 18px", background: "#111", color: "#fff", borderRadius: 999, fontSize: 11, fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap", letterSpacing: "0.3px", fontFamily: "inherit" }}
