@@ -3802,6 +3802,74 @@ function MessagesInner() {
                           </a>
                         )
                       })()}
+                      {/* 3 icônes thread header (Paul 2026-04-26 screenshot) :
+                          Appel (déjà ci-dessus, conservé) + Recherche dans
+                          conv + Visio. Gated par validation candidat OU bail
+                          actif. Si non-gated, click → alert contextuel selon
+                          rôle (proprio = "Validez d'abord le dossier" ;
+                          locataire = "Le proprio doit valider..."). */}
+                      {(() => {
+                        const isUnlocked = isCandidatureValideeDB || isActiveBail(convActiveData)
+                        const peerName = displayName(convActiveData.other, annonceActive?.proprietaire || null)
+                        const gateMessage = proprietaireActive
+                          ? `Validez d'abord le dossier de ${peerName} pour activer cette fonction.`
+                          : `Le propriétaire doit d'abord valider votre candidature pour activer cette fonction.`
+                        const iconBtnStyle: React.CSSProperties = {
+                          width: 36, height: 36, borderRadius: "50%",
+                          background: isUnlocked ? "#fff" : "#F7F4EF",
+                          color: isUnlocked ? "#111" : "#8a8477",
+                          border: "1px solid #EAE6DF",
+                          cursor: "pointer", padding: 0,
+                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                          flexShrink: 0, transition: "background 160ms ease",
+                          fontFamily: "inherit",
+                          opacity: isUnlocked ? 1 : 0.7,
+                        }
+                        return (
+                          <>
+                            {/* Recherche dans la conversation : toggle l'input
+                                de recherche existant (state recherche) — l'input
+                                est déjà rendu plus haut dans la sidebar. */}
+                            <button
+                              type="button"
+                              aria-label="Rechercher dans la conversation"
+                              title={isUnlocked ? "Rechercher dans la conversation" : gateMessage}
+                              onClick={() => {
+                                if (!isUnlocked) { alert(gateMessage); return }
+                                // Focus le champ recherche existant (sidebar)
+                                const el = document.querySelector<HTMLInputElement>('input[placeholder*="Rechercher"]')
+                                if (el) { el.focus(); el.scrollIntoView({ block: "center" }) }
+                              }}
+                              onMouseEnter={e => { if (isUnlocked) (e.currentTarget as HTMLButtonElement).style.background = "#F7F4EF" }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = isUnlocked ? "#fff" : "#F7F4EF" }}
+                              style={iconBtnStyle}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                <circle cx="11" cy="11" r="8" />
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                              </svg>
+                            </button>
+                            {/* Visio — feature en cours, popup placeholder */}
+                            <button
+                              type="button"
+                              aria-label="Lancer une visio"
+                              title={isUnlocked ? "Lancer une visio (bientôt disponible)" : gateMessage}
+                              onClick={() => {
+                                if (!isUnlocked) { alert(gateMessage); return }
+                                alert("La visio en direct sera disponible prochainement. En attendant, utilisez l'appel téléphonique.")
+                              }}
+                              onMouseEnter={e => { if (isUnlocked) (e.currentTarget as HTMLButtonElement).style.background = "#F7F4EF" }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = isUnlocked ? "#fff" : "#F7F4EF" }}
+                              style={iconBtnStyle}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                <polygon points="23 7 16 12 23 17 23 7" />
+                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                              </svg>
+                            </button>
+                          </>
+                        )
+                      })()}
                       <Link href={`/annonces/${convActiveData.annonceId}`}
                         onMouseEnter={e => { e.currentTarget.style.background = "#F7F4EF" }}
                         onMouseLeave={e => { e.currentTarget.style.background = "#fff" }}
