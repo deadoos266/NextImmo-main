@@ -2244,22 +2244,39 @@ function MessagesInner() {
   const convActiveData = conversations.find(c => c.key === convActive)
   const annonceActive = convActiveData?.annonceId ? annonces[convActiveData.annonceId] : null
 
-  // Gating "Proposer une visite" côté locataire : tant que statut_candidature
-  // n'est pas 'validee' sur le 1er message candidature, le locataire ne peut
-  // pas proposer de visite. La modal s'ouvre en mode locked + popup explicatif.
-  // Le proprio est exempté (il propose à ses candidats).
-  const candidatureValidee = (() => {
-    if (proprietaireActive) return true
-    if (!convActiveData?.annonceId) return true
-    // Cherche le 1er message type="candidature" du locataire dans cette conv
-    // qui porte le statut. messages est l'array de la conv active.
+  // Statut DB de la candidature active : true UNIQUEMENT si le proprio a
+  // explicitement cliqué "Valider la candidature" (statut_candidature='validee'
+  // posé sur le 1er message type='candidature' de cette conv).
+  // BUG fix Paul 2026-04-26 : avant `candidatureValidee` retournait `true` côté
+  // proprio inconditionnellement → le bouton "Valider" n'apparaissait jamais
+  // (`!candidatureValidee` toujours false), et le badge "Validée" s'affichait
+  // en permanence côté proprio (faux positif). Désormais cette variable
+  // reflète UNIQUEMENT l'état DB ; le gating "le locataire peut proposer une
+  // visite" est géré séparément via `peutProposerVisite` ci-dessous.
+  const isCandidatureValideeDB = (() => {
+    if (!convActiveData?.annonceId) return false
+    // Côté proprio : on cherche le 1er message candidature ENTRANT (locataire → proprio).
+    // Côté locataire : on cherche son propre 1er message candidature (locataire → proprio).
+    const candidatLocataireEmail = proprietaireActive
+      ? (convActiveData.other || "").toLowerCase()
+      : (myEmail || "").toLowerCase()
     const candMsg = messages.find(m =>
       (m as { type?: string }).type === "candidature" &&
-      (m.from_email || "").toLowerCase() === (myEmail || "").toLowerCase()
+      (m.from_email || "").toLowerCase() === candidatLocataireEmail
     )
     if (!candMsg) return false
     return (candMsg as { statut_candidature?: string }).statut_candidature === "validee"
   })()
+
+  // Gating "Proposer une visite" côté locataire : tant que la candidature
+  // n'est pas validée par le proprio, le locataire ne peut pas proposer.
+  // Le proprio est exempté (il propose à ses candidats sans pré-validation).
+  // Si pas de candidature liée (conv libre sans annonce), pas de gating.
+  const peutProposerVisite = proprietaireActive || !convActiveData?.annonceId || isCandidatureValideeDB
+
+  // Alias pour compat des anciens callsites (locked={!candidatureValidee})
+  // qui font référence au gating visite, pas au statut DB.
+  const candidatureValidee = peutProposerVisite
 
   // Score compat de la conv active — cote locataire = annonce vs myProfile,
   // cote proprio = annonce vs profil candidat (peerProfile). Null si donnees
@@ -3295,7 +3312,7 @@ function MessagesInner() {
                          intermédiaire qui débloque la proposition de visite côté
                          locataire (Paul 2026-04-26). Caché si déjà validée ou
                          si le bail est signé pour ce candidat. */}
-                      {proprietaireActive && annonceActive && convActiveData?.annonceId && !candidatureValidee && !(annonceActive.statut === "loué" && (annonceActive.locataire_email || "").toLowerCase() === convActiveData.other.toLowerCase()) && (
+                      {proprietaireActive && annonceActive && convActiveData?.annonceId && !isCandidatureValideeDB && !(annonceActive.statut === "loué" && (annonceActive.locataire_email || "").toLowerCase() === convActiveData.other.toLowerCase()) && (
                         <button
                           type="button"
                           onClick={async () => {
@@ -3322,8 +3339,8 @@ function MessagesInner() {
                           Valider la candidature
                         </button>
                       )}
-                      {/* Badge "Validée" si décision prise */}
-                      {proprietaireActive && candidatureValidee && annonceActive?.statut !== "loué" && (
+                      {/* Badge "Validée" si décision prise (statut DB) */}
+                      {proprietaireActive && isCandidatureValideeDB && annonceActive?.statut !== "loué" && (
                         <span
                           aria-label="Candidature déjà validée"
                           title="Cette candidature a été validée. Le candidat peut proposer une visite."
