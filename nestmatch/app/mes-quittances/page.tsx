@@ -5,16 +5,18 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "../../lib/supabase"
 import { useResponsive } from "../hooks/useResponsive"
+import { km, KMPageHeader } from "../components/ui/km"
 
 /**
  * /mes-quittances — historique des quittances de loyer pour le locataire.
- *
  * Liste les loyers confirmés par le proprio qui ont une URL PDF associée
- * (colonne loyers.quittance_pdf_url, populée par /api/loyers/quittance
- * au moment de la confirmation).
+ * (loyers.quittance_pdf_url, populée par /api/loyers/quittance au moment
+ * de la confirmation).
  *
- * Pas de génération côté locataire : c'est purement consultatif. Le
- * locataire reçoit aussi le PDF par email Resend, cette page est l'archive.
+ * Design fidèle handoff (3) pages.jsx MesQuittancesScreen l. 242-297 :
+ *   - KMPageHeader eyebrow Locataire + titre + subtitle
+ *   - 3 StatTile : Quittances reçues / Total versé / Logement actuel
+ *   - Card tableau dense : Période / Loyer / Charges / Total / PDF
  */
 type LoyerLigne = {
   id: number
@@ -65,7 +67,6 @@ export default function MesQuittances() {
         .order("mois", { ascending: false })
       const list = (data || []) as LoyerLigne[]
       setLoyers(list)
-      // Charge les annonces correspondantes en un seul round-trip
       const ids = Array.from(new Set(list.map(l => l.annonce_id))).filter(Boolean)
       if (ids.length > 0) {
         const { data: as } = await supabase
@@ -81,103 +82,194 @@ export default function MesQuittances() {
   }, [session, status, router])
 
   if (status === "loading" || loading) return (
-    <main style={{ minHeight: "100vh", background: "#F7F4EF", padding: 40, fontFamily: "'DM Sans', sans-serif" }}>
-      <p style={{ color: "#8a8477", textAlign: "center", marginTop: 80 }}>Chargement…</p>
+    <main style={{ minHeight: "100vh", background: km.beige, padding: 40, fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif" }}>
+      <p style={{ color: km.muted, textAlign: "center", marginTop: 80 }}>Chargement…</p>
     </main>
   )
 
+  // Calculs stat tiles
+  const totalVerse = loyers.reduce((s, l) => s + Number(l.montant || 0) + Number(l.charges || 0), 0)
+  // Logement actuel : annonce du loyer le plus récent
+  const logementActuel = loyers.length > 0 ? annonces[loyers[0].annonce_id] : null
+  const villeActuelle = logementActuel?.ville || "—"
+
   return (
-    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ maxWidth: 880, margin: "0 auto", padding: isMobile ? "32px 16px" : "56px 32px" }}>
-        <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.5px", margin: 0, marginBottom: 6 }}>
-          Mes documents
-        </p>
-        <h1 style={{ fontSize: isMobile ? 30 : 40, fontWeight: 400, fontStyle: "italic", fontFamily: "'Fraunces', 'DM Sans', serif", letterSpacing: "-0.6px", margin: 0, marginBottom: 8, color: "#111", lineHeight: 1.1 }}>
-          Mes quittances de loyer
-        </h1>
-        <p style={{ fontSize: 14, color: "#4b5563", margin: "0 0 32px", lineHeight: 1.55 }}>
-          Toutes vos quittances reçues, classées par mois. Téléchargeables à tout moment — conservez-les comme preuves de paiement.
-        </p>
+    <main style={{ minHeight: "100vh", background: km.beige, fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <KMPageHeader
+          eyebrow="Locataire"
+          title="Mes quittances"
+          subtitle="Archive de vos quittances de loyer · PDF officiel généré par votre propriétaire"
+          isMobile={isMobile}
+        />
 
         {loyers.length === 0 ? (
-          <div style={{ background: "white", borderRadius: 20, padding: "40px 28px", boxShadow: "0 4px 24px rgba(0,0,0,0.06)", textAlign: "center" }}>
-            <p style={{ fontSize: 15, color: "#111", fontWeight: 600, margin: "0 0 8px" }}>Aucune quittance pour le moment.</p>
-            <p style={{ fontSize: 13, color: "#8a8477", margin: 0, lineHeight: 1.55 }}>
+          <div style={{ background: km.white, borderRadius: 20, padding: "60px 32px", border: `1px solid ${km.line}`, textAlign: "center", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: km.beige, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={km.muted} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+            </div>
+            <p style={{ fontFamily: "var(--font-fraunces), 'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, color: km.ink, margin: "0 0 8px" }}>Aucune quittance pour le moment</p>
+            <p style={{ fontSize: 13, color: km.muted, margin: 0, lineHeight: 1.55, maxWidth: 480, marginInline: "auto" }}>
               Vos quittances apparaîtront ici dès que votre propriétaire aura confirmé un loyer reçu.
             </p>
+            <Link href="/mon-logement" style={{ display: "inline-block", marginTop: 20, background: km.ink, color: km.white, padding: "10px 22px", borderRadius: 999, textDecoration: "none", fontSize: 12, fontWeight: 700, letterSpacing: "0.4px", textTransform: "uppercase" as const }}>
+              Mon logement →
+            </Link>
           </div>
         ) : (
-          <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 12 }}>
-            {loyers.map(loyer => {
-              const annonce = annonces[loyer.annonce_id]
-              const periode = formatPeriode(loyer.mois)
-              const total = Number(loyer.montant || 0) + Number(loyer.charges || 0)
-              return (
-                <li
-                  key={loyer.id}
+          <>
+            {/* Stat tiles 3 cols (handoff l. 263-267) */}
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : "repeat(3, 1fr)", gap: isMobile ? 8 : 14, marginBottom: 28 }}>
+              {[
+                { label: "Quittances reçues", val: String(loyers.length), accent: km.beige, color: km.ink },
+                { label: "Total versé", val: `${totalVerse.toLocaleString("fr-FR")} €`, accent: km.successBg, color: km.successText },
+                { label: "Logement actuel", val: villeActuelle, accent: km.beige, color: km.ink },
+              ].map(t => (
+                <div
+                  key={t.label}
                   style={{
-                    background: "white",
-                    borderRadius: 16,
-                    padding: isMobile ? "16px 18px" : "18px 22px",
-                    boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
-                    border: "1px solid #EAE6DF",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 16,
-                    flexWrap: "wrap",
+                    background: t.accent,
+                    border: `1px solid ${km.line}`,
+                    borderRadius: 18,
+                    padding: isMobile ? "14px 14px" : "18px 22px",
                   }}
                 >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0, marginBottom: 4 }}>
-                      {periode}
-                    </p>
-                    <p style={{ fontSize: 15, fontWeight: 600, color: "#111", margin: 0, marginBottom: 2 }}>
-                      {annonce?.titre || `Bien #${loyer.annonce_id}`}
-                    </p>
-                    {(annonce?.ville || annonce?.adresse) && (
-                      <p style={{ fontSize: 12, color: "#8a8477", margin: 0 }}>
-                        {annonce.adresse || annonce.ville}
-                      </p>
-                    )}
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <p style={{ fontSize: 16, fontWeight: 800, color: "#111", margin: 0, fontVariantNumeric: "tabular-nums" }}>
-                      {total.toLocaleString("fr-FR")} €
-                    </p>
-                    <p style={{ fontSize: 10, color: "#8a8477", margin: 0, textTransform: "uppercase", letterSpacing: "0.8px" }}>
-                      Charges comprises
-                    </p>
-                  </div>
-                  {loyer.quittance_pdf_url && (
-                    <a
-                      href={loyer.quittance_pdf_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        background: "#111",
-                        color: "white",
-                        textDecoration: "none",
-                        borderRadius: 999,
-                        padding: "8px 18px",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      Télécharger
-                    </a>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        )}
+                  <div style={{ fontSize: isMobile ? 16 : 22, fontWeight: 700, color: t.color, letterSpacing: "-0.5px", lineHeight: 1.1, fontVariantNumeric: "tabular-nums" as const, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.val}</div>
+                  <div style={{ fontSize: 10, color: km.muted, marginTop: 8, textTransform: "uppercase" as const, letterSpacing: "1.2px", fontWeight: 700 }}>{t.label}</div>
+                </div>
+              ))}
+            </div>
 
-        <p style={{ marginTop: 28, fontSize: 12, color: "#8a8477", textAlign: "center" }}>
-          <Link href="/mon-logement" style={{ color: "#111", fontWeight: 600 }}>
-            ← Retour à mon logement
-          </Link>
-        </p>
+            {/* Tableau dense fidèle handoff (3) l. 269-294 */}
+            <div style={{ background: km.white, borderRadius: 18, border: `1px solid ${km.line}`, overflow: "hidden", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+              {/* Header colonnes — masqué sur mobile, layout switch en card */}
+              {!isMobile && (
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 100px 100px 110px 130px",
+                  padding: "14px 22px",
+                  borderBottom: `1px solid ${km.line}`,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: km.muted,
+                  textTransform: "uppercase" as const,
+                  letterSpacing: "1.2px",
+                }}>
+                  <div>Période</div>
+                  <div style={{ textAlign: "right" }}>Loyer</div>
+                  <div style={{ textAlign: "right" }}>Charges</div>
+                  <div style={{ textAlign: "right" }}>Total</div>
+                  <div style={{ textAlign: "right" }}>PDF</div>
+                </div>
+              )}
+
+              {loyers.map((q, i) => {
+                const annonce = annonces[q.annonce_id]
+                const periode = formatPeriode(q.mois)
+                const loyer = Number(q.montant || 0)
+                const charges = Number(q.charges || 0)
+                const total = loyer + charges
+                const isLast = i === loyers.length - 1
+
+                if (isMobile) {
+                  // Layout mobile : card stacked
+                  return (
+                    <div key={q.id} style={{ padding: "16px 18px", borderBottom: isLast ? "none" : `1px solid ${km.line}` }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: km.ink, textTransform: "capitalize" as const }}>{periode}</div>
+                          {annonce?.titre && (
+                            <div style={{ fontSize: 11, color: km.muted, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{annonce.titre}</div>
+                          )}
+                        </div>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: km.ink, fontVariantNumeric: "tabular-nums" as const, letterSpacing: "-0.3px", flexShrink: 0 }}>
+                          {total.toLocaleString("fr-FR")} €
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                        <span style={{ fontSize: 11, color: km.muted, fontVariantNumeric: "tabular-nums" as const }}>
+                          {loyer.toLocaleString("fr-FR")} € loyer · {charges.toLocaleString("fr-FR")} € charges
+                        </span>
+                        {q.quittance_pdf_url && (
+                          <a
+                            href={q.quittance_pdf_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ background: km.white, color: km.ink, border: `1px solid ${km.line}`, borderRadius: 999, padding: "7px 14px", fontSize: 11, fontWeight: 600, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 5, fontFamily: "inherit" }}
+                          >
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                              <polyline points="7 10 12 15 17 10"/>
+                              <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            PDF
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )
+                }
+
+                // Layout desktop : ligne tableau
+                return (
+                  <div key={q.id} style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 100px 100px 110px 130px",
+                    padding: "16px 22px",
+                    borderBottom: isLast ? "none" : `1px solid ${km.line}`,
+                    alignItems: "center",
+                    fontSize: 13.5,
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: 600, color: km.ink, textTransform: "capitalize" as const }}>{periode}</div>
+                      <div style={{ fontSize: 11, color: km.muted, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {annonce?.titre || `Bien #${q.annonce_id}`}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" as const, color: km.ink }}>
+                      {loyer.toLocaleString("fr-FR")} €
+                    </div>
+                    <div style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" as const, color: km.muted }}>
+                      {charges.toLocaleString("fr-FR")} €
+                    </div>
+                    <div style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" as const, fontWeight: 700, color: km.ink, letterSpacing: "-0.2px" }}>
+                      {total.toLocaleString("fr-FR")} €
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      {q.quittance_pdf_url ? (
+                        <a
+                          href={q.quittance_pdf_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ background: km.white, color: km.ink, border: `1px solid ${km.line}`, borderRadius: 999, padding: "7px 14px", fontSize: 11, fontWeight: 600, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 5, fontFamily: "inherit" }}
+                        >
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                          </svg>
+                          PDF
+                        </a>
+                      ) : (
+                        <span style={{ fontSize: 11, color: km.muted }}>—</span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Footer retour */}
+            <p style={{ marginTop: 24, fontSize: 12, color: km.muted, textAlign: "center" }}>
+              <Link href="/mon-logement" style={{ color: km.ink, fontWeight: 600, textDecoration: "none" }}>
+                ← Retour à mon logement
+              </Link>
+            </p>
+          </>
+        )}
       </div>
     </main>
   )
