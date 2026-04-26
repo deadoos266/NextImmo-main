@@ -2,7 +2,7 @@
 import { useState, useRef } from "react"
 import Image from "next/image"
 import { CARD_GRADIENTS as GRADIENTS } from "../../../lib/cardGradients"
-import { dpeColorFor } from "../../../lib/dpeColors"
+import DpeBadge from "./DpeBadge"
 
 /**
  * MapListCard fidèle handoff (3) app.jsx l. 768-892.
@@ -340,19 +340,7 @@ export default function ListingCardCompact({
           {annonce.dpe && (
             <>
               <span style={{ width: 2, height: 2, background: "#EAE6DF", borderRadius: "50%" }} />
-              <span
-                aria-label={`DPE ${String(annonce.dpe).toUpperCase()}`}
-                title={`Classe énergie ${String(annonce.dpe).toUpperCase()}`}
-                style={{
-                  display: "inline-flex", alignItems: "center", justifyContent: "center",
-                  background: dpeColorFor(annonce.dpe), color: "#fff",
-                  fontSize: 10, fontWeight: 700,
-                  width: 18, height: 18, borderRadius: 4,
-                  letterSpacing: 0, lineHeight: 1, flexShrink: 0,
-                }}
-              >
-                {String(annonce.dpe).toUpperCase()}
-              </span>
+              <DpeBadge letter={annonce.dpe} surfaceM2={Number(annonce.surface) || null} />
             </>
           )}
           {annonce.meuble === true && (

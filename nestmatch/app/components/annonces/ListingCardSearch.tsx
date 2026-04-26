@@ -2,7 +2,7 @@
 import { useState, useRef, type CSSProperties } from "react"
 import Image from "next/image"
 import { CARD_GRADIENTS as GRADIENTS } from "../../../lib/cardGradients"
-import { dpeColorFor } from "../../../lib/dpeColors"
+import DpeBadge from "./DpeBadge"
 
 /**
  * Card annonce pour la grille `/annonces` — fidélité Claude Design handoff
@@ -507,29 +507,7 @@ export default function ListingCardSearch({
         >
           <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 }}>
             {specsLine}
-            {dpeLetter && (
-              <span
-                aria-label={`DPE ${dpeLetter}`}
-                title={`Classe énergie ${dpeLetter}`}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  background: dpeColorFor(dpeLetter),
-                  color: "#fff",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  width: 18,
-                  height: 18,
-                  borderRadius: 4,
-                  letterSpacing: 0,
-                  lineHeight: 1,
-                  flexShrink: 0,
-                }}
-              >
-                {dpeLetter}
-              </span>
-            )}
+            <DpeBadge letter={dpeLetter} surfaceM2={Number(annonce.surface) || null} />
           </span>
           <span
             style={{
