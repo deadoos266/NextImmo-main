@@ -2984,45 +2984,92 @@ function MessagesInner() {
             overflow: "hidden",
             boxShadow: isMobile ? "none" : "none",
           }}>
-            {/* Onglets sidebar — proprio = 4 onglets stricts (Paul 2026-04-26),
-                locataire = 2 onglets historiques (Mon bail / Mes candidatures).
-                Compteurs entre parenthèses. Wrap si écran étroit. */}
-            <div style={{ display: "flex", flexWrap: "wrap", padding: "12px 12px 4px", gap: 6, borderBottom: "1px solid #EAE6DF" }}>
-              {(proprietaireActive ? [
-                { k: "candidat" as const,  label: "Candidat",          count: countByTab.candidat },
-                { k: "valide" as const,    label: "Validé",            count: countByTab.valide },
-                { k: "locataire" as const, label: "Locataire",         count: countByTab.locataire },
-                { k: "autre" as const,     label: "Anciens locataires", count: countByTab.autre },
-              ] : [
-                { k: "locataire" as const, label: "Mon bail",         count: countByTab.locataire },
-                { k: "candidat" as const,  label: "Mes candidatures", count: countByTab.candidat + countByTab.valide + countByTab.autre },
-              ]).map(t => {
-                const active = messagesTab === t.k
+            {/* Onglets sidebar — segmented control fidèle handoff (3) messages.jsx l. 233-255.
+                Proprio : 4 onglets relations Candidat/Validé/Locataire/Anciens
+                Locataire : 2 onglets historiques mappés sur la même mécanique.
+                Design : grid 4 cols dans un container beige radius 12, dot
+                coloré par relation, count tabular en bas.
+                "Anciens locataires" → court "Anciens" pour tenir dans 4 cols. */}
+            <div style={{ padding: "14px 14px 0" }}>
+              {(() => {
+                const tabs = proprietaireActive ? [
+                  { k: "candidat" as const,  short: "Candidat",  label: "Candidats",          count: countByTab.candidat,  dot: "#9CA3AF" },
+                  { k: "valide" as const,    short: "Validé",    label: "Validés",            count: countByTab.valide,    dot: "#F59E0B" },
+                  { k: "locataire" as const, short: "Locataire", label: "Locataires",         count: countByTab.locataire, dot: "#16A34A" },
+                  { k: "autre" as const,     short: "Anciens",   label: "Anciens locataires", count: countByTab.autre,     dot: "#9CA3AF" },
+                ] : [
+                  { k: "locataire" as const, short: "Mon bail",         label: "Mon bail",         count: countByTab.locataire, dot: "#16A34A" },
+                  { k: "candidat" as const,  short: "Mes candidatures", label: "Mes candidatures", count: countByTab.candidat + countByTab.valide + countByTab.autre, dot: "#F59E0B" },
+                ]
                 return (
-                  <button
-                    key={t.k}
-                    onClick={() => setMessagesTab(t.k)}
-                    style={{
-                      flex: proprietaireActive ? "1 1 calc(50% - 3px)" : 1,
-                      padding: "8px 10px",
-                      background: active ? "#111" : "#fff",
-                      color: active ? "white" : "#111",
-                      border: `1px solid ${active ? "#111" : "#EAE6DF"}`,
-                      borderRadius: 999,
-                      fontSize: 12,
-                      fontWeight: active ? 700 : 600,
-                      letterSpacing: "0.1px",
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                      marginBottom: 8,
-                      transition: "background 160ms ease, color 160ms ease, border-color 160ms ease",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {t.label}{t.count > 0 && <span style={{ marginLeft: 6, fontSize: 10, opacity: active ? 0.8 : 0.5, fontVariantNumeric: "tabular-nums" as const }}>({t.count})</span>}
-                  </button>
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: `repeat(${tabs.length}, 1fr)`,
+                    gap: 2,
+                    background: "#F7F4EF",
+                    border: "1px solid #EAE6DF",
+                    borderRadius: 12,
+                    padding: 3,
+                  }}>
+                    {tabs.map(t => {
+                      const sel = messagesTab === t.k
+                      return (
+                        <button
+                          key={t.k}
+                          type="button"
+                          onClick={() => setMessagesTab(t.k)}
+                          title={t.label}
+                          style={{
+                            padding: "9px 4px",
+                            borderRadius: 9,
+                            border: "none",
+                            cursor: "pointer",
+                            fontFamily: "inherit",
+                            background: sel ? "#fff" : "transparent",
+                            color: sel ? "#111" : "#8a8477",
+                            boxShadow: sel ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 4,
+                            transition: "all 160ms",
+                            minWidth: 0,
+                            position: "relative",
+                          }}
+                        >
+                          <span style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 5,
+                            fontSize: 11.5,
+                            fontWeight: sel ? 700 : 500,
+                            letterSpacing: "-0.1px",
+                            maxWidth: "100%",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}>
+                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: t.dot, flexShrink: 0 }} />
+                            {t.short}
+                          </span>
+                          <span style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: sel ? "#111" : "#8a8477",
+                            fontVariantNumeric: "tabular-nums" as const,
+                            letterSpacing: "0.3px",
+                            padding: "1px 6px",
+                            borderRadius: 999,
+                            background: sel ? "#F7F4EF" : "transparent",
+                          }}>
+                            {t.count}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
                 )
-              })}
+              })()}
             </div>
             {/* Recherche + filtre par bien (proprio) + toggle archivées */}
             <div style={{ padding: "12px 16px 14px", borderBottom: "1px solid #EAE6DF", display: "flex", flexDirection: "column", gap: 10 }}>
