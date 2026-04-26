@@ -741,10 +741,14 @@ export default function BailPage() {
           }
           void postNotif({
             userEmail: locataireEmail,
-            type: "bail_genere",
-            title: "Bail généré",
-            body: `Votre bail pour « ${bien.titre} » est disponible${dateStr ? ` (début ${dateStr})` : ""}.`,
-            href: "/mon-logement",
+            type: "bail_a_signer",
+            title: "Bail à signer",
+            body: `Votre bailleur a généré le bail pour « ${bien.titre} »${dateStr ? ` (début ${dateStr})` : ""}. Cliquez pour signer.`,
+            // Lien direct vers la conv messages où la BAIL_CARD est rendue
+            // avec la modale de signature accessible (commit 4 du flow plan).
+            // Avant : "/mon-logement" → mais le locataire n'a pas encore
+            // accès à cette page tant que le bail n'est pas pleinement signé.
+            href: `/messages?with=${encodeURIComponent(fromEmail)}&annonce=${bien.id}`,
             relatedId: String(bien.id),
           })
         } else {

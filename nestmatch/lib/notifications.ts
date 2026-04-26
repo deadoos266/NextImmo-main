@@ -20,6 +20,7 @@ export type NotifType =
   | "location_refusee"
   | "loyer_retard"
   | "bail_genere"
+  | "bail_a_signer"
   | "bail_signe"
   | "edl_envoye"
   | "dossier_consulte"
@@ -66,6 +67,7 @@ export const NOTIF_TYPES: readonly NotifType[] = [
   "location_refusee",
   "loyer_retard",
   "bail_genere",
+  "bail_a_signer",
   "bail_signe",
   "edl_envoye",
   "dossier_consulte",
