@@ -109,6 +109,50 @@ export function KMButtonOutline({
   )
 }
 
+// ─── Button : ghost (transparent ink) — handoff (3) `Button` variant ghost ─
+// Pattern utile en navbar, header pages, ou contextes où la prééminence
+// visuelle d'un KMButton noir est trop forte. Padding modeste, fontSize 13.
+export function KMButtonGhost({
+  children,
+  onClick,
+  href,
+  disabled,
+  style,
+  ariaLabel,
+}: {
+  children: ReactNode
+  onClick?: MouseEventHandler<HTMLButtonElement>
+  href?: string
+  disabled?: boolean
+  style?: CSSProperties
+  ariaLabel?: string
+}) {
+  const baseStyle: CSSProperties = {
+    background: "transparent",
+    color: km.ink,
+    border: "none",
+    padding: "10px 16px",
+    fontWeight: 600,
+    fontSize: 13,
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.5 : 1,
+    fontFamily: "inherit",
+    textDecoration: "none",
+    display: "inline-block",
+    transition: "background 200ms ease",
+    borderRadius: 8,
+    ...style,
+  }
+  if (href) {
+    return <a href={href} aria-label={ariaLabel} style={baseStyle}>{children}</a>
+  }
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} aria-label={ariaLabel} style={baseStyle}>
+      {children}
+    </button>
+  )
+}
+
 // ─── Button : link-style noir, tertiaire ───────────────────────────────────
 export function KMButtonText({
   children,
@@ -393,6 +437,34 @@ export function KMToggle<T extends string>({
         )
       })}
     </div>
+  )
+}
+
+// ─── Grain background : bruit fractal SVG éditorial — handoff (3) ─────────
+// Pose une couche de bruit organique (opacité 3%) sur un fond — donne le
+// rendu papier/print typique des marques éditoriales (cf hero handoff).
+// pointer-events none, aria-hidden : purement décoratif. Le parent doit
+// avoir `position: relative` pour que l'inset 0 absolu se cale dessus.
+export function KMGrain({ opacity = 0.03 }: { opacity?: number }) {
+  return (
+    <svg
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        pointerEvents: "none",
+        opacity,
+        mixBlendMode: "multiply",
+      }}
+    >
+      <filter id="km-grain">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" />
+        <feColorMatrix type="saturate" values="0" />
+      </filter>
+      <rect width="100%" height="100%" filter="url(#km-grain)" />
+    </svg>
   )
 }
 
