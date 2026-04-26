@@ -1168,13 +1168,13 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
               width: isDesktopListCarte ? "100%" : undefined,
             }}
           >
-            {/* ── Colonne Aside — 480px desktop (handoff (3) strict), 100% mobile/tablet ──
-                Layout grid `480px 1fr`. Header riche : eyebrow + h1 22px count
+            {/* ── Colonne Aside — 550px desktop (user request), 100% mobile/tablet ──
+                Layout grid `550px 1fr`. Header riche : eyebrow + h1 22px count
                 + Live indicator + tri segmented (Compatibilité / Prix / Récent). */}
             <div
               ref={listScrollerRef}
               style={{
-                flex: isSmall ? 1 : "0 0 480px",
+                flex: isSmall ? 1 : "0 0 550px",
                 minWidth: 0,
                 width: isSmall ? "100%" : undefined,
                 display: isMobileV5 ? "block" : (isSmall && showMap ? "none" : "flex"),
