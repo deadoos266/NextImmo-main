@@ -4,6 +4,30 @@
   padding: 0;
 }
 
+/* ───────── A11y : focus visible global (WCAG 2.4.7) ─────────
+   On utilise :focus-visible (pas :focus) pour ne montrer l'anneau qu'au
+   focus clavier — pas au click souris (UX moins lourde). Outline ink
+   2px avec offset 2px pour rester visible sur les boutons ronds, pills,
+   inputs, links. Override des inline styles `outline: none` problématiques.
+   Boutons noirs (#111) : on bascule sur ring blanc pour contraste. */
+*:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+button[style*="background: rgb(17, 17, 17)"]:focus-visible,
+button[style*="background:#111"]:focus-visible,
+a[style*="background: rgb(17, 17, 17)"]:focus-visible,
+a[style*="background:#111"]:focus-visible {
+  outline-color: #fff;
+  outline-offset: 3px;
+}
+/* Skip cible focus sur les SVG décoratifs (aria-hidden) qui peuvent
+   recevoir focus en cas de mauvais structurage. */
+[aria-hidden="true"]:focus-visible {
+  outline: none;
+}
+
 /* Animation partagée des composants Skeleton (app/components/ui/Skeleton.tsx) */
 @keyframes nm-skeleton-shimmer {
   0% { background-position: 200% 0; }
