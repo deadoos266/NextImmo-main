@@ -872,13 +872,16 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   }, [isMobileV5, showMap, gridMode])
 
   // ── Container conditionnel — full-width en Liste+Carte, max-1700 en Grille
-  //   Liste+Carte desktop : edge-to-edge (padding 16) pour donner un max
-  //     d'espace à la carte (immersif SeLoger-style).
+  //   Liste+Carte desktop : edge-to-edge SANS padding latéral (la carte +
+  //     aside prennent TOUTE la page horizontale, fidèle handoff (3) MapSplit
+  //     qui occupe toute la largeur). Tous les bandeaux + headers + FiltersBar
+  //     sont masqués au-dessus de la zone map (les QuickFilter chips de
+  //     l'aside header les remplacent).
   //   Grille ou mobile    : max-width 1700 centré, padding padH normal.
   const useFullWidth = !gridMode && !isSmall
   const containerMaxWidth = useFullWidth ? "100%" : GRID_MAX_WIDTH
   const containerMargin = useFullWidth ? "0" : "0 auto"
-  const containerPadH = useFullWidth ? 16 : padH
+  const containerPadH = useFullWidth ? 0 : padH
 
   // v5.3 : en mode Liste+Carte desktop, on utilise un layout FLEX COLUMN
   // pour que la zone liste+carte prenne exactement l'espace restant dans
@@ -921,8 +924,11 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
         width: isDesktopListCarte ? "100%" : undefined,
       }}>
 
-        {/* ── Header éditorial — scroll normal (pas sticky) ────────────── */}
-        {isMobileV5 ? (
+        {/* ── Header éditorial — scroll normal (pas sticky)
+             En mode liste+carte desktop : MASQUÉ. La page est immersive
+             (carte + aside edge-to-edge), l'aside a son propre h1 22px
+             "X logements" + Live + QuickFilter chips. */}
+        {!isDesktopListCarte && (isMobileV5 ? (
           /* Mobile simplifié : h2 Fraunces italic 26 + sous-titre 12, sans popover */
           <div style={{ padding: "16px 0 4px" }}>
             <KMHeading as="h2" size={26}>
@@ -963,17 +969,17 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
               />
             )}
           </div>
-        )}
+        ))}
 
-        {/* ── Bandeau dossier incitatif (card premium) ─────────────────── */}
-        {showBandeauDossier && completudeProfil !== null && (
+        {/* ── Bandeau dossier incitatif (card premium) — MASQUÉ en mode liste+carte desktop ─ */}
+        {!isDesktopListCarte && showBandeauDossier && completudeProfil !== null && (
           <div style={{ padding: isMobile ? "10px 0" : "14px 0 6px" }}>
             <BandeauDossier completude={completudeProfil} isMobile={isMobile} />
           </div>
         )}
 
-        {/* ── Bandeau statut compact (connexion / proprio) ─────────────── */}
-        {(isProprietaire || status === "unauthenticated") && (
+        {/* ── Bandeau statut compact — MASQUÉ en mode liste+carte desktop ── */}
+        {!isDesktopListCarte && (isProprietaire || status === "unauthenticated") && (
           <div style={{ padding: isMobile ? "10px 0" : "8px 0" }}>
             {isProprietaire ? (
               <div style={{ background: km.white, borderRadius: 16, padding: isMobile ? "10px 14px" : "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", border: `1px solid ${km.line}`, gap: 10 }}>
@@ -995,10 +1001,9 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
         )}
 
         {/* ── Header éditorial handoff app.jsx:489-496 ──────────────────
-            Eyebrow ANNONCES + H1 Fraunces italic 34px/500/-1px + sous-titre
-            meta. Affiché uniquement en desktop (mobile = espace contraint,
-            FiltersBar suffit). Style strictement aligné design system KM. */}
-        {!isSmall && (
+            MASQUÉ en mode liste+carte desktop (l'aside a son propre h1
+            22px + Live + QuickFilter chips). Sinon affiché en desktop. */}
+        {!isSmall && !isDesktopListCarte && (
           <div style={{
             padding: "8px 0 14px",
             borderBottom: `1px solid ${km.line}`,
@@ -1034,12 +1039,11 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           </div>
         )}
 
-        {/* ── FiltersBar sticky — top dynamique selon mode scroll ─────
-            Mode liste desktop : scroll isolé dans outer (overflow:auto),
-              sticky top:0 → colle au top de l'outer (qui est sous Navbar).
-            Mode grille / mobile : scroll document,
-              sticky top:NAVBAR_HEIGHT → colle sous la Navbar du viewport. */}
-        <FiltersBar
+        {/* ── FiltersBar sticky — MASQUÉ en mode liste+carte desktop.
+            Les QuickFilter chips de l'aside (Compat / Lieu / Loyer) +
+            bouton "Tous les filtres" jouent ce rôle. Mode grille/mobile
+            le conserve car pas d'aside. */}
+        {!isDesktopListCarte && <FiltersBar
           isMobile={isMobileV5}
           isTablet={isTablet && !isMobileV5}
           activeVille={activeVille}
@@ -1059,7 +1063,7 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           resultCount={annoncesTraitees.length}
           loading={loading}
           stickyTop={!gridMode && !isSmall ? 0 : NAVBAR_HEIGHT}
-        />
+        />}
 
         {/* ── Toggle Liste/Carte tablette (640-767) — mobile <768 utilise FAB */}
         {isSmall && !isMobileV5 && !gridMode && (
