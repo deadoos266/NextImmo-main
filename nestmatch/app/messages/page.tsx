@@ -2897,7 +2897,10 @@ function MessagesInner() {
           )
         })()}
       </Modal>
-      <div style={{ maxWidth: isMobile && convActiveData ? "100%" : 1400, margin: "0 auto", padding: isMobile && convActiveData ? 0 : isMobile ? "20px 16px" : "32px 48px" }}>
+      {/* Container full-width — maxWidth 1700 (au lieu de 1400 handoff) pour
+          remplir mieux les grands écrans. Padding latéral réduit 24px desktop
+          au lieu de 48px → la messagerie respire vraiment edge-to-edge. */}
+      <div style={{ maxWidth: isMobile && convActiveData ? "100%" : 1700, margin: "0 auto", padding: isMobile && convActiveData ? 0 : isMobile ? "20px 16px" : "24px 24px 40px" }}>
         {/* Header éditorial — calque handoff messages.jsx L131-140.
             Eyebrow "Messagerie" + titre "Conversations" 34px weight 500 +
             trust signal discret à droite (chiffré E2E + archivage 3 ans). */}
@@ -2974,7 +2977,7 @@ function MessagesInner() {
 
           {/* ── Colonne gauche : conversations ── */}
           <div style={{
-            width: isMobile ? "100%" : 300,
+            width: isMobile ? "100%" : 340,
             flexShrink: 0,
             background: isMobile ? "white" : "transparent",
             borderRadius: isMobile ? 0 : 0,
@@ -4346,7 +4349,7 @@ function MessagesInner() {
             }
             return (
               <aside style={{
-                width: 300,
+                width: 320,
                 flexShrink: 0,
                 background: "white",
                 borderRadius: 0,
