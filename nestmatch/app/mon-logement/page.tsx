@@ -458,63 +458,74 @@ export default function MonLogement() {
           <BailTimeline steps={timelineSteps} />
         </div>
 
-        {/* Carte principale du bien */}
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
-          {/* Visuel */}
-          <div style={{ background: "#fff", borderRadius: 20, overflow: "hidden", border: "1px solid #EAE6DF", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+        {/* Hero unifié — 1 seul card avec photo 380px gauche + infos flex droite,
+            mini-stats inline Loyer / Charges / Surface / DPE.
+            Fidèle handoff (3) pages.jsx l. 322-340. Avant : 2 cards séparées. */}
+        <div style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 20, overflow: "hidden", marginBottom: 20, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "380px 1fr", gap: 0 }}>
+            {/* Photo gauche — fixe 380px desktop, full mobile */}
             <div style={{
-              height: isMobile ? 180 : 240,
-              background: photoPrincipale
-                ? `url(${photoPrincipale}) center/cover no-repeat`
+              backgroundImage: photoPrincipale
+                ? `url(${photoPrincipale})`
                 : "linear-gradient(135deg, #F7F4EF, #EAE6DF)",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              minHeight: isMobile ? 220 : 280,
             }} />
-            <div style={{ padding: 22 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 6px", letterSpacing: "-0.3px", color: "#111" }}>{bien.titre}</h2>
-              <p style={{ fontSize: 13, color: "#8a8477", margin: "0 0 14px" }}>
-                {bien.adresse ? <>{bien.adresse} <span style={{ color: "#EAE6DF" }}>·</span> </> : ""}{bien.ville}
+            {/* Infos droite — eyebrow + titre + adresse + mini-stats row + CTA */}
+            <div style={{ padding: isMobile ? "22px 22px" : "28px 32px", display: "flex", flexDirection: "column" }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 10px" }}>Votre adresse</p>
+              <h2 style={{ fontSize: 26, fontWeight: 500, letterSpacing: "-0.6px", margin: 0, marginBottom: 4, color: "#111" }}>{bien.titre}</h2>
+              <p style={{ fontSize: 14, color: "#8a8477", marginBottom: 20, margin: "0 0 20px" }}>
+                {bien.adresse ? <>{bien.adresse} </> : ""}{bien.ville}
               </p>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 13, color: "#111" }}>
-                {bien.surface && <span><strong style={{ fontWeight: 600 }}>{bien.surface} m²</strong></span>}
-                {bien.surface && bien.pieces && <span style={{ color: "#EAE6DF" }}>·</span>}
-                {bien.pieces && <span><strong style={{ fontWeight: 600 }}>{bien.pieces}</strong> pièces</span>}
-                {bien.dpe && <span style={{ color: "#EAE6DF" }}>·</span>}
-                {bien.dpe && <span>DPE <strong style={{ fontWeight: 600 }}>{bien.dpe}</strong></span>}
+              <div style={{ display: "flex", gap: isMobile ? 16 : 24, fontSize: 13, paddingTop: 18, borderTop: "1px solid #EAE6DF", flexWrap: "wrap" }}>
+                <div>
+                  <div style={{ fontSize: 22, fontWeight: 700, fontVariantNumeric: "tabular-nums" as const, letterSpacing: "-0.4px", color: "#111" }}>{bien.prix} €</div>
+                  <div style={{ fontSize: 10, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1px", fontWeight: 700, marginTop: 2 }}>Loyer</div>
+                </div>
+                {bien.charges ? (
+                  <div>
+                    <div style={{ fontSize: 22, fontWeight: 700, fontVariantNumeric: "tabular-nums" as const, letterSpacing: "-0.4px", color: "#111" }}>+{bien.charges} €</div>
+                    <div style={{ fontSize: 10, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1px", fontWeight: 700, marginTop: 2 }}>Charges</div>
+                  </div>
+                ) : null}
+                {bien.surface ? (
+                  <div>
+                    <div style={{ fontSize: 22, fontWeight: 700, fontVariantNumeric: "tabular-nums" as const, letterSpacing: "-0.4px", color: "#111" }}>{bien.surface} m²</div>
+                    <div style={{ fontSize: 10, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1px", fontWeight: 700, marginTop: 2 }}>{bien.pieces ? `${bien.pieces} ${bien.pieces > 1 ? "pièces" : "pièce"}` : "Surface"}</div>
+                  </div>
+                ) : null}
+                {bien.dpe ? (
+                  <div>
+                    <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.4px", color: "#111", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      {bien.dpe}
+                      <span style={{ fontSize: 10, background: "#FCD34D", color: "#78350F", padding: "2px 7px", borderRadius: 4, fontWeight: 700 }}>DPE</span>
+                    </div>
+                    <div style={{ fontSize: 10, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1px", fontWeight: 700, marginTop: 2 }}>Énergie</div>
+                  </div>
+                ) : null}
+              </div>
+              {bien.date_debut_bail && (
+                <p style={{ fontSize: 12, color: "#8a8477", margin: "16px 0 0" }}>
+                  Bail signé le <strong style={{ color: "#111", fontWeight: 600 }}>{new Date(bien.date_debut_bail).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</strong>
+                </p>
+              )}
+              <div style={{ marginTop: "auto", paddingTop: 20, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <Link
+                  href={`/messages?with=${encodeURIComponent(bien.proprietaire_email)}`}
+                  style={{ background: "#111", color: "#fff", borderRadius: 999, padding: "11px 22px", textDecoration: "none", fontWeight: 700, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.4px" }}
+                >
+                  Contacter mon propriétaire
+                </Link>
+                <Link
+                  href={`/annonces/${bien.id}`}
+                  style={{ background: "#fff", color: "#111", border: "1px solid #EAE6DF", borderRadius: 999, padding: "11px 22px", textDecoration: "none", fontWeight: 600, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.3px" }}
+                >
+                  Voir la fiche
+                </Link>
               </div>
             </div>
-          </div>
-
-          {/* Infos bail + contact */}
-          <div style={{ background: "#fff", borderRadius: 20, padding: 26, border: "1px solid #EAE6DF", boxShadow: "0 1px 2px rgba(0,0,0,0.02)", display: "flex", flexDirection: "column", gap: 18 }}>
-            <div>
-              <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.4px", marginBottom: 6 }}>Loyer mensuel</p>
-              <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 32, margin: 0, color: "#111", letterSpacing: "-0.5px" }}>{loyerTotal} €<span style={{ fontSize: 14, color: "#8a8477", fontWeight: 400, fontFamily: "'DM Sans', sans-serif", fontStyle: "normal" }}>/mois</span></p>
-              {bien.charges ? (
-                <p style={{ fontSize: 12, color: "#8a8477", margin: "4px 0 0" }}>
-                  dont {bien.charges} € de charges
-                </p>
-              ) : null}
-            </div>
-
-            {bien.date_debut_bail && (
-              <div>
-                <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.4px", marginBottom: 6 }}>Début du bail</p>
-                <p style={{ fontSize: 15, fontWeight: 600, margin: 0, color: "#111" }}>
-                  {new Date(bien.date_debut_bail).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
-                </p>
-              </div>
-            )}
-
-            <div>
-              <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.4px", marginBottom: 6 }}>Propriétaire</p>
-              <p style={{ fontSize: 14, margin: 0, color: "#111" }}>{bien.proprietaire_email}</p>
-            </div>
-
-            <Link
-              href={`/messages?with=${encodeURIComponent(bien.proprietaire_email)}`}
-              style={{ background: "#111", color: "#fff", borderRadius: 999, padding: "13px 26px", textAlign: "center", textDecoration: "none", fontWeight: 600, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.3px" }}
-            >
-              Contacter mon propriétaire
-            </Link>
           </div>
         </div>
 
