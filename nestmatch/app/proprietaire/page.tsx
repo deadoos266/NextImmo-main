@@ -22,7 +22,7 @@ import { km } from "../components/ui/km"
 // 4 onglets (refonte 2026-04-24) : ancien onglet global "Candidatures" retire
 // — les candidatures sont gerees par bien via /proprietaire/annonces/[id]/candidatures
 // (bouton "Candidatures" sur chaque carte de bien dans l'onglet Mes biens).
-const ONGLETS = ["Mes biens", "Visites", "Locataires", "Anciens biens", "Statistiques"] as const
+const ONGLETS = ["Mes biens", "Visites", "Locataires", "Anciens biens", "Stats & paiements"] as const
 type Onglet = typeof ONGLETS[number]
 
 /**
@@ -381,7 +381,7 @@ export default function Proprietaire() {
   const router = useRouter()
   const { isMobile } = useResponsive()
   const myEmail = session?.user?.email?.toLowerCase() ?? null
-  const [onglet, setOnglet] = useState<Onglet>("Statistiques")
+  const [onglet, setOnglet] = useState<Onglet>("Stats & paiements")
   const [biens, setBiens] = useState<any[]>([])
   const [candidatures, setCandidatures] = useState<any[]>([])
   const [loyers, setLoyers] = useState<any[]>([])
@@ -711,7 +711,7 @@ export default function Proprietaire() {
         </div>
 
         {/* TABLEAU DE BORD — KPIs opérationnels (cliquables pour naviguer) */}
-        {onglet === "Statistiques" && (
+        {onglet === "Stats & paiements" && (
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: isMobile ? 12 : 18, marginBottom: 24 }}>
             {[
               { label: "Biens disponibles", val: biensDispos, color: km.successText, bg: km.successBg, targetOnglet: "Mes biens" as const },
@@ -738,7 +738,7 @@ export default function Proprietaire() {
         )}
 
         {/* Alerte loyers — toujours visible en haut de Statistiques */}
-        {onglet === "Statistiques" && loyersAttendus > 0 && (
+        {onglet === "Stats & paiements" && loyersAttendus > 0 && (
           <div style={{ background: km.warnBg, border: "1px solid #EADFC6", borderRadius: 14, padding: isMobile ? "12px 16px" : "14px 20px", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <p style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: km.warnText }}>{loyersAttendus} paiement{loyersAttendus > 1 ? "s" : ""} en attente</p>
             <button onClick={() => setOnglet("Locataires")} style={{ background: km.warnText, color: km.white, border: "none", borderRadius: 999, padding: "6px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Voir</button>
@@ -1055,7 +1055,7 @@ export default function Proprietaire() {
         )}
 
         {/* PERFORMANCE — vue agrégée + pipeline + détail par bien */}
-        {onglet === "Statistiques" && biens.length > 0 && (
+        {onglet === "Stats & paiements" && biens.length > 0 && (
           <div>
             {biens.length === 0 ? (
               <EmptyState
