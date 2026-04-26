@@ -33,6 +33,7 @@ const DEMANDE_DOSSIER_PREFIX = "[DEMANDE_DOSSIER]"
 const EDL_PREFIX = "[EDL_CARD]"
 const RETRAIT_PREFIX = "[CANDIDATURE_RETIREE]"
 const DEVALIDEE_PREFIX = "[CANDIDATURE_DEVALIDEE]"
+const VALIDEE_PREFIX = "[CANDIDATURE_VALIDEE]"
 const REFUS_PREFIX = "[CANDIDATURE_NON_RETENUE]"
 const RELANCE_PREFIX = "[RELANCE]"
 const LOCATION_PREFIX = "[LOCATION_ACCEPTEE]"
@@ -984,6 +985,34 @@ function CandidatureRetireeCard({ contenu, isMine }: { contenu: string; isMine: 
 // ─── Candidature dévalidée Card ──────────────────────────────────────────────
 // Rendue quand le proprio annule une validation précédente (découverte d'un
 // élément, validation par erreur). Posté par /api/candidatures/devalider.
+
+// ─── Candidature validée Card ────────────────────────────────────────────────
+// Rendue côté thread quand le proprio valide le dossier d'un candidat. Posté
+// par /api/candidatures/valider. Avant ce rendu, le message [CANDIDATURE_VALIDEE]
+// s'affichait en JSON brut dans la conv (bug Paul 2026-04-26).
+
+function CandidatureValideeCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any = {}
+  try { data = JSON.parse(contenu.slice(VALIDEE_PREFIX.length)) } catch { /* ignore */ }
+  const dateStr = data.validatedAt
+    ? new Date(data.validatedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    : ""
+  return (
+    <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 340, fontFamily: "'DM Sans', sans-serif" }}>
+      <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 6px", display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12" /></svg>
+        Candidature validée
+      </p>
+      <p style={{ fontSize: 13, color: "#111", margin: 0, lineHeight: 1.5 }}>
+        {isMine
+          ? `Vous avez validé la candidature${data.bienTitre ? ` pour « ${data.bienTitre} »` : ""}. Le candidat peut désormais proposer une visite.`
+          : `Le propriétaire a validé votre candidature${data.bienTitre ? ` pour « ${data.bienTitre} »` : ""}. Vous pouvez maintenant proposer un créneau de visite.`}
+      </p>
+      {dateStr && <p style={{ fontSize: 11, color: "#15803d", margin: "6px 0 0" }}>{dateStr}</p>}
+    </div>
+  )
+}
 
 function CandidatureDevalideeCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -4052,6 +4081,7 @@ function MessagesInner() {
                     const isQuittance = typeof m.contenu === "string" && m.contenu.startsWith(QUITTANCE_PREFIX)
                     const isRetrait = typeof m.contenu === "string" && m.contenu.startsWith(RETRAIT_PREFIX)
                     const isDevalidee = typeof m.contenu === "string" && m.contenu.startsWith(DEVALIDEE_PREFIX)
+                    const isValidee = typeof m.contenu === "string" && m.contenu.startsWith(VALIDEE_PREFIX)
                     const isRefus = typeof m.contenu === "string" && m.contenu.startsWith(REFUS_PREFIX)
                     const isLocation = typeof m.contenu === "string" && m.contenu.startsWith(LOCATION_PREFIX)
                     return (
@@ -4197,6 +4227,13 @@ function MessagesInner() {
                         ) : isDevalidee ? (
                           <div>
                             <CandidatureDevalideeCard contenu={m.contenu} isMine={isMine} />
+                            <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
+                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        ) : isValidee ? (
+                          <div>
+                            <CandidatureValideeCard contenu={m.contenu} isMine={isMine} />
                             <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
