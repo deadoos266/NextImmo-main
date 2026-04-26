@@ -233,6 +233,22 @@ export default function ComparerClient({ ids }: { ids: number[] }) {
                       </span>
                     </Row>
 
+                    <Row label="Dépôt de garantie">
+                      <span style={{ fontSize: 14, color: km.ink }}>
+                        {a.caution != null && a.caution > 0
+                          ? `${Number(a.caution).toLocaleString("fr-FR")} €`
+                          : a.prix != null
+                            ? `${Number(a.prix).toLocaleString("fr-FR")} €`
+                            : "—"}
+                      </span>
+                    </Row>
+
+                    <Row label="Disponibilité">
+                      <span style={{ fontSize: 13, color: km.ink }}>
+                        {a.dispo || "Non renseigné"}
+                      </span>
+                    </Row>
+
                     <Row label="DPE">
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         {a.dpe ? <KMDPE value={a.dpe} /> : <span style={{ fontSize: 14, color: km.muted }}>—</span>}
