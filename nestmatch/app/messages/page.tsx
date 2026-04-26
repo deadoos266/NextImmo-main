@@ -2419,6 +2419,25 @@ function MessagesInner() {
     return "candidat"
   }
 
+  // Désélection automatique : si on change d'onglet et que la conv active
+  // n'appartient plus à l'onglet courant, on déselectionne pour éviter le
+  // cas désorientant "panneau droit affiche une conv invisible à gauche".
+  // Déclenché uniquement sur changement de messagesTab via une ref de garde.
+  const prevTabRef = useRef(messagesTab)
+  useEffect(() => {
+    if (prevTabRef.current === messagesTab) return
+    prevTabRef.current = messagesTab
+    if (!convActive) return
+    const conv = conversations.find(c => c.key === convActive)
+    if (!conv) return
+    const convTab = getTab(conv)
+    const stillVisible = proprietaireActive
+      ? convTab === messagesTab
+      : (messagesTab === "locataire" ? convTab === "locataire" : convTab !== "locataire")
+    if (!stillVisible) setConvActive(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messagesTab])
+
   const convsFiltrees = conversations
     // Onglet primaire : 4 onglets stricts côté proprio (candidat/valide/locataire/autre).
     // Côté locataire on conserve la dichotomie 2-onglets en mappant
