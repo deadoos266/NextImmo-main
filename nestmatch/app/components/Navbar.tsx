@@ -261,6 +261,40 @@ export default function Navbar() {
       {/* Desktop : avatar / auth */}
       {!isSmall && (
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          {/* CTA "Publier un bien" — proprio uniquement, juste avant la cloche.
+              Fidèle handoff `components.jsx` Navbar l. 97 (mode owner = "+ Publier")
+              + visibilité gated par proprietaireActive pour ne pas polluer
+              côté locataire. Bug Paul 2026-04-26 « il devait être en gros à
+              côté de la cloche ». */}
+          {session && proprietaireActive && (
+            <Link
+              href="/proprietaire/ajouter"
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "10px 18px",
+                background: km.ink, color: km.white,
+                borderRadius: 999, textDecoration: "none",
+                fontWeight: 700, fontSize: 12,
+                textTransform: "uppercase", letterSpacing: "0.5px",
+                fontFamily: "inherit", whiteSpace: "nowrap",
+                transition: "transform 160ms ease, box-shadow 160ms ease",
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = "translateY(-1px)"
+                e.currentTarget.style.boxShadow = "0 6px 16px rgba(17,17,17,0.18)"
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = "translateY(0)"
+                e.currentTarget.style.boxShadow = "none"
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Publier
+            </Link>
+          )}
           {session && <NotificationBell />}
           {session ? (
             <div style={{ position: "relative" }}>
@@ -378,6 +412,26 @@ export default function Navbar() {
         </div>
       )}
 
+      {/* Mobile : Publier (icône +) → cloche → burger.
+          Visible uniquement proprio. Icône seule pour préserver l'espace. */}
+      {isSmall && session && proprietaireActive && (
+        <Link
+          href="/proprietaire/ajouter"
+          aria-label="Publier un bien"
+          style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            width: 40, height: 40, borderRadius: "50%",
+            background: km.ink, color: km.white,
+            textDecoration: "none", flexShrink: 0,
+            boxShadow: "0 2px 8px rgba(17,17,17,0.18)",
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </Link>
+      )}
       {/* Mobile : cloche notifications à droite, avant le burger */}
       {isSmall && session && <NotificationBell />}
 
