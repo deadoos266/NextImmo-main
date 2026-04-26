@@ -835,17 +835,32 @@ function Step4Equipements({
     setEquipExtras(prev => ({ ...prev, [k]: !prev[k] }))
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+      {/* Sous-sections cohérentes pour Step 4 : depuis le déplacement de
+          "Meublé" en Step 1, le bloc Général unique manquait de hiérarchie.
+          Découpe en 3 catégories sémantiques (Annexes / Extérieur / Confort
+          immeuble) pour scanner plus vite. */}
       <div>
-        <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 14px" }}>Général</p>
-        {/* Toggle "Meublé" déplacé en Step 1 (premier filtre logique). */}
+        <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 10px" }}>Annexes</p>
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 4 }}>
           <Toggle label="Parking" k="parking" toggles={toggles} setToggles={setToggles} />
           <Toggle label="Cave" k="cave" toggles={toggles} setToggles={setToggles} />
-          <Toggle label="Fibre optique" k="fibre" toggles={toggles} setToggles={setToggles} />
+        </div>
+      </div>
+
+      <div>
+        <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 10px" }}>Extérieur</p>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 4 }}>
           <Toggle label="Balcon" k="balcon" toggles={toggles} setToggles={setToggles} />
           <Toggle label="Terrasse" k="terrasse" toggles={toggles} setToggles={setToggles} />
           <Toggle label="Jardin" k="jardin" toggles={toggles} setToggles={setToggles} />
+        </div>
+      </div>
+
+      <div>
+        <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 10px" }}>Confort de l&apos;immeuble</p>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 4 }}>
           <Toggle label="Ascenseur" k="ascenseur" toggles={toggles} setToggles={setToggles} />
+          <Toggle label="Fibre optique" k="fibre" toggles={toggles} setToggles={setToggles} />
         </div>
       </div>
 
