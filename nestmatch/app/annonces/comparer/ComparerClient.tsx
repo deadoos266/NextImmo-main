@@ -40,7 +40,7 @@ export default function ComparerClient({ ids }: { ids: number[] }) {
     let cancelled = false
     async function load() {
       if (ids.length === 0) { setLoading(false); return }
-      const { data } = await supabase.from("annonces").select("*").in("id", ids)
+      const { data } = await supabase.from("annonces").select("*").in("id", ids).eq("is_test", false)
       if (cancelled) return
       if (data) {
         // Preserve URL order

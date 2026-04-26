@@ -44,7 +44,7 @@ export default function Recommandations() {
     // On ignore le filtre ville stricte pour découvrir d'autres zones
     const profilSouple = p ? { ...p, mode_localisation: "souple" } : null
 
-    const { data: ann } = await supabase.from("annonces").select("*").eq("statut", "disponible")
+    const { data: ann } = await supabase.from("annonces").select("*").eq("statut", "disponible").eq("is_test", false)
     if (!ann) { setLoading(false); return }
 
     // Regrouper par ville + calculer compatibilités

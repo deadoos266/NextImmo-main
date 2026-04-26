@@ -58,9 +58,12 @@ function deduirePointsForts(a: Record<string, unknown>): string[] {
 
 export async function generateMetadata({ params }: any): Promise<Metadata> {
   const { id } = await params
-  const { data: annonce } = await supabase.from("annonces").select("titre,description,ville,prix,surface,pieces,photos").eq("id", id).single()
+  const { data: annonce } = await supabase.from("annonces").select("titre,description,ville,prix,surface,pieces,photos,is_test").eq("id", id).single()
 
-  if (!annonce) {
+  // Annonce flaguée test = traitée comme introuvable côté public (pas de
+  // metadata SEO, pas d'OG image). Le proprio voit toujours sa fiche via
+  // /proprietaire/modifier/[id].
+  if (!annonce || annonce.is_test) {
     return { title: "Annonce introuvable" }
   }
 
@@ -124,7 +127,7 @@ export default async function Annonce({ params }: any) {
       supabase.from("clics_annonces").select("annonce_id", { count: "exact", head: true }).eq("annonce_id", annonce.id),
       supabase.from("messages").select("id", { count: "exact", head: true }).eq("annonce_id", annonce.id),
       ownerEmail
-        ? supabase.from("annonces").select("id", { count: "exact", head: true }).eq("proprietaire_email", ownerEmail).neq("id", annonce.id)
+        ? supabase.from("annonces").select("id", { count: "exact", head: true }).eq("proprietaire_email", ownerEmail).neq("id", annonce.id).eq("is_test", false)
         : Promise.resolve({ count: 0 } as { count: number | null }),
     ])
     nbVues = vuesCount ?? 0
@@ -148,11 +151,14 @@ export default async function Annonce({ params }: any) {
       .gte("prix", prixMin)
       .lte("prix", prixMax)
       .or("statut.is.null,statut.neq.loué")
+      .eq("is_test", false) // Modération : pas d'annonce de test en suggestion
       .limit(4)
     similaires = sim || []
   }
 
-  if (!annonce) return (
+  // Modération : annonce inexistante OU flaguée test = 404-like public.
+  // Le proprio voit sa fiche via /proprietaire/modifier/[id] ou stats.
+  if (!annonce || annonce.is_test) return (
     <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ textAlign: "center" }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12 }}>Annonce introuvable</h1>

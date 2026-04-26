@@ -67,6 +67,12 @@ export default function ModifierBien() {
     fibre: false, balcon: false, terrasse: false, jardin: false, ascenseur: false,
     localisation_exacte: false,
   })
+  // is_test : flag de modération vitrine publique. Si true, l'annonce est
+  // masquée des pages publiques (accueil, /annonces, /location/X, sitemap,
+  // OG, agent IA) mais reste visible/éditable côté proprio (cette page,
+  // /proprietaire, /proprietaire/stats). Migration `annonces.is_test`
+  // appliquée 2026-04-26.
+  const [isTest, setIsTest] = useState(false)
   // R10.6 — équipements étendus jsonb (indépendants des colonnes boolean historiques).
   const [equipExtras, setEquipExtras] = useState<Record<string, boolean>>({})
 
@@ -128,6 +134,7 @@ export default function ModifierBien() {
       terrasse: !!data.terrasse, jardin: !!data.jardin, ascenseur: !!data.ascenseur,
       localisation_exacte: !!data.localisation_exacte,
     })
+    setIsTest(!!data.is_test)
     // R10.6 — équipements jsonb (si colonne absente en DB, reste vide sans casser).
     if (data.equipements_extras && typeof data.equipements_extras === "object") {
       setEquipExtras(data.equipements_extras as Record<string, boolean>)
@@ -239,6 +246,7 @@ export default function ModifierBien() {
       description: form.description, type_bien: form.type_bien,
       photos: photos.length > 0 ? photos : null,
       lat: form.lat, lng: form.lng,
+      is_test: isTest,
       // R10.6 — critères candidats v2 (fallback si migration 025 pas appliquée).
       age_min: toInt(form.age_min),
       age_max: toInt(form.age_max),
@@ -364,6 +372,50 @@ export default function ModifierBien() {
                 Laisser vide = &quot;Disponible maintenant&quot;
               </p>
             </F>
+          </div>
+        </Sec>
+
+        {/* Visibilité publique — toggle is_test pour masquer les annonces de
+            test (modération vitrine, migration 2026-04-26). */}
+        <Sec t="Visibilité publique">
+          <div style={{
+            display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+            gap: 14, padding: "14px 16px",
+            background: isTest ? "#FBF6EA" : "#F7F4EF",
+            border: `1px solid ${isTest ? "#EADFC6" : "#EAE6DF"}`,
+            borderRadius: 12,
+          }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: "#111", margin: 0, marginBottom: 4 }}>
+                Annonce de test (masquée du public)
+              </p>
+              <p style={{ fontSize: 12, color: "#666", lineHeight: 1.55, margin: 0 }}>
+                {isTest
+                  ? "Cette annonce est masquée des pages publiques (accueil, recherche, fiches similaires, sitemap, partages sociaux). Elle reste visible et éditable depuis votre espace propriétaire."
+                  : "L'annonce est visible publiquement. Activez ce toggle si c'est un bien de test, une démo ou un brouillon que vous ne voulez pas exposer."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsTest(!isTest)}
+              role="switch"
+              aria-checked={isTest}
+              style={{
+                width: 44, height: 24, borderRadius: 999,
+                background: isTest ? "#a16207" : "#EAE6DF",
+                cursor: "pointer", position: "relative",
+                transition: "background 0.2s",
+                border: "none", padding: 0, flexShrink: 0,
+              }}
+            >
+              <div style={{
+                width: 18, height: 18, borderRadius: "50%",
+                background: "#fff",
+                position: "absolute", top: 3, left: isTest ? 23 : 3,
+                transition: "left 0.2s",
+                boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
+              }} />
+            </button>
           </div>
         </Sec>
 

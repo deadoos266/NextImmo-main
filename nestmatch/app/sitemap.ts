@@ -5,11 +5,13 @@ import { CITY_NAMES } from "../lib/cityCoords"
 const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://keymatch-immo.fr"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // Seulement les annonces disponibles (statut "disponible" OU statut absent)
+  // Seulement les annonces disponibles (statut "disponible" OU statut absent),
+  // et exclut les annonces de test (col is_test, modération vitrine publique).
   const { data: annonces } = await supabase
     .from("annonces")
     .select("id, updated_at, statut")
     .or("statut.is.null,statut.eq.disponible")
+    .eq("is_test", false)
     .order("id", { ascending: false })
 
   const annoncesUrls: MetadataRoute.Sitemap = (annonces || []).map((a) => ({

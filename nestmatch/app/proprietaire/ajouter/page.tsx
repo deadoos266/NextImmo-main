@@ -50,6 +50,8 @@ type AnnonceForm = {
   // R10.6 — critères v2 bonus-only (jamais de malus). Stockés dans nouvelles colonnes (migration 025).
   age_min: string; age_max: string; max_occupants: string
   animaux_politique: TriPolitique; fumeur_politique: TriPolitique
+  // Modération : si true, l'annonce est masquée des pages publiques. Migration `is_test` 2026-04-26.
+  is_test: boolean
 }
 
 const GARANTS_OPTIONS = ["Visale", "Garantme", "Parents CDI", "Caution bancaire", "Indifférent"] as const
@@ -117,6 +119,7 @@ export default function AjouterBien() {
     min_revenus_ratio: 3, garants_acceptes: ["Visale"], profils_acceptes: ["CDI", "Fonctionnaire"], message_proprietaire: "",
     age_min: "", age_max: "", max_occupants: "",
     animaux_politique: "indifferent", fumeur_politique: "indifferent",
+    is_test: false,
   })
   // R10.6 — équipements étendus stockés dans jsonb equipements_extras.
   // Clé = nom colonne handoff ; valeur = boolean. Init à {} (tout off).
@@ -264,6 +267,7 @@ export default function AjouterBien() {
         membre: "Membre depuis " + new Date().getFullYear(), verifie: true,
         photos: photos.length > 0 ? photos : null,
         lat: form.lat, lng: form.lng,
+        is_test: form.is_test,
         // Critères candidats — handoff publish.jsx. Colonnes optionnelles :
         // fallback « sans ces cols » déclenché si la migration n'a pas tourné.
         min_revenus_ratio: form.min_revenus_ratio,
@@ -1317,6 +1321,55 @@ function Step7Publier({
           </div>
         </div>
       )}
+
+      {/* Toggle "Annonce de test" — modération vitrine. Si activé, l'annonce
+          est créée mais masquée des pages publiques (Paul peut tester le flow
+          publication+matching sans polluer la vitrine). Le proprio voit toujours
+          son annonce dans /proprietaire (Mes biens). */}
+      <div style={{ borderTop: `1px solid ${km.beige}`, paddingTop: 22, marginTop: 28 }}>
+        <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 14px" }}>
+          Visibilité publique
+        </p>
+        <div style={{
+          display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+          gap: 14, padding: "14px 16px",
+          background: form.is_test ? km.warnBg : km.beige,
+          border: `1px solid ${form.is_test ? km.warnLine : km.line}`,
+          borderRadius: 12,
+        }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: km.ink, margin: 0, marginBottom: 4 }}>
+              Marquer comme annonce de test
+            </p>
+            <p style={{ fontSize: 12, color: km.muted, lineHeight: 1.55, margin: 0 }}>
+              {form.is_test
+                ? "Sera masquée des pages publiques (accueil, recherche, fiches similaires, sitemap). Vous la verrez dans votre dashboard."
+                : "L'annonce sera visible publiquement dès la publication. Activez ce toggle si c'est un bien de test ou démo."}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setForm(f => ({ ...f, is_test: !f.is_test }))}
+            role="switch"
+            aria-checked={form.is_test}
+            style={{
+              width: 44, height: 24, borderRadius: 999,
+              background: form.is_test ? km.warnText : km.line,
+              cursor: "pointer", position: "relative",
+              transition: "background 0.2s",
+              border: "none", padding: 0, flexShrink: 0,
+            }}
+          >
+            <div style={{
+              width: 18, height: 18, borderRadius: "50%",
+              background: km.white,
+              position: "absolute", top: 3, left: form.is_test ? 23 : 3,
+              transition: "left 0.2s",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
+            }} />
+          </button>
+        </div>
+      </div>
 
       {/* Récap visuel — checklist complétude avec lien « Modifier » vers l'étape */}
       <div style={{ borderTop: `1px solid ${km.beige}`, paddingTop: 22, marginTop: 28 }}>

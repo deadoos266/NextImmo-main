@@ -436,6 +436,7 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
         .from("annonces")
         .select("*")
         .or("statut.is.null,statut.neq.loué")
+        .eq("is_test", false) // Modération : exclut les annonces flaguées en test (proprio les voit toujours dans /proprietaire)
       if (a) setAnnonces(a)
       if (session?.user?.email) {
         const { data: p } = await supabase.from("profils").select("*").eq("email", session.user.email).single()

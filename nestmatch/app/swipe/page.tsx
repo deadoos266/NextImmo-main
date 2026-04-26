@@ -65,6 +65,7 @@ export default function SwipePage() {
         .from("annonces")
         .select("id, titre, ville, prix, surface, pieces, dpe, meuble, photos, description, balcon, terrasse, jardin, animaux, parking, ascenseur, type_bien, fibre, cave, statut, charges, duree_bail, proprietaire_email")
         .or("statut.is.null,statut.neq.loué")
+        .eq("is_test", false)
         .limit(60)
       let profil: any = null
       if (session?.user?.email) {

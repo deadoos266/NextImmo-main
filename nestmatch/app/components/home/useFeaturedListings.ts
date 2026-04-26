@@ -41,6 +41,7 @@ export function useFeaturedListings(targetCount = 8) {
           .select("id, titre, ville, prix, surface, pieces, dpe, photos, statut, created_at")
           .or("statut.is.null,statut.eq.disponible")
           .not("photos", "is", null)
+          .eq("is_test", false) // Modération : exclut les annonces de test (col added 2026-04-26)
           .order("created_at", { ascending: false })
           .limit(24)
 

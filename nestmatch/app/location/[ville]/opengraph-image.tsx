@@ -41,6 +41,7 @@ export default async function OgImage({ params }: { params: Promise<{ ville: str
       .select("prix")
       .ilike("ville", city)
       .eq("statut", "disponible")
+      .eq("is_test", false) // Modération : OG médiane ville exclut les tests
       .limit(200)
     const prix = (data || []).map(a => Number(a.prix)).filter(n => !isNaN(n) && n > 0)
     total = prix.length

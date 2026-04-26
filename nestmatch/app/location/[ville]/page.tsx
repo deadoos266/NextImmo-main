@@ -88,6 +88,7 @@ export default async function LocationVille({ params }: any) {
     .select("id, titre, ville, prix, surface, pieces, photos, dispo, statut")
     .ilike("ville", city)
     .eq("statut", "disponible")
+    .eq("is_test", false) // Modération : pas d'annonce test sur landing pages SEO ville
     .order("id", { ascending: false })
     .limit(24)
 

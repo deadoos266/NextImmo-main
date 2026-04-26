@@ -23,15 +23,19 @@ export default async function OgImage({ params }: { params: Promise<{ id: string
 
   const { data: annonce } = await supabase
     .from("annonces")
-    .select("titre, ville, prix, surface, pieces")
+    .select("titre, ville, prix, surface, pieces, is_test")
     .eq("id", id)
     .maybeSingle()
 
-  const titre = annonce?.titre || "Logement à louer"
-  const ville = annonce?.ville || ""
-  const prix = annonce?.prix ? `${annonce.prix} €` : ""
-  const surface = annonce?.surface ? `${annonce.surface} m²` : ""
-  const pieces = annonce?.pieces ? `${annonce.pieces} ${annonce.pieces > 1 ? "pièces" : "pièce"}` : ""
+  // Annonce flaguée test = OG image générique (pas de leak des données test
+  // sur les partages sociaux). Le rendu fallback existant gère ce cas via les
+  // strings par défaut.
+  const isTestOrMissing = !annonce || annonce.is_test
+  const titre = (!isTestOrMissing && annonce?.titre) || "Logement à louer"
+  const ville = (!isTestOrMissing && annonce?.ville) || ""
+  const prix = !isTestOrMissing && annonce?.prix ? `${annonce.prix} €` : ""
+  const surface = !isTestOrMissing && annonce?.surface ? `${annonce.surface} m²` : ""
+  const pieces = !isTestOrMissing && annonce?.pieces ? `${annonce.pieces} ${annonce.pieces > 1 ? "pièces" : "pièce"}` : ""
   const details = [surface, pieces].filter(Boolean).join(" · ")
 
   return new ImageResponse(

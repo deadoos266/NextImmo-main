@@ -76,6 +76,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
           .from("annonces")
           .select("id, titre, ville, prix, surface, pieces, meuble, dpe, statut")
           .eq("statut", "disponible")
+          .eq("is_test", false)
 
         if (input.ville) query = query.ilike("ville", `%${input.ville}%`)
         if (input.prix_max) query = query.lte("prix", input.prix_max)
