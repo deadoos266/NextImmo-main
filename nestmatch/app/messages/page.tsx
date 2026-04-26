@@ -1082,6 +1082,11 @@ function MessagesInner() {
 
   const [conversations, setConversations] = useState<any[]>([])
   const [annonces, setAnnonces] = useState<Record<number, any>>({})
+  // Préférences user (pin / mute) keyed par conv.key, persistées en DB
+  // dans `conversation_preferences` (migration 2026-04-26). Fetch parallèle
+  // au load + optimistic update sur toggle. Tri pinned-first / muted-last
+  // appliqué dans loadConversations.
+  const [convPrefs, setConvPrefs] = useState<Record<string, { pinned: boolean; muted: boolean }>>({})
   // Photos de profil des interlocuteurs (keyed par email lower). Chargé après
   // la liste de conv pour afficher un avatar dans la liste et dans le header chat.
   const [peerImages, setPeerImages] = useState<Record<string, string>>({})
@@ -1520,10 +1525,27 @@ function MessagesInner() {
     // l'appel (NextAuth status flicker au mount). Guard explicite.
     const email = session?.user?.email
     if (!email) return
-    const { data } = await supabase.from("messages")
-      .select("*")
-      .or(`from_email.eq.${email},to_email.eq.${email}`)
-      .order("created_at", { ascending: false })
+    // Fetch messages + préférences user (pin/mute) en parallèle.
+    const [{ data }, { data: prefsData }] = await Promise.all([
+      supabase.from("messages")
+        .select("*")
+        .or(`from_email.eq.${email},to_email.eq.${email}`)
+        .order("created_at", { ascending: false }),
+      supabase.from("conversation_preferences")
+        .select("peer_email, annonce_id, pinned_at, muted_at")
+        .eq("user_email", email.toLowerCase()),
+    ])
+
+    // Index des prefs keyé par conv.key (même schéma que convMap ci-dessous).
+    const prefs: Record<string, { pinned: boolean; muted: boolean }> = {}
+    for (const p of (prefsData || []) as Array<{ peer_email: string | null; annonce_id: number | null; pinned_at: string | null; muted_at: string | null }>) {
+      const peer = (p.peer_email || "").toLowerCase()
+      if (!peer) continue
+      const annKey = p.annonce_id ?? "none"
+      const k = [email, peer].sort().join("|") + `:${annKey}`
+      prefs[k] = { pinned: !!p.pinned_at, muted: !!p.muted_at }
+    }
+    setConvPrefs(prefs)
 
     const convMap = new Map<string, any>()
     const searchBuckets = new Map<string, string[]>()
@@ -1581,6 +1603,19 @@ function MessagesInner() {
     }
 
     const convList = Array.from(convMap.values())
+    // Tri : pinned-first → non-marqués → muted-last. Fallback intra-bucket
+    // sur lastMsg.created_at (déjà DESC depuis Supabase). Stable.
+    convList.sort((a, b) => {
+      const pa = prefs[a.key]?.pinned ? 1 : 0
+      const pb = prefs[b.key]?.pinned ? 1 : 0
+      if (pa !== pb) return pb - pa
+      const ma = prefs[a.key]?.muted ? 1 : 0
+      const mb = prefs[b.key]?.muted ? 1 : 0
+      if (ma !== mb) return ma - mb
+      const aT = a.lastMsg?.created_at || ""
+      const bT = b.lastMsg?.created_at || ""
+      return bT.localeCompare(aT)
+    })
     setConversations(convList)
 
     // Fetch photos de profil des peers : priorité à profils.photo_url_custom
@@ -2007,6 +2042,71 @@ function MessagesInner() {
       return next
     })
     if (convActive === key) { setConvActive(null); setMessages([]) }
+  }
+
+  // ─── Pin / Mute ─────────────────────────────────────────────────────────
+  // Persistance DB dans `conversation_preferences` (migration 2026-04-26).
+  // Optimistic update local + upsert manuel (la contrainte unique inclut
+  // COALESCE(annonce_id, -1) — onConflict natif PostgREST gère mal les
+  // expressions, on fait donc select-then-update/insert).
+  async function persistPref(conv: any, patch: { pinned_at?: string | null; muted_at?: string | null }) {
+    if (!myEmail) return
+    const me = myEmail.toLowerCase()
+    const peer = (conv.other || "").toLowerCase()
+    const annId: number | null = conv.annonceId ?? null
+    const nowIso = new Date().toISOString()
+    let lookup = supabase
+      .from("conversation_preferences")
+      .select("id")
+      .eq("user_email", me)
+      .eq("peer_email", peer)
+    lookup = annId === null ? lookup.is("annonce_id", null) : lookup.eq("annonce_id", annId)
+    const { data: existing } = await lookup.maybeSingle()
+    if (existing?.id) {
+      await supabase.from("conversation_preferences")
+        .update({ ...patch, updated_at: nowIso })
+        .eq("id", existing.id)
+    } else {
+      await supabase.from("conversation_preferences").insert({
+        user_email: me,
+        peer_email: peer,
+        annonce_id: annId,
+        pinned_at: patch.pinned_at ?? null,
+        muted_at: patch.muted_at ?? null,
+      })
+    }
+  }
+
+  function reorderConvs(list: any[], prefs: Record<string, { pinned: boolean; muted: boolean }>): any[] {
+    return [...list].sort((a, b) => {
+      const pa = prefs[a.key]?.pinned ? 1 : 0
+      const pb = prefs[b.key]?.pinned ? 1 : 0
+      if (pa !== pb) return pb - pa
+      const ma = prefs[a.key]?.muted ? 1 : 0
+      const mb = prefs[b.key]?.muted ? 1 : 0
+      if (ma !== mb) return ma - mb
+      const aT = a.lastMsg?.created_at || ""
+      const bT = b.lastMsg?.created_at || ""
+      return bT.localeCompare(aT)
+    })
+  }
+
+  async function togglePin(conv: any) {
+    const cur = convPrefs[conv.key]?.pinned || false
+    const next = !cur
+    const nextPrefs = { ...convPrefs, [conv.key]: { pinned: next, muted: convPrefs[conv.key]?.muted || false } }
+    setConvPrefs(nextPrefs)
+    setConversations(prev => reorderConvs(prev, nextPrefs))
+    await persistPref(conv, { pinned_at: next ? new Date().toISOString() : null })
+  }
+
+  async function toggleMute(conv: any) {
+    const cur = convPrefs[conv.key]?.muted || false
+    const next = !cur
+    const nextPrefs = { ...convPrefs, [conv.key]: { pinned: convPrefs[conv.key]?.pinned || false, muted: next } }
+    setConvPrefs(nextPrefs)
+    setConversations(prev => reorderConvs(prev, nextPrefs))
+    await persistPref(conv, { muted_at: next ? new Date().toISOString() : null })
   }
 
   async function loadVisitesConv(otherEmail: string, annonceId?: number | null) {
@@ -3248,10 +3348,12 @@ function MessagesInner() {
                 const cand = candStatut ? CANDIDATE_STATUS[candStatut] : null
                 const ringColor = cand && cand.ring !== "transparent" ? cand.ring : "transparent"
 
+                const pinnedHere = convPrefs[conv.key]?.pinned || false
+                const mutedHere = convPrefs[conv.key]?.muted || false
                 return (
                   <div key={conv.key}
                     onClick={() => { setConvActive(conv.key); setMenuConv(null); setVisitesConv([]); loadMessages(myEmail!, conv.other, conv.annonceId); loadVisitesConv(conv.other, conv.annonceId) }}
-                    style={{ padding: "14px 16px", cursor: "pointer", background: isActive ? "#F7F4EF" : "white", borderBottom: "1px solid #F2EEE6", borderLeft: isActive ? "3px solid #111" : conv.unread > 0 ? "3px solid #b91c1c" : "3px solid transparent", position: "relative", transition: "background 160ms ease" }}
+                    style={{ padding: "14px 16px", cursor: "pointer", background: isActive ? "#F7F4EF" : "white", borderBottom: "1px solid #F2EEE6", borderLeft: isActive ? "3px solid #111" : conv.unread > 0 && !mutedHere ? "3px solid #b91c1c" : "3px solid transparent", position: "relative", transition: "background 160ms ease", opacity: mutedHere && !isActive ? 0.6 : 1 }}
                     onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "#FBF8F3"; const btn = e.currentTarget.querySelector(".menu-btn") as HTMLElement; if (btn) btn.style.opacity = "1" }}
                     onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "white"; if (menuConv !== conv.key) { const btn = e.currentTarget.querySelector(".menu-btn") as HTMLElement; if (btn) btn.style.opacity = "0" } }}
                   >
@@ -3278,11 +3380,25 @@ function MessagesInner() {
                         )}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-                          <p style={{ fontWeight: conv.unread > 0 ? 800 : 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 130, color: "#111" }}>
-                            {ann?.titre || displayName(conv.other, ann?.proprietaire)}
-                          </p>
-                          <span style={{ fontSize: 10.5, color: "#8a8477", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" as const, letterSpacing: "0.2px" }}>{time}</span>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2, gap: 6 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, flex: 1 }}>
+                            {pinnedHere && (
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="#111" stroke="none" aria-label="Épinglée" style={{ flexShrink: 0 }}>
+                                <path d="M16 3 13 6h-2L8 3l-2 2 3 3v3l-3 3v2h5v6l1 1 1-1v-6h5v-2l-3-3V8l3-3z" />
+                              </svg>
+                            )}
+                            <p style={{ fontWeight: conv.unread > 0 && !mutedHere ? 800 : 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#111", margin: 0, flex: 1, minWidth: 0 }}>
+                              {ann?.titre || displayName(conv.other, ann?.proprietaire)}
+                            </p>
+                            {mutedHere && (
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8a8477" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-label="En sourdine" style={{ flexShrink: 0 }}>
+                                <path d="M11 5 6 9H2v6h4l5 4z" />
+                                <line x1="23" y1="9" x2="17" y2="15" />
+                                <line x1="17" y1="9" x2="23" y2="15" />
+                              </svg>
+                            )}
+                          </div>
+                          <span style={{ fontSize: 10.5, color: "#8a8477", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" as const, letterSpacing: "0.2px", flexShrink: 0 }}>{time}</span>
                         </div>
                         {ann?.titre && (
                           <p style={{ fontSize: 11, color: "#8a8477", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName(conv.other, ann?.proprietaire)}</p>
@@ -3351,6 +3467,35 @@ function MessagesInner() {
                               Voir l&apos;annonce
                             </button>
                           )}
+                          <button onClick={e => { e.stopPropagation(); void togglePin(conv); setMenuConv(null) }}
+                            style={{ width: "100%", padding: "11px 14px", background: "none", border: "none", borderBottom: "1px solid #F2EEE6", textAlign: "left", fontSize: 13, cursor: "pointer", fontFamily: "inherit", color: "#111", display: "flex", alignItems: "center", gap: 8 }}
+                            onMouseEnter={e => (e.currentTarget.style.background = "#F7F4EF")}
+                            onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill={pinnedHere ? "#111" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                              <path d="M16 3 13 6h-2L8 3l-2 2 3 3v3l-3 3v2h5v6l1 1 1-1v-6h5v-2l-3-3V8l3-3z" />
+                            </svg>
+                            {pinnedHere ? "Désépingler" : "Épingler"}
+                          </button>
+                          <button onClick={e => { e.stopPropagation(); void toggleMute(conv); setMenuConv(null) }}
+                            style={{ width: "100%", padding: "11px 14px", background: "none", border: "none", borderBottom: "1px solid #F2EEE6", textAlign: "left", fontSize: 13, cursor: "pointer", fontFamily: "inherit", color: "#111", display: "flex", alignItems: "center", gap: 8 }}
+                            onMouseEnter={e => (e.currentTarget.style.background = "#F7F4EF")}
+                            onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                              {mutedHere ? (
+                                <>
+                                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                                </>
+                              ) : (
+                                <>
+                                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                                  <line x1="23" y1="9" x2="17" y2="15" />
+                                  <line x1="17" y1="9" x2="23" y2="15" />
+                                </>
+                              )}
+                            </svg>
+                            {mutedHere ? "Réactiver les notifications" : "Mettre en sourdine"}
+                          </button>
                           <button onClick={e => { e.stopPropagation(); toggleArchive(conv.key); setMenuConv(null) }}
                             style={{ width: "100%", padding: "11px 14px", background: "none", border: "none", borderBottom: "1px solid #F2EEE6", textAlign: "left", fontSize: 13, cursor: "pointer", fontFamily: "inherit", color: "#111", display: "flex", alignItems: "center", gap: 8 }}
                             onMouseEnter={e => (e.currentTarget.style.background = "#F7F4EF")}
