@@ -1164,14 +1164,13 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
               width: isDesktopListCarte ? "100%" : undefined,
             }}
           >
-            {/* ── Colonne Aside — 420px desktop (handoff strict), 100% mobile/tablet ──
-                Sur tablette+desktop ≥1024 : layout grid `420px 1fr`. La aside
-                est une card blanche radius 20 avec header pill (live indicator)
-                et items horizontaux compacts (ListingCardCompact). */}
+            {/* ── Colonne Aside — 480px desktop (handoff (3) strict), 100% mobile/tablet ──
+                Layout grid `480px 1fr`. Header riche : eyebrow + h1 22px count
+                + Live indicator + tri segmented (Compatibilité / Prix / Récent). */}
             <div
               ref={listScrollerRef}
               style={{
-                flex: isSmall ? 1 : "0 0 420px",
+                flex: isSmall ? 1 : "0 0 480px",
                 minWidth: 0,
                 width: isSmall ? "100%" : undefined,
                 display: isMobileV5 ? "block" : (isSmall && showMap ? "none" : "flex"),
@@ -1184,45 +1183,87 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                 paddingBottom: isMobileV5 ? 80 : undefined,
               }}
             >
-              {/* Header pill (handoff l. 566-572) — count + Live pulse vert.
-                  Style intégré à l'aside card sur desktop, masqué mobile. */}
+              {/* Header aside enrichi — handoff (3) MapSplit l. 631-679 */}
               {!isSmall && (
                 <div style={{
-                  padding: "14px 18px",
+                  padding: "18px 22px 14px",
                   borderBottom: `1px solid ${km.line}`,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "#6B6B6B",
-                  textTransform: "uppercase",
-                  letterSpacing: "1.4px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
                   flexShrink: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 12,
                 }}>
-                  <span>
-                    {loading
-                      ? "Chargement…"
-                      : `${annoncesTraitees.length} bien${annoncesTraitees.length > 1 ? "s" : ""}${tri === "match" ? " · triés par match" : ""}`}
-                  </span>
-                  <span style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    textTransform: "none",
-                    letterSpacing: 0,
-                    color: "#16A34A",
-                    fontSize: 11,
-                  }}>
-                    <span style={{
-                      width: 6,
-                      height: 6,
-                      background: "#16A34A",
-                      borderRadius: "50%",
-                      animation: "km-pulse 2s ease-in-out infinite",
-                    }}/>
-                    Live
-                  </span>
+                  {/* Ligne 1 : eyebrow + h1 + Live indicator */}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{
+                      fontSize: 10.5,
+                      fontWeight: 700,
+                      color: "#6B6B6B",
+                      textTransform: "uppercase" as const,
+                      letterSpacing: "1.4px",
+                      marginBottom: 4,
+                    }}>
+                      Annonces
+                    </div>
+                    <h2 style={{
+                      fontSize: 22,
+                      fontWeight: 600,
+                      letterSpacing: "-0.6px",
+                      margin: 0,
+                      lineHeight: 1.2,
+                      color: km.ink,
+                    }}>
+                      {loading ? "Chargement…" : `${annoncesTraitees.length} logement${annoncesTraitees.length > 1 ? "s" : ""}`}
+                    </h2>
+                    <div style={{
+                      fontSize: 11.5,
+                      color: "#6B6B6B",
+                      marginTop: 3,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}>
+                      <span style={{
+                        width: 5,
+                        height: 5,
+                        background: "#16A34A",
+                        borderRadius: "50%",
+                        animation: "km-pulse 2s ease-in-out infinite",
+                      }} />
+                      Mis à jour à l&apos;instant
+                    </div>
+                  </div>
+
+                  {/* Ligne 2 : Tri segmented control fidèle handoff (3) l. 666-678 */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, fontSize: 11.5 }}>
+                    <span style={{ color: "#6B6B6B", fontWeight: 600 }}>Trier par</span>
+                    <div style={{ display: "inline-flex", gap: 0, background: km.beige, borderRadius: 8, padding: 2 }}>
+                      {([
+                        ["match", "Compatibilité"],
+                        ["prix_asc", "Prix"],
+                        ["recent", "Récent"],
+                      ] as const).map(([k, l]) => (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => setTri(k)}
+                          style={{
+                            padding: "5px 11px",
+                            borderRadius: 6,
+                            border: "none",
+                            cursor: "pointer",
+                            fontFamily: "inherit",
+                            fontSize: 11,
+                            fontWeight: 600,
+                            background: tri === k ? km.white : "transparent",
+                            color: tri === k ? km.ink : "#6B6B6B",
+                            boxShadow: tri === k ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
+                          }}>
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
 
