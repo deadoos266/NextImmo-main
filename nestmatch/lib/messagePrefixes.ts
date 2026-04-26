@@ -20,6 +20,7 @@ export const PREFIXES = {
   QUITTANCE:            "[QUITTANCE_CARD]",
   CANDIDATURE_RETIREE:  "[CANDIDATURE_RETIREE]",
   CANDIDATURE_VALIDEE:  "[CANDIDATURE_VALIDEE]",
+  CANDIDATURE_DEVALIDEE: "[CANDIDATURE_DEVALIDEE]",
   RELANCE:              "[RELANCE]",
   LOCATION_ACCEPTEE:    "[LOCATION_ACCEPTEE]",
 } as const
@@ -64,6 +65,7 @@ export function previewLabel(content: string | null | undefined): string | null 
     case "QUITTANCE": return "Quittance reçue"
     case "CANDIDATURE_RETIREE": return "Candidature retirée"
     case "CANDIDATURE_VALIDEE": return "Candidature validée ✓"
+    case "CANDIDATURE_DEVALIDEE": return "Validation retirée"
     case "RELANCE": {
       const text = (content || "").slice(PREFIXES.RELANCE.length)
       return "Relance : " + text.slice(0, 60)

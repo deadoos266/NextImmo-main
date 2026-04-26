@@ -32,6 +32,7 @@ const EDL_A_PLANIFIER_PREFIX = "[EDL_A_PLANIFIER]"
 const DEMANDE_DOSSIER_PREFIX = "[DEMANDE_DOSSIER]"
 const EDL_PREFIX = "[EDL_CARD]"
 const RETRAIT_PREFIX = "[CANDIDATURE_RETIREE]"
+const DEVALIDEE_PREFIX = "[CANDIDATURE_DEVALIDEE]"
 const REFUS_PREFIX = "[CANDIDATURE_NON_RETENUE]"
 const RELANCE_PREFIX = "[RELANCE]"
 const LOCATION_PREFIX = "[LOCATION_ACCEPTEE]"
@@ -976,6 +977,32 @@ function CandidatureRetireeCard({ contenu, isMine }: { contenu: string; isMine: 
         {data.bienTitre ? ` pour « ${data.bienTitre} »` : ""}.
       </p>
       {dateStr && <p style={{ fontSize: 11, color: "#b91c1c", margin: "4px 0 0" }}>{dateStr}</p>}
+    </div>
+  )
+}
+
+// ─── Candidature dévalidée Card ──────────────────────────────────────────────
+// Rendue quand le proprio annule une validation précédente (découverte d'un
+// élément, validation par erreur). Posté par /api/candidatures/devalider.
+
+function CandidatureDevalideeCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any = {}
+  try { data = JSON.parse(contenu.slice(DEVALIDEE_PREFIX.length)) } catch { /* ignore */ }
+  const dateStr = data.devalidatedAt
+    ? new Date(data.devalidatedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    : ""
+  return (
+    <div style={{ background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 340, fontFamily: "'DM Sans', sans-serif" }}>
+      <p style={{ fontSize: 11, fontWeight: 700, color: "#a16207", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 6px" }}>
+        {isMine ? "Validation retirée" : "Validation retirée"}
+      </p>
+      <p style={{ fontSize: 13, color: "#111", margin: 0, lineHeight: 1.5 }}>
+        {isMine
+          ? `Vous avez annulé la validation${data.bienTitre ? ` pour « ${data.bienTitre} »` : ""}. Le candidat ne peut plus proposer de visite tant que vous n'aurez pas revalidé.`
+          : `Le propriétaire a retiré la validation de votre candidature${data.bienTitre ? ` pour « ${data.bienTitre} »` : ""}. Vous ne pouvez plus proposer de visite pour le moment.`}
+      </p>
+      {dateStr && <p style={{ fontSize: 11, color: "#a16207", margin: "6px 0 0" }}>{dateStr}</p>}
     </div>
   )
 }
@@ -3065,6 +3092,7 @@ function MessagesInner() {
                   : rawPreview.startsWith(BAIL_PREFIX) ? "Bail généré"
                   : rawPreview.startsWith(QUITTANCE_PREFIX) ? "Quittance reçue"
                   : rawPreview.startsWith(RETRAIT_PREFIX) ? "Candidature retirée"
+                  : rawPreview.startsWith(DEVALIDEE_PREFIX) ? "Validation retirée"
                   : rawPreview.startsWith(REFUS_PREFIX) ? "Candidature non retenue"
                   : rawPreview.startsWith(RELANCE_PREFIX) ? "Relance : " + rawPreview.slice(RELANCE_PREFIX.length)
                   : rawPreview.startsWith(LOCATION_PREFIX) ? "Location acceptée ✓"
@@ -3343,16 +3371,67 @@ function MessagesInner() {
                           Valider la candidature
                         </button>
                       )}
-                      {/* Badge "Validée" si décision prise (statut DB) */}
+                      {/* Badge "Validée" cliquable pour annuler la validation —
+                          si le proprio découvre quelque chose après coup ou a
+                          validé par erreur. Confirmation native + reload pour
+                          refléter le nouvel état. */}
                       {proprietaireActive && isCandidatureValideeDB && annonceActive?.statut !== "loué" && (
-                        <span
-                          aria-label="Candidature déjà validée"
-                          title="Cette candidature a été validée. Le candidat peut proposer une visite."
-                          style={{ fontSize: 11, fontWeight: 700, color: "#15803d", background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 999, padding: "5px 12px", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 5, letterSpacing: "0.3px" }}
+                        <button
+                          type="button"
+                          aria-label="Annuler la validation de la candidature"
+                          title="Cliquer pour annuler la validation — le candidat ne pourra plus proposer de visite."
+                          onClick={async () => {
+                            if (!convActiveData?.annonceId) return
+                            const ok = window.confirm(
+                              "Annuler la validation de cette candidature ?\n\n" +
+                              "Le candidat ne pourra plus proposer de visite tant que vous n'aurez pas validé à nouveau."
+                            )
+                            if (!ok) return
+                            const res = await fetch("/api/candidatures/devalider", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                annonceId: convActiveData.annonceId,
+                                locataireEmail: convActiveData.other,
+                              }),
+                            })
+                            const json = await res.json().catch(() => ({}))
+                            if (!res.ok || !json.ok) {
+                              alert(`Annulation échouée : ${json.error || res.statusText}`)
+                              return
+                            }
+                            location.reload()
+                          }}
+                          onMouseEnter={e => {
+                            const btn = e.currentTarget as HTMLButtonElement
+                            btn.style.background = "#FEECEC"
+                            btn.style.borderColor = "#F4C9C9"
+                            btn.style.color = "#b91c1c"
+                            const label = btn.querySelector<HTMLElement>(".km-validee-label")
+                            const cross = btn.querySelector<HTMLElement>(".km-validee-cross")
+                            if (label) label.textContent = "Annuler"
+                            if (cross) cross.style.display = "inline-flex"
+                            const check = btn.querySelector<HTMLElement>(".km-validee-check")
+                            if (check) check.style.display = "none"
+                          }}
+                          onMouseLeave={e => {
+                            const btn = e.currentTarget as HTMLButtonElement
+                            btn.style.background = "#F0FAEE"
+                            btn.style.borderColor = "#C6E9C0"
+                            btn.style.color = "#15803d"
+                            const label = btn.querySelector<HTMLElement>(".km-validee-label")
+                            const cross = btn.querySelector<HTMLElement>(".km-validee-cross")
+                            if (label) label.textContent = "Validée"
+                            if (cross) cross.style.display = "none"
+                            const check = btn.querySelector<HTMLElement>(".km-validee-check")
+                            if (check) check.style.display = "inline-flex"
+                          }}
+                          style={{ fontSize: 11, fontWeight: 700, color: "#15803d", background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 999, padding: "5px 12px", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 5, letterSpacing: "0.3px", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}
                         >
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                          Validée
-                        </span>
+                          <svg className="km-validee-check" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline-flex" }}><polyline points="20 6 9 17 4 12" /></svg>
+                          <svg className="km-validee-cross" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ display: "none" }}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                          <span className="km-validee-label">Validée</span>
+                        </button>
                       )}
                       {/* Bouton "Louer à ce candidat" — côté proprio uniquement.
                          Workflow strict : la candidature DOIT être validée
@@ -3538,6 +3617,7 @@ function MessagesInner() {
                     const isLoyerPaye = typeof m.contenu === "string" && m.contenu.startsWith(LOYER_PAYE_PREFIX)
                     const isQuittance = typeof m.contenu === "string" && m.contenu.startsWith(QUITTANCE_PREFIX)
                     const isRetrait = typeof m.contenu === "string" && m.contenu.startsWith(RETRAIT_PREFIX)
+                    const isDevalidee = typeof m.contenu === "string" && m.contenu.startsWith(DEVALIDEE_PREFIX)
                     const isRefus = typeof m.contenu === "string" && m.contenu.startsWith(REFUS_PREFIX)
                     const isLocation = typeof m.contenu === "string" && m.contenu.startsWith(LOCATION_PREFIX)
                     return (
@@ -3676,6 +3756,13 @@ function MessagesInner() {
                         ) : isRefus ? (
                           <div>
                             <CandidatureNonRetenueCard contenu={m.contenu} isMine={isMine} />
+                            <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
+                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        ) : isDevalidee ? (
+                          <div>
+                            <CandidatureDevalideeCard contenu={m.contenu} isMine={isMine} />
                             <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
