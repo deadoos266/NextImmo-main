@@ -702,96 +702,115 @@ export default function Proprietaire() {
           </div>
         )}
 
-        {/* MES BIENS */}
+        {/* MES BIENS — grille 2 cols cards photo hero 16/10 fidèle handoff (3) pages.jsx l. 741-770 */}
         {onglet === "Mes biens" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 14 }}>
             {biens.filter(b => b.statut !== "loue_termine").length === 0 ? (
-              <EmptyState
-                title="Aucun bien publié"
-                description="Commencez par créer votre première annonce pour recevoir des candidatures."
-                ctaLabel="Ajouter un bien"
-                ctaHref="/proprietaire/ajouter"
-              />
+              <div style={{ gridColumn: isMobile ? "1" : "1 / -1" }}>
+                <EmptyState
+                  title="Aucun bien publié"
+                  description="Commencez par créer votre première annonce pour recevoir des candidatures."
+                  ctaLabel="Ajouter un bien"
+                  ctaHref="/proprietaire/ajouter"
+                />
+              </div>
             ) : biens.filter(b => b.statut !== "loue_termine").map(b => {
               const statutKey = b.statut || "disponible"
               const badgeStyle = statutColor[statutKey] || statutColor["disponible"]
               const nbCand = candidatures.filter((c: any) => c.annonce_id === b.id).length
+              const photoHero = Array.isArray(b.photos) && b.photos.length > 0 ? b.photos[0] : null
               return (
-              <div key={b.id} style={{ background: km.white, border: "1px solid #EAE6DF", borderRadius: 20, padding: isMobile ? 20 : 26, fontFamily: "'DM Sans', sans-serif", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
-                {(() => {
-                  // Alerte expiration si bien disponible et publié depuis > 45 jours sans update
-                  const baseDate = b.updated_at || b.created_at
-                  if (!baseDate || (b.statut && b.statut !== "disponible")) return null
-                  const jours = Math.floor((Date.now() - new Date(baseDate).getTime()) / (1000 * 60 * 60 * 24))
-                  if (jours < 45) return null
-                  return (
-                    <div style={{ background: km.warnBg, border: "1px solid #EADFC6", borderRadius: 14, padding: "12px 16px", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-                      <p style={{ fontSize: 13, color: km.warnText, margin: 0, lineHeight: 1.5 }}>
-                        <strong style={{ fontWeight: 600 }}>Annonce en ligne depuis {jours} jours.</strong> Pensez à la rafraîchir (photos, description, prix) pour regagner en visibilité.
-                      </p>
-                      <a href={`/proprietaire/modifier/${b.id}`} style={{ fontSize: 11, fontWeight: 600, color: km.warnText, textDecoration: "none", padding: "7px 14px", border: "1px solid #EADFC6", borderRadius: 999, background: km.white, flexShrink: 0, letterSpacing: "0.3px", textTransform: "uppercase" }}>
-                        Rafraîchir
-                      </a>
-                    </div>
-                  )
-                })()}
-                <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "stretch" : "flex-start", gap: isMobile ? 16 : 24 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
-                      <h3 style={{ fontSize: isMobile ? 16 : 18, fontWeight: 600, margin: 0, letterSpacing: "-0.2px", color: km.ink }}>{b.titre}</h3>
-                      <span style={{ background: badgeStyle.bg, color: badgeStyle.color, border: `1px solid ${badgeStyle.border || km.line}`, padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
-                        {statutLabel[b.statut || ""] || b.statut || "disponible"}
-                      </span>
-                    </div>
-                    <p style={{ color: km.muted, fontSize: 13, margin: 0, letterSpacing: "0.1px" }}>{b.adresse} · {b.ville}</p>
-                    <div style={{ display: "flex", gap: isMobile ? 10 : 16, marginTop: 12, fontSize: 12, color: "#6b6559", flexWrap: "wrap" }}>
-                      <span>{b.surface} m²</span>
-                      <span style={{ color: km.line }}>·</span>
-                      <span>{b.pieces} pièces</span>
-                      <span style={{ color: km.line }}>·</span>
-                      <span style={{ fontWeight: 600, color: km.ink }}>{b.prix} €/mois</span>
-                      {b.meuble && <><span style={{ color: km.line }}>·</span><span>Meublé</span></>}
-                      {b.animaux && <><span style={{ color: km.line }}>·</span><span>Animaux OK</span></>}
-                    </div>
+              <div key={b.id} style={{ background: km.white, border: "1px solid #EAE6DF", borderRadius: 20, fontFamily: "'DM Sans', sans-serif", boxShadow: "0 1px 2px rgba(0,0,0,0.02)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                {/* Photo hero 16/10 + pill statut overlay top-left + badge candidatures overlay top-right */}
+                <div style={{ position: "relative", aspectRatio: "16 / 10", background: photoHero ? `#000 url(${photoHero}) center/cover no-repeat` : `linear-gradient(135deg, ${km.beige}, ${km.line})` }}>
+                  <span style={{ position: "absolute", top: 14, left: 14, background: badgeStyle.bg, color: badgeStyle.color, border: `1px solid ${badgeStyle.border || km.line}`, padding: "5px 12px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
+                    {statutLabel[b.statut || ""] || b.statut || "disponible"}
+                  </span>
+                  {nbCand > 0 && (
+                    <span style={{ position: "absolute", top: 14, right: 14, background: "rgba(0,0,0,0.78)", color: "#fff", padding: "6px 12px", borderRadius: 999, fontSize: 11, fontWeight: 700, backdropFilter: "blur(6px)" }}>
+                      {nbCand} candidature{nbCand > 1 ? "s" : ""}
+                    </span>
+                  )}
+                </div>
+                <div style={{ padding: isMobile ? 18 : 22, display: "flex", flexDirection: "column", gap: 14, flex: 1 }}>
+                  {/* Alerte expiration 45j sans update — conservée mais compacte */}
+                  {(() => {
+                    const baseDate = b.updated_at || b.created_at
+                    if (!baseDate || (b.statut && b.statut !== "disponible")) return null
+                    const jours = Math.floor((Date.now() - new Date(baseDate).getTime()) / (1000 * 60 * 60 * 24))
+                    if (jours < 45) return null
+                    return (
+                      <div style={{ background: km.warnBg, border: "1px solid #EADFC6", borderRadius: 12, padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                        <p style={{ fontSize: 12, color: km.warnText, margin: 0, lineHeight: 1.4 }}>
+                          <strong style={{ fontWeight: 600 }}>{jours}j sans màj.</strong> Pensez à rafraîchir.
+                        </p>
+                        <a href={`/proprietaire/modifier/${b.id}`} style={{ fontSize: 10, fontWeight: 700, color: km.warnText, textDecoration: "none", padding: "5px 11px", border: "1px solid #EADFC6", borderRadius: 999, background: km.white, flexShrink: 0, letterSpacing: "0.3px", textTransform: "uppercase" }}>
+                          Rafraîchir
+                        </a>
+                      </div>
+                    )
+                  })()}
+
+                  {/* Titre + adresse */}
+                  <div>
+                    <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0, letterSpacing: "-0.2px", color: km.ink, lineHeight: 1.3 }}>{b.titre}</h3>
+                    <p style={{ color: km.muted, fontSize: 12, margin: "4px 0 0", letterSpacing: "0.1px" }}>{b.adresse}{b.adresse && b.ville ? " · " : ""}{b.ville}</p>
                   </div>
-                  <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column", gap: 8, flexWrap: "wrap", minWidth: isMobile ? "auto" : 200 }}>
-                    {/* CTA principal : Candidatures (pill noir, radius 999) */}
+
+                  {/* Separator + ligne specs/prix tabular (handoff strict) */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", paddingTop: 12, borderTop: `1px solid ${km.line}`, gap: 8, fontSize: 12, color: km.muted, flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", gap: 12 }}>
+                      <span>{b.surface} m²</span>
+                      <span>{b.pieces} p.</span>
+                      {b.meuble && <span>Meublé</span>}
+                    </div>
+                    <span style={{ fontSize: 18, fontWeight: 700, color: km.ink, fontVariantNumeric: "tabular-nums" as const, letterSpacing: "-0.3px" }}>
+                      {b.prix} €<span style={{ fontSize: 10, color: km.muted, fontWeight: 400 }}>/mois</span>
+                    </span>
+                  </div>
+
+                  {/* Actions row — wrap, CTA principal d'abord, sec ensuite */}
+                  <div style={{ display: "flex", gap: 6, marginTop: "auto", flexWrap: "wrap", paddingTop: 4 }}>
                     <a href={`/proprietaire/annonces/${b.id}/candidatures`}
-                      style={{ textAlign: "center", padding: "11px 18px", border: "none", borderRadius: 999, textDecoration: "none", color: km.white, background: km.ink, fontSize: 12, fontWeight: 600, flex: isMobile ? 1 : undefined, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, letterSpacing: "0.3px", fontFamily: "inherit" }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                      Candidatures{nbCand > 0 ? ` · ${nbCand}` : ""}
+                      style={{ flex: "1 1 auto", textAlign: "center", padding: "9px 14px", border: "none", borderRadius: 999, textDecoration: "none", color: km.white, background: km.ink, fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, letterSpacing: "0.3px", fontFamily: "inherit", whiteSpace: "nowrap", textTransform: "uppercase" as const }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                      Candidatures{nbCand > 0 ? ` (${nbCand})` : ""}
                     </a>
-                    {/* CTA secondaires : pill blanc + hairline */}
-                    <a href={`/proprietaire/stats?id=${b.id}`}
-                      style={{ textAlign: "center", padding: "9px 16px", border: "1px solid #EAE6DF", borderRadius: 999, textDecoration: "none", color: km.ink, fontSize: 11, fontWeight: 600, flex: isMobile ? 1 : undefined, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, letterSpacing: "0.3px", background: km.white, fontFamily: "inherit" }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                      Statistiques
-                    </a>
-                    <select
-                      value={b.statut || "disponible"}
-                      onChange={e => changerStatut(b.id, e.target.value)}
-                      style={{ padding: "9px 14px", borderRadius: 999, border: "1px solid #EAE6DF", fontSize: 11, fontFamily: "inherit", cursor: "pointer", outline: "none", flex: isMobile ? 1 : undefined, background: km.beige, color: km.ink, fontWeight: 600, letterSpacing: "0.3px" }}>
-                      <option value="disponible">Disponible</option>
-                      <option value="en visite">En visite</option>
-                      <option value="réservé">Réservé</option>
-                      <option value="loué">Loué</option>
-                    </select>
-                    <a href={`/proprietaire/modifier/${b.id}`} style={{ textAlign: "center", padding: "9px 16px", border: "1px solid #EAE6DF", borderRadius: 999, textDecoration: "none", color: km.ink, fontSize: 11, fontWeight: 600, flex: isMobile ? 1 : undefined, letterSpacing: "0.3px", background: km.white }}>
+                    <a href={`/proprietaire/modifier/${b.id}`} style={{ padding: "9px 14px", border: "1px solid #EAE6DF", borderRadius: 999, textDecoration: "none", color: km.ink, fontSize: 11, fontWeight: 600, letterSpacing: "0.2px", background: km.white, fontFamily: "inherit" }}>
                       Modifier
                     </a>
-                    <a href={`/annonces/${b.id}`} style={{ textAlign: "center", padding: "9px 16px", border: "1px solid #EAE6DF", borderRadius: 999, textDecoration: "none", color: km.muted, fontSize: 11, fontWeight: 600, flex: isMobile ? 1 : undefined, letterSpacing: "0.3px", background: km.white }}>
-                      Voir l&apos;annonce
-                    </a>
-                    {supprimerId === b.id ? (
-                      <div style={{ display: "flex", gap: 6, flex: isMobile ? 1 : undefined }}>
-                        <button onClick={() => supprimerBien(b.id)} style={{ background: km.errText, color: km.white, border: "none", borderRadius: 999, padding: "9px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", letterSpacing: "0.3px", flex: 1 }}>Confirmer</button>
-                        <button onClick={() => setSupprimerId(null)} style={{ background: km.white, color: km.muted, border: `1px solid ${km.line}`, borderRadius: 999, padding: "9px 14px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", letterSpacing: "0.3px", flex: 1 }}>Annuler</button>
+                    {/* Menu • • • compresse les autres actions */}
+                    <details style={{ position: "relative" }}>
+                      <summary style={{ padding: "9px 12px", border: "1px solid #EAE6DF", borderRadius: 999, color: km.muted, fontSize: 11, fontWeight: 600, cursor: "pointer", listStyle: "none", background: km.white, userSelect: "none" as const }}>
+                        ⋯
+                      </summary>
+                      <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", background: km.white, border: "1px solid #EAE6DF", borderRadius: 12, padding: 6, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 10, minWidth: 180, display: "flex", flexDirection: "column", gap: 2 }}>
+                        <a href={`/proprietaire/stats?id=${b.id}`} style={{ padding: "8px 12px", borderRadius: 8, textDecoration: "none", color: km.ink, fontSize: 12, fontWeight: 600 }}>Statistiques</a>
+                        <a href={`/annonces/${b.id}`} style={{ padding: "8px 12px", borderRadius: 8, textDecoration: "none", color: km.ink, fontSize: 12, fontWeight: 600 }}>Voir l&apos;annonce</a>
+                        <div style={{ height: 1, background: km.line, margin: "4px 0" }} />
+                        <label style={{ padding: "6px 12px 8px", display: "block", fontSize: 11, fontWeight: 700, color: km.muted, textTransform: "uppercase" as const, letterSpacing: "0.6px" }}>Statut</label>
+                        <select
+                          value={b.statut || "disponible"}
+                          onChange={e => changerStatut(b.id, e.target.value)}
+                          style={{ padding: "8px 12px", border: "1px solid #EAE6DF", borderRadius: 8, fontSize: 12, fontFamily: "inherit", cursor: "pointer", outline: "none", background: km.white, color: km.ink, fontWeight: 600, margin: "0 6px 6px" }}>
+                          <option value="disponible">Disponible</option>
+                          <option value="en visite">En visite</option>
+                          <option value="réservé">Réservé</option>
+                          <option value="loué">Loué</option>
+                        </select>
+                        <div style={{ height: 1, background: km.line, margin: "4px 0" }} />
+                        {supprimerId === b.id ? (
+                          <div style={{ display: "flex", gap: 4, padding: "4px 6px" }}>
+                            <button onClick={() => supprimerBien(b.id)} style={{ flex: 1, background: km.errText, color: km.white, border: "none", borderRadius: 8, padding: "8px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Confirmer</button>
+                            <button onClick={() => setSupprimerId(null)} style={{ flex: 1, background: km.white, color: km.muted, border: `1px solid ${km.line}`, borderRadius: 8, padding: "8px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Annuler</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setSupprimerId(b.id)} style={{ padding: "8px 12px", border: "none", borderRadius: 8, color: km.errText, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", background: "transparent", textAlign: "left" as const }}>
+                            Supprimer
+                          </button>
+                        )}
                       </div>
-                    ) : (
-                      <button onClick={() => setSupprimerId(b.id)} style={{ textAlign: "center", padding: "9px 16px", border: "1px solid #EAE6DF", background: "transparent", borderRadius: 999, color: km.errText, fontSize: 11, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", flex: isMobile ? 1 : undefined, letterSpacing: "0.3px" }}>
-                        Supprimer
-                      </button>
-                    )}
+                    </details>
                   </div>
                 </div>
               </div>
