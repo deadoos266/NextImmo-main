@@ -359,6 +359,81 @@ function Profil() {
           </a>
         </div>
 
+        {/* Nav onglets unifiée — 5 onglets symétriques avec /parametres :
+            Préférences (page courante = /profil) + 4 liens vers /parametres?tab=…
+            Donne l'illusion d'une page tabbée 5 onglets sans refactor 900 LoC. */}
+        <nav
+          aria-label="Catégories de réglages"
+          style={{
+            display: "flex",
+            gap: 4,
+            marginBottom: 20,
+            overflowX: isMobile ? "auto" : "visible",
+            paddingBottom: isMobile ? 2 : 0,
+            flexWrap: isMobile ? "nowrap" : "wrap",
+          }}
+        >
+          {/* Préférences = onglet actif (page courante) */}
+          <span
+            aria-current="page"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "10px 16px",
+              background: km.ink,
+              color: km.white,
+              border: `1px solid ${km.ink}`,
+              borderRadius: 12,
+              fontSize: 13,
+              fontWeight: 700,
+              fontFamily: "inherit",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+              boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+              <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+              <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+              <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+            </svg>
+            Préférences
+          </span>
+          {[
+            { tab: "profil", label: "Profil", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
+            { tab: "apparence", label: "Apparence", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg> },
+            { tab: "securite", label: "Sécurité", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
+            { tab: "compte", label: "Compte", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="3"/></svg> },
+          ].map(t => (
+            <Link
+              key={t.tab}
+              href={`/parametres?tab=${t.tab}`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 16px",
+                background: km.white,
+                color: km.ink,
+                border: `1px solid ${km.line}`,
+                borderRadius: 12,
+                fontSize: 13,
+                fontWeight: 500,
+                fontFamily: "inherit",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+                textDecoration: "none",
+                transition: "all 0.15s",
+              }}
+            >
+              {t.icon}
+              {t.label}
+            </Link>
+          ))}
+        </nav>
+
         {/* Bannière succès après création guidée */}
         {createdBannerOpen && !proprietaireActive && (
           <div style={{ background: km.successBg, border: `1px solid ${km.successLine}`, borderRadius: 16, padding: "14px 18px", marginBottom: 20, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
