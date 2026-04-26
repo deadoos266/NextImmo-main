@@ -21,11 +21,22 @@ const STATUT_LABEL: Record<Statut, { label: string; bg: string; color: string; b
   contact:  { label: "Contact établi",      bg: km.beige,    color: "#6b6559",     border: km.line },
   dossier:  { label: "Dossier envoyé",      bg: km.successBg, color: km.successText, border: km.successLine },
   visite:   { label: "Visite programmée",   bg: km.infoBg,    color: km.infoText,    border: km.infoLine },
-  bail:     { label: "Bail signé",          bg: km.ink,       color: km.white,       border: km.ink },
-  rejete:   { label: "Visite refusée",      bg: km.errBg,     color: km.errText,     border: km.errLine },
+  bail:     { label: "Candidature retenue", bg: km.ink,       color: km.white,       border: km.ink },
+  rejete:   { label: "Non retenue",         bg: km.errBg,     color: km.errText,     border: km.errLine },
+}
+
+// Sous-texte explicite "qui doit faire quoi" — le user veut savoir s'il
+// doit attendre, relancer, ou agir. Ajouté en italique sous chaque card.
+const STATUT_HELP: Record<Statut, string> = {
+  contact:  "En attente de réponse du propriétaire — vous pouvez relancer après 7 jours.",
+  dossier:  "Le propriétaire consulte votre dossier — pas d'action de votre part pour l'instant.",
+  visite:   "Visite programmée — préparez vos questions, soyez ponctuel.",
+  bail:     "Félicitations, votre candidature a été retenue — retrouvez votre logement dans « Mon logement ».",
+  rejete:   "Le propriétaire a retenu un autre candidat — votre dossier reste valable pour d'autres annonces.",
 }
 
 const RETRAIT_PREFIX = "[CANDIDATURE_RETIREE]"
+const REFUS_PREFIX = "[CANDIDATURE_NON_RETENUE]"
 const RELANCE_PREFIX = "[RELANCE]"
 // Délai avant de pouvoir relancer (jours sans réponse du proprio)
 const RELANCE_DELAI_JOURS = 7
@@ -152,13 +163,20 @@ export default function MesCandidatures() {
       .in("annonce_id", ids)
       .order("created_at", { ascending: false })
 
-    // 4. Détection dossier envoyé + retraits
+    // 4. Détection dossier envoyé + retraits + refus explicite proprio
     const dossierEnvoyeIds = new Set<number>()
     const retireeIds = new Set<number>()
     for (const m of msgs || []) {
       if (typeof m.contenu !== "string") continue
       if (m.contenu.startsWith("[DOSSIER_CARD]")) dossierEnvoyeIds.add(m.annonce_id)
       if (m.contenu.startsWith(RETRAIT_PREFIX)) retireeIds.add(m.annonce_id)
+    }
+    // Refus reçu : message [CANDIDATURE_NON_RETENUE] envoyé par le proprio
+    // quand il accepte un autre candidat (LOUPÉ #2 fix — avant juste un email).
+    const refusIds = new Set<number>()
+    for (const m of msgsRecus || []) {
+      if (typeof m.contenu !== "string") continue
+      if (m.contenu.startsWith(REFUS_PREFIX)) refusIds.add(m.annonce_id)
     }
 
     // 5. Consolidation
@@ -173,9 +191,15 @@ export default function MesCandidatures() {
         const hasVisiteProposee = visitesAnn.some(v => v.statut === "proposée")
         const hasVisiteRefusee = visitesAnn.some(v => v.statut === "annulée")
         const baisSigne = annonce?.statut === "loué" && (annonce?.locataire_email || "").toLowerCase() === emailLower
+        // Refusé = annonce louée par quelqu'un d'autre OU message refus explicite reçu
+        const autreCandidatRetenu = annonce?.statut === "loué"
+          && annonce?.locataire_email
+          && (annonce.locataire_email || "").toLowerCase() !== emailLower
+        const refuse = refusIds.has(id) || autreCandidatRetenu
 
         let statut: Statut = "contact"
         if (baisSigne) statut = "bail"
+        else if (refuse) statut = "rejete"
         else if (hasVisiteConfirme) statut = "visite"
         else if (dossierEnvoyeIds.has(id)) statut = "dossier"
         else if (hasVisiteRefusee && !hasVisiteConfirme && !hasVisiteProposee) statut = "rejete"
@@ -193,7 +217,9 @@ export default function MesCandidatures() {
         const joursDepuisMoi = Math.floor((now - Math.max(dernierEnvoyeAt, dernierRelanceAt)) / 86400000)
         const proprioARepondu = dernierRecuAt > dernierEnvoyeAt
         const cooldownActif = dernierRelanceAt > 0 && (now - dernierRelanceAt) / 86400000 < RELANCE_COOLDOWN_JOURS
-        const peutRelancer = !baisSigne && !proprioARepondu && joursDepuisMoi >= RELANCE_DELAI_JOURS && !cooldownActif
+        // Pas de relance possible si refus, retenu, ou ancienne (rejete)
+        const peutRelancer = !baisSigne && !refuse && !proprioARepondu
+          && joursDepuisMoi >= RELANCE_DELAI_JOURS && !cooldownActif
 
         return {
           ...c,
@@ -206,8 +232,11 @@ export default function MesCandidatures() {
           joursSansReponse: joursDepuisMoi,
         }
       })
-      // Filtrer les baux signés (vus dans /mon-logement) et candidatures retirées
-      .filter(r => !r.baisSigne && !retireeIds.has(r.annonce_id))
+      // LOUPÉ #1 fix — on garde les baux signés (statut="bail") visibles
+      // pour que le locataire voie sa candidature acceptée. Avant : disparition
+      // silencieuse vers /mon-logement sans transition.
+      // On filtre uniquement les candidatures retirées par le locataire lui-même.
+      .filter(r => !retireeIds.has(r.annonce_id))
 
     setCandidatures(result)
     setLoading(false)
@@ -347,47 +376,84 @@ export default function MesCandidatures() {
                       Premier contact le {new Date(c.premier_contact).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
                       {" "}<span style={{ color: km.line }}>·</span>{" "}Propriétaire : {displayName(c.proprietaire, ann?.proprietaire)}
                     </p>
+                    {/* LOUPÉ #3 fix — sous-texte explicite "qui doit faire quoi" pour
+                        que le user sache s'il doit attendre, relancer ou agir. */}
+                    <p style={{
+                      fontSize: 12,
+                      color: c.statut === "bail" ? km.successText : c.statut === "rejete" ? km.errText : km.muted,
+                      margin: "8px 0 0",
+                      fontFamily: "var(--font-fraunces), 'Fraunces', Georgia, serif",
+                      fontStyle: "italic",
+                      lineHeight: 1.5,
+                    }}>
+                      {STATUT_HELP[c.statut as Statut]}
+                    </p>
                   </div>
                   <div style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
-                    <CtaPill variant="outline" href={`/messages?with=${encodeURIComponent(c.proprietaire)}`}>
-                      Messages
-                    </CtaPill>
-                    {ann && (
-                      <CtaPill variant="ink" href={`/annonces/${ann.id}`}>
-                        Annonce
-                      </CtaPill>
-                    )}
-                    {c.peutRelancer && (
-                      <CtaPill
-                        variant="warn"
-                        disabled={relancantId === c.annonce_id}
-                        onClick={() => relancerCandidature(c.annonce_id, c.proprietaire, ann?.titre || "")}
-                        title={`Sans réponse depuis ${c.joursSansReponse} jours`}
-                      >
-                        {relancantId === c.annonce_id ? "…" : `Relancer (${c.joursSansReponse} j)`}
-                      </CtaPill>
-                    )}
-                    {retraitId === c.annonce_id ? (
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <CtaPill
-                          variant="err"
-                          disabled={retraitEnCours}
-                          onClick={() => retirerCandidature(c.annonce_id, c.proprietaire, ann?.titre || "")}
-                        >
-                          {retraitEnCours ? "…" : "Confirmer"}
+                    {/* LOUPÉ #1 fix — quand candidature retenue (bail signé), CTA principal
+                        = Mon logement, on désactive Retirer/Relancer (irrelevant). Quand
+                        non retenue (rejete), même logique : pas de retrait/relance. */}
+                    {c.statut === "bail" ? (
+                      <>
+                        <CtaPill variant="ink" href="/mon-logement">
+                          Mon logement
                         </CtaPill>
-                        <CtaPill variant="outline" disabled={retraitEnCours} onClick={() => setRetraitId(null)}>
-                          Annuler
+                        <CtaPill variant="outline" href={`/messages?with=${encodeURIComponent(c.proprietaire)}`}>
+                          Messages
                         </CtaPill>
-                      </div>
+                      </>
+                    ) : c.statut === "rejete" ? (
+                      <>
+                        <CtaPill variant="ink" href="/annonces">
+                          Voir d&apos;autres annonces
+                        </CtaPill>
+                        <CtaPill variant="outline" href={`/messages?with=${encodeURIComponent(c.proprietaire)}`}>
+                          Messages
+                        </CtaPill>
+                      </>
                     ) : (
-                      <CtaPill
-                        variant="errSoft"
-                        onClick={() => setRetraitId(c.annonce_id)}
-                        title="Retirer votre candidature — annule les visites en cours et notifie le propriétaire."
-                      >
-                        Retirer
-                      </CtaPill>
+                      <>
+                        <CtaPill variant="outline" href={`/messages?with=${encodeURIComponent(c.proprietaire)}`}>
+                          Messages
+                        </CtaPill>
+                        {ann && (
+                          <CtaPill variant="ink" href={`/annonces/${ann.id}`}>
+                            Annonce
+                          </CtaPill>
+                        )}
+                        {c.peutRelancer && (
+                          <CtaPill
+                            variant="warn"
+                            disabled={relancantId === c.annonce_id}
+                            onClick={() => relancerCandidature(c.annonce_id, c.proprietaire, ann?.titre || "")}
+                            title={`Sans réponse depuis ${c.joursSansReponse} jours`}
+                          >
+                            {relancantId === c.annonce_id ? "…" : `Relancer (${c.joursSansReponse} j)`}
+                          </CtaPill>
+                        )}
+                        {retraitId === c.annonce_id ? (
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <CtaPill
+                              variant="err"
+                              disabled={retraitEnCours}
+                              onClick={() => retirerCandidature(c.annonce_id, c.proprietaire, ann?.titre || "")}
+                            >
+                              {retraitEnCours ? "…" : "Confirmer"}
+                            </CtaPill>
+                            <CtaPill variant="outline" disabled={retraitEnCours} onClick={() => setRetraitId(null)}>
+                              Annuler
+                            </CtaPill>
+                          </div>
+                        ) : (
+                          <CtaPill
+                            variant="errSoft"
+                            onClick={() => setRetraitId(c.annonce_id)}
+                            title="Retirer votre candidature — annule les visites en cours et notifie le propriétaire."
+                          >
+                            Retirer
+                          </CtaPill>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

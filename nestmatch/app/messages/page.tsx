@@ -32,6 +32,7 @@ const EDL_A_PLANIFIER_PREFIX = "[EDL_A_PLANIFIER]"
 const DEMANDE_DOSSIER_PREFIX = "[DEMANDE_DOSSIER]"
 const EDL_PREFIX = "[EDL_CARD]"
 const RETRAIT_PREFIX = "[CANDIDATURE_RETIREE]"
+const REFUS_PREFIX = "[CANDIDATURE_NON_RETENUE]"
 const RELANCE_PREFIX = "[RELANCE]"
 const LOCATION_PREFIX = "[LOCATION_ACCEPTEE]"
 const QUITTANCE_PREFIX = "[QUITTANCE_CARD]"
@@ -975,6 +976,37 @@ function CandidatureRetireeCard({ contenu, isMine }: { contenu: string; isMine: 
         {data.bienTitre ? ` pour « ${data.bienTitre} »` : ""}.
       </p>
       {dateStr && <p style={{ fontSize: 11, color: "#b91c1c", margin: "4px 0 0" }}>{dateStr}</p>}
+    </div>
+  )
+}
+
+// ─── Candidature non retenue Card (LOUPÉ #2 fix) ─────────────────────────────
+// Rendue côté locataire quand le proprio a accepté un autre candidat. Posté
+// par /api/notifications/candidats-orphelins (en plus de l'email respectueux).
+
+function CandidatureNonRetenueCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any = {}
+  try { data = JSON.parse(contenu.slice(REFUS_PREFIX.length)) } catch { /* ignore */ }
+  const dateStr = data.refuseLe
+    ? new Date(data.refuseLe).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    : ""
+  return (
+    <div style={{ background: "#FEECEC", border: "1px solid #F4C9C9", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 340, fontFamily: "'DM Sans', sans-serif" }}>
+      <p style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 6px" }}>
+        {isMine ? "Candidat non retenu — notifié" : "Candidature non retenue"}
+      </p>
+      <p style={{ fontSize: 13, color: "#111", margin: 0, lineHeight: 1.5 }}>
+        {isMine
+          ? `Vous avez retenu un autre candidat${data.bienTitre ? ` pour « ${data.bienTitre} »` : ""}. Le candidat a été notifié par message et email.`
+          : `Le propriétaire a retenu un autre candidat${data.bienTitre ? ` pour « ${data.bienTitre} »` : ""}. Votre dossier reste valable pour vos autres recherches.`}
+      </p>
+      {dateStr && <p style={{ fontSize: 11, color: "#8a8477", margin: "6px 0 0" }}>{dateStr}</p>}
+      {!isMine && (
+        <a href="/annonces" style={{ display: "inline-block", marginTop: 10, background: "#fff", color: "#111", border: "1px solid #EAE6DF", borderRadius: 999, padding: "8px 16px", fontSize: 12, fontWeight: 600, textDecoration: "none", letterSpacing: "0.3px" }}>
+          Voir d&apos;autres annonces →
+        </a>
+      )}
     </div>
   )
 }
@@ -3016,6 +3048,7 @@ function MessagesInner() {
                   : rawPreview.startsWith(BAIL_PREFIX) ? "Bail généré"
                   : rawPreview.startsWith(QUITTANCE_PREFIX) ? "Quittance reçue"
                   : rawPreview.startsWith(RETRAIT_PREFIX) ? "Candidature retirée"
+                  : rawPreview.startsWith(REFUS_PREFIX) ? "Candidature non retenue"
                   : rawPreview.startsWith(RELANCE_PREFIX) ? "Relance : " + rawPreview.slice(RELANCE_PREFIX.length)
                   : rawPreview.startsWith(LOCATION_PREFIX) ? "Location acceptée ✓"
                   : parseReply(rawPreview).text // ignore le préfixe [REPLY:id]
@@ -3481,6 +3514,7 @@ function MessagesInner() {
                     const isLoyerPaye = typeof m.contenu === "string" && m.contenu.startsWith(LOYER_PAYE_PREFIX)
                     const isQuittance = typeof m.contenu === "string" && m.contenu.startsWith(QUITTANCE_PREFIX)
                     const isRetrait = typeof m.contenu === "string" && m.contenu.startsWith(RETRAIT_PREFIX)
+                    const isRefus = typeof m.contenu === "string" && m.contenu.startsWith(REFUS_PREFIX)
                     const isLocation = typeof m.contenu === "string" && m.contenu.startsWith(LOCATION_PREFIX)
                     return (
                       <div key={m.id} style={{ display: "flex", justifyContent: isMine ? "flex-end" : "flex-start" }}>
@@ -3611,6 +3645,13 @@ function MessagesInner() {
                         ) : isRetrait ? (
                           <div>
                             <CandidatureRetireeCard contenu={m.contenu} isMine={isMine} />
+                            <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
+                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        ) : isRefus ? (
+                          <div>
+                            <CandidatureNonRetenueCard contenu={m.contenu} isMine={isMine} />
                             <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>

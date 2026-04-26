@@ -114,6 +114,30 @@ export async function POST(req: NextRequest) {
     annoncesUrl,
   })
 
+  // LOUPÉ #2 fix — En plus de l'email, on poste un message in-app
+  // [CANDIDATURE_NON_RETENUE] dans la conversation pour que le candidat voie
+  // un feedback explicite dans /messages et /mes-candidatures (avant : statut
+  // basculait silencieusement à "rejete" via deriveStatut, sans card visible).
+  const refusPayload = JSON.stringify({
+    bienTitre: annonce.titre || "",
+    refuseLe: new Date().toISOString(),
+  })
+  const refusMessages = uniqueEmails.map(email => ({
+    from_email: callerEmail,
+    to_email: email,
+    contenu: `[CANDIDATURE_NON_RETENUE]${refusPayload}`,
+    annonce_id: annonceId,
+    lu: false,
+    created_at: new Date().toISOString(),
+  }))
+  if (refusMessages.length > 0) {
+    const { error: msgErr } = await supabaseAdmin.from("messages").insert(refusMessages)
+    if (msgErr) {
+      // Non bloquant : si l'insert échoue, on continue avec l'email
+      console.error("[candidats-orphelins] insert refus messages failed", msgErr)
+    }
+  }
+
   let sent = 0
   let failed = 0
   // Envoi séquentiel simple — si 30+ candidats, Resend gère facilement, pas
@@ -134,5 +158,5 @@ export async function POST(req: NextRequest) {
     else failed++
   }
 
-  return NextResponse.json({ ok: true, sent, failed, total: uniqueEmails.length })
+  return NextResponse.json({ ok: true, sent, failed, total: uniqueEmails.length, refusMessages: refusMessages.length })
 }
