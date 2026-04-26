@@ -3620,6 +3620,31 @@ function MessagesInner() {
                         style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", background: "#fff", border: "1px solid #EAE6DF", borderRadius: 999, padding: "7px 14px", whiteSpace: "nowrap", transition: "background 160ms ease" }}>
                         Voir l&apos;annonce
                       </Link>
+                      {/* Liens raccourcis proprio (commit 6 du flow plan) :
+                          si proprietaireActive ET annonceActive est à lui,
+                          accès direct à Modifier annonce + Toutes candidatures. */}
+                      {proprietaireActive && annonceActive && (annonceActive.proprietaire_email || "").toLowerCase() === (myEmail || "").toLowerCase() && (
+                        <>
+                          <Link
+                            href={`/proprietaire/annonces/${convActiveData.annonceId}/candidatures`}
+                            onMouseEnter={e => { e.currentTarget.style.background = "#F7F4EF" }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "#fff" }}
+                            style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", background: "#fff", border: "1px solid #EAE6DF", borderRadius: 999, padding: "7px 14px", whiteSpace: "nowrap", transition: "background 160ms ease", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                              <circle cx="9" cy="7" r="4"/>
+                            </svg>
+                            Candidatures
+                          </Link>
+                          <Link
+                            href={`/proprietaire/modifier/${convActiveData.annonceId}`}
+                            onMouseEnter={e => { e.currentTarget.style.background = "#F7F4EF" }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "#fff" }}
+                            style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", background: "#fff", border: "1px solid #EAE6DF", borderRadius: 999, padding: "7px 14px", whiteSpace: "nowrap", transition: "background 160ms ease" }}>
+                            Modifier
+                          </Link>
+                        </>
+                      )}
                     </>
                   ) : (
                     <>

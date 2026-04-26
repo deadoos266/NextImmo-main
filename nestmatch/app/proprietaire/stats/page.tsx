@@ -1532,6 +1532,44 @@ function StatsInner() {
           </div>
         )}
 
+        {/* Footer raccourcis bail/EDL/modifier (commit 6 du flow plan).
+            Le proprio peut accéder aux pages connexes du même bien sans
+            détour par /proprietaire. */}
+        {bienId && (
+          <div style={{ marginTop: 32, padding: "20px 24px", background: "#fff", border: "1px solid #EAE6DF", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+            <div>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase" as const, letterSpacing: "1.4px", margin: 0, marginBottom: 4 }}>Aller plus loin sur ce bien</p>
+              <p style={{ fontSize: 13, color: "#666", margin: 0 }}>Bail, EDL et modifications de l&apos;annonce</p>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <a
+                href={`/proprietaire/bail/${bienId}`}
+                style={{ background: "#fff", color: "#111", border: "1px solid #EAE6DF", borderRadius: 999, padding: "9px 16px", textDecoration: "none", fontSize: 12, fontWeight: 600, letterSpacing: "0.3px" }}
+              >
+                Bail →
+              </a>
+              <a
+                href={`/proprietaire/edl/${bienId}?type=entree`}
+                style={{ background: "#fff", color: "#111", border: "1px solid #EAE6DF", borderRadius: 999, padding: "9px 16px", textDecoration: "none", fontSize: 12, fontWeight: 600, letterSpacing: "0.3px" }}
+              >
+                EDL entrée →
+              </a>
+              <a
+                href={`/proprietaire/edl/${bienId}?type=sortie`}
+                style={{ background: "#fff", color: "#111", border: "1px solid #EAE6DF", borderRadius: 999, padding: "9px 16px", textDecoration: "none", fontSize: 12, fontWeight: 600, letterSpacing: "0.3px" }}
+              >
+                EDL sortie →
+              </a>
+              <a
+                href={`/proprietaire/modifier/${bienId}`}
+                style={{ background: "#111", color: "#fff", border: "none", borderRadius: 999, padding: "9px 16px", textDecoration: "none", fontSize: 12, fontWeight: 700, letterSpacing: "0.3px" }}
+              >
+                Modifier l&apos;annonce →
+              </a>
+            </div>
+          </div>
+        )}
+
       </div>
     </main>
   )
