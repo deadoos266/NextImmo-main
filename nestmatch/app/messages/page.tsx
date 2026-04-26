@@ -1121,6 +1121,25 @@ function MessagesInner() {
   // mappés sur "locataire" / "candidat" pour réutiliser la même mécanique.
   type MessagesTab = "candidat" | "valide" | "locataire" | "autre"
   const [messagesTab, setMessagesTab] = useState<MessagesTab>("locataire")
+  // Persistance localStorage : si l'user était sur "Validé", on reste sur
+  // "Validé" après reload. Utilisé aussi pour neutraliser l'auto-switch
+  // tabInitialized — sinon un onglet vide auto-bascule vers un autre, ce
+  // qui contredit la demande user "garder l'onglet".
+  const [restoredFromStorage, setRestoredFromStorage] = useState(false)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      const stored = window.localStorage.getItem("nm_messages_tab")
+      if (stored === "candidat" || stored === "valide" || stored === "locataire" || stored === "autre") {
+        setMessagesTab(stored)
+        setRestoredFromStorage(true)
+      }
+    } catch { /* noop */ }
+  }, [])
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try { window.localStorage.setItem("nm_messages_tab", messagesTab) } catch { /* noop */ }
+  }, [messagesTab])
   // Filtre par statut (handoff messages.jsx L154-179) : 6 pills
   const [statusFilter, setStatusFilter] = useState<"all" | StatutConv>("all")
   // Derivation statut : flag [DOSSIER_CARD] par conv + visites batchées par conv
@@ -2469,8 +2488,11 @@ function MessagesInner() {
 
   // Default tab intelligent : priorité Locataire > Candidat > Validé > Autre
   // selon ce qui n'est pas vide. Évite la liste vide au premier load.
+  // SKIP si l'user a déjà choisi un onglet (restauré depuis localStorage) —
+  // l'auto-switch ne doit pas écraser une préférence explicite, même si
+  // l'onglet restauré est vide (ex. plus de candidatures validées en cours).
   useEffect(() => {
-    if (tabInitialized || loading) return
+    if (tabInitialized || loading || restoredFromStorage) return
     if (conversations.length > 0) {
       const order: MessagesTab[] = ["locataire", "candidat", "valide", "autre"]
       const firstNonEmpty = order.find(t => countByTab[t] > 0)
@@ -2480,7 +2502,7 @@ function MessagesInner() {
       setTabInitialized(true)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversations.length, loading, tabInitialized])
+  }, [conversations.length, loading, tabInitialized, restoredFromStorage])
 
   const dossierDejaEnvoye = messages.some(m =>
     typeof m.contenu === "string" && m.contenu.startsWith(DOSSIER_PREFIX)
