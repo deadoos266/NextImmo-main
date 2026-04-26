@@ -456,7 +456,7 @@ export default function AjouterBien() {
           borderRadius: 20, padding: isMobile ? "22px 18px" : "32px",
           marginBottom: 20, boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
         }}>
-          {step === 1 && <Step1Nature form={form} setForm={setForm} isMobile={isMobile} />}
+          {step === 1 && <Step1Nature form={form} setForm={setForm} toggles={toggles} setToggles={setToggles} isMobile={isMobile} />}
           {step === 2 && <Step2Adresse form={form} setForm={setForm} toggles={toggles} setToggles={setToggles} isMobile={isMobile} />}
           {step === 3 && <Step3Dimensions form={form} setForm={setForm} isMobile={isMobile} />}
           {step === 4 && <Step4Equipements toggles={toggles} setToggles={setToggles} equipExtras={equipExtras} setEquipExtras={setEquipExtras} isMobile={isMobile} />}
@@ -567,27 +567,76 @@ function Grid2({ children, isMobile }: { children: ReactNode; isMobile: boolean 
 
 // ─── Étape 1 — Nature ──────────────────────────────────────────────────────
 function Step1Nature({
-  form, setForm, isMobile,
+  form, setForm, toggles, setToggles, isMobile,
 }: {
   form: AnnonceForm
   setForm: React.Dispatch<React.SetStateAction<AnnonceForm>>
+  toggles: AnnonceToggles
+  setToggles: React.Dispatch<React.SetStateAction<AnnonceToggles>>
   isMobile: boolean
 }) {
   const set = (key: keyof AnnonceForm) => (e: { target: { value: string } }) =>
     setForm(f => ({ ...f, [key]: e.target.value }))
   return (
-    <Grid2 isMobile={isMobile}>
-      <F l="Type de bien">
-        <select style={sel} value={form.type_bien} onChange={set("type_bien")}>
-          {["Appartement","Maison","Studio","Chambre","Colocation","Loft","Villa","Autre"].map(v => <option key={v}>{v}</option>)}
-        </select>
-      </F>
-      <F l={<>Statut du bien <Tooltip text="« Déjà loué » crée le bien pour gestion (bail, quittances, EDL) sans le publier publiquement." /></>}>
-        <select style={sel} value={form.statut} onChange={set("statut")}>
-          {SEL_STATUT.map(s => <option key={s.v} value={s.v}>{s.label}</option>)}
-        </select>
-      </F>
-    </Grid2>
+    <>
+      {/* Toggle Meublé / Vide en TÊTE — premier filtre logique du wizard.
+          Avant : toggle paumé en Step 4 Équipements, alors qu'il change le
+          type de bail (1 an meublé vs 3 ans vide), les obligations légales,
+          le marché cible. Bug Paul 2026-04-26. */}
+      <div style={{ marginBottom: 22 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: 0, marginBottom: 10 }}>
+          Mode de location
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {[
+            { value: false, label: "Vide", desc: "Bail 3 ans · loi 89-462" },
+            { value: true,  label: "Meublé", desc: "Bail 1 an · meublé loi ALUR" },
+          ].map(opt => {
+            const active = toggles.meuble === opt.value
+            return (
+              <button
+                key={String(opt.value)}
+                type="button"
+                onClick={() => setToggles(t => ({ ...t, meuble: opt.value }))}
+                aria-pressed={active}
+                style={{
+                  padding: "16px 18px",
+                  borderRadius: 14,
+                  border: active ? `1.5px solid ${km.ink}` : `1px solid ${km.line}`,
+                  background: active ? km.ink : km.white,
+                  color: active ? km.white : km.ink,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  textAlign: "left" as const,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 4,
+                  transition: "all 160ms",
+                }}
+              >
+                <span style={{ fontSize: 14, fontWeight: 700 }}>{opt.label}</span>
+                <span style={{ fontSize: 11, opacity: active ? 0.82 : 1, color: active ? "rgba(255,255,255,0.82)" : km.muted }}>
+                  {opt.desc}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <Grid2 isMobile={isMobile}>
+        <F l="Type de bien">
+          <select style={sel} value={form.type_bien} onChange={set("type_bien")}>
+            {["Appartement","Maison","Studio","Chambre","Colocation","Loft","Villa","Autre"].map(v => <option key={v}>{v}</option>)}
+          </select>
+        </F>
+        <F l={<>Statut du bien <Tooltip text="« Déjà loué » crée le bien pour gestion (bail, quittances, EDL) sans le publier publiquement." /></>}>
+          <select style={sel} value={form.statut} onChange={set("statut")}>
+            {SEL_STATUT.map(s => <option key={s.v} value={s.v}>{s.label}</option>)}
+          </select>
+        </F>
+      </Grid2>
+    </>
   )
 }
 
@@ -784,8 +833,8 @@ function Step4Equipements({
     <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
       <div>
         <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 14px" }}>Général</p>
+        {/* Toggle "Meublé" déplacé en Step 1 (premier filtre logique). */}
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 4 }}>
-          <Toggle label="Meublé" k="meuble" toggles={toggles} setToggles={setToggles} />
           <Toggle label="Parking" k="parking" toggles={toggles} setToggles={setToggles} />
           <Toggle label="Cave" k="cave" toggles={toggles} setToggles={setToggles} />
           <Toggle label="Fibre optique" k="fibre" toggles={toggles} setToggles={setToggles} />
