@@ -27,6 +27,7 @@ export type NotifType =
   | "dossier_consulte"
   | "candidature_retiree"
   | "candidature_validee"
+  | "candidature_devalidee"
   | "carnet_signalement"
 
 export type NotifArgs = {
@@ -75,6 +76,7 @@ export const NOTIF_TYPES: readonly NotifType[] = [
   "dossier_consulte",
   "candidature_retiree",
   "candidature_validee",
+  "candidature_devalidee",
   "carnet_signalement",
 ] as const
 
