@@ -328,6 +328,38 @@ export default function MesCandidatures() {
           </div>
         )}
 
+        {/* Stat tiles vue at-a-glance (HAUTE #4 du flow plan) */}
+        {candidatures.length > 0 && (() => {
+          const nbEnAttente = candidatures.filter(c => c.statut === "contact").length
+          const nbValidees = candidatures.filter(c => c.statut === "dossier" || c.statut === "visite").length
+          const nbARelancer = candidatures.filter(c => c.peutRelancer).length
+          const nbBail = candidatures.filter(c => c.statut === "bail").length
+          const tiles = [
+            { label: "En attente", val: nbEnAttente, accent: km.beige, color: "#6b6559" },
+            { label: "Validées", val: nbValidees, accent: nbValidees > 0 ? km.successBg : km.beige, color: nbValidees > 0 ? km.successText : km.muted },
+            { label: "À relancer", val: nbARelancer, accent: nbARelancer > 0 ? km.warnBg : km.beige, color: nbARelancer > 0 ? km.warnText : km.muted },
+            { label: "Bail signé", val: nbBail, accent: nbBail > 0 ? km.ink : km.beige, color: nbBail > 0 ? km.white : km.muted },
+          ]
+          return (
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? 10 : 14, marginBottom: 20 }}>
+              {tiles.map(t => (
+                <div
+                  key={t.label}
+                  style={{
+                    background: t.accent,
+                    border: `1px solid ${km.line}`,
+                    borderRadius: 18,
+                    padding: isMobile ? "16px 18px" : "18px 22px",
+                  }}
+                >
+                  <div style={{ fontSize: isMobile ? 24 : 28, fontWeight: 700, color: t.color, letterSpacing: "-0.6px", lineHeight: 1, fontVariantNumeric: "tabular-nums" as const }}>{t.val}</div>
+                  <div style={{ fontSize: 10, color: t.color === km.white ? "rgba(255,255,255,0.75)" : km.muted, marginTop: 8, textTransform: "uppercase" as const, letterSpacing: "1.2px", fontWeight: 700 }}>{t.label}</div>
+                </div>
+              ))}
+            </div>
+          )
+        })()}
+
         {candidatures.length === 0 ? (
           <EmptyState
             icon={

@@ -648,6 +648,49 @@ export default function Proprietaire() {
           </a>
         </div>
 
+        {/* ── Stat tiles dashboard cliquables (HAUTE #3 du flow plan) ──
+            Vue at-a-glance : combien d'actions sont en attente côté proprio.
+            Click = bascule sur l'onglet pertinent. */}
+        {biens.length > 0 && (() => {
+          const nbCandidaturesActives = candidatures.filter((c: any) => {
+            const ann = biens.find(b => b.id === c.annonce_id)
+            return ann && ann.statut !== "loue_termine"
+          }).length
+          const nbVisitesAttente = visites.filter(v => v.statut === "proposée" && (v.propose_par || "").toLowerCase() !== (myEmail || "").toLowerCase()).length
+          const tiles = [
+            { label: "Biens disponibles", val: biensDispos, accent: km.successBg, color: km.successText, target: "Mes biens" as const },
+            { label: "Candidatures", val: nbCandidaturesActives, accent: km.beige, color: km.ink, target: "Mes biens" as const },
+            { label: "Visites en attente", val: nbVisitesAttente, accent: nbVisitesAttente > 0 ? "#FEF3E2" : km.beige, color: nbVisitesAttente > 0 ? "#A45A19" : km.muted, target: "Visites" as const },
+            { label: "Loyers à confirmer", val: loyersAttendus, accent: loyersAttendus > 0 ? km.warnBg : km.beige, color: loyersAttendus > 0 ? km.warnText : km.muted, target: "Locataires" as const },
+          ]
+          return (
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? 10 : 14, marginBottom: 24 }}>
+              {tiles.map(t => (
+                <button
+                  key={t.label}
+                  type="button"
+                  onClick={() => setOnglet(t.target)}
+                  style={{
+                    background: t.accent,
+                    border: `1px solid ${km.line}`,
+                    borderRadius: 18,
+                    padding: isMobile ? "16px 18px" : "18px 22px",
+                    textAlign: "left" as const,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    transition: "transform 0.15s, box-shadow 0.15s",
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.06)" }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "none" }}
+                >
+                  <div style={{ fontSize: isMobile ? 24 : 28, fontWeight: 700, color: t.color, letterSpacing: "-0.6px", lineHeight: 1, fontVariantNumeric: "tabular-nums" as const }}>{t.val}</div>
+                  <div style={{ fontSize: 10, color: km.muted, marginTop: 8, textTransform: "uppercase" as const, letterSpacing: "1.2px", fontWeight: 700 }}>{t.label}</div>
+                </button>
+              ))}
+            </div>
+          )
+        })()}
+
         {/* Onglets */}
         <div style={{ display: "flex", gap: 6, marginBottom: 24, background: km.white, borderRadius: 14, padding: 6, width: isMobile ? "100%" : "fit-content", overflowX: isMobile ? "auto" : undefined }}>
           {ONGLETS.map(o => {
