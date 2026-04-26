@@ -584,7 +584,16 @@ function CandidatureCard({
         )}
       </div>
 
-      {/* Actions */}
+      {/* Actions complètes — le proprio peut piloter le candidat de bout en
+          bout depuis cette card (bug Paul 2026-04-26 « il faut la possibilité
+          de valider, lui louer, aller sur ses visites, etc »).
+          Visibilité conditionnelle :
+          - Valider/Refuser : tant que pas de décision et pas déjà au bail
+          - Louer (générer bail) : si validée et pas encore au bail
+          - Visites : si une visite existe (pour ce candidat, ce bien)
+          - Demander dossier : si statut "contact" (pas encore de DOSSIER_CARD)
+          - Voir dossier / Répondre : toujours dispo
+      */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
         {canDecide && (
           <>
@@ -625,6 +634,45 @@ function CandidatureCard({
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             Refusée
           </span>
+        )}
+        {/* Louer = générer le bail. Visible si validée (ou prête bail) ET
+            pas encore au bail. Le wizard /proprietaire/bail/[id] préremplit
+            avec ?locataire={email} (lib existante). */}
+        {(isValidated || statut === "visite") && statut !== "bail" && (
+          <Link
+            href={`/proprietaire/bail/${annonceId}?locataire=${encodeURIComponent(email)}`}
+            title="Générer le bail pour ce candidat"
+            style={{ padding: "9px 18px", background: "#111", color: "#fff", borderRadius: 999, fontSize: 11, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap", letterSpacing: "0.3px", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 6 }}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+            </svg>
+            Louer ce candidat
+          </Link>
+        )}
+        {/* Voir les visites du candidat (si une existe). Lien vers /visites
+            avec filtre — fallback ouverture conv messages si pas de page
+            filtrable côté visites. */}
+        {visite && (
+          <Link
+            href={`/visites?candidat=${encodeURIComponent(email)}`}
+            title="Voir les créneaux de visite avec ce candidat"
+            style={{ padding: "9px 18px", background: "#fff", color: "#a16207", border: "1px solid #EADFC6", borderRadius: 999, fontSize: 11, fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap", letterSpacing: "0.3px", fontFamily: "inherit" }}
+          >
+            Voir la visite
+          </Link>
+        )}
+        {/* Demander le dossier — utile au stade contact (pas encore de
+            [DOSSIER_CARD]). Redirige vers messages, le proprio peut taper
+            son message custom ou utiliser le quick-reply Demande. */}
+        {statut === "contact" && (
+          <Link
+            href={`/messages?with=${encodeURIComponent(email)}&annonce=${annonceId}&action=demande-dossier`}
+            title="Demander le dossier de candidature"
+            style={{ padding: "9px 18px", background: "#fff", color: "#1d4ed8", border: "1px solid #D7E3F4", borderRadius: 999, fontSize: 11, fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap", letterSpacing: "0.3px", fontFamily: "inherit" }}
+          >
+            Demander le dossier
+          </Link>
         )}
         <Link
           href={`/messages?with=${encodeURIComponent(email)}&annonce=${annonceId}`}
