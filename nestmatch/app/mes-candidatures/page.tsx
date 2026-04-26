@@ -328,6 +328,53 @@ export default function MesCandidatures() {
           </div>
         )}
 
+        {/* Bandeau success bail signé — redirection forte vers /mon-logement
+            (commit 5 du flow plan). Apparaît dès qu'au moins une candidature
+            a statut "bail" (le proprio a accepté + bail généré). */}
+        {(() => {
+          const candBail = candidatures.find(c => c.statut === "bail")
+          if (!candBail) return null
+          const titreBien = candBail.annonce?.titre || "votre logement"
+          return (
+            <div style={{
+              background: "linear-gradient(135deg, #15803d 0%, #16A34A 100%)",
+              color: "#fff",
+              borderRadius: 18,
+              padding: isMobile ? "18px 22px" : "22px 28px",
+              marginBottom: 20,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 16,
+              flexWrap: "wrap",
+              boxShadow: "0 6px 20px rgba(21, 128, 61, 0.25)",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0 }}>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+                <div>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.85)", textTransform: "uppercase" as const, letterSpacing: "1.4px", margin: 0 }}>Félicitations</p>
+                  <h2 style={{ fontSize: isMobile ? 16 : 18, fontWeight: 600, margin: "4px 0 2px", letterSpacing: "-0.2px" }}>
+                    Votre candidature a été retenue !
+                  </h2>
+                  <p style={{ fontSize: 13, opacity: 0.9, margin: 0, lineHeight: 1.5 }}>
+                    « {titreBien} » est officiellement à vous. Retrouvez tout dans Mon logement.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/mon-logement"
+                style={{ background: "#fff", color: "#15803d", padding: "11px 22px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 12, letterSpacing: "0.4px", textTransform: "uppercase" as const, whiteSpace: "nowrap", flexShrink: 0 }}
+              >
+                Mon logement →
+              </Link>
+            </div>
+          )
+        })()}
+
         {/* Stat tiles vue at-a-glance (HAUTE #4 du flow plan) */}
         {candidatures.length > 0 && (() => {
           const nbEnAttente = candidatures.filter(c => c.statut === "contact").length
