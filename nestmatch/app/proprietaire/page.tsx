@@ -800,6 +800,57 @@ export default function Proprietaire() {
                     <p style={{ color: km.muted, fontSize: 12, margin: "4px 0 0", letterSpacing: "0.1px" }}>{b.adresse}{b.adresse && b.ville ? " · " : ""}{b.ville}</p>
                   </div>
 
+                  {/* Mini timeline étapes — visibilité du flow par bien (HAUTE #1)
+                      Étapes : Publié / Candidatures / Visite / Bail / Loué.
+                      Done si statut atteint, active sur l'étape courante. */}
+                  {(() => {
+                    const hasVisiteForBien = visites.some((v: any) => v.annonce_id === b.id && (v.statut === "confirmée" || v.statut === "effectuée"))
+                    const isLoue = b.statut === "loué" && !!b.locataire_email
+                    const hasBailGenere = !!(b.bail_genere_at || isLoue || b.statut === "bail_envoye")
+                    // Active step = première étape non-done (capped)
+                    const stepDone = [
+                      true, // Publié (toujours)
+                      nbCand > 0,
+                      hasVisiteForBien,
+                      hasBailGenere,
+                      isLoue,
+                    ]
+                    const activeIdx = stepDone.findIndex(d => !d)
+                    const currentStep = activeIdx === -1 ? 5 : activeIdx
+                    const labels = ["Publié", "Candidat", "Visite", "Bail", "Loué"]
+                    return (
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, paddingTop: 6 }}>
+                        {labels.map((l, i) => {
+                          const done = stepDone[i]
+                          const active = i === currentStep
+                          return (
+                            <div key={l} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, position: "relative" }}>
+                              <div style={{
+                                width: 14, height: 14, borderRadius: "50%",
+                                background: done ? km.ink : km.white,
+                                border: active ? "2px solid #111" : `1px solid ${km.line}`,
+                                color: done ? km.white : km.muted,
+                                fontSize: 8, fontWeight: 700,
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                flexShrink: 0,
+                                zIndex: 2,
+                              }}>
+                                {done ? (
+                                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                ) : (i + 1)}
+                              </div>
+                              <span style={{ fontSize: 9, fontWeight: 600, color: active ? km.ink : done ? km.muted : "#9CA3AF", textTransform: "uppercase" as const, letterSpacing: "0.4px", whiteSpace: "nowrap" }}>{l}</span>
+                              {/* Trait entre les étapes */}
+                              {i < labels.length - 1 && (
+                                <div style={{ position: "absolute", top: 6, left: "calc(50% + 8px)", right: "calc(-50% + 8px)", height: 1, background: stepDone[i + 1] ? km.ink : km.line, zIndex: 1 }} />
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()}
+
                   {/* Separator + ligne specs/prix tabular (handoff strict) */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", paddingTop: 12, borderTop: `1px solid ${km.line}`, gap: 8, fontSize: 12, color: km.muted, flexWrap: "wrap" }}>
                     <div style={{ display: "flex", gap: 12 }}>
