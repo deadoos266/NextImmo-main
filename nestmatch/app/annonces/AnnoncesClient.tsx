@@ -1234,7 +1234,24 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                     </div>
                   </div>
 
-                  {/* Ligne 2 : Tri segmented control fidèle handoff (3) l. 666-678 */}
+                  {/* Ligne 2 : 3 QuickFilter chips fidèles handoff (3) l. 644-650.
+                      Connectés aux vrais state existants (scoreMin / activeVille
+                      / budgetMaxFiltre). Click = popover pour ajuster.
+                      Pas dupliqué avec FiltersBar : ces 3 chips sont l'accès
+                      rapide 1-tap aux filtres les plus utilisés. */}
+                  <QuickFiltersRow
+                    scoreMin={scoreMin}
+                    setScoreMin={setScoreMin}
+                    activeVille={activeVille}
+                    onChangeVille={onChangeVille}
+                    budgetMaxFiltre={budgetMaxFiltre}
+                    setBudgetMaxFiltre={setBudgetMaxFiltre}
+                    activeFilterCount={activeFilterCount}
+                    onOpenAllFilters={() => setModalOpen(true)}
+                    showMatchOption={showMatchOption}
+                  />
+
+                  {/* Ligne 3 : Tri segmented control fidèle handoff (3) l. 666-678 */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, fontSize: 11.5 }}>
                     <span style={{ color: "#6B6B6B", fontWeight: 600 }}>Trier par</span>
                     <div style={{ display: "inline-flex", gap: 0, background: km.beige, borderRadius: 8, padding: 2 }}>
@@ -1599,5 +1616,314 @@ function GridContainer({ children }: { children: React.ReactNode }) {
     >
       {children}
     </div>
+  )
+}
+
+// ─── QuickFiltersRow — header aside MapSplit handoff (3) l. 644-664 ─────────
+// 3 chips d'accès rapide aux filtres les plus utilisés (compat / lieu / prix)
+// + bouton "Tous les filtres" plein largeur avec count badge.
+// Connectés aux vrais state existants — pas de duplication de logique métier.
+
+type QuickKind = "match" | "lieu" | "prix" | null
+
+function QuickFiltersRow({
+  scoreMin,
+  setScoreMin,
+  activeVille,
+  onChangeVille,
+  budgetMaxFiltre,
+  setBudgetMaxFiltre,
+  activeFilterCount,
+  onOpenAllFilters,
+  showMatchOption,
+}: {
+  scoreMin: number
+  setScoreMin: (v: number) => void
+  activeVille: string
+  onChangeVille: (v: string) => void
+  budgetMaxFiltre: number | null
+  setBudgetMaxFiltre: (v: number | null) => void
+  activeFilterCount: number
+  onOpenAllFilters: () => void
+  showMatchOption: boolean
+}) {
+  const [active, setActive] = useState<QuickKind>(null)
+  const matchValue = scoreMin > 0 ? `≥ ${scoreMin} %` : "Toutes"
+  const lieuValue = activeVille.trim() ? activeVille.trim() : "Toute la France"
+  const prixValue = budgetMaxFiltre ? `≤ ${budgetMaxFiltre.toLocaleString("fr-FR")} €` : "Tous"
+
+  return (
+    <div style={{ position: "relative" }}>
+      <div style={{ display: "grid", gridTemplateColumns: showMatchOption ? "repeat(3, 1fr)" : "repeat(2, 1fr)", gap: 6, marginBottom: 6 }}>
+        {showMatchOption && (
+          <QuickFilterChip
+            label="Compat."
+            value={matchValue}
+            iconKind="match"
+            active={active === "match"}
+            onClick={() => setActive(active === "match" ? null : "match")}
+          />
+        )}
+        <QuickFilterChip
+          label="Lieu"
+          value={lieuValue}
+          iconKind="pin"
+          active={active === "lieu"}
+          onClick={() => setActive(active === "lieu" ? null : "lieu")}
+        />
+        <QuickFilterChip
+          label="Loyer"
+          value={prixValue}
+          iconKind="euro"
+          active={active === "prix"}
+          onClick={() => setActive(active === "prix" ? null : "prix")}
+        />
+      </div>
+
+      <button
+        type="button"
+        onClick={onOpenAllFilters}
+        style={{
+          width: "100%",
+          padding: "8px 12px",
+          borderRadius: 10,
+          border: `1px solid ${km.line}`,
+          background: km.white,
+          fontFamily: "inherit",
+          fontSize: 12,
+          fontWeight: 600,
+          color: km.ink,
+          cursor: "pointer",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+          transition: "all 160ms",
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.background = km.beige
+          e.currentTarget.style.borderColor = km.ink
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.background = km.white
+          e.currentTarget.style.borderColor = km.line
+        }}
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <line x1="4" y1="6" x2="20" y2="6"/>
+          <line x1="7" y1="12" x2="17" y2="12"/>
+          <line x1="10" y1="18" x2="14" y2="18"/>
+        </svg>
+        Tous les filtres
+        {activeFilterCount > 0 && (
+          <span style={{
+            minWidth: 16, height: 16,
+            background: km.ink, color: km.white,
+            borderRadius: 999, fontSize: 10, fontWeight: 700,
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            padding: "0 5px",
+            fontVariantNumeric: "tabular-nums" as const,
+          }}>{activeFilterCount}</span>
+        )}
+      </button>
+
+      {active === "match" && (
+        <QuickFilterPopover onClose={() => setActive(null)} title="Compatibilité minimum">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 10 }}>
+            {[
+              { v: 0, l: "Tous" },
+              { v: 60, l: "60+" },
+              { v: 70, l: "70+" },
+              { v: 80, l: "80+" },
+              { v: 90, l: "90+" },
+              { v: 95, l: "95+" },
+            ].map(opt => {
+              const sel = scoreMin === opt.v
+              return (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => { setScoreMin(opt.v); setActive(null) }}
+                  style={{
+                    padding: "8px 4px",
+                    borderRadius: 8,
+                    border: sel ? "1.5px solid #111" : `1px solid ${km.line}`,
+                    background: sel ? km.beige : km.white,
+                    color: km.ink,
+                    fontFamily: "inherit",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >{opt.l}</button>
+              )
+            })}
+          </div>
+          <div style={{ fontSize: 11, color: "#8a8477" }}>Les annonces sous le seuil sont masquées.</div>
+        </QuickFilterPopover>
+      )}
+
+      {active === "lieu" && (
+        <QuickFilterPopover onClose={() => setActive(null)} title="Ville ou code postal">
+          <input
+            autoFocus
+            defaultValue={activeVille}
+            placeholder="Ex. Paris 10e, 75010, Lyon…"
+            onKeyDown={e => {
+              if (e.key === "Enter") {
+                onChangeVille((e.target as HTMLInputElement).value)
+                setActive(null)
+              }
+            }}
+            onBlur={e => {
+              const v = (e.target as HTMLInputElement).value
+              if (v !== activeVille) onChangeVille(v)
+            }}
+            style={{
+              width: "100%",
+              padding: "10px 14px",
+              borderRadius: 10,
+              border: `1px solid ${km.line}`,
+              fontFamily: "inherit",
+              fontSize: 13,
+              outline: "none",
+              background: km.beige,
+              color: km.ink,
+              boxSizing: "border-box",
+            }}
+          />
+          <div style={{ fontSize: 11, color: "#8a8477", marginTop: 8 }}>Tape Entrée pour valider.</div>
+        </QuickFilterPopover>
+      )}
+
+      {active === "prix" && (
+        <QuickFilterPopover onClose={() => setActive(null)} title="Loyer maximum (charges comprises)">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 5 }}>
+            {[
+              { v: null, l: "Tous" },
+              { v: 800, l: "≤ 800 €" },
+              { v: 1000, l: "≤ 1 000 €" },
+              { v: 1200, l: "≤ 1 200 €" },
+              { v: 1500, l: "≤ 1 500 €" },
+              { v: 2000, l: "≤ 2 000 €" },
+            ].map(opt => {
+              const sel = budgetMaxFiltre === opt.v
+              return (
+                <button
+                  key={String(opt.v)}
+                  type="button"
+                  onClick={() => { setBudgetMaxFiltre(opt.v); setActive(null) }}
+                  style={{
+                    padding: "6px 4px",
+                    borderRadius: 8,
+                    border: sel ? "1.5px solid #111" : `1px solid ${km.line}`,
+                    background: sel ? km.beige : km.white,
+                    color: km.ink,
+                    fontFamily: "inherit",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >{opt.l}</button>
+              )
+            })}
+          </div>
+        </QuickFilterPopover>
+      )}
+    </div>
+  )
+}
+
+function QuickFilterChip({ label, value, iconKind, active, onClick }: {
+  label: string
+  value: string
+  iconKind: "match" | "pin" | "euro"
+  active: boolean
+  onClick: () => void
+}) {
+  const icon = iconKind === "match" ? (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="9 11 12 14 22 4"/></svg>
+  ) : iconKind === "pin" ? (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+  ) : (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10h12"/><path d="M4 14h9"/><path d="M19 6.5a8 8 0 1 0 0 11"/></svg>
+  )
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        padding: "7px 8px",
+        borderRadius: 10,
+        border: active ? "1.5px solid #111" : `1px solid ${km.line}`,
+        background: active ? km.ink : km.white,
+        color: active ? km.white : km.ink,
+        fontFamily: "inherit",
+        cursor: "pointer",
+        minWidth: 0,
+        width: "100%",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 4,
+        transition: "all 160ms",
+      }}
+      onMouseEnter={e => {
+        if (!active) {
+          e.currentTarget.style.background = km.beige
+          e.currentTarget.style.borderColor = km.ink
+        }
+      }}
+      onMouseLeave={e => {
+        if (!active) {
+          e.currentTarget.style.background = km.white
+          e.currentTarget.style.borderColor = km.line
+        }
+      }}
+    >
+      <span aria-hidden="true" style={{ flexShrink: 0, opacity: 0.65 }}>{icon}</span>
+      <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", lineHeight: 1.1, minWidth: 0, overflow: "hidden", flex: 1 }}>
+        <span style={{ fontSize: 9, fontWeight: 600, opacity: 0.65, letterSpacing: "0.4px", textTransform: "uppercase" as const, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{label}</span>
+        <span style={{ fontSize: 11.5, fontWeight: 700, fontVariantNumeric: "tabular-nums" as const, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{value}</span>
+      </span>
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5, flexShrink: 0 }} aria-hidden="true">
+        <polyline points="6 9 12 15 18 9"/>
+      </svg>
+    </button>
+  )
+}
+
+function QuickFilterPopover({ title, onClose, children }: {
+  title: string
+  onClose: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <>
+      {/* Backdrop pour fermer au clic extérieur */}
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 40 }} aria-hidden="true" />
+      <div style={{
+        position: "absolute",
+        top: "calc(100% + 6px)",
+        left: 0,
+        right: 0,
+        zIndex: 50,
+        background: km.white,
+        border: `1px solid ${km.line}`,
+        borderRadius: 14,
+        boxShadow: "0 12px 32px rgba(0,0,0,0.12)",
+        padding: 14,
+        fontFamily: "inherit",
+      }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: "#6B6B6B", textTransform: "uppercase" as const, letterSpacing: "1.2px", marginBottom: 10 }}>{title}</div>
+        {children}
+        <div style={{ display: "flex", gap: 8, marginTop: 12, paddingTop: 10, borderTop: `1px solid ${km.line}` }}>
+          <button type="button" onClick={onClose} style={{ flex: 1, padding: 8, borderRadius: 8, border: "none", background: km.ink, color: km.white, fontFamily: "inherit", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            Fermer
+          </button>
+        </div>
+      </div>
+    </>
   )
 }
