@@ -3539,6 +3539,88 @@ function MessagesInner() {
                   )}
                 </div>
 
+                {/* BienPicker — quand le même peer a 2+ conversations liées
+                   à des biens différents, chips de navigation pour switcher.
+                   Handoff messages.jsx l. 533-569. */}
+                {convActiveData?.annonceId != null && (() => {
+                  const relatedConvs = conversations.filter(c =>
+                    c.other === convActiveData.other
+                    && c.annonceId != null
+                    && c.annonceId !== convActiveData.annonceId
+                  )
+                  if (relatedConvs.length === 0) return null
+                  const chips = [convActiveData, ...relatedConvs]
+                  return (
+                    <div style={{ padding: "10px 20px", borderBottom: "1px solid #EAE6DF", background: "#fff", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase" as const, letterSpacing: "1.2px", flexShrink: 0 }}>
+                        Biens concernés
+                      </span>
+                      <div style={{ display: "flex", gap: 6, overflowX: "auto", flex: 1 }}>
+                        {chips.map(c => {
+                          const sel = c.key === convActiveData.key
+                          const ann = c.annonceId != null ? annonces[c.annonceId] : null
+                          if (!ann) return null
+                          const photo = Array.isArray(ann.photos) && ann.photos.length > 0 ? ann.photos[0] : null
+                          const score = computeConvScore(c)
+                          const matchPct = score !== null ? Math.round(score / 10) : null
+                          return (
+                            <button
+                              key={c.key}
+                              type="button"
+                              onClick={() => {
+                                if (sel) return
+                                setConvActive(c.key)
+                                setVisitesConv([])
+                                if (myEmail) {
+                                  loadMessages(myEmail, c.other, c.annonceId)
+                                  loadVisitesConv(c.other, c.annonceId)
+                                }
+                              }}
+                              style={{
+                                display: "inline-flex", alignItems: "center", gap: 8,
+                                padding: "4px 12px 4px 4px",
+                                background: sel ? "#111" : "#FBF9F5",
+                                color: sel ? "#fff" : "#111",
+                                border: `1px solid ${sel ? "#111" : "#EAE6DF"}`,
+                                borderRadius: 999,
+                                cursor: sel ? "default" : "pointer",
+                                fontFamily: "inherit",
+                                flexShrink: 0,
+                                transition: "all 200ms",
+                              }}
+                            >
+                              {photo ? (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img src={photo} alt="" style={{ width: 22, height: 22, borderRadius: "50%", objectFit: "cover", flexShrink: 0, display: "block" }} />
+                              ) : (
+                                <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#EAE6DF", flexShrink: 0 }} />
+                              )}
+                              <span style={{ fontSize: 11, fontWeight: 600 }}>{ann.ville || "—"}</span>
+                              {typeof ann.prix === "number" ? (
+                                <span style={{ fontSize: 10, opacity: 0.7 }}>· {ann.prix.toLocaleString("fr-FR")} €</span>
+                              ) : null}
+                              {matchPct !== null && (
+                                <span style={{
+                                  display: "inline-flex", alignItems: "center", gap: 3,
+                                  padding: "1px 6px", borderRadius: 999,
+                                  background: sel ? "rgba(255,255,255,0.15)" : "#fff",
+                                  border: sel ? "1px solid rgba(255,255,255,0.25)" : "1px solid rgba(17,17,17,0.15)",
+                                  color: sel ? "#fff" : "#111",
+                                  fontSize: 10, fontWeight: 700,
+                                  fontVariantNumeric: "tabular-nums" as const,
+                                }}>
+                                  <span style={{ width: 4, height: 4, borderRadius: "50%", background: sel ? "#fff" : "#111" }} />
+                                  {matchPct}
+                                </span>
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })()}
+
                 {/* Confirmation inline : louer à ce candidat — palette douce (vert subtil sur fond beige pour s'aligner sur le reste du site) */}
                 {accepterLocationOpen && proprietaireActive && convActiveData && (
                   <div style={{ background: "#F7F4EF", borderBottom: "1px solid #EAE6DF", padding: "14px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
