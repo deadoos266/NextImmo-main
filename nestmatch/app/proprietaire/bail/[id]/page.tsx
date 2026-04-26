@@ -2441,10 +2441,12 @@ export default function BailPage() {
 
             void postNotif({
               userEmail: locataireEmail,
-              type: "bail_genere",
+              type: "bail_a_signer",
               title: "Bail à signer",
               body: `Votre bailleur a importé le bail pour « ${bien.titre} ». Vous pouvez le télécharger et le signer.`,
-              href: "/mon-logement",
+              // Lien vers la conv messages où la BAIL_CARD vient d'être insérée
+              // (cohérent avec le flux de génération l. 751).
+              href: `/messages?with=${encodeURIComponent(fromEmail)}&annonce=${bien.id}`,
               relatedId: String(bien.id),
             })
 
