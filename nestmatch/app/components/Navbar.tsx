@@ -192,6 +192,16 @@ export default function Navbar() {
     return () => { document.body.style.overflow = original }
   }, [mobileOpen])
 
+  // Broadcast drawer state via custom event — permet aux composants enfants
+  // (FAB "Voir sur la carte" sur /annonces, StickyCTABanner sur fiche
+  // annonce, ...) de se cacher pendant que le drawer est ouvert plutot que
+  // de jouer au stacking context. Solution defensive : peu importe le
+  // z-index, si l'element est unmounted il ne peut pas overlapper.
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    window.dispatchEvent(new CustomEvent("km:drawer-state", { detail: { open: mobileOpen } }))
+  }, [mobileOpen])
+
   // Focus le bouton close a l'ouverture pour les utilisateurs clavier
   // (a11y : leur permet d'ouvrir avec espace/enter sur le burger puis de
   // refermer avec espace/enter ou Esc sans tab-search).

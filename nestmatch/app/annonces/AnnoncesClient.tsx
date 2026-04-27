@@ -250,6 +250,19 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   // ── R10.2 — Quick-view modal
   const [quickViewId, setQuickViewId] = useState<number | null>(null)
 
+  // Drawer mobile state — ecoute le custom event dispatched par Navbar pour
+  // cacher le FAB "Voir sur la carte" quand le drawer est ouvert (Paul
+  // 2026-04-27). Solution defensive aux conflits de stacking context : on
+  // unmount le FAB plutot que de jouer aux z-index.
+  const [navDrawerOpen, setNavDrawerOpen] = useState(false)
+  useEffect(() => {
+    function handler(e: Event) {
+      setNavDrawerOpen((e as CustomEvent).detail?.open === true)
+    }
+    window.addEventListener("km:drawer-state", handler)
+    return () => window.removeEventListener("km:drawer-state", handler)
+  }, [])
+
   const { data: session, status } = useSession()
   const { role } = useRole()
   const isProprietaire = role === "proprietaire"
@@ -1516,8 +1529,10 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
         )}
       </div>
 
-      {/* ── Mobile FAB "Voir sur la carte" (<768, mode Liste, modale fermée) */}
-      {isMobileV5 && !gridMode && !showMap && (
+      {/* ── Mobile FAB "Voir sur la carte" (<768, mode Liste, modale fermée).
+          Hide quand le drawer mobile est ouvert pour eviter tout chevauchement
+          visuel (z-index war). Cf custom event "km:drawer-state". */}
+      {isMobileV5 && !gridMode && !showMap && !navDrawerOpen && (
         <button
           type="button"
           onClick={() => setShowMap(true)}
@@ -1572,6 +1587,9 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           favoris={favoris}
           onToggleFavori={handleToggleFavoriId}
           MapComp={MapComp}
+          activeVille={activeVille || ""}
+          onOpenFilters={() => setModalOpen(true)}
+          activeFilterCount={activeFilterCount}
         />
       )}
 

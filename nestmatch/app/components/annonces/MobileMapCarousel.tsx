@@ -39,6 +39,9 @@ export default function MobileMapCarousel({
   favoris,
   onToggleFavori,
   MapComp,
+  activeVille,
+  onOpenFilters,
+  activeFilterCount,
 }: {
   annonces: any[]
   selectedId: number | null
@@ -49,6 +52,15 @@ export default function MobileMapCarousel({
   favoris: number[]
   onToggleFavori: (id: number) => void
   MapComp: ComponentType<MapAnnoncesProps>
+  /** Ville active (filtre URL ville=...). Affichee en chip cliquable
+   *  qui ouvre FiltersModal pour modification (Paul 2026-04-27). */
+  activeVille?: string
+  /** Ouvre la modale de filtres complets (FiltersModal) — accessible depuis
+   *  le header sticky en plus du FAB. User a demande l'acces direct depuis
+   *  le mode carte. */
+  onOpenFilters?: () => void
+  /** Nombre de filtres actifs — affiche en badge sur le bouton Filtres si > 0. */
+  activeFilterCount?: number
 }) {
   const cardAnnonces = useMemo(() => annonces.filter(a => a._lat && a._lng), [annonces])
 
@@ -132,16 +144,20 @@ export default function MobileMapCarousel({
         flexDirection: "column",
       }}
     >
-      {/* Header sticky : Liste + count */}
+      {/* Header sticky : back Liste + Ville + Filtres (Paul 2026-04-27 v2)
+          User : "quand la carte est affiche faudrait qu'on puisse toujours
+          avoir acces au choix de la ville et des filtres au dessus".
+          Layout 3 colonnes : back arrow / Ville pill cliquable / Filtres
+          + badge count. Click Ville ou Filtres → ouvre FiltersModal
+          (le picker ville est dans la modale, evite un 2e dropdown). */}
       <div style={{
         flexShrink: 0,
-        padding: "12px 16px",
+        padding: "10px 12px",
         background: km.white,
         borderBottom: `1px solid ${km.line}`,
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
-        gap: 12,
+        gap: 8,
         zIndex: 2,
       }}>
         <button
@@ -152,32 +168,101 @@ export default function MobileMapCarousel({
             background: km.white,
             color: km.ink,
             border: `1px solid ${km.line}`,
-            borderRadius: 999,
-            padding: "8px 16px",
-            fontSize: 11,
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "0.6px",
+            borderRadius: "50%",
+            width: 38,
+            height: 38,
             fontFamily: "inherit",
             cursor: "pointer",
             display: "inline-flex",
             alignItems: "center",
-            gap: 6,
+            justifyContent: "center",
+            flexShrink: 0,
+            WebkitTapHighlightColor: "transparent",
           }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <polyline points="15 18 9 12 15 6" />
           </svg>
-          Liste
         </button>
-        <span style={{ fontSize: 12, color: "#666", fontWeight: 500 }}>
-          {annonces.length} annonce{annonces.length > 1 ? "s" : ""}
-          {cardAnnonces.length < annonces.length && (
-            <span style={{ color: "#999", marginLeft: 4 }}>
-              · {cardAnnonces.length} géolocalisée{cardAnnonces.length > 1 ? "s" : ""}
+
+        {/* Ville pill — flex 1 pour prendre la place restante. Click ouvre
+            FiltersModal (qui contient le picker ville complet avec
+            autocomplete). Affiche la ville active ou "Toute la France". */}
+        <button
+          type="button"
+          onClick={onOpenFilters}
+          disabled={!onOpenFilters}
+          aria-label={activeVille ? `Filtre ville actuel : ${activeVille}. Modifier` : "Choisir une ville"}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            background: km.white,
+            color: km.ink,
+            border: `1px solid ${km.line}`,
+            borderRadius: 999,
+            padding: "0 14px",
+            height: 38,
+            fontFamily: "inherit",
+            fontSize: 13,
+            fontWeight: 500,
+            cursor: onOpenFilters ? "pointer" : "default",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, color: "#8a8477" }}>
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "left" }}>
+            {activeVille || `Toute la France · ${cardAnnonces.length}`}
+          </span>
+        </button>
+
+        {/* Filtres button — pill avec icone slider + badge count si actifs.
+            Open FiltersModal direct. Position right pour pattern Airbnb. */}
+        <button
+          type="button"
+          onClick={onOpenFilters}
+          disabled={!onOpenFilters}
+          aria-label={`Ouvrir les filtres${activeFilterCount && activeFilterCount > 0 ? ` (${activeFilterCount} actifs)` : ""}`}
+          style={{
+            position: "relative",
+            background: km.white,
+            color: km.ink,
+            border: `1px solid ${km.line}`,
+            borderRadius: 999,
+            padding: "0 14px",
+            height: 38,
+            fontFamily: "inherit",
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: onOpenFilters ? "pointer" : "default",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            flexShrink: 0,
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" />
+            <line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" />
+            <line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" />
+          </svg>
+          Filtres
+          {activeFilterCount !== undefined && activeFilterCount > 0 && (
+            <span aria-hidden style={{ background: "#111", color: "#fff", borderRadius: 999, fontSize: 10, fontWeight: 800, minWidth: 18, height: 18, padding: "0 5px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+              {activeFilterCount}
             </span>
           )}
-        </span>
+        </button>
       </div>
 
       {/* Map fullscreen — prend tout l'espace restant. */}
