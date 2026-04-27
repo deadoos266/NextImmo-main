@@ -213,14 +213,35 @@ export default function OngletProfil() {
         )}
       </section>
 
-      {/* Coordonnees — telephone editable depuis /parametres (Paul 2026-04-27).
-          Section disponible quel que soit le role (proprio ou locataire).
-          Source de verite `profils.telephone` partagee avec /dossier. */}
+      {/* Coordonnees — email + telephone rassembles dans une seule section
+          (Paul 2026-04-27 v2). Avant : email dans OngletSecurite section
+          Authentification, telephone ici. User : "rassembler email +
+          telephone dans une seule section Coordonnees coherente". */}
       <section style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, padding: 28, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
         <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, letterSpacing: "-0.3px", color: "#111", margin: "0 0 6px" }}>Coordonnées</h2>
-        <p style={{ fontSize: 13, color: "#8a8477", margin: "0 0 16px" }}>
-          Votre numéro est utilisé uniquement pour les appels et la visio dans la messagerie, après validation mutuelle. Jamais affiché publiquement.
+        <p style={{ fontSize: 13, color: "#8a8477", margin: "0 0 20px" }}>
+          Email pour la connexion + téléphone pour les appels/visio dans la messagerie. Le téléphone n&apos;est jamais affiché publiquement.
         </p>
+
+        {/* Adresse e-mail — read-only (changement bientot via flow re-verif) */}
+        <div style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>
+          Adresse e-mail
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "10px 14px", border: "1px solid #EAE6DF", borderRadius: 12, background: "#F7F4EF", flexWrap: "wrap" }}>
+          <span style={{ fontSize: 14, color: "#111", fontWeight: 500, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: "1 1 200px" }}>
+            {session?.user?.email || "—"}
+          </span>
+          <button
+            type="button"
+            disabled
+            title="Le changement d'adresse e-mail (avec re-verification) sera bientôt disponible."
+            style={{ background: "white", border: "1px solid #EAE6DF", color: "#8a8477", borderRadius: 999, padding: "7px 16px", fontWeight: 600, fontSize: 11, cursor: "not-allowed", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px", flexShrink: 0 }}
+          >
+            Modifier · Bientôt
+          </button>
+        </div>
+
+        <div style={{ height: 20 }} />
 
         <div style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>

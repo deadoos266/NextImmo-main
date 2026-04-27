@@ -1,6 +1,6 @@
 "use client"
 import { useState } from "react"
-import { signOut, useSession } from "next-auth/react"
+import { signOut } from "next-auth/react"
 import ChangePasswordForm from "./ChangePasswordForm"
 
 function SettingRow({ title, desc, action }: { title: string; desc: string; action: React.ReactNode }) {
@@ -16,8 +16,6 @@ function SettingRow({ title, desc, action }: { title: string; desc: string; acti
 }
 
 export default function OngletSecurite() {
-  const { data: session } = useSession()
-  const email = session?.user?.email || null
   const [showPwd, setShowPwd] = useState(false)
 
   return (
@@ -37,19 +35,6 @@ export default function OngletSecurite() {
           }
         />
         {showPwd && <ChangePasswordForm onDone={() => setShowPwd(false)} />}
-
-        <div style={{ height: 1, background: "#EAE6DF", margin: "20px 0" }} />
-
-        <SettingRow
-          title="Adresse e-mail"
-          desc={email ? `Compte associé à ${email}. Le changement d'adresse est bientôt disponible.` : "Adresse non disponible."}
-          action={
-            <button disabled
-              style={{ background: "#F7F4EF", border: "1px solid #EAE6DF", color: "#8a8477", borderRadius: 999, padding: "8px 18px", fontWeight: 600, fontSize: 11, cursor: "not-allowed", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-              Bientôt
-            </button>
-          }
-        />
 
         <div style={{ height: 1, background: "#EAE6DF", margin: "20px 0" }} />
 
