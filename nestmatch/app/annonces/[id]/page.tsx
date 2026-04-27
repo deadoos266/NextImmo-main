@@ -522,17 +522,32 @@ export default async function Annonce({ params }: any) {
               <h2 style={{ fontSize: 24, fontWeight: 400, fontStyle: "italic", fontFamily: "'Fraunces', 'DM Sans', serif", letterSpacing: "-0.4px", margin: 0, marginBottom: 18, color: "#111" }}>
                 Caractéristiques
               </h2>
-              <dl className="r-detail-dl" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 32, rowGap: 0, margin: "0 0 20px" }}>
+              {/* Paul 2026-04-27 v2 : tout en rows cle/valeur unifiees, plus
+                  de checklist verticale separee. Meuble en 1er row (info la
+                  plus discriminante pour un locataire), Oui/Non explicite.
+                  Equipements booleens (parking, cave, balcon, etc.) : ne
+                  s'affichent en row QUE si true — evite la pollution avec
+                  des "Non" sur tous les equipements absents. */}
+              <dl className="r-detail-dl" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 32, rowGap: 0, margin: 0 }}>
                 {(() => {
                   const publieLe = annonce.created_at
                     ? new Date(annonce.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
                     : null
                   const rows: Array<[string, string | null]> = [
+                    ["Meublé", annonce.meuble === true ? "Oui" : annonce.meuble === false ? "Non" : null],
                     ["Type de bien", annonce.type_bien || null],
                     ["Surface habitable", annonce.surface ? `${annonce.surface} m²` : null],
                     ["Nombre de pièces", annonce.pieces ? String(annonce.pieces) : null],
                     ["Nombre de chambres", annonce.chambres !== null && annonce.chambres !== undefined ? String(annonce.chambres) : null],
                     ["Étage", annonce.etage || null],
+                    // Equipements : afficher uniquement si true (skip "Non").
+                    ["Parking", annonce.parking ? "Inclus" : null],
+                    ["Cave", annonce.cave ? "Oui" : null],
+                    ["Balcon", annonce.balcon ? "Oui" : null],
+                    ["Terrasse", annonce.terrasse ? "Oui" : null],
+                    ["Jardin", annonce.jardin ? "Oui" : null],
+                    ["Ascenseur", annonce.ascenseur ? "Oui" : null],
+                    ["Fibre optique", annonce.fibre ? "Oui" : null],
                     ["Disponibilité", annonce.dispo || null],
                     ["Publié le", publieLe],
                   ]
@@ -546,37 +561,6 @@ export default async function Annonce({ params }: any) {
                     ))
                 })()}
               </dl>
-              {(() => {
-                // R10.10b — N'afficher QUE les équipements présents (cochés)
-                // dans le bien. Avant : grille avec coches + croix grisées
-                // pour les absents → pollution visuelle. Maintenant : seuls
-                // les "true" rendent une ligne, croisillon vert. Si rien
-                // n'est coché, on omet entièrement la grille (le tableau dl
-                // au-dessus suffit). Bug Paul 2026-04-26.
-                const items = [
-                  { label: "Meublé", val: !!annonce.meuble },
-                  { label: "Parking inclus", val: !!annonce.parking },
-                  { label: "Cave", val: !!annonce.cave },
-                  { label: "Balcon", val: !!annonce.balcon },
-                  { label: "Terrasse", val: !!annonce.terrasse },
-                  { label: "Jardin", val: !!annonce.jardin },
-                  { label: "Ascenseur", val: !!annonce.ascenseur },
-                  { label: "Fibre optique", val: !!annonce.fibre },
-                ].filter(i => i.val)
-                if (items.length === 0) return null
-                return (
-                  <div className="r-detail-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, paddingTop: 4, borderTop: "1px solid #F7F4EF" }}>
-                    {items.map(item => (
-                      <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14, paddingTop: 12 }}>
-                        <span aria-hidden style={{ width: 24, height: 24, borderRadius: "50%", background: "#F0FAEE", color: "#15803d", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                        </span>
-                        <span style={{ color: "#111" }}>{item.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                )
-              })()}
             </section>
 
             {/* ─── R10.9 Diagnostic énergétique (DPE bars) ──────────── */}
