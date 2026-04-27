@@ -175,8 +175,12 @@ export default function Navbar() {
     { href: "/proprietaire/estimateur",label: "Estimer un loyer",   desc: "Comparer avec le marché avant de publier" },
     { href: "/carnet",                 label: "Carnet d'entretien", desc: "Historique des travaux" },
   ] : [
+    // Ordre intentionnel : non-gated en haut (utiles dès la phase recherche),
+    // gated en bas (nécessitent un bail KeyMatch). Mes visites est non-gated
+    // car le locataire en a besoin avant signature de bail.
     { href: "/profil",        label: "Mon profil",         desc: "Critères de recherche & matching" },
     { href: "/dossier",       label: "Mon dossier",        desc: "Documents & complétion" },
+    { href: "/visites",       label: "Mes visites",        desc: "Demandes & confirmations", badge: badgeVisites },
     { href: "/mon-logement",  label: "Mon logement",       desc: "Bail actif, loyer, documents",
       gate: { enabled: hasCurrentHousing, reason: reasonHousing } },
     { href: "/mes-documents", label: "Mes documents",      desc: "Hub central — dossier, bail, EDL, quittances",
@@ -185,7 +189,6 @@ export default function Navbar() {
       gate: { enabled: hasCurrentHousing, reason: reasonHousing } },
     { href: "/anciens-logements", label: "Anciens logements", desc: "Historique des baux passés",
       gate: { enabled: hasPastHousing, reason: reasonPastHousing } },
-    { href: "/visites",       label: "Mes visites",        desc: "Demandes & confirmations", badge: badgeVisites },
     { href: "/carnet",        label: "Carnet d'entretien", desc: "Historique des travaux",
       gate: { enabled: hasCurrentHousing, reason: reasonHousing } },
   ]

@@ -3961,6 +3961,16 @@ function MessagesInner() {
                                 {callIcon}
                               </a>
                             </GatedAction>
+                            <GatedAction enabled={visioEnabled} disabledReason={visioReason}>
+                              <button
+                                type="button"
+                                aria-label="Lancer une visio"
+                                title="Lancer une visio"
+                                style={iconBtnStyle}
+                              >
+                                {videoIcon}
+                              </button>
+                            </GatedAction>
                             <GatedAction
                               enabled={isUnlocked}
                               disabledReason={validationReason}
@@ -3976,16 +3986,6 @@ function MessagesInner() {
                                 style={iconBtnStyle}
                               >
                                 {searchIcon}
-                              </button>
-                            </GatedAction>
-                            <GatedAction enabled={visioEnabled} disabledReason={visioReason}>
-                              <button
-                                type="button"
-                                aria-label="Lancer une visio"
-                                title="Lancer une visio"
-                                style={iconBtnStyle}
-                              >
-                                {videoIcon}
                               </button>
                             </GatedAction>
                           </>
