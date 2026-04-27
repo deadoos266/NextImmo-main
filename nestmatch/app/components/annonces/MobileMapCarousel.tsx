@@ -271,13 +271,14 @@ export default function MobileMapCarousel({
   )
 }
 
-// ─── ScrollListCard : card portrait mobile pour scroll vertical ───────
-// Format inspire de ListingCardSearch (photo aspect ratio + footer
-// specs/prix) mais condensee pour fit ~2.5 cards visibles dans 55vh.
+// ─── ScrollListCard : card mobile compacte landscape (Paul 2026-04-27 v2) ─
+// User feedback : "les cartes sont trop grosses je trouve il faudrait que ce
+// soit en long". Refonte : layout `120px 1fr` (photo carree gauche + content
+// droite), card height ~140-150px. Avec gap 12 : 2 cards completes + ~50%
+// de la 3eme = ~360-400px de contenu visible dans la zone scroll (~55vh).
 //
-// Photo aspect 16/10 (au lieu de 4/5 portrait classique) : reduit la hauteur
-// totale de la card a ~210-230px sur 360 width mobile, soit 2.5 cards
-// visibles dans 530-580px de scroller (=~ 55vh sur iPhone moyen).
+// Inspire de ListingCardCompact (mode aside list desktop) — meme grammaire
+// visuelle mais adaptee au touch mobile.
 interface ScrollListCardProps {
   annonce: any
   selected: boolean
@@ -289,6 +290,8 @@ const ScrollListCard = forwardRef<HTMLAnchorElement, ScrollListCardProps>(
   function ScrollListCard({ annonce, selected, isFavori, onToggleFavori }, ref) {
     const photo = Array.isArray(annonce.photos) && annonce.photos.length > 0 ? annonce.photos[0] : null
     const ville = (annonce.ville || "").toString().trim()
+    const quartier = (annonce.quartier || "").toString().trim()
+    const loc = ville && quartier ? `${ville} · ${quartier}` : ville
     const surface = annonce.surface != null ? `${annonce.surface} m²` : null
     const pieces = annonce.pieces != null ? `${annonce.pieces} p.` : null
     const specs = [surface, pieces].filter(Boolean).join(" · ")
@@ -299,24 +302,26 @@ const ScrollListCard = forwardRef<HTMLAnchorElement, ScrollListCardProps>(
         href={`/annonces/${annonce.id}`}
         data-annonce-id={annonce.id}
         style={{
-          display: "block",
+          display: "grid",
+          gridTemplateColumns: "120px 1fr",
+          gap: 0,
           textDecoration: "none",
           color: km.ink,
           background: km.white,
           border: `1px solid ${selected ? km.ink : km.line}`,
-          borderRadius: 16,
+          borderRadius: 14,
           overflow: "hidden",
-          boxShadow: selected ? "0 8px 20px rgba(0,0,0,0.10)" : "0 1px 3px rgba(0,0,0,0.04)",
+          boxShadow: selected ? "0 6px 16px rgba(0,0,0,0.10)" : "0 1px 2px rgba(0,0,0,0.03)",
           transition: "border-color 200ms, box-shadow 200ms",
           fontFamily: "inherit",
           flexShrink: 0,
         }}
       >
-        {/* Photo top — aspect 16/10 (mode portrait Airbnb mobile) */}
+        {/* Photo carree gauche 120x120 */}
         <div style={{
           position: "relative",
-          width: "100%",
-          aspectRatio: "16 / 10",
+          width: 120,
+          aspectRatio: "1 / 1",
           background: "#000",
         }}>
           {photo ? (
@@ -324,7 +329,7 @@ const ScrollListCard = forwardRef<HTMLAnchorElement, ScrollListCardProps>(
               src={photo}
               alt={annonce.titre || "Photo logement"}
               fill
-              sizes="(max-width: 768px) 100vw, 360px"
+              sizes="120px"
               style={{ objectFit: "cover" }}
             />
           ) : (
@@ -336,10 +341,10 @@ const ScrollListCard = forwardRef<HTMLAnchorElement, ScrollListCardProps>(
             aria-label={isFavori ? "Retirer des favoris" : "Ajouter aux favoris"}
             style={{
               position: "absolute",
-              top: 10,
-              right: 10,
-              width: 34,
-              height: 34,
+              top: 8,
+              right: 8,
+              width: 30,
+              height: 30,
               borderRadius: "50%",
               background: isFavori ? "#DC2626" : "rgba(255,255,255,0.94)",
               color: isFavori ? "#fff" : km.ink,
@@ -351,49 +356,53 @@ const ScrollListCard = forwardRef<HTMLAnchorElement, ScrollListCardProps>(
               backdropFilter: "blur(6px)",
             }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill={isFavori ? "#fff" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill={isFavori ? "#fff" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
             </svg>
           </button>
         </div>
 
-        {/* Footer compact : eyebrow ville · titre 1 ligne · specs|prix */}
-        <div style={{ padding: "10px 12px 12px" }}>
-          {ville && (
-            <p style={{
-              fontSize: 9.5,
-              fontWeight: 700,
-              color: "#6B6B6B",
-              textTransform: "uppercase",
-              letterSpacing: "1px",
-              margin: "0 0 3px",
-              whiteSpace: "nowrap",
+        {/* Contenu droite : eyebrow / titre / specs+prix */}
+        <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: 0 }}>
+          <div style={{ minWidth: 0 }}>
+            {loc && (
+              <p style={{
+                fontSize: 9.5,
+                fontWeight: 700,
+                color: "#6B6B6B",
+                textTransform: "uppercase",
+                letterSpacing: "1px",
+                margin: "0 0 3px",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}>
+                {loc}
+              </p>
+            )}
+            <h3 style={{
+              fontSize: 14,
+              fontWeight: 600,
+              margin: 0,
+              lineHeight: 1.25,
+              color: km.ink,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
               overflow: "hidden",
-              textOverflow: "ellipsis",
             }}>
-              {ville}
-            </p>
-          )}
-          <h3 style={{
-            fontSize: 14,
-            fontWeight: 600,
-            margin: "0 0 6px",
-            lineHeight: 1.3,
-            color: km.ink,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}>
-            {annonce.titre || "Sans titre"}
-          </h3>
+              {annonce.titre || "Sans titre"}
+            </h3>
+          </div>
           <div style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "baseline",
             gap: 8,
+            marginTop: 6,
           }}>
             <span style={{
-              fontSize: 11.5,
+              fontSize: 11,
               color: "#8a8477",
               minWidth: 0,
               overflow: "hidden",
@@ -403,7 +412,7 @@ const ScrollListCard = forwardRef<HTMLAnchorElement, ScrollListCardProps>(
               {specs}
             </span>
             <span style={{
-              fontSize: 14.5,
+              fontSize: 14,
               fontWeight: 800,
               color: km.ink,
               fontVariantNumeric: "tabular-nums",
@@ -411,7 +420,7 @@ const ScrollListCard = forwardRef<HTMLAnchorElement, ScrollListCardProps>(
               flexShrink: 0,
             }}>
               {annonce.prix?.toLocaleString("fr-FR") ?? "—"} €
-              <span style={{ fontWeight: 400, color: "#8a8477", fontSize: 10, marginLeft: 2 }}>/mois</span>
+              <span style={{ fontWeight: 400, color: "#8a8477", fontSize: 9.5, marginLeft: 1 }}>/mois</span>
             </span>
           </div>
         </div>
