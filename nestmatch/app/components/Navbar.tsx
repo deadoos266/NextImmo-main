@@ -12,6 +12,42 @@ import NotificationBell from "./NotificationBell"
 import { km } from "./ui/km"
 import GatedAction, { type GatedActionReason } from "./ui/GatedAction"
 
+// ─── Drawer mobile : helpers de style des items menu (Paul 2026-04-27) ──
+// Pattern "soft pill" avec hover beige clair, actif beige fonce, no
+// tap-highlight natif bleu, transition smooth. Helpers definis HORS du
+// composant pour eviter les re-renders inutiles. Couleurs hardcodees
+// (km.beige = "#F7F4EF", #EAE6DF = beige fonce active) : importer km
+// dans la portee module necessiterait de bouger l'import — on accepte
+// le couplage soft.
+const DRAWER_HOVER_BG = "#F7F4EF"
+const DRAWER_ACTIVE_BG = "#EAE6DF"
+
+function drawerItemStyle(active: boolean, hasBadge: boolean = false): React.CSSProperties {
+  return {
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+    padding: "12px 14px",
+    margin: "2px 8px",
+    borderRadius: 12,
+    textDecoration: "none",
+    color: "#111",
+    background: active ? DRAWER_ACTIVE_BG : "transparent",
+    fontWeight: active ? 600 : 500,
+    fontSize: 15,
+    fontFamily: "inherit",
+    WebkitTapHighlightColor: "transparent",
+    transition: "background 160ms cubic-bezier(0.4, 0, 0.2, 1)",
+    justifyContent: hasBadge ? "space-between" : "flex-start",
+  }
+}
+function drawerItemHover(e: React.SyntheticEvent<HTMLElement>) {
+  ;(e.currentTarget as HTMLElement).style.background = DRAWER_HOVER_BG
+}
+function drawerItemUnhover(e: React.SyntheticEvent<HTMLElement>, active: boolean) {
+  ;(e.currentTarget as HTMLElement).style.background = active ? DRAWER_ACTIVE_BG : "transparent"
+}
+
 // ─── Icon vocabulary (aligné sur le handoff Claude Design, stroke 1.8px) ─────
 function MenuIcon({ name }: { name: string }) {
   const common = { width: 15, height: 15, viewBox: "0 0 24 24", fill: "none", stroke: "#555", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true, style: { flexShrink: 0 } }
@@ -583,7 +619,11 @@ export default function Navbar() {
               width: "min(85vw, 360px)",
               maxWidth: "100vw",
               background: km.white, zIndex: 8001, overflowY: "auto",
-              boxShadow: mobileOpen ? "0 0 40px rgba(0,0,0,0.18)" : "none",
+              // Coins droits arrondis (slide-in depuis la gauche, cote droit
+              // visible dans la viewport — Paul 2026-04-27).
+              borderTopRightRadius: 20,
+              borderBottomRightRadius: 20,
+              boxShadow: mobileOpen ? "12px 0 32px rgba(0,0,0,0.18)" : "none",
               transform: mobileOpen ? "translateX(0)" : "translateX(-100%)",
               transition: "transform 0.32s cubic-bezier(0.4, 0, 0.2, 1)",
             }}
@@ -633,14 +673,22 @@ export default function Navbar() {
               </div>
             )}
 
-            {/* Nav links */}
+            {/* Nav links — pattern "pill rounded" pour hover/active design soft.
+                Paul 2026-04-27 : remplace les rows plats avec hairline par
+                des items ramassés en pill 12px radius, hover beige clair,
+                actif beige plus marque, transition smooth, no tap-highlight
+                native bleue. */}
             <div style={{ padding: "8px 0" }}>
               {[
                 { href: "/annonces", label: "Annonces" },
                 { href: "/favoris",  label: "Favoris" },
               ].map(item => (
                 <Link key={item.href} href={item.href}
-                  style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: km.ink, background: isActive(item.href) ? km.beige : "transparent", fontWeight: isActive(item.href) ? 700 : 500, fontSize: 15, borderBottom: `1px solid ${km.beige}` }}>
+                  style={drawerItemStyle(isActive(item.href))}
+                  onTouchStart={drawerItemHover}
+                  onTouchEnd={e => drawerItemUnhover(e, isActive(item.href))}
+                  onMouseEnter={drawerItemHover}
+                  onMouseLeave={e => drawerItemUnhover(e, isActive(item.href))}>
                   {item.label}
                 </Link>
               ))}
@@ -649,7 +697,11 @@ export default function Navbar() {
                 <>
                   {/* Messages */}
                   <Link href="/messages"
-                    style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: km.ink, background: isActive("/messages") ? km.beige : "transparent", fontWeight: isActive("/messages") ? 700 : 500, fontSize: 15, borderBottom: `1px solid ${km.beige}`, justifyContent: "space-between" }}>
+                    style={drawerItemStyle(isActive("/messages"), true)}
+                    onTouchStart={drawerItemHover}
+                    onTouchEnd={e => drawerItemUnhover(e, isActive("/messages"))}
+                    onMouseEnter={drawerItemHover}
+                    onMouseLeave={e => drawerItemUnhover(e, isActive("/messages"))}>
                     <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                       Messages
                     </div>
@@ -661,13 +713,17 @@ export default function Navbar() {
                   </Link>
 
                   {/* Espace : section */}
-                  <div style={{ padding: "12px 20px 6px", background: km.beige }}>
-                    <p style={{ fontSize: 11, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "0.5px" }}>Mon espace</p>
+                  <div style={{ padding: "12px 20px 6px", marginTop: 6 }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "0.5px", margin: 0 }}>Mon espace</p>
                   </div>
                   {espaceLinksAvecBadge.map(item => {
                     const linkContent = (
                       <Link key={item.href} href={item.href}
-                        style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: km.ink, background: isActive(item.href) ? km.beige : "transparent", fontWeight: isActive(item.href) ? 700 : 500, fontSize: 15, borderBottom: `1px solid ${km.beige}`, justifyContent: "space-between" }}>
+                        style={drawerItemStyle(isActive(item.href), true)}
+                        onTouchStart={drawerItemHover}
+                        onTouchEnd={e => drawerItemUnhover(e, isActive(item.href))}
+                        onMouseEnter={drawerItemHover}
+                        onMouseLeave={e => drawerItemUnhover(e, isActive(item.href))}>
                         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                           {item.label}
                         </div>
@@ -689,7 +745,11 @@ export default function Navbar() {
                   })}
 
                   <Link href="/parametres" onClick={() => setMobileOpen(false)}
-                    style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: km.ink, background: isActive("/parametres") ? km.beige : "transparent", fontWeight: isActive("/parametres") ? 700 : 500, fontSize: 15, borderBottom: `1px solid ${km.beige}` }}>
+                    style={drawerItemStyle(isActive("/parametres"))}
+                    onTouchStart={drawerItemHover}
+                    onTouchEnd={e => drawerItemUnhover(e, isActive("/parametres"))}
+                    onMouseEnter={drawerItemHover}
+                    onMouseLeave={e => drawerItemUnhover(e, isActive("/parametres"))}>
                     Paramètres
                   </Link>
 
