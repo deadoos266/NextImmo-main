@@ -2490,17 +2490,19 @@ function MessagesInner() {
   // visite" est géré séparément via `peutProposerVisite` ci-dessous.
   const isCandidatureValideeDB = (() => {
     if (!convActiveData?.annonceId) return false
-    // Côté proprio : on cherche le 1er message candidature ENTRANT (locataire → proprio).
-    // Côté locataire : on cherche son propre 1er message candidature (locataire → proprio).
+    // Côté proprio : on cherche les messages candidature ENTRANTS (locataire → proprio).
+    // Côté locataire : on cherche ses propres messages candidature (locataire → proprio).
+    // Robustesse : on utilise `some` plutôt que `find(...).statut === 'validee'`
+    // pour ne pas dépendre du tri ni d'un éventuel doublon de message candidature.
+    // Si UN SEUL des messages candidature porte le statut validé, c'est validé.
     const candidatLocataireEmail = proprietaireActive
       ? (convActiveData.other || "").toLowerCase()
       : (myEmail || "").toLowerCase()
-    const candMsg = messages.find(m =>
+    return messages.some(m =>
       (m as { type?: string }).type === "candidature" &&
-      (m.from_email || "").toLowerCase() === candidatLocataireEmail
+      (m.from_email || "").toLowerCase() === candidatLocataireEmail &&
+      (m as { statut_candidature?: string }).statut_candidature === "validee"
     )
-    if (!candMsg) return false
-    return (candMsg as { statut_candidature?: string }).statut_candidature === "validee"
   })()
 
   // Gating "Proposer une visite" côté locataire : tant que la candidature
@@ -3774,15 +3776,24 @@ function MessagesInner() {
                           Valider la candidature
                         </button>
                       )}
-                      {/* Badge "Validée" cliquable pour annuler la validation —
-                          si le proprio découvre quelque chose après coup ou a
-                          validé par erreur. Confirmation native + reload pour
-                          refléter le nouvel état. */}
+                      {/* Badge "Candidature validée" — pill STATIQUE non-cliquable
+                          (Paul 2026-04-27) : avant c'était un button qui se hover
+                          en "Annuler" rouge — confondu par le user avec un CTA
+                          encore actif. Maintenant c'est un état lecture clair,
+                          et l'action "Dévalider" est un lien discret séparé.
+                          Caché si bail signé (annonce.statut='loué' avec ce
+                          candidat) — état terminal, dévalidation interdite. */}
+                      {proprietaireActive && isCandidatureValideeDB && annonceActive?.statut !== "loué" && (
+                        <span
+                          style={{ fontSize: 11, fontWeight: 700, color: "#15803d", background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 999, padding: "5px 12px", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 5, letterSpacing: "0.3px", fontFamily: "inherit" }}
+                        >
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12" /></svg>
+                          Candidature validée
+                        </span>
+                      )}
                       {proprietaireActive && isCandidatureValideeDB && annonceActive?.statut !== "loué" && (
                         <button
                           type="button"
-                          aria-label="Annuler la validation de la candidature"
-                          title="Cliquer pour annuler la validation — le candidat ne pourra plus proposer de visite."
                           onClick={async () => {
                             if (!convActiveData?.annonceId) return
                             const ok = window.confirm(
@@ -3805,35 +3816,10 @@ function MessagesInner() {
                             }
                             location.reload()
                           }}
-                          onMouseEnter={e => {
-                            const btn = e.currentTarget as HTMLButtonElement
-                            btn.style.background = "#FEECEC"
-                            btn.style.borderColor = "#F4C9C9"
-                            btn.style.color = "#b91c1c"
-                            const label = btn.querySelector<HTMLElement>(".km-validee-label")
-                            const cross = btn.querySelector<HTMLElement>(".km-validee-cross")
-                            if (label) label.textContent = "Annuler"
-                            if (cross) cross.style.display = "inline-flex"
-                            const check = btn.querySelector<HTMLElement>(".km-validee-check")
-                            if (check) check.style.display = "none"
-                          }}
-                          onMouseLeave={e => {
-                            const btn = e.currentTarget as HTMLButtonElement
-                            btn.style.background = "#F0FAEE"
-                            btn.style.borderColor = "#C6E9C0"
-                            btn.style.color = "#15803d"
-                            const label = btn.querySelector<HTMLElement>(".km-validee-label")
-                            const cross = btn.querySelector<HTMLElement>(".km-validee-cross")
-                            if (label) label.textContent = "Validée"
-                            if (cross) cross.style.display = "none"
-                            const check = btn.querySelector<HTMLElement>(".km-validee-check")
-                            if (check) check.style.display = "inline-flex"
-                          }}
-                          style={{ fontSize: 11, fontWeight: 700, color: "#15803d", background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 999, padding: "5px 12px", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 5, letterSpacing: "0.3px", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}
+                          title="Annuler la validation — le candidat ne pourra plus proposer de visite"
+                          style={{ fontSize: 11, fontWeight: 500, color: "#8a8477", background: "transparent", border: "none", padding: "5px 4px", cursor: "pointer", fontFamily: "inherit", textDecoration: "underline", whiteSpace: "nowrap" }}
                         >
-                          <svg className="km-validee-check" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline-flex" }}><polyline points="20 6 9 17 4 12" /></svg>
-                          <svg className="km-validee-cross" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ display: "none" }}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                          <span className="km-validee-label">Validée</span>
+                          Dévalider
                         </button>
                       )}
                       {/* Bouton "Louer à ce candidat" — côté proprio uniquement.
@@ -3949,28 +3935,39 @@ function MessagesInner() {
                             <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
                           </svg>
                         )
+                        // Décision Paul 2026-04-27 : Appel + Visio HIDDEN tant que
+                        // la candidature n'est pas validée (ou qu'un bail n'est
+                        // pas en place). Avant : visibles+grisés avec popup —
+                        // mais discoverabilité d'une fonction qui implique du
+                        // trust avant que ce trust soit établi = fausse promesse.
+                        // Recherche reste visible (gated en revanche : popup si
+                        // pas validé) car c'est utile dès la phase contact.
                         return (
                           <>
-                            <GatedAction enabled={callEnabled} disabledReason={callReason}>
-                              <a
-                                href={callEnabled ? `tel:${peerPhone.replace(/\s/g, "")}` : undefined}
-                                aria-label="Appeler"
-                                title="Appeler"
-                                style={iconBtnStyle}
-                              >
-                                {callIcon}
-                              </a>
-                            </GatedAction>
-                            <GatedAction enabled={visioEnabled} disabledReason={visioReason}>
-                              <button
-                                type="button"
-                                aria-label="Lancer une visio"
-                                title="Lancer une visio"
-                                style={iconBtnStyle}
-                              >
-                                {videoIcon}
-                              </button>
-                            </GatedAction>
+                            {isUnlocked && (
+                              <GatedAction enabled={callEnabled} disabledReason={callReason}>
+                                <a
+                                  href={callEnabled ? `tel:${peerPhone.replace(/\s/g, "")}` : undefined}
+                                  aria-label="Appeler"
+                                  title="Appeler"
+                                  style={iconBtnStyle}
+                                >
+                                  {callIcon}
+                                </a>
+                              </GatedAction>
+                            )}
+                            {isUnlocked && (
+                              <GatedAction enabled={visioEnabled} disabledReason={visioReason}>
+                                <button
+                                  type="button"
+                                  aria-label="Lancer une visio"
+                                  title="Lancer une visio"
+                                  style={iconBtnStyle}
+                                >
+                                  {videoIcon}
+                                </button>
+                              </GatedAction>
+                            )}
                             <GatedAction
                               enabled={isUnlocked}
                               disabledReason={validationReason}
