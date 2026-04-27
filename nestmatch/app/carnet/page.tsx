@@ -263,20 +263,41 @@ export default function Carnet() {
           </div>
         )}
 
-        {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : `repeat(${proprietaireActive ? 4 : 3}, 1fr)`, gap: 12, marginBottom: 24 }}>
-          {[
+        {/* Stats — Total / En cours / Planifiés (avec indicateur en retard) /
+            Terminés (proprio) / Coût total (proprio). Calcul "en retard"
+            inline : événement planifié dont la date est passée — alerte
+            visuelle au proprio pour qu'il agisse. */}
+        {(() => {
+          const nowMs = Date.now()
+          const enRetard = evenements.filter(e =>
+            e.statut === "planifié"
+            && e.date_evenement
+            && new Date(e.date_evenement).getTime() < nowMs
+          ).length
+          const termines = evenements.filter(e => e.statut === "terminé").length
+          const enCours = evenements.filter(e => e.statut === "en cours").length
+          const planifies = evenements.filter(e => e.statut === "planifié").length
+          const tiles = [
             { label: "Total", val: evenements.length, bg: "white" },
-            { label: "En cours", val: evenements.filter(e => e.statut === "en cours").length, bg: evenements.filter(e => e.statut === "en cours").length > 0 ? "#EEF3FB" : "white", color: evenements.filter(e => e.statut === "en cours").length > 0 ? "#1d4ed8" : undefined },
-            { label: "Planifiés", val: evenements.filter(e => e.statut === "planifié").length, bg: "white" },
-            ...(proprietaireActive ? [{ label: "Coût total", val: `${totalCout.toLocaleString("fr-FR")} €`, bg: "white" }] : []),
-          ].map(s => (
-            <div key={s.label} style={{ background: s.bg, borderRadius: 16, padding: "16px 20px" }}>
-              <div style={{ fontSize: 22, fontWeight: 800, color: (s as any).color || "#111" }}>{s.val}</div>
-              <div style={{ fontSize: 12, color: "#8a8477", marginTop: 2 }}>{s.label}</div>
+            { label: "En cours", val: enCours, bg: enCours > 0 ? "#EEF3FB" : "white", color: enCours > 0 ? "#1d4ed8" : undefined },
+            { label: enRetard > 0 ? `Planifiés · ${enRetard} en retard` : "Planifiés", val: planifies, bg: enRetard > 0 ? "#FEECEC" : "white", color: enRetard > 0 ? "#b91c1c" : undefined },
+            ...(proprietaireActive ? [
+              { label: "Terminés", val: termines, bg: termines > 0 ? "#F0FAEE" : "white", color: termines > 0 ? "#15803d" : undefined },
+              { label: "Coût total", val: `${totalCout.toLocaleString("fr-FR")} €`, bg: "white" },
+            ] : []),
+          ]
+          const cols = isMobile ? "1fr 1fr" : `repeat(${tiles.length}, 1fr)`
+          return (
+            <div style={{ display: "grid", gridTemplateColumns: cols, gap: 12, marginBottom: 24 }}>
+              {tiles.map(s => (
+                <div key={s.label} style={{ background: s.bg, borderRadius: 16, padding: "16px 20px" }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: (s as any).color || "#111" }}>{s.val}</div>
+                  <div style={{ fontSize: 12, color: "#8a8477", marginTop: 2 }}>{s.label}</div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )
+        })()}
 
         {/* Formulaire */}
         {showForm && (
@@ -419,11 +440,33 @@ export default function Carnet() {
                     )}
 
                     <div style={{ display: "flex", gap: 12, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
-                      {e.date_evenement && (
-                        <span style={{ fontSize: 12, color: "#8a8477" }}>
-                          {new Date(e.date_evenement).toLocaleDateString("fr-FR")}
-                        </span>
-                      )}
+                      {e.date_evenement && (() => {
+                        // Format court éditorial "12 nov. 2026" + indicateur "en retard"
+                        // si planifié et date passée — flag rouge pour pousser à l'action.
+                        const d = new Date(e.date_evenement)
+                        const isOverdue = e.statut === "planifié" && d.getTime() < Date.now()
+                        const formatted = d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
+                        return (
+                          <span style={{
+                            fontSize: 12,
+                            color: isOverdue ? "#b91c1c" : "#8a8477",
+                            fontWeight: isOverdue ? 700 : 400,
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 5,
+                          }}>
+                            {isOverdue && (
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="12" y1="8" x2="12" y2="12" />
+                                <line x1="12" y1="16" x2="12.01" y2="16" />
+                              </svg>
+                            )}
+                            {formatted}
+                            {isOverdue && " · en retard"}
+                          </span>
+                        )
+                      })()}
                       {canEdit && e.statut !== "terminé" && (
                         <button onClick={() => changerStatut(e.id, e.statut === "planifié" ? "en cours" : "terminé")}
                           style={{ fontSize: 12, fontWeight: 600, background: "#F7F4EF", border: "none", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontFamily: "inherit", color: "#111" }}>
