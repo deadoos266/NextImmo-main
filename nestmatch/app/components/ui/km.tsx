@@ -53,8 +53,14 @@ export function KMButton({
 }) {
   const pad = size === "sm" ? "8px 18px" : size === "lg" ? "16px 36px" : "12px 26px"
   const font = size === "sm" ? 10 : size === "lg" ? 13 : 11
+  // Micro-interactions Paul 2026-04-27 : hover lift -2px + shadow soft,
+  // active scale 0.98 (feedback tactile). Skipped si disabled.
   return (
     <button type={type} onClick={onClick} disabled={disabled} aria-label={ariaLabel}
+      onMouseEnter={e => { if (!disabled) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 20px rgba(17,17,17,0.18)" } }}
+      onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none" }}
+      onMouseDown={e => { if (!disabled) e.currentTarget.style.transform = "translateY(0) scale(0.98)" }}
+      onMouseUp={e => { if (!disabled) e.currentTarget.style.transform = "translateY(-2px) scale(1)" }}
       style={{
         background: km.ink, color: km.white, border: "none",
         borderRadius: 999, padding: pad,
@@ -64,6 +70,8 @@ export function KMButton({
         opacity: disabled ? 0.5 : 1,
         fontFamily: "inherit",
         whiteSpace: "nowrap",
+        transition: "transform 180ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 180ms ease",
+        WebkitTapHighlightColor: "transparent",
         ...style,
       }}>
       {children}
@@ -93,6 +101,10 @@ export function KMButtonOutline({
   const font = size === "sm" ? 10 : size === "lg" ? 13 : 11
   return (
     <button type={type} onClick={onClick} disabled={disabled} aria-label={ariaLabel}
+      onMouseEnter={e => { if (!disabled) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.background = km.beige } }}
+      onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.background = km.white }}
+      onMouseDown={e => { if (!disabled) e.currentTarget.style.transform = "translateY(0) scale(0.98)" }}
+      onMouseUp={e => { if (!disabled) e.currentTarget.style.transform = "translateY(-2px) scale(1)" }}
       style={{
         background: km.white, color: km.ink, border: `1px solid ${km.ink}`,
         borderRadius: 999, padding: pad,
@@ -102,6 +114,8 @@ export function KMButtonOutline({
         opacity: disabled ? 0.5 : 1,
         fontFamily: "inherit",
         whiteSpace: "nowrap",
+        transition: "transform 180ms cubic-bezier(0.4, 0, 0.2, 1), background 180ms ease",
+        WebkitTapHighlightColor: "transparent",
         ...style,
       }}>
       {children}

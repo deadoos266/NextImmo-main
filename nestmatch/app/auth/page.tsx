@@ -26,16 +26,52 @@ export default function Auth() {
 }
 
 function AuthFallback() {
+  // Skeleton loader (Paul 2026-04-27) : reproduit la shape de la page auth
+  // (titre + 3 inputs + CTA) en blocs gris animes shimmer plutot que le
+  // texte "Chargement..." brut. Reduit le perçu de latence sur les pages
+  // d'auth (audit consultant : 2-3s d'ecran chargement).
+  const block: React.CSSProperties = {
+    background: "linear-gradient(90deg, #EAE6DF 0%, #F4F1EC 50%, #EAE6DF 100%)",
+    backgroundSize: "200% 100%",
+    animation: "km-skeleton 1.4s ease-in-out infinite",
+    borderRadius: 10,
+  }
   return (
     <main style={{
       minHeight: "100vh",
       background: km.beige,
       display: "flex", alignItems: "center", justifyContent: "center",
       fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
-      color: km.muted, fontSize: 13,
-      textTransform: "uppercase", letterSpacing: "1.2px",
+      padding: 20,
     }}>
-      Chargement…
+      <style>{`@keyframes km-skeleton { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }`}</style>
+      <div aria-busy="true" aria-label="Chargement de la page d'authentification" style={{
+        background: km.white,
+        border: `1px solid ${km.line}`,
+        borderRadius: 20,
+        padding: "40px 32px",
+        width: "100%",
+        maxWidth: 440,
+        boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+      }}>
+        {/* Logo placeholder */}
+        <div style={{ ...block, width: 56, height: 56, borderRadius: "50%", margin: "0 auto 6px" }} />
+        {/* Titre */}
+        <div style={{ ...block, height: 28, width: "70%", margin: "0 auto" }} />
+        {/* Sous-titre */}
+        <div style={{ ...block, height: 14, width: "85%", margin: "0 auto 12px" }} />
+        {/* 3 inputs */}
+        <div style={{ ...block, height: 46 }} />
+        <div style={{ ...block, height: 46 }} />
+        <div style={{ ...block, height: 46 }} />
+        {/* CTA */}
+        <div style={{ ...block, height: 48, marginTop: 6, borderRadius: 999 }} />
+        {/* Lien secondaire */}
+        <div style={{ ...block, height: 12, width: "60%", margin: "8px auto 0" }} />
+      </div>
     </main>
   )
 }
