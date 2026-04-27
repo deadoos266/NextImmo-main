@@ -335,7 +335,7 @@ export default function Navbar() {
                         )
                         if (item.gate) {
                           return (
-                            <GatedAction key={item.href} enabled={item.gate.enabled} disabledReason={item.gate.reason}>
+                            <GatedAction key={item.href} enabled={item.gate.enabled} disabledReason={item.gate.reason} block>
                               {linkContent}
                             </GatedAction>
                           )
@@ -711,8 +711,12 @@ export default function Navbar() {
                 Paul 2026-04-27 : remplace les rows plats avec hairline par
                 des items ramassés en pill 12px radius, hover beige clair,
                 actif beige plus marque, transition smooth, no tap-highlight
-                native bleue. */}
-            <div style={{ padding: "8px 0" }}>
+                native bleue.
+                v2 (Paul 2026-04-27 sur retour user) : flex column garantit
+                que les items gated (GatedAction wrapper) prennent chacun une
+                ligne entiere — avant ils s'alignaient en grid 2 cols a cause
+                du span inline-flex de GatedAction. */}
+            <div style={{ padding: "8px 0", display: "flex", flexDirection: "column" }}>
               {[
                 { href: "/annonces", label: "Annonces" },
                 { href: "/favoris",  label: "Favoris" },
@@ -770,7 +774,7 @@ export default function Navbar() {
                     )
                     if (item.gate) {
                       return (
-                        <GatedAction key={item.href} enabled={item.gate.enabled} disabledReason={item.gate.reason}>
+                        <GatedAction key={item.href} enabled={item.gate.enabled} disabledReason={item.gate.reason} block>
                           {linkContent}
                         </GatedAction>
                       )

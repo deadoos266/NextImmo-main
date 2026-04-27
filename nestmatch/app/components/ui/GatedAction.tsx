@@ -40,7 +40,18 @@ export type GatedActionReason = {
   }
 }
 
-export interface GatedActionProps {
+export interface GatedActionPropsExtra {
+  /**
+   * Si true, le wrapper desactive prend toute la largeur (display: flex,
+   * width: 100%) et le cadenas est aligne a droite (marginLeft: auto).
+   * Utilise dans les listes menu (drawer mobile, dropdown desktop) pour
+   * eviter le wrap 2 colonnes inline. Default false (inline-flex compact).
+   * Paul 2026-04-27.
+   */
+  block?: boolean
+}
+
+export interface GatedActionProps extends GatedActionPropsExtra {
   /** Si `true`, render children tels quels (passthrough complet). */
   enabled: boolean
   /** Contenu du popup affiché quand l'utilisateur clique sur l'action désactivée. */
@@ -77,7 +88,7 @@ function LockIcon({ size = 11 }: { size?: number }) {
   )
 }
 
-export default function GatedAction({ enabled, disabledReason, children, onClick }: GatedActionProps) {
+export default function GatedAction({ enabled, disabledReason, children, onClick, block }: GatedActionProps) {
   const [popupOpen, setPopupOpen] = useState(false)
   const titleId = useId()
   const bodyId = useId()
@@ -138,7 +149,8 @@ export default function GatedAction({ enabled, disabledReason, children, onClick
           }
         }}
         style={{
-          display: "inline-flex",
+          display: block ? "flex" : "inline-flex",
+          width: block ? "100%" : undefined,
           alignItems: "center",
           gap: 6,
           opacity: 0.5,
@@ -149,10 +161,12 @@ export default function GatedAction({ enabled, disabledReason, children, onClick
           // none ci-dessous + capture-phase, sans casser le focus clavier.
         }}
       >
-        <span style={{ pointerEvents: "none", display: "inline" }}>
+        <span style={{ pointerEvents: "none", display: block ? "block" : "inline", flex: block ? 1 : undefined, minWidth: 0 }}>
           {children}
         </span>
-        <LockIcon />
+        <span style={{ marginLeft: block ? "auto" : undefined, paddingRight: block ? 14 : undefined, flexShrink: 0, display: "inline-flex", alignItems: "center" }}>
+          <LockIcon />
+        </span>
       </span>
       {popupOpen && (
         <DisabledPopup
