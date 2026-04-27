@@ -21,7 +21,7 @@ const CSP_HEADER = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "img-src 'self' data: blob: https://*.supabase.co https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://lh3.googleusercontent.com https://images.unsplash.com",
+  "img-src 'self' data: blob: https://*.supabase.co https://*.tile.openstreetmap.org https://*.tile.openstreetmap.fr https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://tiles.stadiamaps.com https://lh3.googleusercontent.com https://images.unsplash.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io https://*.upstash.io https://geo.api.gouv.fr https://nominatim.openstreetmap.org",
   "frame-ancestors 'none'",
