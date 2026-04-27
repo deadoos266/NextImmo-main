@@ -2475,7 +2475,10 @@ function MessagesInner() {
     })
   }
 
-  const { isMobile } = useResponsive()
+  // Responsive (Paul 2026-04-27) : on consomme aussi `isTablet` et `isDesktop`
+  // pour le layout 3 colonnes — auparavant `isTablet` etait calcule mais jamais
+  // utilise, ce qui ecrasait les 3 panneaux 340 + 1fr + ~320 dans <1024px.
+  const { isMobile, isTablet, isDesktop } = useResponsive()
   const convActiveData = conversations.find(c => c.key === convActive)
   const annonceActive = convActiveData?.annonceId ? annonces[convActiveData.annonceId] : null
 
@@ -3181,8 +3184,10 @@ function MessagesInner() {
         }}>
 
           {/* ── Colonne gauche : conversations ── */}
+          {/* Tablette (640-1023) : sidebar reduite a 280px pour laisser
+              de la place au thread, panel droit cache. Desktop : 340px. */}
           <div style={{
-            width: isMobile ? "100%" : 340,
+            width: isMobile ? "100%" : isTablet ? 280 : 340,
             flexShrink: 0,
             background: isMobile ? "white" : "transparent",
             borderRadius: isMobile ? 0 : 0,
@@ -3294,7 +3299,7 @@ function MessagesInner() {
                   placeholder="Rechercher une conversation"
                   onFocus={e => { e.currentTarget.style.borderColor = "#111"; e.currentTarget.style.background = "#fff" }}
                   onBlur={e => { e.currentTarget.style.borderColor = "#EAE6DF"; e.currentTarget.style.background = "#F7F4EF" }}
-                  style={{ width: "100%", padding: "9px 12px 9px 34px", border: "1px solid #EAE6DF", background: "#F7F4EF", color: "#111", borderRadius: 999, fontSize: 13, outline: "none", fontFamily: "inherit", boxSizing: "border-box", transition: "border-color 160ms ease, background 160ms ease" }}
+                  style={{ width: "100%", padding: isMobile ? "11px 12px 11px 34px" : "9px 12px 9px 34px", border: "1px solid #EAE6DF", background: "#F7F4EF", color: "#111", borderRadius: 999, fontSize: isMobile ? 16 : 13, outline: "none", fontFamily: "inherit", boxSizing: "border-box", transition: "border-color 160ms ease, background 160ms ease" }}
                 />
               </div>
               {/* Filtre par statut — 7 pills (handoff messages.jsx L154-179)
@@ -3681,7 +3686,13 @@ function MessagesInner() {
             ) : (
               <>
                 {/* Header chat — bordure alignee palette handoff (#EAE6DF hairline) */}
-                <div style={{ padding: isMobile ? "12px 14px" : "16px 22px", borderBottom: "1px solid #EAE6DF", display: "flex", alignItems: "center", gap: isMobile ? 8 : 12, background: "#fff" }}>
+                {/* flexWrap (Paul 2026-04-27) : avec 7-9 enfants nowrap (avatar,
+                    titre+pills, Valider, Validee, Devalider, Louer, Appel,
+                    Visio, Recherche, Voir l'annonce, Modifier...), le header
+                    debordait en tablette/desktop etroit. flexWrap: wrap +
+                    rowGap fait passer en multi-lignes proprement quand
+                    necessaire au lieu de pousser hors de l'ecran. */}
+                <div style={{ padding: isMobile ? "12px 14px" : "16px 22px", borderBottom: "1px solid #EAE6DF", display: "flex", alignItems: "center", gap: isMobile ? 8 : 12, rowGap: isMobile ? 8 : 10, background: "#fff", flexWrap: "wrap" }}>
                   {isMobile && (
                     <button onClick={() => setConvActive(null)}
                       aria-label="Retour aux conversations"
@@ -4717,16 +4728,20 @@ function MessagesInner() {
                     </div>
                   )}
                   {/* Composer handoff L401-419 : container beige pill avec input transparent + bouton rond */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F7F4EF", borderRadius: 24, padding: "6px 6px 6px 18px", border: "1px solid #EAE6DF" }}>
+                  {/* Paul 2026-04-27 : fontSize 16px sur mobile pour eviter le
+                      zoom auto iOS au focus (Safari zoom si <16px). Bouton
+                      d'envoi 44x44 minimum sur mobile (seuil tactile WCAG 2.5.5).
+                      Padding mobile reduit pour gagner de la place. */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F7F4EF", borderRadius: 24, padding: isMobile ? "5px 5px 5px 14px" : "6px 6px 6px 18px", border: "1px solid #EAE6DF" }}>
                     <input ref={inputRef} value={nouveau} onChange={e => { setNouveau(e.target.value); signalTyping() }}
                       onKeyDown={e => e.key === "Enter" && !e.shiftKey && envoyer()}
                       aria-label={replyTo ? "Saisir votre réponse" : "Saisir un message"}
                       placeholder={replyTo ? "Votre réponse…" : "Votre message… (↵ pour envoyer)"}
-                      style={{ flex: 1, padding: "10px 0", border: "none", background: "transparent", fontSize: 14, outline: "none", fontFamily: "inherit", color: "#111", letterSpacing: "-0.1px" }} />
+                      style={{ flex: 1, minWidth: 0, padding: isMobile ? "12px 0" : "10px 0", border: "none", background: "transparent", fontSize: isMobile ? 16 : 14, outline: "none", fontFamily: "inherit", color: "#111", letterSpacing: "-0.1px" }} />
                     <button onClick={envoyer} disabled={envoi || !nouveau.trim()}
                       aria-label="Envoyer le message"
-                      style={{ background: nouveau.trim() && !envoi ? "#111" : "#EAE6DF", color: nouveau.trim() && !envoi ? "white" : "#8a8477", border: "none", borderRadius: "50%", width: 38, height: 38, cursor: envoi || !nouveau.trim() ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 200ms ease" }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                      style={{ background: nouveau.trim() && !envoi ? "#111" : "#EAE6DF", color: nouveau.trim() && !envoi ? "white" : "#8a8477", border: "none", borderRadius: "50%", width: isMobile ? 44 : 38, height: isMobile ? 44 : 38, cursor: envoi || !nouveau.trim() ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 200ms ease" }}>
+                      <svg width={isMobile ? 18 : 16} height={isMobile ? 18 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                     </button>
                   </div>
                 </div>
@@ -4735,7 +4750,10 @@ function MessagesInner() {
           </div>
 
           {/* ── Colonne droite : détails bien + docs + timeline (handoff L448-505) ── */}
-          {!isMobile && convActiveData && (() => {
+          {/* Paul 2026-04-27 : panel cache aussi en tablette (640-1023px) — sur
+              768px portrait avec sidebar 280 + thread, il restait < 250px pour
+              ce panel, contenu illisible. Desktop only. */}
+          {isDesktop && convActiveData && (() => {
             const ann = annonceActive
             const photo = Array.isArray(ann?.photos) && ann.photos.length > 0 ? ann.photos[0] : null
             const statut = deriveStatut(convActiveData)
