@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useResponsive } from "../../hooks/useResponsive"
 import Image from "next/image"
 import { km, KMEyebrow, KMHeading, KMChip, KMDPE, KMMatchRing } from "../ui/km"
 import { CARD_GRADIENTS as GRADIENTS } from "../../../lib/cardGradients"
@@ -68,6 +69,9 @@ interface QuickViewProps {
 export default function QuickViewModal({ annonce, open, onClose, score, favori, onToggleFavori, userVille }: QuickViewProps) {
   const [photoIdx, setPhotoIdx] = useState(0)
   const [lightboxOpen, setLightboxOpen] = useState(false)
+  // Mobile : modal plus compact (Paul 2026-04-27 — user : "L'aperçu pas
+  // très bien introduit c'est trop gros je trouve").
+  const { isMobile } = useResponsive()
 
   useEffect(() => {
     if (!open) return
@@ -127,6 +131,7 @@ export default function QuickViewModal({ annonce, open, onClose, score, favori, 
       <style>{`
         @keyframes nm-qv-fade { from { opacity: 0 } to { opacity: 1 } }
         @keyframes nm-qv-rise { from { opacity: 0; transform: translate(-50%, -46%) } to { opacity: 1; transform: translate(-50%, -50%) } }
+        @keyframes nm-qv-slideup { from { transform: translateY(8%) } to { transform: translateY(0) } }
       `}</style>
       <div
         onClick={onClose}
@@ -144,25 +149,31 @@ export default function QuickViewModal({ annonce, open, onClose, score, favori, 
         aria-label={`Aperçu de ${annonce.titre || "l'annonce"}`}
         style={{
           position: "fixed",
-          top: "50%", left: "50%",
-          transform: "translate(-50%, -50%)",
+          // Mobile : bottom sheet compact (slide-up depuis le bas, max 85vh).
+          // Desktop : center modal classique 720px.
+          top: isMobile ? "auto" : "50%",
+          left: isMobile ? 0 : "50%",
+          right: isMobile ? 0 : "auto",
+          bottom: isMobile ? 0 : "auto",
+          transform: isMobile ? "none" : "translate(-50%, -50%)",
           background: km.white,
           border: `1px solid ${km.line}`,
-          borderRadius: 24,
-          width: "min(720px, 94vw)",
-          maxHeight: "92vh",
+          borderRadius: isMobile ? "20px 20px 0 0" : 24,
+          width: isMobile ? "100%" : "min(720px, 94vw)",
+          maxWidth: "100vw",
+          maxHeight: isMobile ? "85vh" : "92vh",
           display: "flex",
           flexDirection: "column",
-          boxShadow: "0 24px 64px rgba(17,17,17,0.22)",
+          boxShadow: isMobile ? "0 -12px 32px rgba(17,17,17,0.20)" : "0 24px 64px rgba(17,17,17,0.22)",
           zIndex: 9001,
           fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
           overflow: "hidden",
-          animation: "nm-qv-rise 0.22s cubic-bezier(0.22, 1, 0.36, 1)",
+          animation: isMobile ? "nm-qv-slideup 0.22s cubic-bezier(0.22, 1, 0.36, 1)" : "nm-qv-rise 0.22s cubic-bezier(0.22, 1, 0.36, 1)",
         }}
       >
-        {/* Photo header (cliquable → Lightbox) */}
+        {/* Photo header (cliquable → Lightbox) — aspect 16/9 desktop, 5/3 mobile (plus compact) */}
         <div
-          style={{ position: "relative", aspectRatio: "16 / 9", background: current ? "#000" : base, flexShrink: 0, cursor: current ? "zoom-in" : "default" }}
+          style={{ position: "relative", aspectRatio: isMobile ? "5 / 3" : "16 / 9", background: current ? "#000" : base, flexShrink: 0, cursor: current ? "zoom-in" : "default" }}
           onClick={() => { if (current) setLightboxOpen(true) }}
         >
           {current ? (

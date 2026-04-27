@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { DM_Sans, Fraunces } from 'next/font/google'
 import './globals.css'
 import Providers from './providers'
@@ -55,6 +55,26 @@ const DEFAULT_DESC = `${BRAND.name} connecte propriétaires et locataires direct
 // Mode bêta : bloque l'indexation moteurs de recherche (activé via
 // NEXT_PUBLIC_NOINDEX=true dans Vercel env vars). À retirer au lancement.
 const NO_INDEX = process.env.NEXT_PUBLIC_NOINDEX === "true"
+
+/**
+ * Viewport export (Next 15 — separe du metadata).
+ * Paul 2026-04-27 : User : "on peut zoomer et dezoomer et quand on dezoom au
+ * max bah on peut plus scroller, le fait qu'on puisse zoomer je trouve pas
+ * ça très cool".
+ *
+ * Compromis a11y : on garde `userScalable: true` (a11y mandatory pour les
+ * malvoyants qui zooment le texte) MAIS on cap `maximumScale: 5` (au lieu
+ * du default infini) — empeche les pinches qui dezoom < 100% et casse le
+ * scroll. iOS Safari respecte ce cap.
+ *
+ * `initialScale: 1` + `width: device-width` standard.
+ */
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+}
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
