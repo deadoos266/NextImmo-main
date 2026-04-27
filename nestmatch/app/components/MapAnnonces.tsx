@@ -11,21 +11,23 @@ import MarkerClusterGroup from "react-leaflet-cluster"
 
 type MapType = "plan" | "satellite" | "standard"
 
-// Tuiles par défaut = OpenStreetMap France (Paul 2026-04-27 — REVERT
-// d'urgence depuis Stadia Maps qui retournait 401 Authentication Error
-// en prod sans API key. osmfr = labels FR natifs + GRATUIT illimité sans
-// API key. Style un peu plus charge que Positron mais ZERO maintenance.
-// User : "la map remet celle d'avant la ça fait de la merde").
+// Tuiles par défaut = CartoDB Positron Light (Paul 2026-04-27 v5).
+// User : "pour la carte faut que ça passe en carte épurée quand on est sur
+// le site, c'est la 1ère qui doit apparaitre". Trade-off accepté : labels
+// EN (London, Spain) en échange du style minimaliste blanc qui matche
+// l'esthetique Airbnb/SeLoger premium.
 //
-// CartoDB Positron Light reste accessible via le selecteur "Épuré" pour
-// les users qui preferent l'esthetique minimaliste meme en anglais.
+// Détaillé = OSM France pour ceux qui veulent + de details ET labels FR.
+// Satellite = Esri World Imagery.
+// Choix mapType persiste en localStorage (`nestmatch_map_type`) pour que
+// l'user qui prefere Détaillé garde son choix entre les visites.
 const TILES: Record<MapType, { url: string; attribution: string; label: string; subdomains?: string; maxZoom?: number; soft?: boolean }> = {
   plan: {
-    url: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> France',
+    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
     label: "Plan",
-    subdomains: "abc",
-    maxZoom: 20,
+    subdomains: "abcd",
+    maxZoom: 19,
   },
   satellite: {
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -33,11 +35,11 @@ const TILES: Record<MapType, { url: string; attribution: string; label: string; 
     label: "Satellite",
   },
   standard: {
-    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    label: "Épuré",
-    subdomains: "abcd",
-    maxZoom: 19,
+    url: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> France',
+    label: "Détaillé",
+    subdomains: "abc",
+    maxZoom: 20,
   },
 }
 
@@ -367,7 +369,24 @@ export default function MapAnnonces({
   disablePopup,
 }: MapAnnoncesProps) {
   useEffect(() => { fixLeafletIcons() }, [])
+  // Map type persiste en localStorage (Paul 2026-04-27 v5). Default "plan"
+  // (Positron Light epure). Si l'user a choisi "Détaillé" ou "Satellite"
+  // une fois, on garde son choix entre les visites. SSR-safe : on n'attaque
+  // pas localStorage au useState init (cf. R618 hydratation), on hydrate
+  // dans un useEffect post-mount.
   const [mapType, setMapType] = useState<MapType>("plan")
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("nestmatch_map_type")
+      if (saved === "plan" || saved === "satellite" || saved === "standard") {
+        setMapType(saved)
+      }
+    } catch { /* ignore (private mode, etc.) */ }
+  }, [])
+  function changeMapType(t: MapType) {
+    setMapType(t)
+    try { localStorage.setItem("nestmatch_map_type", t) } catch { /* ignore */ }
+  }
   const [pendingBounds, setPendingBounds] = useState<L.LatLngBounds | null>(null)
   const [searchHere, setSearchHere] = useState(false)
   const initialBoundsSet = useRef(false)
@@ -754,7 +773,7 @@ export default function MapAnnonces({
           }}>
             <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1px", margin: "4px 12px 8px" }}>Fond de carte</p>
             {(Object.keys(TILES) as MapType[]).map(t => (
-              <button key={t} type="button" onClick={() => { setMapType(t); setPanelOpen(null) }}
+              <button key={t} type="button" onClick={() => { changeMapType(t); setPanelOpen(null) }}
                 style={{
                   display: "flex", alignItems: "center", gap: 10,
                   width: "100%", padding: "10px 12px", borderRadius: 8,
