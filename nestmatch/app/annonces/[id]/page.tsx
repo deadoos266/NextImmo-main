@@ -22,6 +22,28 @@ import Image from "next/image"
 const BASE_URL = process.env.NEXT_PUBLIC_URL || 'https://keymatch-immo.fr'
 
 // ─── Helpers fiche enrichie R10.9 ─────────────────────────────────────────
+
+/**
+ * Normalise un champ "boolean" qui peut arriver en string ("oui"/"non"/
+ * "true"/"false"), nombre (0/1) ou bool natif depuis Supabase. Le schema
+ * `annonces.meuble` et autres equipements (parking, cave, etc.) ont en
+ * DB un mix de valeurs hérité de migrations successives. Un check strict
+ * `=== true` ratait les strings "oui" → la pill Meuble n'apparaissait
+ * jamais. Paul 2026-04-27 (bug #b6c8f19 follow-up).
+ */
+function asTriBool(v: unknown): boolean | null {
+  if (v === null || v === undefined || v === "") return null
+  if (typeof v === "boolean") return v
+  if (typeof v === "number") return v !== 0
+  if (typeof v === "string") {
+    const norm = v.toLowerCase().trim()
+    if (norm === "true" || norm === "oui" || norm === "1" || norm === "yes" || norm === "y") return true
+    if (norm === "false" || norm === "non" || norm === "0" || norm === "no" || norm === "n") return false
+    return null
+  }
+  return null
+}
+
 function formatPublieIlYA(createdAt: string | null | undefined): string | null {
   if (!createdAt) return null
   const delta = Date.now() - new Date(createdAt).getTime()
@@ -482,8 +504,9 @@ export default async function Annonce({ params }: any) {
                   { val: annonce.chambres !== null && annonce.chambres !== undefined ? annonce.chambres : "—", label: "chambres" },
                   { val: annonce.etage || "—", label: "étage" },
                 ]
-                if (annonce.meuble === true) stats.push({ val: "Oui", label: "meublé" })
-                else if (annonce.meuble === false) stats.push({ val: "Vide", label: "meublé" })
+                const meubleNorm = asTriBool(annonce.meuble)
+                if (meubleNorm === true) stats.push({ val: "Oui", label: "meublé" })
+                else if (meubleNorm === false) stats.push({ val: "Vide", label: "meublé" })
                 return stats
               })().map(item => (
                 <div key={item.label} style={{ background: "white", borderRadius: 16, padding: "18px 20px", textAlign: "center", flex: 1, minWidth: 70, border: "1px solid #EAE6DF" }}>
@@ -542,21 +565,27 @@ export default async function Annonce({ params }: any) {
                   const publieLe = annonce.created_at
                     ? new Date(annonce.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
                     : null
+                  // Normalisation booleens (asTriBool helper) — les valeurs en
+                  // DB peuvent etre "oui"/"non" (string), true/false (bool), ou
+                  // 0/1 selon les migrations. Sans normalisation, "non" string
+                  // etait truthy → "Cave: Oui" affiche meme quand non. Bug
+                  // signalé Paul 2026-04-27 pour Meuble qui n'apparaissait pas.
+                  const meubleNorm = asTriBool(annonce.meuble)
                   const rows: Array<[string, string | null]> = [
-                    ["Meublé", annonce.meuble === true ? "Oui" : annonce.meuble === false ? "Non" : null],
+                    ["Meublé", meubleNorm === true ? "Oui" : meubleNorm === false ? "Non" : null],
                     ["Type de bien", annonce.type_bien || null],
                     ["Surface habitable", annonce.surface ? `${annonce.surface} m²` : null],
                     ["Nombre de pièces", annonce.pieces ? String(annonce.pieces) : null],
                     ["Nombre de chambres", annonce.chambres !== null && annonce.chambres !== undefined ? String(annonce.chambres) : null],
                     ["Étage", annonce.etage || null],
-                    // Equipements : afficher uniquement si true (skip "Non").
-                    ["Parking", annonce.parking ? "Inclus" : null],
-                    ["Cave", annonce.cave ? "Oui" : null],
-                    ["Balcon", annonce.balcon ? "Oui" : null],
-                    ["Terrasse", annonce.terrasse ? "Oui" : null],
-                    ["Jardin", annonce.jardin ? "Oui" : null],
-                    ["Ascenseur", annonce.ascenseur ? "Oui" : null],
-                    ["Fibre optique", annonce.fibre ? "Oui" : null],
+                    // Equipements : afficher uniquement si normalize == true (skip false + null).
+                    ["Parking", asTriBool(annonce.parking) === true ? "Inclus" : null],
+                    ["Cave", asTriBool(annonce.cave) === true ? "Oui" : null],
+                    ["Balcon", asTriBool(annonce.balcon) === true ? "Oui" : null],
+                    ["Terrasse", asTriBool(annonce.terrasse) === true ? "Oui" : null],
+                    ["Jardin", asTriBool(annonce.jardin) === true ? "Oui" : null],
+                    ["Ascenseur", asTriBool(annonce.ascenseur) === true ? "Oui" : null],
+                    ["Fibre optique", asTriBool(annonce.fibre) === true ? "Oui" : null],
                     ["Disponibilité", annonce.dispo || null],
                     ["Publié le", publieLe],
                   ]
