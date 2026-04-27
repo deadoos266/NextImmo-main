@@ -1,6 +1,20 @@
 import { defineConfig } from "vitest/config"
+import react from "@vitejs/plugin-react"
+import path from "node:path"
 
 export default defineConfig({
+  plugins: [react()],
+  // Le worktree contient un node_modules à la racine + un dans nestmatch/.
+  // Sans alias explicite, vitest peut charger 2 instances de React et
+  // useState échoue ("Cannot read properties of null"). On force tous les
+  // imports React à pointer vers nestmatch/node_modules/react.
+  resolve: {
+    alias: {
+      react: path.resolve(__dirname, "node_modules/react"),
+      "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
+    },
+    dedupe: ["react", "react-dom"],
+  },
   test: {
     environment: "node",
     // Env dummies pour les imports qui vérifient la présence de vars Supabase
@@ -44,6 +58,11 @@ export default defineConfig({
         statements: 50,
       },
     },
-    include: ["lib/**/*.test.ts", "lib/**/__tests__/*.test.ts"],
+    include: [
+      "lib/**/*.test.ts",
+      "lib/**/__tests__/*.test.ts",
+      "app/**/*.test.tsx",
+      "app/**/__tests__/*.test.tsx",
+    ],
   },
 })
