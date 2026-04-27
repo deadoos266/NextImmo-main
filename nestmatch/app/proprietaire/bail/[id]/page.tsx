@@ -16,6 +16,7 @@ import {
 } from "../../../../lib/bailDefaults"
 import Modal from "../../../components/ui/Modal"
 import UploadBailModal from "../../../components/UploadBailModal"
+import HelpIcon, { PhoneHelpContent } from "../../../components/ui/HelpIcon"
 import AnnexeUploader from "../../../components/AnnexeUploader"
 import { formatNomComplet } from "../../../../lib/profilHelpers"
 
@@ -210,7 +211,9 @@ function FieldInput({
   type = "text",
   help,
 }: {
-  label: string
+  // ReactNode pour permettre des labels enrichis (HelpIcon, badges
+  // recommandé/facultatif). Reste rétrocompatible avec string.
+  label: React.ReactNode
   value: string
   onChange: (v: string) => void
   placeholder?: string
@@ -1133,7 +1136,7 @@ export default function BailPage() {
               placeholder="Dupont Jean"
             />
             <FieldInput
-              label="Téléphone"
+              label={<>Téléphone <span style={{ fontWeight: 400, color: "#8a8477", textTransform: "none" as const, letterSpacing: 0 }}>(recommandé)</span> <HelpIcon><PhoneHelpContent /></HelpIcon></>}
               value={form.telBailleur}
               onChange={set("telBailleur")}
               placeholder="06 12 34 56 78"
@@ -1202,7 +1205,7 @@ export default function BailPage() {
               />
             </div>
             <FieldInput
-              label="Téléphone"
+              label={<>Téléphone <span style={{ fontWeight: 400, color: "#8a8477", textTransform: "none" as const, letterSpacing: 0 }}>(recommandé)</span> <HelpIcon><PhoneHelpContent /></HelpIcon></>}
               value={form.telLocataire}
               onChange={set("telLocataire")}
               placeholder="06 12 34 56 78"
@@ -1310,7 +1313,7 @@ export default function BailPage() {
                 placeholder="garant@email.fr"
               />
               <FieldInput
-                label="Téléphone"
+                label={<>Téléphone <span style={{ fontWeight: 400, color: "#8a8477", textTransform: "none" as const, letterSpacing: 0 }}>(recommandé)</span> <HelpIcon><PhoneHelpContent /></HelpIcon></>}
                 value={form.telGarant}
                 onChange={set("telGarant")}
                 type="tel"

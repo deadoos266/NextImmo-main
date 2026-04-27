@@ -7,6 +7,7 @@ import { supabase } from "../../lib/supabase"
 import { validateDocument } from "../../lib/fileValidation"
 import Tooltip from "../components/Tooltip"
 import PhoneInput from "../components/PhoneInput"
+import HelpIcon, { PhoneHelpContent } from "../components/ui/HelpIcon"
 
 // Lazy : SharePanel + AccessLogPanel sont en bas de la page (after upload form),
 // 99 % des users ne scrollent pas jusqu'en bas avant plusieurs jours.
@@ -1956,7 +1957,7 @@ export default function Dossier() {
                     <LockedInput value={form.nom} />
                   </Field>
                 </Row2>
-                <Field label="Téléphone">
+                <Field label={<>Téléphone <span style={{ fontWeight: 400, color: T.soft, textTransform: "none", letterSpacing: 0 }}>(recommandé)</span> <HelpIcon><PhoneHelpContent /></HelpIcon></>}>
                   <PhoneInput value={form.telephone} onChange={v => setForm(f => ({ ...f, telephone: v }))} placeholder="6 12 34 56 78" />
                 </Field>
                 <Field label="Email">
