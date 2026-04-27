@@ -110,6 +110,9 @@ export default function Admin() {
   const [contactReponse, setContactReponse] = useState<Record<number, string>>({})
   const [convThread, setConvThread] = useState<{ a: string; b: string; annonceId?: number | null; messages: any[] } | null>(null)
   const [loadingThread, setLoadingThread] = useState(false)
+  // Modération vitrine — sélection multiple pour bulk flag is_test
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [bulkBusy, setBulkBusy] = useState(false)
 
   useEffect(() => {
     if (status === "authenticated" && !session?.user?.isAdmin) router.replace("/")
@@ -190,6 +193,41 @@ export default function Admin() {
         }
       }
     } catch { /* noop */ }
+  }
+
+  // Toggle is_test sur une annonce (action individuelle ligne par ligne).
+  // Optimistic update : refletée localement avant le retour DB pour ne pas
+  // bloquer la modération par à-coups.
+  async function toggleTest(id: number, current: boolean) {
+    const next = !current
+    setAnnonces(prev => prev.map(a => a.id === id ? { ...a, is_test: next } : a))
+    const { error } = await supabase.from("annonces").update({ is_test: next }).eq("id", id)
+    if (error) {
+      // Rollback optimiste si échec
+      setAnnonces(prev => prev.map(a => a.id === id ? { ...a, is_test: current } : a))
+      alert(`Erreur modération : ${error.message}`)
+    }
+  }
+
+  // Bulk : flag/unflag is_test sur les annonces sélectionnées.
+  // `mode` détermine la cible — toujours appliquer le même état pour
+  // éviter les confusions (cocher = test ; décocher = public).
+  async function toggleTestBulk(mode: "test" | "public") {
+    if (selectedIds.size === 0 || bulkBusy) return
+    setBulkBusy(true)
+    const ids = Array.from(selectedIds)
+    const next = mode === "test"
+    // Optimistic
+    setAnnonces(prev => prev.map(a => ids.includes(a.id) ? { ...a, is_test: next } : a))
+    const { error } = await supabase.from("annonces").update({ is_test: next }).in("id", ids)
+    if (error) {
+      // Rollback bulk si échec global
+      setAnnonces(prev => prev.map(a => ids.includes(a.id) ? { ...a, is_test: !next } : a))
+      alert(`Erreur bulk : ${error.message}`)
+    } else {
+      setSelectedIds(new Set())
+    }
+    setBulkBusy(false)
   }
 
   async function supprimerAnnonce(id: number) {
@@ -384,18 +422,90 @@ export default function Admin() {
 
         {onglet === "Annonces" && (
           <div style={{ background: "white", borderRadius: 20, overflow: "hidden" }}>
+            {/* Bulk actions — apparaissent quand au moins une ligne sélectionnée.
+                Permet de modérer en masse les annonces de test sans passer par
+                Supabase MCP. Toggle public/test est appliqué uniformément
+                sur la sélection (UX moins ambiguë que toggle individuel). */}
+            {selectedIds.size > 0 && (
+              <div style={{ padding: "14px 18px", borderBottom: "1px solid #F7F4EF", background: "#FBF6EA", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 13, color: "#a16207", fontWeight: 700 }}>
+                  {selectedIds.size} annonce{selectedIds.size > 1 ? "s" : ""} sélectionnée{selectedIds.size > 1 ? "s" : ""}
+                </span>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => toggleTestBulk("test")}
+                    disabled={bulkBusy}
+                    style={{ background: "#a16207", color: "white", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: bulkBusy ? "wait" : "pointer", fontFamily: "inherit" }}
+                  >
+                    {bulkBusy ? "…" : "Marquer comme test"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleTestBulk("public")}
+                    disabled={bulkBusy}
+                    style={{ background: "#15803d", color: "white", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: bulkBusy ? "wait" : "pointer", fontFamily: "inherit" }}
+                  >
+                    {bulkBusy ? "…" : "Rendre public"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedIds(new Set())}
+                    disabled={bulkBusy}
+                    style={{ background: "#F7F4EF", color: "#111", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                  >
+                    Tout désélectionner
+                  </button>
+                </div>
+              </div>
+            )}
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
                 <thead>
                   <tr style={{ background: "#F7F4EF" }}>
-                    {["ID", "Titre", "Ville", "Prix", "Statut", "Propriétaire", "Action"].map(h => (
+                    <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "0.5px", width: 32 }}>
+                      <input
+                        type="checkbox"
+                        checked={annoncesFiltrees.length > 0 && annoncesFiltrees.every(a => selectedIds.has(a.id))}
+                        ref={el => {
+                          if (!el) return
+                          const someSelected = annoncesFiltrees.some(a => selectedIds.has(a.id))
+                          const allSelected = annoncesFiltrees.length > 0 && annoncesFiltrees.every(a => selectedIds.has(a.id))
+                          el.indeterminate = someSelected && !allSelected
+                        }}
+                        onChange={e => {
+                          if (e.target.checked) setSelectedIds(new Set(annoncesFiltrees.map(a => a.id as number)))
+                          else setSelectedIds(new Set())
+                        }}
+                        aria-label="Tout sélectionner"
+                        style={{ cursor: "pointer", width: 16, height: 16 }}
+                      />
+                    </th>
+                    {["ID", "Titre", "Ville", "Prix", "Statut", "Visibilité", "Propriétaire", "Action"].map(h => (
                       <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "0.5px" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {annoncesFiltrees.map((a, i) => (
-                    <tr key={a.id} style={{ borderTop: "1px solid #F7F4EF", background: i % 2 === 0 ? "white" : "#F7F4EF" }}>
+                  {annoncesFiltrees.map((a, i) => {
+                    const checked = selectedIds.has(a.id)
+                    const isTest = !!a.is_test
+                    return (
+                    <tr key={a.id} style={{ borderTop: "1px solid #F7F4EF", background: checked ? "#FBF6EA" : i % 2 === 0 ? "white" : "#F7F4EF" }}>
+                      <td style={{ padding: "12px 16px", width: 32 }}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={e => {
+                            const next = new Set(selectedIds)
+                            if (e.target.checked) next.add(a.id)
+                            else next.delete(a.id)
+                            setSelectedIds(next)
+                          }}
+                          aria-label={`Sélectionner annonce ${a.id}`}
+                          style={{ cursor: "pointer", width: 16, height: 16 }}
+                        />
+                      </td>
                       <td style={{ padding: "12px 16px", fontSize: 12, color: "#8a8477", fontFamily: "monospace" }}>#{a.id}</td>
                       <td style={{ padding: "12px 16px", fontSize: 14, fontWeight: 600, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         <a href={`/annonces/${a.id}`} target="_blank" rel="noopener noreferrer" style={{ color: "#111", textDecoration: "none" }}>{a.titre || "—"}</a>
@@ -406,6 +516,23 @@ export default function Admin() {
                         <span style={{ background: a.statut === "loué" ? "#F7F4EF" : "#F0FAEE", color: a.statut === "loué" ? "#8a8477" : "#15803d", padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                           {a.statut || "disponible"}
                         </span>
+                      </td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <button
+                          type="button"
+                          onClick={() => toggleTest(a.id, isTest)}
+                          title={isTest ? "Cliquer pour rendre publique" : "Cliquer pour marquer comme test"}
+                          style={{
+                            background: isTest ? "#FBF6EA" : "#F0FAEE",
+                            color: isTest ? "#a16207" : "#15803d",
+                            border: `1px solid ${isTest ? "#EADFC6" : "#C6E9C0"}`,
+                            borderRadius: 999, padding: "3px 10px", fontSize: 11, fontWeight: 700,
+                            cursor: "pointer", fontFamily: "inherit", letterSpacing: "0.3px",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          {isTest ? "Test" : "Public"}
+                        </button>
                       </td>
                       <td style={{ padding: "12px 16px", fontSize: 12, color: "#8a8477", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.proprietaire_email || "—"}</td>
                       <td style={{ padding: "12px 16px" }}>
@@ -421,7 +548,8 @@ export default function Admin() {
                         )}
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
