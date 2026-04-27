@@ -14,7 +14,16 @@ import { useRoleSwitch, type ActiveRole } from "../hooks/useRoleSwitch"
  * Toast subtle bottom-center 3s a chaque switch ("Mode Proprietaire
  * active" / "Mode Locataire active").
  */
-export default function RoleSwitchToggle({ variant = "desktop" }: { variant?: "desktop" | "mobile" }) {
+export default function RoleSwitchToggle({
+  variant = "desktop",
+  showLabel = true,
+}: {
+  variant?: "desktop" | "mobile"
+  /** Affiche l'eyebrow "ESPACE ACTUEL" au-dessus du pill (mobile uniquement).
+   *  Default true. False quand on insere dans le dropdown avatar (eyebrow
+   *  redondant avec "Mon espace" qui suit). Paul 2026-04-27. */
+  showLabel?: boolean
+}) {
   const { canSwitch, currentRole, switchTo } = useRoleSwitch()
   const [toast, setToast] = useState<string | null>(null)
 
@@ -83,7 +92,7 @@ export default function RoleSwitchToggle({ variant = "desktop" }: { variant?: "d
 
   return (
     <>
-      {variant === "mobile" && (
+      {variant === "mobile" && showLabel && (
         <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 16px 4px", padding: "12px 0 0" }}>
           Espace actuel
         </p>

@@ -397,7 +397,10 @@ export default function Navbar() {
               Publier
             </Link>
           )}
-          {session && <RoleSwitchToggle variant="desktop" />}
+          {/* RoleSwitchToggle desktop : DEPLACE dans le dropdown avatar
+              (Paul 2026-04-27 v2). User : "le bouton proprietaire et locataire
+              pour switch faut mettre ca dans le menu deroulant". Libere de
+              la place dans la nav. */}
           {session && <NotificationBell />}
           {session ? (
             <div style={{ position: "relative" }}>
@@ -436,8 +439,17 @@ export default function Navbar() {
                       </div>
                     </div>
 
+                    {/* RoleSwitchToggle (Paul 2026-04-27 v2) : deplace ici
+                        depuis la Navbar pour liberer de la place dans la nav.
+                        Self-hide si user n'a qu'un seul role. Wrap dans un div
+                        avec padding pour matcher la grammaire visuelle du
+                        dropdown. */}
+                    <div style={{ padding: "10px 12px 0" }}>
+                      <RoleSwitchToggle variant="mobile" showLabel={false} />
+                    </div>
+
                     {/* Eyebrow groupe */}
-                    <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.2px", padding: "10px 16px 4px", margin: 0 }}>Mon espace</p>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.2px", padding: "12px 16px 4px", margin: 0 }}>Mon espace</p>
 
                     {/* Items avec icônes et indicateur actif */}
                     {(proprietaireActive ? [
