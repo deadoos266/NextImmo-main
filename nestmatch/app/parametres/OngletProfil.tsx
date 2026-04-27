@@ -2,10 +2,15 @@
 import { useEffect, useRef, useState } from "react"
 import { useSession } from "next-auth/react"
 import { supabase } from "../../lib/supabase"
+import PhoneInput from "../components/PhoneInput"
+import HelpIcon, { PhoneHelpContent } from "../components/ui/HelpIcon"
 
 /**
- * Onglet Profil : photo avatar + bio publique. Le nom complet et le téléphone
- * sont édités dans /dossier (source de vérité — évite les conflits de champ).
+ * Onglet Profil : photo avatar + bio publique + telephone (Paul 2026-04-27).
+ * Le nom complet reste verrouille apres confirmation. Le telephone est
+ * editable ici ET dans /dossier (meme colonne `profils.telephone`, source de
+ * verite unique). User : "dans les parametres faut pouvoir mettre son numero
+ * de tel cote proprio ou locataire" — section visible quel que soit le role.
  */
 export default function OngletProfil() {
   const { data: session } = useSession()
@@ -18,11 +23,18 @@ export default function OngletProfil() {
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
+  // Telephone — source de verite `profils.telephone` (Paul 2026-04-27).
+  // Editable ici + dans /dossier, meme colonne donc cherche-cherche.
+  const [telephone, setTelephone] = useState("")
+  const [initialTel, setInitialTel] = useState("")
+  const [savingTel, setSavingTel] = useState(false)
+  const [savedTel, setSavedTel] = useState(false)
+  const [telError, setTelError] = useState<string | null>(null)
 
   useEffect(() => {
     const email = session?.user?.email
     if (!email) return
-    supabase.from("profils").select("photo_url_custom, bio_publique").eq("email", email).single().then(({ data, error }) => {
+    supabase.from("profils").select("photo_url_custom, bio_publique, telephone").eq("email", email).single().then(({ data, error }) => {
       if (error) {
         // Probable cause : migration 008 pas encore appliquée (colonnes absentes).
         setSaveError(
@@ -35,8 +47,31 @@ export default function OngletProfil() {
       setPhoto(data?.photo_url_custom || null)
       setBio(data?.bio_publique || "")
       setInitialBio(data?.bio_publique || "")
+      const tel = (data as { telephone?: string | null })?.telephone || ""
+      setTelephone(tel)
+      setInitialTel(tel)
     })
   }, [session?.user?.email])
+
+  async function sauverTel() {
+    const email = session?.user?.email
+    if (!email) return
+    setSavingTel(true)
+    setTelError(null)
+    const trimmed = telephone.trim().slice(0, 25)
+    const { error } = await supabase.from("profils").upsert(
+      { email, telephone: trimmed || null },
+      { onConflict: "email" },
+    )
+    setSavingTel(false)
+    if (error) {
+      setTelError(`Enregistrement impossible : ${error.message}`)
+      return
+    }
+    setInitialTel(trimmed)
+    setSavedTel(true)
+    setTimeout(() => setSavedTel(false), 2400)
+  }
 
   const currentPhotoSrc = photo || session?.user?.image || null
   const initial = (session?.user?.name || session?.user?.email || "?").slice(0, 1).toUpperCase()
@@ -178,11 +213,49 @@ export default function OngletProfil() {
         )}
       </section>
 
+      {/* Coordonnees — telephone editable depuis /parametres (Paul 2026-04-27).
+          Section disponible quel que soit le role (proprio ou locataire).
+          Source de verite `profils.telephone` partagee avec /dossier. */}
+      <section style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, padding: 28, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+        <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, letterSpacing: "-0.3px", color: "#111", margin: "0 0 6px" }}>Coordonnées</h2>
+        <p style={{ fontSize: 13, color: "#8a8477", margin: "0 0 16px" }}>
+          Votre numéro est utilisé uniquement pour les appels et la visio dans la messagerie, après validation mutuelle. Jamais affiché publiquement.
+        </p>
+
+        <div style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            Numéro de téléphone
+            <span style={{ fontWeight: 400, color: "#8a8477", textTransform: "none", letterSpacing: 0 }}>(recommandé)</span>
+            <HelpIcon><PhoneHelpContent /></HelpIcon>
+          </span>
+        </div>
+
+        <PhoneInput value={telephone} onChange={v => { setTelephone(v); if (telError) setTelError(null) }} placeholder="6 12 34 56 78" />
+
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
+          <button
+            type="button"
+            disabled={savingTel || telephone.trim() === initialTel.trim()}
+            onClick={sauverTel}
+            style={{ background: "#111", color: "white", border: "none", borderRadius: 999, padding: "10px 22px", fontWeight: 600, fontSize: 11, cursor: savingTel || telephone.trim() === initialTel.trim() ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: savingTel || telephone.trim() === initialTel.trim() ? 0.5 : 1, textTransform: "uppercase", letterSpacing: "0.3px", display: "inline-flex", alignItems: "center", gap: 6 }}>
+            {savingTel ? "Enregistrement…" : savedTel ? (
+              <>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
+                Enregistré
+              </>
+            ) : "Enregistrer"}
+          </button>
+        </div>
+        {telError && (
+          <p style={{ fontSize: 12, color: "#b91c1c", margin: "10px 0 0", background: "#FEECEC", border: "1px solid #F4C9C9", borderRadius: 12, padding: "8px 12px", lineHeight: 1.5 }}>{telError}</p>
+        )}
+      </section>
+
       <section style={{ background: "#F7F4EF", border: "1px solid #EAE6DF", borderRadius: 16, padding: 18 }}>
         <p style={{ fontSize: 13, color: "#111", margin: 0, lineHeight: 1.6 }}>
-          <strong>Prénom et nom</strong> sont verrouillés après confirmation pour garantir la cohérence avec votre pièce d&apos;identité et vos documents officiels (dossier, bail, état des lieux). <strong>Téléphone et autres informations</strong> restent éditables dans votre dossier locataire.
+          <strong>Prénom et nom</strong> sont verrouillés après confirmation pour garantir la cohérence avec votre pièce d&apos;identité et vos documents officiels (dossier, bail, état des lieux).
           {" "}
-          <a href="/dossier" style={{ color: "#111", fontWeight: 600, textDecoration: "underline", textDecorationColor: "#EAE6DF", textUnderlineOffset: "3px" }}>Gérer mon dossier →</a>
+          <a href="/dossier" style={{ color: "#111", fontWeight: 600, textDecoration: "underline", textDecorationColor: "#EAE6DF", textUnderlineOffset: "3px" }}>Gérer mon dossier complet →</a>
         </p>
       </section>
     </div>
