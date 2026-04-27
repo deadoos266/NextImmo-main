@@ -11,19 +11,22 @@ import MarkerClusterGroup from "react-leaflet-cluster"
 
 type MapType = "plan" | "satellite" | "standard"
 
-// Tuiles par défaut = CARTO Voyager (rendu sobre gris clair premium, style
-// proche SeLoger/Airbnb, GRATUIT sans clé API, subdomains {a,b,c,d}, labels
-// OSM en français pour les villes FR). Remplace Stadia (qui retourne 401
-// sans token malgré la doc "free tier").
-// https://carto.com/basemaps/
+// Tuiles par défaut = CARTO Positron Light (Paul 2026-04-27 — switch depuis
+// Voyager pour maximiser le contraste avec les pills prix noires style Airbnb).
+// Positron : fond très clair quasi-blanc, labels gris fins, axes routiers
+// gris pâle. Markers ressortent franchement, lecture rapide des prix.
+// GRATUIT sans clé API, subdomains {a,b,c,d}, maxZoom 19, retina @2x via {r}.
+// https://github.com/CartoDB/basemap-styles
 // Mode "Détaillé" = OSM France (labels FR, plus dense au zoom street-level).
 // Satellite = Esri World Imagery (pas d'alternative française gratuite
 // équivalente sans clé API).
-const TILES: Record<MapType, { url: string; attribution: string; label: string; soft?: boolean }> = {
+const TILES: Record<MapType, { url: string; attribution: string; label: string; subdomains?: string; maxZoom?: number; soft?: boolean }> = {
   plan: {
-    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &middot; &copy; <a href="https://carto.com/">CARTO</a>',
+    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
     label: "Plan",
+    subdomains: "abcd",
+    maxZoom: 19,
   },
   satellite: {
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -392,6 +395,8 @@ export default function MapAnnonces({
           key={mapType}
           attribution={tile.attribution}
           url={tile.url}
+          {...(tile.subdomains ? { subdomains: tile.subdomains.split("") } : {})}
+          {...(tile.maxZoom ? { maxZoom: tile.maxZoom } : {})}
         />
         <BoundsWatcher onMoved={handleMoved} />
         <FrenchLeafletLocale />
