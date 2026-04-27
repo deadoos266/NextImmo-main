@@ -371,8 +371,9 @@ export default function ListingCardSearch({
           )}
         </div>
 
-        {/* Top-right : pile d'actions (favori + Aperçu + Comparer) */}
-        <div style={{ position: "absolute", top: 12, right: 12, zIndex: 5, display: "flex", flexDirection: "column", gap: 8 }}>
+        {/* Top-right : favori uniquement (Paul 2026-04-27 — Aperçu + Comparer
+            deplaces dans le footer pour ne plus bloquer la photo). */}
+        <div style={{ position: "absolute", top: 12, right: 12, zIndex: 5 }}>
           <button
             onClick={onToggleFavori}
             aria-label={favori ? "Retirer des favoris" : "Ajouter aux favoris"}
@@ -391,66 +392,6 @@ export default function ListingCardSearch({
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
             </svg>
           </button>
-
-          {/* Aperçu (QuickView) — affiche la modale détail sans quitter la liste */}
-          {onQuickView && (
-            <button
-              onClick={e => { e.preventDefault(); e.stopPropagation(); onQuickView(annonce.id) }}
-              aria-label="Aperçu rapide de l'annonce"
-              title="Aperçu rapide"
-              style={{
-                width: 38, height: 38, borderRadius: "50%",
-                background: "rgba(255,255,255,0.94)", color: "#111",
-                border: "none", cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                backdropFilter: "blur(6px)", transition: "transform 200ms",
-              }}
-              onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.10)")}
-              onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-            </button>
-          )}
-
-          {/* Comparer — toggle dans la pile compare (CompareTray sticky bas) */}
-          {onToggleCompare && (
-            <button
-              onClick={e => { e.preventDefault(); e.stopPropagation(); if (!compareDisabled || compared) onToggleCompare(annonce.id) }}
-              disabled={!compared && compareDisabled}
-              aria-label={compared ? "Retirer de la comparaison" : "Ajouter à la comparaison"}
-              aria-pressed={compared}
-              title={compared ? "Retirer de la comparaison" : (compareDisabled ? "Maximum atteint" : "Comparer cette annonce")}
-              style={{
-                width: 38, height: 38, borderRadius: "50%",
-                background: compared ? "#111" : "rgba(255,255,255,0.94)",
-                color: compared ? "white" : "#111",
-                border: "none",
-                cursor: !compared && compareDisabled ? "not-allowed" : "pointer",
-                opacity: !compared && compareDisabled ? 0.55 : 1,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                backdropFilter: "blur(6px)", transition: "transform 200ms",
-              }}
-              onMouseEnter={e => { if (compared || !compareDisabled) e.currentTarget.style.transform = "scale(1.10)" }}
-              onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
-            >
-              {compared ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  {/* Échelle/balance — symbole comparaison */}
-                  <line x1="12" y1="3" x2="12" y2="21" />
-                  <line x1="3" y1="9" x2="21" y2="9" />
-                  <path d="M3 9 6 15 9 9" />
-                  <path d="M15 9 18 15 21 9" />
-                </svg>
-              )}
-            </button>
-          )}
         </div>
       </div>
 
@@ -523,6 +464,76 @@ export default function ListingCardSearch({
             <span style={{ fontWeight: 400, color: "#8a8477", fontSize: 10 }}>/mois</span>
           </span>
         </div>
+
+        {/* Actions ghost (Aperçu + Comparer) — Paul 2026-04-27 : deplaces de
+            l'overlay photo top-right vers le footer card pour ne plus bloquer
+            la photo. Style ghost (transparent + hover beige) pour rester
+            secondaire vs la card cliquable. stopPropagation pour ne pas
+            declencher la navigation vers /annonces/[id]. */}
+        {(onQuickView || onToggleCompare) && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10, paddingTop: 9, borderTop: "1px solid #EAE6DF" }}>
+            {onQuickView && (
+              <button
+                type="button"
+                onClick={e => { e.preventDefault(); e.stopPropagation(); onQuickView(annonce.id) }}
+                aria-label="Aperçu rapide de l'annonce"
+                title="Aperçu rapide — voir le détail sans quitter la liste"
+                onMouseEnter={e => { e.currentTarget.style.background = "#F7F4EF"; e.currentTarget.style.color = "#111" }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#6B6B6B" }}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  background: "transparent", border: "none",
+                  color: "#6B6B6B", padding: "6px 10px", borderRadius: 999,
+                  fontSize: 12, fontWeight: 600, fontFamily: "inherit",
+                  cursor: "pointer", transition: "background 150ms, color 150ms",
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                Aperçu
+              </button>
+            )}
+            {onToggleCompare && (
+              <button
+                type="button"
+                onClick={e => { e.preventDefault(); e.stopPropagation(); if (!compareDisabled || compared) onToggleCompare(annonce.id) }}
+                disabled={!compared && compareDisabled}
+                aria-label={compared ? "Retirer de la comparaison" : "Ajouter à la comparaison"}
+                aria-pressed={compared}
+                title={compared ? "Retirer de la comparaison" : (compareDisabled ? "Maximum atteint" : "Comparer cette annonce")}
+                onMouseEnter={e => { if (compared) return; if (compareDisabled) return; e.currentTarget.style.background = "#F7F4EF"; e.currentTarget.style.color = "#111" }}
+                onMouseLeave={e => { if (compared) return; e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#6B6B6B" }}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  background: compared ? "#111" : "transparent",
+                  border: "none",
+                  color: compared ? "#fff" : "#6B6B6B",
+                  padding: "6px 10px", borderRadius: 999,
+                  fontSize: 12, fontWeight: 600, fontFamily: "inherit",
+                  cursor: !compared && compareDisabled ? "not-allowed" : "pointer",
+                  opacity: !compared && compareDisabled ? 0.55 : 1,
+                  transition: "background 150ms, color 150ms",
+                }}
+              >
+                {compared ? (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <line x1="12" y1="3" x2="12" y2="21" />
+                    <line x1="3" y1="9" x2="21" y2="9" />
+                    <path d="M3 9 6 15 9 9" />
+                    <path d="M15 9 18 15 21 9" />
+                  </svg>
+                )}
+                {compared ? "Comparé" : "Comparer"}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </a>
   )

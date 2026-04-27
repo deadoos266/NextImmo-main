@@ -183,10 +183,10 @@ export default function ListingCardCompact({
           )}
         </div>
 
-        {/* Pile actions top-right : favori + Aperçu + Comparer (handoff parity
-            avec ListingCardSearch). Réorganise l'action bar du footer trop
-            dense. Boutons 28×28 ronds, pile verticale gap 6. */}
-        <div style={{ position: "absolute", top: 8, right: 8, zIndex: 3, display: "flex", flexDirection: "column", gap: 6 }}>
+        {/* Top-right : favori uniquement (Paul 2026-04-27 — Aperçu + Comparer
+            deplaces dans la barre d'actions du footer pour ne plus bloquer
+            la photo, a gauche du CTA "Voir l'annonce"). */}
+        <div style={{ position: "absolute", top: 8, right: 8, zIndex: 3 }}>
           <button
             type="button"
             onClick={onToggleFavori}
@@ -211,63 +211,6 @@ export default function ListingCardCompact({
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
             </svg>
           </button>
-          {onPreview && (
-            <button
-              type="button"
-              onClick={handlePreview}
-              aria-label="Aperçu rapide de l'annonce"
-              title="Aperçu rapide"
-              style={{
-                width: 28, height: 28, borderRadius: "50%",
-                background: "rgba(255,255,255,0.95)", color: "#111",
-                border: "none", cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                transition: "transform 200ms",
-              }}
-              onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.10)")}
-              onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-            </button>
-          )}
-          {onToggleCompare && (
-            <button
-              type="button"
-              onClick={handleCompareToggle}
-              disabled={!compared && compareDisabled}
-              aria-label={compared ? "Retirer du comparateur" : "Ajouter au comparateur"}
-              aria-pressed={compared}
-              title={compared ? "Retirer de la comparaison" : (compareDisabled ? "Maximum atteint" : "Comparer cette annonce")}
-              style={{
-                width: 28, height: 28, borderRadius: "50%",
-                background: compared ? "#111" : "rgba(255,255,255,0.95)",
-                color: compared ? "#fff" : "#111",
-                border: "none",
-                cursor: !compared && compareDisabled ? "not-allowed" : "pointer",
-                opacity: !compared && compareDisabled ? 0.55 : 1,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                transition: "transform 200ms",
-              }}
-              onMouseEnter={e => { if (compared || !compareDisabled) e.currentTarget.style.transform = "scale(1.10)" }}
-              onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                {compared ? (
-                  <polyline points="20 6 9 17 4 12" />
-                ) : (
-                  <>
-                    <line x1="12" y1="3" x2="12" y2="21" />
-                    <line x1="3" y1="9" x2="21" y2="9" />
-                    <path d="M3 9 6 15 9 9" />
-                    <path d="M15 9 18 15 21 9" />
-                  </>
-                )}
-              </svg>
-            </button>
-          )}
         </div>
 
         {/* Photo dots segmented bar bottom */}
@@ -362,11 +305,73 @@ export default function ListingCardCompact({
           </div>
         )}
 
-        {/* Action bar — simplifiée. Aperçu/Comparer désormais en top-right
-            photo (cohérent ListingCardSearch). On garde juste le CTA "Voir →"
-            qui est de toute façon redondant avec le card cliquable mais
-            confirme l'affordance. */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginTop: "auto", paddingTop: 10, borderTop: "1px solid #EAE6DF" }}>
+        {/* Action bar (Paul 2026-04-27) : Aperçu + Comparer ghost a gauche,
+            CTA "Voir l'annonce" a droite. stopPropagation pour ne pas
+            declencher la navigation vers /annonces/[id] sur les actions
+            secondaires. */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: "auto", paddingTop: 10, borderTop: "1px solid #EAE6DF", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 1, minWidth: 0 }}>
+            {onPreview && (
+              <button
+                type="button"
+                onClick={handlePreview}
+                aria-label="Aperçu rapide de l'annonce"
+                title="Aperçu rapide — voir le détail sans quitter la liste"
+                onMouseEnter={e => { e.currentTarget.style.background = "#F7F4EF"; e.currentTarget.style.color = "#111" }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#6B6B6B" }}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  background: "transparent", border: "none",
+                  color: "#6B6B6B", padding: "5px 8px", borderRadius: 999,
+                  fontSize: 11.5, fontWeight: 600, fontFamily: "inherit",
+                  cursor: "pointer", transition: "background 150ms, color 150ms",
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                Aperçu
+              </button>
+            )}
+            {onToggleCompare && (
+              <button
+                type="button"
+                onClick={handleCompareToggle}
+                disabled={!compared && compareDisabled}
+                aria-label={compared ? "Retirer du comparateur" : "Ajouter au comparateur"}
+                aria-pressed={compared}
+                title={compared ? "Retirer de la comparaison" : (compareDisabled ? "Maximum atteint" : "Comparer cette annonce")}
+                onMouseEnter={e => { if (compared) return; if (compareDisabled) return; e.currentTarget.style.background = "#F7F4EF"; e.currentTarget.style.color = "#111" }}
+                onMouseLeave={e => { if (compared) return; e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#6B6B6B" }}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  background: compared ? "#111" : "transparent",
+                  border: "none",
+                  color: compared ? "#fff" : "#6B6B6B",
+                  padding: "5px 8px", borderRadius: 999,
+                  fontSize: 11.5, fontWeight: 600, fontFamily: "inherit",
+                  cursor: !compared && compareDisabled ? "not-allowed" : "pointer",
+                  opacity: !compared && compareDisabled ? 0.55 : 1,
+                  transition: "background 150ms, color 150ms",
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  {compared ? (
+                    <polyline points="20 6 9 17 4 12" />
+                  ) : (
+                    <>
+                      <line x1="12" y1="3" x2="12" y2="21" />
+                      <line x1="3" y1="9" x2="21" y2="9" />
+                      <path d="M3 9 6 15 9 9" />
+                      <path d="M15 9 18 15 21 9" />
+                    </>
+                  )}
+                </svg>
+                {compared ? "Comparé" : "Comparer"}
+              </button>
+            )}
+          </div>
           <span style={{
             padding: "7px 14px",
             borderRadius: 999,
@@ -380,6 +385,7 @@ export default function ListingCardCompact({
             gap: 4,
             whiteSpace: "nowrap",
             letterSpacing: "0.3px",
+            flexShrink: 0,
           }}>
             Voir l&apos;annonce
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
