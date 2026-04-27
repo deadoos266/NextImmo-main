@@ -327,6 +327,11 @@ export default function MapAnnonces({
   const [pendingBounds, setPendingBounds] = useState<L.LatLngBounds | null>(null)
   const [searchHere, setSearchHere] = useState(false)
   const initialBoundsSet = useRef(false)
+  // Popup ouvert top-right : 'layers' (selecteur de fond), 'legend'
+  // (legende compatibilite couleur), null (rien ouvert).
+  // Paul 2026-04-27 : remplace les 3 boutons inline Plan/Sat/Detaille par
+  // un bouton icone Layers + un bouton (i) info — moins encombrant.
+  const [panelOpen, setPanelOpen] = useState<"layers" | "legend" | null>(null)
 
   const withCoords = spreadOverlappingMarkers(annonces.filter(a => a._lat && a._lng))
 
@@ -638,26 +643,140 @@ export default function MapAnnonces({
         {withCoords.length} bien{withCoords.length > 1 ? "s" : ""} &middot; France
       </div>
 
-      {/* v5.4 : Sélecteur Plan/Satellite/Détaillé déplacé en haut (top-right).
-          Le bouton "Rechercher dans cette zone" reste top-center quand actif. */}
-      <div style={{
-        position: "absolute", top: 16, right: 12, zIndex: 1000,
-        background: "white", borderRadius: 10, boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
-        display: "flex", overflow: "hidden", border: "1px solid #EAE6DF"
-      }}>
-        {(Object.keys(TILES) as MapType[]).map((t, i) => (
-          <button key={t} onClick={() => setMapType(t)}
-            style={{
-              padding: "7px 12px", border: "none", cursor: "pointer",
-              fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 600,
-              background: mapType === t ? "#111" : "white",
-              color: mapType === t ? "white" : "#111",
-              borderRight: i < 2 ? "1px solid #EAE6DF" : "none",
-              transition: "all 0.15s",
-            }}>
-            {TILES[t].label}
-          </button>
-        ))}
+      {/* Top-right : stack 2 boutons icones (Layers + Legend info).
+          Paul 2026-04-27 : remplace les 3 boutons inline qui prenaient toute
+          la barre top-right. Click ouvre un popup contextuel sous le bouton. */}
+      <div style={{ position: "absolute", top: 16, right: 12, zIndex: 1000, display: "flex", flexDirection: "column", gap: 8 }}>
+        {/* Bouton Layers (3 cartes empilees) */}
+        <button
+          type="button"
+          onClick={() => setPanelOpen(p => p === "layers" ? null : "layers")}
+          aria-label="Choisir le fond de carte"
+          aria-expanded={panelOpen === "layers"}
+          title="Choisir le fond de carte"
+          style={{
+            width: 36, height: 36, border: "1px solid #EAE6DF",
+            background: panelOpen === "layers" ? "#F7F4EF" : "white",
+            color: "#111",
+            borderRadius: 10,
+            cursor: "pointer", fontFamily: "inherit",
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+            transition: "background 120ms ease",
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <polygon points="12 2 2 7 12 12 22 7 12 2" />
+            <polyline points="2 17 12 22 22 17" />
+            <polyline points="2 12 12 17 22 12" />
+          </svg>
+        </button>
+
+        {/* Bouton (i) Legend compatibilite */}
+        <button
+          type="button"
+          onClick={() => setPanelOpen(p => p === "legend" ? null : "legend")}
+          aria-label="Légende des couleurs de compatibilité"
+          aria-expanded={panelOpen === "legend"}
+          title="Légende compatibilité"
+          style={{
+            width: 36, height: 36, border: "1px solid #EAE6DF",
+            background: panelOpen === "legend" ? "#F7F4EF" : "white",
+            color: "#111",
+            borderRadius: 10,
+            cursor: "pointer", fontFamily: "inherit",
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+            transition: "background 120ms ease",
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+          </svg>
+        </button>
+
+        {/* Popup contextuel (sous les boutons, slide-in fade) */}
+        {panelOpen === "layers" && (
+          <div role="menu" aria-label="Fond de carte" style={{
+            position: "absolute", top: 88, right: 0,
+            background: "white", borderRadius: 14, border: "1px solid #EAE6DF",
+            boxShadow: "0 12px 32px rgba(0,0,0,0.15)",
+            minWidth: 220, padding: 8,
+            fontFamily: "inherit",
+          }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1px", margin: "4px 12px 8px" }}>Fond de carte</p>
+            {(Object.keys(TILES) as MapType[]).map(t => (
+              <button key={t} type="button" onClick={() => { setMapType(t); setPanelOpen(null) }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  width: "100%", padding: "10px 12px", borderRadius: 8,
+                  background: mapType === t ? "#F7F4EF" : "transparent",
+                  border: "none", cursor: "pointer", fontFamily: "inherit",
+                  fontSize: 13, fontWeight: mapType === t ? 700 : 500, color: "#111",
+                  textAlign: "left",
+                  WebkitTapHighlightColor: "transparent",
+                }}>
+                <span style={{ width: 16, height: 16, borderRadius: 4, border: `2px solid ${mapType === t ? "#111" : "#EAE6DF"}`, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {mapType === t && (
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </span>
+                {TILES[t].label}
+              </button>
+            ))}
+            {/* Layers premium "Bientot" — placeholder pour rassurer sur la roadmap */}
+            <div style={{ height: 1, background: "#F7F4EF", margin: "6px 12px" }} />
+            {[
+              { key: "prix", label: "Carte des prix" },
+              { key: "ecoles", label: "Carte des écoles" },
+            ].map(item => (
+              <div key={item.key} style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+                padding: "10px 12px", borderRadius: 8,
+                fontSize: 13, fontWeight: 500, color: "#8a8477", fontFamily: "inherit",
+              }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ width: 16, height: 16, borderRadius: 4, border: "2px solid #EAE6DF", flexShrink: 0 }} />
+                  {item.label}
+                </span>
+                <span style={{ fontSize: 9, fontWeight: 700, color: "#a16207", background: "#FBF6EA", border: "1px solid #EADFC6", padding: "2px 7px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "0.6px" }}>Bientôt</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {panelOpen === "legend" && (
+          <div role="dialog" aria-label="Légende compatibilité" style={{
+            position: "absolute", top: 88, right: 0,
+            background: "white", borderRadius: 14, border: "1px solid #EAE6DF",
+            boxShadow: "0 12px 32px rgba(0,0,0,0.15)",
+            width: 240, padding: 16,
+            fontFamily: "inherit",
+          }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1px", margin: "0 0 8px" }}>Code couleur des annonces</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "#111" }}>
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#16A34A", flexShrink: 0 }} />
+                <span><strong>Vert</strong> · compatibilité ≥ 70 %</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "#111" }}>
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#F59E0B", flexShrink: 0 }} />
+                <span><strong>Orange</strong> · 50 – 70 %</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "#111" }}>
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#9CA3AF", flexShrink: 0 }} />
+                <span><strong>Gris</strong> · &lt; 50 % ou non calculé</span>
+              </div>
+            </div>
+            <p style={{ fontSize: 11, color: "#8a8477", margin: "12px 0 0", lineHeight: 1.5 }}>
+              Connectez-vous et complétez votre dossier pour voir votre score de compatibilité sur chaque annonce.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )
