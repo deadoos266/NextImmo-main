@@ -643,9 +643,15 @@ export default function Proprietaire() {
                 : `${biens.length} annonce${biens.length > 1 ? "s" : ""} · ${biensActifs} active${biensActifs > 1 ? "s" : ""}${loyersAttendus > 0 ? ` · ${loyersAttendus} loyer${loyersAttendus > 1 ? "s" : ""} à confirmer` : ""}`}
             </p>
           </div>
-          <a href="/proprietaire/ajouter" style={{ background: km.ink, color: km.white, padding: "11px 22px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14, whiteSpace: "nowrap" }}>
-            + Ajouter un bien
-          </a>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <a href="/proprietaire/bail/importer" title="Importer un bail signé hors plateforme et inviter le locataire à le valider"
+              style={{ background: "transparent", color: km.ink, padding: "11px 22px", borderRadius: 999, textDecoration: "none", fontWeight: 600, fontSize: 14, whiteSpace: "nowrap", border: `1px solid ${km.line}` }}>
+              Importer un bail
+            </a>
+            <a href="/proprietaire/ajouter" style={{ background: km.ink, color: km.white, padding: "11px 22px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 14, whiteSpace: "nowrap" }}>
+              + Ajouter un bien
+            </a>
+          </div>
         </div>
 
         {/* ── Stat tiles dashboard cliquables (HAUTE #3 du flow plan) ──
