@@ -12,6 +12,13 @@ interface RoleContextType {
   setIsAdmin: (v: boolean) => void
   proprietaireActive: boolean
   setProprietaireActive: (v: boolean) => void
+  /**
+   * canBeProprio : l'user a-t-il acces au role proprio (annonce en DB OU
+   * flag is_proprietaire) ? Decorrele de l'etat courant proprietaireActive.
+   * Sert au RoleSwitchToggle (Paul 2026-04-27) qui n'apparait que si l'user
+   * a les 2 roles disponibles.
+   */
+  canBeProprio: boolean
   mounted: boolean
 }
 
@@ -22,6 +29,7 @@ const RoleContext = createContext<RoleContextType>({
   setIsAdmin: () => {},
   proprietaireActive: false,
   setProprietaireActive: () => {},
+  canBeProprio: false,
   mounted: false,
 })
 
@@ -41,6 +49,7 @@ function RoleProvider({ children }: { children: ReactNode }) {
   const [role, setRoleState] = useState<Role>("locataire")
   const [isAdmin, setIsAdminState] = useState(false)
   const [proprietaireActive, setProprietaireActiveState] = useState(false)
+  const [canBeProprio, setCanBeProprio] = useState(false)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -88,7 +97,30 @@ function RoleProvider({ children }: { children: ReactNode }) {
     ]).then(([{ data: profil }, { count }]) => {
       const isProprio = profil?.is_proprietaire === true || (count ?? 0) > 0
       setProprietaireActiveState(isProprio)
+      setCanBeProprio(isProprio)
       localStorage.setItem("nestmatch_proprio_active", isProprio ? "true" : "false")
+      localStorage.setItem("nestmatch_can_be_proprio", isProprio ? "true" : "false")
+    })
+  }, [session, status])
+
+  // Detection canBeProprio via DB une fois — independant de l'etat actuel
+  // proprietaireActive (qui peut etre toggle off par l'user). Sert au
+  // RoleSwitchToggle pour determiner si on affiche le toggle. Persiste en
+  // localStorage pour ne pas re-querier a chaque mount.
+  useEffect(() => {
+    if (status !== "authenticated" || !session?.user?.email) return
+    const cached = localStorage.getItem("nestmatch_can_be_proprio")
+    if (cached === "true") { setCanBeProprio(true); return }
+    if (cached === "false") { setCanBeProprio(false); return }
+    // Pas de cache — query DB
+    const email = session.user.email
+    Promise.all([
+      supabase.from("profils").select("is_proprietaire").eq("email", email).single(),
+      supabase.from("annonces").select("id", { count: "exact", head: true }).eq("proprietaire_email", email),
+    ]).then(([{ data: profil }, { count }]) => {
+      const isProprio = profil?.is_proprietaire === true || (count ?? 0) > 0
+      setCanBeProprio(isProprio)
+      localStorage.setItem("nestmatch_can_be_proprio", isProprio ? "true" : "false")
     })
   }, [session, status])
 
@@ -108,7 +140,7 @@ function RoleProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <RoleContext.Provider value={{ role, setRole, isAdmin, setIsAdmin, proprietaireActive, setProprietaireActive, mounted }}>
+    <RoleContext.Provider value={{ role, setRole, isAdmin, setIsAdmin, proprietaireActive, setProprietaireActive, canBeProprio, mounted }}>
       {children}
     </RoleContext.Provider>
   )

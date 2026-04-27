@@ -9,6 +9,7 @@ import { useResponsive } from "../hooks/useResponsive"
 import { useUserHousingState } from "../hooks/useUserHousingState"
 import Logo from "./Logo"
 import NotificationBell from "./NotificationBell"
+import RoleSwitchToggle from "./RoleSwitchToggle"
 import { km } from "./ui/km"
 import GatedAction, { type GatedActionReason } from "./ui/GatedAction"
 
@@ -386,6 +387,7 @@ export default function Navbar() {
               Publier
             </Link>
           )}
+          {session && <RoleSwitchToggle variant="desktop" />}
           {session && <NotificationBell />}
           {session ? (
             <div style={{ position: "relative" }}>
@@ -678,6 +680,10 @@ export default function Navbar() {
                 </div>
               </div>
             )}
+
+            {/* Role switch toggle — visible UNIQUEMENT si l'user a les 2 roles
+                disponibles (cf useRoleSwitch.canSwitch). Self-hides sinon. */}
+            {session && <RoleSwitchToggle variant="mobile" />}
 
             {/* Nav links — pattern "pill rounded" pour hover/active design soft.
                 Paul 2026-04-27 : remplace les rows plats avec hairline par
