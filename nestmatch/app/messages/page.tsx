@@ -3916,15 +3916,22 @@ function MessagesInner() {
                             ? `Validez d'abord le dossier de ${peerName} pour activer cette fonction.`
                             : `Le propriétaire doit d'abord valider votre candidature pour activer cette fonction.`,
                         }
+                        // Decision Paul 2026-04-27 : Visio = deeplink WhatsApp
+                        // au lieu d'un tier visio integre. Le bouton ouvre
+                        // wa.me/<numero> dans un nouvel onglet (mobile : app
+                        // native via le scheme handler). User choisit dans
+                        // WhatsApp si appel audio ou video.
+                        // Format E.164 sans + ni espaces (ex 33612345678).
+                        const peerPhoneE164 = peerPhone.replace(/[\s\-+()]/g, "")
                         const visioReason = phoneReasonForUser || phoneReasonForPeer || {
-                          title: "Visio bientôt disponible",
-                          body: "La visio en direct sera disponible prochainement. En attendant, planifiez une visite physique ou utilisez l'appel téléphonique une fois la relation avancée.",
+                          title: "Visio indisponible",
+                          body: "Le numero du correspondant n'est pas exploitable pour ouvrir WhatsApp.",
                         }
-                        // Visio : jamais enabled aujourd'hui (placeholder en
-                        // attendant intégration tier). Mais on raffine la
-                        // raison si phone manquant pour ne pas dire "bientôt"
-                        // alors que la vraie cause c'est l'absence de numéro.
-                        const visioEnabled = false
+                        // Visio enabled = phones bilateraux OK (meme contrainte
+                        // que l'appel) — pas de tier visio en place, donc on
+                        // delegue a WhatsApp qui demande de toute facon que
+                        // les 2 parties l'utilisent.
+                        const visioEnabled = phoneAvailable && peerPhoneE164.length >= 8
 
                         const iconBtnStyle: React.CSSProperties = {
                           width: 36, height: 36, borderRadius: "50%",
@@ -3976,14 +3983,16 @@ function MessagesInner() {
                             )}
                             {isUnlocked && (
                               <GatedAction enabled={visioEnabled} disabledReason={visioReason}>
-                                <button
-                                  type="button"
-                                  aria-label="Lancer une visio"
-                                  title="Lancer une visio"
+                                <a
+                                  href={visioEnabled ? `https://wa.me/${peerPhoneE164}` : undefined}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  aria-label="Lancer un appel WhatsApp"
+                                  title="Lancer un appel WhatsApp (audio ou video)"
                                   style={iconBtnStyle}
                                 >
                                   {videoIcon}
-                                </button>
+                                </a>
                               </GatedAction>
                             )}
                             <GatedAction
