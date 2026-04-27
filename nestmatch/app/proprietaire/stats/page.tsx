@@ -232,11 +232,12 @@ function LineChart({
 
 async function genererQuittancePDF({
   nomProprietaire, emailProprietaire, emailLocataire,
-  titreBien, villeBien, adresse, loyerHC, charges, moisLabel
+  titreBien, villeBien, adresse, loyerHC, charges, moisLabel, bailSource
 }: {
   nomProprietaire: string; emailProprietaire: string; emailLocataire: string
   titreBien: string; villeBien: string; adresse: string
   loyerHC: number; charges: number; moisLabel: string
+  bailSource?: "platform" | "imported" | "imported_pending"
 }) {
   const { default: jsPDF } = await import("jspdf")
   const doc = new jsPDF()
@@ -289,6 +290,12 @@ async function genererQuittancePDF({
   doc.line(110, 198, 185, 198)
 
   doc.setFontSize(7); doc.setTextColor(150, 150, 150)
+  if (bailSource === "imported" || bailSource === "imported_pending") {
+    doc.text(
+      "Bail signé hors plateforme — KeyMatch est utilisé comme outil de gestion locative.",
+      105, 280, { align: "center" }
+    )
+  }
   doc.text(`Document généré par ${BRAND.name} — ${BRAND.url.replace(/^https?:\/\//, "")}`, 105, 285, { align: "center" })
 
   doc.save(`quittance-${moisLabel.toLowerCase().replace(" ", "-")}.pdf`)
@@ -1549,6 +1556,7 @@ function StatsInner() {
                           loyerHC: Number(bien.prix) || 0,
                           charges: Number(bien.charges) || 0,
                           moisLabel,
+                          bailSource: bien.bail_source,
                         })}
                           style={{ background: "#EEF3FB", color: "#1d4ed8", border: "1px solid #D7E3F4", borderRadius: 999, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                           Quittance PDF
@@ -1615,6 +1623,7 @@ function StatsInner() {
                           loyerHC: Number(bien.prix) || 0,
                           charges: Number(bien.charges) || 0,
                           moisLabel,
+                          bailSource: bien.bail_source,
                         })}
                           style={{ background: "#EEF3FB", color: "#1d4ed8", border: "1px solid #D7E3F4", borderRadius: 999, padding: "4px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                           PDF

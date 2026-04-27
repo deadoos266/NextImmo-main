@@ -27,6 +27,10 @@ export interface QuittanceData {
   charges: number
   moisLabel: string  // "septembre 2026"
   dateEmission?: string  // YYYY-MM-DD, défaut today
+  // Origine du bail — pour ajouter une mention transparente quand le
+  // bail a été signé hors plateforme (l'attestation reste juridiquement
+  // valable, mais on précise que KeyMatch n'est qu'outil de gestion).
+  bailSource?: "platform" | "imported" | "imported_pending"
 }
 
 /**
@@ -106,8 +110,15 @@ export function generateQuittancePDFBuffer(data: QuittanceData): Buffer {
   doc.text("Signature du bailleur :", 110, 200)
   doc.line(110, 215, 185, 215)
 
-  // Footer
+  // Footer — mention origine bail si importé (transparence)
   doc.setFontSize(7); doc.setTextColor(150, 150, 150)
+  const isImported = data.bailSource === "imported" || data.bailSource === "imported_pending"
+  if (isImported) {
+    doc.text(
+      "Bail signé hors plateforme — KeyMatch est utilisé comme outil de gestion locative.",
+      105, 280, { align: "center" }
+    )
+  }
   doc.text(`Document généré par ${BRAND.name} — ${BRAND.url.replace(/^https?:\/\//, "")}`, 105, 285, { align: "center" })
 
   // ArrayBuffer → Buffer Node

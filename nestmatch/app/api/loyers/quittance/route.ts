@@ -70,7 +70,7 @@ export async function POST(req: Request) {
   // Récupère l'annonce + le proprio + le locataire pour validation accès
   const { data: annonce } = await supabaseAdmin
     .from("annonces")
-    .select("id, titre, ville, adresse, prix, charges, proprietaire_email")
+    .select("id, titre, ville, adresse, prix, charges, proprietaire_email, bail_source")
     .eq("id", loyer.annonce_id)
     .maybeSingle()
 
@@ -126,6 +126,7 @@ export async function POST(req: Request) {
     loyerHC,
     charges: chargesMontant,
     moisLabel,
+    bailSource: (annonce as { bail_source?: "platform" | "imported" | "imported_pending" })?.bail_source,
   })
 
   // Upload Storage
