@@ -63,6 +63,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Contenu du fichier invalide" }, { status: 400 })
   }
 
+  // Toggle "Améliorer automatiquement les photos" : par défaut ON cote UI,
+  // peut etre desactive si le proprio a deja retouche manuellement. Le client
+  // envoie la string "true"/"false", absence = false (compat ascendante).
+  const enhanceField = form.get("enhance")
+  const enhance = typeof enhanceField === "string" ? enhanceField === "true" : false
+
   let sanitized
   try {
     sanitized = await sanitizeImage(Buffer.from(bytes), {
@@ -70,6 +76,7 @@ export async function POST(req: NextRequest) {
       maxHeight: 2000,
       format: "jpeg",
       quality: 85,
+      enhance,
     })
   } catch (e) {
     console.error("[photo annonce sanitize]", e)

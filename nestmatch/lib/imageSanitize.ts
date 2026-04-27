@@ -16,6 +16,7 @@
  */
 
 import sharp from "sharp"
+import { applyPhotoEnhance } from "./photoEnhance"
 
 export type SanitizeFormat = "jpeg" | "webp"
 
@@ -24,6 +25,12 @@ export type SanitizeOpts = {
   maxHeight?: number
   format?: SanitizeFormat
   quality?: number
+  /**
+   * Si true, applique le pipeline d'enhance auto (normalize + modulate +
+   * sharpen) avant l'encodage final. Default: false (preserve l'image
+   * source telle quelle apres strip EXIF + resize).
+   */
+  enhance?: boolean
 }
 
 export type SanitizeResult = {
@@ -54,6 +61,14 @@ export async function sanitizeImage(
       fit: "inside",
       withoutEnlargement: true,
     })
+
+  // Enhance auto (Paul 2026-04-27) : normalize + modulate + sharpen, opt-in
+  // via le toggle UI cote proprio. Place APRES rotate+resize pour que
+  // l'enhance s'applique sur l'image deja a la bonne taille (sharpen plus
+  // efficace) et avant l'encode final.
+  if (opts.enhance) {
+    pipeline = applyPhotoEnhance(pipeline)
+  }
 
   if (format === "jpeg") {
     pipeline = pipeline.jpeg({ quality, progressive: true, mozjpeg: true })

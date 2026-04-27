@@ -47,6 +47,8 @@ export default function ModifierBien() {
   const [photos, setPhotos] = useState<string[]>([])
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
+  // Toggle "Améliorer auto" — Paul 2026-04-27. Default ON. Cf /ajouter.
+  const [enhancePhotos, setEnhancePhotos] = useState(true)
   const photoInputRef = useRef<HTMLInputElement>(null)
 
   const [form, setForm] = useState({
@@ -164,6 +166,7 @@ export default function ModifierBien() {
     // Passe par l'API serveur : strip EXIF/GPS + resize + re-encode JPEG.
     const fd = new FormData()
     fd.append("file", file)
+    fd.append("enhance", enhancePhotos ? "true" : "false")
     let json: { ok?: boolean; url?: string; error?: string } = {}
     try {
       const res = await fetch("/api/proprietaire/photo", { method: "POST", body: fd })
@@ -421,6 +424,18 @@ export default function ModifierBien() {
 
         {/* Photos */}
         <Sec t="Photos du bien">
+          {/* Toggle "Améliorer auto" — Paul 2026-04-27. Default ON.
+              Pipeline server-side : normalize + modulate + sharpen Sharp. */}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+            <label style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 12, color: "#111", fontWeight: 500 }}
+              title="Auto-contraste, légère exposition + saturation, sharpening doux. Désactivez si vos photos sont déjà retouchées.">
+              <span style={{ color: "#8a8477" }}>Améliorer auto</span>
+              <span aria-hidden style={{ position: "relative", display: "inline-block", width: 36, height: 20, borderRadius: 999, background: enhancePhotos ? "#111" : "#EAE6DF", transition: "background 200ms" }}>
+                <span style={{ position: "absolute", top: 2, left: enhancePhotos ? 18 : 2, width: 16, height: 16, borderRadius: "50%", background: "#fff", transition: "left 200ms", boxShadow: "0 1px 2px rgba(0,0,0,0.15)" }} />
+              </span>
+              <input type="checkbox" checked={enhancePhotos} onChange={e => setEnhancePhotos(e.target.checked)} style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }} />
+            </label>
+          </div>
           {photoError && (
             <div style={{ background: "#FEECEC", border: "1px solid #F4C9C9", borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <p style={{ fontSize: 13, color: "#b91c1c" }}>{photoError}</p>

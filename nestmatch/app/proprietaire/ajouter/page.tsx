@@ -105,6 +105,10 @@ export default function AjouterBien() {
   const [photos, setPhotos] = useState<string[]>([])
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
+  // Toggle "Améliorer automatiquement les photos" — opt-in par défaut ON
+  // (Paul 2026-04-27). Le proprio peut désactiver s'il a déjà retouché ses
+  // photos (Lightroom, etc.) et ne veut pas qu'on touche.
+  const [enhancePhotos, setEnhancePhotos] = useState(true)
   const photoInputRef = useRef<HTMLInputElement>(null)
 
   const [form, setForm] = useState<AnnonceForm>({
@@ -209,6 +213,7 @@ export default function AjouterBien() {
 
     const fd = new FormData()
     fd.append("file", file)
+    fd.append("enhance", enhancePhotos ? "true" : "false")
     let json: { ok?: boolean; url?: string; error?: string } = {}
     try {
       const res = await fetch("/api/proprietaire/photo", { method: "POST", body: fd })
@@ -475,6 +480,8 @@ export default function AjouterBien() {
               uploadPhoto={uploadPhoto}
               removePhoto={removePhoto}
               photoInputRef={photoInputRef}
+              enhancePhotos={enhancePhotos}
+              setEnhancePhotos={setEnhancePhotos}
             />
           )}
           {step === 6 && (
@@ -898,6 +905,7 @@ function Step4Equipements({
 // ─── Étape 5 — Photos + description ────────────────────────────────────────
 function Step5Recit({
   form, setForm, photos, photoError, setPhotoError, uploadingPhoto, uploadPhoto, removePhoto, photoInputRef,
+  enhancePhotos, setEnhancePhotos,
 }: {
   form: AnnonceForm
   setForm: React.Dispatch<React.SetStateAction<AnnonceForm>>
@@ -908,6 +916,8 @@ function Step5Recit({
   uploadPhoto: (f: File) => Promise<void>
   removePhoto: (idx: number) => void
   photoInputRef: React.RefObject<HTMLInputElement | null>
+  enhancePhotos: boolean
+  setEnhancePhotos: React.Dispatch<React.SetStateAction<boolean>>
 }) {
   const set = (key: keyof AnnonceForm) => (e: { target: { value: string } }) =>
     setForm(f => ({ ...f, [key]: e.target.value }))
@@ -953,9 +963,22 @@ function Step5Recit({
 
   return (
     <>
-      <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 14px" }}>
-        Photos — {photos.length}/10
-      </p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, margin: "0 0 14px" }}>
+        <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: 0 }}>
+          Photos — {photos.length}/10
+        </p>
+        {/* Toggle "Améliorer automatiquement" — Paul 2026-04-27. Default ON :
+            applique normalize + modulate + sharpen au serveur. Off pour les
+            proprios qui ont déjà retouché manuellement. */}
+        <label style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 12, color: km.ink, fontWeight: 500 }}
+          title="Auto-contraste, légère exposition + saturation, sharpening doux. Désactivez si vos photos sont déjà retouchées.">
+          <span style={{ color: km.muted }}>Améliorer auto</span>
+          <span aria-hidden style={{ position: "relative", display: "inline-block", width: 36, height: 20, borderRadius: 999, background: enhancePhotos ? km.ink : km.line, transition: "background 200ms" }}>
+            <span style={{ position: "absolute", top: 2, left: enhancePhotos ? 18 : 2, width: 16, height: 16, borderRadius: "50%", background: km.white, transition: "left 200ms", boxShadow: "0 1px 2px rgba(0,0,0,0.15)" }} />
+          </span>
+          <input type="checkbox" checked={enhancePhotos} onChange={e => setEnhancePhotos(e.target.checked)} style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }} />
+        </label>
+      </div>
 
       {photoError && (
         <div style={{ background: km.errBg, border: `1px solid ${km.errLine}`, borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
