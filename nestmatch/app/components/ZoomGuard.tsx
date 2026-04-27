@@ -31,9 +31,12 @@ export default function ZoomGuard() {
       // parfois meme avec maximumScale 1. On reset le document overflow
       // pour garantir scroll possible.
       if (vv.scale < 0.99) {
-        // Force le reflow + reset overflow body
-        document.body.style.overflow = "auto"
-        document.documentElement.style.overflow = "auto"
+        // Force le reflow + reset overflow body. STRING VIDE et pas "auto" :
+        // si un modal a stocke prev = "auto" et qu'il restaure ensuite, on
+        // garderait "auto" en permanence. La string vide reset au default
+        // CSS du document. Paul 2026-04-27.
+        document.body.style.overflow = ""
+        document.documentElement.style.overflow = ""
         // Trigger un layout pass via scrollTo (no-op si deja a 0)
         window.scrollTo({ top: window.scrollY, behavior: "auto" })
       }

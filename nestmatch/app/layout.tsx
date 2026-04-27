@@ -9,6 +9,7 @@ import CookieBanner from './components/CookieBanner'
 import ToastStack from './components/ToastStack'
 import ServiceWorkerRegister from './components/ServiceWorkerRegister'
 import ZoomGuard from './components/ZoomGuard'
+import ScrollLockReset from './components/ScrollLockReset'
 import BetaBanner from './components/BetaBanner'
 import MountedOnly from './components/MountedOnly'
 import ThemeApplier from './components/ThemeApplier'
@@ -224,6 +225,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ToastStack />
           <ServiceWorkerRegister />
           <ZoomGuard />
+          <ScrollLockReset />
         </Providers>
       </body>
     </html>
