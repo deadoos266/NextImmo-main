@@ -321,6 +321,92 @@ Voir les annonces : ${params.annoncesUrl}
   }
 }
 
+export function bailInvitationTemplate(params: {
+  proprioName: string
+  bienTitre: string
+  ville: string | null
+  loyerHC: number
+  charges: number
+  acceptUrl: string
+  declineUrl: string
+  expiresAt: string  // ex: "le 4 mai 2026"
+  messageProprio?: string | null
+}): { subject: string; html: string; text: string } {
+  const contexte = params.ville
+    ? `${escapeHtml(params.bienTitre)} à ${escapeHtml(params.ville)}`
+    : escapeHtml(params.bienTitre)
+  const totalCC = params.loyerHC + params.charges
+  const messageBlock = params.messageProprio?.trim()
+    ? `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 18px;">
+      <tr>
+        <td style="background:${PALETTE.bg};border-left:3px solid ${PALETTE.accentMid};border-radius:12px;padding:14px 16px;font-size:13px;line-height:1.6;color:${PALETTE.text};white-space:pre-wrap;">
+          <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:${PALETTE.textSubtle};text-transform:uppercase;letter-spacing:1px;">Mot de ${escapeHtml(params.proprioName)}</p>
+          ${escapeHtml(params.messageProprio.trim())}
+        </td>
+      </tr>
+    </table>
+    `
+    : ""
+  const body = `
+    <h1 style="font-size:24px;font-weight:800;letter-spacing:-0.5px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      Votre propriétaire vous invite sur KeyMatch
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      <strong style="color:${PALETTE.text};">${escapeHtml(params.proprioName)}</strong> a importé votre bail pour <strong style="color:${PALETTE.text};">${contexte}</strong> sur KeyMatch et vous invite à le valider.
+    </p>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      En acceptant, vous pourrez recevoir vos quittances de loyer en PDF chaque mois, signaler des entretiens et discuter avec votre propriétaire — gratuitement, sans frais d'agence.
+    </p>
+
+    ${messageBlock}
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 8px;">
+      <tr>
+        <td style="background:${PALETTE.bg};border-radius:12px;padding:16px 18px;">
+          <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:${PALETTE.textSubtle};text-transform:uppercase;letter-spacing:1px;">Loyer mensuel</p>
+          <p style="margin:0 0 12px;font-size:15px;color:${PALETTE.text};">
+            ${params.loyerHC.toLocaleString("fr-FR")} € hors charges
+            ${params.charges > 0 ? ` <span style="color:${PALETTE.textSubtle};">+ ${params.charges.toLocaleString("fr-FR")} € charges</span>` : ""}
+          </p>
+          <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:${PALETTE.textSubtle};text-transform:uppercase;letter-spacing:1px;">Total mensuel</p>
+          <p style="margin:0;font-size:18px;font-weight:800;color:${PALETTE.text};">${totalCC.toLocaleString("fr-FR")} € CC</p>
+        </td>
+      </tr>
+    </table>
+
+    ${button(params.acceptUrl, "Accepter et créer mon compte")}
+
+    <p style="margin:14px 0 0;text-align:center;font-size:13px;">
+      <a href="${params.declineUrl}" target="_blank" style="color:${PALETTE.textMuted};text-decoration:underline;">Ce n'est pas mon bail / refuser</a>
+    </p>
+
+    <p style="margin:26px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
+      Cette invitation expire ${escapeHtml(params.expiresAt)}. Si vous n'êtes pas le ou la locataire concernée, cliquez simplement sur "refuser" — votre propriétaire en sera informé.
+    </p>
+  `
+  const html = wrap(`${params.proprioName} vous invite à valider votre bail sur KeyMatch.`, body, "bailinvit")
+  const text = `Bonjour,
+
+${params.proprioName} a importé votre bail pour ${params.bienTitre}${params.ville ? " à " + params.ville : ""} sur KeyMatch et vous invite à le valider.
+
+Loyer : ${params.loyerHC.toLocaleString("fr-FR")} € HC${params.charges > 0 ? ` + ${params.charges.toLocaleString("fr-FR")} € charges` : ""}
+Total : ${totalCC.toLocaleString("fr-FR")} € CC
+
+Accepter et créer mon compte : ${params.acceptUrl}
+
+Ce n'est pas mon bail / refuser : ${params.declineUrl}
+
+Cette invitation expire ${params.expiresAt}.
+
+— L'équipe KeyMatch`
+  return {
+    subject: `${params.proprioName} vous invite sur KeyMatch — ${params.bienTitre}`,
+    html,
+    text,
+  }
+}
+
 export function quittanceTemplate(params: {
   bienTitre: string
   ville?: string | null
