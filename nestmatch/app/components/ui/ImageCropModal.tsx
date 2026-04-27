@@ -93,8 +93,14 @@ export default function ImageCropModal({
 }: {
   file: File | null
   onCancel: () => void
-  onCropped: (blob: Blob, originalName: string) => void
-  onSkipCrop?: () => void
+  /** Peut retourner une Promise — le bouton "Valider" reste disabled jusqu'a
+   *  resolution. Anti double-click bug (Paul 2026-04-27) : si le caller
+   *  uploade async vers /api/proprietaire/photo apres crop, on reste busy
+   *  pendant tout ce temps pour eviter 2-3 uploads identiques au spam-click. */
+  onCropped: (blob: Blob, originalName: string) => void | Promise<void>
+  /** Permet aussi de retourner une Promise — meme contrat que onCropped pour
+   *  bloquer le double-click pendant l'upload. */
+  onSkipCrop?: () => void | Promise<void>
   defaultRatio?: number
 }) {
   const [mounted, setMounted] = useState(false)
@@ -148,21 +154,33 @@ export default function ImageCropModal({
     setCrop({ x: 0, y: 0 })
   }
 
+  // Verrou synchrone anti double-click : React setState est asynchrone donc
+  // setBusy(true) ne bloque pas le 2e clic immediatement. Sans ce ref, un
+  // user qui spam-click "Valider" pouvait declencher 2-3 uploads identiques
+  // (la photo arrivait 2-3 fois en DB). Cf. user 2026-04-27.
+  const validateInFlight = useRef(false)
+
   async function validate() {
+    if (validateInFlight.current) return
     if (!dataUrl || !pixelCrop || !file) return
+    validateInFlight.current = true
     setBusy(true)
     setError(null)
     try {
       const blob = await getCroppedBlob(dataUrl, pixelCrop, file.type)
-      onCropped(blob, file.name)
+      // Important : on AWAIT le caller. Si le parent uploade async (ex:
+      // /api/proprietaire/photo qui peut prendre 1-3s avec Sharp enhance),
+      // on reste busy/disabled jusqu'a resolution.
+      await Promise.resolve(onCropped(blob, file.name))
     } catch (e) {
       console.error("[crop] validation failed", e)
       setError("Le recadrage a échoué, veuillez réessayer ou cliquer sur « Sans recadrer ».")
     } finally {
-      // Important : reset busy dans tous les cas pour pouvoir enchaîner sur le
-      // fichier suivant de la queue (multi-upload). Sans ça, le bouton EXPORT
-      // restait coincé en "EXPORT…" et bloquait toute la file de photos.
+      // Reset busy dans tous les cas pour pouvoir enchainer sur le fichier
+      // suivant de la queue (multi-upload). Sans ca, le bouton "Valider"
+      // restait coince en "Export…" et bloquait toute la file de photos.
       setBusy(false)
+      validateInFlight.current = false
     }
   }
 
@@ -317,7 +335,18 @@ export default function ImageCropModal({
             {onSkipCrop && (
               <button
                 type="button"
-                onClick={onSkipCrop}
+                onClick={async () => {
+                  // Meme guard anti double-click que validate (Paul 2026-04-27).
+                  if (validateInFlight.current) return
+                  validateInFlight.current = true
+                  setBusy(true)
+                  try {
+                    await Promise.resolve(onSkipCrop())
+                  } finally {
+                    setBusy(false)
+                    validateInFlight.current = false
+                  }
+                }}
                 disabled={busy}
                 style={{
                   background: "none", border: `1px solid ${km.line}`,
@@ -327,6 +356,7 @@ export default function ImageCropModal({
                   color: km.muted, textTransform: "uppercase", letterSpacing: "0.6px",
                   cursor: busy ? "not-allowed" : "pointer",
                   fontFamily: "inherit",
+                  opacity: busy ? 0.5 : 1,
                 }}
               >Sans recadrer</button>
             )}
@@ -334,8 +364,16 @@ export default function ImageCropModal({
               Annuler
             </KMButtonOutline>
             <KMButton onClick={validate} disabled={busy || !pixelCrop || !dataUrl} style={footerBtnSize}>
-              {busy ? "Export…" : "Valider"}
+              {busy ? (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true" style={{ animation: "km-crop-spin 0.9s linear infinite" }}>
+                    <path d="M21 12a9 9 0 1 1-6.2-8.55" />
+                  </svg>
+                  Optimisation…
+                </span>
+              ) : "Valider"}
             </KMButton>
+            <style>{`@keyframes km-crop-spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`}</style>
           </div>
         </div>
       </div>

@@ -199,8 +199,17 @@ export default function AjouterBien() {
 
   const dejaLoue = form.statut === "loué"
 
+  // Verrou synchrone anti double-click (Paul 2026-04-27) : React setState
+  // est asynchrone donc setUploadingPhoto(true) ne bloque pas le 2e click
+  // immediatement. Sans ce ref, un user qui spam-click "Valider" du
+  // ImageCropModal pouvait declencher 2-3 uploads identiques de la meme
+  // photo. Defense en profondeur en plus du verrou ImageCropModal.
+  const uploadingRef = useRef(false)
+
   async function uploadPhoto(file: File) {
     if (!session?.user?.email) return
+    if (uploadingRef.current) return
+    uploadingRef.current = true
     setUploadingPhoto(true)
     setPhotoError(null)
 
@@ -208,6 +217,7 @@ export default function AjouterBien() {
     if (!check.ok) {
       setPhotoError(check.error)
       setUploadingPhoto(false)
+      uploadingRef.current = false
       return
     }
 
@@ -221,15 +231,20 @@ export default function AjouterBien() {
       if (!res.ok || !json.ok || !json.url) {
         setPhotoError(json.error || "L'envoi de la photo a échoué, veuillez réessayer.")
         setUploadingPhoto(false)
+        uploadingRef.current = false
         return
       }
     } catch {
       setPhotoError("L'envoi de la photo a échoué, veuillez réessayer.")
       setUploadingPhoto(false)
+      uploadingRef.current = false
       return
     }
-    setPhotos(prev => [...prev, json.url!])
+    // De-dup paranoia : si la meme URL est deja presente (bug eventuel ou
+    // race condition residuelle), on ne l'ajoute pas une 2e fois.
+    setPhotos(prev => prev.includes(json.url!) ? prev : [...prev, json.url!])
     setUploadingPhoto(false)
+    uploadingRef.current = false
   }
 
   function removePhoto(idx: number) {

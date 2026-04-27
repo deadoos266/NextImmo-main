@@ -151,8 +151,14 @@ export default function ModifierBien() {
   const sel: any = { ...inp, background: "white" }
   const dejaLoue = form.statut === "loué"
 
+  // Verrou synchrone anti double-click — meme pattern que /proprietaire/ajouter
+  // (Paul 2026-04-27). Defense en profondeur en plus du verrou ImageCropModal.
+  const uploadingRef = useRef(false)
+
   async function uploadPhoto(file: File) {
     if (!session?.user?.email) return
+    if (uploadingRef.current) return
+    uploadingRef.current = true
     setUploadingPhoto(true)
     setPhotoError(null)
 
@@ -160,6 +166,7 @@ export default function ModifierBien() {
     if (!check.ok) {
       setPhotoError(check.error)
       setUploadingPhoto(false)
+      uploadingRef.current = false
       return
     }
 
@@ -174,15 +181,19 @@ export default function ModifierBien() {
       if (!res.ok || !json.ok || !json.url) {
         setPhotoError(json.error || "L'envoi de la photo a échoué, veuillez réessayer.")
         setUploadingPhoto(false)
+        uploadingRef.current = false
         return
       }
     } catch {
       setPhotoError("L'envoi de la photo a échoué, veuillez réessayer.")
       setUploadingPhoto(false)
+      uploadingRef.current = false
       return
     }
-    setPhotos(prev => [...prev, json.url!])
+    // De-dup paranoia : eviter d'ajouter 2x la meme URL (race conditions).
+    setPhotos(prev => prev.includes(json.url!) ? prev : [...prev, json.url!])
     setUploadingPhoto(false)
+    uploadingRef.current = false
   }
 
   function removePhoto(idx: number) {
