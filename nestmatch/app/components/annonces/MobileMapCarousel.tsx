@@ -137,15 +137,17 @@ export default function MobileMapCarousel({
       aria-label="Carte des annonces"
       style={{
         // top: 72 (Paul 2026-04-27) : laisse la Navbar visible au-dessus du
-        // mode carte mobile. User : "le burger menu doit rester visible et
-        // cliquable meme quand on est sur la map". La modale ne couvre plus
-        // toute la viewport.
+        // mode carte mobile. zIndex 5000 < Navbar 10000 < drawer 11000 :
+        // assure que la Navbar (et son burger) restent au-dessus du modal
+        // ET cliquables, et que le drawer mobile (au tap burger) s'ouvre
+        // bien par-dessus tout. Bug user precedent : "le menu burger passe
+        // en dessous donc on peut pas l'utiliser".
         position: "fixed",
         top: 72,
         left: 0,
         right: 0,
         bottom: 0,
-        zIndex: 7400,
+        zIndex: 5000,
         background: km.beige,
         display: "flex",
         flexDirection: "column",

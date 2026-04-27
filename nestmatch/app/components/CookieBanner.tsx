@@ -203,7 +203,9 @@ export default function CookieBanner() {
           bottom: 0,
           left: 0,
           right: 0,
-          zIndex: 9999,
+          // Sous la Navbar (10000) et le drawer (11000) mais au-dessus du
+          // contenu page. Paul 2026-04-27 : passe de 9999 a 8500.
+          zIndex: 8500,
           padding: isMobile ? "16px" : "20px 32px",
           fontFamily: "'DM Sans', sans-serif",
           opacity: animateIn ? 1 : 0,

@@ -163,7 +163,10 @@ export default function ToastStack() {
         position: "fixed",
         bottom: 20,
         right: 20,
-        zIndex: 9999,
+        // Toast notifications doivent etre au-dessus de tout, y compris le
+        // drawer mobile (11000-11001) — un toast critique (visite annulee,
+        // message recu) doit interrompre meme un menu ouvert. Paul 2026-04-27.
+        zIndex: 12000,
         display: "flex",
         flexDirection: "column",
         gap: 10,

@@ -75,7 +75,10 @@ export default function StickyCTABanner({ annonce }: { annonce: any }) {
           left: 0,
           right: 0,
           bottom: 0,
-          zIndex: 9999,
+          // Sous la Navbar (10000) et le drawer (11000-11001). Reste au-dessus
+          // de la modal map (5000) et des modaux app standards (9000).
+          // Paul 2026-04-27 : passe de 9999 a 8000.
+          zIndex: 8000,
           background: "white",
           borderTop: "1.5px solid #EAE6DF",
           boxShadow: "0 -4px 24px rgba(0,0,0,0.08)",

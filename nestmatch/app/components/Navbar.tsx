@@ -276,7 +276,7 @@ export default function Navbar() {
   }
 
   return (
-    <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: isSmall ? "0 16px" : "0 48px", background: km.white, borderBottom: `1px solid ${km.line}`, position: "sticky", top: 0, zIndex: 7000, height: 72, boxShadow: "0 1px 8px rgba(0,0,0,0.05)" }}>
+    <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: isSmall ? "0 16px" : "0 48px", background: km.white, borderBottom: `1px solid ${km.line}`, position: "sticky", top: 0, zIndex: 10000, height: 72, boxShadow: "0 1px 8px rgba(0,0,0,0.05)" }}>
 
       {/* Logo */}
       <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
@@ -614,13 +614,13 @@ export default function Navbar() {
             onClick={() => setMobileOpen(false)}
             aria-hidden="true"
             style={{
-              // z-index 10500/10501 (Paul 2026-04-27) : passe au-dessus du
-              // FAB "Voir sur la carte" (7200), du StickyCTABanner (9999),
-              // CookieBanner (9999) et ToastStack (9999). Le drawer doit
-              // recouvrir tout autre element flottant pendant qu'il est
-              // ouvert. Bug user : "Quand le menu burger sur tel apparait
-              // le 'Voir la carte' passe par dessus".
-              position: "fixed", inset: 0, zIndex: 10500,
+              // z-index 11000/11001 (Paul 2026-04-27 v2) : Navbar bumpee a
+              // 10000 pour passer au-dessus du modal map mobile. Drawer doit
+              // donc etre encore au-dessus de la Navbar pour pouvoir s'ouvrir
+              // par-dessus elle au tap burger.
+              // Hierarchy : modal map 5000 < StickyCTABanner 8000 < modaux app
+              // 9000 < Navbar 10000 < drawer 11000/11001 < toasts 12000.
+              position: "fixed", inset: 0, zIndex: 11000,
               background: "rgba(0,0,0,0.45)",
               opacity: mobileOpen ? 1 : 0,
               pointerEvents: mobileOpen ? "auto" : "none",
@@ -636,7 +636,7 @@ export default function Navbar() {
               position: "fixed", top: 72, left: 0, bottom: 0,
               width: "min(85vw, 360px)",
               maxWidth: "100vw",
-              background: km.white, zIndex: 10501, overflowY: "auto",
+              background: km.white, zIndex: 11001, overflowY: "auto",
               // Coins droits arrondis (slide-in depuis la gauche, cote droit
               // visible dans la viewport — Paul 2026-04-27).
               borderTopRightRadius: 20,
