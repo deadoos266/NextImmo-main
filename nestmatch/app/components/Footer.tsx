@@ -3,6 +3,7 @@ import { usePathname } from "next/navigation"
 import { useResponsive } from "../hooks/useResponsive"
 import { useRole } from "../providers"
 import { useUserHousingState } from "../hooks/useUserHousingState"
+import GatedAction, { type GatedActionReason } from "./ui/GatedAction"
 import Logo from "./Logo"
 
 /**
@@ -158,12 +159,27 @@ export default function Footer() {
                 <a href="/dossier" style={linkBase} onMouseEnter={hoverInk} onMouseLeave={hoverMeta}>Mon dossier</a>
                 <a href="/mes-candidatures" style={linkBase} onMouseEnter={hoverInk} onMouseLeave={hoverMeta}>Mes candidatures</a>
                 <a href="/visites" style={linkBase} onMouseEnter={hoverInk} onMouseLeave={hoverMeta}>Mes visites</a>
-                {hasCurrentHousing && (
+                {/* Pattern GatedAction (round 2026-04-27) : entrées toujours
+                    visibles, désactivées + popup si l'état n'est pas atteint. */}
+                <GatedAction
+                  enabled={hasCurrentHousing}
+                  disabledReason={{
+                    title: "Disponible bientôt",
+                    body: "Cette section sera active une fois que vous aurez signé un bail via KeyMatch.",
+                    cta: { label: "Parcourir les annonces", href: "/annonces" },
+                  } satisfies GatedActionReason}
+                >
                   <a href="/mon-logement" style={linkBase} onMouseEnter={hoverInk} onMouseLeave={hoverMeta}>Mon logement</a>
-                )}
-                {hasPastHousing && (
+                </GatedAction>
+                <GatedAction
+                  enabled={hasPastHousing}
+                  disabledReason={{
+                    title: "Pas encore d'ancien logement",
+                    body: "Quand vous aurez résilié un bail via KeyMatch, vos anciens logements apparaîtront ici.",
+                  } satisfies GatedActionReason}
+                >
                   <a href="/anciens-logements" style={linkBase} onMouseEnter={hoverInk} onMouseLeave={hoverMeta}>Anciens logements</a>
-                )}
+                </GatedAction>
               </>
             )}
           </div>

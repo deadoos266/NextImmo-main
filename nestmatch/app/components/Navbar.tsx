@@ -10,6 +10,7 @@ import { useUserHousingState } from "../hooks/useUserHousingState"
 import Logo from "./Logo"
 import NotificationBell from "./NotificationBell"
 import { km } from "./ui/km"
+import GatedAction, { type GatedActionReason } from "./ui/GatedAction"
 
 // ─── Icon vocabulary (aligné sur le handoff Claude Design, stroke 1.8px) ─────
 function MenuIcon({ name }: { name: string }) {
@@ -143,11 +144,31 @@ export default function Navbar() {
     return () => window.removeEventListener("keydown", handleKey)
   }, [espaceOpen, menuOpen, mobileOpen])
 
-  // Gating locataire — masque les entrées qui n'ont aucune raison d'apparaître
-  // tant que l'état correspondant n'existe pas (avant signature : 0 logement
-  // ⇒ pas de Mon logement / Carnet / Quittances ; pas d'ancien bail terminé
-  // ⇒ pas d'Anciens logements). Routes accessibles en direct (EmptyState).
-  const espaceLinks = proprietaireActive ? [
+  // Gating locataire — pattern GatedAction (round 2026-04-27) :
+  // les entrées Mon logement / Carnet / Quittances / Anciens logements
+  // restent VISIBLES même quand l'état correspondant manque, mais sont
+  // désactivées avec popup explicatif au click (vs masquage silencieux
+  // du commit 5f68917). Améliore l'expectation user.
+  const reasonHousing: GatedActionReason = {
+    title: "Disponible bientôt",
+    body: "Cette section sera active une fois que vous aurez signé un bail via KeyMatch.",
+    cta: { label: "Parcourir les annonces", href: "/annonces" },
+  }
+  const reasonPastHousing: GatedActionReason = {
+    title: "Pas encore d'ancien logement",
+    body: "Quand vous aurez résilié un bail via KeyMatch, vos anciens logements apparaîtront ici.",
+  }
+  type EspaceLink = {
+    href: string
+    label: string
+    desc: string
+    badge?: number
+    /** Si défini, l'entrée est gated par cette condition. Si la condition
+     *  est false, l'entrée est rendue dans un GatedAction qui affiche
+     *  `reason` au click (au lieu de naviguer). */
+    gate?: { enabled: boolean; reason: GatedActionReason }
+  }
+  const espaceLinks: EspaceLink[] = proprietaireActive ? [
     { href: "/profil",                 label: "Mon profil",         desc: "Informations personnelles" },
     { href: "/proprietaire",           label: "Mes biens",          desc: "Gestion de mes annonces" },
     { href: "/proprietaire/ajouter",   label: "Publier un bien",    desc: "Ajouter une nouvelle annonce" },
@@ -156,18 +177,17 @@ export default function Navbar() {
   ] : [
     { href: "/profil",        label: "Mon profil",         desc: "Critères de recherche & matching" },
     { href: "/dossier",       label: "Mon dossier",        desc: "Documents & complétion" },
-    ...(hasCurrentHousing ? [
-      { href: "/mon-logement",   label: "Mon logement",       desc: "Bail actif, loyer, documents" },
-      { href: "/mes-documents",  label: "Mes documents",      desc: "Hub central — dossier, bail, EDL, quittances" },
-      { href: "/mes-quittances", label: "Mes quittances",     desc: "Archives mensuelles" },
-    ] : []),
-    ...(hasPastHousing ? [
-      { href: "/anciens-logements", label: "Anciens logements", desc: "Historique des baux passés" },
-    ] : []),
+    { href: "/mon-logement",  label: "Mon logement",       desc: "Bail actif, loyer, documents",
+      gate: { enabled: hasCurrentHousing, reason: reasonHousing } },
+    { href: "/mes-documents", label: "Mes documents",      desc: "Hub central — dossier, bail, EDL, quittances",
+      gate: { enabled: hasCurrentHousing, reason: reasonHousing } },
+    { href: "/mes-quittances",label: "Mes quittances",     desc: "Archives mensuelles",
+      gate: { enabled: hasCurrentHousing, reason: reasonHousing } },
+    { href: "/anciens-logements", label: "Anciens logements", desc: "Historique des baux passés",
+      gate: { enabled: hasPastHousing, reason: reasonPastHousing } },
     { href: "/visites",       label: "Mes visites",        desc: "Demandes & confirmations", badge: badgeVisites },
-    ...(hasCurrentHousing ? [
-      { href: "/carnet",        label: "Carnet d'entretien", desc: "Historique des travaux" },
-    ] : []),
+    { href: "/carnet",        label: "Carnet d'entretien", desc: "Historique des travaux",
+      gate: { enabled: hasCurrentHousing, reason: reasonHousing } },
   ]
 
   const espaceActif = isActive("/profil") || isActive("/dossier") || isActive("/mon-logement") || isActive("/mes-documents") || isActive("/mes-quittances") || isActive("/anciens-logements") || isActive("/proprietaire") || isActive("/carnet") || isActive("/visites")
@@ -225,22 +245,32 @@ export default function Navbar() {
                   <>
                     <div aria-hidden="true" onClick={() => setEspaceOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 150 }} />
                     <div id="navbar-espace-menu" role="menu" aria-label="Mon espace" style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, background: km.white, borderRadius: 16, border: `1px solid ${km.line}`, boxShadow: "0 8px 32px rgba(0,0,0,0.12)", minWidth: 240, zIndex: 200, overflow: "hidden" }}>
-                      {espaceLinksAvecBadge.map(item => (
-                        <Link key={item.href} href={item.href} onClick={() => setEspaceOpen(false)}
-                          style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", textDecoration: "none", color: km.ink, borderBottom: `1px solid ${km.beige}` }}
-                          onMouseEnter={e => (e.currentTarget.style.background = km.beige)}
-                          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                          <div style={{ flex: 1 }}>
-                            <p style={{ fontSize: 13, fontWeight: 600, margin: 0 }}>{item.label}</p>
-                            <p style={{ fontSize: 11, color: km.muted, margin: 0, marginTop: 1 }}>{item.desc}</p>
-                          </div>
-                          {(item as any).badge > 0 && (
-                            <span style={{ ...badgePill, minWidth: 18, height: 18, padding: "0 5px", flexShrink: 0 }}>
-                              {(item as any).badge}
-                            </span>
-                          )}
-                        </Link>
-                      ))}
+                      {espaceLinksAvecBadge.map(item => {
+                        const linkContent = (
+                          <Link key={item.href} href={item.href} onClick={() => setEspaceOpen(false)}
+                            style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", textDecoration: "none", color: km.ink, borderBottom: `1px solid ${km.beige}` }}
+                            onMouseEnter={e => (e.currentTarget.style.background = km.beige)}
+                            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                            <div style={{ flex: 1 }}>
+                              <p style={{ fontSize: 13, fontWeight: 600, margin: 0 }}>{item.label}</p>
+                              <p style={{ fontSize: 11, color: km.muted, margin: 0, marginTop: 1 }}>{item.desc}</p>
+                            </div>
+                            {(item as any).badge > 0 && (
+                              <span style={{ ...badgePill, minWidth: 18, height: 18, padding: "0 5px", flexShrink: 0 }}>
+                                {(item as any).badge}
+                              </span>
+                            )}
+                          </Link>
+                        )
+                        if (item.gate) {
+                          return (
+                            <GatedAction key={item.href} enabled={item.gate.enabled} disabledReason={item.gate.reason}>
+                              {linkContent}
+                            </GatedAction>
+                          )
+                        }
+                        return linkContent
+                      })}
                     </div>
                   </>
                 )}
@@ -565,19 +595,29 @@ export default function Navbar() {
                   <div style={{ padding: "12px 20px 6px", background: km.beige }}>
                     <p style={{ fontSize: 11, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "0.5px" }}>Mon espace</p>
                   </div>
-                  {espaceLinksAvecBadge.map(item => (
-                    <Link key={item.href} href={item.href}
-                      style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: km.ink, background: isActive(item.href) ? km.beige : "transparent", fontWeight: isActive(item.href) ? 700 : 500, fontSize: 15, borderBottom: `1px solid ${km.beige}`, justifyContent: "space-between" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                        {item.label}
-                      </div>
-                      {(item as any).badge > 0 && (
-                        <span style={{ background: km.errText, color: km.white, borderRadius: 999, fontSize: 11, fontWeight: 800, minWidth: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px" }}>
-                          {(item as any).badge}
-                        </span>
-                      )}
-                    </Link>
-                  ))}
+                  {espaceLinksAvecBadge.map(item => {
+                    const linkContent = (
+                      <Link key={item.href} href={item.href}
+                        style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: km.ink, background: isActive(item.href) ? km.beige : "transparent", fontWeight: isActive(item.href) ? 700 : 500, fontSize: 15, borderBottom: `1px solid ${km.beige}`, justifyContent: "space-between" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                          {item.label}
+                        </div>
+                        {(item as any).badge > 0 && (
+                          <span style={{ background: km.errText, color: km.white, borderRadius: 999, fontSize: 11, fontWeight: 800, minWidth: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px" }}>
+                            {(item as any).badge}
+                          </span>
+                        )}
+                      </Link>
+                    )
+                    if (item.gate) {
+                      return (
+                        <GatedAction key={item.href} enabled={item.gate.enabled} disabledReason={item.gate.reason}>
+                          {linkContent}
+                        </GatedAction>
+                      )
+                    }
+                    return linkContent
+                  })}
 
                   <Link href="/parametres" onClick={() => setMobileOpen(false)}
                     style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 20px", textDecoration: "none", color: km.ink, background: isActive("/parametres") ? km.beige : "transparent", fontWeight: isActive("/parametres") ? 700 : 500, fontSize: 15, borderBottom: `1px solid ${km.beige}` }}>

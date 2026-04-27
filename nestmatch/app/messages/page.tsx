@@ -13,6 +13,7 @@ import { displayName } from "../../lib/privacy"
 import { formatNomComplet } from "../../lib/profilHelpers"
 import { annulerVisite, STATUT_VISITE_STYLE as STATUT_VISITE } from "../../lib/visitesHelpers"
 import { postNotif } from "../../lib/notificationsClient"
+import GatedAction from "../components/ui/GatedAction"
 import MessageSkeleton from "../components/ui/MessageSkeleton"
 import Modal from "../components/ui/Modal"
 
@@ -1131,6 +1132,11 @@ function MessagesInner() {
   // Profil matching de l'user connecte (cote locataire seulement). Sert a
   // calculer le score d'une annonce donnee dans une conv (ex. "82% compat").
   const [myProfile, setMyProfile] = useState<MatchingProfil | null>(null)
+  // Téléphone de l'utilisateur connecté (extrait de myProfileRes.telephone) —
+  // utilisé pour le check bilatéral Appel/Visio dans le thread header :
+  // les 2 parties doivent avoir un numéro pour activer le tel: (commit
+  // GatedAction 2026-04-27).
+  const [myPhone, setMyPhone] = useState<string>("")
   const [convActive, setConvActive] = useState<string | null>(null)
   const [messages, setMessages] = useState<any[]>([])
   // Signatures EDL : { [edlId]: { locataire: bool, bailleur: bool } }.
@@ -1688,6 +1694,9 @@ function MessagesInner() {
       setPeerProfiles(profileMap)
       if (!myProfileRes.error && myProfileRes.data) {
         setMyProfile(myProfileRes.data as unknown as MatchingProfil)
+        const myTel = (myProfileRes.data as { telephone?: string | null }).telephone
+        if (typeof myTel === "string" && myTel.trim()) setMyPhone(myTel.trim())
+        else setMyPhone("")
       }
     }
 
@@ -3843,105 +3852,142 @@ function MessagesInner() {
                           </button>
                         )
                       )}
-                      {/* Bouton "Appeler" — click-to-call tel:. Garde-fou vie
-                         privée 2026-04-23 : visible UNIQUEMENT quand la
-                         relation est avancée, c.-à-d. une visite est en cours
-                         (proposée/confirmée/effectuée) OU le bail est signé
-                         (statut annonce = loué ou bail_envoye, géré par
-                         isActiveBail). Jamais pendant un premier contact. */}
+                      {/* 3 icônes thread header (Appel / Recherche / Visio)
+                          unifiées via GatedAction (round 2026-04-27).
+                          Avant : Appel disparaissait silencieusement si pas
+                          de visite, Recherche/Visio étaient grisées avec
+                          alert(). Maintenant : pattern visible+disabled+popup
+                          uniforme.
+
+                          Check bilatéral téléphone (Paul 2026-04-27) :
+                          Appel/Visio désactivés si l'une des 2 parties n'a
+                          pas renseigné de téléphone (vie privée + pragmatique :
+                          un appel ne peut pas se faire à sens unique). Reason
+                          contextuelle selon qui manque (proprio peut être
+                          redirigé vers /profil pour ajouter son numéro). */}
                       {(() => {
                         const peerEmail = convActiveData.other.toLowerCase()
-                        const peerPhone = peerPhones[peerEmail]
-                        if (!peerPhone) return null
-                        // Note : loadVisitesConv charge uniquement les visites
-                        // en statut proposée/confirmée/annulée. On exclut
-                        // "annulée" ici — un proprio qui a annulé n'a plus de
-                        // raison d'être joignable par tél.
+                        const peerPhone = peerPhones[peerEmail] || ""
+                        const peerHasPhone = peerPhone.trim().length > 0
+                        const userHasPhone = myPhone.trim().length > 0
+                        const phoneAvailable = peerHasPhone && userHasPhone
+
                         const hasActiveVisite = visitesConv.some(v =>
                           v.statut === "proposée" || v.statut === "confirmée"
                         )
                         const hasActiveBail = isActiveBail(convActiveData)
-                        if (!hasActiveVisite && !hasActiveBail) return null
-                        return (
-                          <a
-                            href={`tel:${peerPhone.replace(/\s/g, "")}`}
-                            title={`Appeler ${displayName(convActiveData.other, annonceActive.proprietaire)}`}
-                            aria-label="Appeler"
-                            onMouseEnter={e => { e.currentTarget.style.background = "#F2EEE6" }}
-                            onMouseLeave={e => { e.currentTarget.style.background = "#F7F4EF" }}
-                            style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: "#111", textDecoration: "none", background: "#F7F4EF", border: "1px solid #EAE6DF", borderRadius: 999, padding: "7px 13px", whiteSpace: "nowrap", fontFamily: "inherit", transition: "background 160ms ease" }}>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                            </svg>
-                            {isMobile ? null : "Appeler"}
-                          </a>
-                        )
-                      })()}
-                      {/* 3 icônes thread header (Paul 2026-04-26 screenshot) :
-                          Appel (déjà ci-dessus, conservé) + Recherche dans
-                          conv + Visio. Gated par validation candidat OU bail
-                          actif. Si non-gated, click → alert contextuel selon
-                          rôle (proprio = "Validez d'abord le dossier" ;
-                          locataire = "Le proprio doit valider..."). */}
-                      {(() => {
-                        const isUnlocked = isCandidatureValideeDB || isActiveBail(convActiveData)
+                        const relationAdvanced = hasActiveVisite || hasActiveBail
+                        const isUnlocked = isCandidatureValideeDB || hasActiveBail
+
+                        // Build des 3 reasons selon état
+                        const phoneReasonForUser = !userHasPhone
+                          ? {
+                              title: "Numéro manquant",
+                              body: "Vous n'avez pas renseigné votre numéro de téléphone. Ajoutez-le dans votre profil pour activer les appels et la visio dans la messagerie.",
+                              cta: { label: "Renseigner mon numéro", href: "/profil" },
+                            }
+                          : null
+                        const phoneReasonForPeer = userHasPhone && !peerHasPhone
+                          ? {
+                              title: "Appel impossible",
+                              body: "L'une des deux personnes n'a pas renseigné son numéro de téléphone.",
+                            }
+                          : null
+                        const relationReason = phoneAvailable && !relationAdvanced
+                          ? {
+                              title: "Disponible plus tard",
+                              body: "L'appel sera disponible une fois qu'une visite est proposée ou confirmée, ou que le bail est signé.",
+                            }
+                          : null
+                        const callEnabled = phoneAvailable && relationAdvanced
+                        const callReason = phoneReasonForUser || phoneReasonForPeer || relationReason || {
+                          title: "Indisponible",
+                          body: "L'appel n'est pas disponible pour cette conversation.",
+                        }
+
                         const peerName = displayName(convActiveData.other, annonceActive?.proprietaire || null)
-                        const gateMessage = proprietaireActive
-                          ? `Validez d'abord le dossier de ${peerName} pour activer cette fonction.`
-                          : `Le propriétaire doit d'abord valider votre candidature pour activer cette fonction.`
+                        const validationReason = {
+                          title: proprietaireActive ? "Dossier non validé" : "Candidature non validée",
+                          body: proprietaireActive
+                            ? `Validez d'abord le dossier de ${peerName} pour activer cette fonction.`
+                            : `Le propriétaire doit d'abord valider votre candidature pour activer cette fonction.`,
+                        }
+                        const visioReason = phoneReasonForUser || phoneReasonForPeer || {
+                          title: "Visio bientôt disponible",
+                          body: "La visio en direct sera disponible prochainement. En attendant, planifiez une visite physique ou utilisez l'appel téléphonique une fois la relation avancée.",
+                        }
+                        // Visio : jamais enabled aujourd'hui (placeholder en
+                        // attendant intégration tier). Mais on raffine la
+                        // raison si phone manquant pour ne pas dire "bientôt"
+                        // alors que la vraie cause c'est l'absence de numéro.
+                        const visioEnabled = false
+
                         const iconBtnStyle: React.CSSProperties = {
                           width: 36, height: 36, borderRadius: "50%",
-                          background: isUnlocked ? "#fff" : "#F7F4EF",
-                          color: isUnlocked ? "#111" : "#8a8477",
+                          background: "#fff",
+                          color: "#111",
                           border: "1px solid #EAE6DF",
                           cursor: "pointer", padding: 0,
                           display: "inline-flex", alignItems: "center", justifyContent: "center",
                           flexShrink: 0, transition: "background 160ms ease",
                           fontFamily: "inherit",
-                          opacity: isUnlocked ? 1 : 0.7,
                         }
+                        const callIcon = (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                          </svg>
+                        )
+                        const searchIcon = (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                          </svg>
+                        )
+                        const videoIcon = (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                            <polygon points="23 7 16 12 23 17 23 7" />
+                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                          </svg>
+                        )
                         return (
                           <>
-                            {/* Recherche dans la conversation : toggle l'input
-                                de recherche existant (state recherche) — l'input
-                                est déjà rendu plus haut dans la sidebar. */}
-                            <button
-                              type="button"
-                              aria-label="Rechercher dans la conversation"
-                              title={isUnlocked ? "Rechercher dans la conversation" : gateMessage}
+                            <GatedAction enabled={callEnabled} disabledReason={callReason}>
+                              <a
+                                href={callEnabled ? `tel:${peerPhone.replace(/\s/g, "")}` : undefined}
+                                aria-label="Appeler"
+                                title="Appeler"
+                                style={iconBtnStyle}
+                              >
+                                {callIcon}
+                              </a>
+                            </GatedAction>
+                            <GatedAction
+                              enabled={isUnlocked}
+                              disabledReason={validationReason}
                               onClick={() => {
-                                if (!isUnlocked) { alert(gateMessage); return }
-                                // Focus le champ recherche existant (sidebar)
                                 const el = document.querySelector<HTMLInputElement>('input[placeholder*="Rechercher"]')
                                 if (el) { el.focus(); el.scrollIntoView({ block: "center" }) }
                               }}
-                              onMouseEnter={e => { if (isUnlocked) (e.currentTarget as HTMLButtonElement).style.background = "#F7F4EF" }}
-                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = isUnlocked ? "#fff" : "#F7F4EF" }}
-                              style={iconBtnStyle}
                             >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                                <circle cx="11" cy="11" r="8" />
-                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                              </svg>
-                            </button>
-                            {/* Visio — feature en cours, popup placeholder */}
-                            <button
-                              type="button"
-                              aria-label="Lancer une visio"
-                              title={isUnlocked ? "Lancer une visio (bientôt disponible)" : gateMessage}
-                              onClick={() => {
-                                if (!isUnlocked) { alert(gateMessage); return }
-                                alert("La visio en direct sera disponible prochainement. En attendant, utilisez l'appel téléphonique.")
-                              }}
-                              onMouseEnter={e => { if (isUnlocked) (e.currentTarget as HTMLButtonElement).style.background = "#F7F4EF" }}
-                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = isUnlocked ? "#fff" : "#F7F4EF" }}
-                              style={iconBtnStyle}
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                                <polygon points="23 7 16 12 23 17 23 7" />
-                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-                              </svg>
-                            </button>
+                              <button
+                                type="button"
+                                aria-label="Rechercher dans la conversation"
+                                title="Rechercher dans la conversation"
+                                style={iconBtnStyle}
+                              >
+                                {searchIcon}
+                              </button>
+                            </GatedAction>
+                            <GatedAction enabled={visioEnabled} disabledReason={visioReason}>
+                              <button
+                                type="button"
+                                aria-label="Lancer une visio"
+                                title="Lancer une visio"
+                                style={iconBtnStyle}
+                              >
+                                {videoIcon}
+                              </button>
+                            </GatedAction>
                           </>
                         )
                       })()}
