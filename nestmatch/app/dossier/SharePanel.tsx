@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useState, useCallback } from "react"
+import GatedAction from "../components/ui/GatedAction"
 
 /**
  * Panneau de partage : génère et gère des liens sécurisés (7 jours par défaut)
@@ -49,7 +50,12 @@ function linkStatus(row: ShareRow): { label: string; color: string } {
   return { label: "Actif", color: T.success }
 }
 
-export default function SharePanel() {
+export default function SharePanel({ dossierScore }: { dossierScore?: number } = {}) {
+  // Gate la génération de lien si dossier < 80% : partager un dossier
+  // incomplet donne une mauvaise impression et fait perdre la candidature.
+  // Soft gate : popup pédagogique + CTA pour compléter, pas un blocage
+  // technique du serveur (l'API /api/dossier/share marche toujours).
+  const dossierIncomplet = typeof dossierScore === "number" && dossierScore < 80
   const [links, setLinks] = useState<ShareRow[]>([])
   const [loadingList, setLoadingList] = useState(true)
   const [label, setLabel] = useState("")
@@ -174,13 +180,22 @@ export default function SharePanel() {
               disabled={creating}
               style={{ flex: 1, minWidth: 200, padding: "10px 14px", border: `1px solid ${T.line}`, borderRadius: 10, fontSize: 14, fontFamily: "inherit", background: T.white, color: T.ink, outline: "none" }}
             />
-            <button
-              onClick={create}
-              disabled={creating || label.trim().length < 2}
-              style={{ background: T.ink, color: T.white, border: "none", borderRadius: 999, padding: "11px 22px", fontWeight: 600, fontSize: 13, cursor: (creating || label.trim().length < 2) ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: (creating || label.trim().length < 2) ? 0.5 : 1, letterSpacing: "0.3px", whiteSpace: "nowrap" }}
+            <GatedAction
+              enabled={!dossierIncomplet}
+              disabledReason={{
+                title: "Dossier incomplet",
+                body: `Votre dossier est complété à ${dossierScore ?? 0}%. Partager un dossier incomplet diminue fortement vos chances. Atteignez au moins 80% pour générer un lien partageable.`,
+                cta: { label: "Compléter mon dossier", href: "#dossier-info" },
+              }}
             >
-              {creating ? "Génération…" : "Générer un lien"}
-            </button>
+              <button
+                onClick={create}
+                disabled={creating || label.trim().length < 2}
+                style={{ background: T.ink, color: T.white, border: "none", borderRadius: 999, padding: "11px 22px", fontWeight: 600, fontSize: 13, cursor: (creating || label.trim().length < 2) ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: (creating || label.trim().length < 2) ? 0.5 : 1, letterSpacing: "0.3px", whiteSpace: "nowrap" }}
+              >
+                {creating ? "Génération…" : "Générer un lien"}
+              </button>
+            </GatedAction>
           </div>
           {error && <p style={{ color: T.danger, fontSize: 12, marginTop: 10, marginBottom: 0 }}>{error}</p>}
         </div>

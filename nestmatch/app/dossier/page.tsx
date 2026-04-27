@@ -2206,7 +2206,7 @@ export default function Dossier() {
 
             {/* Sidebar droite — partage + accès + download */}
             <aside style={STYLES.layout.sidebar(!isCompactLayout)} className="no-print">
-              <SharePanel />
+              <SharePanel dossierScore={score} />
               <AccessLogPanel />
               {/* DownloadCard */}
               <div style={STYLES.download.wrap(isMobile)}>
