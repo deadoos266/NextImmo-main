@@ -291,6 +291,7 @@ export default function MobileMapCarousel({
           favoris={favoris}
           onToggleFavori={onToggleFavori}
           onMapClick={() => { if (showCard) closeCard() }}
+          disablePopup
         />
 
         {/* FAB "Voir la liste" sticky bottom-center (Paul 2026-04-27).

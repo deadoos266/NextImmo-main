@@ -161,11 +161,16 @@ function HoverableMarker({
   icon,
   onSelect,
   popupContent,
+  disablePopup,
 }: {
   position: [number, number]
   icon: L.DivIcon
   onSelect: () => void
   popupContent: ReactNode
+  /** Si true, ne pas rendre le popup hover (desactive mouseover/popup).
+   *  Utilise sur mobile mode carte ou la card slide-up SeLoger remplace
+   *  le popup — sinon doublon visuel au tap marker. Paul 2026-04-27. */
+  disablePopup?: boolean
 }) {
   const markerRef = useRef<L.Marker | null>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -177,6 +182,7 @@ function HoverableMarker({
       eventHandlers={{
         click: () => onSelect(),
         mouseover: () => {
+          if (disablePopup) return
           if (closeTimer.current) {
             clearTimeout(closeTimer.current)
             closeTimer.current = null
@@ -185,6 +191,7 @@ function HoverableMarker({
           markerRef.current?.openPopup()
         },
         mouseout: () => {
+          if (disablePopup) return
           // Délai pour permettre à l'user de glisser sur le popup sans
           // qu'il se ferme. Si le pointeur ne revient pas, ferme à 250ms.
           if (closeTimer.current) clearTimeout(closeTimer.current)
@@ -195,16 +202,18 @@ function HoverableMarker({
         },
       }}
     >
-      <Popup
-        closeButton={false}
-        autoPan={false}
-        maxWidth={240}
-        minWidth={240}
-        offset={[0, -8]}
-        className="km-hover-popup"
-      >
-        {popupContent}
-      </Popup>
+      {!disablePopup && (
+        <Popup
+          closeButton={false}
+          autoPan={false}
+          maxWidth={240}
+          minWidth={240}
+          offset={[0, -8]}
+          className="km-hover-popup"
+        >
+          {popupContent}
+        </Popup>
+      )}
     </Marker>
   )
 }
@@ -315,6 +324,11 @@ export interface MapAnnoncesProps {
    *  (Leaflet's `click` event sur le map container). Utilise par
    *  MobileMapCarousel pour fermer la card slide-up au tap-outside. */
   onMapClick?: () => void
+  /** Si true, desactive le popup hover sur les markers. Utilise sur mobile
+   *  mode carte ou la grande card slide-up SeLoger fait office de popup —
+   *  sinon le popup natif Leaflet apparait EN PLUS de la card → doublon.
+   *  Paul 2026-04-27. */
+  disablePopup?: boolean
 }
 
 /** Composant interne : ecoute les clicks sur le map container Leaflet
@@ -338,6 +352,7 @@ export default function MapAnnonces({
   favoris,
   onToggleFavori,
   onMapClick,
+  disablePopup,
 }: MapAnnoncesProps) {
   useEffect(() => { fixLeafletIcons() }, [])
   const [mapType, setMapType] = useState<MapType>("plan")
@@ -471,6 +486,7 @@ export default function MapAnnonces({
               position={[a._lat, a._lng]}
               icon={priceMarker(a.prix, selectedId === a.id, a.scoreMatching ?? null)}
               onSelect={() => onSelect(a.id)}
+              disablePopup={disablePopup}
               popupContent={
                 <div style={{ fontFamily: "'DM Sans',sans-serif", width: 240 }}>
                   {firstPhoto && (
