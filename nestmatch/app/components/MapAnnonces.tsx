@@ -235,6 +235,9 @@ function HoverableMarker({
 // Boutons zoom custom +/- : pill blanc bottom-right (Paul 2026-04-27 — passe
 // de top-right a bottom-right sur demande user pour pattern SeLoger/Airbnb
 // mobile, plus accessible au pouce). 32x32, bordure beige, shadow douce.
+// zIndex 1500 (Paul 2026-04-27 v6) : passe au-dessus de la card slide-up
+// MobileMapCarousel (zIndex 1000) sur mobile mode carte. User signalait
+// que les boutons + - n'etaient plus visibles quand une card etait ouverte.
 function ZoomControls() {
   const map = useMap()
   const btn: React.CSSProperties = {
@@ -247,7 +250,7 @@ function ZoomControls() {
   }
   return (
     <div style={{
-      position: "absolute", bottom: 16, right: 16, zIndex: 1000,
+      position: "absolute", bottom: 16, right: 16, zIndex: 1500,
       background: "#fff",
       borderRadius: 12,
       border: "1px solid #EAE6DF",
@@ -632,7 +635,7 @@ export default function MapAnnonces({
             top: 16,
             left: "50%",
             transform: "translateX(-50%)",
-            zIndex: 1000,
+            zIndex: 1500,
             background: "white",
             border: "1px solid #e5e7eb",
             borderRadius: 12,
@@ -659,7 +662,7 @@ export default function MapAnnonces({
             top: 16,
             left: "50%",
             transform: "translateX(-50%)",
-            zIndex: 1000,
+            zIndex: 1500,
             background: "#111",
             color: "white",
             border: "none",
@@ -688,7 +691,7 @@ export default function MapAnnonces({
         position: "absolute",
         left: 18,
         bottom: 18,
-        zIndex: 1000,
+        zIndex: 1500,
         background: "white",
         borderRadius: 999,
         padding: "8px 14px",
@@ -711,7 +714,7 @@ export default function MapAnnonces({
       {/* Top-right : stack 2 boutons icones (Layers + Legend info).
           Paul 2026-04-27 : remplace les 3 boutons inline qui prenaient toute
           la barre top-right. Click ouvre un popup contextuel sous le bouton. */}
-      <div style={{ position: "absolute", top: 16, right: 12, zIndex: 1000, display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ position: "absolute", top: 16, right: 12, zIndex: 1500, display: "flex", flexDirection: "column", gap: 8 }}>
         {/* Bouton Layers (3 cartes empilees) */}
         <button
           type="button"
