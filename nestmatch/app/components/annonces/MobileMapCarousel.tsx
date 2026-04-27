@@ -136,8 +136,15 @@ export default function MobileMapCarousel({
       aria-modal="true"
       aria-label="Carte des annonces"
       style={{
+        // top: 72 (Paul 2026-04-27) : laisse la Navbar visible au-dessus du
+        // mode carte mobile. User : "le burger menu doit rester visible et
+        // cliquable meme quand on est sur la map". La modale ne couvre plus
+        // toute la viewport.
         position: "fixed",
-        inset: 0,
+        top: 72,
+        left: 0,
+        right: 0,
+        bottom: 0,
         zIndex: 7400,
         background: km.beige,
         display: "flex",
@@ -282,6 +289,52 @@ export default function MobileMapCarousel({
           favoris={favoris}
           onToggleFavori={onToggleFavori}
         />
+
+        {/* FAB "Voir la liste" sticky bottom-center (Paul 2026-04-27).
+            Visible uniquement quand AUCUNE card n'est ouverte — disparait
+            au tap d'un marker (la card prend le relais visuellement),
+            revient au close de la card. Style pill blanc avec icone liste
+            a gauche. Position bottom-center du viewport map. */}
+        {!showCard && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Voir la liste des annonces"
+            style={{
+              position: "absolute",
+              bottom: "calc(20px + env(safe-area-inset-bottom, 0px))",
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 999,
+              background: "#111",
+              color: "#fff",
+              border: "none",
+              borderRadius: 999,
+              padding: "12px 22px",
+              fontSize: 12,
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.6px",
+              fontFamily: "inherit",
+              cursor: "pointer",
+              boxShadow: "0 6px 20px rgba(0,0,0,0.25)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="8" y1="6" x2="21" y2="6" />
+              <line x1="8" y1="12" x2="21" y2="12" />
+              <line x1="8" y1="18" x2="21" y2="18" />
+              <line x1="3" y1="6" x2="3.01" y2="6" />
+              <line x1="3" y1="12" x2="3.01" y2="12" />
+              <line x1="3" y1="18" x2="3.01" y2="18" />
+            </svg>
+            Voir la liste
+          </button>
+        )}
 
         {/* Card overlay slide-up — pattern SeLoger.
             Animation : translateY(100% → 0) sur 250ms cubic-bezier.

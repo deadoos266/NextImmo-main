@@ -209,9 +209,9 @@ function HoverableMarker({
   )
 }
 
-// Boutons zoom custom +/- (handoff app.jsx:666-670) : pill blanc top-right,
-// 32×32, fontsize 18, bordure beige légère, shadow douce. Remplace le
-// zoomControl Leaflet par défaut (top-left) pour cohérence visuelle KM.
+// Boutons zoom custom +/- : pill blanc bottom-right (Paul 2026-04-27 — passe
+// de top-right a bottom-right sur demande user pour pattern SeLoger/Airbnb
+// mobile, plus accessible au pouce). 32x32, bordure beige, shadow douce.
 function ZoomControls() {
   const map = useMap()
   const btn: React.CSSProperties = {
@@ -224,7 +224,7 @@ function ZoomControls() {
   }
   return (
     <div style={{
-      position: "absolute", top: 16, right: 16, zIndex: 1000,
+      position: "absolute", bottom: 16, right: 16, zIndex: 1000,
       background: "#fff",
       borderRadius: 12,
       border: "1px solid #EAE6DF",
