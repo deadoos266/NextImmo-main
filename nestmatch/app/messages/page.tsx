@@ -1786,22 +1786,29 @@ function MessagesInner() {
     // Fetch signatures EDL pour tous les [EDL_CARD] rencontres dans la conv.
     // Le badge "En attente de confirmation" cote proprio a besoin de savoir
     // si le locataire a signé. Regroupé en 1 requête pour éviter N round-trips.
+    // Guard NaN (Paul 2026-04-27) : si payload.edlId est present mais pas un
+    // entier > 0 (ex: payload corrompu, "abc", {}, ...), Number(...) renvoyait
+    // NaN et la query Supabase generait `edl_id=in.(NaN)` qui produit un 400.
+    // Maintenant on filtre dur a 2 endroits : push (Number.isFinite + > 0) et
+    // pre-query (re-filtre defensif).
     const edlIds: number[] = []
     for (const m of data) {
       if (typeof m.contenu === "string" && m.contenu.startsWith("[EDL_CARD]")) {
         try {
           const payload = JSON.parse(m.contenu.slice("[EDL_CARD]".length))
-          if (payload?.edlId) edlIds.push(Number(payload.edlId))
+          const edlIdNum = Number(payload?.edlId)
+          if (Number.isFinite(edlIdNum) && edlIdNum > 0) edlIds.push(edlIdNum)
         } catch { /* ignore */ }
       }
     }
-    if (edlIds.length > 0) {
+    const validEdlIds = edlIds.filter(id => Number.isFinite(id) && id > 0)
+    if (validEdlIds.length > 0) {
       const { data: sigs } = await supabase
         .from("edl_signatures")
         .select("edl_id, signataire_role")
-        .in("edl_id", edlIds)
+        .in("edl_id", validEdlIds)
       const map: Record<number, { locataire: boolean; bailleur: boolean }> = {}
-      edlIds.forEach(id => { map[id] = { locataire: false, bailleur: false } })
+      validEdlIds.forEach(id => { map[id] = { locataire: false, bailleur: false } })
       if (sigs) {
         for (const s of sigs) {
           const id = Number(s.edl_id)

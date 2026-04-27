@@ -21,7 +21,7 @@ const CSP_HEADER = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "img-src 'self' data: blob: https://*.supabase.co https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://lh3.googleusercontent.com",
+  "img-src 'self' data: blob: https://*.supabase.co https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://lh3.googleusercontent.com https://images.unsplash.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io https://*.upstash.io https://geo.api.gouv.fr https://nominatim.openstreetmap.org",
   "frame-ancestors 'none'",
@@ -40,6 +40,10 @@ const nextConfig = {
       { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" },
       // Avatars Google (NextAuth)
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
+      // Unsplash — utilisé pour les photos des annonces de démo (seed data).
+      // Sans ce pattern, /_next/image renvoie 400 sur toutes les URLs
+      // images.unsplash.com et les annonces apparaissent sans visuel.
+      { protocol: "https", hostname: "images.unsplash.com" },
     ],
     formats: ["image/avif", "image/webp"],
     deviceSizes: [320, 480, 640, 768, 1024, 1280, 1536],
