@@ -453,9 +453,11 @@ export default function MobileMapCarousel({
   )
 }
 
-// ─── CardContent : photo + infos, wrap dans un Link pour naviguer ────
-// Format inspire de ListingCardCompact (horizontal landscape) — le tap
-// sur le contenu navigue vers /annonces/[id].
+// ─── CardContent : photo carousel + infos, wrap dans un Link pour naviguer.
+// Photo carousel (Paul 2026-04-27 v3) : useState photoIdx avec touch swipe
+// + fleches ◀ ▶ visibles. Reset a 0 quand l'annonce change (key prop dans
+// caller suffit puisqu'on remount). Le swipe sur la PHOTO ne propage pas
+// (stopPropagation) pour ne pas declencher le swipe d'annonce parent.
 function CardContent({
   annonce,
   isFavori,
@@ -465,53 +467,169 @@ function CardContent({
   isFavori: boolean
   onToggleFavori: (id: number) => void
 }) {
-  const photo = Array.isArray(annonce.photos) && annonce.photos.length > 0 ? annonce.photos[0] : null
+  const photos: string[] = Array.isArray(annonce.photos) ? annonce.photos.slice(0, 6) : []
+  const totalPhotos = photos.length
+  const [photoIdx, setPhotoIdx] = useState(0)
+  const photoTouchStartX = useRef<number | null>(null)
+  const photoTouchEndX = useRef<number | null>(null)
+
   const ville = (annonce.ville || "").toString().trim()
   const quartier = (annonce.quartier || "").toString().trim()
   const loc = ville && quartier ? `${ville} · ${quartier}` : ville
   const surface = annonce.surface != null ? `${annonce.surface} m²` : null
   const pieces = annonce.pieces != null ? `${annonce.pieces} p.` : null
   const specs = [surface, pieces].filter(Boolean).join(" · ")
+  const currentPhoto = photos[photoIdx] || null
+
+  function prevPhoto(e: React.MouseEvent) {
+    e.preventDefault(); e.stopPropagation()
+    if (totalPhotos <= 1) return
+    setPhotoIdx(i => (i - 1 + totalPhotos) % totalPhotos)
+  }
+  function nextPhoto(e: React.MouseEvent) {
+    e.preventDefault(); e.stopPropagation()
+    if (totalPhotos <= 1) return
+    setPhotoIdx(i => (i + 1) % totalPhotos)
+  }
+  function onPhotoTouchStart(e: React.TouchEvent) {
+    e.stopPropagation()
+    photoTouchStartX.current = e.touches[0].clientX
+    photoTouchEndX.current = null
+  }
+  function onPhotoTouchMove(e: React.TouchEvent) {
+    e.stopPropagation()
+    photoTouchEndX.current = e.touches[0].clientX
+  }
+  function onPhotoTouchEnd(e: React.TouchEvent) {
+    e.stopPropagation()
+    if (photoTouchStartX.current === null || photoTouchEndX.current === null) return
+    const diff = photoTouchStartX.current - photoTouchEndX.current
+    if (Math.abs(diff) > 40 && totalPhotos > 1) {
+      if (diff > 0) setPhotoIdx(i => (i + 1) % totalPhotos)
+      else setPhotoIdx(i => (i - 1 + totalPhotos) % totalPhotos)
+    }
+    photoTouchStartX.current = null
+    photoTouchEndX.current = null
+  }
+
+  const arrowBtnStyle: React.CSSProperties = {
+    position: "absolute",
+    top: "50%",
+    transform: "translateY(-50%)",
+    width: 28, height: 28,
+    borderRadius: "50%",
+    background: "rgba(255,255,255,0.92)",
+    color: km.ink,
+    border: `1px solid ${km.line}`,
+    cursor: "pointer",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    backdropFilter: "blur(6px)",
+    WebkitTapHighlightColor: "transparent",
+    zIndex: 2,
+    boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
+  }
 
   return (
     <Link
       href={`/annonces/${annonce.id}`}
       style={{
-        display: "grid",
-        gridTemplateColumns: "120px 1fr",
-        gap: 0,
+        display: "block",
         textDecoration: "none",
         color: km.ink,
         fontFamily: "inherit",
       }}
     >
-      <div style={{
-        position: "relative",
-        width: 120,
-        aspectRatio: "1 / 1",
-        background: "#000",
-      }}>
-        {photo ? (
+      {/* Photo full-width en haut (pattern SeLoger, Paul 2026-04-27 v3).
+          Aspect ratio 16/10 → ~225px hauteur sur mobile 360 width. La card
+          totale fait ~330-360px (40% viewport iPhone). */}
+      <div
+        onTouchStart={onPhotoTouchStart}
+        onTouchMove={onPhotoTouchMove}
+        onTouchEnd={onPhotoTouchEnd}
+        style={{
+          position: "relative",
+          width: "100%",
+          aspectRatio: "16 / 10",
+          background: "#000",
+        }}>
+        {currentPhoto ? (
           <Image
-            src={photo}
+            src={currentPhoto}
             alt={annonce.titre || "Photo logement"}
             fill
-            sizes="120px"
+            sizes="(max-width: 768px) 100vw, 360px"
             style={{ objectFit: "cover" }}
           />
         ) : (
           <div style={{ width: "100%", height: "100%", background: km.beige }} />
         )}
+
+        {/* Indicateur "1/N" top-right de la photo (au-dessus du favori) */}
+        {totalPhotos > 1 && (
+          <span style={{
+            position: "absolute", top: 10, left: 12,
+            background: "rgba(0,0,0,0.6)", color: "#fff",
+            padding: "3px 10px", borderRadius: 999,
+            fontSize: 11, fontWeight: 700,
+            fontVariantNumeric: "tabular-nums",
+            backdropFilter: "blur(6px)",
+            zIndex: 2,
+            pointerEvents: "none",
+          }}>
+            {photoIdx + 1} / {totalPhotos}
+          </span>
+        )}
+
+        {/* Fleches navigation photos — visibles mobile + desktop */}
+        {totalPhotos > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={prevPhoto}
+              aria-label="Photo précédente"
+              style={{ ...arrowBtnStyle, left: 8, width: 36, height: 36 }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={nextPhoto}
+              aria-label="Photo suivante"
+              style={{ ...arrowBtnStyle, right: 8, width: 36, height: 36 }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+
+            {/* Dots bottom photo */}
+            <div style={{ position: "absolute", bottom: 10, left: 0, right: 0, display: "flex", justifyContent: "center", gap: 4, pointerEvents: "none", zIndex: 1 }}>
+              {photos.map((_, i) => (
+                <span key={i} style={{
+                  width: i === photoIdx ? 14 : 5,
+                  height: 5,
+                  background: i === photoIdx ? "#fff" : "rgba(255,255,255,0.55)",
+                  borderRadius: 999,
+                  transition: "all 200ms",
+                }} />
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Favori top-right */}
         <button
           type="button"
           onClick={e => { e.preventDefault(); e.stopPropagation(); onToggleFavori(annonce.id) }}
           aria-label={isFavori ? "Retirer des favoris" : "Ajouter aux favoris"}
           style={{
             position: "absolute",
-            top: 8,
-            right: 8,
-            width: 28,
-            height: 28,
+            top: 10,
+            right: 12,
+            width: 36,
+            height: 36,
             borderRadius: "50%",
             background: isFavori ? "#DC2626" : "rgba(255,255,255,0.94)",
             color: isFavori ? "#fff" : km.ink,
@@ -522,74 +640,71 @@ function CardContent({
             justifyContent: "center",
             backdropFilter: "blur(6px)",
             WebkitTapHighlightColor: "transparent",
+            zIndex: 2,
           }}
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill={isFavori ? "#fff" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill={isFavori ? "#fff" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
           </svg>
         </button>
       </div>
 
-      <div style={{ padding: "12px 14px 8px", display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: 0 }}>
-        <div style={{ minWidth: 0, paddingRight: 36 /* eviter overlap avec X close */ }}>
+      {/* Contenu sous la photo : prix prominent + ville + titre + specs */}
+      <div style={{ padding: "14px 16px 12px", display: "flex", flexDirection: "column", gap: 4 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+          <span style={{
+            fontSize: 22,
+            fontWeight: 800,
+            color: km.ink,
+            fontVariantNumeric: "tabular-nums",
+            letterSpacing: "-0.4px",
+            lineHeight: 1.1,
+          }}>
+            {annonce.prix?.toLocaleString("fr-FR") ?? "—"} €
+            <span style={{ fontWeight: 500, color: "#8a8477", fontSize: 12, marginLeft: 2 }}>/mois</span>
+          </span>
           {loc && (
-            <p style={{
-              fontSize: 9.5,
+            <span style={{
+              fontSize: 10,
               fontWeight: 700,
               color: "#6B6B6B",
               textTransform: "uppercase",
               letterSpacing: "1px",
-              margin: "0 0 3px",
-              whiteSpace: "nowrap",
+              flexShrink: 1,
+              minWidth: 0,
               overflow: "hidden",
               textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              textAlign: "right",
             }}>
               {loc}
-            </p>
+            </span>
           )}
-          <h3 style={{
-            fontSize: 14,
-            fontWeight: 600,
-            margin: 0,
-            lineHeight: 1.25,
-            color: km.ink,
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }}>
-            {annonce.titre || "Sans titre"}
-          </h3>
         </div>
-        <div style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          gap: 8,
-          marginTop: 6,
+        <h3 style={{
+          fontSize: 14,
+          fontWeight: 600,
+          margin: 0,
+          lineHeight: 1.3,
+          color: km.ink,
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+          paddingRight: 36 /* eviter overlap avec X close */,
         }}>
-          <span style={{
-            fontSize: 11,
+          {annonce.titre || "Sans titre"}
+        </h3>
+        {specs && (
+          <p style={{
+            fontSize: 12,
             color: "#8a8477",
-            minWidth: 0,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
+            margin: 0,
+            lineHeight: 1.4,
           }}>
             {specs}
-          </span>
-          <span style={{
-            fontSize: 14,
-            fontWeight: 800,
-            color: km.ink,
-            fontVariantNumeric: "tabular-nums",
-            letterSpacing: "-0.2px",
-            flexShrink: 0,
-          }}>
-            {annonce.prix?.toLocaleString("fr-FR") ?? "—"} €
-            <span style={{ fontWeight: 400, color: "#8a8477", fontSize: 9.5, marginLeft: 1 }}>/mois</span>
-          </span>
-        </div>
+          </p>
+        )}
       </div>
     </Link>
   )
