@@ -471,12 +471,21 @@ export default async function Annonce({ params }: any) {
               <PhotoCarousel photos={photos} />
             </div>
             <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
-              {[
-                { val: annonce.surface ? `${annonce.surface}` : "—", label: "m²" },
-                { val: annonce.pieces || "—", label: "pièces" },
-                { val: annonce.chambres !== null && annonce.chambres !== undefined ? annonce.chambres : "—", label: "chambres" },
-                { val: annonce.etage || "—", label: "étage" },
-              ].map(item => (
+              {(() => {
+                // Stats row pills (Paul 2026-04-27 — ajout Meuble en 5e position).
+                // Meuble : "Oui" si true, "Vide" si false explicite, skip si null.
+                // C'est une info discriminante pour un locataire (rapport au prix
+                // au m² + au type de bail), donc visible direct sous la photo.
+                const stats: Array<{ val: string | number; label: string }> = [
+                  { val: annonce.surface ? `${annonce.surface}` : "—", label: "m²" },
+                  { val: annonce.pieces || "—", label: "pièces" },
+                  { val: annonce.chambres !== null && annonce.chambres !== undefined ? annonce.chambres : "—", label: "chambres" },
+                  { val: annonce.etage || "—", label: "étage" },
+                ]
+                if (annonce.meuble === true) stats.push({ val: "Oui", label: "meublé" })
+                else if (annonce.meuble === false) stats.push({ val: "Vide", label: "meublé" })
+                return stats
+              })().map(item => (
                 <div key={item.label} style={{ background: "white", borderRadius: 16, padding: "18px 20px", textAlign: "center", flex: 1, minWidth: 70, border: "1px solid #EAE6DF" }}>
                   <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.3px" }}>{item.val}</div>
                   <div style={{ fontSize: 11, color: "#666", marginTop: 4, fontWeight: 500, letterSpacing: "0.3px" }}>{item.label}</div>
