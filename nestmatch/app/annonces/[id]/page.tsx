@@ -31,6 +31,28 @@ const BASE_URL = process.env.NEXT_PUBLIC_URL || 'https://keymatch-immo.fr'
  * `=== true` ratait les strings "oui" → la pill Meuble n'apparaissait
  * jamais. Paul 2026-04-27 (bug #b6c8f19 follow-up).
  */
+/**
+ * Formate un etage (chiffre ou string) en ordinal francais court.
+ * - 0 / "0" / "rdc" → "RDC"
+ * - 1 → "1er"
+ * - 2-9 → "2e" / "3e" ... (e en superscript via tag <sup> au render)
+ * - Si la valeur contient deja des lettres ("Sous-sol", "1er", "2e", "7e+"),
+ *   on la retourne telle quelle (deja format DB pre-existant).
+ */
+function formatEtage(raw: unknown): string | null {
+  if (raw === null || raw === undefined || raw === "") return null
+  const s = String(raw).trim()
+  const lower = s.toLowerCase()
+  if (lower === "rdc" || lower === "rez-de-chaussee" || lower === "rez-de-chaussée" || s === "0") return "RDC"
+  // Deja formate (Sous-sol, 1er, 2e, 7e+, etc.)
+  if (/[a-zA-Zéè]/i.test(s)) return s
+  const n = parseInt(s, 10)
+  if (!Number.isFinite(n)) return s
+  if (n === 0) return "RDC"
+  if (n === 1) return "1er"
+  return `${n}e`
+}
+
 function asTriBool(v: unknown): boolean | null {
   if (v === null || v === undefined || v === "") return null
   if (typeof v === "boolean") return v
@@ -494,28 +516,52 @@ export default async function Annonce({ params }: any) {
             </div>
             <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
               {(() => {
-                // Stats row pills (Paul 2026-04-27 — ajout Meuble en 5e position).
-                // Meuble : "Oui" si true, "Vide" si false explicite, skip si null.
-                // C'est une info discriminante pour un locataire (rapport au prix
-                // au m² + au type de bail), donc visible direct sous la photo.
-                const stats: Array<{ val: string | number; label: string }> = [
-                  { val: annonce.surface ? `${annonce.surface}` : "—", label: "m²" },
-                  { val: annonce.pieces || "—", label: "pièces" },
-                  { val: annonce.chambres !== null && annonce.chambres !== undefined ? annonce.chambres : "—", label: "chambres" },
-                  { val: annonce.etage || "—", label: "étage" },
-                ]
+                // Stats row pills v3 (Paul 2026-04-27).
+                // - "single" : val seul (gros texte, pas de sub) — pour les
+                //   pills auto-explicites comme "Meublé" / "Non meublé".
+                // - "pair" : val (gros) + sub (petit) — chiffre + label.
+                // Skip si val=null (m², pieces, chambres, etage, meuble peuvent
+                // tous etre null selon les annonces).
+                type Stat =
+                  | { kind: "pair"; val: string | number; sub: string }
+                  | { kind: "single"; val: string }
+                const stats: Stat[] = []
+                if (annonce.surface) stats.push({ kind: "pair", val: annonce.surface, sub: "m²" })
+                if (annonce.pieces) stats.push({ kind: "pair", val: annonce.pieces, sub: "pièces" })
+                if (annonce.chambres !== null && annonce.chambres !== undefined) {
+                  stats.push({ kind: "pair", val: annonce.chambres, sub: "chambres" })
+                }
+                const etageFmt = formatEtage(annonce.etage)
+                // Pour l'etage : val = "5e", sub = "étage" (ou val = "RDC" sub omis)
+                if (etageFmt) {
+                  if (etageFmt === "RDC" || /[a-zA-Z]/.test(etageFmt) && !/^(\d+)(er|e)$/.test(etageFmt)) {
+                    // RDC ou Sous-sol : single (auto-explicite)
+                    stats.push({ kind: "single", val: etageFmt })
+                  } else {
+                    stats.push({ kind: "pair", val: etageFmt, sub: "étage" })
+                  }
+                }
                 const meubleNorm = asTriBool(annonce.meuble)
-                if (meubleNorm === true) stats.push({ val: "Oui", label: "meublé" })
-                else if (meubleNorm === false) stats.push({ val: "Vide", label: "meublé" })
+                if (meubleNorm === true) stats.push({ kind: "single", val: "Meublé" })
+                else if (meubleNorm === false) stats.push({ kind: "single", val: "Non meublé" })
                 return stats
-              })().map(item => (
-                <div key={item.label} style={{ background: "white", borderRadius: 16, padding: "18px 20px", textAlign: "center", flex: 1, minWidth: 70, border: "1px solid #EAE6DF" }}>
-                  <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.3px" }}>{item.val}</div>
-                  <div style={{ fontSize: 11, color: "#666", marginTop: 4, fontWeight: 500, letterSpacing: "0.3px" }}>{item.label}</div>
+              })().map((item, i) => (
+                <div key={i} style={{ background: "white", borderRadius: 16, padding: "18px 16px", textAlign: "center", flex: 1, minWidth: 76, border: "1px solid #EAE6DF" }}>
+                  {item.kind === "pair" ? (
+                    <>
+                      <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.3px", lineHeight: 1.1 }}>{item.val}</div>
+                      <div style={{ fontSize: 11, color: "#666", marginTop: 4, fontWeight: 500, letterSpacing: "0.3px", whiteSpace: "nowrap" }}>{item.sub}</div>
+                    </>
+                  ) : (
+                    // Single : val centre verticalement avec hauteur identique
+                    // aux pair pills (val 20 + 4 + sub 11 ≈ 38) — alignement
+                    // ligne homogene.
+                    <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.2px", paddingTop: 8, paddingBottom: 8, lineHeight: 1.2, whiteSpace: "nowrap" }}>{item.val}</div>
+                  )}
                 </div>
               ))}
               {annonce.dpe && (
-                <div style={{ background: "white", borderRadius: 16, padding: "14px 18px", textAlign: "center", flex: 1, minWidth: 70, border: "1px solid #EAE6DF" }}>
+                <div style={{ background: "white", borderRadius: 16, padding: "14px 16px", textAlign: "center", flex: 1, minWidth: 76, border: "1px solid #EAE6DF" }}>
                   <div style={{ fontSize: 18, fontWeight: 800, color: "white", background: DPE_COLORS[annonce.dpe] || "#8a8477", width: 36, height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>{annonce.dpe}</div>
                   <div style={{ fontSize: 11, color: "#666", marginTop: 6, fontWeight: 500, letterSpacing: "0.3px" }}>DPE</div>
                 </div>
