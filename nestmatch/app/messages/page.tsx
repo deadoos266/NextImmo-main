@@ -3405,14 +3405,29 @@ function MessagesInner() {
 
             <div style={{ flex: 1, overflowY: "auto" }}>
               {convsFiltrees.length === 0 ? (
-                <div style={{ padding: "36px 20px", textAlign: "center", color: "#8a8477" }}>
-                  <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontSize: 16, fontWeight: 500, color: "#111", margin: 0, letterSpacing: "-0.2px" }}>{recherche ? "Aucun résultat" : "Aucune conversation"}</p>
+                <div style={{ padding: "44px 20px 36px", textAlign: "center", color: "#8a8477" }}>
+                  {/* Icone cercle beige discret — palette eyebrow KeyMatch.
+                      Plus compact que <EmptyState> (sidebar 340px etroite). */}
+                  <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#F7F4EF", border: "1px solid #EAE6DF", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8a8477" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                  </div>
+                  <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontSize: 18, fontWeight: 500, color: "#111", margin: 0, letterSpacing: "-0.2px" }}>{recherche ? "Aucun résultat" : "Aucune conversation"}</p>
                   {!recherche && (
-                    <p style={{ fontSize: 12, marginTop: 6, textAlign: "center", lineHeight: 1.6, color: "#8a8477" }}>
-                      {proprietaireActive
-                        ? "Les locataires vous contacteront depuis vos annonces."
-                        : "Contactez un propriétaire depuis une annonce."}
-                    </p>
+                    <>
+                      <p style={{ fontSize: 12, marginTop: 8, textAlign: "center", lineHeight: 1.6, color: "#8a8477", maxWidth: 240, marginInline: "auto" }}>
+                        {proprietaireActive
+                          ? "Les locataires vous contacteront depuis vos annonces."
+                          : "Contactez un propriétaire depuis une annonce."}
+                      </p>
+                      <Link
+                        href={proprietaireActive ? "/proprietaire" : "/annonces"}
+                        style={{ display: "inline-block", marginTop: 18, background: "#111", color: "#fff", padding: "10px 22px", borderRadius: 999, textDecoration: "none", fontSize: 12, fontWeight: 700, letterSpacing: "0.3px", fontFamily: "inherit" }}
+                      >
+                        {proprietaireActive ? "Voir mes biens" : "Découvrir des biens"}
+                      </Link>
+                    </>
                   )}
                 </div>
               ) : convsFiltrees.map(conv => {
