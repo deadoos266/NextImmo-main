@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react"
 import { supabase } from "../../../lib/supabase"
 import { useRole } from "../../providers"
 import { postNotif } from "../../../lib/notificationsClient"
+import { calculerCompletudeProfil } from "../../../lib/profilCompleteness"
+import GatedAction from "../../components/ui/GatedAction"
 
 export default function ContactButton({ annonce }: { annonce: any }) {
   const { data: session } = useSession()
@@ -19,6 +21,26 @@ export default function ContactButton({ annonce }: { annonce: any }) {
   // immediatement — le ref si)
   const inFlight = useRef(false)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+
+  // Complétude dossier — gate la candidature si < 30% pour éviter
+  // les contacts vides côté proprio (le candidat doit avoir au moins
+  // les bases : ville/budget/revenus). Gating soft : popup explicatif
+  // + CTA /dossier, pas un blocage radical.
+  const [profilCompletude, setProfilCompletude] = useState<number | null>(null)
+  useEffect(() => {
+    if (!session?.user?.email) { setProfilCompletude(null); return }
+    let cancelled = false
+    void supabase.from("profils")
+      .select("ville_souhaitee, budget_max, revenus_mensuels, surface_min, type_garant, type_quartier")
+      .eq("email", session.user.email)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return
+        const { score } = calculerCompletudeProfil(data || null)
+        setProfilCompletude(score)
+      })
+    return () => { cancelled = true }
+  }, [session?.user?.email])
 
   const isOwnAnnonce = session?.user?.email === annonce.proprietaire_email
 
@@ -113,12 +135,33 @@ export default function ContactButton({ annonce }: { annonce: any }) {
     }
   }
 
+  // Gating : si le user est connecté ET dossier < 30%, on grise le bouton.
+  // Si pas connecté, openModal() redirige vers /auth (pas de gating ici).
+  // Si profilCompletude = null (encore en chargement), on autorise le clic
+  // pour ne pas bloquer pendant le fetch (UX > rigueur).
+  const dossierIncomplet = !!session && profilCompletude !== null && profilCompletude < 30
+
+  const button = (
+    <button onClick={openModal}
+      style={{ display: "block", width: "100%", background: "#111", color: "white", border: "none", borderRadius: 999, padding: "14px 0", fontWeight: 700, fontSize: 15, cursor: "pointer", marginBottom: 10, textAlign: "center", fontFamily: "inherit" }}>
+      Contacter le propriétaire
+    </button>
+  )
+
   return (
     <>
-      <button onClick={openModal}
-        style={{ display: "block", width: "100%", background: "#111", color: "white", border: "none", borderRadius: 999, padding: "14px 0", fontWeight: 700, fontSize: 15, cursor: "pointer", marginBottom: 10, textAlign: "center", fontFamily: "inherit" }}>
-        Contacter le propriétaire
-      </button>
+      {dossierIncomplet ? (
+        <GatedAction
+          enabled={false}
+          disabledReason={{
+            title: "Complétez votre dossier",
+            body: "Pour contacter un propriétaire, votre dossier doit être complété au minimum (ville, budget, revenus). Un dossier complet a beaucoup plus de chances d'être retenu.",
+            cta: { label: "Compléter mon dossier", href: "/dossier" },
+          }}
+        >
+          {button}
+        </GatedAction>
+      ) : button}
 
       {showModal && (
         <div
