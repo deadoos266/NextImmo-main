@@ -11,22 +11,21 @@ import MarkerClusterGroup from "react-leaflet-cluster"
 
 type MapType = "plan" | "satellite" | "standard"
 
-// Tuiles par défaut = CARTO Positron Light (Paul 2026-04-27 — switch depuis
-// Voyager pour maximiser le contraste avec les pills prix noires style Airbnb).
-// Positron : fond très clair quasi-blanc, labels gris fins, axes routiers
-// gris pâle. Markers ressortent franchement, lecture rapide des prix.
-// GRATUIT sans clé API, subdomains {a,b,c,d}, maxZoom 19, retina @2x via {r}.
-// https://github.com/CartoDB/basemap-styles
-// Mode "Détaillé" = OSM France (labels FR, plus dense au zoom street-level).
-// Satellite = Esri World Imagery (pas d'alternative française gratuite
-// équivalente sans clé API).
+// Tuiles par défaut = OpenStreetMap France (Paul 2026-04-27 v3 sur retour
+// user "ce qui m'embête sur la map actuellement c'est qu'elle est en
+// anglais surtout"). osmfr a les labels en FRANÇAIS natifs (Paris, Londres,
+// Espagne au lieu de London/Spain), GRATUIT illimité sans cle API, et le
+// style standard OSM reste lisible meme s'il est moins minimaliste que
+// CartoDB Positron (qui etait en anglais par defaut).
+// https://wiki.openstreetmap.org/wiki/OpenStreetMap_France
+// Satellite = Esri World Imagery (preserve, pas d'alternative FR equivalente).
 const TILES: Record<MapType, { url: string; attribution: string; label: string; subdomains?: string; maxZoom?: number; soft?: boolean }> = {
   plan: {
-    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    url: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> France',
     label: "Plan",
-    subdomains: "abcd",
-    maxZoom: 19,
+    subdomains: "abc",
+    maxZoom: 20,
   },
   satellite: {
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -34,9 +33,11 @@ const TILES: Record<MapType, { url: string; attribution: string; label: string; 
     label: "Satellite",
   },
   standard: {
-    url: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
-    attribution: '&copy; <a href="https://www.openstreetmap.fr/">OpenStreetMap France</a>',
-    label: "Détaillé",
+    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    label: "Épuré",
+    subdomains: "abcd",
+    maxZoom: 19,
   },
 }
 
