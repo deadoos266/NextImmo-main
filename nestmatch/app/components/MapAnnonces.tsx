@@ -251,6 +251,35 @@ function ZoomControls() {
   )
 }
 
+// Recentre la carte sur l'annonce selectedId (utilise par le carrousel
+// horizontal mobile : quand l'user scroll sur une card, on flyTo sur le
+// marker correspondant pour synchroniser map ↔ liste).
+// Memoize la coord pour ne pas spammer flyTo au chaque re-render.
+function FlyToSelected({
+  annonces,
+  selectedId,
+  zoom = 14,
+}: {
+  annonces: { id: number; _lat?: number | null; _lng?: number | null }[]
+  selectedId: number | null
+  zoom?: number
+}) {
+  const map = useMap()
+  const lastFlyTarget = useRef<number | null>(null)
+  useEffect(() => {
+    if (selectedId === null) return
+    if (lastFlyTarget.current === selectedId) return
+    const ann = annonces.find(a => a.id === selectedId)
+    if (!ann || !ann._lat || !ann._lng) return
+    lastFlyTarget.current = selectedId
+    map.flyTo([ann._lat, ann._lng], Math.max(map.getZoom(), zoom), {
+      animate: true,
+      duration: 0.8,
+    })
+  }, [annonces, selectedId, zoom, map])
+  return null
+}
+
 // Recentre la carte quand le centerHint change (ville URL/profil qui change
 // sans devoir remount tout le MapContainer)
 function CenterOnHint({ centerHint }: { centerHint?: [number, number] | null }) {
@@ -367,6 +396,7 @@ export default function MapAnnonces({
         <BoundsWatcher onMoved={handleMoved} />
         <FrenchLeafletLocale />
         <CenterOnHint centerHint={centerHint} />
+        <FlyToSelected annonces={withCoords} selectedId={selectedId} />
         <ZoomControls />
         <MarkerClusterGroup
           chunkedLoading

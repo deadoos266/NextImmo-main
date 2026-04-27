@@ -29,6 +29,9 @@ const FiltersModal = dynamic(() => import("../components/annonces/FiltersModal")
 const SavedSearchesPopover = dynamic(() => import("../components/annonces/SavedSearchesPopover"), { ssr: false })
 const QuickViewModal = dynamic(() => import("../components/annonces/QuickViewModal"), { ssr: false })
 const CompareTray = dynamic(() => import("../components/annonces/CompareTray"), { ssr: false })
+// MobileMapCarousel : monte uniquement quand showMap=true ET viewport mobile.
+// Lazy : on évite de payer le coût (Image, Leaflet props) sur desktop.
+const MobileMapCarousel = dynamic(() => import("../components/annonces/MobileMapCarousel"), { ssr: false })
 
 // R10.2 — max simultané d'annonces dans le comparateur.
 const COMPARE_MAX = 3
@@ -1505,75 +1508,25 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
         </button>
       )}
 
-      {/* ── Mobile Map Modal plein écran (<768, showMap=true) ─────────── */}
+      {/* ── Mobile Map Modal — pattern Airbnb/SeLoger (Paul 2026-04-27) ──
+          Map ~60% top + carrousel horizontal cards ~40% bottom.
+          Synchronisation map ↔ carrousel :
+          - Click marker → setSelectedId → MapComp flyTo (FlyToSelected) +
+            useEffect scroll la card matching dans le carrousel.
+          - Swipe carrousel → IntersectionObserver détecte la card centrée
+            → setSelectedId → flyTo automatique. */}
       {isMobileV5 && !gridMode && showMap && mounted && MapComp && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Carte des annonces"
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 7400,
-            background: km.beige,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          {/* Bouton retour Liste (top sticky) */}
-          <div style={{
-            flexShrink: 0,
-            padding: "14px 16px",
-            background: km.white,
-            borderBottom: `1px solid ${km.line}`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-          }}>
-            <button
-              type="button"
-              onClick={() => setShowMap(false)}
-              aria-label="Retour à la liste"
-              style={{
-                background: km.white,
-                color: km.ink,
-                border: `1px solid ${km.line}`,
-                borderRadius: 999,
-                padding: "8px 16px",
-                fontSize: 11,
-                fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.6px",
-                fontFamily: "inherit",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
-              Liste
-            </button>
-            <span style={{ fontSize: 12, color: "#666", fontWeight: 500 }}>
-              {annoncesTraitees.length} annonce{annoncesTraitees.length > 1 ? "s" : ""}
-            </span>
-          </div>
-          {/* Carte plein écran */}
-          <div style={{ flex: 1, position: "relative", isolation: "isolate", overflow: "hidden" }}>
-            <MapComp
-              annonces={annoncesTraitees}
-              selectedId={selectedId}
-              onSelect={id => setSelectedId(id)}
-              onBoundsChange={handleBoundsChange}
-              centerHint={centerCity ? [centerCity[0], centerCity[1]] : null}
-              favoris={favoris}
-              onToggleFavori={handleToggleFavoriId}
-            />
-          </div>
-        </div>
+        <MobileMapCarousel
+          annonces={annoncesTraitees}
+          selectedId={selectedId}
+          onSelect={(id: number | null) => setSelectedId(id)}
+          onClose={() => setShowMap(false)}
+          onBoundsChange={handleBoundsChange}
+          centerHint={centerCity ? [centerCity[0], centerCity[1]] : null}
+          favoris={favoris}
+          onToggleFavori={handleToggleFavoriId}
+          MapComp={MapComp}
+        />
       )}
 
       {/* ── R10.2 — QuickView modal ───────────────────────────────────── */}
