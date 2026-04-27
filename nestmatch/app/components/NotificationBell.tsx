@@ -61,7 +61,7 @@ export default function NotificationBell() {
     return () => { supabase.removeChannel(channel) }
   }, [email])
 
-  // Close dropdown on outside click
+  // Close dropdown on outside click + Esc keyboard (a11y WCAG 2.1.2).
   useEffect(() => {
     if (!open) return
     function onClick(e: MouseEvent) {
@@ -69,8 +69,15 @@ export default function NotificationBell() {
         setOpen(false)
       }
     }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false)
+    }
     document.addEventListener("mousedown", onClick)
-    return () => document.removeEventListener("mousedown", onClick)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", onClick)
+      document.removeEventListener("keydown", onKey)
+    }
   }, [open])
 
   async function handleClickNotif(n: Notif) {
@@ -111,6 +118,8 @@ export default function NotificationBell() {
         type="button"
         onClick={() => setOpen(o => !o)}
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} non lues)` : ""}`}
+        aria-expanded={open}
+        aria-haspopup="menu"
         style={{
           position: "relative",
           background: open ? "#F7F4EF" : "white",
@@ -186,8 +195,15 @@ export default function NotificationBell() {
           </div>
 
           {notifs.length === 0 ? (
-            <div style={{ padding: "32px 16px", textAlign: "center" }}>
-              <p style={{ fontSize: 13, color: "#8a8477", margin: 0 }}>Aucune notification.</p>
+            <div style={{ padding: "32px 16px 28px", textAlign: "center" }}>
+              <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#F7F4EF", border: "1px solid #EAE6DF", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8a8477" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+              </div>
+              <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontSize: 15, fontWeight: 500, color: "#111", margin: 0 }}>Aucune notification</p>
+              <p style={{ fontSize: 12, color: "#8a8477", margin: "4px 0 0" }}>Vous serez prévenu ici dès qu&apos;il se passera quelque chose.</p>
             </div>
           ) : (
             <div style={{ maxHeight: 400, overflowY: "auto" }}>

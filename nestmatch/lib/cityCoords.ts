@@ -143,3 +143,43 @@ export function normalizeCityName(name: string): string {
 export function normalizeCityKey(name: string): string {
   return name.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
 }
+
+/**
+ * Distance haversine en km entre 2 points lat/lng. Sphere terrestre ~6371 km.
+ * Utilise pour findNearbyCities (recherche 0 resultat -> suggestions).
+ */
+function haversineKm(a: [number, number], b: [number, number]): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180
+  const R = 6371
+  const dLat = toRad(b[0] - a[0])
+  const dLng = toRad(b[1] - a[1])
+  const lat1 = toRad(a[0])
+  const lat2 = toRad(b[0])
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)))
+}
+
+/**
+ * Retourne jusqu'a `limit` villes proches geographiquement de `ville`,
+ * triees par distance croissante, en excluant la ville elle-meme.
+ * Si la ville n'est pas dans CITY_COORDS, retourne [].
+ *
+ * Utilise sur l'empty state /annonces (0 resultat avec ville filtree) :
+ * "Aucun resultat a Lyon - essayez Villeurbanne (4 km), Vaulx-en-Velin
+ * (8 km), Caluire-et-Cuire (5 km)".
+ */
+export function findNearbyCities(ville: string, limit = 5): Array<{ name: string; distanceKm: number }> {
+  const sourceCoords = getCityCoords(ville)
+  if (!sourceCoords) return []
+  const sourceKey = normalizeCityKey(ville)
+  const distances: Array<{ key: string; distanceKm: number }> = []
+  for (const [key, coords] of Object.entries(CITY_COORDS)) {
+    if (normalizeCityKey(key) === sourceKey) continue
+    distances.push({ key, distanceKm: haversineKm(sourceCoords, coords) })
+  }
+  distances.sort((a, b) => a.distanceKm - b.distanceKm)
+  return distances.slice(0, limit).map(d => ({
+    name: toTitleCase(d.key),
+    distanceKm: Math.round(d.distanceKm),
+  }))
+}

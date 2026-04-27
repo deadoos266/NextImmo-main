@@ -7,7 +7,7 @@ import { supabase } from "../../lib/supabase"
 import { calculerScore, estExclu, labelScore } from "../../lib/matching"
 import { useSession } from "next-auth/react"
 import { useRole } from "../providers"
-import { getCityCoords, normalizeCityKey } from "../../lib/cityCoords"
+import { getCityCoords, normalizeCityKey, findNearbyCities } from "../../lib/cityCoords"
 import { geocodeCity } from "../../lib/geocoding"
 import { getFavoris, toggleFavori } from "../../lib/favoris"
 import { calculerCompletudeProfil } from "../../lib/profilCompleteness"
@@ -1110,16 +1110,62 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
             {loading ? (
               <GridContainer>{[1, 2, 3, 4, 5, 6, 7, 8].map(i => <AnnonceSkeleton key={i} />)}</GridContainer>
             ) : annoncesTraitees.length === 0 ? (
-              <EmptyState
-                title="Aucun logement trouvé"
-                description={activeVille
-                  ? `Aucun résultat à ${activeVille} pour ces critères. Élargissez la recherche ou effacez la ville.`
-                  : "Ajustez vos filtres pour voir plus de résultats."}
-                ctaLabel={activeFilterCount > 0 ? "Réinitialiser les filtres" : undefined}
-                onCtaClick={activeFilterCount > 0 ? onResetAll : undefined}
-                secondaryCtaLabel={activeVille ? "Voir toutes les villes" : undefined}
-                onSecondaryCtaClick={activeVille ? () => onChangeVille("") : undefined}
-              />
+              <>
+                <EmptyState
+                  title="Aucun logement trouvé"
+                  description={activeVille
+                    ? `Aucun résultat à ${activeVille} pour ces critères. Élargissez la recherche ou essayez une ville voisine.`
+                    : "Ajustez vos filtres pour voir plus de résultats."}
+                  ctaLabel={activeFilterCount > 0 ? "Réinitialiser les filtres" : undefined}
+                  onCtaClick={activeFilterCount > 0 ? onResetAll : undefined}
+                  secondaryCtaLabel={activeVille ? "Voir toutes les villes" : undefined}
+                  onSecondaryCtaClick={activeVille ? () => onChangeVille("") : undefined}
+                />
+                {/* Suggestions villes proches (Paul 2026-04-27) — uniquement si
+                    la ville est connue dans CITY_COORDS. Click = onChangeVille
+                    qui re-route avec la ville suggeree. */}
+                {activeVille && (() => {
+                  const nearby = findNearbyCities(activeVille, 5)
+                  if (nearby.length === 0) return null
+                  return (
+                    <div style={{ marginTop: 18, background: "white", border: "1px solid #EAE6DF", borderRadius: 16, padding: "20px 24px" }}>
+                      <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 12px" }}>
+                        Villes proches de {activeVille}
+                      </p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        {nearby.map(c => (
+                          <button
+                            key={c.name}
+                            type="button"
+                            onClick={() => onChangeVille(c.name)}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                              background: "#F7F4EF",
+                              border: "1px solid #EAE6DF",
+                              color: "#111",
+                              borderRadius: 999,
+                              padding: "8px 14px",
+                              fontSize: 12,
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              fontFamily: "inherit",
+                              transition: "background 160ms",
+                              WebkitTapHighlightColor: "transparent",
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.background = "#EAE6DF")}
+                            onMouseLeave={e => (e.currentTarget.style.background = "#F7F4EF")}
+                          >
+                            {c.name}
+                            <span style={{ color: "#8a8477", fontWeight: 500 }}>· {c.distanceKm} km</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
+              </>
             ) : (
               <>
                 <GridContainer>
