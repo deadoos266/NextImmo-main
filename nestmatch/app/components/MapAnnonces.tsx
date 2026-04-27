@@ -311,6 +311,22 @@ export interface MapAnnoncesProps {
   // sur la photo du popup. Pattern miroir de ListingCardSearch.
   favoris?: number[]
   onToggleFavori?: (id: number) => void
+  /** Callback invoque quand l'user tape sur la map en dehors d'un marker
+   *  (Leaflet's `click` event sur le map container). Utilise par
+   *  MobileMapCarousel pour fermer la card slide-up au tap-outside. */
+  onMapClick?: () => void
+}
+
+/** Composant interne : ecoute les clicks sur le map container Leaflet
+ *  (hors marker, hors popup) et appelle onMapClick. Doit etre enfant de
+ *  MapContainer pour avoir acces a useMapEvents. */
+function MapClickListener({ onMapClick }: { onMapClick?: () => void }) {
+  useMapEvents({
+    click: () => {
+      if (onMapClick) onMapClick()
+    },
+  })
+  return null
 }
 
 export default function MapAnnonces({
@@ -321,6 +337,7 @@ export default function MapAnnonces({
   centerHint,
   favoris,
   onToggleFavori,
+  onMapClick,
 }: MapAnnoncesProps) {
   useEffect(() => { fixLeafletIcons() }, [])
   const [mapType, setMapType] = useState<MapType>("plan")
@@ -405,6 +422,7 @@ export default function MapAnnonces({
         />
         <BoundsWatcher onMoved={handleMoved} />
         <FrenchLeafletLocale />
+        <MapClickListener onMapClick={onMapClick} />
         <CenterOnHint centerHint={centerHint} />
         <FlyToSelected annonces={withCoords} selectedId={selectedId} />
         <ZoomControls />

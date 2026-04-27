@@ -290,6 +290,7 @@ export default function MobileMapCarousel({
           centerHint={centerHint}
           favoris={favoris}
           onToggleFavori={onToggleFavori}
+          onMapClick={() => { if (showCard) closeCard() }}
         />
 
         {/* FAB "Voir la liste" sticky bottom-center (Paul 2026-04-27).

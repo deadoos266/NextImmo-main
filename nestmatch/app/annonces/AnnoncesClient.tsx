@@ -1074,11 +1074,12 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           </div>
         )}
 
-        {/* ── FiltersBar sticky — MASQUÉ en mode liste+carte desktop.
-            Les QuickFilter chips de l'aside (Compat / Lieu / Loyer) +
-            bouton "Tous les filtres" jouent ce rôle. Mode grille/mobile
-            le conserve car pas d'aside. */}
-        {!isDesktopListCarte && <FiltersBar
+        {/* ── FiltersBar sticky — MASQUÉ en mode liste+carte desktop ET en
+            mobile mode carte (Paul 2026-04-27 sur retour user — la barre
+            apparaissait au milieu de l'ecran sur la map mobile, moche et
+            inutile car le bouton Filtres + le picker Ville sont deja dans
+            le header sticky de MobileMapCarousel). */}
+        {!isDesktopListCarte && !(isMobileV5 && showMap) && <FiltersBar
           isMobile={isMobileV5}
           isTablet={isTablet && !isMobileV5}
           activeVille={activeVille}
