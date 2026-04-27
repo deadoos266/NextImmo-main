@@ -1,5 +1,7 @@
 "use client"
 
+import { useState } from "react"
+
 /**
  * Bandeau incitatif premium pour compléter son dossier locataire.
  *
@@ -10,6 +12,10 @@
  *  - Titre + sous-titre au centre
  *  - Bouton CTA noir « Compléter mon dossier » à droite
  *  - Progress bar discrète 4px sous le contenu
+ *  - X close top-right (Paul 2026-04-27 sur retour user) — ephemere :
+ *    state local React, PAS de localStorage. Au reload/navigation,
+ *    le bandeau revient. Le user peut juste l'ecarter pendant qu'il
+ *    explore /annonces sans pression visuelle constante.
  *
  * Affichage conditionnel géré par le parent : le composant assume que
  * si on le rend, c'est qu'on doit l'afficher. Masquer = ne pas rendre.
@@ -22,19 +28,61 @@ export default function BandeauDossier({
   completude: number
   isMobile: boolean
 }) {
+  const [dismissed, setDismissed] = useState(false)
+  if (dismissed) return null
+
   return (
     <div
       style={{
+        position: "relative",
         background: "linear-gradient(135deg, #FFFFFF 0%, #F9F6F0 100%)",
         border: "1px solid #EAE6DF",
         borderRadius: 16,
-        padding: isMobile ? "16px 18px" : "20px 24px",
+        padding: isMobile ? "16px 18px 16px 18px" : "20px 60px 20px 24px",
         display: "flex",
         flexDirection: isMobile ? "column" : "row",
         alignItems: isMobile ? "stretch" : "center",
         gap: isMobile ? 12 : 20,
+        animation: "km-banner-fadein 0.22s ease-out",
       }}
     >
+      <style>{`
+        @keyframes km-banner-fadein { from { opacity: 0; transform: translateY(-4px) } to { opacity: 1; transform: translateY(0) } }
+      `}</style>
+
+      {/* X close top-right — zone tactile 36x36 mobile (>= 44 avec padding),
+          32x32 desktop. Ne casse pas le layout flex (position absolute). */}
+      <button
+        type="button"
+        aria-label="Masquer ce rappel"
+        onClick={() => setDismissed(true)}
+        style={{
+          position: "absolute",
+          top: isMobile ? 8 : 10,
+          right: isMobile ? 8 : 10,
+          width: isMobile ? 36 : 32,
+          height: isMobile ? 36 : 32,
+          borderRadius: "50%",
+          background: "transparent",
+          border: "none",
+          color: "#8a8477",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: "inherit",
+          WebkitTapHighlightColor: "transparent",
+          transition: "background 150ms, color 150ms",
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = "#F7F4EF"; e.currentTarget.style.color = "#111" }}
+        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#8a8477" }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+
       {/* Icône document + % */}
       <div
         style={{
@@ -59,7 +107,7 @@ export default function BandeauDossier({
         </svg>
       </div>
 
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ flex: 1, minWidth: 0, paddingRight: isMobile ? 36 /* eviter overlap avec X */ : 0 }}>
         <p style={{ fontSize: 15, fontWeight: 600, color: "#111", margin: 0, lineHeight: 1.3 }}>
           Votre dossier est à {completude}%
         </p>
