@@ -1610,7 +1610,13 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
         items={compareIds
           .map(id => annoncesEnrichies.find(a => a.id === id))
           .filter((a): a is NonNullable<typeof a> => !!a)
-          .map(a => ({ id: a.id, titre: a.titre ?? null, ville: a.ville ?? null, prix: a.prix ?? null }))
+          .map(a => ({
+            id: a.id,
+            titre: a.titre ?? null,
+            ville: a.ville ?? null,
+            prix: a.prix ?? null,
+            photo: Array.isArray(a.photos) && a.photos.length > 0 ? a.photos[0] : null,
+          }))
         }
         max={COMPARE_MAX}
         onRemove={handleToggleCompare}

@@ -187,7 +187,18 @@ function HoverableMarker({
             clearTimeout(closeTimer.current)
             closeTimer.current = null
           }
-          onSelect()
+          // Paul 2026-04-27 : on n'appelle PLUS onSelect au mouseover.
+          // User : "quand on passe notre souris sur les bulles d'annonces
+          // affichées sur la carte la carte bouge automatiquement". Cause :
+          // onSelect changeait selectedId → FlyToSelected appelait flyTo →
+          // la carte se deplacait. La sync card↔marker ne se fait que sur
+          // CLICK explicite maintenant. Le hover ouvre juste le popup
+          // preview (et highlight visuel via le selectedId === a.id check
+          // dans priceMarker → mais comme on n'appelle plus onSelect, le
+          // marker reste visuellement "non actif" au hover, ce qui est OK
+          // car c'est juste un preview). Pour rendre le marker subtilement
+          // hover-active, on pourrait ajouter un state local mais ce serait
+          // de la decoration — pas demande par l'user.
           markerRef.current?.openPopup()
         },
         mouseout: () => {
