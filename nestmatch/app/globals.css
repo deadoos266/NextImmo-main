@@ -4,6 +4,26 @@
   padding: 0;
 }
 
+/* ───────── Mobile pinch-zoom guard (Paul 2026-04-27) ─────────
+   En complement du viewport meta `maximumScale: 1, userScalable: false`,
+   on force `touch-action: pan-y` sur html + body : meme si iOS ignore
+   les directives viewport (cas connu pour a11y), le pinch-zoom est
+   toujours bloque cote CSS. `pan-y` autorise SEUL le scroll vertical
+   en touch — pinch et pan-x ignored. Resout : "Y A TOUJOURS LE BUG DE
+   QUAND C'EST DEZOOMER AU MAX ON PEUT PAS SCROLLE SUR TEL".
+
+   Composants qui ont besoin de pinch-zoom (lightbox photo, map Leaflet)
+   override avec `touch-action: auto` ou `pinch-zoom` localement. */
+html, body {
+  touch-action: pan-y;
+  overscroll-behavior-y: auto;
+}
+/* Whitelist : composants qui doivent garder le pinch-zoom natif. */
+.leaflet-container,
+[data-allow-pinch-zoom="true"] {
+  touch-action: auto;
+}
+
 /* ───────── A11y : focus visible global (WCAG 2.4.7) ─────────
    On utilise :focus-visible (pas :focus) pour ne montrer l'anneau qu'au
    focus clavier — pas au click souris (UX moins lourde). Outline ink

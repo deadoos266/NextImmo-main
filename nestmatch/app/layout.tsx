@@ -8,6 +8,7 @@ import Footer from './components/Footer'
 import CookieBanner from './components/CookieBanner'
 import ToastStack from './components/ToastStack'
 import ServiceWorkerRegister from './components/ServiceWorkerRegister'
+import ZoomGuard from './components/ZoomGuard'
 import BetaBanner from './components/BetaBanner'
 import MountedOnly from './components/MountedOnly'
 import ThemeApplier from './components/ThemeApplier'
@@ -58,22 +59,26 @@ const NO_INDEX = process.env.NEXT_PUBLIC_NOINDEX === "true"
 
 /**
  * Viewport export (Next 15 — separe du metadata).
- * Paul 2026-04-27 : User : "on peut zoomer et dezoomer et quand on dezoom au
- * max bah on peut plus scroller, le fait qu'on puisse zoomer je trouve pas
- * ça très cool".
  *
- * Compromis a11y : on garde `userScalable: true` (a11y mandatory pour les
- * malvoyants qui zooment le texte) MAIS on cap `maximumScale: 5` (au lieu
- * du default infini) — empeche les pinches qui dezoom < 100% et casse le
- * scroll. iOS Safari respecte ce cap.
+ * Bug v2 (Paul 2026-04-27) — User : "Y A TOUJOURS LE BUG DE QUAND C'EST
+ * DEZOOMER AU MAX ON PEUT PAS SCROLLE SUR TEL".
  *
- * `initialScale: 1` + `width: device-width` standard.
+ * Le precedent `maximumScale: 5, userScalable: true` ne suffisait pas :
+ * iOS Safari ignore certaines directives pour a11y. On cap maintenant
+ * `minimumScale: 1` ET `maximumScale: 1` ensemble — empeche TOUT pinch
+ * zoom (in OU out) qui casse le scroll. Trade-off a11y assume : les
+ * malvoyants zoom-in via Settings iOS / Display Zoom systeme, pas via
+ * pinch in-page.
+ *
+ * `viewport-fit: cover` pour bonne gestion safe-area iPhone notch.
  */
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 5,
-  userScalable: true,
+  minimumScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
 }
 
 export const metadata: Metadata = {
@@ -218,6 +223,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <CookieBanner />
           <ToastStack />
           <ServiceWorkerRegister />
+          <ZoomGuard />
         </Providers>
       </body>
     </html>
