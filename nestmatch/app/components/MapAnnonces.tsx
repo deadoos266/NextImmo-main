@@ -11,29 +11,20 @@ import MarkerClusterGroup from "react-leaflet-cluster"
 
 type MapType = "plan" | "satellite" | "standard"
 
-// Tuiles par défaut = Stadia Maps "Alidade Smooth" avec lang=fr (Paul
-// 2026-04-27 v4). User : "je veux un truc free sur lequel j'aurais pas à
-// revenir 500 fois, surtout la c'est bien déjà mais juste le fait que ce
-// soit en anglais relou".
+// Tuiles par défaut = OpenStreetMap France (Paul 2026-04-27 — REVERT
+// d'urgence depuis Stadia Maps qui retournait 401 Authentication Error
+// en prod sans API key. osmfr = labels FR natifs + GRATUIT illimité sans
+// API key. Style un peu plus charge que Positron mais ZERO maintenance.
+// User : "la map remet celle d'avant la ça fait de la merde").
 //
-// Stadia Alidade Smooth = style minimaliste blanc épuré quasi-identique a
-// CartoDB Positron (que l'user aimait) + support natif `?lang=fr` qui
-// retourne les labels en français (Paris/Londres/Espagne).
-// FREE sans compte : 200 req/IP/heure — suffit pour beta avec peu d'users.
-// Pour la prod a grand trafic, ajouter une API key gratuite (200K req/
-// mois). Pas de breaking change requis quand on l'ajoute, juste un param
-// `?api_key=...` apres `?lang=fr`.
-//
-// https://docs.stadiamaps.com/themes/
-//
-// Fallback : "Plan FR" en mode standard (osmfr) reste accessible via le
-// selecteur layers top-right si Stadia rate-limite ou tombe.
-// Satellite = Esri World Imagery (preserve, pas d'equivalent FR).
+// CartoDB Positron Light reste accessible via le selecteur "Épuré" pour
+// les users qui preferent l'esthetique minimaliste meme en anglais.
 const TILES: Record<MapType, { url: string; attribution: string; label: string; subdomains?: string; maxZoom?: number; soft?: boolean }> = {
   plan: {
-    url: "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?lang=fr",
-    attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+    url: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> France',
     label: "Plan",
+    subdomains: "abc",
     maxZoom: 20,
   },
   satellite: {
@@ -42,11 +33,11 @@ const TILES: Record<MapType, { url: string; attribution: string; label: string; 
     label: "Satellite",
   },
   standard: {
-    url: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> France',
-    label: "OSM FR",
-    subdomains: "abc",
-    maxZoom: 20,
+    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    label: "Épuré",
+    subdomains: "abcd",
+    maxZoom: 19,
   },
 }
 
