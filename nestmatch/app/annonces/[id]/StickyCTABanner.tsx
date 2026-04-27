@@ -43,8 +43,12 @@ export default function StickyCTABanner({ annonce }: { annonce: any }) {
     }
   }, [session])
 
-  // Owner sur sa propre annonce → pas de bandeau (déjà pas de contact)
-  if (role === "proprietaire" && session?.user?.email === annonce.proprietaire_email) return null
+  // Owner sur sa propre annonce — peu importe le mode (Paul 2026-04-27 fix
+  // bug : avant on checkait role && match, manquait le cas user toggle en
+  // mode locataire mais owner). Maintenant priorite au check email.
+  if (session?.user?.email && annonce.proprietaire_email &&
+      session.user.email.toLowerCase() === annonce.proprietaire_email.toLowerCase()) return null
+  // Mode proprio sur l'annonce d'un autre → pas de bandeau non plus
   if (role === "proprietaire") return null
 
   const pct = profil ? Math.round(calculerScore(annonce, profil) / 10) : null

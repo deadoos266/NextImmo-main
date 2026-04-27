@@ -371,28 +371,31 @@ export default function ListingCardSearch({
           )}
         </div>
 
-        {/* Top-right : favori uniquement (Paul 2026-04-27 — Aperçu + Comparer
-            deplaces dans le footer pour ne plus bloquer la photo). */}
-        <div style={{ position: "absolute", top: 12, right: 12, zIndex: 5 }}>
-          <button
-            onClick={onToggleFavori}
-            aria-label={favori ? "Retirer des favoris" : "Ajouter aux favoris"}
-            style={{
-              width: 38, height: 38, borderRadius: "50%",
-              background: favori ? "#DC2626" : "rgba(255,255,255,0.94)",
-              color: favori ? "white" : "#111",
-              border: "none", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              backdropFilter: "blur(6px)", transition: "transform 200ms",
-            }}
-            onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.10)")}
-            onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill={favori ? "white" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-            </svg>
-          </button>
-        </div>
+        {/* Top-right : favori uniquement — masque si isOwn (Paul 2026-04-27,
+            user : "si c'est mon annonce je suis pas censé pouvoir contacter
+            le proprio"; idem favori/comparer = no-op sur sa propre annonce). */}
+        {!isOwn && (
+          <div style={{ position: "absolute", top: 12, right: 12, zIndex: 5 }}>
+            <button
+              onClick={onToggleFavori}
+              aria-label={favori ? "Retirer des favoris" : "Ajouter aux favoris"}
+              style={{
+                width: 38, height: 38, borderRadius: "50%",
+                background: favori ? "#DC2626" : "rgba(255,255,255,0.94)",
+                color: favori ? "white" : "#111",
+                border: "none", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                backdropFilter: "blur(6px)", transition: "transform 200ms",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.10)")}
+              onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill={favori ? "white" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ═══ Footer infos — handoff strict (eyebrow + titre + separator + 1 ligne) ═══ */}
@@ -469,8 +472,9 @@ export default function ListingCardSearch({
             l'overlay photo top-right vers le footer card pour ne plus bloquer
             la photo. Style ghost (transparent + hover beige) pour rester
             secondaire vs la card cliquable. stopPropagation pour ne pas
-            declencher la navigation vers /annonces/[id]. */}
-        {(onQuickView || onToggleCompare) && (
+            declencher la navigation vers /annonces/[id]. Masque si isOwn —
+            no sense de comparer sa propre annonce avec d'autres. */}
+        {!isOwn && (onQuickView || onToggleCompare) && (
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10, paddingTop: 9, borderTop: "1px solid #EAE6DF" }}>
             {onQuickView && (
               <button

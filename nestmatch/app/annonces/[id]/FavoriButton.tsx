@@ -1,24 +1,28 @@
 "use client"
 import { useEffect, useState } from "react"
+import { useSession } from "next-auth/react"
 import { isFavori, toggleFavori } from "../../../lib/favoris"
 
 /**
- * Paul 2026-04-27 : icon-only sur tous les viewports.
- * User : "y a un bug avec le sauvegarder, enleve juste le texte ca devrait
- * laisser le coeur ca devrait suffire". Le label etait perçu comme bruyant
- * a cote du heart, et le couplage label rouge + bord rouge en etat actif
- * etait visuellement surcharge.
+ * Bouton coeur favori — 40x40 rond, hairline + hover beige. Etat actif =
+ * coeur rempli rouge.
  *
- * Maintenant : bouton 40x40 rond, hairline #EAE6DF, hover beige. Etat
- * actif = coeur rempli rouge #DC2626 + bord rouge subtle. aria-label
- * preserve pour les screen readers.
+ * Owner-view (Paul 2026-04-27) : si `ownerEmail` est passe et matche la
+ * session courante, le bouton est masque. Le proprio ne sauvegarde pas
+ * son propre bien (no-op, juste du bruit visuel).
  */
-export default function FavoriButton({ id }: { id: number }) {
+export default function FavoriButton({ id, ownerEmail }: { id: number; ownerEmail?: string | null }) {
+  const { data: session } = useSession()
   const [actif, setActif] = useState(false)
 
   useEffect(() => {
     setActif(isFavori(id))
   }, [id])
+
+  // Owner sur sa propre annonce → ne pas afficher le coeur favori
+  if (ownerEmail && session?.user?.email && session.user.email.toLowerCase() === ownerEmail.toLowerCase()) {
+    return null
+  }
 
   function handleClick() {
     toggleFavori(id)

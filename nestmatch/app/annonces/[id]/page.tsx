@@ -482,7 +482,7 @@ export default async function Annonce({ params }: any) {
               {annonce.dispo}
             </span>
             <ShareButton title={annonce.titre || "Logement à louer"} url={`${BASE_URL}/annonces/${id}`} />
-            <FavoriButton id={annonce.id} />
+            <FavoriButton id={annonce.id} ownerEmail={annonce.proprietaire_email} />
           </div>
         </div>
 

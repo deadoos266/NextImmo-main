@@ -1460,6 +1460,7 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                           compared={compareIds.includes(a.id)}
                           onToggleCompare={handleToggleCompare}
                           compareDisabled={compareIds.length >= COMPARE_MAX}
+                          isOwn={isOwn}
                         />
                       )
                     })}

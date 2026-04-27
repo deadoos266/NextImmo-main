@@ -40,6 +40,9 @@ interface Props {
   compared?: boolean
   onToggleCompare?: (annonceId: number) => void
   compareDisabled?: boolean
+  /** Owner-view (Paul 2026-04-27) : si true, masque favori + Aperçu +
+   *  Comparer car no-op sur sa propre annonce. */
+  isOwn?: boolean
 }
 
 function isNewAnnonce(createdAt: string | null | undefined): boolean {
@@ -73,6 +76,7 @@ export default function ListingCardCompact({
   compared = false,
   onToggleCompare,
   compareDisabled = false,
+  isOwn = false,
 }: Props) {
   const [idx, setIdx] = useState(0)
   const realPhotos: string[] = Array.isArray(annonce.photos) && annonce.photos.length > 0 ? annonce.photos : []
@@ -183,35 +187,36 @@ export default function ListingCardCompact({
           )}
         </div>
 
-        {/* Top-right : favori uniquement (Paul 2026-04-27 — Aperçu + Comparer
-            deplaces dans la barre d'actions du footer pour ne plus bloquer
-            la photo, a gauche du CTA "Voir l'annonce"). */}
-        <div style={{ position: "absolute", top: 8, right: 8, zIndex: 3 }}>
-          <button
-            type="button"
-            onClick={onToggleFavori}
-            aria-label={favori ? "Retirer des favoris" : "Ajouter aux favoris"}
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: "50%",
-              background: favori ? "#DC2626" : "rgba(255,255,255,0.95)",
-              color: favori ? "#fff" : "#111",
-              border: "none",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "transform 200ms",
-            }}
-            onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.10)")}
-            onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill={favori ? "#fff" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-            </svg>
-          </button>
-        </div>
+        {/* Top-right : favori — masque si isOwn (Paul 2026-04-27, no-op
+            sur sa propre annonce). */}
+        {!isOwn && (
+          <div style={{ position: "absolute", top: 8, right: 8, zIndex: 3 }}>
+            <button
+              type="button"
+              onClick={onToggleFavori}
+              aria-label={favori ? "Retirer des favoris" : "Ajouter aux favoris"}
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                background: favori ? "#DC2626" : "rgba(255,255,255,0.95)",
+                color: favori ? "#fff" : "#111",
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "transform 200ms",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.10)")}
+              onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill={favori ? "#fff" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+            </button>
+          </div>
+        )}
 
         {/* Photo dots segmented bar bottom */}
         {photos.length > 1 && (
@@ -311,7 +316,7 @@ export default function ListingCardCompact({
             secondaires. */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: "auto", paddingTop: 10, borderTop: "1px solid #EAE6DF", flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 1, minWidth: 0 }}>
-            {onPreview && (
+            {!isOwn && onPreview && (
               <button
                 type="button"
                 onClick={handlePreview}
@@ -334,7 +339,7 @@ export default function ListingCardCompact({
                 Aperçu
               </button>
             )}
-            {onToggleCompare && (
+            {!isOwn && onToggleCompare && (
               <button
                 type="button"
                 onClick={handleCompareToggle}

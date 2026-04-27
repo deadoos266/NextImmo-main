@@ -21,29 +21,31 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
     }
   }, [session, status])
 
-  // Côté propriétaire
-  if (session && role === "proprietaire") {
-    // Qualité uniquement sur sa propre annonce
-    if (annonce.proprietaire_email === session.user?.email) return (
-      <div style={{ background: "#F7F4EF", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
-        <p style={{ fontSize: 12, fontWeight: 700, color: "#8a8477", marginBottom: 6 }}>Qualité de l'annonce</p>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          {[
-            { label: "Photos", ok: false },
-            { label: "Description", ok: !!annonce.description },
-            { label: "DPE renseigné", ok: !!annonce.dpe },
-            { label: "Prix renseigné", ok: !!annonce.prix },
-          ].map(item => (
-            <span key={item.label} style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 999, background: item.ok ? "#F0FAEE" : "#F7F4EF", color: item.ok ? "#15803d" : "#8a8477" }}>
-              {item.ok ? "✓" : "✗"} {item.label}
-            </span>
-          ))}
-        </div>
+  // Owner sur sa propre annonce — peu importe le mode actif (Paul 2026-04-27).
+  // Avant : check `role === "proprietaire" && proprietaire_email === email`.
+  // Bug : si l'user owner avait toggle en mode locataire, il voyait le score
+  // de compat (qui calcule sa compat avec SON propre bien — non-sens). Fix :
+  // check owner en PRIORITE quel que soit le role courant.
+  const isOwnAnnonce = !!session?.user?.email && session.user.email.toLowerCase() === (annonce.proprietaire_email || "").toLowerCase()
+  if (isOwnAnnonce) return (
+    <div style={{ background: "#F7F4EF", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+      <p style={{ fontSize: 12, fontWeight: 700, color: "#8a8477", marginBottom: 6 }}>Qualité de l&apos;annonce</p>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        {[
+          { label: "Photos", ok: Array.isArray(annonce.photos) && annonce.photos.length > 0 },
+          { label: "Description", ok: !!annonce.description },
+          { label: "DPE renseigné", ok: !!annonce.dpe },
+          { label: "Prix renseigné", ok: !!annonce.prix },
+        ].map(item => (
+          <span key={item.label} style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 999, background: item.ok ? "#F0FAEE" : "#F7F4EF", color: item.ok ? "#15803d" : "#8a8477" }}>
+            {item.ok ? "✓" : "✗"} {item.label}
+          </span>
+        ))}
       </div>
-    )
-    // Annonce d'un autre propriétaire : rien à afficher
-    return null
-  }
+    </div>
+  )
+  // Mode proprio actif sur l'annonce d'un autre : rien
+  if (session && role === "proprietaire") return null
 
   if (loading) return (
     <div style={{ background: "#F7F4EF", borderRadius: 12, padding: "14px 16px", marginBottom: 16, textAlign: "center" }}>

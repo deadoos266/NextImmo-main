@@ -53,8 +53,11 @@ export default function ContactButton({ annonce }: { annonce: any }) {
     return () => { clearTimeout(t); window.removeEventListener("keydown", onKey) }
   }, [showModal])
 
-  // Propriétaire sur sa propre annonce → bouton de gestion
-  if (role === "proprietaire" && isOwnAnnonce) {
+  // Propriétaire sur sa propre annonce → bouton de gestion (Paul 2026-04-27 :
+  // bug fix — avant on checkait `role === "proprietaire" && isOwnAnnonce` ce
+  // qui ratait le cas user toggle en mode locataire mais owner de l'annonce).
+  // Maintenant le check isOwnAnnonce passe en PRIORITE quel que soit le role.
+  if (isOwnAnnonce) {
     return (
       <a href="/proprietaire"
         style={{ display: "block", width: "100%", background: "#111", color: "white", border: "none", borderRadius: 999, padding: "14px 0", fontWeight: 700, fontSize: 15, textAlign: "center", textDecoration: "none", marginBottom: 10, boxSizing: "border-box" }}>
@@ -63,7 +66,7 @@ export default function ContactButton({ annonce }: { annonce: any }) {
     )
   }
 
-  // Propriétaire sur l'annonce d'un autre → rien
+  // Propriétaire (mode actif) sur l'annonce d'un autre → rien
   if (role === "proprietaire") return null
 
   function openModal() {
