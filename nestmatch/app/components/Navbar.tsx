@@ -1,6 +1,6 @@
 "use client"
 import { useSession, signOut } from "next-auth/react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { useRole } from "../providers"
@@ -143,6 +143,27 @@ export default function Navbar() {
     window.addEventListener("keydown", handleKey)
     return () => window.removeEventListener("keydown", handleKey)
   }, [espaceOpen, menuOpen, mobileOpen])
+
+  // Body scroll lock quand le drawer mobile est ouvert (Paul 2026-04-27).
+  // Sinon le contenu de la page derriere le scrim reste scrollable au touch
+  // mobile, et le drawer "saute" visuellement quand on scrolle accidentellement.
+  // Pattern standard pour les modaux fullscreen (cf. ImageCropModal).
+  useEffect(() => {
+    if (!mobileOpen) return
+    const original = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => { document.body.style.overflow = original }
+  }, [mobileOpen])
+
+  // Focus le bouton close a l'ouverture pour les utilisateurs clavier
+  // (a11y : leur permet d'ouvrir avec espace/enter sur le burger puis de
+  // refermer avec espace/enter ou Esc sans tab-search).
+  const drawerCloseRef = useRef<HTMLButtonElement | null>(null)
+  useEffect(() => {
+    if (!mobileOpen) return
+    const t = setTimeout(() => drawerCloseRef.current?.focus(), 320) // apres l'animation slide-in
+    return () => clearTimeout(t)
+  }, [mobileOpen])
 
   // Gating locataire — pattern GatedAction (round 2026-04-27) :
   // les entrées Mon logement / Carnet / Quittances / Anciens logements
@@ -528,11 +549,22 @@ export default function Navbar() {
         </button>
       )}
 
-      {/* Mobile : drawer overlay — toujours monté quand isSmall pour animer l'ouverture/fermeture */}
+      {/* Mobile : drawer overlay (Paul 2026-04-27 refacto)
+          User : "le menu burger sur telephone faut pas qu'il prenne toute
+          la page ca fait moche en plus on sait pas ou cliquer pour
+          l'enlever". Refonte :
+          - Drawer width min(85vw, 360px) au lieu de 100vw → laisse une
+            zone visible a droite qui montre la page derriere.
+          - Scrim cliquable (existait) sur la zone restante → ferme.
+          - Bouton X (close) visible en top-right du drawer, 44x44.
+          - Esc keyboard ferme (existait deja).
+          - Body scroll lock pendant l'ouverture (nouveau useEffect).
+          - Focus auto sur close button a l'ouverture pour clavier (a11y). */}
       {isSmall && (
         <>
           <div
             onClick={() => setMobileOpen(false)}
+            aria-hidden="true"
             style={{
               position: "fixed", inset: 0, zIndex: 8000,
               background: "rgba(0,0,0,0.45)",
@@ -542,16 +574,50 @@ export default function Navbar() {
             }}
           />
           <div
+            role="dialog"
+            aria-modal={mobileOpen}
             aria-hidden={!mobileOpen}
+            aria-label="Menu de navigation"
             style={{
               position: "fixed", top: 72, left: 0, bottom: 0,
-              width: "100vw",
+              width: "min(85vw, 360px)",
+              maxWidth: "100vw",
               background: km.white, zIndex: 8001, overflowY: "auto",
-              boxShadow: mobileOpen ? "0 0 40px rgba(0,0,0,0.15)" : "none",
+              boxShadow: mobileOpen ? "0 0 40px rgba(0,0,0,0.18)" : "none",
               transform: mobileOpen ? "translateX(0)" : "translateX(-100%)",
               transition: "transform 0.32s cubic-bezier(0.4, 0, 0.2, 1)",
             }}
           >
+            {/* Bouton X (close) — ergonomie tactile WCAG 2.5.5 (44x44) */}
+            <div style={{ position: "sticky", top: 0, zIndex: 1, background: km.white, display: "flex", justifyContent: "flex-end", padding: "10px 10px 0", borderBottom: `1px solid ${km.beige}`, marginBottom: 0 }}>
+              <button
+                ref={drawerCloseRef}
+                type="button"
+                onClick={() => setMobileOpen(false)}
+                aria-label="Fermer le menu"
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: "50%",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: km.ink,
+                  fontFamily: "inherit",
+                  transition: "background 150ms",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = km.beige)}
+                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
 
             {/* User info */}
             {session && (
