@@ -1231,6 +1231,12 @@ function MessagesInner() {
   const [visitesConv, setVisitesConv] = useState<any[]>([])
   // Modale de gestion des visites (ouverte depuis la mini-barre dans la conv).
   const [visitesModalOpen, setVisitesModalOpen] = useState<boolean>(false)
+  // Bottom sheet mobile pour les actions secondaires du thread header (Paul
+  // 2026-04-27) : ferme le header surcharge sur mobile en cachant Voir
+  // l'annonce / Candidatures / Modifier / Devalider / Louer / Appel / Visio /
+  // Recherche dans une feuille slide-up declenchee via un kebab ⋯.
+  const [mobileSheetOpen, setMobileSheetOpen] = useState<boolean>(false)
+  useEffect(() => { setMobileSheetOpen(false) }, [convActive])
   // Historique annulées dans la modale : collapsible local (fermé par défaut).
   const [historiqueAnnOuvert, setHistoriqueAnnOuvert] = useState<boolean>(false)
   useEffect(() => { setHistoriqueAnnOuvert(false); setJustAcceptedAnnonceId(null) }, [convActive])
@@ -3824,7 +3830,7 @@ function MessagesInner() {
                           Candidature validée
                         </span>
                       )}
-                      {proprietaireActive && isCandidatureValideeDB && annonceActive?.statut !== "loué" && (
+                      {!isMobile && proprietaireActive && isCandidatureValideeDB && annonceActive?.statut !== "loué" && (
                         <button
                           type="button"
                           onClick={async () => {
@@ -3860,7 +3866,7 @@ function MessagesInner() {
                          (isCandidatureValideeDB=true) avant de pouvoir louer.
                          Empêche de sauter l'étape Valider → Visite → Bail.
                          Cache aussi si location déjà actée pour ce candidat. */}
-                      {proprietaireActive && annonceActive && isCandidatureValideeDB && (
+                      {!isMobile && proprietaireActive && annonceActive && isCandidatureValideeDB && (
                         (annonceActive.statut !== "loué" || (annonceActive.locataire_email || "").toLowerCase() !== convActiveData.other.toLowerCase()) && (
                           <button
                             type="button"
@@ -3883,8 +3889,12 @@ function MessagesInner() {
                           pas renseigné de téléphone (vie privée + pragmatique :
                           un appel ne peut pas se faire à sens unique). Reason
                           contextuelle selon qui manque (proprio peut être
-                          redirigé vers /profil pour ajouter son numéro). */}
-                      {(() => {
+                          redirigé vers /profil pour ajouter son numéro).
+
+                          Mobile : tout ce bloc icones est cache (Paul
+                          2026-04-27 v2) et accessible via le kebab ⋯ →
+                          bottom sheet. Header trop charge sinon. */}
+                      {!isMobile && (() => {
                         const peerEmail = convActiveData.other.toLowerCase()
                         const peerPhone = peerPhones[peerEmail] || ""
                         const peerHasPhone = peerPhone.trim().length > 0
@@ -4030,16 +4040,18 @@ function MessagesInner() {
                           </>
                         )
                       })()}
-                      <Link href={`/annonces/${convActiveData.annonceId}`}
-                        onMouseEnter={e => { e.currentTarget.style.background = "#F7F4EF" }}
-                        onMouseLeave={e => { e.currentTarget.style.background = "#fff" }}
-                        style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", background: "#fff", border: "1px solid #EAE6DF", borderRadius: 999, padding: "7px 14px", whiteSpace: "nowrap", transition: "background 160ms ease" }}>
-                        Voir l&apos;annonce
-                      </Link>
+                      {!isMobile && (
+                        <Link href={`/annonces/${convActiveData.annonceId}`}
+                          onMouseEnter={e => { e.currentTarget.style.background = "#F7F4EF" }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "#fff" }}
+                          style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", background: "#fff", border: "1px solid #EAE6DF", borderRadius: 999, padding: "7px 14px", whiteSpace: "nowrap", transition: "background 160ms ease" }}>
+                          Voir l&apos;annonce
+                        </Link>
+                      )}
                       {/* Liens raccourcis proprio (commit 6 du flow plan) :
                           si proprietaireActive ET annonceActive est à lui,
                           accès direct à Modifier annonce + Toutes candidatures. */}
-                      {proprietaireActive && annonceActive && (annonceActive.proprietaire_email || "").toLowerCase() === (myEmail || "").toLowerCase() && (
+                      {!isMobile && proprietaireActive && annonceActive && (annonceActive.proprietaire_email || "").toLowerCase() === (myEmail || "").toLowerCase() && (
                         <>
                           <Link
                             href={`/proprietaire/annonces/${convActiveData.annonceId}/candidatures`}
@@ -4060,6 +4072,41 @@ function MessagesInner() {
                             Modifier
                           </Link>
                         </>
+                      )}
+
+                      {/* Kebab ⋯ mobile : ouvre le bottom sheet avec toutes les
+                          actions secondaires (Voir l'annonce, Candidatures,
+                          Modifier, Devalider, Louer, Appel, Visio, Recherche). */}
+                      {isMobile && (
+                        <button
+                          type="button"
+                          onClick={() => setMobileSheetOpen(true)}
+                          aria-label="Plus d'actions"
+                          aria-haspopup="menu"
+                          aria-expanded={mobileSheetOpen}
+                          style={{
+                            background: "#fff",
+                            border: "1px solid #EAE6DF",
+                            borderRadius: "50%",
+                            width: 36,
+                            height: 36,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            color: "#111",
+                            flexShrink: 0,
+                            fontFamily: "inherit",
+                            marginLeft: "auto",
+                            WebkitTapHighlightColor: "transparent",
+                          }}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <circle cx="5" cy="12" r="2" />
+                            <circle cx="12" cy="12" r="2" />
+                            <circle cx="19" cy="12" r="2" />
+                          </svg>
+                        </button>
                       )}
                     </>
                   ) : (
@@ -4776,6 +4823,175 @@ function MessagesInner() {
                     </button>
                   </div>
                 </div>
+
+                {/* Bottom sheet mobile — actions secondaires header (Paul
+                    2026-04-27). Slide-up depuis le bottom, scrim cliquable.
+                    Liste verticale propre avec icones inline. */}
+                {isMobile && convActiveData && (() => {
+                  if (!mobileSheetOpen) return null
+                  const peerEmail = convActiveData.other.toLowerCase()
+                  const peerPhone = peerPhones[peerEmail] || ""
+                  const peerPhoneE164 = peerPhone.replace(/[\s\-+()]/g, "")
+                  const peerHasPhone = peerPhone.trim().length > 0
+                  const userHasPhone = myPhone.trim().length > 0
+                  const phoneAvailable = peerHasPhone && userHasPhone
+                  const hasActiveBail = isActiveBail(convActiveData)
+                  const isUnlocked = isCandidatureValideeDB || hasActiveBail
+                  const isOwnAnnonce = !!(proprietaireActive && annonceActive && (annonceActive.proprietaire_email || "").toLowerCase() === (myEmail || "").toLowerCase())
+                  const canLouer = !!(proprietaireActive && annonceActive && isCandidatureValideeDB && (annonceActive.statut !== "loué" || (annonceActive.locataire_email || "").toLowerCase() !== convActiveData.other.toLowerCase()))
+                  const canDevalider = !!(proprietaireActive && isCandidatureValideeDB && annonceActive?.statut !== "loué")
+
+                  function close() { setMobileSheetOpen(false) }
+
+                  const rowStyle: React.CSSProperties = {
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 14,
+                    width: "100%",
+                    padding: "14px 20px",
+                    background: "transparent",
+                    border: "none",
+                    color: "#111",
+                    fontSize: 15,
+                    fontWeight: 500,
+                    fontFamily: "inherit",
+                    cursor: "pointer",
+                    textAlign: "left" as const,
+                    textDecoration: "none",
+                    WebkitTapHighlightColor: "transparent",
+                  }
+                  const iconWrap: React.CSSProperties = {
+                    width: 32, height: 32, borderRadius: "50%",
+                    background: "#F7F4EF", border: "1px solid #EAE6DF",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#111", flexShrink: 0,
+                  }
+
+                  return (
+                    <>
+                      <div onClick={close} aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 9000, background: "rgba(0,0,0,0.45)" }} />
+                      <div role="dialog" aria-modal="true" aria-label="Actions de la conversation" style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 9001, background: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "75vh", overflowY: "auto", paddingBottom: "calc(12px + env(safe-area-inset-bottom, 0px))", boxShadow: "0 -8px 28px rgba(0,0,0,0.18)" }}>
+                        <div style={{ padding: "10px 0 6px", display: "flex", justifyContent: "center" }} aria-hidden="true">
+                          <div style={{ width: 40, height: 4, borderRadius: 999, background: "#EAE6DF" }} />
+                        </div>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1px", margin: "6px 20px 6px", padding: "0 0 6px", borderBottom: "1px solid #F7F4EF" }}>
+                          Actions
+                        </p>
+
+                        <Link href={`/annonces/${convActiveData.annonceId}`} onClick={close} style={rowStyle}>
+                          <span style={iconWrap}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                          </span>
+                          Voir l&apos;annonce
+                        </Link>
+
+                        {isOwnAnnonce && (
+                          <>
+                            <Link href={`/proprietaire/annonces/${convActiveData.annonceId}/candidatures`} onClick={close} style={rowStyle}>
+                              <span style={iconWrap}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
+                              </span>
+                              Toutes les candidatures
+                            </Link>
+                            <Link href={`/proprietaire/modifier/${convActiveData.annonceId}`} onClick={close} style={rowStyle}>
+                              <span style={iconWrap}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                              </span>
+                              Modifier l&apos;annonce
+                            </Link>
+                          </>
+                        )}
+
+                        {isUnlocked && phoneAvailable && (
+                          <a href={`tel:${peerPhone.replace(/\s/g, "")}`} onClick={close} style={rowStyle}>
+                            <span style={iconWrap}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+                            </span>
+                            Appeler
+                          </a>
+                        )}
+
+                        {isUnlocked && phoneAvailable && peerPhoneE164.length >= 8 && (
+                          <a href={`https://wa.me/${peerPhoneE164}`} target="_blank" rel="noopener noreferrer" onClick={close} style={rowStyle}>
+                            <span style={iconWrap}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" ry="2" /></svg>
+                            </span>
+                            Lancer un appel WhatsApp
+                          </a>
+                        )}
+
+                        {isUnlocked && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              close()
+                              const el = document.querySelector<HTMLInputElement>('input[placeholder*="Rechercher"]')
+                              if (el) { el.focus(); el.scrollIntoView({ block: "center" }) }
+                            }}
+                            style={rowStyle}
+                          >
+                            <span style={iconWrap}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                            </span>
+                            Rechercher dans la conversation
+                          </button>
+                        )}
+
+                        {canLouer && (
+                          <button
+                            type="button"
+                            onClick={() => { close(); setAccepterLocationOpen(true) }}
+                            style={{ ...rowStyle, color: "#15803d", fontWeight: 700 }}
+                          >
+                            <span style={{ ...iconWrap, background: "#F0FAEE", borderColor: "#C6E9C0", color: "#15803d" }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                            </span>
+                            Louer à ce candidat
+                          </button>
+                        )}
+
+                        {canDevalider && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              close()
+                              if (!convActiveData?.annonceId) return
+                              const ok = window.confirm(
+                                "Annuler la validation de cette candidature ?\n\n" +
+                                "Le candidat ne pourra plus proposer de visite tant que vous n'aurez pas validé à nouveau."
+                              )
+                              if (!ok) return
+                              const res = await fetch("/api/candidatures/devalider", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  annonceId: convActiveData.annonceId,
+                                  locataireEmail: convActiveData.other,
+                                }),
+                              })
+                              const json = await res.json().catch(() => ({}))
+                              if (!res.ok || !json.ok) {
+                                alert(`Annulation échouée : ${json.error || res.statusText}`)
+                                return
+                              }
+                              location.reload()
+                            }}
+                            style={{ ...rowStyle, color: "#8a8477" }}
+                          >
+                            <span style={iconWrap}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                            </span>
+                            Dévalider la candidature
+                          </button>
+                        )}
+
+                        <button type="button" onClick={close} style={{ ...rowStyle, color: "#8a8477", borderTop: "1px solid #F7F4EF", marginTop: 4, justifyContent: "center", padding: "16px 20px" }}>
+                          Fermer
+                        </button>
+                      </div>
+                    </>
+                  )
+                })()}
               </>
             )}
           </div>
