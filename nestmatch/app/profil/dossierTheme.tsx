@@ -299,7 +299,9 @@ export function DossierChip({
       onClick={onClick}
       aria-pressed={ariaPressed ?? active}
       style={{
-        padding: "8px 14px",
+        // V10.3 — minHeight 44 pour atteindre tap target WCAG/Apple HIG.
+        minHeight: 44,
+        padding: "10px 16px",
         borderRadius: 999,
         border: `1px solid ${active ? toneColor : T.line}`,
         cursor: "pointer",
@@ -310,6 +312,8 @@ export function DossierChip({
         color: active ? T.white : "#333",
         transition: "all 0.15s",
         whiteSpace: "nowrap",
+        WebkitTapHighlightColor: "transparent",
+        touchAction: "manipulation",
       }}
     >
       {children}
@@ -401,13 +405,17 @@ export function DossierSaveBtn({
         color: T.white,
         border: "none",
         borderRadius: 999,
-        padding: "10px 22px",
+        // V10.3 — minHeight 44 + padding adapte pour tap target
+        minHeight: 44,
+        padding: "12px 22px",
         fontWeight: 700,
         fontSize: 13,
         cursor: state === "saving" ? "not-allowed" : "pointer",
         fontFamily: "'DM Sans', sans-serif",
         letterSpacing: 0,
         whiteSpace: "nowrap",
+        WebkitTapHighlightColor: "transparent",
+        touchAction: "manipulation",
       }}
     >
       {children}

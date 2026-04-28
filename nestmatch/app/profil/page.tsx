@@ -1183,7 +1183,9 @@ function EquipementPreferencePicker({
               aria-checked={active}
               onClick={() => onChange(opt.v)}
               style={{
-                padding: "8px 13px",
+                // V10.3 — tap target minHeight 44
+                minHeight: 44,
+                padding: "10px 14px",
                 borderRadius: 999,
                 border: `1px solid ${active ? opt.tone : T.line}`,
                 background: active ? opt.tone : T.white,
@@ -1194,6 +1196,8 @@ function EquipementPreferencePicker({
                 fontFamily: "inherit",
                 transition: "all 140ms",
                 whiteSpace: "nowrap",
+                WebkitTapHighlightColor: "transparent",
+                touchAction: "manipulation",
               }}
             >
               {opt.l}

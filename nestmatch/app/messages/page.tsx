@@ -3777,7 +3777,7 @@ function MessagesInner() {
                   {isMobile && (
                     <button onClick={() => setConvActive(null)}
                       aria-label="Retour aux conversations"
-                      style={{ background: "#F7F4EF", border: "1px solid #EAE6DF", borderRadius: 999, width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 18, color: "#111", flexShrink: 0, fontFamily: "inherit" }}>
+                      style={{ background: "#F7F4EF", border: "1px solid #EAE6DF", borderRadius: 999, width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 18, color: "#111", flexShrink: 0, fontFamily: "inherit", WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}>
                       ←
                     </button>
                   )}
@@ -4012,7 +4012,8 @@ function MessagesInner() {
                         const visioEnabled = phoneAvailable && peerPhoneE164.length >= 8
 
                         const iconBtnStyle: React.CSSProperties = {
-                          width: 36, height: 36, borderRadius: "50%",
+                          // V10.3 — tap target 44x44 (au lieu de 36x36)
+                          width: 44, height: 44, borderRadius: "50%",
                           background: "#fff",
                           color: "#111",
                           border: "1px solid #EAE6DF",
@@ -4020,6 +4021,8 @@ function MessagesInner() {
                           display: "inline-flex", alignItems: "center", justifyContent: "center",
                           flexShrink: 0, transition: "background 160ms ease",
                           fontFamily: "inherit",
+                          WebkitTapHighlightColor: "transparent",
+                          touchAction: "manipulation",
                         }
                         const callIcon = (
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -4141,8 +4144,9 @@ function MessagesInner() {
                             background: "#fff",
                             border: "1px solid #EAE6DF",
                             borderRadius: "50%",
-                            width: 36,
-                            height: 36,
+                            // V10.3 — tap target 44x44 (au lieu de 36x36)
+                            width: 44,
+                            height: 44,
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -4152,6 +4156,7 @@ function MessagesInner() {
                             fontFamily: "inherit",
                             marginLeft: "auto",
                             WebkitTapHighlightColor: "transparent",
+                            touchAction: "manipulation",
                           }}
                         >
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -4888,13 +4893,15 @@ function MessagesInner() {
                         style={{
                           background: "#fff", color: "#111",
                           border: "1px solid #EAE6DF", borderRadius: "50%",
-                          width: 36, height: 36, flexShrink: 0,
+                          // V10.3 — tap target 44x44 minimum
+                          width: 44, height: 44, flexShrink: 0,
                           display: "flex", alignItems: "center", justifyContent: "center",
                           cursor: "pointer", fontFamily: "inherit",
                           WebkitTapHighlightColor: "transparent",
+                          touchAction: "manipulation",
                         }}
                       >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                           <line x1="12" y1="5" x2="12" y2="19" />
                           <line x1="5" y1="12" x2="19" y2="12" />
                         </svg>
