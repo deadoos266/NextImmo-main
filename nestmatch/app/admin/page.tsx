@@ -2,7 +2,9 @@
 import { useEffect, useState, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { supabase } from "../../lib/supabase"
+// V12 (Paul 2026-04-28) — supabase anon retiré : toutes les ops du dashboard
+// admin passent désormais par les routes /api/admin/* (server-side avec
+// supabaseAdmin + is_admin gating). Aucun appel direct DB depuis le client.
 import { displayName } from "../../lib/privacy"
 import { RAISONS, getRaisonLabel } from "../../lib/signalements"
 import { STATUT_STYLE as CONTACT_STATUTS, getSujetLabel, type ContactStatut } from "../../lib/contacts"
@@ -121,16 +123,26 @@ export default function Admin() {
 
   async function loadData() {
     setLoading(true)
-    const [{ data: a }, { data: p }, { data: u }, { data: m }] = await Promise.all([
-      supabase.from("annonces").select("*").order("id", { ascending: false }),
-      supabase.from("profils").select("*"),
-      supabase.from("users").select("id, email, name, role, is_admin, is_banned, ban_reason, email_verified, created_at").order("created_at", { ascending: false }),
-      supabase.from("messages").select("*").order("created_at", { ascending: false }).limit(100),
-    ])
-    if (a) setAnnonces(a)
-    if (p) setProfils(p)
-    if (u) setUsers(u)
-    if (m) setMessages(m)
+    // V12 (Paul 2026-04-28) — sécurité : les 4 SELECT bruts (annonces,
+    // profils, users, messages) faits avec la clé anon ont été migrés
+    // vers /api/admin/dashboard (server-side, supabaseAdmin + is_admin
+    // gating). Empêche un attaquant non-admin d'exfiltrer dossier_docs
+    // (CNI, fiches paie) avec la clé anon publique du bundle.
+    try {
+      const res = await fetch("/api/admin/dashboard")
+      const json = await res.json()
+      if (res.ok && json.success) {
+        setAnnonces(json.annonces || [])
+        setProfils(json.profils || [])
+        setUsers(json.users || [])
+        setMessages(json.messages || [])
+      } else if (res.status === 403) {
+        router.replace("/")
+        return
+      }
+    } catch (e) {
+      console.error("[admin loadData]", e)
+    }
     setLoading(false)
     loadSignalements(signalStatutFilter)
     loadContacts(contactFilter)
@@ -148,13 +160,17 @@ export default function Admin() {
     setConvThread({ a, b, annonceId, messages: [] })
     setLoadingThread(true)
     try {
-      let query = supabase.from("messages")
-        .select("*")
-        .or(`and(from_email.eq.${a},to_email.eq.${b}),and(from_email.eq.${b},to_email.eq.${a})`)
-        .order("created_at", { ascending: true })
-      if (annonceId) query = query.eq("annonce_id", annonceId)
-      const { data } = await query
-      setConvThread({ a, b, annonceId, messages: data || [] })
+      // V12 — lecture des threads via /api/admin/messages (server-side,
+      // is_admin gating). Avant : supabase anon direct sans contrôle.
+      const params = new URLSearchParams({ a, b })
+      if (annonceId) params.set("annonceId", String(annonceId))
+      const res = await fetch(`/api/admin/messages?${params.toString()}`)
+      const json = await res.json()
+      if (res.ok && json.success) {
+        setConvThread({ a, b, annonceId, messages: json.messages || [] })
+      } else {
+        setConvThread({ a, b, annonceId, messages: [] })
+      }
     } finally {
       setLoadingThread(false)
     }
@@ -198,20 +214,31 @@ export default function Admin() {
   // Toggle is_test sur une annonce (action individuelle ligne par ligne).
   // Optimistic update : refletée localement avant le retour DB pour ne pas
   // bloquer la modération par à-coups.
+  // V12 — passe par /api/admin/annonces (PATCH) au lieu de supabase anon.
   async function toggleTest(id: number, current: boolean) {
     const next = !current
     setAnnonces(prev => prev.map(a => a.id === id ? { ...a, is_test: next } : a))
-    const { error } = await supabase.from("annonces").update({ is_test: next }).eq("id", id)
-    if (error) {
-      // Rollback optimiste si échec
+    try {
+      const res = await fetch("/api/admin/annonces", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [id], is_test: next }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.success) {
+        setAnnonces(prev => prev.map(a => a.id === id ? { ...a, is_test: current } : a))
+        alert(`Erreur modération : ${json.error || res.statusText}`)
+      }
+    } catch (e) {
       setAnnonces(prev => prev.map(a => a.id === id ? { ...a, is_test: current } : a))
-      alert(`Erreur modération : ${error.message}`)
+      alert(`Erreur modération : ${e instanceof Error ? e.message : "réseau"}`)
     }
   }
 
   // Bulk : flag/unflag is_test sur les annonces sélectionnées.
   // `mode` détermine la cible — toujours appliquer le même état pour
   // éviter les confusions (cocher = test ; décocher = public).
+  // V12 — passe par /api/admin/annonces (PATCH).
   async function toggleTestBulk(mode: "test" | "public") {
     if (selectedIds.size === 0 || bulkBusy) return
     setBulkBusy(true)
@@ -219,13 +246,22 @@ export default function Admin() {
     const next = mode === "test"
     // Optimistic
     setAnnonces(prev => prev.map(a => ids.includes(a.id) ? { ...a, is_test: next } : a))
-    const { error } = await supabase.from("annonces").update({ is_test: next }).in("id", ids)
-    if (error) {
-      // Rollback bulk si échec global
+    try {
+      const res = await fetch("/api/admin/annonces", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, is_test: next }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.success) {
+        setAnnonces(prev => prev.map(a => ids.includes(a.id) ? { ...a, is_test: !next } : a))
+        alert(`Erreur bulk : ${json.error || res.statusText}`)
+      } else {
+        setSelectedIds(new Set())
+      }
+    } catch (e) {
       setAnnonces(prev => prev.map(a => ids.includes(a.id) ? { ...a, is_test: !next } : a))
-      alert(`Erreur bulk : ${error.message}`)
-    } else {
-      setSelectedIds(new Set())
+      alert(`Erreur bulk : ${e instanceof Error ? e.message : "réseau"}`)
     }
     setBulkBusy(false)
   }
@@ -241,36 +277,81 @@ export default function Admin() {
     setConfirmId(null)
   }
 
+  // V12 — toutes les mutations users (suppression, is_admin, ban) passent
+  // désormais par /api/admin/users (server-side, is_admin gating + zod
+  // validation + garde-fous self-action). Avant : supabase anon direct
+  // permettait à un attaquant de s'élever en admin ou supprimer/bannir.
   async function supprimerUtilisateur(email: string) {
-    await supabase.from("profils").delete().eq("email", email)
-    await supabase.from("users").delete().eq("email", email)
-    setProfils(profils.filter(p => p.email !== email))
-    setUsers(users.filter(u => u.email !== email))
-    setConfirmId(null)
+    try {
+      const res = await fetch(`/api/admin/users?email=${encodeURIComponent(email)}`, { method: "DELETE" })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.success) {
+        alert(`Suppression échouée : ${json.error || res.statusText}`)
+        return
+      }
+      setProfils(profils.filter(p => p.email !== email))
+      setUsers(users.filter(u => u.email !== email))
+      setConfirmId(null)
+    } catch (e) {
+      alert(`Erreur suppression : ${e instanceof Error ? e.message : "réseau"}`)
+    }
   }
 
   async function togglerAdmin(email: string, current: boolean) {
-    const { error } = await supabase.from("users").update({ is_admin: !current }).eq("email", email)
-    if (!error) setUsers(users.map(u => u.email === email ? { ...u, is_admin: !current } : u))
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "toggle_admin", email, is_admin: !current }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.success) {
+        alert(`Erreur : ${json.error || res.statusText}`)
+        return
+      }
+      setUsers(users.map(u => u.email === email ? { ...u, is_admin: !current } : u))
+    } catch (e) {
+      alert(`Erreur : ${e instanceof Error ? e.message : "réseau"}`)
+    }
   }
 
   async function bannirUser(email: string) {
     const raison = prompt("Motif du bannissement (obligatoire) :")
     if (!raison || !raison.trim()) return
-    const { error } = await supabase.from("users").update({
-      is_banned: true,
-      ban_reason: raison.trim(),
-    }).eq("email", email)
-    if (!error) setUsers(users.map(u => u.email === email ? { ...u, is_banned: true, ban_reason: raison.trim() } : u))
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "ban", email, ban_reason: raison.trim() }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.success) {
+        alert(`Erreur bannissement : ${json.error || res.statusText}`)
+        return
+      }
+      setUsers(users.map(u => u.email === email ? { ...u, is_banned: true, ban_reason: raison.trim() } : u))
+    } catch (e) {
+      alert(`Erreur bannissement : ${e instanceof Error ? e.message : "réseau"}`)
+    }
   }
 
   async function debannirUser(email: string) {
     if (!confirm("Débannir cet utilisateur ? Il pourra à nouveau se connecter.")) return
-    const { error } = await supabase.from("users").update({
-      is_banned: false,
-      ban_reason: null,
-    }).eq("email", email)
-    if (!error) setUsers(users.map(u => u.email === email ? { ...u, is_banned: false, ban_reason: null } : u))
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "unban", email }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.success) {
+        alert(`Erreur débannissement : ${json.error || res.statusText}`)
+        return
+      }
+      setUsers(users.map(u => u.email === email ? { ...u, is_banned: false, ban_reason: null } : u))
+    } catch (e) {
+      alert(`Erreur débannissement : ${e instanceof Error ? e.message : "réseau"}`)
+    }
   }
 
   const trendAnnonces = useMemo(() => trendLast30Days(annonces, "created_at"), [annonces])
