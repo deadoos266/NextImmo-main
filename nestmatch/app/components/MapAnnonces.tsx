@@ -8,6 +8,7 @@ import "leaflet/dist/leaflet.css"
 // d'un certain zoom, le cluster s'éclate en markers individuels. Style
 // SeLoger / Idealista. La lib gère elle-même le CSS de leaflet.markercluster.
 import MarkerClusterGroup from "react-leaflet-cluster"
+import { asNumber } from "../../lib/asValue"
 
 type MapType = "plan" | "satellite" | "standard"
 
@@ -89,13 +90,16 @@ function useFrenchLeaflet() {
 //   - badge "NOUV" ambre si annonce < 7 jours
 //   - selected = bg noir comme avant
 function priceMarker(
-  prix: number,
-  charges: number | null,
+  prix: unknown,
+  charges: unknown,
   selected: boolean,
   scorePct: number | null,
   isNew: boolean,
 ) {
-  const total = (Number(prix) || 0) + (Number(charges) > 0 ? Number(charges) : 0)
+  // V20 (Paul 2026-04-29) — asNumber pour robustesse string/number
+  const loyer = asNumber(prix, 0) ?? 0
+  const ch = asNumber(charges, 0) ?? 0
+  const total = loyer + (ch > 0 ? ch : 0)
   const price = total > 0 ? total.toLocaleString("fr-FR") + "\u00a0\u20ac" : "\u2014"
   // Tier color : vert \u226575, ambre 50-74, rouge <50, gris si pas de score
   const borderColor = selected ? "#111"
@@ -565,9 +569,11 @@ export default function MapAnnonces({
           //   - eyebrow VILLE · QUARTIER, titre 14/600, specs+prix inline
           //   - chip match top-left photo si scoreMatching présent
           //   - bouton favori top-right photo
-          // V19 (Paul 2026-04-29) — calculs pour le pin enrichi
-          const ch = Number((a as { charges?: number | null }).charges ?? 0)
-          const total = Number(a.prix || 0) + (ch > 0 ? ch : 0)
+          // V19 + V20 (Paul 2026-04-29) — asNumber robuste (DB peut renvoyer
+          // string sur colonne numeric, ce qui faisait que Number() pouvait
+          // foirer silencieusement et le pin affichait juste le loyer).
+          const ch = asNumber((a as { charges?: unknown }).charges, 0) ?? 0
+          const total = (asNumber(a.prix, 0) ?? 0) + (ch > 0 ? ch : 0)
           const createdAt = (a as { created_at?: string | null }).created_at
           const isNew = createdAt
             ? (Date.now() - new Date(createdAt).getTime()) < 7 * 24 * 60 * 60 * 1000

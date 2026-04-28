@@ -2,6 +2,7 @@
 import { useState, useRef, type CSSProperties } from "react"
 import Image from "next/image"
 import { CARD_GRADIENTS as GRADIENTS } from "../../../lib/cardGradients"
+import { asNumber } from "../../../lib/asValue"
 import DpeBadge from "./DpeBadge"
 
 /**
@@ -461,9 +462,10 @@ export default function ListingCardSearch({
             )}
           </span>
           {(() => {
-            // V15c (Paul 2026-04-28) — CC = loyer + charges. Pas de HC.
-            const loyer = Number(annonce.prix ?? 0)
-            const ch = Number((annonce as { charges?: number | null }).charges ?? 0)
+            // V15c + V20 (Paul 2026-04-29) — CC = loyer + charges, parsing
+            // robuste via asNumber (DB peut renvoyer string sur colonne numeric).
+            const loyer = asNumber(annonce.prix, 0) ?? 0
+            const ch = asNumber((annonce as { charges?: unknown }).charges, 0) ?? 0
             const total = loyer + (ch > 0 ? ch : 0)
             return (
               <span

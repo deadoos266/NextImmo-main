@@ -6,6 +6,7 @@ import Image from "next/image"
 import { km, KMEyebrow, KMHeading, KMChip, KMDPE, KMMatchRing } from "../ui/km"
 import { CARD_GRADIENTS as GRADIENTS } from "../../../lib/cardGradients"
 import { getCityCoords } from "../../../lib/cityCoords"
+import { asNumber } from "../../../lib/asValue"
 import Lightbox from "../ui/Lightbox"
 
 /**
@@ -108,9 +109,11 @@ export default function QuickViewModal({ annonce, open, onClose, score, favori, 
   const locLine = [annonce.ville, annonce.quartier].filter(Boolean).join(" · ")
   const scorePct = score !== null ? Math.max(0, Math.min(100, Math.round(score / 10))) : null
 
-  // Loyer breakdown
-  const prix = typeof annonce.prix === "number" ? annonce.prix : null
-  const charges = typeof annonce.charges === "number" && annonce.charges > 0 ? annonce.charges : null
+  // Loyer breakdown — V20 (Paul 2026-04-29) : asNumber pour robustesse
+  // string/number (DB peut renvoyer string sur colonne numeric).
+  const prix = asNumber(annonce.prix) ?? null
+  const chargesParsed = asNumber(annonce.charges, 0) ?? 0
+  const charges = chargesParsed > 0 ? chargesParsed : null
   const totalCC = prix !== null ? prix + (charges ?? 0) : null
 
   // Distance depuis userVille

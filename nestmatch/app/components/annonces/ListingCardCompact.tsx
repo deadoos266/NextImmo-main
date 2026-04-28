@@ -2,6 +2,7 @@
 import { useState, useRef } from "react"
 import Image from "next/image"
 import { CARD_GRADIENTS as GRADIENTS } from "../../../lib/cardGradients"
+import { asNumber } from "../../../lib/asValue"
 import DpeBadge from "./DpeBadge"
 
 /**
@@ -96,7 +97,11 @@ export default function ListingCardCompact({
   const quartier = (annonce.quartier || "").toString().trim()
   const loc = ville && quartier ? `${ville} · ${quartier}` : ville
   const dispoLabel = formatDispo(annonce)
-  const charges = typeof annonce.charges === "number" && annonce.charges > 0 ? annonce.charges : null
+  // V20 (Paul 2026-04-29) — asNumber coercion : DB peut renvoyer "100"
+  // string sur colonne numeric. Avant : `typeof === "number"` strict =
+  // null pour les strings → addition CC silencieusement skipped.
+  const chargesParsed = asNumber(annonce.charges, 0) ?? 0
+  const charges = chargesParsed > 0 ? chargesParsed : null
   const currentPhoto = photos[idx]
 
   function onTouchStart(e: React.TouchEvent) {
@@ -278,8 +283,8 @@ export default function ListingCardCompact({
                 Si charges saisies : afficher (loyer + charges) € CC.
                 Si pas de charges : afficher loyer € CC (assumé all-inclusive). */}
             {(() => {
-              const loyer = Number(annonce.prix ?? 0)
-              const ch = Number(charges ?? 0)
+              const loyer = asNumber(annonce.prix, 0) ?? 0
+              const ch = charges ?? 0
               const total = loyer + (ch > 0 ? ch : 0)
               return (
                 <>

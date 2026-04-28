@@ -5,6 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import type { MapAnnoncesProps } from "../MapAnnonces"
 import { km } from "../ui/km"
+import { asNumber } from "../../../lib/asValue"
 
 /**
  * Pattern SeLoger mobile (Paul 2026-04-27 v3 — refactor du pattern Airbnb).
@@ -690,9 +691,9 @@ function CardContent({
       <div style={{ padding: "14px 16px 12px", display: "flex", flexDirection: "column", gap: 4 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
           {(() => {
-            // V15c (Paul 2026-04-28) — CC = loyer + charges. Pas de HC.
-            const loyer = Number(annonce.prix ?? 0)
-            const ch = Number((annonce as { charges?: number | null }).charges ?? 0)
+            // V15c + V20 (Paul 2026-04-29) — parsing robuste via asNumber.
+            const loyer = asNumber(annonce.prix, 0) ?? 0
+            const ch = asNumber((annonce as { charges?: unknown }).charges, 0) ?? 0
             const total = loyer + (ch > 0 ? ch : 0)
             return (
               <span style={{
