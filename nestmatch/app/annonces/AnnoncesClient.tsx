@@ -1354,7 +1354,7 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           resultCount={annoncesTraitees.length}
           loading={loading}
           stickyTop={!gridMode && !isSmall ? 0 : NAVBAR_HEIGHT}
-          monProfilHref={!isProprietaire && session?.user?.email ? "/profil" : null}
+          monProfilHref={!isProprietaire ? "/profil" : null}
         />}
 
         {/* ── Toggle Liste/Carte tablette (640-767) — mobile <768 utilise FAB */}
@@ -1636,7 +1636,7 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                     activeFilterCount={activeFilterCount}
                     onOpenAllFilters={() => setModalOpen(true)}
                     showMatchOption={showMatchOption}
-                    monProfilHref={!isProprietaire && session?.user?.email ? "/profil" : null}
+                    monProfilHref={!isProprietaire ? "/profil" : null}
                   />
 
                   {/* Ligne 3 : Tri segmented control fidèle handoff (3) l. 666-678 */}

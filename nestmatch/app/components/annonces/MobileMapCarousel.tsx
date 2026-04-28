@@ -663,6 +663,12 @@ function CardContent({
             lineHeight: 1.1,
           }}>
             {annonce.prix?.toLocaleString("fr-FR") ?? "—"} €
+            {/* V15b (Paul 2026-04-28) — suffixe CC/HC selon charges saisies. */}
+            {typeof (annonce as { charges?: number | null }).charges === "number" && ((annonce as { charges?: number | null }).charges ?? 0) > 0 ? (
+              <span style={{ fontWeight: 700, fontSize: 11, color: "#15803d", marginLeft: 4, letterSpacing: "0.3px" }} title="Charges comprises">CC</span>
+            ) : (
+              <span style={{ fontWeight: 600, fontSize: 11, color: "#8a8477", marginLeft: 4, letterSpacing: "0.3px" }} title="Hors charges">HC</span>
+            )}
             <span style={{ fontWeight: 500, color: "#8a8477", fontSize: 12, marginLeft: 2 }}>/mois</span>
           </span>
           {loc && (
