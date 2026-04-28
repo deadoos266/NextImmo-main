@@ -3188,7 +3188,10 @@ function MessagesInner() {
         <div style={{
           display: isMobile ? "flex" : "flex",
           gap: isMobile && convActiveData ? 0 : isMobile ? 16 : 0,
-          height: isMobile ? "calc(100vh - 72px)" : "76vh",
+          // V4.9 — fix chevauchement iOS : 100vh inclut la zone Safari URL bar
+          // dynamique, ce qui fait deborder le composer en dessous du bas
+          // visible. 100dvh suit la viewport reelle (Safari 15.4+, Chrome 108+).
+          height: isMobile ? "calc(100dvh - 72px)" : "76vh",
           background: isMobile ? "transparent" : "#fff",
           border: isMobile ? "none" : "1px solid #EAE6DF",
           borderRadius: isMobile ? 0 : 24,
@@ -4725,8 +4728,16 @@ function MessagesInner() {
                   )
                 })()}
 
-                {/* Zone saisie */}
-                <div style={{ borderTop: "1px solid #EAE6DF", padding: isMobile ? "12px 12px 14px" : "14px 20px 16px", background: "white" }}>
+                {/* Zone saisie. V4.9 — padding-bottom safe-area-inset pour
+                    eviter que le composer soit mange par la bottom toolbar
+                    iOS dynamique. */}
+                <div style={{
+                  borderTop: "1px solid #EAE6DF",
+                  padding: isMobile
+                    ? "12px 12px calc(14px + env(safe-area-inset-bottom, 0px))"
+                    : "14px 20px 16px",
+                  background: "white",
+                }}>
                   {/* Chips d'actions + réponses rapides — calque handoff QuickReply L432-438.
                       Actions sémantiques en pill 999, couleurs d'accent préservées mais adoucies.
                       Séparateur vertical remplacé par gap naturel. */}
