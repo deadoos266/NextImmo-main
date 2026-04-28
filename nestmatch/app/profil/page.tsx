@@ -512,80 +512,11 @@ function Profil() {
           />
         )}
 
-        {/* Nav onglets unifiée — 5 onglets symétriques avec /parametres :
-            Préférences (page courante = /profil) + 4 liens vers /parametres?tab=…
-            Donne l'illusion d'une page tabbée 5 onglets sans refactor 900 LoC. */}
-        <nav
-          aria-label="Catégories de réglages"
-          style={{
-            display: "flex",
-            gap: 4,
-            marginBottom: 20,
-            overflowX: isMobile ? "auto" : "visible",
-            paddingBottom: isMobile ? 2 : 0,
-            flexWrap: isMobile ? "nowrap" : "wrap",
-          }}
-        >
-          {/* Préférences = onglet actif (page courante) */}
-          <span
-            aria-current="page"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "10px 16px",
-              background: km.ink,
-              color: km.white,
-              border: `1px solid ${km.ink}`,
-              borderRadius: 12,
-              fontSize: 13,
-              fontWeight: 700,
-              fontFamily: "inherit",
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-              boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
-              <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
-              <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
-              <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
-            </svg>
-            Préférences
-          </span>
-          {[
-            { tab: "profil", label: "Profil", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
-            { tab: "apparence", label: "Apparence", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg> },
-            { tab: "securite", label: "Sécurité", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
-            { tab: "compte", label: "Compte", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="3"/></svg> },
-          ].map(t => (
-            <Link
-              key={t.tab}
-              href={`/parametres?tab=${t.tab}`}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "10px 16px",
-                background: km.white,
-                color: km.ink,
-                border: `1px solid ${km.line}`,
-                borderRadius: 12,
-                fontSize: 13,
-                fontWeight: 500,
-                fontFamily: "inherit",
-                whiteSpace: "nowrap",
-                flexShrink: 0,
-                textDecoration: "none",
-                transition: "all 0.15s",
-              }}
-            >
-              {t.icon}
-              {t.label}
-            </Link>
-          ))}
-        </nav>
+        {/* V11.4 (Paul 2026-04-28) — l'ancienne nav 5-tabs Preferences/Profil/
+            Apparence/Securite/Compte est supprimee. Elle dupliquait la
+            navigation du V6.3 hub Critères/Dossier ci-dessous + repetait des
+            entrees deja accessibles via /parametres + le menu burger user.
+            On ne garde que le hub tabs unifié. */}
 
         {/* V6.3 + V8 — Hub tabs Critères / Dossier alignees dossier-style. */}
         {!proprietaireActive && (
@@ -988,41 +919,13 @@ function Profil() {
         </div>
         </>}
 
-        {/* Paramètres — inline uniquement si viewport étroit. Sur desktop large,
-            la card est déplacée dans l'aside sticky droit (en dessous de
-            Complétion). */}
-        {!wideAside && <SettingsCardInline />}
+        {/* V11.4 — Aside droite supprimee : la CompletionCard etait redondante
+            avec DossierScoreCard deja affiche dans le hero. SettingsCardInline
+            (lien vers /parametres) est accessible via le menu burger user.
+            Plus de 3 cards stackees a droite, plus de TOC qui chevauche le
+            hero. Layout propre : hero centre + sections column-flex en dessous,
+            TOC sticky desktop sur la gauche en dehors du flow centre. */}
       </div>
-
-      {/* Aside sticky droit — Complétion + Paramètres (desktop ≥ 1280px). Fixed
-          position pour rester visible pendant le scroll des sections. */}
-      {wideAside && (
-        <aside
-          aria-label="Complétion du dossier et paramètres"
-          style={{
-            position: "fixed",
-            left: "calc(50vw + 460px)",
-            top: 120,
-            width: 280,
-            maxHeight: "calc(100vh - 140px)",
-            overflowY: "auto",
-            display: "flex",
-            flexDirection: "column",
-            gap: 16,
-            zIndex: 5,
-          }}
-        >
-          {!proprietaireActive && (
-            <CompletionCard
-              scoreCompletion={scoreCompletion}
-              scoreColor={scoreColor}
-              manquants={manquants}
-              compact
-            />
-          )}
-          <SettingsCardInline compact />
-        </aside>
-      )}
 
       {undo && (
         <UndoToast
@@ -1040,12 +943,16 @@ function Profil() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function ProfilTOC({ active, isMobile }: { active: string; isMobile: boolean }) {
-  // Desktop aside : visible uniquement si viewport >= 1200px pour éviter de
-  // chevaucher le contenu (main maxWidth 900, margin auto).
+  // V11.4 (Paul 2026-04-28) — Desktop aside : visible uniquement si viewport
+  // >= 1640px pour eviter de chevaucher le contenu centre. Container maxWidth
+  // 1240 + auto margin + TOC width 200 + gap 20 = 1460px minimum + buffer
+  // 180 = 1640. Sous ce seuil, on retombe sur la barre horizontale scrollable
+  // (cf. branche if (isMobile || !wide) ci-dessous).
+  // Ancien threshold 1200px causait l'overlap massif sur 1280-1440 viewports.
   const [wide, setWide] = useState(false)
   useEffect(() => {
     if (typeof window === "undefined") return
-    const mq = window.matchMedia("(min-width: 1200px)")
+    const mq = window.matchMedia("(min-width: 1640px)")
     const update = () => setWide(mq.matches)
     update()
     mq.addEventListener("change", update)
@@ -1083,11 +990,13 @@ function ProfilTOC({ active, isMobile }: { active: string; isMobile: boolean }) 
       </nav>
     )
   }
-  // V8 — TOC desktop sticky restyle dossier : numerotation italic + label.
+  // V8 + V11.4 — TOC desktop sticky restyle dossier. Position fixed left
+  // calc(50vw - 700px) (au lieu de -610) pour laisser largement la place au
+  // hero centre 1240 maxWidth + ne plus chevaucher le contenu sur 1400px.
   return (
     <aside aria-label="Sommaire du profil" style={{
-      position: "fixed", left: "calc(50vw - 610px)", top: 120,
-      width: 220, zIndex: 5,
+      position: "fixed", left: "max(20px, calc(50vw - 700px))", top: 120,
+      width: 200, zIndex: 5,
       padding: "18px 0",
     }}>
       <p style={{ fontSize: 10, fontWeight: 700, color: T.soft, textTransform: "uppercase", letterSpacing: "1.8px", margin: "0 12px 14px" }}>
