@@ -40,6 +40,10 @@ interface Props {
   annonce: any
   score: number | null
   info: { label: string; color: string; bg: string } | null
+  /** V7.3 — rang dans la liste filtree (1..N). null si liste < 10 ou exclu. */
+  rang?: number | null
+  /** V7.3 — total annonces classees. */
+  rangTotal?: number | null
   isOwn: boolean
   isSelected: boolean
   favori: boolean
@@ -242,6 +246,8 @@ export default function ListingCardSearch({
   annonce,
   score,
   info: _info,
+  rang,
+  rangTotal,
   isOwn,
   isSelected,
   favori,
@@ -349,9 +355,18 @@ export default function ListingCardSearch({
                 fontSize: 11,
                 fontWeight: 600,
                 backdropFilter: "blur(6px)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
               }}
             >
               {matchPct}% match
+              {/* V7.3 — rang relatif si liste >= 10 */}
+              {rang !== null && rang !== undefined && rangTotal !== null && rangTotal !== undefined && (
+                <span style={{ fontSize: 10, fontWeight: 500, color: "#8a8477", letterSpacing: "0.1px" }}>
+                  · #{rang}/{rangTotal}
+                </span>
+              )}
             </span>
           )}
           {isOwn && (

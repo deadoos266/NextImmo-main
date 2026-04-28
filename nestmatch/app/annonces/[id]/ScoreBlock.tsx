@@ -2,7 +2,8 @@
 import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { supabase } from "../../../lib/supabase"
-import { calculerScore, labelScore, breakdownScore, suggestImprovements } from "../../../lib/matching"
+import { calculerScore, estExclu, labelScore, breakdownScore, suggestImprovements } from "../../../lib/matching"
+import { calcRangs, shouldShowRank } from "../../../lib/rangs"
 import { useRole } from "../../providers"
 
 export default function ScoreBlock({ annonce }: { annonce: any }) {
@@ -10,6 +11,8 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
   const { role } = useRole()
   const [profil, setProfil] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  // V7.3 — fetch toutes annonces visibles pour calculer le rang relatif
+  const [allAnnonces, setAllAnnonces] = useState<Array<{ id: number; scoreMatching: number | null }>>([])
 
   useEffect(() => {
     if (session?.user?.email) {
@@ -19,6 +22,24 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
       setLoading(false)
     }
   }, [session, status])
+
+  // V7.3 — fetch toutes annonces actives + score rapport au profil pour ranking
+  useEffect(() => {
+    if (!profil) return
+    let cancelled = false
+    void supabase.from("annonces")
+      .select("*")
+      .or("statut.is.null,statut.neq.loué")
+      .eq("is_test", false)
+      .then(({ data }) => {
+        if (cancelled || !data) return
+        const ranked = data
+          .filter(a => !estExclu(a as never, profil as never))
+          .map(a => ({ id: a.id as number, scoreMatching: calculerScore(a as never, profil as never) }))
+        setAllAnnonces(ranked)
+      })
+    return () => { cancelled = true }
+  }, [profil])
 
   // Owner sur sa propre annonce — peu importe le mode actif (Paul 2026-04-27).
   // Avant : check `role === "proprietaire" && proprietaire_email === email`.
@@ -74,25 +95,58 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
   const suggestions = suggestImprovements(annonce, profil)
   const pct = Math.round(score / 10)
 
+  // V7.3 — rang relatif dans la liste filtree par le profil
+  const rangs = calcRangs(allAnnonces)
+  const totalRangs = rangs.size
+  const myRang = rangs.get(annonce.id) ?? null
+  const showRang = shouldShowRank(totalRangs) && myRang !== null
+
   // V2.8 — breakdown visible par defaut (plus de toggle "voir détails"),
   // bar mini horizontale par categorie + 0..3 suggestions actionnables.
   return (
     <div style={{ marginBottom: 16 }}>
-      <div style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 8,
-        background: info.bg,
-        color: info.color,
-        padding: "6px 14px",
-        borderRadius: 999,
-        fontSize: 13,
-        fontWeight: 700,
-        letterSpacing: "0.2px",
-      }}>
-        <span style={{ fontSize: 15, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{pct}&nbsp;%</span>
-        <span>de compatibilité</span>
-      </div>
+      {/* V7.3 — hero rang : signal beaucoup plus fort que le pourcentage seul.
+          "#2 meilleure annonce sur 188" parle a tout le monde, "92% match"
+          est ambigu. Affiche uniquement si liste >= 10. */}
+      {showRang && (
+        <div style={{
+          background: info.bg,
+          color: info.color,
+          borderRadius: 14,
+          padding: "12px 16px",
+          marginBottom: 10,
+          border: `1px solid ${info.color}33`,
+        }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: info.color, textTransform: "uppercase", letterSpacing: "1.2px", margin: 0, opacity: 0.85 }}>
+            Rang dans ta recherche
+          </p>
+          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, color: info.color, margin: "4px 0 0", letterSpacing: "-0.4px", lineHeight: 1.2 }}>
+            #{myRang} {myRang === 1 ? "meilleure annonce" : myRang! <= 3 ? "meilleure annonce" : "annonce"} sur {totalRangs}
+          </p>
+          <p style={{ fontSize: 12, color: info.color, margin: "4px 0 0", opacity: 0.85 }}>
+            {pct}% de compatibilité avec ton profil.
+          </p>
+        </div>
+      )}
+
+      {/* Chip compact si liste trop courte ou rang absent */}
+      {!showRang && (
+        <div style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          background: info.bg,
+          color: info.color,
+          padding: "6px 14px",
+          borderRadius: 999,
+          fontSize: 13,
+          fontWeight: 700,
+          letterSpacing: "0.2px",
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{pct}&nbsp;%</span>
+          <span>de compatibilité</span>
+        </div>
+      )}
 
       {/* Breakdown par categorie — visible par defaut */}
       {breakdown.length > 0 && (

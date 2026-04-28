@@ -31,6 +31,9 @@ interface Props {
   active: boolean
   favori: boolean
   match: number | null
+  /** V7.3 — rang dans la liste filtree (1..N). null si exclu ou liste < 10. */
+  rang?: number | null
+  rangTotal?: number | null
   onMouseEnter: () => void
   onMouseLeave: () => void
   onToggleFavori: (e: React.MouseEvent) => void
@@ -69,6 +72,8 @@ export default function ListingCardCompact({
   active,
   favori,
   match,
+  rang,
+  rangTotal,
   onMouseEnter,
   onMouseLeave,
   onToggleFavori,
@@ -183,6 +188,12 @@ export default function ListingCardCompact({
             <span style={{ padding: "3px 8px", background: "rgba(255,255,255,0.96)", color: "#111", borderRadius: 999, fontSize: 10, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}>
               <span style={{ width: 4, height: 4, background: "#16A34A", borderRadius: "50%" }} />
               {match}%
+              {/* V7.3 — rang relatif compact si liste >= 10 */}
+              {rang !== null && rang !== undefined && rangTotal !== null && rangTotal !== undefined && (
+                <span style={{ fontSize: 9, fontWeight: 500, color: "#8a8477" }}>
+                  · #{rang}/{rangTotal}
+                </span>
+              )}
             </span>
           )}
         </div>

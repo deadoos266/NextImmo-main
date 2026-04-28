@@ -5,6 +5,7 @@ import dynamic from "next/dynamic"
 import type { MapAnnoncesProps } from "../components/MapAnnonces"
 import { supabase } from "../../lib/supabase"
 import { calculerScore, estExclu, labelScore } from "../../lib/matching"
+import { calcRangs, shouldShowRank } from "../../lib/rangs"
 import { useSession } from "next-auth/react"
 import { useRole } from "../providers"
 import { getCityCoords, normalizeCityKey, findNearbyCities } from "../../lib/cityCoords"
@@ -700,6 +701,13 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
       return 0
     })
 
+  // V7 chantier 3 — rang de chaque annonce dans la liste filtree actuelle.
+  // Calcul cote client (188 annonces, negligeable). Refresh a chaque change
+  // de liste/filtre. Map<id, rang> 1..N par score decroissant.
+  const rangs = calcRangs(annoncesTraitees)
+  const totalRangs = rangs.size
+  const showRanks = shouldShowRank(totalRangs)
+
   // Coordonnees de centrage de la carte : ville URL > ville profil > aucune
   const centerCity = activeVille
     ? (getCityCoords(activeVille) ?? geocoded[normalizeVille(activeVille)] ?? null)
@@ -1288,6 +1296,8 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                         annonce={a}
                         score={score}
                         info={info}
+                        rang={showRanks ? rangs.get(a.id) ?? null : null}
+                        rangTotal={showRanks ? totalRangs : null}
                         isOwn={isOwn}
                         isSelected={isSelected}
                         favori={favoris.includes(a.id)}
@@ -1546,6 +1556,8 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                           active={selectedId === a.id}
                           favori={favoris.includes(a.id)}
                           match={matchPct}
+                          rang={showRanks ? rangs.get(a.id) ?? null : null}
+                          rangTotal={showRanks ? totalRangs : null}
                           onMouseEnter={() => setSelectedId(a.id)}
                           onMouseLeave={() => setSelectedId(null)}
                           onToggleFavori={e => handleToggleFavori(e, a.id)}
