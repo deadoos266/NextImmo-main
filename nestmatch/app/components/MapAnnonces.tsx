@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useState, useRef } from "react"
 import type { ReactNode } from "react"
-import { MapContainer, TileLayer, Marker, Popup, Polygon, useMap, useMapEvents } from "react-leaflet"
+import { MapContainer, TileLayer, Marker, Popup, Polygon, GeoJSON, useMap, useMapEvents } from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
 import { pointInPolygon, type LatLng as GeoLatLng } from "../../lib/geo"
@@ -477,13 +477,28 @@ export default function MapAnnonces({
 
   // V25.2 (Paul 2026-04-29) — toggle "Carte des prix" : overlay stats €/m²
   // par ville (style SeLoger lite). Persisted en localStorage.
+  // V26.2 — étendu avec heatmap polygones Paris arrondissements (full).
   const [showPrices, setShowPrices] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [parisGeoJson, setParisGeoJson] = useState<any | null>(null)
   useEffect(() => {
     try {
       const saved = localStorage.getItem("nestmatch_map_show_prices")
       if (saved === "true") setShowPrices(true)
     } catch { /* ignore */ }
   }, [])
+  // V26.2 — fetch lazy du GeoJSON Paris quand showPrices ON et pas déjà chargé
+  useEffect(() => {
+    if (!showPrices || parisGeoJson) return
+    let cancelled = false
+    fetch("/data/paris-arrondissements.geojson", { cache: "force-cache" })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!cancelled && data) setParisGeoJson(data)
+      })
+      .catch(() => { /* fallback : la version lite reste affichée */ })
+    return () => { cancelled = true }
+  }, [showPrices, parisGeoJson])
   function togglePrices() {
     setShowPrices(prev => {
       const next = !prev
@@ -491,6 +506,47 @@ export default function MapAnnonces({
       return next
     })
   }
+
+  // V26.2 — calcule les stats €/m² par arrondissement Paris (1-20).
+  // Utilise les coordonnées des annonces + pointInPolygon pour assigner
+  // chaque annonce à son arrondissement. Memoized via useMemo serait plus
+  // propre mais le coût est négligeable (~20 polygons × ~200 annonces).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const arrStatsByCode = (() => {
+    if (!parisGeoJson) return new Map<number, { count: number; meanPrixM2: number }>()
+    const map = new Map<number, { count: number; sumPrixM2: number }>()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const feat of parisGeoJson.features as any[]) {
+      const code = Number(feat.properties?.c_ar)
+      if (!Number.isFinite(code)) continue
+      const polys: GeoLatLng[][] = []
+      const geom = feat.geometry
+      if (geom?.type === "Polygon") {
+        polys.push((geom.coordinates[0] as number[][]).map(([lng, lat]) => ({ lat, lng })))
+      } else if (geom?.type === "MultiPolygon") {
+        for (const poly of geom.coordinates as number[][][][]) {
+          polys.push((poly[0]).map(([lng, lat]) => ({ lat, lng })))
+        }
+      } else continue
+      for (const a of annonces) {
+        if (!a._lat || !a._lng) continue
+        const prix = Number(a.prix) || 0
+        const surface = Number(a.surface) || 0
+        if (prix <= 0 || surface <= 0) continue
+        const inside = polys.some(p => pointInPolygon({ lat: a._lat, lng: a._lng }, p))
+        if (!inside) continue
+        const prixM2 = prix / surface
+        const cur = map.get(code)
+        if (cur) { cur.count++; cur.sumPrixM2 += prixM2 }
+        else map.set(code, { count: 1, sumPrixM2: prixM2 })
+      }
+    }
+    const out = new Map<number, { count: number; meanPrixM2: number }>()
+    for (const [code, s] of map) {
+      out.set(code, { count: s.count, meanPrixM2: Math.round(s.sumPrixM2 / s.count) })
+    }
+    return out
+  })()
 
   // V26.1 (Paul 2026-04-29) — polygon drawing custom (style SeLoger).
   // drawMode = on dessine ; vertices = points du polygone en cours ;
@@ -665,6 +721,38 @@ export default function MapAnnonces({
             }}
           />
         )}
+        {/* V26.2 — Heatmap Paris arrondissements (full) — actif si toggle
+            Carte des prix ON et GeoJSON chargé. Fill color tier sur €/m².
+            Tooltip au hover : "Paris 11e — 32 €/m² · 12 annonces". */}
+        {showPrices && parisGeoJson && (
+          <GeoJSON
+            key="paris-arr-heatmap"
+            data={parisGeoJson}
+            style={(feat) => {
+              const code = Number(feat?.properties?.c_ar) || 0
+              const stats = arrStatsByCode.get(code)
+              if (!stats) {
+                return { color: "#8a8477", weight: 1, fillColor: "#FAF8F3", fillOpacity: 0.15 }
+              }
+              const tier = stats.meanPrixM2 <= 20
+                ? { stroke: "#15803d", fill: "#86efac" }
+                : stats.meanPrixM2 <= 30
+                  ? { stroke: "#a16207", fill: "#fcd34d" }
+                  : { stroke: "#b91c1c", fill: "#fca5a5" }
+              return { color: tier.stroke, weight: 1.5, fillColor: tier.fill, fillOpacity: 0.45 }
+            }}
+            onEachFeature={(feat, layer) => {
+              const code = Number(feat?.properties?.c_ar) || 0
+              const label = feat?.properties?.l_ar || `Paris ${code}e`
+              const stats = arrStatsByCode.get(code)
+              const txt = stats
+                ? `<strong>${label}</strong><br/>${stats.meanPrixM2}&nbsp;€/m² · ${stats.count} annonce${stats.count > 1 ? "s" : ""}`
+                : `<strong>${label}</strong><br/>Aucune annonce`
+              layer.bindTooltip(txt, { sticky: true, direction: "top" })
+            }}
+          />
+        )}
+
         {/* V26.1 — polygon committed (filtre actif) */}
         {committedPolygon && committedPolygon.length >= 3 && (
           <Polygon
