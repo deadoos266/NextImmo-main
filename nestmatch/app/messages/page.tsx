@@ -14,6 +14,7 @@ import { formatNomComplet } from "../../lib/profilHelpers"
 import { annulerVisite, STATUT_VISITE_STYLE as STATUT_VISITE } from "../../lib/visitesHelpers"
 import { postNotif } from "../../lib/notificationsClient"
 import GatedAction from "../components/ui/GatedAction"
+import AddToCalendarButton from "../components/AddToCalendarButton"
 import MessageSkeleton from "../components/ui/MessageSkeleton"
 import Modal from "../components/ui/Modal"
 
@@ -796,11 +797,23 @@ function VisiteDemandeCard({
 }
 
 // Carte "Visite confirmée" — remplace le texte brut "Visite confirmée pour le X"
-function VisiteConfirmeeCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
+function VisiteConfirmeeCard({ contenu, isMine, annonceTitre, adresse }: { contenu: string; isMine: boolean; annonceTitre?: string | null; adresse?: string | null }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let data: any = {}
   try { data = JSON.parse(contenu.slice(VISITE_CONFIRMEE_PREFIX.length)) } catch { /* ignore */ }
   const dateStr = data.dateFormatee || (data.dateVisite ? formatVisiteDate(data.dateVisite, { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "")
+
+  // V4.4 — construit l'evenement ICS exportable
+  const eventDate = (() => {
+    if (!data.dateVisite) return null
+    try {
+      const [h = "10", mi = "00"] = String(data.heure || "10:00").split(":")
+      const d = new Date(data.dateVisite)
+      d.setHours(parseInt(h, 10), parseInt(mi, 10), 0, 0)
+      return d
+    } catch { return null }
+  })()
+
   return (
     <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 16, padding: "12px 16px", minWidth: 240, maxWidth: 320 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
@@ -819,6 +832,19 @@ function VisiteConfirmeeCard({ contenu, isMine }: { contenu: string; isMine: boo
       <p style={{ fontSize: 12, color: "#15803d", margin: "4px 0 0", lineHeight: 1.5, fontWeight: 500 }}>
         {dateStr}{data.heure ? ` à ${data.heure}` : ""}
       </p>
+      {/* V4.4 — bouton Ajouter a mon agenda (Apple/Google/Samsung/Outlook) */}
+      {eventDate && (
+        <div style={{ marginTop: 10 }}>
+          <AddToCalendarButton event={{
+            uid: `visite-${data.dateVisite || ""}-${data.heure || ""}`.replace(/[^0-9a-z-]/gi, ""),
+            title: annonceTitre ? `Visite — ${annonceTitre}` : "Visite logement",
+            start: eventDate,
+            durationMinutes: 30,
+            location: adresse || undefined,
+            description: "Visite confirmée via KeyMatch.",
+          }} />
+        </div>
+      )}
     </div>
   )
 }
@@ -4464,7 +4490,7 @@ function MessagesInner() {
                           </div>
                         ) : isVisiteConfirmee ? (
                           <div>
-                            <VisiteConfirmeeCard contenu={m.contenu} isMine={isMine} />
+                            <VisiteConfirmeeCard contenu={m.contenu} isMine={isMine} annonceTitre={annonceActive?.titre} adresse={annonceActive?.adresse || annonceActive?.ville || null} />
                             <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
