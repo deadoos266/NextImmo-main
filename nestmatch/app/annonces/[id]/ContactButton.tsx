@@ -153,9 +153,15 @@ export default function ContactButton({ annonce }: { annonce: any }) {
 
   return (
     <>
+      {/* V21.2 (Paul 2026-04-29) — wrapper width 100% block-centered. Sans
+          ce wrapper, GatedAction (en mode disabled) utilise inline-flex
+          width auto, et le bouton width:100% du child shrink à sa largeur
+          naturelle → bouton off-center dans la sticky card. */}
+      <div style={{ width: "100%", display: "block" }}>
       {dossierIncomplet ? (
         <GatedAction
           enabled={false}
+          block
           disabledReason={{
             title: "Complétez votre dossier",
             body: "Pour contacter un propriétaire, votre dossier doit être complété au minimum (ville, budget, revenus). Un dossier complet a beaucoup plus de chances d'être retenu.",
@@ -165,6 +171,7 @@ export default function ContactButton({ annonce }: { annonce: any }) {
           {button}
         </GatedAction>
       ) : button}
+      </div>
 
       {showModal && (
         <div

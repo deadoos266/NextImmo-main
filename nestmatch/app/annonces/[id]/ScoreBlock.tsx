@@ -126,50 +126,74 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
 
   // V2.8 — breakdown visible par defaut (plus de toggle "voir détails"),
   // bar mini horizontale par categorie + 0..3 suggestions actionnables.
+  // V21.1 (Paul 2026-04-29) — hero score global gros au-dessus du breakdown
+  // ("85% match" Fraunces 56px italic + progress bar). User : "le score
+  // global doit être visible en haut, pas seulement les bars détaillées".
   return (
     <div style={{ marginBottom: 16 }}>
-      {/* V7.3 — hero rang : signal beaucoup plus fort que le pourcentage seul.
-          "#2 meilleure annonce sur 188" parle a tout le monde, "92% match"
-          est ambigu. Affiche uniquement si liste >= 10. */}
-      {showRang && (
+      {/* V21.1 hero score global — Fraunces italic gros + progress + rang */}
+      <div style={{
+        background: info.bg,
+        color: info.color,
+        borderRadius: 14,
+        padding: "16px 18px 14px",
+        marginBottom: 10,
+        border: `1px solid ${info.color}33`,
+        textAlign: "center" as const,
+      }}>
         <div style={{
-          background: info.bg,
+          fontFamily: "'Fraunces', Georgia, serif",
+          fontStyle: "italic",
+          fontWeight: 500,
+          fontSize: 56,
           color: info.color,
-          borderRadius: 14,
-          padding: "12px 16px",
-          marginBottom: 10,
-          border: `1px solid ${info.color}33`,
+          letterSpacing: "-2px",
+          lineHeight: 1,
+          fontVariantNumeric: "tabular-nums",
         }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: info.color, textTransform: "uppercase", letterSpacing: "1.2px", margin: 0, opacity: 0.85 }}>
-            Rang{rangScopeLabel}
-          </p>
-          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, color: info.color, margin: "4px 0 0", letterSpacing: "-0.4px", lineHeight: 1.2 }}>
-            #{myRang} {myRang === 1 ? "meilleure annonce" : myRang! <= 3 ? "meilleure annonce" : "annonce"} sur {totalRangs}{rangScopeLabel}
-          </p>
-          <p style={{ fontSize: 12, color: info.color, margin: "4px 0 0", opacity: 0.85 }}>
-            {pct}% de compatibilité avec ton profil.
-          </p>
+          {pct}<span style={{ fontSize: 28, marginLeft: 2 }}>%</span>
         </div>
-      )}
-
-      {/* Chip compact si liste trop courte ou rang absent */}
-      {!showRang && (
+        {/* Progress bar globale */}
         <div style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          background: info.bg,
-          color: info.color,
-          padding: "6px 14px",
+          marginTop: 12,
+          height: 6,
+          background: `${info.color}22`,
           borderRadius: 999,
-          fontSize: 13,
-          fontWeight: 700,
-          letterSpacing: "0.2px",
+          overflow: "hidden",
         }}>
-          <span style={{ fontSize: 15, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{pct}&nbsp;%</span>
-          <span>de compatibilité</span>
+          <div style={{
+            width: `${pct}%`,
+            height: "100%",
+            background: info.color,
+            transition: "width .3s ease",
+          }} />
         </div>
-      )}
+        <p style={{
+          fontSize: 11,
+          fontWeight: 700,
+          color: info.color,
+          textTransform: "uppercase",
+          letterSpacing: "1.2px",
+          margin: "10px 0 0",
+          opacity: 0.85,
+        }}>
+          Match avec ton profil
+        </p>
+        {/* Rang scoped si liste >= 10 */}
+        {showRang && (
+          <p style={{
+            fontFamily: "'Fraunces', Georgia, serif",
+            fontStyle: "italic",
+            fontWeight: 400,
+            fontSize: 14,
+            color: info.color,
+            margin: "4px 0 0",
+            opacity: 0.75,
+          }}>
+            #{myRang} {myRang === 1 ? "meilleure annonce" : "sur"} {myRang === 1 ? `sur ${totalRangs}` : `${totalRangs}`}{rangScopeLabel}
+          </p>
+        )}
+      </div>
 
       {/* Breakdown par categorie — visible par defaut */}
       {breakdown.length > 0 && (
