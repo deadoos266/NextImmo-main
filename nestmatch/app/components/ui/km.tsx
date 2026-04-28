@@ -55,12 +55,28 @@ export function KMButton({
   const font = size === "sm" ? 10 : size === "lg" ? 13 : 11
   // Micro-interactions Paul 2026-04-27 : hover lift -2px + shadow soft,
   // active scale 0.98 (feedback tactile). Skipped si disabled.
+  // V5.4 (Paul 2026-04-28) : passage onPointerEnter avec pointerType=='mouse'
+  // pour eviter le sticky-hover iOS qui mangait le 1er tap (cf V4.2 messages).
   return (
     <button type={type} onClick={onClick} disabled={disabled} aria-label={ariaLabel}
-      onMouseEnter={e => { if (!disabled) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 20px rgba(17,17,17,0.18)" } }}
-      onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none" }}
-      onMouseDown={e => { if (!disabled) e.currentTarget.style.transform = "translateY(0) scale(0.98)" }}
-      onMouseUp={e => { if (!disabled) e.currentTarget.style.transform = "translateY(-2px) scale(1)" }}
+      onPointerEnter={e => {
+        if (e.pointerType !== "mouse" || disabled) return
+        e.currentTarget.style.transform = "translateY(-2px)"
+        e.currentTarget.style.boxShadow = "0 8px 20px rgba(17,17,17,0.18)"
+      }}
+      onPointerLeave={e => {
+        if (e.pointerType !== "mouse") return
+        e.currentTarget.style.transform = "translateY(0)"
+        e.currentTarget.style.boxShadow = "none"
+      }}
+      onPointerDown={e => {
+        if (e.pointerType !== "mouse" || disabled) return
+        e.currentTarget.style.transform = "translateY(0) scale(0.98)"
+      }}
+      onPointerUp={e => {
+        if (e.pointerType !== "mouse" || disabled) return
+        e.currentTarget.style.transform = "translateY(-2px) scale(1)"
+      }}
       style={{
         background: km.ink, color: km.white, border: "none",
         borderRadius: 999, padding: pad,
@@ -72,6 +88,7 @@ export function KMButton({
         whiteSpace: "nowrap",
         transition: "transform 180ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 180ms ease",
         WebkitTapHighlightColor: "transparent",
+        touchAction: "manipulation",
         ...style,
       }}>
       {children}
@@ -101,10 +118,24 @@ export function KMButtonOutline({
   const font = size === "sm" ? 10 : size === "lg" ? 13 : 11
   return (
     <button type={type} onClick={onClick} disabled={disabled} aria-label={ariaLabel}
-      onMouseEnter={e => { if (!disabled) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.background = km.beige } }}
-      onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.background = km.white }}
-      onMouseDown={e => { if (!disabled) e.currentTarget.style.transform = "translateY(0) scale(0.98)" }}
-      onMouseUp={e => { if (!disabled) e.currentTarget.style.transform = "translateY(-2px) scale(1)" }}
+      onPointerEnter={e => {
+        if (e.pointerType !== "mouse" || disabled) return
+        e.currentTarget.style.transform = "translateY(-2px)"
+        e.currentTarget.style.background = km.beige
+      }}
+      onPointerLeave={e => {
+        if (e.pointerType !== "mouse") return
+        e.currentTarget.style.transform = "translateY(0)"
+        e.currentTarget.style.background = km.white
+      }}
+      onPointerDown={e => {
+        if (e.pointerType !== "mouse" || disabled) return
+        e.currentTarget.style.transform = "translateY(0) scale(0.98)"
+      }}
+      onPointerUp={e => {
+        if (e.pointerType !== "mouse" || disabled) return
+        e.currentTarget.style.transform = "translateY(-2px) scale(1)"
+      }}
       style={{
         background: km.white, color: km.ink, border: `1px solid ${km.ink}`,
         borderRadius: 999, padding: pad,
@@ -116,6 +147,7 @@ export function KMButtonOutline({
         whiteSpace: "nowrap",
         transition: "transform 180ms cubic-bezier(0.4, 0, 0.2, 1), background 180ms ease",
         WebkitTapHighlightColor: "transparent",
+        touchAction: "manipulation",
         ...style,
       }}>
       {children}

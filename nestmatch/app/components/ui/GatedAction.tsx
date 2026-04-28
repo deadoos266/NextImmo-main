@@ -273,12 +273,33 @@ function DisabledPopup({
         {reason.cta && (
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
             {reason.cta.href ? (
+              // V5.4 — fix bouton qui glitch sur iOS : avant, <a><KMButton>...</KMButton></a>
+              // donnait du HTML invalide (button dans anchor). Sur iOS Safari, le tap
+              // declenchait mouseEnter sur le <button> (transform -2px + shadow), puis
+              // navigation, puis mouseLeave (revert transform) → animation visible et
+              // hitbox glitchy. Solution : <a> stylise comme un button KMButton, pas
+              // de nested button.
               <a
                 href={reason.cta.href}
                 onClick={onClose}
-                style={{ textDecoration: "none" }}
+                style={{
+                  textDecoration: "none",
+                  background: km.ink,
+                  color: km.white,
+                  borderRadius: 999,
+                  padding: "12px 26px",
+                  fontWeight: 700,
+                  fontSize: 11,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.6px",
+                  fontFamily: "inherit",
+                  whiteSpace: "nowrap",
+                  display: "inline-block",
+                  WebkitTapHighlightColor: "transparent",
+                  touchAction: "manipulation",
+                }}
               >
-                <KMButton size="md">{reason.cta.label}</KMButton>
+                {reason.cta.label}
               </a>
             ) : (
               <KMButton
