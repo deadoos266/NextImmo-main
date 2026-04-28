@@ -1247,18 +1247,32 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           </div>
         )}
 
-        {/* V14 (Paul 2026-04-28) — bandeau "critères du profil appliqués"
-            + raccourci vers /profil + bouton "Réinitialiser à mes préférences"
-            quand les filtres URL divergent des critères du profil locataire.
-            Se cache : sur proprio, sans profil, ou sur la modale carte mobile. */}
+        {/* V14 (Paul 2026-04-28) + V14b (correction visibilité) —
+            bandeau TOUJOURS VISIBLE pour locataire connecté avec profil.
+            Affiche en permanence le bouton "Mes critères →" (CTA pill noire
+            visible) + état "appliqués / modifiés / aucun critère défini" +
+            actions contextuelles (Réinitialiser / Voir toutes). User feedback
+            (V14 round 1) : "y a pas de bouton pour aller direct au profil et
+            réinitialiser les pref" — résolu en rendant ces boutons toujours
+            présents en haut de la liste. */}
         {!isProprietaire && profil && !isDesktopListCarte && !(isMobileV5 && showMap) && (() => {
           const diverge = paramsDivergeFromProfil(initialSearchParams, profil)
           const hasParams = !!initialSearchParams && Object.keys(initialSearchParams).some(k => {
             const v = initialSearchParams[k]; return v && (!Array.isArray(v) || v.length > 0)
           })
-          // Si rien à afficher (pas de params ET pas auto-applied) → null silencieux.
-          if (!hasParams && !autoAppliedBannerOpen) return null
           const wantedQs = buildProfilParams(profil).toString()
+          const profilHasCriteres = wantedQs.length > 0
+          // États possibles :
+          // - hasProfilCriteres + diverge → "Filtres modifiés" + CTA reset
+          // - hasProfilCriteres + !diverge + hasParams → "Tes critères sont appliqués"
+          // - !hasProfilCriteres → "Définis tes critères dans ton espace pour mieux matcher"
+          const label = !profilHasCriteres
+            ? "Aucun critère défini dans ton espace"
+            : diverge
+              ? "Filtres modifiés par rapport à tes critères"
+              : hasParams
+                ? "Tes critères sont appliqués"
+                : "Aucun filtre actif"
           return (
             <div style={{
               display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
@@ -1281,23 +1295,33 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                     <circle cx="12" cy="7" r="4" />
                   </svg>
                 </span>
-                <span style={{ fontWeight: 600 }}>
-                  {diverge ? "Filtres modifiés" : "Tes critères sont appliqués"}
-                </span>
-                <Link
-                  href="/profil#equipements"
-                  style={{ color: "#666", textDecoration: "underline", textUnderlineOffset: 3, fontSize: 11.5 }}
-                >
-                  Mes critères →
-                </Link>
+                <span style={{ fontWeight: 600 }}>{label}</span>
               </span>
-              <span style={{ display: "inline-flex", gap: 8, flexWrap: "wrap" }}>
-                {diverge && wantedQs && (
+              <span style={{ display: "inline-flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                {/* TOUJOURS VISIBLE : CTA "Mes critères" — pill noire vers /profil */}
+                <Link
+                  href="/profil"
+                  style={{
+                    background: "#111", color: "#fff", textDecoration: "none",
+                    borderRadius: 999, padding: "6px 14px",
+                    fontSize: 11.5, fontWeight: 700, fontFamily: "inherit",
+                    whiteSpace: "nowrap",
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                  }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                  Mes critères
+                </Link>
+                {/* Conditionnel : "Réinitialiser" si divergence */}
+                {diverge && profilHasCriteres && (
                   <button
                     type="button"
                     onClick={() => router.replace(`/annonces?${wantedQs}`, { scroll: false })}
                     style={{
-                      background: "#111", color: "#fff", border: "none",
+                      background: "#fff", color: "#111", border: "1px solid #111",
                       borderRadius: 999, padding: "6px 14px",
                       fontSize: 11.5, fontWeight: 700, fontFamily: "inherit",
                       cursor: "pointer", whiteSpace: "nowrap",
@@ -1307,21 +1331,24 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                     Réinitialiser à mes préférences
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAutoAppliedBannerOpen(false)
-                    router.replace("/annonces", { scroll: false })
-                  }}
-                  style={{
-                    background: "transparent", border: "1px solid #EAE6DF", color: "#111",
-                    borderRadius: 999, padding: "6px 14px",
-                    fontSize: 11.5, fontWeight: 600, fontFamily: "inherit",
-                    cursor: "pointer", whiteSpace: "nowrap",
-                  }}
-                >
-                  Voir toutes les annonces ↺
-                </button>
+                {/* Conditionnel : "Voir toutes" si on a des params actifs */}
+                {hasParams && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAutoAppliedBannerOpen(false)
+                      router.replace("/annonces", { scroll: false })
+                    }}
+                    style={{
+                      background: "transparent", border: "1px solid #EAE6DF", color: "#111",
+                      borderRadius: 999, padding: "6px 14px",
+                      fontSize: 11.5, fontWeight: 600, fontFamily: "inherit",
+                      cursor: "pointer", whiteSpace: "nowrap",
+                    }}
+                  >
+                    Voir toutes ↺
+                  </button>
+                )}
               </span>
             </div>
           )
