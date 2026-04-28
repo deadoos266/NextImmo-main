@@ -85,8 +85,6 @@ export interface Profil {
   nationalite?: string
   religion?: string
   orientation?: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  preferences_implicites?: any
 }
 
 export interface Annonce {
@@ -392,25 +390,10 @@ export function calculerScore(annonce: Annonce, profil: Profil): number {
   // ── COEFFICIENT DE COHÉRENCE ──────────────────
   score = Math.round(score * facteurCoherence)
 
-  // ── BONUS ADAPTATIF — FIX #3 ──────────────────
-  // Multiplicateur au lieu d'addition directe
-  if (profil.preferences_implicites) {
-    try {
-      const prefs =
-        typeof profil.preferences_implicites === "string"
-          ? JSON.parse(profil.preferences_implicites)
-          : profil.preferences_implicites
-
-      let bonus = 0
-      if (toBool(prefs.prefere_meuble)    && toBool(annonce.meuble))                               bonus += 0.03
-      if (toBool(prefs.prefere_exterieur) && (toBool(annonce.balcon) || toBool(annonce.terrasse))) bonus += 0.03
-      if (toBool(prefs.prefere_parking)   && toBool(annonce.parking))                              bonus += 0.02
-
-      score = score * (1 + bonus)
-    } catch {
-      // Silencieux — préférences implicites optionnelles
-    }
-  }
+  // V2.10 (Paul 2026-04-28) — bloc preferences_implicites supprime.
+  // Remplace par preferences_equipements jsonb tri-state (V2.4) qui couvre
+  // la meme intention (preferences user-driven sur equipements) sans le
+  // multiplicateur opaque ni la double comptabilite avec le bloc EQUIPEMENTS.
 
   // FIX #5 — Sécurité globale
   return Math.max(0, Math.min(Math.round(score), 1000))

@@ -50,6 +50,10 @@ export default function ModifierBien() {
   const [photoError, setPhotoError] = useState<string | null>(null)
   // Toggle "Améliorer auto" — Paul 2026-04-27. Default ON. Cf /ajouter.
   const [enhancePhotos, setEnhancePhotos] = useState(true)
+  // V2.10 (Paul 2026-04-28) — gating age criteria : par defaut OFF.
+  // Ouvre uniquement si l'annonce stockait deja des bornes age (legacy ou
+  // logement specialise). Reproduit le pattern de /proprietaire/ajouter.
+  const [logementSpecialise, setLogementSpecialise] = useState(false)
   const photoInputRef = useRef<HTMLInputElement>(null)
 
   const [form, setForm] = useState({
@@ -138,6 +142,8 @@ export default function ModifierBien() {
       localisation_exacte: !!data.localisation_exacte,
     })
     setIsTest(!!data.is_test)
+    // V2.10 — re-active le toggle si l'annonce avait deja des bornes age.
+    if (data.age_min != null || data.age_max != null) setLogementSpecialise(true)
     // R10.6 — équipements jsonb (si colonne absente en DB, reste vide sans casser).
     if (data.equipements_extras && typeof data.equipements_extras === "object") {
       setEquipExtras(data.equipements_extras as Record<string, boolean>)
@@ -745,14 +751,51 @@ export default function ModifierBien() {
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 22 }}>
-            <F l="Âge minimum candidat">
-              <input style={inp} type="number" min={18} max={99} value={form.age_min} onChange={set("age_min")} placeholder="18" />
-            </F>
-            <F l="Âge maximum candidat">
-              <input style={inp} type="number" min={18} max={99} value={form.age_max} onChange={set("age_max")} placeholder="99" />
-            </F>
+          {/* V2.10 — toggle "Logement spécialisé" gate les bornes age.
+              Default OFF : pas de risque de discrimination par age sur 99% des
+              annonces. Toggler les efface a la sauvegarde. */}
+          <div style={{ marginBottom: logementSpecialise ? 12 : 22 }}>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={logementSpecialise}
+              onClick={() => {
+                const next = !logementSpecialise
+                setLogementSpecialise(next)
+                if (!next) setForm(f => ({ ...f, age_min: "", age_max: "" }))
+              }}
+              style={{
+                display: "flex", alignItems: "center", gap: 12,
+                background: "transparent", border: "none", padding: 0, cursor: "pointer",
+                fontFamily: "inherit", color: "#111",
+              }}
+            >
+              <span style={{
+                position: "relative", width: 44, height: 24, borderRadius: 999,
+                background: logementSpecialise ? "#a16207" : "#EAE6DF",
+                transition: "background 160ms",
+              }}>
+                <span style={{
+                  position: "absolute", top: 3, left: logementSpecialise ? 23 : 3,
+                  width: 18, height: 18, borderRadius: "50%", background: "#fff",
+                  transition: "left 160ms", boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                }} />
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>
+                Logement spécialisé (séniors, étudiants…)
+              </span>
+            </button>
           </div>
+          {logementSpecialise && (
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 22 }}>
+              <F l="Âge minimum candidat">
+                <input style={inp} type="number" min={18} max={99} value={form.age_min} onChange={set("age_min")} placeholder="18" />
+              </F>
+              <F l="Âge maximum candidat">
+                <input style={inp} type="number" min={18} max={99} value={form.age_max} onChange={set("age_max")} placeholder="99" />
+              </F>
+            </div>
+          )}
 
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 18 }}>
             {(["animaux_politique", "fumeur_politique"] as const).map(key => {
