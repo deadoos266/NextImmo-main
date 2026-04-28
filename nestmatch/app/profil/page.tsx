@@ -626,13 +626,15 @@ function Profil() {
 
         {!proprietaireActive && <>
 
-        {/* Sommaire sticky (desktop) + layout 2 colonnes — R10.3a.
-            Sur mobile, le TOC se replie en une barre horizontale scrollable
-            placée juste avant les sections. */}
-        <ProfilTOC active={activeSection} isMobile={isMobile} />
-
-        {/* V8 — column flex avec gap 20 entre sections, comme /dossier body. */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        {/* V11.16 (Paul 2026-04-28) — Wrapper CSS Grid explicite pour la
+            zone TOC + sections. Quand viewport ≥ 1280px, on a un grid
+            2-cols : [TOC 200px] [sections minmax(0, 1fr)] avec gap 32.
+            Le TOC est sticky DANS sa cellule, les sections dans la leur :
+            zero overlap possible. En dessous (mobile + tablette < 1280),
+            on retombe sur le layout flex column avec TOC en barre horizontale
+            scrollable au-dessus (cf ProfilTOC). */}
+        <ProfilSectionsLayout active={activeSection} isMobile={isMobile}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 20, minWidth: 0 }}>
 
         <DossierSection
           id="criteres"
@@ -876,6 +878,7 @@ function Profil() {
         </DossierSection>
 
         </div>{/* V8 — close column flex sections */}
+        </ProfilSectionsLayout>{/* V11.16 — close grid wrapper TOC + sections */}
 
         {erreur && (
           <div style={{ background: "#FEECEC", color: "#b91c1c", border: "1px solid #F4C9C9", padding: "12px 20px", borderRadius: 14, marginTop: 20, fontSize: 14 }}>
@@ -942,22 +945,71 @@ function Profil() {
 // Helpers HORS composant — CLAUDE.md convention (focus preservation).
 // ═══════════════════════════════════════════════════════════════════════════
 
-function ProfilTOC({ active, isMobile }: { active: string; isMobile: boolean }) {
-  // V11.4 (Paul 2026-04-28) — Desktop aside : visible uniquement si viewport
-  // >= 1640px pour eviter de chevaucher le contenu centre. Container maxWidth
-  // 1240 + auto margin + TOC width 200 + gap 20 = 1460px minimum + buffer
-  // 180 = 1640. Sous ce seuil, on retombe sur la barre horizontale scrollable
-  // (cf. branche if (isMobile || !wide) ci-dessous).
-  // Ancien threshold 1200px causait l'overlap massif sur 1280-1440 viewports.
+// V11.16 (Paul 2026-04-28) — hook expose le wide check, partage entre
+// ProfilTOC et le wrapper grid de la page principale. Threshold 1280px :
+// avec un grid 200 + 24 gap + minmax(0, 1fr) dans un container 1240, le
+// content garde 1016px utiles (acceptable). Avant : threshold 1640 +
+// position: fixed avec calc -> overlap visuel quand viewport entre 1640
+// et ~1820 (TOC fixed cohabitait avec hero).
+function useProfilTocWide() {
   const [wide, setWide] = useState(false)
   useEffect(() => {
     if (typeof window === "undefined") return
-    const mq = window.matchMedia("(min-width: 1640px)")
+    const mq = window.matchMedia("(min-width: 1280px)")
     const update = () => setWide(mq.matches)
     update()
     mq.addEventListener("change", update)
     return () => mq.removeEventListener("change", update)
   }, [])
+  return wide
+}
+
+// V11.16 — Wrapper grid 2-col (TOC + sections) quand viewport >= 1280px.
+// Sous le threshold, fallback flex column (TOC en barre horizontale
+// scrollable au-dessus). Le TOC est rendu DANS la grid cell column 1
+// avec position: sticky (cf ProfilTOC desktop path). Aucun overlap
+// possible — le grid réserve des cellules dédiées.
+function ProfilSectionsLayout({
+  active,
+  isMobile,
+  children,
+}: {
+  active: string
+  isMobile: boolean
+  children: React.ReactNode
+}) {
+  const wide = useProfilTocWide()
+  if (isMobile || !wide) {
+    return (
+      <>
+        <ProfilTOC active={active} isMobile={isMobile} />
+        {children}
+      </>
+    )
+  }
+  return (
+    <div style={{
+      display: "grid",
+      gridTemplateColumns: "200px minmax(0, 1fr)",
+      gap: 32,
+      alignItems: "start",
+      width: "100%",
+    }}>
+      <ProfilTOC active={active} isMobile={isMobile} />
+      <div style={{ minWidth: 0 }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function ProfilTOC({ active, isMobile }: { active: string; isMobile: boolean }) {
+  // V11.16 (Paul 2026-04-28) — re-architecture : passe d'un position:fixed
+  // calculé manuellement (qui chevauchait le hero) à un layout CSS Grid
+  // explicite. Le TOC desktop devient `position: sticky` DANS sa cellule
+  // grid (column 1), le hero/sections sont dans la column 2. Aucun
+  // chevauchement possible — c'est le grid qui gère l'espace.
+  const wide = useProfilTocWide()
 
   if (isMobile || !wide) {
     // V8 — Barre horizontale scrollable (mobile + tablette) restyle dossier.
@@ -990,14 +1042,14 @@ function ProfilTOC({ active, isMobile }: { active: string; isMobile: boolean }) 
       </nav>
     )
   }
-  // V8 + V11.4 — TOC desktop sticky restyle dossier. Position fixed left
-  // calc(50vw - 700px) (au lieu de -610) pour laisser largement la place au
-  // hero centre 1240 maxWidth + ne plus chevaucher le contenu sur 1400px.
+  // V11.16 — TOC desktop : sticky DANS la cellule grid column 1 (au lieu
+  // de position:fixed avec calc qui overlapait). C'est le grid wrapper
+  // dans Profil() qui place le TOC à gauche du contenu. Aucun overlap
+  // possible — le grid réserve la colonne dédiée.
   return (
     <aside aria-label="Sommaire du profil" style={{
-      position: "fixed", left: "max(20px, calc(50vw - 700px))", top: 120,
-      width: 200, zIndex: 5,
-      padding: "18px 0",
+      position: "sticky", top: 90, alignSelf: "start",
+      padding: "0",
     }}>
       <p style={{ fontSize: 10, fontWeight: 700, color: T.soft, textTransform: "uppercase", letterSpacing: "1.8px", margin: "0 12px 14px" }}>
         Sommaire
