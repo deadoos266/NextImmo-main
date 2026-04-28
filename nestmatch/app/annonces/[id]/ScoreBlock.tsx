@@ -2,7 +2,7 @@
 import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { supabase } from "../../../lib/supabase"
-import { calculerScore, labelScore, expliquerScore } from "../../../lib/matching"
+import { calculerScore, labelScore, breakdownScore, suggestImprovements } from "../../../lib/matching"
 import { useRole } from "../../providers"
 
 export default function ScoreBlock({ annonce }: { annonce: any }) {
@@ -10,7 +10,6 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
   const { role } = useRole()
   const [profil, setProfil] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [showDetails, setShowDetails] = useState(false)
 
   useEffect(() => {
     if (session?.user?.email) {
@@ -71,12 +70,12 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
 
   const score = calculerScore(annonce, profil)
   const info = labelScore(score)
-  const raisons = expliquerScore(annonce, profil)
+  const breakdown = breakdownScore(annonce, profil)
+  const suggestions = suggestImprovements(annonce, profil)
   const pct = Math.round(score / 10)
 
-  // Rendu compact "chip" style bundle design — bg vert pâle #DCFCE7 +
-  // color #16A34A si bon score, sinon palette info. Bouton "détails" reste
-  // accessible en dessous pour afficher la liste des raisons ✓/✗.
+  // V2.8 — breakdown visible par defaut (plus de toggle "voir détails"),
+  // bar mini horizontale par categorie + 0..3 suggestions actionnables.
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{
@@ -94,20 +93,58 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
         <span style={{ fontSize: 15, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{pct}&nbsp;%</span>
         <span>de compatibilité</span>
       </div>
-      {raisons.length > 0 && (
-        <>
-          <button onClick={() => setShowDetails(!showDetails)}
-            style={{ display: "block", marginTop: 8, background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, color: "#8a8477", padding: 0, fontFamily: "inherit", textDecoration: "underline" }}>
-            {showDetails ? "Masquer les détails" : "Voir le détail du score"}
-          </button>
-          {showDetails && (
-            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 4 }}>
-              {raisons.map((r, i) => (
-                <p key={i} style={{ fontSize: 12, color: r.startsWith("✓") ? "#15803d" : "#b91c1c", fontWeight: 500 }}>{r}</p>
-              ))}
-            </div>
-          )}
-        </>
+
+      {/* Breakdown par categorie — visible par defaut */}
+      {breakdown.length > 0 && (
+        <div style={{ marginTop: 14, padding: "14px 16px", background: "#F7F4EF", border: "1px solid #EAE6DF", borderRadius: 14 }}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 10px" }}>
+            Détail du score
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {breakdown.map(item => {
+              const ratio = item.max > 0 ? item.pts / item.max : 0
+              const widthPct = Math.max(0, Math.min(100, Math.round(ratio * 100)))
+              const barColor =
+                item.status === "match"   ? "#16a34a" :
+                item.status === "partiel" ? "#ea580c" :
+                item.status === "miss"    ? "#dc2626" :
+                                            "#9ca3af"
+              return (
+                <div key={item.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "#111", minWidth: 90 }}>
+                    {item.label}
+                  </span>
+                  <div style={{ flex: 1, height: 6, background: "#EAE6DF", borderRadius: 999, overflow: "hidden" }}>
+                    <div style={{ width: `${widthPct}%`, height: "100%", background: barColor, transition: "width .3s ease" }} />
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", minWidth: 60, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                    {item.pts}/{item.max}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Suggestions actionnables */}
+      {suggestions.length > 0 && (
+        <div style={{ marginTop: 10, padding: "12px 14px", background: "#fffbeb", border: "1px solid #FDE68A", borderRadius: 14 }}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: "#a16207", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 8px" }}>
+            Pistes pour améliorer ce match
+          </p>
+          <ul style={{ margin: 0, padding: "0 0 0 16px", display: "flex", flexDirection: "column", gap: 4 }}>
+            {suggestions.map((s, i) => (
+              <li key={i} style={{ fontSize: 12, color: "#78350f", lineHeight: 1.5 }}>
+                {s.hint}
+                {s.impactPts > 0 && <span style={{ fontWeight: 700, marginLeft: 4 }}>(+{s.impactPts} pts)</span>}
+              </li>
+            ))}
+          </ul>
+          <a href="/profil#criteres" style={{ display: "inline-block", marginTop: 8, fontSize: 11, fontWeight: 700, color: "#111", textDecoration: "underline", letterSpacing: "0.2px" }}>
+            Ajuster mon profil →
+          </a>
+        </div>
       )}
     </div>
   )

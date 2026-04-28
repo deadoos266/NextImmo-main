@@ -474,3 +474,212 @@ export function expliquerScore(annonce: Annonce, profil: Profil): string[] {
 
   return raisons
 }
+
+// ──────────────────────────────────────────────
+// V2.8 — Breakdown par categorie (pour ScoreBlock detaille)
+// ──────────────────────────────────────────────
+/**
+ * Renvoie une decomposition par categorie du score : Budget, Surface, Pieces,
+ * Meuble, Equipements, DPE. Pour chaque categorie : pts obtenus, pts max,
+ * et un statut (match / partiel / miss / neutre).
+ *
+ * Utilise par /annonces/[id] ScoreBlock pour afficher le breakdown visible
+ * par defaut + suggestions actionnables.
+ */
+export type BreakdownItem = {
+  key: string
+  label: string
+  pts: number
+  max: number
+  status: "match" | "partiel" | "miss" | "neutre"
+}
+
+export function breakdownScore(annonce: Annonce, profil: Profil): BreakdownItem[] {
+  if (!profil) return []
+  const items: BreakdownItem[] = []
+
+  // Budget — max 330 (cap), neutre 150.
+  if (profil.budget_max && annonce.prix) {
+    const ecart = (annonce.prix - profil.budget_max) / profil.budget_max
+    let pts = 0
+    if (ecart < -0.30) pts = 330
+    else if (ecart <= 0) pts = Math.round(280 + 50 * (1 - (ecart + 0.30) / 0.30))
+    else if (ecart <= 0.20) pts = Math.round(280 * Math.pow(1 - ecart / 0.20, 1.5))
+    items.push({
+      key: "budget", label: "Budget", pts, max: 330,
+      status: pts >= 280 ? "match" : pts >= 100 ? "partiel" : "miss",
+    })
+  } else {
+    items.push({ key: "budget", label: "Budget", pts: 150, max: 330, status: "neutre" })
+  }
+
+  // Surface — max 270.
+  if (profil.surface_min && annonce.surface) {
+    const ratio = annonce.surface / profil.surface_min
+    let pts = 0
+    if (ratio >= 1.40) pts = 270
+    else if (ratio >= 1.00) pts = Math.round(200 + 70 * (ratio - 1.00) / 0.40)
+    else pts = Math.round(200 * Math.pow(ratio, 2.5))
+    items.push({
+      key: "surface", label: "Surface", pts, max: 270,
+      status: pts >= 200 ? "match" : pts >= 100 ? "partiel" : "miss",
+    })
+  } else {
+    items.push({ key: "surface", label: "Surface", pts: 135, max: 270, status: "neutre" })
+  }
+
+  // Pieces — max 150.
+  if (profil.pieces_min && annonce.pieces) {
+    const diff = annonce.pieces - profil.pieces_min
+    let pts = 0
+    if (diff >= 1) pts = 150
+    else if (diff === 0) pts = 140
+    else if (diff === -1) pts = 91
+    else if (diff === -2) pts = 42
+    else pts = 28
+    items.push({
+      key: "pieces", label: "Pièces", pts, max: 150,
+      status: pts >= 140 ? "match" : pts >= 80 ? "partiel" : "miss",
+    })
+  } else {
+    items.push({ key: "pieces", label: "Pièces", pts: 75, max: 150, status: "neutre" })
+  }
+
+  // Meuble — max 100.
+  const pMeuble = toBool(profil.meuble)
+  const aMeuble = toBool(annonce.meuble)
+  if (pMeuble !== undefined && aMeuble !== undefined) {
+    const pts = pMeuble === aMeuble ? 100 : 40
+    items.push({
+      key: "meuble", label: "Meublé", pts, max: 100,
+      status: pts === 100 ? "match" : "partiel",
+    })
+  } else {
+    items.push({ key: "meuble", label: "Meublé", pts: 70, max: 100, status: "neutre" })
+  }
+
+  // Equipements — max 100. Reutilise la logique tri-state de calculerScore.
+  const EQUIP_KEYS = ["parking", "balcon", "terrasse", "jardin", "cave", "fibre", "ascenseur"] as const
+  const equips = EQUIP_KEYS.map(key => ({
+    pref: getEquipementPreference(profil, key),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    has: toBool((annonce as any)[key]),
+  }))
+  const actionnable = equips.filter(e => e.pref !== "indifferent")
+  let equipPts: number
+  let equipStatus: BreakdownItem["status"] = "neutre"
+  if (actionnable.length === 0) {
+    equipPts = 70
+  } else {
+    const hasAnyInfo = actionnable.some(e => e.has !== undefined)
+    if (!hasAnyInfo) {
+      equipPts = 50
+      equipStatus = "partiel"
+    } else {
+      let raw = 0
+      for (const { pref, has } of actionnable) {
+        if (pref === "indispensable") {
+          if (has === true) raw += 25
+          else if (has === false) raw -= 20
+          else raw -= 5
+        } else if (pref === "souhaite") {
+          if (has === true) raw += 10
+          else if (has === undefined) raw += 2
+        } else if (pref === "refuse") {
+          if (has === true) raw -= 15
+          else if (has === false) raw += 5
+        }
+      }
+      equipPts = Math.max(0, Math.min(100, 50 + raw))
+      equipStatus = equipPts >= 80 ? "match" : equipPts >= 40 ? "partiel" : "miss"
+    }
+  }
+  items.push({ key: "equipements", label: "Équipements", pts: equipPts, max: 100, status: equipStatus })
+
+  // DPE — max 50.
+  const dpePoints: Record<string, number> = { A: 50, B: 42, C: 34, D: 22, E: 12, F: 4, G: 0 }
+  if (annonce.dpe && dpePoints[annonce.dpe] !== undefined) {
+    const pts = dpePoints[annonce.dpe]
+    items.push({
+      key: "dpe", label: "DPE", pts, max: 50,
+      status: pts >= 34 ? "match" : pts >= 12 ? "partiel" : "miss",
+    })
+  } else {
+    items.push({ key: "dpe", label: "DPE", pts: 25, max: 50, status: "neutre" })
+  }
+
+  return items
+}
+
+/**
+ * V2.8 — Suggestions actionnables pour gagner des points sur ce match.
+ * Renvoie 0..N suggestions priorisees par impact estime.
+ *
+ * Ne touche pas au profil de l'utilisateur — c'est juste un coup de pouce
+ * UI : "tu peux gagner +X pts en faisant Y".
+ */
+export type Suggestion = {
+  hint: string
+  impactPts: number  // estimation grossiere
+}
+
+export function suggestImprovements(annonce: Annonce, profil: Profil): Suggestion[] {
+  if (!profil) return []
+  const out: Suggestion[] = []
+
+  // Budget : si depasse, suggerer d'augmenter la tolerance.
+  if (profil.budget_max && annonce.prix && annonce.prix > profil.budget_max) {
+    const tolPct = typeof profil.tolerance_budget_pct === "number" ? profil.tolerance_budget_pct : 20
+    const ecartPct = Math.ceil(((annonce.prix - profil.budget_max) / profil.budget_max) * 100)
+    if (ecartPct > tolPct) {
+      out.push({
+        hint: `Augmentez votre tolérance budget à ${ecartPct}% pour ne plus exclure ce type d'annonces.`,
+        impactPts: 50,
+      })
+    }
+  }
+
+  // Rayon : si pas defini, suggerer de l'activer si annonce hors ville exacte.
+  if (!profil.rayon_recherche_km && profil.ville_souhaitee && annonce.ville
+      && profil.ville_souhaitee.toLowerCase() !== annonce.ville.toLowerCase()) {
+    const sourceCoords = getCityCoords(profil.ville_souhaitee)
+    const targetCoords = getCityCoords(annonce.ville)
+    if (sourceCoords && targetCoords) {
+      const distanceKm = Math.round(haversineKm(sourceCoords, targetCoords))
+      out.push({
+        hint: `Définissez un rayon de recherche d'au moins ${Math.max(distanceKm + 5, 10)} km pour valoriser cette annonce.`,
+        impactPts: 35,
+      })
+    }
+  }
+
+  // Equipement indispensable manquant : suggerer de passer en souhaite.
+  const EQUIP_KEYS = ["parking", "balcon", "terrasse", "jardin", "cave", "fibre", "ascenseur"] as const
+  for (const key of EQUIP_KEYS) {
+    const pref = getEquipementPreference(profil, key)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const has = toBool((annonce as any)[key])
+    if (pref === "indispensable" && has === false) {
+      out.push({
+        hint: `Cette annonce n'a pas de ${key}. Passez ce critère en "Souhaité" pour ne plus le pénaliser fortement.`,
+        impactPts: 45,
+      })
+      break  // Une seule suggestion equipement
+    }
+  }
+
+  // DPE filtre dur actif + annonce DPE pire : suggerer d'assouplir.
+  if (profil.dpe_min_actif && profil.dpe_min && annonce.dpe) {
+    const order = ["A", "B", "C", "D", "E", "F", "G"]
+    const seuil = order.indexOf(profil.dpe_min.toUpperCase())
+    const annonceIdx = order.indexOf(annonce.dpe.toUpperCase())
+    if (seuil >= 0 && annonceIdx >= 0 && annonceIdx > seuil) {
+      out.push({
+        hint: `Cette annonce a un DPE ${annonce.dpe} (vous avez fixé ${profil.dpe_min} comme strict). Désactivez le filtre DPE strict pour la voir.`,
+        impactPts: 0,  // ne change pas le score, juste la visibilite
+      })
+    }
+  }
+
+  return out.slice(0, 3)  // max 3 suggestions
+}
