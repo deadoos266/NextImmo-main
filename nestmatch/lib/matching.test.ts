@@ -359,3 +359,113 @@ describe("V2.3 calculerScore — bonus geographique rayon_recherche_km", () => {
     expect(avecRayon).toBe(sansRayon)
   })
 })
+
+// ──────────────────────────────────────────────
+// V2.4 — Tri-state preferences equipements (jsonb)
+// ──────────────────────────────────────────────
+import { getEquipementPreference } from "./matching"
+
+describe("V2.4 getEquipementPreference — tri-state equipements", () => {
+  it("retourne la valeur explicite de preferences_equipements jsonb", () => {
+    const profil: Profil = {
+      preferences_equipements: { parking: "indispensable", balcon: "refuse" },
+    } as Profil
+    expect(getEquipementPreference(profil, "parking")).toBe("indispensable")
+    expect(getEquipementPreference(profil, "balcon")).toBe("refuse")
+  })
+
+  it("fallback boolean legacy true → souhaite", () => {
+    const profil: Profil = { parking: true } as Profil
+    expect(getEquipementPreference(profil, "parking")).toBe("souhaite")
+  })
+
+  it("fallback boolean legacy false ou absent → indifferent", () => {
+    expect(getEquipementPreference({ parking: false } as Profil, "parking")).toBe("indifferent")
+    expect(getEquipementPreference({} as Profil, "parking")).toBe("indifferent")
+  })
+
+  it("preferences_equipements prime sur boolean legacy", () => {
+    const profil: Profil = {
+      parking: true,
+      preferences_equipements: { parking: "refuse" },
+    } as Profil
+    expect(getEquipementPreference(profil, "parking")).toBe("refuse")
+  })
+
+  it("valeur invalide dans jsonb → fallback boolean legacy", () => {
+    const profil: Profil = {
+      parking: true,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      preferences_equipements: { parking: "trololo" as any },
+    } as Profil
+    expect(getEquipementPreference(profil, "parking")).toBe("souhaite")
+  })
+})
+
+describe("V2.4 calculerScore — bonus/malus tri-state equipements", () => {
+  const baseProfil: Profil = {
+    budget_max: 1500,
+    surface_min: 40,
+    pieces_min: 2,
+  }
+  const baseAnnonce: Annonce = {
+    ville: "Paris",
+    prix: 1400,
+    surface: 50,
+    pieces: 3,
+  }
+
+  it("indispensable parking + annonce avec parking → bonus equipement maximise", () => {
+    const profil: Profil = { ...baseProfil, preferences_equipements: { parking: "indispensable" } }
+    const sansParking = calculerScore({ ...baseAnnonce, parking: true }, baseProfil)
+    const avecIndispensable = calculerScore({ ...baseAnnonce, parking: true }, profil)
+    // indispensable+present = 50+25 = 75 vs legacy "indifferent" = 70 → diff = +5
+    expect(avecIndispensable - sansParking).toBe(5)
+  })
+
+  it("indispensable parking + annonce sans parking → forte penalite", () => {
+    const profil: Profil = { ...baseProfil, preferences_equipements: { parking: "indispensable" } }
+    const refScore = calculerScore({ ...baseAnnonce, parking: false }, baseProfil)
+    const indispScore = calculerScore({ ...baseAnnonce, parking: false }, profil)
+    // indispensable+absent = 50-20 = 30 vs legacy "indifferent" = 70 → diff = -40
+    expect(indispScore - refScore).toBe(-40)
+  })
+
+  it("refuse balcon + annonce avec balcon → malus", () => {
+    const profil: Profil = { ...baseProfil, preferences_equipements: { balcon: "refuse" } }
+    const refScore = calculerScore({ ...baseAnnonce, balcon: true }, baseProfil)
+    const refusScore = calculerScore({ ...baseAnnonce, balcon: true }, profil)
+    // refuse+present = 50-15 = 35 vs legacy "indifferent" = 70 → diff = -35
+    expect(refusScore - refScore).toBe(-35)
+  })
+
+  it("refuse balcon + annonce sans balcon → leger bonus", () => {
+    const profil: Profil = { ...baseProfil, preferences_equipements: { balcon: "refuse" } }
+    const refScore = calculerScore({ ...baseAnnonce, balcon: false }, baseProfil)
+    const refusScore = calculerScore({ ...baseAnnonce, balcon: false }, profil)
+    // refuse+absent = 50+5 = 55 vs legacy "indifferent" = 70 → diff = -15
+    // (legacy neutre est plus favorable car on n'a rien souhaite)
+    expect(refusScore - refScore).toBe(-15)
+  })
+
+  it("toutes prefs indifferent + annonce sans equipement → score neutre 70 (compat legacy)", () => {
+    const profil: Profil = {
+      ...baseProfil,
+      preferences_equipements: {
+        parking: "indifferent", balcon: "indifferent", terrasse: "indifferent",
+        jardin: "indifferent", cave: "indifferent", fibre: "indifferent", ascenseur: "indifferent",
+      },
+    }
+    const score = calculerScore(baseAnnonce, profil)
+    const scoreLegacy = calculerScore(baseAnnonce, baseProfil)
+    expect(score).toBe(scoreLegacy)
+  })
+
+  it("preferences_equipements null → fallback legacy boolean", () => {
+    const profil: Profil = { ...baseProfil, parking: true, preferences_equipements: null }
+    const annonce: Annonce = { ...baseAnnonce, parking: true }
+    const score = calculerScore(annonce, profil)
+    const scoreSansPref = calculerScore(annonce, { ...baseProfil, parking: true })
+    expect(score).toBe(scoreSansPref)
+  })
+})

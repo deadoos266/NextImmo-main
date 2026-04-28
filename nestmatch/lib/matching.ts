@@ -14,6 +14,34 @@ function toBool(v: unknown): boolean | undefined {
   return undefined
 }
 
+// V2.4 — preference tri-state par equipement.
+type EquipPref = "indispensable" | "souhaite" | "indifferent" | "refuse"
+
+function normalizePref(v: unknown): EquipPref | undefined {
+  if (v === "indispensable" || v === "souhaite" || v === "indifferent" || v === "refuse") return v
+  return undefined
+}
+
+/**
+ * Lit la preference tri-state d'un equipement pour un profil donne.
+ * Priorite : preferences_equipements jsonb > legacy boolean > "indifferent".
+ *
+ * Compat : un user qui n'a pas encore configure preferences_equipements
+ * verra ses anciens booleans interpretes comme "souhaite" (true) ou
+ * "indifferent" (false/undefined). Aucune regression silencieuse.
+ *
+ * Exporte pour tests + UI picker EquipementPreferencePicker (V2.6).
+ */
+export function getEquipementPreference(profil: Profil, key: string): EquipPref {
+  const explicit = profil.preferences_equipements?.[key]
+  const norm = normalizePref(explicit)
+  if (norm) return norm
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const legacyVal = (profil as any)[key]
+  if (toBool(legacyVal) === true) return "souhaite"
+  return "indifferent"
+}
+
 export interface Profil {
   ville_souhaitee?: string
   mode_localisation?: "strict" | "souple"
@@ -250,27 +278,45 @@ export function calculerScore(annonce: Annonce, profil: Profil): number {
     score += 70 // neutre
   }
 
-  // ── ÉQUIPEMENTS (100 pts, plancher 40) ────────
-  const equips = [
-    { want: toBool(profil.parking),   has: toBool(annonce.parking) },
-    { want: toBool(profil.balcon),    has: toBool(annonce.balcon) },
-    { want: toBool(profil.terrasse),  has: toBool(annonce.terrasse) },
-    { want: toBool(profil.jardin),    has: toBool(annonce.jardin) },
-    { want: toBool(profil.cave),      has: toBool(annonce.cave) },
-    { want: toBool(profil.fibre),     has: toBool(annonce.fibre) },
-    { want: toBool(profil.ascenseur), has: toBool(annonce.ascenseur) },
-  ]
-  const wanted = equips.filter(e => e.want === true)
-  if (wanted.length === 0) {
-    score += 70 // neutre — rien souhaité
+  // ── ÉQUIPEMENTS (100 pts, plancher 0) ─────────
+  // V2.4 — tri-state per equipement via preferences_equipements jsonb.
+  // Fallback boolean legacy preserve. Bareme :
+  //   indispensable + present : +25 ; absent : -20 ; inconnu : -5
+  //   souhaite      + present : +10 ; absent :   0 ; inconnu : +2
+  //   refuse        + present : -15 ; absent :  +5 ; inconnu :  0
+  //   indifferent   : 0 (skip)
+  // Score = clamp(0, 100, 50 + somme).
+  // Compat : si toutes prefs == indifferent → 70 (legacy "rien souhaité").
+  const EQUIP_KEYS = ["parking", "balcon", "terrasse", "jardin", "cave", "fibre", "ascenseur"] as const
+  const equips = EQUIP_KEYS.map(key => ({
+    key,
+    pref: getEquipementPreference(profil, key),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    has: toBool((annonce as any)[key]),
+  }))
+  const actionnable = equips.filter(e => e.pref !== "indifferent")
+  if (actionnable.length === 0) {
+    score += 70
   } else {
-    const hasInfo = wanted.some(e => e.has !== undefined)
-    if (!hasInfo) {
-      score += 50 // annonce ne renseigne rien → léger doute
+    const hasAnyInfo = actionnable.some(e => e.has !== undefined)
+    if (!hasAnyInfo) {
+      score += 50
     } else {
-      const matched = wanted.filter(e => e.has === true).length
-      // Plancher à 40 — équipements jamais éliminatoires
-      score += Math.round(40 + 60 * (matched / wanted.length))
+      let raw = 0
+      for (const { pref, has } of actionnable) {
+        if (pref === "indispensable") {
+          if (has === true) raw += 25
+          else if (has === false) raw -= 20
+          else raw -= 5
+        } else if (pref === "souhaite") {
+          if (has === true) raw += 10
+          else if (has === undefined) raw += 2
+        } else if (pref === "refuse") {
+          if (has === true) raw -= 15
+          else if (has === false) raw += 5
+        }
+      }
+      score += Math.max(0, Math.min(100, 50 + raw))
     }
   }
 
