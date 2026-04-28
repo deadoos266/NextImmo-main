@@ -1,13 +1,15 @@
 "use client"
 
-// V7 chantier 2 (Paul 2026-04-28) — picker Leaflet pour que le candidat
-// pose un marker sur SON quartier favori. Sauvegarde lat/lng + label
-// auto-reverse-geocode (Nominatim free tier).
+// V7.2 (Paul 2026-04-28) — picker Leaflet pour que le candidat pose un
+// marker sur SON quartier favori. Sauvegarde lat/lng + label.
 //
-// Render lazy-loaded (Leaflet pese 40+ kB) : on monte juste au focus de
-// la zone, sinon on affiche un placeholder collapsed.
+// V11.2 (Paul 2026-04-28) — refonte avec input adresse autocomplete
+// Nominatim au-dessus de la map. User report : "je peux pas saisir
+// d'adresse justement pour mettre ?". Pattern Google Maps search → tape
+// "Bastille" → suggestions → click → marker + label remplis. Map reste
+// disponible pour fine-tune via drag.
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import { getCityCoords } from "../../lib/cityCoords"
 
@@ -27,9 +29,38 @@ interface Props {
 
 const PARIS_DEFAULT: [number, number] = [48.8566, 2.3522]
 
+interface Suggestion {
+  display_name: string
+  lat: string
+  lon: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  address?: any
+}
+
+// V11.2 — cache local des dernieres recherches (max 10) pour eviter de
+// re-query Nominatim sur backspace+retype.
+const SEARCH_CACHE = new Map<string, Suggestion[]>()
+
+function buildShortLabel(s: Suggestion): string {
+  const a = s.address || {}
+  const quartier = a.suburb || a.neighbourhood || a.city_district || a.borough || a.quarter
+  const cityName = a.city || a.town || a.village || ""
+  if (quartier) return `${quartier}${cityName ? `, ${cityName}` : ""}`
+  // Fallback : 2 premiers segments du display_name
+  return s.display_name.split(",").slice(0, 2).map(p => p.trim()).join(", ")
+}
+
 export default function QuartierPicker({ ville, lat, lng, label, onChange, onClear, isMobile }: Props) {
   const [open, setOpen] = useState(lat !== null && lng !== null)
   const [resolvedLabel, setResolvedLabel] = useState<string | null>(label)
+
+  // V11.2 — autocomplete state
+  const [query, setQuery] = useState("")
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [searching, setSearching] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const inputRef = useRef<HTMLInputElement | null>(null)
 
   // Centrage initial : marker existant > coords ville profil > Paris
   const center: [number, number] = (lat !== null && lng !== null)
@@ -38,8 +69,72 @@ export default function QuartierPicker({ ville, lat, lng, label, onChange, onCle
 
   useEffect(() => { setResolvedLabel(label) }, [label])
 
-  // Reverse-geocode minimaliste via Nominatim (free, rate-limit 1 req/s).
-  // On debounce 600ms apres dragend pour ne pas spam.
+  // Autofocus input quand on ouvre la card
+  useEffect(() => {
+    if (open && inputRef.current && lat === null) {
+      const t = setTimeout(() => inputRef.current?.focus(), 100)
+      return () => clearTimeout(t)
+    }
+  }, [open, lat])
+
+  // V11.2 — debounce 300ms autocomplete Nominatim
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (query.trim().length < 2) {
+      setSuggestions([])
+      return
+    }
+    const cached = SEARCH_CACHE.get(query.trim().toLowerCase())
+    if (cached) {
+      setSuggestions(cached)
+      setShowSuggestions(true)
+      return
+    }
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5&countrycodes=fr`,
+          { headers: { "Accept-Language": "fr" } }
+        )
+        if (!res.ok) {
+          setSuggestions([])
+          return
+        }
+        const data = await res.json() as Suggestion[]
+        const arr = Array.isArray(data) ? data.slice(0, 5) : []
+        SEARCH_CACHE.set(query.trim().toLowerCase(), arr)
+        // Trim cache to last 10
+        if (SEARCH_CACHE.size > 10) {
+          const firstKey = SEARCH_CACHE.keys().next().value
+          if (firstKey) SEARCH_CACHE.delete(firstKey)
+        }
+        setSuggestions(arr)
+        setShowSuggestions(true)
+      } catch {
+        setSuggestions([])
+      } finally {
+        setSearching(false)
+      }
+    }, 300)
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [query])
+
+  function selectSuggestion(s: Suggestion) {
+    const sLat = Number(s.lat)
+    const sLng = Number(s.lon)
+    if (!Number.isFinite(sLat) || !Number.isFinite(sLng)) return
+    const lbl = buildShortLabel(s)
+    setQuery("")
+    setSuggestions([])
+    setShowSuggestions(false)
+    setResolvedLabel(lbl)
+    onChange({ lat: sLat, lng: sLng, label: lbl })
+  }
+
+  // V7.2 — Reverse-geocode au dragend (label se met a jour). Garde V11.2.
   useEffect(() => {
     if (lat === null || lng === null) return
     if (resolvedLabel && resolvedLabel.length > 0) return
@@ -57,7 +152,7 @@ export default function QuartierPicker({ ville, lat, lng, label, onChange, onCle
           setResolvedLabel(lbl)
           onChange({ lat, lng, label: lbl })
         }
-      } catch { /* swallow — pas de label = degraded mode */ }
+      } catch { /* swallow */ }
     }, 600)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -70,12 +165,12 @@ export default function QuartierPicker({ ville, lat, lng, label, onChange, onCle
         background: "#F7F4EF", border: "1px solid #EAE6DF", borderRadius: 14,
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <div>
+          <div style={{ minWidth: 0 }}>
             <p style={{ fontSize: 13, fontWeight: 600, color: "#111", margin: 0 }}>
               Quartier de prédilection
             </p>
             <p style={{ fontSize: 11, color: "#8a8477", margin: "4px 0 0", lineHeight: 1.5 }}>
-              Pose un marker sur ton quartier favori pour scorer la proximité réelle.
+              Cherche une adresse ou pose un marker sur ton quartier favori pour scorer la proximité réelle.
             </p>
           </div>
           <button
@@ -83,13 +178,16 @@ export default function QuartierPicker({ ville, lat, lng, label, onChange, onCle
             onClick={() => setOpen(true)}
             style={{
               background: "#111", color: "#fff", border: "none",
-              borderRadius: 999, padding: "8px 16px",
+              borderRadius: 999, padding: "10px 18px",
               fontSize: 11, fontWeight: 700, fontFamily: "inherit",
               textTransform: "uppercase" as const, letterSpacing: "0.4px",
               cursor: "pointer", whiteSpace: "nowrap",
+              minHeight: 44,
+              WebkitTapHighlightColor: "transparent",
+              touchAction: "manipulation",
             }}
           >
-            Ouvrir la carte
+            Ouvrir
           </button>
         </div>
       </div>
@@ -106,16 +204,99 @@ export default function QuartierPicker({ ville, lat, lng, label, onChange, onCle
           Quartier de prédilection
         </label>
         <span style={{ fontSize: 11, color: "#8a8477" }}>
-          Glisse le marker. {resolvedLabel ? <strong style={{ color: "#111" }}>{resolvedLabel}</strong> : "Détection en cours…"}
+          {resolvedLabel ? <>📍 <strong style={{ color: "#111" }}>{resolvedLabel}</strong></> : "Cherche un quartier ou drag le marker."}
         </span>
       </div>
+
+      {/* V11.2 — Search input avec autocomplete Nominatim */}
+      <div style={{ position: "relative", marginBottom: 10 }}>
+        <div style={{ position: "relative" }}>
+          <span aria-hidden="true" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#8a8477", fontSize: 14, pointerEvents: "none" }}>
+            🔍
+          </span>
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true) }}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+            placeholder="Cherche un quartier ou une adresse…"
+            style={{
+              width: "100%",
+              padding: "11px 14px 11px 38px",
+              border: "1px solid #EAE6DF",
+              borderRadius: 10,
+              fontSize: isMobile ? 16 : 14,
+              fontFamily: "inherit",
+              outline: "none",
+              boxSizing: "border-box",
+              background: "#fff",
+              color: "#111",
+            }}
+          />
+        </div>
+        {showSuggestions && (suggestions.length > 0 || searching || (query.trim().length >= 2 && !searching)) && (
+          <div style={{
+            position: "absolute", top: "100%", left: 0, right: 0,
+            marginTop: 4,
+            background: "#fff",
+            border: "1px solid #EAE6DF",
+            borderRadius: 10,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
+            zIndex: 50,
+            maxHeight: 240,
+            overflowY: "auto",
+          }}>
+            {searching && (
+              <div style={{ padding: "10px 14px", fontSize: 12, color: "#8a8477" }}>Recherche…</div>
+            )}
+            {!searching && suggestions.length === 0 && query.trim().length >= 2 && (
+              <div style={{ padding: "10px 14px", fontSize: 12, color: "#8a8477" }}>
+                Aucun résultat. Essaie un nom de quartier ou une adresse plus spécifique.
+              </div>
+            )}
+            {suggestions.map((s, i) => (
+              <button
+                key={`${s.lat}-${s.lon}-${i}`}
+                type="button"
+                onMouseDown={e => { e.preventDefault(); selectSuggestion(s) }}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  textAlign: "left" as const,
+                  padding: "10px 14px",
+                  background: "transparent",
+                  border: "none",
+                  borderBottom: i < suggestions.length - 1 ? "1px solid #F0EAE0" : "none",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  fontSize: 13,
+                  color: "#111",
+                  lineHeight: 1.4,
+                  WebkitTapHighlightColor: "transparent",
+                  minHeight: 44,
+                  boxSizing: "border-box",
+                }}
+              >
+                <div style={{ fontWeight: 600 }}>{buildShortLabel(s)}</div>
+                <div style={{ fontSize: 11, color: "#8a8477", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {s.display_name}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div style={{
-        height: isMobile ? 220 : 280,
+        height: isMobile ? 200 : 260,
         borderRadius: 12,
         overflow: "hidden",
         border: "1px solid #EAE6DF",
       }}>
         <MapContainer
+          key={`${center[0]},${center[1]}`}
           center={center}
           zoom={lat !== null ? 14 : 12}
           scrollWheelZoom
@@ -142,12 +323,13 @@ export default function QuartierPicker({ ville, lat, lng, label, onChange, onCle
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, gap: 8 }}>
         <button
           type="button"
-          onClick={() => { onClear(); setResolvedLabel(null); setOpen(false) }}
+          onClick={() => { onClear(); setResolvedLabel(null); setQuery(""); setSuggestions([]); setOpen(false) }}
           style={{
             background: "transparent", color: "#8a8477", border: "1px solid #EAE6DF",
-            borderRadius: 999, padding: "6px 14px",
+            borderRadius: 999, padding: "8px 14px",
             fontSize: 11, fontWeight: 600, fontFamily: "inherit",
             cursor: "pointer", whiteSpace: "nowrap",
+            minHeight: 44, WebkitTapHighlightColor: "transparent", touchAction: "manipulation",
           }}
         >
           Effacer
@@ -157,10 +339,11 @@ export default function QuartierPicker({ ville, lat, lng, label, onChange, onCle
           onClick={() => setOpen(false)}
           style={{
             background: "#111", color: "#fff", border: "none",
-            borderRadius: 999, padding: "6px 14px",
+            borderRadius: 999, padding: "8px 18px",
             fontSize: 11, fontWeight: 700, fontFamily: "inherit",
             textTransform: "uppercase" as const, letterSpacing: "0.4px",
             cursor: "pointer",
+            minHeight: 44, WebkitTapHighlightColor: "transparent", touchAction: "manipulation",
           }}
         >
           Replier
