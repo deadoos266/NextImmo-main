@@ -743,8 +743,12 @@ function Step2Adresse({
   return (
     <>
       <Grid2 isMobile={isMobile}>
-        <F l="Titre de l'annonce">
-          <input style={inp} value={form.titre} onChange={set("titre")} maxLength={120} placeholder="Ex : Bel appartement T2 lumineux" />
+        <F l={<>Titre de l&apos;annonce <Tooltip text="Un bon titre explique le type, la pièce phare et 1-2 atouts. Ex : 'T3 lumineux avec balcon, proche métro'." /></>}>
+          <input style={inp} value={form.titre} onChange={set("titre")} maxLength={120} placeholder="Ex : T2 lumineux à 5 min du métro" />
+          {/* V3.4 — templates titre cliquables. Genere a partir du type, ville
+              et toggles deja remplis. Le proprio peut piocher pour ne pas
+              partir de zero. */}
+          <TitleTemplates form={form} setForm={setForm} toggles={toggles} />
         </F>
         <F l="Ville">
           <CityAutocomplete value={form.ville} onChange={v => setForm(f => ({ ...f, ville: v }))} placeholder="Commencez à taper…" />
@@ -1632,6 +1636,61 @@ function Step7Publier({
 }
 
 // ─── Modal de prévisualisation (inchangée, migrée aux tokens km) ───────────
+// V3.4 — propose 3-4 titres pre-remplis a partir des donnees deja saisies.
+// Cliquer sur un template remplit le champ titre. Aide les proprios qui
+// regardent le placeholder en se grattant la tete.
+function TitleTemplates({
+  form, setForm, toggles,
+}: {
+  form: AnnonceForm
+  setForm: React.Dispatch<React.SetStateAction<AnnonceForm>>
+  toggles: AnnonceToggles
+}) {
+  const type = form.type_bien || "Logement"
+  const ville = form.ville
+  const piecesNum = parseInt(form.pieces || "0", 10)
+  const piecesLabel = piecesNum >= 1 ? `T${piecesNum}` : type
+  const surface = form.surface ? `${form.surface} m²` : ""
+  const meuble = toggles.meuble ? "meublé" : ""
+  const exterieur = toggles.balcon ? "balcon" : toggles.terrasse ? "terrasse" : toggles.jardin ? "jardin" : ""
+
+  const templates = [
+    `${piecesLabel} ${meuble || "lumineux"}${ville ? ` à ${ville}` : ""}`,
+    surface ? `${piecesLabel} de ${surface}${exterieur ? ` avec ${exterieur}` : ""}` : "",
+    exterieur ? `${piecesLabel} avec ${exterieur}${ville ? ` — ${ville}` : ""}` : "",
+    `Beau ${type.toLowerCase()} ${meuble || "rénové"}${ville ? ` à ${ville}` : ""}`,
+  ]
+    .map(t => t.trim().replace(/\s+/g, " "))
+    .filter((t, i, arr) => t.length > 6 && arr.indexOf(t) === i)
+    .slice(0, 4)
+
+  if (templates.length === 0) return null
+
+  return (
+    <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
+      <span style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.2px", alignSelf: "center" }}>
+        Modèles
+      </span>
+      {templates.map((t, i) => (
+        <button
+          key={i}
+          type="button"
+          onClick={() => setForm(f => ({ ...f, titre: t }))}
+          style={{
+            padding: "5px 11px", borderRadius: 999,
+            background: km.beige, border: `1px solid ${km.line}`,
+            color: km.ink, fontSize: 11.5, fontWeight: 500,
+            cursor: "pointer", fontFamily: "inherit",
+            maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}
+        >
+          {t}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 // V3.2 — modal de confirmation avant publish. Liste les checks + valeurs cles
 // (titre, ville, prix). Bouton \"Publier\" finalise, \"Modifier\" ferme la modal.
 function PublishConfirmModal({
