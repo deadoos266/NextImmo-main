@@ -16,6 +16,7 @@ import LocataireMatchCard from "./LocataireMatchCard"
 import EquipementsBlock from "./EquipementsBlock"
 import PartagerCard from "./PartagerCard"
 import StickyCTABanner from "./StickyCTABanner"
+import CandidaturesCounter from "./CandidaturesCounter"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -914,6 +915,14 @@ export default async function Annonce({ params }: any) {
               )}
 
               <ScoreBlock annonce={annonce} />
+
+              {/* V9.4 — Compteur candidatures public + ancienneté annonce.
+                  Color coding selon densite (gris/ambre/rouge). Owner-side cache. */}
+              <CandidaturesCounter
+                annonceId={annonce.id}
+                annonceCreatedAt={annonce.created_at}
+                proprietaireEmail={annonce.proprietaire_email}
+              />
 
               {/* Mot du proprietaire — collecte Step 6 du wizard ajouter
                   (champ message_proprietaire). Etait orphelin (jamais affiche)
