@@ -134,8 +134,17 @@ const T = {
 } as const
 
 const STYLES = {
-  main: { minHeight: "100vh", background: T.bg, fontFamily: "'DM Sans', sans-serif", paddingBottom: 48 } as React.CSSProperties,
-  container: (isMobile: boolean): React.CSSProperties => ({ maxWidth: 1240, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 40px" }),
+  // V11.9 (Paul 2026-04-28) — overflowX: clip sur le main pour absorber tout
+  // child rebelle qui depasse horizontalement (chips longs, map Leaflet,
+  // image, etc). Sans cela, le viewport peut horizontalement scroller, ce qui
+  // donne l'impression que des labels sont coupes a gauche (cf "LO" cut sur
+  // "LOYER MAX RECOMMANDÉ" dans le screenshot user). overflow-x: clip est
+  // strict (pas de scroll possible), supporte iOS 16+, fallback hidden sinon.
+  main: { minHeight: "100vh", background: T.bg, fontFamily: "'DM Sans', sans-serif", paddingBottom: 48, overflowX: "clip", maxWidth: "100vw" } as React.CSSProperties,
+  // V11.9 — boxSizing + maxWidth 100% defensif pour le container : double
+  // ceinture-bretelle, evite que le container deborde quand un child a un
+  // min-content trop large.
+  container: (isMobile: boolean): React.CSSProperties => ({ maxWidth: 1240, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 40px", boxSizing: "border-box", width: "100%" }),
 
   hero: {
     wrap: (isMobile: boolean): React.CSSProperties => ({ padding: isMobile ? "8px 0 12px" : "0 0 16px" }),
@@ -285,41 +294,77 @@ const STYLES = {
       borderRadius: 24,
       padding: isMobile ? "22px 16px 24px" : "30px 32px 32px",
       boxShadow: "0 1px 0 #ebe4d6",
-      // V11.1 — defensif overflow mobile : box-sizing + maxWidth pour qu'un
-      // input/chip large ne pousse pas la section au-dela du viewport.
+      // V11.1 + V11.9 — defensif overflow mobile : box-sizing + maxWidth +
+      // width pour qu'un input/chip large ne pousse pas la section au-dela
+      // du viewport. overflow: hidden sur mobile uniquement (sinon casse
+      // les tooltips qui doivent overflow visible sur desktop).
       boxSizing: "border-box",
+      width: "100%",
       maxWidth: "100%",
       minWidth: 0,
-      overflow: "hidden",
+      overflowX: "hidden",
     }),
-    head: { display: "flex", alignItems: "baseline", gap: 16, marginBottom: 4, flexWrap: "wrap" as const } as React.CSSProperties,
-    num: { fontSize: 16, fontStyle: "italic", color: T.soft, fontVariantNumeric: "tabular-nums", fontWeight: 400 } as React.CSSProperties,
-    kicker: { fontSize: 11, fontWeight: 700, letterSpacing: "1.8px", textTransform: "uppercase", color: T.soft } as React.CSSProperties,
+    // V11.9 — overflowWrap defensif sur les heads + h2 + kicker (les libelles
+    // longs comme "Ce que vous faites" ne doivent jamais tronquer).
+    head: { display: "flex", alignItems: "baseline", gap: 16, marginBottom: 4, flexWrap: "wrap" as const, width: "100%", minWidth: 0 } as React.CSSProperties,
+    num: { fontSize: 16, fontStyle: "italic", color: T.soft, fontVariantNumeric: "tabular-nums", fontWeight: 400, flexShrink: 0 } as React.CSSProperties,
+    kicker: { fontSize: 11, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: T.soft, overflowWrap: "anywhere" as const, wordBreak: "break-word" as const } as React.CSSProperties,
     rule: { flex: 1, height: 1, background: T.hairline, minWidth: 20 } as React.CSSProperties,
     subtitle: { fontSize: 11.5, color: T.soft } as React.CSSProperties,
-    h2: (isMobile: boolean): React.CSSProperties => ({ fontSize: isMobile ? 24 : 28, fontWeight: 500, margin: "0 0 22px", color: T.ink, letterSpacing: "-0.4px" }),
+    h2: (isMobile: boolean): React.CSSProperties => ({ fontSize: isMobile ? 22 : 28, fontWeight: 500, margin: "0 0 22px", color: T.ink, letterSpacing: "-0.4px", overflowWrap: "anywhere" as const, wordBreak: "break-word" as const, lineHeight: 1.2 }),
   },
 
-  row2: (isMobile: boolean): React.CSSProperties => ({ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }),
+  // V11.9 — minmax(0, 1fr) au lieu de "1fr" pour autoriser le shrink des
+  // colonnes sous min-content. CSS Grid : "1fr" = "minmax(auto, 1fr)" ce qui
+  // empeche le shrink sous le min-content size. Avec un long input ou chips
+  // dans une cell, la column overflow. minmax(0, 1fr) corrige.
+  row2: (isMobile: boolean): React.CSSProperties => ({
+    display: "grid",
+    gridTemplateColumns: isMobile ? "minmax(0, 1fr)" : "minmax(0, 1fr) minmax(0, 1fr)",
+    gap: 16,
+    width: "100%",
+    boxSizing: "border-box",
+  }),
 
   field: {
-    wrap: { marginBottom: 18, minWidth: 0 } as React.CSSProperties,
-    // V11.1 — overflowWrap + wordBreak pour que les longs labels avec
-    // (facultatif) et tooltip wrappent proprement sur mobile au lieu d'etre
-    // tronques. La letterSpacing 1.4px + uppercase rend les chaines plus
-    // longues que prevu — defensif.
-    label: { display: "block", fontSize: 11, fontWeight: 700, color: T.soft, marginBottom: 8, textTransform: "uppercase", letterSpacing: "1.4px", overflowWrap: "anywhere", wordBreak: "break-word" } as React.CSSProperties,
+    // V11.9 — width 100% + maxWidth 100% strict pour que les Field ne
+    // depassent jamais leur grid column (dans Row2). Combiné avec
+    // section.wrap overflow:hidden, plus aucune surcharge horizontale.
+    wrap: { marginBottom: 18, minWidth: 0, width: "100%", maxWidth: "100%", boxSizing: "border-box" } as React.CSSProperties,
+    // V11.1 + V11.9 — letterSpacing reduit a 1.2px (etait 1.4px) pour reduire
+    // la largeur des labels uppercase. wordBreak defensif. width 100% pour
+    // que le label respecte la largeur du Field meme sur 320px.
+    label: {
+      display: "block",
+      width: "100%",
+      maxWidth: "100%",
+      boxSizing: "border-box" as const,
+      fontSize: 11,
+      fontWeight: 700,
+      color: T.soft,
+      marginBottom: 8,
+      textTransform: "uppercase",
+      letterSpacing: "1.2px",
+      overflowWrap: "anywhere",
+      wordBreak: "break-word",
+      lineHeight: 1.3,
+    } as React.CSSProperties,
     input: (isMobile: boolean): React.CSSProperties => ({ width: "100%", padding: "11px 14px", border: `1px solid ${T.line}`, borderRadius: 10, fontSize: isMobile ? 16 : 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box", background: T.white, color: T.ink, fontVariantNumeric: "tabular-nums" }),
     inputDisabled: { background: T.mutedBg, color: T.soft } as React.CSSProperties,
     textarea: (isMobile: boolean): React.CSSProperties => ({ width: "100%", padding: "14px 16px", border: `1px solid ${T.line}`, borderRadius: 14, fontSize: isMobile ? 16 : 14.5, fontFamily: "'DM Sans', sans-serif", fontStyle: "italic", fontWeight: 400, outline: "none", resize: "vertical", boxSizing: "border-box", lineHeight: 1.55, color: "#222", background: T.mutedBg }),
   },
 
   chip: {
-    // V11.1 — maxWidth 100% defensif pour le container, evite tout overflow.
-    wrap: { display: "flex", gap: 8, flexWrap: "wrap" as const, maxWidth: "100%" } as React.CSSProperties,
+    // V11.1 + V11.9 — maxWidth 100% + minWidth 0 defensif pour le container
+    // ET pour chaque chip. Wrap horizontal + wrap interne au chip pour les
+    // longs (Indépendant / Freelance, Sans emploi, etc.).
+    wrap: { display: "flex", gap: 8, flexWrap: "wrap" as const, maxWidth: "100%", minWidth: 0 } as React.CSSProperties,
     base: (active: boolean): React.CSSProperties => ({
+      // V11.9 — borderRadius reduit a 16 (etait 999 pill). Avec un text
+      // multi-lignes dans un pill, le rendu est moche. Rectangle a coins
+      // arrondis tolerent multi-lignes proprement.
       padding: "8px 14px",
-      borderRadius: 999,
+      borderRadius: 16,
       border: "1px solid",
       cursor: "pointer",
       fontFamily: "inherit",
@@ -329,9 +374,17 @@ const STYLES = {
       color: active ? T.white : "#333",
       borderColor: active ? T.ink : T.line,
       transition: "all 0.15s",
-      // V11.1 — empeche un chip de devenir plus large que le container,
-      // permet le wrap meme si le mot est tres long (PACS, etc).
+      // V11.9 — text wrapping defensif : whitespace normal + wordBreak +
+      // overflowWrap pour briser les longs mots si vraiment necessaire.
+      whiteSpace: "normal" as const,
+      wordBreak: "normal" as const,
+      overflowWrap: "anywhere" as const,
+      lineHeight: 1.3,
+      // maxWidth 100% : empeche le chip de devenir plus large que son container.
+      // minWidth 0 : autorise le shrink sous min-content (essential pour wrap).
       maxWidth: "100%",
+      minWidth: 0,
+      textAlign: "center" as const,
     }),
   },
 
