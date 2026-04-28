@@ -411,38 +411,52 @@ function Profil() {
   }
 
   // R10.3a — IntersectionObserver pour surligner la section active dans le TOC.
-  // V11.18 (Paul 2026-04-28) — refonte algo : l'ancienne approche
-  // "section avec plus grand ratio visible" était cassée pour les longues
-  // sections (criteres tient parfois tout le viewport, donc le ratio 1.0
-  // empêche les autres de prendre le focus). Nouvelle approche : on
-  // observe une bande étroite à ~20% du top viewport. Dès qu'une section
-  // entre dans cette bande (= son haut passe sous le top 20%), elle
-  // devient active. Pattern Linear/Notion-like.
-  // rootMargin "-20% 0px -75% 0px" : la zone d'observation est une bande
-  // horizontale entre 20% et 25% du top viewport.
+  // V11.19 (Paul 2026-04-28) — V11.18 cassée encore : la bande étroite
+  // [-20%, -75%] = 5% à 20-25% du top viewport ne contenait AUCUNE section
+  // pendant les phases "entre 2 sections" (gap entre fin section 01 et
+  // début section 02), donc l'active state restait figé sur "criteres".
+  //
+  // Nouveau pattern bulletproof : scroll listener (debounced via rAF) +
+  // calcul direct des positions. Pour chaque section, on calcule la
+  // distance entre son top et le navbar-offset (90px). On pick la
+  // dernière section dont le top est <= navbar-offset (= "section dont le
+  // header a déjà passé sous la Navbar"). Si aucune n'a passé, on pick la
+  // première (haut de page). Approche déterministe, pas de gap.
   useEffect(() => {
     if (!dataLoaded || proprietaireActive) return
-    const nodes = SECTIONS.map(s => document.getElementById(s.id)).filter((n): n is HTMLElement => n !== null)
-    if (nodes.length === 0) return
+    if (typeof window === "undefined") return
+    const NAV_OFFSET = 100 // navbar 72 + buffer 28 (au lieu de 90 = arête)
 
-    // État interne : map id -> isIntersecting. À chaque changement, on
-    // pick l'id le plus haut dans le DOM qui est intersectant. Si rien
-    // n'intersecte (entre 2 sections), on garde l'ancien actif.
-    const intersectingIds = new Set<string>()
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) intersectingIds.add(e.target.id)
-          else intersectingIds.delete(e.target.id)
-        }
-        // Pick la première section (ordre DOM) qui est dans la bande.
-        const firstActive = SECTIONS.find(s => intersectingIds.has(s.id))
-        if (firstActive) setActiveSection(firstActive.id)
-      },
-      { rootMargin: "-20% 0px -75% 0px", threshold: 0 },
-    )
-    nodes.forEach(n => io.observe(n))
-    return () => io.disconnect()
+    let raf = 0
+    function compute() {
+      raf = 0
+      // Pick la DERNIÈRE section (ordre DOM) dont le top a dépassé le seuil.
+      let lastPassed: string | null = null
+      for (const s of SECTIONS) {
+        const el = document.getElementById(s.id)
+        if (!el) continue
+        const top = el.getBoundingClientRect().top
+        if (top <= NAV_OFFSET) lastPassed = s.id
+        else break // les suivants ont forcement top plus grand (DOM order)
+      }
+      // Si aucune section n'a passé, on est avant la 1re — pick la 1re.
+      const next = lastPassed ?? SECTIONS[0]?.id
+      if (next) setActiveSection(prev => (prev === next ? prev : next))
+    }
+
+    function onScroll() {
+      if (raf) return
+      raf = window.requestAnimationFrame(compute)
+    }
+
+    compute() // run une fois au mount
+    window.addEventListener("scroll", onScroll, { passive: true })
+    window.addEventListener("resize", onScroll, { passive: true })
+    return () => {
+      if (raf) window.cancelAnimationFrame(raf)
+      window.removeEventListener("scroll", onScroll)
+      window.removeEventListener("resize", onScroll)
+    }
   }, [dataLoaded, proprietaireActive])
 
   // R10.11 — Viewport wide (≥ 1280px) → Completion + Settings vont dans
