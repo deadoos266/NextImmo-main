@@ -1142,8 +1142,12 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
         {/* ── Header éditorial — scroll normal (pas sticky)
              En mode liste+carte desktop : MASQUÉ. La page est immersive
              (carte + aside edge-to-edge), l'aside a son propre h1 22px
-             "X logements" + Live + QuickFilter chips. */}
-        {!isDesktopListCarte && (isMobileV5 ? (
+             "X logements" + Live + QuickFilter chips.
+             V18 (Paul 2026-04-28) — masqué AUSSI en mobile carte plein
+             écran (`isMobileV5 && showMap`) : la map prend tout l'écran,
+             le titre "22 logements à Paris / Tri par compatibilité" est
+             redondant et bouffe de la verticale précieuse sur mobile. */}
+        {!isDesktopListCarte && !(isMobileV5 && showMap) && (isMobileV5 ? (
           /* Mobile simplifié : h2 Fraunces italic 26 + sous-titre 12, sans popover */
           <div style={{ padding: "16px 0 4px" }}>
             <KMHeading as="h2" size={26}>
