@@ -18,6 +18,7 @@ import PartagerCard from "./PartagerCard"
 import StickyCTABanner from "./StickyCTABanner"
 import CandidaturesCounter from "./CandidaturesCounter"
 import DpeWarningBanner from "./DpeWarningBanner"
+import QualiteAnnonceBadge from "./QualiteAnnonceBadge"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -919,6 +920,18 @@ export default async function Annonce({ params }: any) {
               <DpeWarningBanner dpe={annonce.dpe} />
 
               <ScoreBlock annonce={annonce} />
+
+              {/* V9.3 — Badge qualité de l'annonce (score 0..100 + tier). */}
+              <QualiteAnnonceBadge annonce={{
+                photos: annonce.photos,
+                description: annonce.description,
+                message_proprietaire: annonce.message_proprietaire,
+                dpe: annonce.dpe,
+                localisation_exacte: annonce.localisation_exacte,
+                chambres: annonce.chambres,
+                pieces: annonce.pieces,
+                surface: annonce.surface,
+              }} />
 
               {/* V9.4 — Compteur candidatures public + ancienneté annonce.
                   Color coding selon densite (gris/ambre/rouge). Owner-side cache. */}

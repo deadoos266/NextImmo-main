@@ -40,27 +40,39 @@ const PAUL_SCREENING: ScreeningProfil = {
   budget_max: 1500,
 }
 
-// 5 annonces realistes
-const T1_PARIS_800: Annonce = {
+// 5 annonces realistes — V9.3 : qualite "premium" pour ne pas etre
+// penalisees par le multiplicateur qualite (0.7-1.0). Stub des fields
+// photos/description/... via Object.assign pour eviter de polluer
+// l'interface Annonce (les fields sont lus dans `as any` cote matching).
+function asAnnonce(base: Annonce): Annonce {
+  return Object.assign(base as Record<string, unknown>, {
+    photos: ["a","b","c","d","e","f"],
+    description: "x".repeat(350),
+    message_proprietaire: "Bel appartement…",
+    localisation_exacte: true,
+    chambres: 1,
+  }) as Annonce
+}
+const T1_PARIS_800: Annonce = asAnnonce({
   ville: "Paris", prix: 800, surface: 25, pieces: 1, meuble: true,
   balcon: false, fibre: true, dpe: "D",
-}
-const T2_PARIS_1200: Annonce = {
-  ville: "Paris", prix: 1200, surface: 45, pieces: 2, meuble: true,
+})
+const T2_PARIS_1200: Annonce = asAnnonce({
+  ville: "Paris", prix: 1200, surface: 45, pieces: 2, meuble: true, chambres: 1,
   balcon: true, fibre: true, dpe: "B",
-}
-const T3_PARIS_1800: Annonce = {
-  ville: "Paris", prix: 1800, surface: 65, pieces: 3, meuble: false,
+})
+const T3_PARIS_1800: Annonce = asAnnonce({
+  ville: "Paris", prix: 1800, surface: 65, pieces: 3, meuble: false, chambres: 2,
   balcon: true, fibre: true, dpe: "C",
-}
-const T4_PARIS_2500: Annonce = {
-  ville: "Paris", prix: 2500, surface: 90, pieces: 4, meuble: false,
+})
+const T4_PARIS_2500: Annonce = asAnnonce({
+  ville: "Paris", prix: 2500, surface: 90, pieces: 4, meuble: false, chambres: 3,
   balcon: true, fibre: true, dpe: "C",
-}
-const HOUSE_PARIS_3500: Annonce = {
-  ville: "Paris", prix: 3500, surface: 130, pieces: 5, meuble: false,
+})
+const HOUSE_PARIS_3500: Annonce = asAnnonce({
+  ville: "Paris", prix: 3500, surface: 130, pieces: 5, meuble: false, chambres: 4,
   balcon: true, jardin: true, fibre: true, dpe: "B",
-}
+})
 
 describe("V6.4 matching integration — Paul vs 5 annonces realistes", () => {
   it("scores sont tous dans [0, 1000]", () => {

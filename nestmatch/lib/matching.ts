@@ -4,6 +4,7 @@
 // =====================
 
 import { getCityCoords, haversineKm } from "./cityCoords"
+import { computeQualiteAnnonce, qualiteFacteur } from "./qualiteAnnonce"
 
 // Normalisation defensive des valeurs booleennes venant de la DB.
 // Supabase peut renvoyer boolean, null, ou (legacy) string "true"/"false".
@@ -557,6 +558,34 @@ export function calculerScore(annonce: Annonce, profil: Profil): number {
   // Remplace par preferences_equipements jsonb tri-state (V2.4) qui couvre
   // la meme intention (preferences user-driven sur equipements) sans le
   // multiplicateur opaque ni la double comptabilite avec le bloc EQUIPEMENTS.
+
+  // V9.3 (Paul 2026-04-28) — score qualite annonce comme multiplicateur.
+  // Une annonce avec 0 photo + desc 5 chars + sans DPE = score qualite ~0
+  // → facteur 0.7 (-30%). Une annonce parfaite = facteur 1.0 (pas de
+  // boost positif, on respecte le bareme natif). Shaping juste, pas de
+  // filtre dur.
+  // Skip si l'annonce est un stub minimal (pas de photos, pas de desc,
+  // pas de DPE) : on n'a pas assez de signal pour penaliser, on laisse
+  // le score natif. Couvre les tests + les annonces fraichement creees
+  // pendant le wizard (le multiplier sera applique apres save complet).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const a = annonce as any
+  const hasQualiteSignal = (Array.isArray(a.photos) && a.photos.length > 0)
+    || (typeof a.description === "string" && a.description.trim().length > 0)
+    || (typeof annonce.dpe === "string" && annonce.dpe.trim().length > 0)
+  if (hasQualiteSignal) {
+    const qualite = computeQualiteAnnonce({
+      photos: a.photos,
+      description: a.description,
+      message_proprietaire: a.message_proprietaire,
+      dpe: annonce.dpe,
+      localisation_exacte: a.localisation_exacte,
+      chambres: annonce.chambres,
+      pieces: annonce.pieces,
+      surface: annonce.surface,
+    })
+    score = score * qualiteFacteur(qualite.score)
+  }
 
   // FIX #5 — Sécurité globale
   return Math.max(0, Math.min(Math.round(score), 1000))

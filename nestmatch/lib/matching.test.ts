@@ -34,17 +34,27 @@ describe("calculerScore", () => {
       fibre: true,
       dpe_min: "B",
     }
+    // V9.3 — annonce avec qualite "premium" (photos + desc + msg) pour ne
+    // pas etre penalisee par le multiplicateur qualite (0.7..1.0).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const annonce: Annonce = {
       ville: "Paris",
       prix: 1400,
       surface: 55,
       pieces: 3,
+      chambres: 2,
       meuble: true,
       parking: true,
       balcon: true,
       fibre: true,
       dpe: "B",
-    }
+      ...({
+        photos: ["a","b","c","d","e","f"],
+        description: "x".repeat(350),
+        message_proprietaire: "Bonjour, voici mon bien lumineux...",
+        localisation_exacte: true,
+      } as Record<string, unknown>),
+    } as Annonce
     const score = calculerScore(annonce, profil)
     expect(score).toBeGreaterThanOrEqual(800)
     expect(score).toBeLessThanOrEqual(1000)

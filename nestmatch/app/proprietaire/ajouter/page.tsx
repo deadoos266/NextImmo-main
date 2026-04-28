@@ -5,6 +5,7 @@ import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../../lib/supabase"
 import { validateImage } from "../../../lib/fileValidation"
+import { computeQualiteAnnonce } from "../../../lib/qualiteAnnonce"
 import { useResponsive } from "../../hooks/useResponsive"
 import LocataireEmailField from "../../components/LocataireEmailField"
 import CityAutocomplete from "../../components/CityAutocomplete"
@@ -1607,6 +1608,22 @@ function Step7Publier({
         )}
       </div>
 
+      {/* V9.3 — Score qualite live de l'annonce. Affiche dans Step 7 pour
+          que le proprio voie son score et puisse remonter aux etapes pour
+          ameliorer (photos, description, mot proprio, DPE). */}
+      <div style={{ borderTop: `1px solid ${km.beige}`, paddingTop: 22, marginTop: 28 }}>
+        <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 12px" }}>
+          Qualité de votre annonce
+        </p>
+        <QualiteLive
+          form={form}
+          photos={photos}
+          toggles={toggles}
+          goToStep={goToStep}
+          isMobile={isMobile}
+        />
+      </div>
+
       {/* Récap visuel — checklist complétude avec lien « Modifier » vers l'étape */}
       <div style={{ borderTop: `1px solid ${km.beige}`, paddingTop: 22, marginTop: 28 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
@@ -1657,6 +1674,96 @@ function Step7Publier({
         )}
       </div>
     </>
+  )
+}
+
+// V9.3 (Paul 2026-04-28) — Score qualite live affiche dans Step 7.
+// Le proprio voit son score 0..100 + tier + 3 suggestions priorisees pour
+// ameliorer. Cliquer sur une suggestion ramene au step concerne.
+function QualiteLive({
+  form, photos, toggles, goToStep, isMobile,
+}: {
+  form: AnnonceForm
+  photos: string[]
+  toggles: AnnonceToggles
+  goToStep: (n: StepNum) => void
+  isMobile: boolean
+}) {
+  void isMobile
+  const r = computeQualiteAnnonce({
+    photos,
+    description: form.description,
+    message_proprietaire: form.message_proprietaire,
+    dpe: form.dpe,
+    localisation_exacte: toggles.localisation_exacte,
+    chambres: form.chambres,
+    pieces: form.pieces,
+    surface: form.surface,
+  })
+  // Map suggestion key → step à ouvrir au click
+  const stepByKey: Record<string, StepNum> = {
+    photos: 5,
+    description: 5,
+    message: 6,
+    dpe: 1,
+    exacte: 2,
+    caracteristiques: 3,
+  }
+  return (
+    <div style={{
+      background: r.bg, border: `1px solid ${r.border}`, borderRadius: 14,
+      padding: "14px 16px",
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+          <span style={{
+            fontFamily: "'Fraunces', Georgia, serif",
+            fontFeatureSettings: "'ss01'",
+            fontSize: 32, fontWeight: 400,
+            color: r.color, fontVariantNumeric: "tabular-nums",
+            letterSpacing: "-0.5px", lineHeight: 1,
+          }}>
+            {r.score}
+            <span style={{ fontSize: 15, marginLeft: 1, opacity: 0.6 }}>/100</span>
+          </span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: r.color }}>{r.label}</span>
+        </div>
+      </div>
+      <div style={{
+        marginTop: 10, height: 4, background: "rgba(0,0,0,0.08)",
+        borderRadius: 999, overflow: "hidden",
+      }}>
+        <div style={{ width: `${r.score}%`, height: "100%", background: r.color, transition: "width 300ms ease" }} />
+      </div>
+      {r.suggestions.length > 0 && (
+        <ul style={{ listStyle: "none", padding: 0, margin: "12px 0 0", display: "flex", flexDirection: "column", gap: 6 }}>
+          {r.suggestions.slice(0, 3).map(s => (
+            <li key={s.key} style={{ fontSize: 12.5, color: "#3f3c37", lineHeight: 1.5, display: "flex", alignItems: "flex-start", gap: 8 }}>
+              <span aria-hidden="true" style={{ color: r.color, fontWeight: 700, flexShrink: 0 }}>+{s.deltaPts}</span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                {s.hint}
+                {stepByKey[s.key] && (
+                  <>
+                    {" "}
+                    <button
+                      type="button"
+                      onClick={() => goToStep(stepByKey[s.key])}
+                      style={{
+                        background: "transparent", border: "none", padding: 0, cursor: "pointer",
+                        fontFamily: "inherit", fontSize: 12, fontWeight: 700,
+                        color: km.ink, textDecoration: "underline", textUnderlineOffset: 3,
+                      }}
+                    >
+                      Étape {stepByKey[s.key]} →
+                    </button>
+                  </>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 
