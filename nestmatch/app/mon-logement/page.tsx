@@ -254,19 +254,26 @@ export default function MonLogement() {
     if (dejaExiste) return
     const montant = (Number(bien.prix) || 0) + (Number(bien.charges) || 0)
     const now = new Date().toISOString()
-    void supabase.from("loyers").insert({
-      annonce_id: bien.id,
-      mois: moisCourant,
-      montant,
-      statut: "confirmé",
-      date_confirmation: now,
-      locataire_email: session.user.email.toLowerCase(),
-      proprietaire_email: (bien.proprietaire_email || "").toLowerCase(),
-    }).select().single().then(({ data, error }) => {
-      if (!error && data) {
-        setLoyers(prev => [data, ...prev])
+    // V24.1 — via /api/loyers/save (server-side, mode upsert proprio)
+    // NB : auto-paiement déclenche ici mais signe le loyer "confirmé"
+    // d'office. Le serveur vérifiera que session = locataire.
+    void fetch("/api/loyers/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode: "declare",
+        annonce_id: bien.id,
+        mois: moisCourant,
+        montant,
+        remarque: "auto-paiement",
+      }),
+    }).then(async (res) => {
+      const json = await res.json().catch(() => ({}))
+      if (res.ok && json.ok && json.loyer) {
+        setLoyers(prev => [json.loyer, ...prev])
       }
-    })
+    }).catch(() => {})
+    void now // suppress unused
   }, [bien, loyers, session?.user?.email])
 
   async function declarerPaiement(mois: string) {
@@ -283,23 +290,33 @@ export default function MonLogement() {
       return
     }
     if (!existant) {
-      // Pas d'upsert (nécessite un UNIQUE constraint natif en DB que prod n'a pas
-      // forcément). On INSERT direct — si ça conflicte (race), on ignore l'erreur
-      // de duplicate_key, le loyer existe déjà en DB.
-      const { data, error } = await supabase.from("loyers").insert({
-        annonce_id: bien.id,
-        mois,
-        montant: montantAttendu,
-        statut: "déclaré",
-        locataire_email: locataireEmail,
-        proprietaire_email: proprietaireEmail,
-      }).select().single()
-      if (error && !/duplicate key|already exists/i.test(error.message || "")) {
-        alert(`Erreur : ${error.message}`)
+      // V24.1 — via /api/loyers/save mode "declare" (server-side, locataire-only)
+      try {
+        const res = await fetch("/api/loyers/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode: "declare",
+            annonce_id: bien.id,
+            mois,
+            montant: montantAttendu,
+          }),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok || !json.ok) {
+          // Tolerate duplicate (race) silently
+          if (!/duplicate|already exists/i.test(json.error || "")) {
+            alert(`Erreur : ${json.error || res.statusText}`)
+            return
+          }
+        }
+        if (json.loyer) setLoyers(prev => [json.loyer, ...prev.filter(l => l.mois !== mois)])
+      } catch (e) {
+        alert(`Erreur réseau : ${e instanceof Error ? e.message : "inconnue"}`)
         return
       }
-      if (data) setLoyers(prev => [data, ...prev.filter(l => l.mois !== mois)])
     }
+    void locataireEmail; void proprietaireEmail; void now; // suppress unused after migration
     // Message card + notif au proprio
     const moisLabel = new Date(mois + "-01T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
     if (proprietaireEmail) {

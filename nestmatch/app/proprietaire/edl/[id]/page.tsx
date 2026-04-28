@@ -424,13 +424,23 @@ export default function EdlPage() {
       pieces_data: pieces,
       statut: statutOverride || edlExistant?.statut || "brouillon",
     }
+    // V24.1 (Paul 2026-04-29) — migration vers /api/edl/save (server-side
+    // supabaseAdmin) pour permettre REVOKE INSERT/UPDATE anon (migration 034).
     let saved: any = null
-    if (edlExistant) {
-      const { data } = await supabase.from("etats_des_lieux").update(payload).eq("id", edlExistant.id).select().single()
-      if (data) { setEdlExistant(data); saved = data }
-    } else {
-      const { data } = await supabase.from("etats_des_lieux").insert([payload]).select().single()
-      if (data) { setEdlExistant(data); saved = data }
+    try {
+      const res = await fetch("/api/edl/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(edlExistant ? { id: edlExistant.id, ...payload } : payload),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (res.ok && json.ok && json.edl) {
+        setEdlExistant(json.edl); saved = json.edl
+      } else {
+        console.error("[edl/save]", json.error || res.statusText)
+      }
+    } catch (e) {
+      console.error("[edl/save] exception", e)
     }
     setSaving(false)
     setSaved(true)
@@ -489,7 +499,14 @@ export default function EdlPage() {
 
   async function remettreEnBrouillon() {
     if (!edlExistant) return
-    await supabase.from("etats_des_lieux").update({ statut: "brouillon" }).eq("id", edlExistant.id)
+    // V24.1 — via /api/edl/save (server-side)
+    try {
+      await fetch("/api/edl/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: edlExistant.id, statut: "brouillon" }),
+      })
+    } catch { /* noop */ }
     setEdlExistant({ ...edlExistant, statut: "brouillon" })
   }
 

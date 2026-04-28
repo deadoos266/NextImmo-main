@@ -317,13 +317,19 @@ export default function ConsulterEdlPage() {
     if (!edl || !session?.user?.email || !commentaire.trim()) return
     setContesting(true)
     try {
-      const { data: updated, error } = await supabase
-        .from("etats_des_lieux")
-        .update({ statut: "conteste", commentaire_locataire: commentaire.trim() })
-        .eq("id", edl.id)
-        .select("id")
-      if (error || !updated || updated.length === 0) {
-        alert(`Contestation échouée : ${error?.message || "aucune ligne mise à jour"}`)
+      // V24.1 — via /api/edl/save (server-side avec auth check locataire)
+      const res = await fetch("/api/edl/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: edl.id,
+          statut: "conteste",
+          commentaire_locataire: commentaire.trim(),
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.ok) {
+        alert(`Contestation échouée : ${json.error || res.statusText}`)
         return
       }
       const toEmail = (edl.proprietaire_email || "").toLowerCase().trim()

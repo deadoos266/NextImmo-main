@@ -513,7 +513,14 @@ export default function Proprietaire() {
     if (!loyer) return
     const bien = biens.find(b => b.id === loyer.annonce_id)
     const nowIso = new Date().toISOString()
-    await supabase.from("loyers").update({ statut: "confirmé", date_confirmation: nowIso }).eq("id", id)
+    // V24.1 — via /api/loyers/save mode "confirm" (server-side, proprio-only)
+    try {
+      await fetch("/api/loyers/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "confirm", id, statut: "confirmé", date_confirmation: nowIso }),
+      })
+    } catch { /* noop */ }
     setLoyers(loyers.map(l => l.id === id ? { ...l, statut: "confirmé", date_confirmation: nowIso } : l))
 
     const locataireEmail = (bien?.locataire_email || "").toLowerCase()
@@ -536,10 +543,18 @@ export default function Proprietaire() {
       created_at: nowIso,
     }]).select().single()
     if (msg?.id) {
-      await supabase.from("loyers").update({
-        quittance_envoyee_at: nowIso,
-        quittance_message_id: msg.id,
-      }).eq("id", id)
+      // V24.1 — via /api/loyers/save mode "confirm" with quittance fields
+      try {
+        await fetch("/api/loyers/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode: "confirm", id,
+            quittance_envoyee_at: nowIso,
+            quittance_message_id: msg.id,
+          }),
+        })
+      } catch { /* noop */ }
     }
 
     // Génération PDF serveur + upload Storage + email Resend au locataire

@@ -432,15 +432,25 @@ function StatsInner() {
     const proprietaireEmail = (bien?.proprietaire_email || "").toLowerCase() || null
     const nowIso = new Date().toISOString()
     const statut = newLoyerConfirme ? "confirmé" : "déclaré"
-    const { data } = await supabase.from("loyers").upsert({
-      annonce_id: Number(bienId),
-      mois: newLoyerMois,
-      montant,
-      statut,
-      date_confirmation: newLoyerConfirme ? nowIso : null,
-      locataire_email: locataireEmail,
-      proprietaire_email: proprietaireEmail,
-    }, { onConflict: "annonce_id,mois" }).select().single()
+    // V24.1 — via /api/loyers/save mode "upsert" (server-side, proprio-only)
+    let data: any = null
+    try {
+      const res = await fetch("/api/loyers/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "upsert",
+          annonce_id: Number(bienId),
+          mois: newLoyerMois,
+          montant,
+          statut,
+          date_confirmation: newLoyerConfirme ? nowIso : null,
+          locataire_email: locataireEmail,
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (res.ok && json.ok && json.loyer) data = json.loyer
+    } catch { /* noop */ }
     if (data) {
       setLoyers(prev => [...prev.filter(l => l.mois !== newLoyerMois), data])
       // Si l'user a coche "confirme", on envoie directement la quittance par
@@ -476,13 +486,22 @@ function StatsInner() {
     // mise à jour optimiste — sinon le proprio voit "confirmé" alors que
     // la DB est restée "en attente" (silent-failure-hunter HIGH#3).
     const nowIso = new Date().toISOString()
-    const { error: updateErr } = await supabase
-      .from("loyers")
-      .update({ statut: "confirmé", date_confirmation: nowIso })
-      .eq("id", id)
-    if (updateErr) {
-      console.error("[stats] confirmerLoyer: update failed", updateErr)
-      alert("Impossible de confirmer le loyer pour le moment. Vérifiez votre connexion et réessayez.")
+    // V24.1 — via /api/loyers/save mode "confirm"
+    try {
+      const res = await fetch("/api/loyers/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "confirm", id, statut: "confirmé", date_confirmation: nowIso }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.ok) {
+        console.error("[stats] confirmerLoyer: update failed", json.error || res.statusText)
+        alert("Impossible de confirmer le loyer pour le moment. Vérifiez votre connexion et réessayez.")
+        return
+      }
+    } catch (e) {
+      console.error("[stats] confirmerLoyer: exception", e)
+      alert("Impossible de confirmer le loyer pour le moment.")
       return
     }
     setLoyers(prev => prev.map(l => l.id === id ? { ...l, statut: "confirmé", date_confirmation: nowIso } : l))
@@ -522,10 +541,18 @@ function StatsInner() {
 
     // 3. Trace l'envoi côté loyer
     if (msg?.id) {
-      await supabase.from("loyers").update({
-        quittance_envoyee_at: nowIso,
-        quittance_message_id: msg.id,
-      }).eq("id", id)
+      // V24.1 — via /api/loyers/save mode "confirm" (quittance fields)
+      try {
+        await fetch("/api/loyers/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode: "confirm", id,
+            quittance_envoyee_at: nowIso,
+            quittance_message_id: msg.id,
+          }),
+        })
+      } catch { /* noop */ }
     }
 
     // 4. Génération PDF serveur + upload Storage + email Resend au locataire
