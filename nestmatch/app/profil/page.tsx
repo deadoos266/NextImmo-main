@@ -418,7 +418,10 @@ function Profil() {
     <main style={{ minHeight: "100vh", background: km.beige, fontFamily: "'DM Sans', sans-serif" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,500&display=swap');`}</style>
 
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 16px" : "48px" }}>
+      {/* V4.8 — padding tablette adapte (24px) pour eviter que le contenu
+          colle au bord ou que les cards soient compressees. Mobile inchange,
+          desktop large garde 48px. */}
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 16px" : "clamp(24px, 5vw, 48px)" }}>
 
         <div style={{ background: km.white, border: `1px solid ${km.line}`, borderRadius: 20, padding: isMobile ? "20px 18px" : 32, marginBottom: 20, display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "space-between", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 16 : 0, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 14 : 24 }}>
@@ -926,6 +929,8 @@ function ProfilTOC({ active, isMobile }: { active: string; isMobile: boolean }) 
 // V2.6 (Paul 2026-04-27) — picker tri-state par equipement.
 // 4 etats : indispensable / souhaite / indifferent / refuse. Hors du composant
 // principal pour preserver le focus (convention CLAUDE.md).
+// V4.1 (Paul 2026-04-28) — sur tablette/mobile (< 1024px), stack vertical
+// pour eviter overflow horizontal des 4 boutons + label.
 function EquipementPreferencePicker({
   label, value, onChange, isMobile,
 }: {
@@ -934,6 +939,17 @@ function EquipementPreferencePicker({
   onChange: (v: EquipPref) => void
   isMobile: boolean
 }) {
+  // V4.1 — detection tablette inline (640-1023px) pour stack aussi
+  const [isTablet, setIsTablet] = useState(false)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const mq = window.matchMedia("(max-width: 1023px)")
+    const update = () => setIsTablet(mq.matches)
+    update()
+    mq.addEventListener("change", update)
+    return () => mq.removeEventListener("change", update)
+  }, [])
+  const stack = isMobile || isTablet
   const opts: Array<{ v: EquipPref; l: string; tone: string }> = [
     { v: "indispensable", l: "Indispensable", tone: "#16a34a" },
     { v: "souhaite",      l: "Souhaité",      tone: "#0ea5e9" },
@@ -943,10 +959,10 @@ function EquipementPreferencePicker({
   return (
     <div style={{
       display: "flex",
-      flexDirection: isMobile ? "column" : "row",
-      alignItems: isMobile ? "stretch" : "center",
+      flexDirection: stack ? "column" : "row",
+      alignItems: stack ? "stretch" : "center",
       justifyContent: "space-between",
-      gap: isMobile ? 8 : 12,
+      gap: stack ? 8 : 12,
       padding: "10px 12px",
       borderRadius: 12,
       border: `1px solid ${km.line}`,
@@ -1106,13 +1122,17 @@ function SettingsCardInline({ compact = false }: { compact?: boolean }) {
       </div>
     )
   }
+  // V4.8 — sur tablette etroite (768-900px), le titre + paragraphe + lien
+  // se chevauchaient parce que `flexWrap: wrap` faisait wrap mais le lien
+  // gardait une largeur \"nowrap\" qui depassait. Padding reduit + min-width:0
+  // sur le bloc texte permet de wrap proprement.
   return (
-    <div style={{ background: km.white, border: `1px solid ${km.line}`, borderRadius: 20, padding: 26, marginTop: 24, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
-      <div>
+    <div style={{ background: km.white, border: `1px solid ${km.line}`, borderRadius: 20, padding: "20px 22px", marginTop: 24, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+      <div style={{ minWidth: 0, flex: "1 1 240px" }}>
         <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 20, letterSpacing: "-0.3px", color: km.ink, margin: "0 0 6px" }}>Paramètres du compte</h2>
         <p style={{ fontSize: 13, color: km.muted, margin: 0, lineHeight: 1.5 }}>Mot de passe, apparence (clair/sombre), notifications, suppression de compte.</p>
       </div>
-      <Link href="/parametres" style={{ background: km.ink, color: km.white, borderRadius: 999, padding: "10px 22px", textDecoration: "none", fontWeight: 600, fontSize: 11, whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+      <Link href="/parametres" style={{ background: km.ink, color: km.white, borderRadius: 999, padding: "10px 22px", textDecoration: "none", fontWeight: 600, fontSize: 11, whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.3px", flexShrink: 0 }}>
         Ouvrir les paramètres →
       </Link>
     </div>
