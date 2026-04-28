@@ -268,3 +268,51 @@ describe("R10.6 — estExclu + animaux_politique prend le pas sur boolean", () =
     expect(excluded).toBe(true)
   })
 })
+
+
+// ─── V2.2 — tolerance_budget_pct + dpe_min_actif (Paul 2026-04-27) ────────
+describe("V2.2 estExclu — tolerance_budget_pct user-controlled", () => {
+  const annonce: Annonce = { ville: "paris", prix: 1300 }
+
+  it("tolerance default 20% — annonce 1300/budget 1000 (=130%) → exclue", () => {
+    const exc = estExclu(annonce, { budget_max: 1000 })
+    expect(exc).toBe(true)
+  })
+
+  it("tolerance 50% — annonce 1300/budget 1000 (=130%) → pas exclue", () => {
+    const exc = estExclu(annonce, { budget_max: 1000, tolerance_budget_pct: 50 })
+    expect(exc).toBe(false)
+  })
+
+  it("tolerance 0% — annonce 1100/budget 1000 → exclue (au-delà strict)", () => {
+    const exc = estExclu({ ville: "paris", prix: 1100 }, { budget_max: 1000, tolerance_budget_pct: 0 })
+    expect(exc).toBe(true)
+  })
+
+  it("tolerance 0% — annonce 1000/budget 1000 → pas exclue (égalité OK)", () => {
+    const exc = estExclu({ ville: "paris", prix: 1000 }, { budget_max: 1000, tolerance_budget_pct: 0 })
+    expect(exc).toBe(false)
+  })
+})
+
+describe("V2.2 estExclu — dpe_min_actif filtre dur", () => {
+  it("dpe_min=C + dpe_min_actif=true + annonce DPE F → exclue", () => {
+    const exc = estExclu({ dpe: "F" }, { dpe_min: "C", dpe_min_actif: true })
+    expect(exc).toBe(true)
+  })
+
+  it("dpe_min=C + dpe_min_actif=true + annonce DPE B → pas exclue (B mieux que C)", () => {
+    const exc = estExclu({ dpe: "B" }, { dpe_min: "C", dpe_min_actif: true })
+    expect(exc).toBe(false)
+  })
+
+  it("dpe_min=C + dpe_min_actif=false → pas exclue (DPE pas filtre dur)", () => {
+    const exc = estExclu({ dpe: "F" }, { dpe_min: "C", dpe_min_actif: false })
+    expect(exc).toBe(false)
+  })
+
+  it("dpe_min=C + dpe_min_actif absent → pas exclue (default OFF)", () => {
+    const exc = estExclu({ dpe: "F" }, { dpe_min: "C" })
+    expect(exc).toBe(false)
+  })
+})

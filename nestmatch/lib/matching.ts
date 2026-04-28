@@ -30,6 +30,18 @@ export interface Profil {
   fibre?: boolean
   ascenseur?: boolean
   dpe_min?: string
+  // V2.2 (Paul 2026-04-27) — nouveaux champs matching v2 (migration 026).
+  /** Si true, dpe_min est utilise comme filtre dur (annonces pire DPE
+   *  exclues). Si false ou absent, le DPE est juste un bonus de score. */
+  dpe_min_actif?: boolean
+  /** Tolerance budget en pourcentage (default 20). Remplace le hardcode
+   *  1.20 dans estExclu. User-controlled via slider /profil. */
+  tolerance_budget_pct?: number
+  /** Rayon recherche km depuis ville_souhaitee. Si defini, score bonus
+   *  geographique (haversine). Lu en V2.3. */
+  rayon_recherche_km?: number | null
+  /** Tri-state per equipement (V2.4). Lu via getEquipementPreference. */
+  preferences_equipements?: Record<string, "indispensable" | "souhaite" | "indifferent" | "refuse"> | null
   // R10.6 — dérivés du dossier locataire, lus depuis table `profils`.
   // `fumeur` / `nb_occupants` existent depuis la baseline ; `date_naissance` depuis 007.
   // `date_naissance` → on calcule l'âge à la volée, pour comparaison avec annonce.age_min/age_max.
@@ -99,9 +111,22 @@ export function estExclu(annonce: Annonce, profil: Profil): boolean {
     if (!vA.includes(vP) && !vP.includes(vA)) return true
   }
 
-  // Budget dépassé de plus de 20%
+  // Budget depasse au-dela de la tolerance user-controlled (V2.2 Paul 2026-04-27).
+  // Default 20% si tolerance_budget_pct absent (compat ancien profil).
   if (profil.budget_max && annonce.prix) {
-    if (annonce.prix > profil.budget_max * 1.20) return true
+    const tolPct = typeof profil.tolerance_budget_pct === "number" && profil.tolerance_budget_pct >= 0
+      ? profil.tolerance_budget_pct
+      : 20
+    if (annonce.prix > profil.budget_max * (1 + tolPct / 100)) return true
+  }
+
+  // DPE filtre dur (V2.2) — uniquement si dpe_min_actif=true et dpe_min defini.
+  // Ordre des classes : A (meilleur) → G (pire). On compare via index.
+  if (profil.dpe_min_actif === true && profil.dpe_min && annonce.dpe) {
+    const order = ["A", "B", "C", "D", "E", "F", "G"]
+    const seuil = order.indexOf(profil.dpe_min.toUpperCase())
+    const annonceIdx = order.indexOf(annonce.dpe.toUpperCase())
+    if (seuil >= 0 && annonceIdx >= 0 && annonceIdx > seuil) return true
   }
 
   // Animaux refusés — prise en compte du nouveau champ `animaux_politique`
