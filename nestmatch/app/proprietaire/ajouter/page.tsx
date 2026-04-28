@@ -102,6 +102,9 @@ export default function AjouterBien() {
   const [step, setStep] = useState<StepNum>(1)
   const [saving, setSaving] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  // V3.2 (Paul 2026-04-28) — modal de confirmation avant publish, derniere
+  // chance pour le proprio de relire les essentiels (titre, ville, prix).
+  const [showPublishConfirm, setShowPublishConfirm] = useState(false)
   const [photos, setPhotos] = useState<string[]>([])
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
@@ -591,7 +594,7 @@ export default function AjouterBien() {
                 Suivant →
               </KMButton>
             ) : (
-              <KMButton size="lg" onClick={publier} disabled={saving || !canAdvance}>
+              <KMButton size="lg" onClick={() => setShowPublishConfirm(true)} disabled={saving || !canAdvance}>
                 {saving ? "Publication…" : dejaLoue ? "Enregistrer le bien" : "Publier l'annonce"}
               </KMButton>
             )}
@@ -608,6 +611,21 @@ export default function AjouterBien() {
           <p style={{ fontSize: 12, color: km.errText, marginTop: 10, textAlign: "right" }}>
             Le loyer est requis pour publier.
           </p>
+        )}
+
+        {showPublishConfirm && (
+          <PublishConfirmModal
+            form={form}
+            checks={checks}
+            completion={completion}
+            saving={saving}
+            dejaLoue={dejaLoue}
+            onCancel={() => setShowPublishConfirm(false)}
+            onConfirm={async () => {
+              setShowPublishConfirm(false)
+              await publier()
+            }}
+          />
         )}
 
         {showPreview && (
@@ -1596,6 +1614,132 @@ function Step7Publier({
 }
 
 // ─── Modal de prévisualisation (inchangée, migrée aux tokens km) ───────────
+// V3.2 — modal de confirmation avant publish. Liste les checks + valeurs cles
+// (titre, ville, prix). Bouton \"Publier\" finalise, \"Modifier\" ferme la modal.
+function PublishConfirmModal({
+  form, checks, completion, saving, dejaLoue, onCancel, onConfirm,
+}: {
+  form: AnnonceForm
+  checks: Array<{ key: string; label: string; ok: boolean; editStep: StepNum }>
+  completion: number
+  saving: boolean
+  dejaLoue: boolean
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  const missing = checks.filter(c => !c.ok)
+  return (
+    <div
+      onClick={onCancel}
+      style={{
+        position: "fixed", inset: 0, zIndex: 9000,
+        background: "rgba(20, 18, 14, 0.55)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 16, fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Confirmer la publication"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: km.white, borderRadius: 24, padding: "26px 28px",
+          maxWidth: 520, width: "100%", maxHeight: "90vh", overflow: "auto",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
+        }}
+      >
+        <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 8px" }}>
+          Dernier regard
+        </p>
+        <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 26, color: km.ink, margin: "0 0 4px" }}>
+          {dejaLoue ? "Enregistrer ce bien ?" : "Publier cette annonce ?"}
+        </h2>
+        <p style={{ fontSize: 13, color: km.muted, margin: "0 0 18px", lineHeight: 1.55 }}>
+          {dejaLoue
+            ? "Ce bien sera enregistre dans votre dashboard sans apparaitre en public."
+            : "Apres publication, l'annonce sera visible sur la vitrine et accessible aux candidats."}
+        </p>
+
+        {/* Recap valeurs cles */}
+        <div style={{ background: km.beige, border: `1px solid ${km.line}`, borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}>
+          <RecapRow label="Titre" value={form.titre || "—"} />
+          <RecapRow label="Ville" value={form.ville || "—"} />
+          <RecapRow label="Loyer" value={form.prix ? `${form.prix} €/mois` : "—"} />
+          <RecapRow label="Surface" value={form.surface ? `${form.surface} m²` : "—"} />
+          <RecapRow label="Type" value={form.type_bien || "—"} last />
+        </div>
+
+        {/* Checklist completude */}
+        <div style={{ marginBottom: 18 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 8px" }}>
+            Complétude · {completion}%
+          </p>
+          {missing.length === 0 ? (
+            <p style={{ fontSize: 12, color: km.successText, margin: 0 }}>
+              ✓ Tous les essentiels sont remplis.
+            </p>
+          ) : (
+            <ul style={{ margin: 0, padding: "0 0 0 16px", display: "flex", flexDirection: "column", gap: 3 }}>
+              {missing.map(c => (
+                <li key={c.key} style={{ fontSize: 12, color: km.warnText, lineHeight: 1.5 }}>
+                  {c.label} non rempli (étape {c.editStep})
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={saving}
+            style={{
+              padding: "11px 22px", borderRadius: 999,
+              background: "transparent", border: `1px solid ${km.line}`,
+              color: km.ink, fontWeight: 600, fontSize: 12,
+              cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit",
+              textTransform: "uppercase", letterSpacing: "0.3px",
+            }}
+          >
+            Modifier
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={saving}
+            style={{
+              padding: "11px 24px", borderRadius: 999,
+              background: km.ink, border: "none",
+              color: km.white, fontWeight: 700, fontSize: 12,
+              cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit",
+              textTransform: "uppercase", letterSpacing: "0.3px",
+              opacity: saving ? 0.6 : 1,
+            }}
+          >
+            {saving ? "Publication…" : (dejaLoue ? "Enregistrer" : "Publier maintenant")}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function RecapRow({ label, value, last = false }: { label: string; value: string; last?: boolean }) {
+  return (
+    <div style={{
+      display: "flex", justifyContent: "space-between", gap: 12,
+      padding: "8px 0",
+      borderBottom: last ? "none" : `1px solid ${km.line}`,
+      fontSize: 13,
+    }}>
+      <span style={{ color: km.muted }}>{label}</span>
+      <span style={{ color: km.ink, fontWeight: 600, textAlign: "right", maxWidth: "60%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</span>
+    </div>
+  )
+}
+
 function PreviewModal({ form, toggles, photos, onClose }: { form: AnnonceForm; toggles: AnnonceToggles; photos: string[]; onClose: () => void }) {
   const loyerTotal = (parseInt(form.prix || "0", 10) || 0) + (parseInt(form.charges || "0", 10) || 0)
   const [lightbox, setLightbox] = useState<{ open: boolean; index: number }>({ open: false, index: 0 })
