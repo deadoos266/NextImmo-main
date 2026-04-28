@@ -157,7 +157,7 @@ function Profil() {
     // 3-state : "peu_importe" | "oui" | "non". Mappé en DB sur boolean nullable.
     meuble_pref: "peu_importe",
     // V2.6 — defaults : tolerance 20% (legacy), rayon vide (pas de bonus geo)
-    tolerance_budget_pct: "20",
+    tolerance_budget_pct: "10",
     rayon_recherche_km: "",
   })
   const [toggles, setToggles] = useState<TogglesShape>({
@@ -204,7 +204,7 @@ function Profil() {
                 : data.meuble ? "oui" : "non",
               // V2.6 — defaults safe si colonnes absentes (compat ancien profil)
               tolerance_budget_pct: typeof data.tolerance_budget_pct === "number"
-                ? String(data.tolerance_budget_pct) : "20",
+                ? String(data.tolerance_budget_pct) : "10",
               rayon_recherche_km: typeof data.rayon_recherche_km === "number"
                 ? String(data.rayon_recherche_km) : "",
             })
@@ -278,7 +278,7 @@ function Profil() {
       meuble: meubleDb,
       ...toggles,
       // V2.6 — matching v2 fields
-      tolerance_budget_pct: form.tolerance_budget_pct ? parseInt(form.tolerance_budget_pct) : 20,
+      tolerance_budget_pct: form.tolerance_budget_pct ? parseInt(form.tolerance_budget_pct) : 10,
       rayon_recherche_km: form.rayon_recherche_km ? parseInt(form.rayon_recherche_km) : null,
       preferences_equipements: prefsEquip,
       // V7 chantier 2 — quartier prefere
@@ -329,8 +329,8 @@ function Profil() {
       if (["budget_min", "budget_max", "surface_min", "surface_max", "pieces_min", "chambres_min", "nb_occupants", "revenus_mensuels", "rayon_recherche_km"].includes(k)) {
         patch[k] = toInt(raw)
       } else if (k === "tolerance_budget_pct") {
-        // V2.6 — slider 0..50, default 20 si vide
-        patch[k] = raw ? parseInt(raw) : 20
+        // V9.2 — slider 0..50, default 10 si vide (avant 20).
+        patch[k] = raw ? parseInt(raw) : 10
       } else if (k === "meuble_pref") {
         // 3-state UI → DB boolean nullable
         patch.meuble = raw === "peu_importe" ? null : raw === "oui"

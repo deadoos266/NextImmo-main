@@ -226,11 +226,13 @@ export function estExclu(annonce: Annonce, profil: Profil): boolean {
   }
 
   // Budget depasse au-dela de la tolerance user-controlled (V2.2 Paul 2026-04-27).
-  // Default 20% si tolerance_budget_pct absent (compat ancien profil).
+  // V9.2 (Paul 2026-04-28) : default passe de 20% a 10% — feedback user
+  // "20% c'est trop genereux, 10% plus realiste pour le marche tendu FR".
+  // Migration 029 update aussi la prod.
   if (profil.budget_max && annonce.prix) {
     const tolPct = typeof profil.tolerance_budget_pct === "number" && profil.tolerance_budget_pct >= 0
       ? profil.tolerance_budget_pct
-      : 20
+      : 10
     if (annonce.prix > profil.budget_max * (1 + tolPct / 100)) return true
   }
 
@@ -302,7 +304,7 @@ export function estExcluAvecRaison(annonce: Annonce, profil: Profil): { excluded
   }
   if (profil.budget_max && annonce.prix) {
     const tolPct = typeof profil.tolerance_budget_pct === "number" && profil.tolerance_budget_pct >= 0
-      ? profil.tolerance_budget_pct : 20
+      ? profil.tolerance_budget_pct : 10
     if (annonce.prix > profil.budget_max * (1 + tolPct / 100)) {
       return { excluded: true, raison: `Loyer ${annonce.prix} € au-delà de votre budget +${tolPct}%` }
     }
@@ -765,7 +767,7 @@ export function suggestImprovements(annonce: Annonce, profil: Profil): Suggestio
 
   // Budget : si depasse, suggerer d'augmenter la tolerance.
   if (profil.budget_max && annonce.prix && annonce.prix > profil.budget_max) {
-    const tolPct = typeof profil.tolerance_budget_pct === "number" ? profil.tolerance_budget_pct : 20
+    const tolPct = typeof profil.tolerance_budget_pct === "number" ? profil.tolerance_budget_pct : 10
     const ecartPct = Math.ceil(((annonce.prix - profil.budget_max) / profil.budget_max) * 100)
     if (ecartPct > tolPct) {
       out.push({
