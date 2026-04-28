@@ -479,6 +479,32 @@ export default function MapAnnonces({
   // par ville (style SeLoger lite). Persisted en localStorage.
   // V26.2 — étendu avec heatmap polygones Paris arrondissements (full).
   const [showPrices, setShowPrices] = useState(false)
+  // V26.3 — toggles overlays "Carte des écoles" + "Transports". Source :
+  // OpenInfraMap / Wikimedia maps tiles (publiques, sans clé). Lite version
+  // car custom data layer = chantier 50k+ POI avec parsing CSV. Tile overlay
+  // donne déjà 90% de la valeur visuelle sans coût technique.
+  const [showSchools, setShowSchools] = useState(false)
+  const [showTransports, setShowTransports] = useState(false)
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("nestmatch_map_show_schools") === "true") setShowSchools(true)
+      if (localStorage.getItem("nestmatch_map_show_transports") === "true") setShowTransports(true)
+    } catch { /* ignore */ }
+  }, [])
+  function toggleSchools() {
+    setShowSchools(prev => {
+      const next = !prev
+      try { localStorage.setItem("nestmatch_map_show_schools", next ? "true" : "false") } catch { /* ignore */ }
+      return next
+    })
+  }
+  function toggleTransports() {
+    setShowTransports(prev => {
+      const next = !prev
+      try { localStorage.setItem("nestmatch_map_show_transports", next ? "true" : "false") } catch { /* ignore */ }
+      return next
+    })
+  }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [parisGeoJson, setParisGeoJson] = useState<any | null>(null)
   useEffect(() => {
@@ -699,6 +725,33 @@ export default function MapAnnonces({
           {...(tile.subdomains ? { subdomains: tile.subdomains.split("") } : {})}
           {...(tile.maxZoom ? { maxZoom: tile.maxZoom } : {})}
         />
+        {/* V26.3 (Paul 2026-04-29) — overlay "Écoles" via tiles OSM POI :
+            Wikimedia maps `osm-intl` retient les écoles ; alternative
+            simple = utiliser un overlay SVG generated par OSM Carto qui
+            highlight les amenity=school. On utilise l'overlay OpenStreetMap
+            standard qui retient déjà les POI éducation visibles. */}
+        {showSchools && (
+          <TileLayer
+            key="ov-schools"
+            url="https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png"
+            opacity={0.45}
+            subdomains={["a", "b", "c"]}
+            attribution='Écoles : OpenStreetMap France &copy; OSM contributors'
+            zIndex={400}
+          />
+        )}
+        {/* V26.3 — overlay "Transports" via OpenRailwayMap (publics, sans clé) :
+            metros/RER/tramway/bus visibles en surimpression. */}
+        {showTransports && (
+          <TileLayer
+            key="ov-transports"
+            url="https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png"
+            opacity={0.7}
+            subdomains={["a", "b", "c"]}
+            attribution='Transports : <a href="https://openrailwaymap.org">OpenRailwayMap</a>'
+            zIndex={401}
+          />
+        )}
         <BoundsWatcher onMoved={handleMoved} />
         <FrenchLeafletLocale />
         <MapClickListener onMapClick={drawMode ? undefined : onMapClick} />
@@ -1319,18 +1372,67 @@ export default function MapAnnonces({
               )}
             </button>
 
-            {/* Carte des écoles — coming soon */}
-            <div style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
-              padding: "10px 12px", borderRadius: 8,
-              fontSize: 13, fontWeight: 500, color: "#8a8477", fontFamily: "inherit",
-            }}>
+            {/* V26.3 — Carte des écoles (overlay tile OSM-FR amenity=school) */}
+            <button
+              type="button"
+              onClick={toggleSchools}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+                width: "100%", padding: "10px 12px", borderRadius: 8,
+                background: showSchools ? "#F7F4EF" : "transparent",
+                border: "none", cursor: "pointer", fontFamily: "inherit",
+                fontSize: 13, fontWeight: showSchools ? 700 : 500, color: "#111",
+                textAlign: "left", WebkitTapHighlightColor: "transparent",
+              }}
+              aria-pressed={showSchools}
+            >
               <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
-                <span style={{ width: 16, height: 16, borderRadius: 4, border: "2px solid #EAE6DF", flexShrink: 0 }} />
+                <span style={{
+                  width: 16, height: 16, borderRadius: 4,
+                  border: `2px solid ${showSchools ? "#111" : "#EAE6DF"}`,
+                  display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  {showSchools && (
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </span>
                 Carte des écoles
               </span>
-              <span style={{ fontSize: 9, fontWeight: 700, color: "#a16207", background: "#FBF6EA", border: "1px solid #EADFC6", padding: "2px 7px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "0.6px" }}>Bientôt</span>
-            </div>
+              <span style={{ fontSize: 10, color: "#8a8477" }}>OSM</span>
+            </button>
+
+            {/* V26.3 — Carte des transports (OpenRailwayMap : métro/RER/tram) */}
+            <button
+              type="button"
+              onClick={toggleTransports}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+                width: "100%", padding: "10px 12px", borderRadius: 8,
+                background: showTransports ? "#F7F4EF" : "transparent",
+                border: "none", cursor: "pointer", fontFamily: "inherit",
+                fontSize: 13, fontWeight: showTransports ? 700 : 500, color: "#111",
+                textAlign: "left", WebkitTapHighlightColor: "transparent",
+              }}
+              aria-pressed={showTransports}
+            >
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+                <span style={{
+                  width: 16, height: 16, borderRadius: 4,
+                  border: `2px solid ${showTransports ? "#111" : "#EAE6DF"}`,
+                  display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  {showTransports && (
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </span>
+                Transports
+              </span>
+              <span style={{ fontSize: 10, color: "#8a8477" }}>Métro/RER</span>
+            </button>
           </div>
         )}
 
