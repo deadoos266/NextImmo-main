@@ -1778,6 +1778,66 @@ export default function Dossier() {
       <main style={STYLES.main}>
         <div style={STYLES.container(isMobile)}>
 
+          {/* V6.3 (Paul 2026-04-28) — Hub tabs : Mes critères / Mon dossier
+              affichees au top de /dossier pour visualiser l'unification avec
+              /profil. Le user a flag "la difference entre profil et dossier
+              n'est pas claire". /dossier reste l'onglet actif (design pixel-
+              perfect preserve). Lien vers /profil pour switcher. */}
+          <div style={{
+            display: "flex",
+            gap: 0,
+            marginBottom: 24,
+            borderBottom: "1px solid #EAE6DF",
+            overflowX: "auto",
+          }}>
+            <a
+              href="/profil"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "12px 18px 14px",
+                color: "#8a8477",
+                fontSize: 14,
+                fontWeight: 500,
+                fontFamily: "inherit",
+                whiteSpace: "nowrap",
+                textDecoration: "none",
+                transition: "color 160ms",
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+                <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+                <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+              </svg>
+              Mes critères
+            </a>
+            <span
+              aria-current="page"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "12px 18px 14px",
+                color: "#111",
+                fontSize: 14,
+                fontWeight: 700,
+                fontFamily: "inherit",
+                whiteSpace: "nowrap",
+                borderBottom: "2px solid #111",
+                marginBottom: -1,
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+              Mon dossier
+            </span>
+          </div>
+
           {/* ══════════ HERO ÉDITORIAL ══════════ */}
           <section style={STYLES.hero.wrap(isMobile)}>
             <div style={STYLES.hero.eyebrowRow}>

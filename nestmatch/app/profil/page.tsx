@@ -519,6 +519,69 @@ function Profil() {
           ))}
         </nav>
 
+        {/* V6.3 (Paul 2026-04-28) — Hub tabs : Mes critères / Mon dossier.
+            Le user a flag "la difference entre profil et dossier n'est pas
+            claire". Ces 2 tabs visualisent l'unification. /profil reste
+            l'onglet actif (critères + équipements). /dossier conserve son
+            design pixel-perfect — on link vers la route inchangee. */}
+        {!proprietaireActive && (
+          <div style={{
+            display: "flex",
+            gap: 0,
+            marginBottom: 20,
+            borderBottom: `1px solid ${km.line}`,
+            overflowX: "auto",
+          }}>
+            <span
+              aria-current="page"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "12px 18px 14px",
+                color: km.ink,
+                fontSize: 14,
+                fontWeight: 700,
+                fontFamily: "inherit",
+                whiteSpace: "nowrap",
+                borderBottom: `2px solid ${km.ink}`,
+                marginBottom: -1,
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+                <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+                <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+              </svg>
+              Mes critères
+              <span style={{ marginLeft: 4, padding: "1px 8px", borderRadius: 999, background: km.beige, fontSize: 10, fontWeight: 700, color: scoreColor }}>{scoreCompletion}%</span>
+            </span>
+            <Link
+              href="/dossier"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "12px 18px 14px",
+                color: km.muted,
+                fontSize: 14,
+                fontWeight: 500,
+                fontFamily: "inherit",
+                whiteSpace: "nowrap",
+                textDecoration: "none",
+                transition: "color 160ms",
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+              Mon dossier
+            </Link>
+          </div>
+        )}
+
         {/* Bannière succès après création guidée */}
         {createdBannerOpen && !proprietaireActive && (
           <div style={{ background: km.successBg, border: `1px solid ${km.successLine}`, borderRadius: 16, padding: "14px 18px", marginBottom: 20, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
