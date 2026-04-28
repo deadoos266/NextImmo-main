@@ -1272,19 +1272,26 @@ function MessagesInner() {
   // a juste le header thread compact (~60px).
   // Detection mobile inline via matchMedia (le useResponsive hook est plus
   // bas dans le composant, on ne peut pas l'utiliser ici sans hoisting).
+  // V11.10 (Paul 2026-04-28) — etend le pattern : event 'km:thread-active'
+  // dispatch sur TOUTE viewport (mobile + desktop) pour cacher Footer +
+  // AdminBar quand on est dans un thread. UX Instagram/WhatsApp : zero
+  // chrome parasite autour de la conversation, focus messagerie pure.
   useEffect(() => {
     if (typeof window === "undefined") return
     const mq = window.matchMedia("(max-width: 767px)")
     function update() {
-      const inThread = mq.matches && convActive !== null
-      window.dispatchEvent(new CustomEvent("km:thread-mobile-open", { detail: { open: inThread } }))
+      const inThread = convActive !== null
+      const inThreadMobile = mq.matches && inThread
+      window.dispatchEvent(new CustomEvent("km:thread-mobile-open", { detail: { open: inThreadMobile } }))
+      window.dispatchEvent(new CustomEvent("km:thread-active", { detail: { open: inThread } }))
     }
     update()
     mq.addEventListener("change", update)
     return () => {
       mq.removeEventListener("change", update)
-      // Cleanup au unmount : remet la Navbar visible
+      // Cleanup au unmount : remet Navbar/Footer/AdminBar visibles.
       window.dispatchEvent(new CustomEvent("km:thread-mobile-open", { detail: { open: false } }))
+      window.dispatchEvent(new CustomEvent("km:thread-active", { detail: { open: false } }))
     }
   }, [convActive])
   // Historique annulées dans la modale : collapsible local (fermé par défaut).

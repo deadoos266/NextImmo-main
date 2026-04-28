@@ -1,4 +1,5 @@
 "use client"
+import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
 import { useResponsive } from "../hooks/useResponsive"
 import { useRole } from "../providers"
@@ -28,8 +29,24 @@ export default function Footer() {
   // si l'état correspondant existe. Cohérent avec le menu Navbar.
   const { hasCurrentHousing, hasPastHousing } = useUserHousingState()
 
+  // V11.10 (Paul 2026-04-28) — cache le Footer quand on est dans un thread
+  // /messages (mobile + desktop). Pattern Instagram/WhatsApp : focus pur
+  // sur la conversation, aucun chrome parasite. Listener sur l'event
+  // 'km:thread-active' dispatch par /messages/page.tsx.
+  const [threadActive, setThreadActive] = useState(false)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    function onThread(e: Event) {
+      setThreadActive((e as CustomEvent).detail?.open === true)
+    }
+    window.addEventListener("km:thread-active", onThread)
+    return () => window.removeEventListener("km:thread-active", onThread)
+  }, [])
+
   // Masqué sur /annonces (scroll isolé, layout plein viewport)
   if (pathname === "/annonces" || pathname?.startsWith("/annonces?")) return null
+  // V11.10 — masque sur /messages quand un thread est ouvert.
+  if (threadActive) return null
   // isTablet destructuré mais non utilisé — volontairement laissé pour stabilité
   // (évite un churn si on ajoute un comportement tablette plus tard).
   void isTablet

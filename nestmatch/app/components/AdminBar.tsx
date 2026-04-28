@@ -1,16 +1,33 @@
 "use client"
 import Link from "next/link"
+import { useEffect, useState } from "react"
 import { useRole } from "../providers"
 
 /**
  * Bandeau affiché uniquement pour les admins sur toutes les pages.
  * Rappelle le mode admin et permet de switcher rapidement la vue
  * entre locataire et propriétaire pour tester les 2 flows.
+ *
+ * V11.10 (Paul 2026-04-28) — masqué quand on est dans un thread /messages
+ * (mobile + desktop). Pattern Instagram/WhatsApp : conversation full-bleed,
+ * zero chrome parasite. Listener sur 'km:thread-active' dispatch par
+ * /messages/page.tsx.
  */
 export default function AdminBar() {
   const { isAdmin, proprietaireActive, setProprietaireActive, mounted } = useRole()
 
+  const [threadActive, setThreadActive] = useState(false)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    function onThread(e: Event) {
+      setThreadActive((e as CustomEvent).detail?.open === true)
+    }
+    window.addEventListener("km:thread-active", onThread)
+    return () => window.removeEventListener("km:thread-active", onThread)
+  }, [])
+
   if (!mounted || !isAdmin) return null
+  if (threadActive) return null
 
   return (
     <div style={{
