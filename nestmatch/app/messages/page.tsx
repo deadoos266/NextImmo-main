@@ -2936,7 +2936,7 @@ function MessagesInner() {
   )
 
   return (
-    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
+    <main style={{ minHeight: "100dvh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
       <AnnulerVisiteDialog
         open={!!visiteCancelTarget}
         mode={visiteCancelTarget?.mode}
@@ -3180,8 +3180,11 @@ function MessagesInner() {
       </Modal>
       {/* Container full-width — maxWidth 1700 (au lieu de 1400 handoff) pour
           remplir mieux les grands écrans. Padding latéral réduit 24px desktop
-          au lieu de 48px → la messagerie respire vraiment edge-to-edge. */}
-      <div style={{ maxWidth: isMobile && convActiveData ? "100%" : 1700, margin: "0 auto", padding: isMobile && convActiveData ? 0 : isMobile ? "20px 16px" : "24px 24px 40px" }}>
+          au lieu de 48px → la messagerie respire vraiment edge-to-edge.
+          V11.15 (Paul 2026-04-28) — mobile list : padding-bottom 0 pour que
+          le panel touche le bord bas du viewport (user voulait "ça colle en
+          bas du téléphone"). Mobile thread : déjà 0 partout. */}
+      <div style={{ maxWidth: isMobile && convActiveData ? "100%" : 1700, margin: "0 auto", padding: isMobile && convActiveData ? 0 : isMobile ? "20px 16px 0" : "24px 24px 40px" }}>
         {/* Header éditorial — calque handoff messages.jsx L131-140.
             Eyebrow "Messagerie" + titre "Conversations" 34px weight 500 +
             trust signal discret à droite (chiffré E2E + archivage 3 ans). */}
@@ -3251,7 +3254,13 @@ function MessagesInner() {
           // V4.9 — fix chevauchement iOS : 100vh inclut la zone Safari URL bar
           // dynamique, ce qui fait deborder le composer en dessous du bas
           // visible. 100dvh suit la viewport reelle (Safari 15.4+, Chrome 108+).
-          height: isMobile ? "calc(100dvh - 72px)" : "76vh",
+          // V11.15 (Paul 2026-04-28) — mobile thread : Navbar hidden (V11.1),
+          // donc panel = 100dvh full. Mobile list : Navbar visible 72px,
+          // donc panel = 100dvh - 72. Sans cette difference, en mode thread
+          // on perdait 72px en bas (gap blanc avant la safari URL bar).
+          height: isMobile
+            ? (convActiveData ? "100dvh" : "calc(100dvh - 72px)")
+            : "76vh",
           background: isMobile ? "transparent" : "#fff",
           border: isMobile ? "none" : "1px solid #EAE6DF",
           borderRadius: isMobile ? 0 : 24,

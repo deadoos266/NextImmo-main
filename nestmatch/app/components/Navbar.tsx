@@ -207,28 +207,22 @@ export default function Navbar() {
   // prend tout l'espace, le back-arrow du thread suffit pour revenir.
   // L'event 'km:thread-mobile-open' est dispatch par /messages/page.tsx
   // quand convActive est set en mobile.
-  // V11.14 (Paul 2026-04-28) — etend a TOUTE la route /messages sur mobile
-  // (liste vide, liste avec convs, thread) via 'km:messages-route-active'
-  // dispatch par app/messages/MessagesRouteSignal.tsx. Sur desktop, la
-  // Navbar reste visible (utile pour navigation).
+  // V11.15 (Paul 2026-04-28) — REVERT V11.14 Navbar : la Navbar reste
+  // visible sur la LISTE /messages mobile (user perd la nav burger sinon).
+  // Hide uniquement dans un thread actif (V11.1 d'origine). Footer +
+  // AdminBar restent hides sur toute la route via V11.14.
   const [threadOpen, setThreadOpen] = useState(false)
-  const [messagesRoute, setMessagesRoute] = useState(false)
   useEffect(() => {
     if (typeof window === "undefined") return
     function onThread(e: Event) {
       setThreadOpen((e as CustomEvent).detail?.open === true)
     }
-    function onRoute(e: Event) {
-      setMessagesRoute((e as CustomEvent).detail?.open === true)
-    }
     window.addEventListener("km:thread-mobile-open", onThread)
-    window.addEventListener("km:messages-route-active", onRoute)
     return () => {
       window.removeEventListener("km:thread-mobile-open", onThread)
-      window.removeEventListener("km:messages-route-active", onRoute)
     }
   }, [])
-  const hideNavMobile = threadOpen || messagesRoute
+  const hideNavMobile = threadOpen
 
   // Focus le bouton close a l'ouverture pour les utilisateurs clavier
   // (a11y : leur permet d'ouvrir avec espace/enter sur le burger puis de
