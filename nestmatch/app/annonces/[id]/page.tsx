@@ -893,6 +893,45 @@ export default async function Annonce({ params }: any) {
               )}
 
               <ScoreBlock annonce={annonce} />
+
+              {/* Mot du proprietaire — collecte Step 6 du wizard ajouter
+                  (champ message_proprietaire). Etait orphelin (jamais affiche)
+                  jusqu'au commit V1.1. Skip si vide. Style editorial : eyebrow
+                  italique Fraunces + prose blockquote-like avec border-left
+                  marque, fond beige #F7F4EF. */}
+              {typeof annonce.message_proprietaire === "string" && annonce.message_proprietaire.trim().length > 0 && (
+                <div style={{
+                  background: "#F7F4EF",
+                  borderLeft: "3px solid #111",
+                  borderRadius: "0 12px 12px 0",
+                  padding: "14px 18px",
+                  marginBottom: 16,
+                }}>
+                  <p style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "#8a8477",
+                    textTransform: "uppercase",
+                    letterSpacing: "1.4px",
+                    margin: "0 0 6px",
+                  }}>
+                    Mot du propriétaire
+                  </p>
+                  <p style={{
+                    fontFamily: "var(--font-fraunces), 'Fraunces', Georgia, serif",
+                    fontStyle: "italic",
+                    fontWeight: 500,
+                    fontSize: 15,
+                    lineHeight: 1.55,
+                    color: "#111",
+                    margin: 0,
+                    whiteSpace: "pre-wrap",
+                  }}>
+                    {annonce.message_proprietaire}
+                  </p>
+                </div>
+              )}
+
               <ContactButton annonce={annonce} />
               <BookingVisite annonceId={annonce.id} proprietaireEmail={annonce.proprietaire_email} />
               <OwnerActions proprietaireEmail={annonce.proprietaire_email} annonceId={annonce.id} statut={annonce.statut} />
