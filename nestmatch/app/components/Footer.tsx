@@ -33,20 +33,32 @@ export default function Footer() {
   // /messages (mobile + desktop). Pattern Instagram/WhatsApp : focus pur
   // sur la conversation, aucun chrome parasite. Listener sur l'event
   // 'km:thread-active' dispatch par /messages/page.tsx.
+  // V11.14 (Paul 2026-04-28) — etend a TOUTE la route /messages (liste,
+  // thread, vide) via 'km:messages-route-active' dispatch par
+  // app/messages/MessagesRouteSignal.tsx (mount du layout). Footer disparait
+  // des qu'on entre dans /messages, revient des qu'on sort.
   const [threadActive, setThreadActive] = useState(false)
+  const [messagesRouteActive, setMessagesRouteActive] = useState(false)
   useEffect(() => {
     if (typeof window === "undefined") return
     function onThread(e: Event) {
       setThreadActive((e as CustomEvent).detail?.open === true)
     }
+    function onRoute(e: Event) {
+      setMessagesRouteActive((e as CustomEvent).detail?.open === true)
+    }
     window.addEventListener("km:thread-active", onThread)
-    return () => window.removeEventListener("km:thread-active", onThread)
+    window.addEventListener("km:messages-route-active", onRoute)
+    return () => {
+      window.removeEventListener("km:thread-active", onThread)
+      window.removeEventListener("km:messages-route-active", onRoute)
+    }
   }, [])
 
   // Masqué sur /annonces (scroll isolé, layout plein viewport)
   if (pathname === "/annonces" || pathname?.startsWith("/annonces?")) return null
-  // V11.10 — masque sur /messages quand un thread est ouvert.
-  if (threadActive) return null
+  // V11.10 + V11.14 — masque sur /messages (route entiere ou thread).
+  if (threadActive || messagesRouteActive) return null
   // isTablet destructuré mais non utilisé — volontairement laissé pour stabilité
   // (évite un churn si on ajoute un comportement tablette plus tard).
   void isTablet

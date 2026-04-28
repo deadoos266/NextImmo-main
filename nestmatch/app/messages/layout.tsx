@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import MessagesRouteSignal from "./MessagesRouteSignal"
 
 export const metadata: Metadata = {
   title: "Messages",
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 }
 
 export default function MessagesLayout({ children }: { children: React.ReactNode }) {
-  return children
+  return (
+    <>
+      <MessagesRouteSignal />
+      {children}
+    </>
+  )
 }

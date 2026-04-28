@@ -207,15 +207,28 @@ export default function Navbar() {
   // prend tout l'espace, le back-arrow du thread suffit pour revenir.
   // L'event 'km:thread-mobile-open' est dispatch par /messages/page.tsx
   // quand convActive est set en mobile.
+  // V11.14 (Paul 2026-04-28) — etend a TOUTE la route /messages sur mobile
+  // (liste vide, liste avec convs, thread) via 'km:messages-route-active'
+  // dispatch par app/messages/MessagesRouteSignal.tsx. Sur desktop, la
+  // Navbar reste visible (utile pour navigation).
   const [threadOpen, setThreadOpen] = useState(false)
+  const [messagesRoute, setMessagesRoute] = useState(false)
   useEffect(() => {
     if (typeof window === "undefined") return
     function onThread(e: Event) {
       setThreadOpen((e as CustomEvent).detail?.open === true)
     }
+    function onRoute(e: Event) {
+      setMessagesRoute((e as CustomEvent).detail?.open === true)
+    }
     window.addEventListener("km:thread-mobile-open", onThread)
-    return () => window.removeEventListener("km:thread-mobile-open", onThread)
+    window.addEventListener("km:messages-route-active", onRoute)
+    return () => {
+      window.removeEventListener("km:thread-mobile-open", onThread)
+      window.removeEventListener("km:messages-route-active", onRoute)
+    }
   }, [])
+  const hideNavMobile = threadOpen || messagesRoute
 
   // Focus le bouton close a l'ouverture pour les utilisateurs clavier
   // (a11y : leur permet d'ouvrir avec espace/enter sur le burger puis de
@@ -291,7 +304,7 @@ export default function Navbar() {
   }
 
   return (
-    <nav style={{ display: threadOpen && isSmall ? "none" : "flex", justifyContent: "space-between", alignItems: "center", padding: isSmall ? "0 16px" : "0 48px", background: km.white, borderBottom: `1px solid ${km.line}`, position: "sticky", top: 0, zIndex: 10000, height: 72, boxShadow: "0 1px 8px rgba(0,0,0,0.05)" }}>
+    <nav style={{ display: hideNavMobile && isSmall ? "none" : "flex", justifyContent: "space-between", alignItems: "center", padding: isSmall ? "0 16px" : "0 48px", background: km.white, borderBottom: `1px solid ${km.line}`, position: "sticky", top: 0, zIndex: 10000, height: 72, boxShadow: "0 1px 8px rgba(0,0,0,0.05)" }}>
 
       {/* Logo */}
       <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>

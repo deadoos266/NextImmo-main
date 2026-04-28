@@ -12,22 +12,34 @@ import { useRole } from "../providers"
  * (mobile + desktop). Pattern Instagram/WhatsApp : conversation full-bleed,
  * zero chrome parasite. Listener sur 'km:thread-active' dispatch par
  * /messages/page.tsx.
+ *
+ * V11.14 (Paul 2026-04-28) — etend a TOUTE la route /messages (liste, vide,
+ * thread) via 'km:messages-route-active' dispatch par
+ * app/messages/MessagesRouteSignal.tsx (mount du layout).
  */
 export default function AdminBar() {
   const { isAdmin, proprietaireActive, setProprietaireActive, mounted } = useRole()
 
   const [threadActive, setThreadActive] = useState(false)
+  const [messagesRouteActive, setMessagesRouteActive] = useState(false)
   useEffect(() => {
     if (typeof window === "undefined") return
     function onThread(e: Event) {
       setThreadActive((e as CustomEvent).detail?.open === true)
     }
+    function onRoute(e: Event) {
+      setMessagesRouteActive((e as CustomEvent).detail?.open === true)
+    }
     window.addEventListener("km:thread-active", onThread)
-    return () => window.removeEventListener("km:thread-active", onThread)
+    window.addEventListener("km:messages-route-active", onRoute)
+    return () => {
+      window.removeEventListener("km:thread-active", onThread)
+      window.removeEventListener("km:messages-route-active", onRoute)
+    }
   }, [])
 
   if (!mounted || !isAdmin) return null
-  if (threadActive) return null
+  if (threadActive || messagesRouteActive) return null
 
   return (
     <div style={{
