@@ -696,11 +696,14 @@ function VisiteDemandeCard({
   // Le destinataire peut choisir un slot s'il n'est pas l'auteur ET la visite est
   // en attente ET au moins un slot existe.
   const canChoose = !isMine && isPending && rawSlots.length > 0
+  // V11.13 (Paul 2026-04-28) — version compactee, user feedback : "tu pourrais
+  // pas rendre tout de meme ca moins gros car la ca impose et serait plus
+  // lisible si plus petit". Padding/font/icon/CTA reduits ~30%.
   return (
-    <div style={{ background: "#fff", borderRadius: 18, border: "1px solid #EAE6DF", padding: 16, minWidth: 260, maxWidth: 340, boxShadow: "0 1px 2px rgba(0,0,0,0.02)", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 10, background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #EAE6DF", padding: 12, minWidth: 220, maxWidth: 320, boxShadow: "0 1px 2px rgba(0,0,0,0.02)", fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <div style={{ width: 26, height: 26, borderRadius: 8, background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="4" width="18" height="18" rx="2"/>
             <line x1="16" y1="2" x2="16" y2="6"/>
             <line x1="8" y1="2" x2="8" y2="6"/>
@@ -708,17 +711,17 @@ function VisiteDemandeCard({
           </svg>
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#111", letterSpacing: "-0.1px" }}>{title}</div>
-          <div style={{ fontSize: 10, color: "#8a8477", textTransform: "uppercase" as const, letterSpacing: "1px", fontWeight: 600 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: "#111", letterSpacing: "-0.1px" }}>{title}</div>
+          <div style={{ fontSize: 9.5, color: "#8a8477", textTransform: "uppercase" as const, letterSpacing: "0.8px", fontWeight: 600 }}>
             {rawSlots.length} créneau{rawSlots.length > 1 ? "x" : ""} · 30 min
           </div>
         </div>
-        <span style={{ background: "#fff", color: accent, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, border: `1px solid ${accent}33`, textTransform: "uppercase" as const, letterSpacing: "0.3px", flexShrink: 0 }}>
+        <span style={{ background: "#fff", color: accent, fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 999, border: `1px solid ${accent}33`, textTransform: "uppercase" as const, letterSpacing: "0.3px", flexShrink: 0 }}>
           {badgeLabel}
         </span>
       </div>
       {/* Slots — R10.8. Grille à 1 col si 1-2 slots, 2 col si ≥3 pour compacité. */}
-      <div style={{ display: "grid", gridTemplateColumns: rawSlots.length >= 3 ? "1fr 1fr" : "1fr", gap: 6 }}>
+      <div style={{ display: "grid", gridTemplateColumns: rawSlots.length >= 3 ? "1fr 1fr" : "1fr", gap: 5 }}>
         {rawSlots.map((slot, i) => {
           const dayShort = slot.date ? formatVisiteDate(slot.date, { weekday: "short", day: "numeric", month: "short" }) : ""
           const isRetenu = retenu === i
@@ -730,10 +733,10 @@ function VisiteDemandeCard({
               disabled={!canChoose}
               onClick={() => { if (canChoose && data.visiteId) void onChooseSlot(data.visiteId, slot) }}
               style={{
-                padding: 12,
+                padding: "8px 10px",
                 background: isRetenu ? "#F0FAEE" : isNonRetenu ? "#F7F4EF" : "#FBF9F5",
                 border: `1px solid ${isRetenu ? "#15803d" : "#EAE6DF"}`,
-                borderRadius: 12,
+                borderRadius: 10,
                 textAlign: "center",
                 cursor: canChoose ? "pointer" : "default",
                 fontFamily: "inherit",
@@ -744,19 +747,19 @@ function VisiteDemandeCard({
               onMouseEnter={e => { if (canChoose) e.currentTarget.style.borderColor = "#111" }}
               onMouseLeave={e => { if (canChoose) e.currentTarget.style.borderColor = isRetenu ? "#15803d" : "#EAE6DF" }}
             >
-              <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 3, textTransform: "uppercase" as const, letterSpacing: "0.5px", color: "#8a8477", fontWeight: 600 }}>
+              <div style={{ fontSize: 9.5, opacity: 0.7, marginBottom: 2, textTransform: "uppercase" as const, letterSpacing: "0.4px", color: "#8a8477", fontWeight: 600 }}>
                 {dayShort || "Date"}
               </div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: isNonRetenu ? "#8a8477" : "#111" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: isNonRetenu ? "#8a8477" : "#111" }}>
                 {slot.heure || "–"}
               </div>
               {isRetenu && (
-                <div style={{ fontSize: 9, fontWeight: 700, color: "#15803d", marginTop: 4, textTransform: "uppercase" as const, letterSpacing: "0.4px" }}>
+                <div style={{ fontSize: 8.5, fontWeight: 700, color: "#15803d", marginTop: 3, textTransform: "uppercase" as const, letterSpacing: "0.4px" }}>
                   ✓ Retenu
                 </div>
               )}
               {isNonRetenu && (
-                <div style={{ fontSize: 9, fontWeight: 600, color: "#8a8477", marginTop: 4, textTransform: "uppercase" as const, letterSpacing: "0.4px" }}>
+                <div style={{ fontSize: 8.5, fontWeight: 600, color: "#8a8477", marginTop: 3, textTransform: "uppercase" as const, letterSpacing: "0.4px" }}>
                   Non retenu
                 </div>
               )}
@@ -765,12 +768,12 @@ function VisiteDemandeCard({
         })}
       </div>
       {canChoose && multi && (
-        <p style={{ fontSize: 11, color: "#8a8477", margin: "10px 0 0", lineHeight: 1.45 }}>
+        <p style={{ fontSize: 10.5, color: "#8a8477", margin: "8px 0 0", lineHeight: 1.4 }}>
           Cliquez sur le créneau qui vous arrange — les autres seront automatiquement rejetés.
         </p>
       )}
       {data.message && (
-        <p style={{ fontSize: 12, color: "#111", margin: "10px 0 0", fontStyle: "italic", lineHeight: 1.5 }}>
+        <p style={{ fontSize: 11.5, color: "#111", margin: "8px 0 0", fontStyle: "italic", lineHeight: 1.45 }}>
           « {data.message} »
         </p>
       )}
@@ -781,14 +784,14 @@ function VisiteDemandeCard({
         <button
           type="button"
           onClick={onOuvrirGestion}
-          style={{ width: "100%", padding: 11, marginTop: 10, borderRadius: 999, background: isMine ? "#111" : "#fff", color: isMine ? "#fff" : "#111", border: isMine ? "none" : "1px solid #EAE6DF", fontFamily: "inherit", fontWeight: 600, fontSize: 12, cursor: "pointer", letterSpacing: "0.3px", transition: "all 200ms" }}
+          style={{ width: "100%", padding: "8px 14px", marginTop: 8, borderRadius: 999, background: isMine ? "#111" : "#fff", color: isMine ? "#fff" : "#111", border: isMine ? "none" : "1px solid #EAE6DF", fontFamily: "inherit", fontWeight: 600, fontSize: 11.5, cursor: "pointer", letterSpacing: "0.2px", transition: "all 200ms" }}
         >
           {isMine ? "Gérer la proposition" : "Proposer un autre créneau"}
         </button>
       )}
       {/* Ligne de rappel date si confirmée/annulée sur un format 1-slot */}
       {!isPending && !multi && dateLong && (
-        <p style={{ fontSize: 11, color: accent, margin: "10px 0 0", textAlign: "right" as const, fontWeight: 600, textTransform: "capitalize" }}>
+        <p style={{ fontSize: 10.5, color: accent, margin: "8px 0 0", textAlign: "right" as const, fontWeight: 600, textTransform: "capitalize" }}>
           {dateLong}
         </p>
       )}
@@ -4731,7 +4734,9 @@ function MessagesInner() {
                   <div ref={bottomRef} />
                 </div>
 
-                {/* Visites : barre résumé compacte + modale de gestion */}
+                {/* Visites : barre résumé compacte + modale de gestion.
+                    V11.13 (Paul 2026-04-28) — compactee : padding 10x20 -> 6x14,
+                    font 12 -> 11, icon 16 -> 14, CTA padding 6x14 -> 5x12. */}
                 {visitesConv.length > 0 && (() => {
                   const actives = visitesConv.filter(v => v.statut === "proposée" || v.statut === "confirmée")
                   const annulees = visitesConv.filter(v => v.statut === "annulée")
@@ -4743,17 +4748,18 @@ function MessagesInner() {
                     <div
                       style={{
                         borderTop: "1px solid #F7F4EF",
-                        padding: "10px 20px",
+                        padding: "6px 14px",
                         background: barBg,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
-                        gap: 12,
+                        gap: 10,
                         flexWrap: "wrap",
+                        minHeight: 40,
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 12 }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#111" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 11 }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#111" }}>
                           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                           <line x1="16" y1="2" x2="16" y2="6"/>
                           <line x1="8" y1="2" x2="8" y2="6"/>
@@ -4763,12 +4769,12 @@ function MessagesInner() {
                           {actives.length} visite{actives.length !== 1 ? "s" : ""} active{actives.length !== 1 ? "s" : ""}
                         </span>
                         {enAttente > 0 && (
-                          <span style={{ background: "#a16207", color: "white", padding: "1px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700 }}>
+                          <span style={{ background: "#a16207", color: "white", padding: "1px 6px", borderRadius: 999, fontSize: 9.5, fontWeight: 700 }}>
                             {enAttente} à traiter
                           </span>
                         )}
                         {annulees.length > 0 && (
-                          <span style={{ color: "#8a8477", fontSize: 11 }}>
+                          <span style={{ color: "#8a8477", fontSize: 10.5 }}>
                             · {annulees.length} annulée{annulees.length > 1 ? "s" : ""}
                           </span>
                         )}
@@ -4781,8 +4787,8 @@ function MessagesInner() {
                           border: `1px solid ${barBorder}`,
                           color: "#111",
                           borderRadius: 999,
-                          padding: "6px 14px",
-                          fontSize: 12,
+                          padding: "5px 12px",
+                          fontSize: 11,
                           fontWeight: 700,
                           cursor: "pointer",
                           fontFamily: "inherit",
