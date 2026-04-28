@@ -68,6 +68,12 @@ export default function ModifierBien() {
     age_min: "", age_max: "", max_occupants: "",
     animaux_politique: "indifferent" as TriPolitique,
     fumeur_politique: "indifferent" as TriPolitique,
+    // V6.1 (Paul 2026-04-28) — critères proprio (migration 027). Persistence
+    // parite avec /proprietaire/ajouter.
+    min_revenus_ratio: 3,
+    garants_acceptes: [] as string[],
+    profils_acceptes: [] as string[],
+    message_proprietaire: "",
   })
   const [toggles, setToggles] = useState({
     meuble: false, animaux: false, parking: false, cave: false,
@@ -134,6 +140,11 @@ export default function ModifierBien() {
       fumeur_politique: (["oui", "non", "indifferent"].includes(data.fumeur_politique)
         ? data.fumeur_politique
         : "indifferent") as TriPolitique,
+      // V6.1 — defaults safe si colonnes absentes (compat ancien schema)
+      min_revenus_ratio: typeof data.min_revenus_ratio === "number" ? data.min_revenus_ratio : 3,
+      garants_acceptes: Array.isArray(data.garants_acceptes) ? data.garants_acceptes : [],
+      profils_acceptes: Array.isArray(data.profils_acceptes) ? data.profils_acceptes : [],
+      message_proprietaire: typeof data.message_proprietaire === "string" ? data.message_proprietaire : "",
     })
     setToggles({
       meuble: !!data.meuble, animaux: !!data.animaux, parking: !!data.parking,
@@ -287,6 +298,11 @@ export default function ModifierBien() {
       animaux_politique: form.animaux_politique === "indifferent" ? null : form.animaux_politique,
       fumeur_politique: form.fumeur_politique === "indifferent" ? null : form.fumeur_politique,
       equipements_extras: Object.keys(equipExtras).length > 0 ? equipExtras : null,
+      // V6.1 — critères proprio migration 027
+      min_revenus_ratio: form.min_revenus_ratio,
+      garants_acceptes: form.garants_acceptes.length > 0 ? form.garants_acceptes : null,
+      profils_acceptes: form.profils_acceptes.length > 0 ? form.profils_acceptes : null,
+      message_proprietaire: form.message_proprietaire || null,
       ...toggles,
     }
     // R10.6 — dérive la colonne legacy boolean `animaux` de la politique tri-state.
@@ -314,7 +330,7 @@ export default function ModifierBien() {
       const retry = await supabase.from("annonces").update(updatesNoCoords).eq("id", bienId)
       error = retry.error
     }
-    if (error && /age_min|age_max|max_occupants|animaux_politique|fumeur_politique|equipements_extras|column.*does not exist/i.test(error.message || "")) {
+    if (error && /age_min|age_max|max_occupants|animaux_politique|fumeur_politique|equipements_extras|min_revenus_ratio|garants_acceptes|profils_acceptes|message_proprietaire|column.*does not exist/i.test(error.message || "")) {
       const updatesNoV2 = { ...updates }
       delete updatesNoV2.age_min
       delete updatesNoV2.age_max
@@ -322,6 +338,11 @@ export default function ModifierBien() {
       delete updatesNoV2.animaux_politique
       delete updatesNoV2.fumeur_politique
       delete updatesNoV2.equipements_extras
+      // V6.1 — fallback si migration 027 pas appliquee
+      delete updatesNoV2.min_revenus_ratio
+      delete updatesNoV2.garants_acceptes
+      delete updatesNoV2.profils_acceptes
+      delete updatesNoV2.message_proprietaire
       delete updatesNoV2.lat
       delete updatesNoV2.lng
       const retry = await supabase.from("annonces").update(updatesNoV2).eq("id", bienId)
@@ -846,6 +867,119 @@ export default function ModifierBien() {
 
         <Sec t="Description">
           <textarea style={{ ...inp, minHeight: 120, resize: "vertical" }} value={form.description} onChange={set("description")} placeholder="Décrivez votre bien..." />
+        </Sec>
+
+        {/* V6.1 (Paul 2026-04-28) — Critères proprio (migration 027) */}
+        <Sec t="Critères propriétaire (filtre dossier)">
+          <p style={{ fontSize: 12, color: "#8a8477", marginBottom: 18, lineHeight: 1.5 }}>
+            Ces critères sont utilisés pour <strong>screener les candidats</strong> côté dossier (revenus, garant,
+            situation pro). Vide = pas de filtre.
+          </p>
+
+          {/* Ratio min revenus / loyer */}
+          <div style={{ marginBottom: 22 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 6px" }}>
+              Ratio revenus / loyer min
+            </p>
+            <p style={{ fontSize: 13, color: "#666", marginBottom: 10 }}>
+              {form.min_revenus_ratio.toFixed(1).replace(/\.0$/, "")}× le loyer
+              {form.prix && Number(form.prix) > 0 && (
+                <> — soit {Math.round((Number(form.prix) + (Number(form.charges) || 0)) * form.min_revenus_ratio).toLocaleString("fr-FR")} €/mois net</>
+              )}
+            </p>
+            <input
+              type="range"
+              min={2}
+              max={5}
+              step={0.5}
+              value={form.min_revenus_ratio}
+              onChange={(e) => setForm(f => ({ ...f, min_revenus_ratio: parseFloat(e.target.value) }))}
+              style={{ width: "100%", accentColor: "#111" }}
+            />
+          </div>
+
+          {/* Garants acceptés */}
+          <div style={{ marginBottom: 22 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 10px" }}>
+              Garants acceptés
+            </p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {["Visale", "Garantme", "Parents", "Caution bancaire", "Indifférent"].map(g => {
+                const active = form.garants_acceptes.includes(g)
+                return (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setForm(f => ({
+                      ...f,
+                      garants_acceptes: active
+                        ? f.garants_acceptes.filter(x => x !== g)
+                        : [...f.garants_acceptes, g],
+                    }))}
+                    style={{
+                      padding: "8px 16px", borderRadius: 999, fontFamily: "inherit", fontSize: 12.5, fontWeight: 500, cursor: "pointer",
+                      border: `1.5px solid ${active ? "#111" : "#EAE6DF"}`,
+                      background: active ? "#111" : "white",
+                      color: active ? "white" : "#111",
+                    }}
+                  >{g}</button>
+                )
+              })}
+            </div>
+            <p style={{ fontSize: 11, color: "#8a8477", marginTop: 6 }}>
+              Vide = tous les garants acceptés.
+            </p>
+          </div>
+
+          {/* Profils acceptés */}
+          <div style={{ marginBottom: 22 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 10px" }}>
+              Situations professionnelles acceptées
+            </p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {["CDI", "CDD", "Étudiant", "Fonctionnaire", "Indépendant", "Retraité"].map(p => {
+                const active = form.profils_acceptes.includes(p)
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setForm(f => ({
+                      ...f,
+                      profils_acceptes: active
+                        ? f.profils_acceptes.filter(x => x !== p)
+                        : [...f.profils_acceptes, p],
+                    }))}
+                    style={{
+                      padding: "8px 16px", borderRadius: 999, fontFamily: "inherit", fontSize: 12.5, fontWeight: 500, cursor: "pointer",
+                      border: `1.5px solid ${active ? "#111" : "#EAE6DF"}`,
+                      background: active ? "#111" : "white",
+                      color: active ? "white" : "#111",
+                    }}
+                  >{p}</button>
+                )
+              })}
+            </div>
+            <p style={{ fontSize: 11, color: "#8a8477", marginTop: 6 }}>
+              Vide = toutes les situations acceptées.
+            </p>
+          </div>
+
+          {/* Mot du proprio */}
+          <div>
+            <p style={{ fontSize: 12, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 10px" }}>
+              Mot du propriétaire (optionnel)
+            </p>
+            <textarea
+              style={{ ...inp, minHeight: 80, resize: "vertical" }}
+              value={form.message_proprietaire}
+              onChange={set("message_proprietaire")}
+              placeholder="Présentez-vous, votre logement, ce que vous attendez du locataire (max 500 chars)…"
+              maxLength={500}
+            />
+            <p style={{ fontSize: 11, color: "#8a8477", marginTop: 4, textAlign: "right" }}>
+              {form.message_proprietaire.length}/500
+            </p>
+          </div>
         </Sec>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

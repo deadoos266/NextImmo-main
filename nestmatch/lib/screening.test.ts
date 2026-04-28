@@ -269,3 +269,56 @@ describe("computeScreening — critères annonce (V1.5 Paul 2026-04-27)", () => 
     expect(r2.flags.every(f => !f.includes("non listé"))).toBe(true)
   })
 })
+
+// ──────────────────────────────────────────────
+// V6.1 — Branchement reel sur colonnes annonces (migration 027)
+// Avant V6.1, ces colonnes n'existaient pas en prod. Maintenant que les
+// colonnes existent, ces tests valident la chaine end-to-end avec des
+// formes de donnees realistes lues directement depuis Supabase.
+// ──────────────────────────────────────────────
+describe("V6.1 computeScreening — donnees annonce shape prod", () => {
+  it("annonce avec min_revenus_ratio default 3.0 (DB default) → equivalent comportement legacy", () => {
+    const p: ScreeningProfil = { revenus_mensuels: 3000, situation_pro: "CDI", garant: true }
+    const v1 = computeScreening(p, 1000)
+    // Annonce shape DB : min_revenus_ratio = 3.0 (default migration 027)
+    const v6 = computeScreening(p, 1000, {
+      min_revenus_ratio: 3.0,
+      garants_acceptes: [],
+      profils_acceptes: [],
+    })
+    expect(v6.score).toBe(v1.score)
+  })
+
+  it("annonce shape Supabase prod (text[] empty arrays) → pas de filtre actif", () => {
+    // Format reel renvoye par PostgREST : "{}" parsed en [] cote client.
+    const p: ScreeningProfil = {
+      revenus_mensuels: 2800,
+      situation_pro: "CDI",
+      type_garant: "Visale",
+      garant: true,
+    }
+    const r = computeScreening(p, 800, {
+      min_revenus_ratio: 3.0,
+      garants_acceptes: [],
+      profils_acceptes: [],
+    })
+    // Aucun flag de filtre proprio ne doit apparaitre.
+    expect(r.flags.every(f => !f.includes("non listé"))).toBe(true)
+    expect(r.tier).not.toBe("incomplet")
+  })
+
+  it("annonce ratio strict 4.0 + locataire 3.5x → flag Revenus tendus 4×", () => {
+    const p: ScreeningProfil = {
+      revenus_mensuels: 3500, // 3.5× loyer 1000
+      situation_pro: "CDI",
+      garant: true,
+    }
+    const r = computeScreening(p, 1000, {
+      min_revenus_ratio: 4.0,
+      garants_acceptes: [],
+      profils_acceptes: [],
+    })
+    // Le ratio 3.5× passe juste sous le seuil 4× → flag attendu.
+    expect(r.flags.some(f => /4\.0×|tendus/i.test(f))).toBe(true)
+  })
+})
