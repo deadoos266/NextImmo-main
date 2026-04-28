@@ -418,10 +418,13 @@ export default function AjouterBien() {
         insertedRows = retry.data
       }
       if (!error && insertedRows && insertedRows.length > 0) {
-        await supabase.from("profils").upsert({
-          email: session!.user!.email!,
-          is_proprietaire: true,
-        }, { onConflict: "email" })
+        // V24.3 — via /api/profil/save
+        try {
+          await fetch("/api/profil/save", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ is_proprietaire: true }),
+          })
+        } catch { /* noop */ }
         try { localStorage.removeItem(draftStorageKey(session!.user!.email!)) } catch { /* noop */ }
 
         // V23.2 (Paul 2026-04-29) — si l'annonce est créée comme "déjà

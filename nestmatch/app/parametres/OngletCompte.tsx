@@ -113,7 +113,13 @@ export default function OngletCompte() {
     const next = { ...prefs, [key]: !prefs[key] }
     setPrefs(next)
     setSaving(true)
-    await supabase.from("profils").upsert({ email, ...next }, { onConflict: "email" })
+    // V24.3 — via /api/profil/save
+    try {
+      await fetch("/api/profil/save", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(next),
+      })
+    } catch { /* noop */ }
     setSaving(false)
   }
 

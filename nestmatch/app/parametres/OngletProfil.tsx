@@ -59,13 +59,21 @@ export default function OngletProfil() {
     setSavingTel(true)
     setTelError(null)
     const trimmed = telephone.trim().slice(0, 25)
-    const { error } = await supabase.from("profils").upsert(
-      { email, telephone: trimmed || null },
-      { onConflict: "email" },
-    )
+    // V24.3 — via /api/profil/save
+    let errMsg: string | null = null
+    try {
+      const res = await fetch("/api/profil/save", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ telephone: trimmed || null }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.ok) errMsg = json.error || res.statusText
+    } catch (e) {
+      errMsg = e instanceof Error ? e.message : "réseau"
+    }
     setSavingTel(false)
-    if (error) {
-      setTelError(`Enregistrement impossible : ${error.message}`)
+    if (errMsg) {
+      setTelError(`Enregistrement impossible : ${errMsg}`)
       return
     }
     setInitialTel(trimmed)
@@ -121,17 +129,21 @@ export default function OngletProfil() {
     setSaving(true)
     setSaveError(null)
     const trimmed = bio.trim().slice(0, 300)
-    const { error } = await supabase.from("profils").upsert(
-      { email, bio_publique: trimmed || null },
-      { onConflict: "email" },
-    )
+    // V24.3 — via /api/profil/save
+    let errMsg: string | null = null
+    try {
+      const res = await fetch("/api/profil/save", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bio_publique: trimmed || null }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.ok) errMsg = json.error || res.statusText
+    } catch (e) {
+      errMsg = e instanceof Error ? e.message : "réseau"
+    }
     setSaving(false)
-    if (error) {
-      setSaveError(
-        error.code === "42703" || error.message.includes("column")
-          ? "Colonne bio_publique introuvable — la migration 008 doit être appliquée dans Supabase."
-          : `Enregistrement impossible : ${error.message}`
-      )
+    if (errMsg) {
+      setSaveError(`Enregistrement impossible : ${errMsg}`)
       return
     }
     setInitialBio(trimmed)

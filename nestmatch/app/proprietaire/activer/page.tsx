@@ -21,11 +21,13 @@ export default function ActiverProprietaire() {
     if (!session?.user?.email) return
     setLoading(true)
     try {
-      // Upsert is_proprietaire dans le profil
-      await supabase.from("profils").upsert({
-        email: session.user.email,
-        is_proprietaire: true,
-      }, { onConflict: "email" })
+      // V24.3 — via /api/profil/save (server-side)
+      try {
+        await fetch("/api/profil/save", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ is_proprietaire: true }),
+        })
+      } catch { /* noop */ }
 
       setProprietaireActive(true)
       setRole("proprietaire")

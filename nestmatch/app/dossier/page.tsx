@@ -1464,7 +1464,14 @@ export default function Dossier() {
     if (newUrls.length > 0) {
       const updated = { ...docs, [key]: [...existing, ...newUrls] }
       setDocs(updated)
-      await supabase.from("profils").upsert({ email: session.user.email, dossier_docs: updated }, { onConflict: "email" })
+      // V24.3 — via /api/profil/save (server-side, email forcé = session)
+      try {
+        await fetch("/api/profil/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ dossier_docs: updated }),
+        })
+      } catch { /* noop */ }
     }
     setUploading(null)
   }
@@ -1584,9 +1591,8 @@ export default function Dossier() {
     setUploadError(null)
     // Lowercase l'email : clé primaire de profils, évite les doublons
     // si la session retourne une casse différente de la ligne DB.
-    const email = session.user.email.toLowerCase()
-    const { error } = await supabase.from("profils").upsert({
-      email,
+    // V24.3 — via /api/profil/save (server-side, email forcé = session)
+    const payload = {
       telephone: form.telephone, situation_pro: form.situation_pro,
       revenus_mensuels: form.revenus_mensuels ? Number(form.revenus_mensuels) : null,
       garant: form.garant, type_garant: form.type_garant, nb_occupants: form.nb_occupants,
@@ -1602,18 +1608,22 @@ export default function Dossier() {
       a_apl: form.a_apl,
       mobilite_pro: form.mobilite_pro,
       presentation: form.presentation ? form.presentation.slice(0, 500) : null,
-    }, { onConflict: "email" })
+    }
+    let errorMsg: string | null = null
+    try {
+      const res = await fetch("/api/profil/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.ok) errorMsg = json.error || res.statusText
+    } catch (e) {
+      errorMsg = e instanceof Error ? e.message : "réseau"
+    }
     setSaving(false)
-    if (error) {
-      const code = (error as { code?: string }).code
-      const msg = error.message || ""
-      if (code === "42703" || /column.*(presentation|date_naissance|nationalite|civilite|situation_familiale|employeur_nom|date_embauche|logement_actuel|a_apl|mobilite_pro|nb_enfants)/i.test(msg)) {
-        setUploadError("Enregistrement partiel : certaines colonnes n'existent pas en base. Appliquer migrations 007 et 018 (civilite) puis forcer un reload schema (NOTIFY pgrst, 'reload schema').")
-      } else if (code === "23502" || /null value.*not-null/i.test(msg)) {
-        setUploadError("Contrainte NOT NULL violée. Appliquez la migration 009 (drop NOT NULL sur nom, telephone…).")
-      } else {
-        setUploadError(`Enregistrement impossible : ${msg}`)
-      }
+    if (errorMsg) {
+      setUploadError(`Enregistrement impossible : ${errorMsg}`)
       return
     }
     setSaved(true)

@@ -303,15 +303,23 @@ function Profil() {
         prefsEquip[e.key] === "souhaite" || prefsEquip[e.key] === "indispensable",
       ])),
     }
-    const { error } = await supabase.from("profils").upsert(data, { onConflict: "email" })
-    if (error) {
-      const { error: insertErr } = await supabase.from("profils").insert(data)
-      if (insertErr) {
-        const { email: _email, ...updateData } = data
-        void _email
-        const { error: updateErr } = await supabase.from("profils").update(updateData).eq("email", session?.user?.email!)
-        if (updateErr) { setErreur("Erreur: " + updateErr.message); setSaving(false); return }
+    // V24.3 — via /api/profil/save (server-side, email forcé)
+    try {
+      const res = await fetch("/api/profil/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.ok) {
+        setErreur("Erreur: " + (json.error || res.statusText))
+        setSaving(false)
+        return
       }
+    } catch (e) {
+      setErreur("Erreur: " + (e instanceof Error ? e.message : "réseau"))
+      setSaving(false)
+      return
     }
     setSaving(false)
     setSaved(true)
@@ -368,7 +376,18 @@ function Profil() {
       patch.quartier_prefere_label = quartierLabel
     }
 
-    const { error } = await supabase.from("profils").upsert(patch, { onConflict: "email" })
+    // V24.3 — via /api/profil/save
+    let error: { message: string } | null = null
+    try {
+      const res = await fetch("/api/profil/save", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.ok) error = { message: json.error || res.statusText }
+    } catch (e) {
+      error = { message: e instanceof Error ? e.message : "réseau" }
+    }
     if (error) {
       setErreur("Erreur : " + error.message)
       setSavingSection(null)
@@ -419,7 +438,13 @@ function Profil() {
         patch[e.key] = undo.prevPrefsEquip[e.key] === "souhaite" || undo.prevPrefsEquip[e.key] === "indispensable"
       }
     }
-    await supabase.from("profils").upsert(patch, { onConflict: "email" })
+    // V24.3 — via /api/profil/save (server-side)
+    try {
+      await fetch("/api/profil/save", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      })
+    } catch { /* noop — undo silently fails */ }
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
     setUndo(null)
   }
@@ -936,11 +961,13 @@ function Profil() {
               // attendue : valider la popup = enregistré.
               try {
                 if (!session?.user?.email) return
-                const patch = {
-                  email: session.user.email,
-                  preferences_equipements: writeEquipementsSecondaires(prefsEquip, next),
-                }
-                await supabase.from("profils").upsert(patch, { onConflict: "email" })
+                // V24.3 — via /api/profil/save
+                await fetch("/api/profil/save", {
+                  method: "POST", headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    preferences_equipements: writeEquipementsSecondaires(prefsEquip, next),
+                  }),
+                })
               } catch {
                 // Silencieux — l'utilisateur voit la fermeture de la popup
                 // comme une confirmation. La section sera resauvegardée

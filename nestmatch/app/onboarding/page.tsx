@@ -54,7 +54,13 @@ export default function Onboarding() {
       balcon: exterieur,
       terrasse: exterieur,
     }
-    await supabase.from("profils").upsert(payload, { onConflict: "email" })
+    // V24.3 — via /api/profil/save (server-side, email forcé)
+    try {
+      await fetch("/api/profil/save", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+    } catch { /* noop */ }
 
     // Redirection avec filtres pré-remplis
     const params = new URLSearchParams()

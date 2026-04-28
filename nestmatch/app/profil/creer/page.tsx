@@ -208,19 +208,22 @@ export default function CreerProfil() {
       profil_locataire: form.profil_locataire,
       ...toggles,
     }
-    const { error } = await supabase.from("profils").upsert(data, { onConflict: "email" })
-    if (error) {
-      const { error: insertErr } = await supabase.from("profils").insert(data)
-      if (insertErr) {
-        const { email: _email, ...updateData } = data
-        void _email
-        const { error: updateErr } = await supabase.from("profils").update(updateData).eq("email", session?.user?.email!)
-        if (updateErr) {
-          setErreur("Erreur: " + updateErr.message)
-          setSaving(false)
-          return
-        }
+    // V24.3 — via /api/profil/save
+    try {
+      const res = await fetch("/api/profil/save", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.ok) {
+        setErreur("Erreur: " + (json.error || res.statusText))
+        setSaving(false)
+        return
       }
+    } catch (e) {
+      setErreur("Erreur: " + (e instanceof Error ? e.message : "réseau"))
+      setSaving(false)
+      return
     }
     setSaving(false)
     try {
