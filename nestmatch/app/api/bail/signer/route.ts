@@ -95,10 +95,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Signature trop lourde" }, { status: 413 })
   }
 
-  // Vérifier que le signataire est bien le bon interlocuteur de l'annonce
+  // Vérifier que le signataire est bien le bon interlocuteur de l'annonce.
+  // V23.3 — on récupère aussi prix/charges/date_debut_bail pour l'auto-
+  // génération des loyers à double signature.
   const { data: annonce, error: errAnn } = await supabaseAdmin
     .from("annonces")
-    .select("id, proprietaire_email, locataire_email")
+    .select("id, proprietaire_email, locataire_email, prix, charges, date_debut_bail")
     .eq("id", annonceId)
     .single()
   if (errAnn || !annonce) {
@@ -165,6 +167,51 @@ export async function POST(req: NextRequest) {
   const doubleSigne = roles.has("locataire") && roles.has("bailleur")
 
   if (doubleSigne) {
+    // V23.3 (Paul 2026-04-29) — auto-génère 12 mois de loyers à partir de
+    // date_debut_bail (ou aujourd'hui si absent). Idempotent : skip si
+    // au moins une row loyers existe déjà pour cet annonce_id. User a
+    // explicitement validé V23.3 (audit V22.1 finding HIGH #5).
+    try {
+      const { data: existingLoyers } = await supabaseAdmin
+        .from("loyers")
+        .select("id")
+        .eq("annonce_id", annonceId)
+        .limit(1)
+      if (!existingLoyers || existingLoyers.length === 0) {
+        const dateDebutRaw = (annonce as { date_debut_bail?: string | null }).date_debut_bail
+        const startDate = dateDebutRaw ? new Date(dateDebutRaw) : new Date()
+        if (!Number.isFinite(startDate.getTime())) {
+          startDate.setTime(Date.now())
+        }
+        const loyerHC = Number((annonce as { prix?: number | null }).prix ?? 0) || 0
+        const charges = Number((annonce as { charges?: number | null }).charges ?? 0) || 0
+        const totalCC = loyerHC + charges
+        if (totalCC > 0) {
+          // Génère 12 mois (durée bail meublé = 12, vide = 36 — on prend
+          // 12 par défaut, le proprio peut étendre ensuite si nécessaire).
+          const NB_MOIS = 12
+          const rows: Array<{ annonce_id: number; mois: string; montant: number; statut: string; created_at: string }> = []
+          for (let i = 0; i < NB_MOIS; i++) {
+            const d = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1)
+            const mois = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+            rows.push({
+              annonce_id: annonceId,
+              mois,
+              montant: totalCC,
+              statut: "déclaré",
+              created_at: now,
+            })
+          }
+          const { error: loyersErr } = await supabaseAdmin.from("loyers").insert(rows)
+          if (loyersErr) {
+            console.warn("[bail/signer] loyers auto-create failed:", loyersErr.message)
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("[bail/signer] loyers auto-create exception:", e)
+    }
+
     // Vérifier qu'on n'a pas déjà envoyé ce message (évite doublons en cas de double-clic)
     const propEmail = (annonce.proprietaire_email || "").toLowerCase()
     const locEmail = (annonce.locataire_email || "").toLowerCase()

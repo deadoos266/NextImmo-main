@@ -423,6 +423,35 @@ export default function AjouterBien() {
           is_proprietaire: true,
         }, { onConflict: "email" })
         try { localStorage.removeItem(draftStorageKey(session!.user!.email!)) } catch { /* noop */ }
+
+        // V23.2 (Paul 2026-04-29) — si l'annonce est créée comme "déjà
+        // louée" avec un email locataire, on enchaîne sur la création
+        // d'une bail_invitations officielle. Avant : statut="loué" sans
+        // aucune trace bail (cf audit V22.1 finding HIGH #2).
+        const newAnnonceId = insertedRows[0]?.id
+        if (dejaLoue && newAnnonceId && form.locataire_email && form.locataire_email.trim()) {
+          try {
+            const res = await fetch("/api/bail/from-annonce", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                annonceId: newAnnonceId,
+                locataireEmail: form.locataire_email.trim().toLowerCase(),
+                loyerHC: toInt(form.prix) || undefined,
+                charges: toInt(form.charges) || undefined,
+              }),
+            })
+            const json = await res.json().catch(() => ({}))
+            if (!res.ok || !json.ok) {
+              console.warn("[publier] bail invitation creation failed:", json.error || res.statusText)
+              // Non-bloquant : l'annonce est publiée. Le proprio peut
+              // re-créer l'invitation depuis /proprietaire/bail/importer.
+            }
+          } catch (e) {
+            console.warn("[publier] bail invitation creation exception:", e)
+          }
+        }
+
         router.push("/proprietaire")
       } else if (error) {
         console.error("[publier] insert error:", error)
