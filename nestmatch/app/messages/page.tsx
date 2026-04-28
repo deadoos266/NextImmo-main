@@ -3317,6 +3317,10 @@ function MessagesInner() {
               </div>
               {/* Filtre par statut — 7 pills (handoff messages.jsx L154-179)
                   + Validée (Paul 2026-04-26) entre Dossier et Visite */}
+              {/* V4.3 — chips de statut conditionnels : n'afficher \"Contact\",
+                  \"Dossier\", \"Validée\", \"Visite\", \"Bail\", \"Refusé\" que si au
+                  moins une conv y est. Reduit la pollution UI quand le proprio
+                  n'en a pas encore declenche l'action. \"Toutes\" reste fixe. */}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {([
                   ["all",     "Toutes",  null as null | StatutConv],
@@ -3326,7 +3330,9 @@ function MessagesInner() {
                   ["visite",  "Visite",  "visite"  as StatutConv],
                   ["bail",    "Bail",    "bail"    as StatutConv],
                   ["rejete",  "Refusé",  "rejete"  as StatutConv],
-                ] as const).map(([k, label, statutKey]) => {
+                ] as const)
+                  .filter(([k]) => k === "all" || statusFilter === k || (statutCounts[k] || 0) > 0)
+                  .map(([k, label, statutKey]) => {
                   const s = statutKey ? STATUT_CONV[statutKey] : null
                   const sel = statusFilter === k
                   const n = statutCounts[k]
