@@ -1,9 +1,10 @@
 "use client"
 import { useEffect, useState, useRef } from "react"
 import type { ReactNode } from "react"
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet"
+import { MapContainer, TileLayer, Marker, Popup, Polygon, useMap, useMapEvents } from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
+import { pointInPolygon, type LatLng as GeoLatLng } from "../../lib/geo"
 // Clustering : regroupe les markers proches en bulles avec compteur. Au-delà
 // d'un certain zoom, le cluster s'éclate en markers individuels. Style
 // SeLoger / Idealista. La lib gère elle-même le CSS de leaflet.markercluster.
@@ -394,6 +395,47 @@ function MapClickListener({ onMapClick }: { onMapClick?: () => void }) {
   return null
 }
 
+/** V26.1 (Paul 2026-04-29) — listener qui capte les clicks pour dessiner
+ *  un polygone custom. Quand drawMode === true, chaque click ajoute un
+ *  vertex au polygone. Double-click = ferme le polygone (commit).
+ *  Curseur change en crosshair en mode dessin. */
+function PolygonDrawListener({
+  drawMode,
+  onAddVertex,
+  onCommit,
+}: {
+  drawMode: boolean
+  onAddVertex: (latlng: GeoLatLng) => void
+  onCommit: () => void
+}) {
+  const map = useMapEvents({
+    click: (e) => {
+      if (!drawMode) return
+      onAddVertex({ lat: e.latlng.lat, lng: e.latlng.lng })
+    },
+    dblclick: () => {
+      if (!drawMode) return
+      onCommit()
+    },
+  })
+  useEffect(() => {
+    const container = map.getContainer()
+    if (drawMode) {
+      container.style.cursor = "crosshair"
+      // Désactive le doubleClickZoom natif tant qu'on dessine
+      map.doubleClickZoom.disable()
+    } else {
+      container.style.cursor = ""
+      map.doubleClickZoom.enable()
+    }
+    return () => {
+      container.style.cursor = ""
+      map.doubleClickZoom.enable()
+    }
+  }, [drawMode, map])
+  return null
+}
+
 export default function MapAnnonces({
   annonces,
   selectedId,
@@ -450,7 +492,55 @@ export default function MapAnnonces({
     })
   }
 
-  const withCoords = spreadOverlappingMarkers(annonces.filter(a => a._lat && a._lng))
+  // V26.1 (Paul 2026-04-29) — polygon drawing custom (style SeLoger).
+  // drawMode = on dessine ; vertices = points du polygone en cours ;
+  // committedPolygon = polygone final qui sert de filtre dur.
+  const [drawMode, setDrawMode] = useState(false)
+  const [drawingVertices, setDrawingVertices] = useState<GeoLatLng[]>([])
+  const [committedPolygon, setCommittedPolygon] = useState<GeoLatLng[] | null>(null)
+  // Persiste le polygone en localStorage pour réutilisation au refresh
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("nestmatch_map_polygon")
+      if (saved) {
+        const parsed = JSON.parse(saved) as GeoLatLng[]
+        if (Array.isArray(parsed) && parsed.length >= 3) setCommittedPolygon(parsed)
+      }
+    } catch { /* ignore */ }
+  }, [])
+  function commitPolygon() {
+    if (drawingVertices.length < 3) {
+      // Polygone invalide (< 3 points) → annule sans commit
+      setDrawMode(false)
+      setDrawingVertices([])
+      return
+    }
+    setCommittedPolygon([...drawingVertices])
+    setDrawingVertices([])
+    setDrawMode(false)
+    try { localStorage.setItem("nestmatch_map_polygon", JSON.stringify(drawingVertices)) } catch { /* ignore */ }
+  }
+  function clearPolygon() {
+    setCommittedPolygon(null)
+    setDrawingVertices([])
+    setDrawMode(false)
+    try { localStorage.removeItem("nestmatch_map_polygon") } catch { /* ignore */ }
+  }
+  function startDrawMode() {
+    setDrawingVertices([])
+    setDrawMode(true)
+    setPanelOpen(null)
+  }
+
+  // Filtre dur : si polygone committed, on ne garde que les annonces
+  // dont (lat, lng) est dans le polygone. Appliqué AVANT spread overlap.
+  const annoncesInPolygon = committedPolygon
+    ? annonces.filter(a => {
+        if (!a._lat || !a._lng) return false
+        return pointInPolygon({ lat: a._lat, lng: a._lng }, committedPolygon)
+      })
+    : annonces
+  const withCoords = spreadOverlappingMarkers(annoncesInPolygon.filter(a => a._lat && a._lng))
 
   // V25.2 — agrège les prix €/m² par ville (lite, sans GeoJSON arrondissements).
   // Calcul à la volée depuis annonces actives. Memoized via useMemo serait
@@ -555,7 +645,38 @@ export default function MapAnnonces({
         />
         <BoundsWatcher onMoved={handleMoved} />
         <FrenchLeafletLocale />
-        <MapClickListener onMapClick={onMapClick} />
+        <MapClickListener onMapClick={drawMode ? undefined : onMapClick} />
+        {/* V26.1 — listener pour polygon drawing custom */}
+        <PolygonDrawListener
+          drawMode={drawMode}
+          onAddVertex={(v) => setDrawingVertices(prev => [...prev, v])}
+          onCommit={commitPolygon}
+        />
+        {/* V26.1 — preview polygon en cours de dessin (ambre transparent) */}
+        {drawMode && drawingVertices.length >= 2 && (
+          <Polygon
+            positions={drawingVertices.map(v => [v.lat, v.lng] as [number, number])}
+            pathOptions={{
+              color: "#a16207",
+              fillColor: "#FBF6EA",
+              fillOpacity: 0.3,
+              weight: 2,
+              dashArray: "6 4",
+            }}
+          />
+        )}
+        {/* V26.1 — polygon committed (filtre actif) */}
+        {committedPolygon && committedPolygon.length >= 3 && (
+          <Polygon
+            positions={committedPolygon.map(v => [v.lat, v.lng] as [number, number])}
+            pathOptions={{
+              color: "#111",
+              fillColor: "#FBF6EA",
+              fillOpacity: 0.18,
+              weight: 2,
+            }}
+          />
+        )}
         <CenterOnHint centerHint={centerHint} />
         <FlyToSelected annonces={withCoords} selectedId={selectedId} />
         <ZoomControls />
@@ -826,6 +947,79 @@ export default function MapAnnonces({
         {withCoords.length} bien{withCoords.length > 1 ? "s" : ""} &middot; France
       </div>
 
+      {/* V26.1 (Paul 2026-04-29) — control bar pour polygon drawing.
+          Visible en mode dessin (vertices + Terminer/Annuler) OU quand
+          un polygone est committed (Effacer la zone). */}
+      {(drawMode || committedPolygon) && (
+        <div style={{
+          position: "absolute",
+          top: 16, left: "50%", transform: "translateX(-50%)",
+          zIndex: 1500,
+          background: "white", borderRadius: 999,
+          border: "1px solid #EAE6DF",
+          boxShadow: "0 6px 20px rgba(0,0,0,0.15)",
+          padding: "6px 8px",
+          display: "inline-flex", alignItems: "center", gap: 6,
+          fontFamily: "'DM Sans', sans-serif",
+        }}>
+          {drawMode && (
+            <>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#111", padding: "0 8px" }}>
+                {drawingVertices.length < 3
+                  ? `Cliquez pour ajouter (${drawingVertices.length}/3 min)`
+                  : `${drawingVertices.length} pts · double-clic pour terminer`}
+              </span>
+              <button
+                type="button"
+                onClick={commitPolygon}
+                disabled={drawingVertices.length < 3}
+                style={{
+                  background: drawingVertices.length >= 3 ? "#111" : "#EAE6DF",
+                  color: drawingVertices.length >= 3 ? "#fff" : "#8a8477",
+                  border: "none", borderRadius: 999,
+                  padding: "6px 14px", fontSize: 12, fontWeight: 700,
+                  fontFamily: "inherit", cursor: drawingVertices.length >= 3 ? "pointer" : "not-allowed",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Terminer
+              </button>
+              <button
+                type="button"
+                onClick={() => { setDrawMode(false); setDrawingVertices([]) }}
+                style={{
+                  background: "transparent", color: "#111",
+                  border: "1px solid #EAE6DF", borderRadius: 999,
+                  padding: "6px 14px", fontSize: 12, fontWeight: 600,
+                  fontFamily: "inherit", cursor: "pointer", whiteSpace: "nowrap",
+                }}
+              >
+                Annuler
+              </button>
+            </>
+          )}
+          {!drawMode && committedPolygon && (
+            <>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#111", padding: "0 10px" }}>
+                Zone active · {withCoords.length} bien{withCoords.length > 1 ? "s" : ""}
+              </span>
+              <button
+                type="button"
+                onClick={clearPolygon}
+                style={{
+                  background: "#a16207", color: "#fff",
+                  border: "none", borderRadius: 999,
+                  padding: "6px 14px", fontSize: 12, fontWeight: 700,
+                  fontFamily: "inherit", cursor: "pointer", whiteSpace: "nowrap",
+                }}
+              >
+                Effacer la zone
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {/* V25.2 (Paul 2026-04-29) — card "Carte des prix" lite : top villes
           rankées par count + €/m² moyen. Affiché bottom-left au-dessus du
           chip "X biens" quand showPrices est actif. Tier color sur €/m² :
@@ -1008,6 +1202,35 @@ export default function MapAnnonces({
                 {pricesByVille.length} ville{pricesByVille.length !== 1 ? "s" : ""}
               </span>
             </button>
+            {/* V26.1 — Dessiner une zone (polygon custom) */}
+            <button
+              type="button"
+              onClick={startDrawMode}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+                width: "100%", padding: "10px 12px", borderRadius: 8,
+                background: drawMode ? "#FBF6EA" : "transparent",
+                border: "none", cursor: "pointer", fontFamily: "inherit",
+                fontSize: 13, fontWeight: drawMode ? 700 : 500, color: "#111",
+                textAlign: "left", WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M12 19l7-7 3 3-7 7-3-3z" />
+                  <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                  <path d="M2 2l7.586 7.586" />
+                  <circle cx="11" cy="11" r="2" />
+                </svg>
+                Dessiner une zone
+              </span>
+              {committedPolygon && (
+                <span style={{ fontSize: 10, color: "#a16207", fontWeight: 700, background: "#FBF6EA", border: "1px solid #EADFC6", padding: "2px 6px", borderRadius: 999 }}>
+                  Active
+                </span>
+              )}
+            </button>
+
             {/* Carte des écoles — coming soon */}
             <div style={{
               display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
