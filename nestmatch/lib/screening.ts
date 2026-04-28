@@ -282,6 +282,18 @@ export function computeScreening(
 
   const score = Math.max(0, Math.min(100, solvabiliteScore + situationScore + garantScore + completudeScore + bonusContexte))
 
+  // V11.6 (Paul 2026-04-28) — distinguer "Risqué" (jugement sur donnees
+  // PRESENTES) de "Dossier incomplet" (absence de donnees). Avant, un
+  // candidat qui n'a juste pas rempli ses revenus + son garant tombait en
+  // "Risqué" (rouge) alors que c'est juste un manque d'info, pas un risque
+  // metier reel.
+  // Spec : revenus manquants ET (garant=false OU non renseigne) →
+  // "Dossier incomplet" (gris). Sinon score bas avec donnees presentes →
+  // "Risqué" (rouge).
+  const revenusManquant = revenus === null
+  const garantManquant = !aGarant && !sansGarant  // Ni "oui" ni "non explicite"
+  const dossierIncomplet = revenusManquant && (garantManquant || sansGarant)
+
   let tier: ScreeningResult["tier"]
   let color: string
   let bg: string
@@ -294,7 +306,12 @@ export function computeScreening(
     tier = "bon"; color = "#166534"; bg = "#f0fdf4"; border = "#bbf7d0"; label = "Bon candidat"
   } else if (score >= 40) {
     tier = "moyen"; color = "#c2410c"; bg = "#fff7ed"; border = "#fed7aa"; label = "À examiner"
+  } else if (dossierIncomplet) {
+    // V11.6 — score bas MAIS revenus + garant non renseignes : ce n'est pas
+    // un risque, c'est un dossier a completer. Couleur gris neutre, pas rouge.
+    tier = "incomplet"; color = "#6b7280"; bg = "#f3f4f6"; border = "#e5e7eb"; label = "Dossier incomplet"
   } else if (score >= 20) {
+    // Score bas avec donnees presentes → vrai jugement "Risqué".
     tier = "faible"; color = "#b91c1c"; bg = "#fee2e2"; border = "#fecaca"; label = "Risqué"
   } else {
     tier = "incomplet"; color = "#6b7280"; bg = "#f3f4f6"; border = "#e5e7eb"; label = "Incomplet"

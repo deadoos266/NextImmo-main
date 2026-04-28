@@ -322,3 +322,53 @@ describe("V6.1 computeScreening — donnees annonce shape prod", () => {
     expect(r.flags.some(f => /4\.0×|tendus/i.test(f))).toBe(true)
   })
 })
+
+// ──────────────────────────────────────────────
+// V11.6 — Tier "Dossier incomplet" vs "Risqué"
+// ──────────────────────────────────────────────
+describe("V11.6 — distinction Dossier incomplet vs Risqué", () => {
+  it("revenus null + garant non renseigne → tier 'incomplet' (gris, pas rouge)", () => {
+    const p: ScreeningProfil = { situation_pro: "CDI" }
+    const r = computeScreening(p, 1000)
+    expect(r.tier).toBe("incomplet")
+    expect(r.label).toMatch(/incomplet/i)
+    expect(r.color).toBe("#6b7280")  // gris neutre
+  })
+
+  it("revenus null + garant=false → tier 'incomplet' (pas Risqué meme avec sansGarant)", () => {
+    const p: ScreeningProfil = { situation_pro: "CDI", garant: false, type_garant: "Aucun garant" }
+    const r = computeScreening(p, 1000)
+    expect(r.tier).toBe("incomplet")
+    expect(r.label).toBe("Dossier incomplet")
+  })
+
+  it("revenus 2000€ pour loyer 1000€ (ratio 2× < 3× attendu) + CDI → tier 'faible' (Risqué, rouge)", () => {
+    const p: ScreeningProfil = {
+      revenus_mensuels: 2000,
+      situation_pro: "CDI",
+      garant: false,
+      type_garant: "Aucun garant",
+    }
+    const r = computeScreening(p, 1000)
+    // Score sera bas (ratio insuffisant + pas de garant) mais revenus
+    // PRESENTS → c'est un vrai risque, pas un manque d'info.
+    if (r.score < 40) {
+      expect(r.tier).toBe("faible")
+      expect(r.label).toBe("Risqué")
+      expect(r.color).toBe("#b91c1c")  // rouge
+    }
+  })
+
+  it("revenus 3500€ + CDI + Visale → tier 'excellent' (Solide)", () => {
+    const p: ScreeningProfil = {
+      revenus_mensuels: 3500,
+      situation_pro: "CDI",
+      garant: true,
+      type_garant: "Organisme Visale",
+      prenom: "Paul", nom: "Martin", telephone: "0612345678",
+    }
+    const r = computeScreening(p, 1000)
+    expect(r.score).toBeGreaterThanOrEqual(80)
+    expect(r.tier).toBe("excellent")
+  })
+})
