@@ -269,6 +269,24 @@ export default function AjouterBien() {
         alert("Remplis au minimum le titre, la ville et le loyer.")
         return
       }
+
+      // Rate-limit check pre-insert (Paul 2026-04-27 V1.4) : protege contre
+      // les double-clicks et le spam (5 annonces / 10 min / user, 20 / h / IP).
+      // Best-effort cote client : un attaquant peut bypass via insert
+      // Supabase direct, mais l'API key est anon donc risque limite. Pour
+      // un guard inflexible, migrer l'insert cote serveur en V2.
+      try {
+        const rlRes = await fetch("/api/annonces/check-rate-limit", { method: "POST" })
+        if (!rlRes.ok) {
+          const j = await rlRes.json().catch(() => ({}))
+          alert(j.error || "Trop de publications récentes, réessayez plus tard.")
+          return
+        }
+      } catch {
+        // Si la route est down, on laisse passer (best-effort, ne bloque
+        // jamais une publication legitime sur un probleme reseau).
+      }
+
       if (form.titre.length > 120) {
         alert("Le titre doit faire 120 caractères maximum.")
         return
