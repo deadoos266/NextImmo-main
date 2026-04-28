@@ -1262,6 +1262,9 @@ function MessagesInner() {
   // l'annonce / Candidatures / Modifier / Devalider / Louer / Appel / Visio /
   // Recherche dans une feuille slide-up declenchee via un kebab ⋯.
   const [mobileSheetOpen, setMobileSheetOpen] = useState<boolean>(false)
+  // V5.5 (Paul 2026-04-28) — sheet quick actions (chips reply) attache au "+"
+  // de la zone composer mobile. Decongestionne le thread overloaded.
+  const [mobileQuickActionsOpen, setMobileQuickActionsOpen] = useState<boolean>(false)
   useEffect(() => { setMobileSheetOpen(false) }, [convActive])
   // Historique annulées dans la modale : collapsible local (fermé par défaut).
   const [historiqueAnnOuvert, setHistoriqueAnnOuvert] = useState<boolean>(false)
@@ -4169,8 +4172,10 @@ function MessagesInner() {
 
                 {/* BienPicker — quand le même peer a 2+ conversations liées
                    à des biens différents, chips de navigation pour switcher.
-                   Handoff messages.jsx l. 533-569. */}
-                {convActiveData?.annonceId != null && (() => {
+                   Handoff messages.jsx l. 533-569.
+                   V5.5 (Paul 2026-04-28) : cache sur mobile (deplace dans le
+                   kebab bottom sheet pour decongestionner le header thread). */}
+                {!isMobile && convActiveData?.annonceId != null && (() => {
                   const relatedConvs = conversations.filter(c =>
                     c.other === convActiveData.other
                     && c.annonceId != null
@@ -4322,8 +4327,10 @@ function MessagesInner() {
                   </div>
                 )}
 
-                {/* Note privée proprio (visible uniquement côté proprio) — palette editoriale + accent amber doux */}
-                {proprietaireActive && convActiveData && (
+                {/* Note privée proprio (visible uniquement côté proprio) — palette editoriale + accent amber doux.
+                    V5.5 (Paul 2026-04-28) : sur mobile, cache du flux principal (deplace dans le
+                    kebab). Sur desktop, reste visible inline. */}
+                {!isMobile && proprietaireActive && convActiveData && (
                   <div style={{ background: "#FBF6EA", borderBottom: "1px solid #EADFC6", padding: "10px 20px", display: "flex", alignItems: "center", gap: 8 }}>
                     {noteEditKey === convActiveData.key ? (
                       <>
@@ -4766,8 +4773,10 @@ function MessagesInner() {
                 }}>
                   {/* Chips d'actions + réponses rapides — calque handoff QuickReply L432-438.
                       Actions sémantiques en pill 999, couleurs d'accent préservées mais adoucies.
-                      Séparateur vertical remplacé par gap naturel. */}
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+                      Séparateur vertical remplacé par gap naturel.
+                      V5.5 (Paul 2026-04-28) : cache sur mobile (deplace dans la sheet "+" attachee
+                      au composer pour eviter d'occuper 60px+ avant de voir un message). */}
+                  <div style={{ display: isMobile ? "none" : "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
                     {!proprietaireActive && (
                       <button onClick={envoyerDossier} disabled={envoyantDossier}
                         style={{ background: "#fff", border: "1px solid #C6E9C0", color: "#15803d", borderRadius: 999, padding: "6px 14px", fontSize: 11.5, fontWeight: 600, cursor: envoyantDossier ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, opacity: envoyantDossier ? 0.6 : 1, letterSpacing: "0.1px" }}>
@@ -4868,7 +4877,29 @@ function MessagesInner() {
                       zoom auto iOS au focus (Safari zoom si <16px). Bouton
                       d'envoi 44x44 minimum sur mobile (seuil tactile WCAG 2.5.5).
                       Padding mobile reduit pour gagner de la place. */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F7F4EF", borderRadius: 24, padding: isMobile ? "5px 5px 5px 14px" : "6px 6px 6px 18px", border: "1px solid #EAE6DF" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F7F4EF", borderRadius: 24, padding: isMobile ? "5px 5px 5px 8px" : "6px 6px 6px 18px", border: "1px solid #EAE6DF" }}>
+                    {/* V5.5 — bouton "+" mobile : ouvre la sheet quick actions
+                        (chips dossier / visite / question loyer). UX iOS Messages style. */}
+                    {isMobile && (
+                      <button
+                        type="button"
+                        onClick={() => setMobileQuickActionsOpen(true)}
+                        aria-label="Plus d'actions"
+                        style={{
+                          background: "#fff", color: "#111",
+                          border: "1px solid #EAE6DF", borderRadius: "50%",
+                          width: 36, height: 36, flexShrink: 0,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          cursor: "pointer", fontFamily: "inherit",
+                          WebkitTapHighlightColor: "transparent",
+                        }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <line x1="12" y1="5" x2="12" y2="19" />
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                      </button>
+                    )}
                     <input ref={inputRef} value={nouveau} onChange={e => { setNouveau(e.target.value); signalTyping() }}
                       onKeyDown={e => e.key === "Enter" && !e.shiftKey && envoyer()}
                       aria-label={replyTo ? "Saisir votre réponse" : "Saisir un message"}
@@ -5073,6 +5104,114 @@ function MessagesInner() {
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                             </span>
                             Dévalider la candidature
+                          </button>
+                        )}
+
+                        <button type="button" onClick={close} style={{ ...rowStyle, color: "#8a8477", borderTop: "1px solid #F7F4EF", marginTop: 4, justifyContent: "center", padding: "16px 20px" }}>
+                          Fermer
+                        </button>
+                      </div>
+                    </>
+                  )
+                })()}
+
+                {/* V5.5 — Quick actions sheet (chips reply mobile). Bottom-sheet
+                    minimal liste les actions rapides : envoyer/demander dossier,
+                    proposer visite, question loyer. */}
+                {isMobile && convActiveData && mobileQuickActionsOpen && (() => {
+                  function close() { setMobileQuickActionsOpen(false) }
+                  const rowStyle: React.CSSProperties = {
+                    display: "flex", alignItems: "center", gap: 14, width: "100%",
+                    padding: "14px 20px", background: "transparent", border: "none",
+                    color: "#111", fontSize: 15, fontWeight: 500, fontFamily: "inherit",
+                    cursor: "pointer", textAlign: "left" as const,
+                    WebkitTapHighlightColor: "transparent",
+                  }
+                  const iconWrap: React.CSSProperties = {
+                    width: 32, height: 32, borderRadius: "50%",
+                    background: "#F7F4EF", border: "1px solid #EAE6DF",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#111", flexShrink: 0,
+                  }
+                  return (
+                    <>
+                      <div onClick={close} aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 9000, background: "rgba(0,0,0,0.45)" }} />
+                      <div role="dialog" aria-modal="true" aria-label="Actions rapides" style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 9001, background: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: "calc(12px + env(safe-area-inset-bottom, 0px))", boxShadow: "0 -8px 28px rgba(0,0,0,0.18)" }}>
+                        <div style={{ padding: "10px 0 6px", display: "flex", justifyContent: "center" }} aria-hidden="true">
+                          <div style={{ width: 40, height: 4, borderRadius: 999, background: "#EAE6DF" }} />
+                        </div>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1px", margin: "6px 20px 6px", padding: "0 0 6px", borderBottom: "1px solid #F7F4EF" }}>
+                          Actions rapides
+                        </p>
+                        {!proprietaireActive && (
+                          <button
+                            type="button"
+                            disabled={envoyantDossier}
+                            onClick={() => { close(); envoyerDossier() }}
+                            style={{ ...rowStyle, color: "#15803d", fontWeight: 600 }}
+                          >
+                            <span style={{ ...iconWrap, background: "#F0FAEE", borderColor: "#C6E9C0", color: "#15803d" }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                            </span>
+                            {envoyantDossier ? "Envoi…" : "Envoyer mon dossier"}
+                          </button>
+                        )}
+                        {proprietaireActive && (
+                          <button
+                            type="button"
+                            disabled={demandantDossier}
+                            onClick={() => { close(); demanderDossier() }}
+                            style={{ ...rowStyle, color: "#b45309", fontWeight: 600 }}
+                          >
+                            <span style={{ ...iconWrap, background: "#FBF6EA", borderColor: "#EADFC6", color: "#b45309" }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                            </span>
+                            {demandantDossier ? "Envoi…" : "Demander le dossier"}
+                          </button>
+                        )}
+                        {convActiveData.annonceId && (
+                          <button
+                            type="button"
+                            onClick={() => { close(); setCounterTarget(null); setShowVisiteForm(true) }}
+                            style={{ ...rowStyle, color: "#1d4ed8", fontWeight: 600 }}
+                          >
+                            <span style={{ ...iconWrap, background: "#EEF3FB", borderColor: "#D7E3F4", color: "#1d4ed8" }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /></svg>
+                            </span>
+                            Proposer une visite
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            close()
+                            if (nouveau.trim().length === 0) {
+                              setNouveau("Bonjour, j'aurais une question concernant le loyer et les charges. ")
+                              inputRef.current?.focus()
+                            }
+                          }}
+                          style={{ ...rowStyle, color: "#6b6b6b", fontWeight: 600 }}
+                        >
+                          <span style={iconWrap}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>
+                          </span>
+                          Question sur le loyer
+                        </button>
+
+                        {/* V5.5 — Note privée (mobile, deplace ici depuis le banner du thread) */}
+                        {proprietaireActive && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              close()
+                              if (convActiveData) openNoteEditor(convActiveData.key)
+                            }}
+                            style={{ ...rowStyle, color: "#a16207", fontWeight: 600, borderTop: "1px solid #F7F4EF", marginTop: 4 }}
+                          >
+                            <span style={{ ...iconWrap, background: "#FBF6EA", borderColor: "#EADFC6", color: "#a16207" }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                            </span>
+                            {candidatNotes[convActiveData.key] ? "Modifier ma note privée" : "Ajouter une note privée"}
                           </button>
                         )}
 
