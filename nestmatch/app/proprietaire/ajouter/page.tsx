@@ -897,6 +897,31 @@ function Step3Dimensions({
             onChange={set("dpe")}
           />
         )}
+
+        {/* V9.1 — soft warning si DPE F/G choisi. Loi Climat & Resilience.
+            Pas blocking, juste un nudge vers les travaux de renovation. */}
+        {(form.dpe === "F" || form.dpe === "G") && (
+          <div style={{
+            marginTop: 12,
+            background: "#FBF6EA",
+            border: "1px solid #EADFC6",
+            borderRadius: 12,
+            padding: "10px 14px",
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 10,
+          }}>
+            <span aria-hidden="true" style={{ flexShrink: 0, color: "#a16207", fontSize: 16, marginTop: 1 }}>⚠</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 12.5, fontWeight: 700, color: "#a16207", margin: 0 }}>
+                {form.dpe === "G" ? "DPE G : déjà interdit pour les nouveaux baux depuis janvier 2025." : "DPE F : interdiction de location à partir de janvier 2028."}
+              </p>
+              <p style={{ fontSize: 11.5, color: "#6b5314", margin: "4px 0 0", lineHeight: 1.5 }}>
+                Vous pouvez publier l&apos;annonce, mais pensez aux travaux de rénovation énergétique pour pérenniser la location. <a href="https://www.legifrance.gouv.fr/loda/id/LEGISCTA000043959654/" target="_blank" rel="noopener noreferrer" style={{ color: "#a16207", textDecoration: "underline", fontWeight: 700 }}>Loi Climat &amp; Résilience</a>.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -17,6 +17,7 @@ import EquipementsBlock from "./EquipementsBlock"
 import PartagerCard from "./PartagerCard"
 import StickyCTABanner from "./StickyCTABanner"
 import CandidaturesCounter from "./CandidaturesCounter"
+import DpeWarningBanner from "./DpeWarningBanner"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -913,6 +914,9 @@ export default async function Annonce({ params }: any) {
                   </div>
                 </div>
               )}
+
+              {/* V9.1 — warning DPE F/G interdit en 2028 (loi Climat & Résilience). */}
+              <DpeWarningBanner dpe={annonce.dpe} />
 
               <ScoreBlock annonce={annonce} />
 

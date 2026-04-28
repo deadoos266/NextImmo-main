@@ -467,6 +467,19 @@ export default function ListingCardSearch({
           <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 }}>
             {specsLine}
             <DpeBadge letter={dpeLetter} surfaceM2={Number(annonce.surface) || null} />
+            {/* V9.1 — pill discrete loi Climat 2028 si DPE F/G */}
+            {(dpeLetter === "F" || dpeLetter === "G") && (
+              <span title="Loi Climat & Résilience : interdiction de location à partir de 2028 (G déjà interdits depuis 2025)" style={{
+                display: "inline-flex", alignItems: "center", gap: 3,
+                padding: "1px 7px", borderRadius: 999,
+                background: "#FEECEC", color: "#b91c1c",
+                border: "1px solid #F4C9C9",
+                fontSize: 9.5, fontWeight: 700, letterSpacing: "0.3px",
+                whiteSpace: "nowrap",
+              }}>
+                ⚠ Interdiction 2028
+              </span>
+            )}
           </span>
           <span
             style={{

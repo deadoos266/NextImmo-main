@@ -300,6 +300,18 @@ export default function ListingCardCompact({
             <>
               <span style={{ width: 2, height: 2, background: "#EAE6DF", borderRadius: "50%" }} />
               <DpeBadge letter={annonce.dpe} surfaceM2={Number(annonce.surface) || null} />
+              {/* V9.1 — pill loi Climat 2028 si DPE F/G */}
+              {(String(annonce.dpe).toUpperCase() === "F" || String(annonce.dpe).toUpperCase() === "G") && (
+                <span title="Loi Climat & Résilience : interdiction location 2028" style={{
+                  padding: "1px 6px", borderRadius: 999,
+                  background: "#FEECEC", color: "#b91c1c",
+                  border: "1px solid #F4C9C9",
+                  fontSize: 9, fontWeight: 700, letterSpacing: "0.2px",
+                  whiteSpace: "nowrap",
+                }}>
+                  ⚠ 2028
+                </span>
+              )}
             </>
           )}
           {annonce.meuble === true && (
