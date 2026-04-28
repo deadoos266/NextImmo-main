@@ -280,6 +280,12 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   const urlSurfaceMax = spGet(initialSearchParams, "surface_max")
   const urlPiecesMin = parseInt(spGet(initialSearchParams, "pieces_min") || "0") || 0
   const urlMotCle = spGet(initialSearchParams, "q")
+  // V2.7 (Paul 2026-04-27) — matching v2 URL overrides
+  const urlCompatMin = parseInt(spGet(initialSearchParams, "compatibilite_min") || "0") || 0
+  const urlToleranceRaw = spGet(initialSearchParams, "tolerance")
+  const urlTolerance = urlToleranceRaw === "" ? NaN : parseInt(urlToleranceRaw)
+  const urlRayonRaw = spGet(initialSearchParams, "rayon")
+  const urlRayon = urlRayonRaw === "" ? NaN : parseInt(urlRayonRaw)
 
   const activeVille = urlVille
   const activeBudget = urlBudget
@@ -291,8 +297,10 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
     if (urlSurfaceMax !== surfaceMax) setSurfaceMax(urlSurfaceMax)
     if (urlPiecesMin !== piecesMin) setPiecesMin(urlPiecesMin)
     if (urlMotCle !== motCle) setMotCle(urlMotCle)
+    // V2.7 — compatibilite_min URL → state local scoreMin (compat URL existante)
+    if (urlCompatMin > 0 && urlCompatMin !== scoreMin) setScoreMin(urlCompatMin)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlSurfaceMin, urlSurfaceMax, urlPiecesMin, urlMotCle])
+  }, [urlSurfaceMin, urlSurfaceMax, urlPiecesMin, urlMotCle, urlCompatMin])
 
   // ── Persist view en localStorage (clé km_annonces_view)
   useEffect(() => {
@@ -499,9 +507,20 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   // Normalisation ville identique à lib/geocoding (pour lookup dans `geocoded`)
   const normalizeVille = normalizeCityKey
 
+  // V2.7 — profil effectif : merge profil DB + overrides URL pour tolerance/rayon.
+  // Permet aux liens partages (?tolerance=10&rayon=30) de surcharger le profil
+  // sans muter ce qu'on persiste cote /profil.
+  const profilEffectif = profil
+    ? {
+        ...profil,
+        ...(Number.isFinite(urlTolerance) && urlTolerance >= 0 ? { tolerance_budget_pct: urlTolerance } : {}),
+        ...(Number.isFinite(urlRayon) && urlRayon > 0 ? { rayon_recherche_km: urlRayon } : {}),
+      }
+    : null
+
   // ── Enrichissement coords
   const annoncesEnrichies = annonces
-    .filter(a => !profil || !estExclu(a, profil))
+    .filter(a => !profilEffectif || !estExclu(a, profilEffectif))
     .map(a => {
       const canUseDbCoords = !!a.localisation_exacte && typeof a.lat === "number" && typeof a.lng === "number"
       let lat: number | null = null
@@ -519,7 +538,7 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           if (g) { lat = g[0]; lng = g[1] }
         }
       }
-      return { ...a, scoreMatching: profil ? calculerScore(a, profil) : null, _lat: lat, _lng: lng }
+      return { ...a, scoreMatching: profilEffectif ? calculerScore(a, profilEffectif) : null, _lat: lat, _lng: lng }
     })
 
   // Background geocoding pour les villes pas dans cityCoords + pas en DB
