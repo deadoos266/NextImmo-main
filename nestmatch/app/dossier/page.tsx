@@ -2000,15 +2000,10 @@ export default function Dossier() {
 
               {/* ─── 01 Identité ─── */}
               <Section id="identite" num="01" kicker="Qui êtes-vous" title="Identité" isMobile={isMobile}>
-                {/* Bannière transparence ALUR — décret 2015-1437 + article 22-2
-                    loi 89-462. Les champs marqués "facultatif" ci-dessous ne
-                    peuvent pas être exigés pour l'attribution d'un logement. */}
-                <div style={{ background: T.mutedBg, border: `1px solid ${T.line}`, borderLeft: `3px solid ${T.ink}`, borderRadius: 12, padding: "14px 16px", marginBottom: 22 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase", color: T.soft, marginBottom: 4 }}>Vos droits</div>
-                  <p style={{ fontSize: 13, color: "#333", lineHeight: 1.55, margin: 0, fontStyle: "italic" }}>
-                    Aucune pièce non listée par le décret n° 2015-1437 ne peut vous être exigée. Les champs marqués « facultatif » sont à votre discrétion — loi ALUR (2014-366) et article 22-2 de la loi du 6 juillet 1989 (89-462).
-                  </p>
-                </div>
+                {/* V10 (Paul 2026-04-28) — la card "Vos droits" en haut etait
+                    un doublon de celle deja presente en bas de page (section
+                    legale finale). User a flag : on supprime ici, la version
+                    bottom reste. */}
                 <Row2 isMobile={isMobile}>
                   <Field label={<>Prénom <LockBadge mailto={buildMailtoModifIdentite(session?.user?.email || "", form.prenom, form.nom)} /></>}>
                     <LockedInput value={form.prenom} />
@@ -2223,32 +2218,32 @@ export default function Dossier() {
                   Vos droits
                 </h3>
                 <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 12 }}>
-                  <li style={{ display: "flex", gap: 10, fontSize: 13, color: "#111", lineHeight: 1.55 }}>
+                  <li style={{ display: "flex", gap: 10, fontSize: 13, color: "#111", lineHeight: 1.55, overflowWrap: "anywhere", wordBreak: "break-word" }}>
                     <span aria-hidden style={{ flexShrink: 0, marginTop: 3 }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                     </span>
                     <span><strong>Vos données restent à vous.</strong> Vous décidez à qui partager votre dossier, à votre seule initiative. Vous pouvez à tout moment révoquer un lien de partage depuis la sidebar.</span>
                   </li>
-                  <li style={{ display: "flex", gap: 10, fontSize: 13, color: "#111", lineHeight: 1.55 }}>
+                  <li style={{ display: "flex", gap: 10, fontSize: 13, color: "#111", lineHeight: 1.55, overflowWrap: "anywhere", wordBreak: "break-word" }}>
                     <span aria-hidden style={{ flexShrink: 0, marginTop: 3 }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                     </span>
                     <span><strong>Le propriétaire ne peut pas tout exiger.</strong> Liste de pièces interdites par le décret n°2015-1437 : photo d&apos;identité, attestation d&apos;absence de crédit, RIB sauf pour le prélèvement, copie du compte bancaire.</span>
                   </li>
-                  <li style={{ display: "flex", gap: 10, fontSize: 13, color: "#111", lineHeight: 1.55 }}>
+                  <li style={{ display: "flex", gap: 10, fontSize: 13, color: "#111", lineHeight: 1.55, overflowWrap: "anywhere", wordBreak: "break-word" }}>
                     <span aria-hidden style={{ flexShrink: 0, marginTop: 3 }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                     </span>
                     <span><strong>Pas de discrimination.</strong> L&apos;article 225-1 du Code pénal interdit le refus de louer en raison de votre origine, religion, situation familiale, orientation, état de santé. La nationalité est <em>facultative</em> dans votre dossier.</span>
                   </li>
-                  <li style={{ display: "flex", gap: 10, fontSize: 13, color: "#111", lineHeight: 1.55 }}>
+                  <li style={{ display: "flex", gap: 10, fontSize: 13, color: "#111", lineHeight: 1.55, overflowWrap: "anywhere", wordBreak: "break-word" }}>
                     <span aria-hidden style={{ flexShrink: 0, marginTop: 3 }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                     </span>
                     <span><strong>Droit à la suppression.</strong> Vous pouvez supprimer votre compte et toutes vos données (RGPD article 17) depuis vos <a href="/parametres" style={{ color: "#111", textDecoration: "underline" }}>paramètres</a>. Le propriétaire ne peut conserver votre dossier qu&apos;avec votre consentement.</span>
                   </li>
                 </ul>
-                <p style={{ fontSize: 11, color: "#8a8477", margin: "16px 0 0", lineHeight: 1.5 }}>
+                <p style={{ fontSize: 11, color: "#8a8477", margin: "16px 0 0", lineHeight: 1.5, overflowWrap: "anywhere", wordBreak: "break-word" }}>
                   Ce dossier est conforme à la loi du 6 juillet 1989 et au décret n°2015-1437 fixant la liste des pièces qu&apos;un bailleur peut exiger.
                 </p>
               </div>
