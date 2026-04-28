@@ -150,6 +150,43 @@ export interface Annonce {
  * Plafond cumulé 30 pts (≈ 6 matches). Volontairement borné — au-delà, le
  * scoring principal doit dominer.
  */
+/**
+ * V25.3 (Paul 2026-04-29) — score bonus "composition du foyer".
+ *
+ * Avant V25.3 : nb_enfants / situation_familiale / animaux étaient en interface
+ * Profil mais N'INFLUAIENT PAS le score (nb_enfants explicite "STRICTEMENT
+ * IGNORÉ" comme discriminant légal). C'est correct pour interdire la
+ * discrimination de location, mais on peut quand même BONIFIER le matching :
+ * si un user a 2 enfants, on boost les annonces avec jardin / T4+ / 3+ chambres
+ * (logements adaptés). Pas de malus inverse — on ne pénalise pas un studio
+ * pour une famille (le user reste libre).
+ *
+ * Plafond 35 pts cumulés pour ne pas vampiriser les 965 autres pts du barème.
+ */
+export function scoreFoyer(annonce: Annonce, profil: Profil): number {
+  let score = 0
+  const nbEnfants = Number(profil.nb_enfants ?? 0) || 0
+  const situ = (profil.situation_familiale || "").toLowerCase()
+  const isCouple = situ.includes("marié") || situ.includes("couple") || situ.includes("pacs")
+
+  // Familles avec enfants → jardin = vraie valeur ajoutée
+  if (nbEnfants >= 1 && annonce.jardin === true) score += 15
+
+  // Familles avec enfants → besoin de pièces (T4+ = 4+ pieces)
+  if (nbEnfants >= 1 && typeof annonce.pieces === "number" && annonce.pieces >= 4) score += 10
+
+  // 2+ enfants → chambres séparées (3+ chambres = chacun la sienne + parents)
+  if (nbEnfants >= 2 && typeof annonce.chambres === "number" && annonce.chambres >= 3) score += 10
+
+  // Couple → 2 chambres minimum (1 chambre principal + 1 bureau/invité)
+  if (isCouple && typeof annonce.chambres === "number" && annonce.chambres >= 2) score += 5
+
+  // Animaux + jardin = combo idéal
+  if (profil.animaux === true && annonce.jardin === true) score += 5
+
+  return Math.min(score, 35)
+}
+
 export function scoreEquipementsSecondaires(annonce: Annonce, profil: Profil): number {
   const wanted = readEquipementsSecondaires(profil.preferences_equipements ?? null)
   if (wanted.length === 0) return 0
@@ -588,6 +625,9 @@ export function calculerScore(annonce: Annonce, profil: Profil): number {
   // locataire dans la popup /profil. +5 par match, cap 30 pts. Volontairement
   // borné pour ne pas vampiriser les 970 autres pts du barème.
   score += scoreEquipementsSecondaires(annonce, profil)
+  // V25.3 (Paul 2026-04-29) — bonus composition foyer (familles + jardin/T4+/3CH).
+  // Cap 35 pts (cf. scoreFoyer). Non-discriminant : pas de malus, juste boost.
+  score += scoreFoyer(annonce, profil)
 
   // V9.3 (Paul 2026-04-28) — score qualite annonce comme multiplicateur.
   // Une annonce avec 0 photo + desc 5 chars + sans DPE = score qualite ~0

@@ -713,3 +713,58 @@ describe("V13 scoreEquipementsSecondaires — bonus checkbox-only équipements e
     expect(scoreEquipementsSecondaires(annonce, profil)).toBe(0)
   })
 })
+
+// ─── V25.3 — scoreFoyer ────────────────────────────────────────────────────
+import { scoreFoyer } from "./matching"
+
+describe("V25.3 scoreFoyer — bonus composition foyer (cap 35)", () => {
+  const PROFIL_BASE: Profil = { ville_souhaitee: "Paris", budget_max: 1500 }
+
+  it("célibataire sans enfants → 0 pts", () => {
+    const profil: Profil = { ...PROFIL_BASE }
+    const annonce: Annonce = { ville: "Paris", jardin: true, pieces: 5, chambres: 4 }
+    expect(scoreFoyer(annonce, profil)).toBe(0)
+  })
+
+  it("famille 1 enfant + jardin → +15 pts", () => {
+    const profil: Profil = { ...PROFIL_BASE, nb_enfants: 1 }
+    const annonce: Annonce = { ville: "Paris", jardin: true, pieces: 3 }
+    expect(scoreFoyer(annonce, profil)).toBe(15)
+  })
+
+  it("famille 1 enfant + jardin + T4 → +25 pts (15 jardin + 10 T4+)", () => {
+    const profil: Profil = { ...PROFIL_BASE, nb_enfants: 1 }
+    const annonce: Annonce = { ville: "Paris", jardin: true, pieces: 4, chambres: 2 }
+    expect(scoreFoyer(annonce, profil)).toBe(25)
+  })
+
+  it("famille 2 enfants + jardin + T5 + 3CH + couple → cap 35 (15+10+10+5 = 40 → 35)", () => {
+    const profil: Profil = { ...PROFIL_BASE, nb_enfants: 2, situation_familiale: "marié·e" }
+    const annonce: Annonce = { ville: "Paris", jardin: true, pieces: 5, chambres: 3 }
+    expect(scoreFoyer(annonce, profil)).toBe(35) // cap
+  })
+
+  it("couple sans enfants + 2CH → +5 pts (couple bonus seul)", () => {
+    const profil: Profil = { ...PROFIL_BASE, situation_familiale: "en couple" }
+    const annonce: Annonce = { ville: "Paris", chambres: 2 }
+    expect(scoreFoyer(annonce, profil)).toBe(5)
+  })
+
+  it("animaux + jardin (sans enfants) → +5 pts", () => {
+    const profil: Profil = { ...PROFIL_BASE, animaux: true }
+    const annonce: Annonce = { ville: "Paris", jardin: true }
+    expect(scoreFoyer(annonce, profil)).toBe(5)
+  })
+
+  it("famille avec enfants + animaux + jardin → +15 (jardin) + +5 (animaux) = 20", () => {
+    const profil: Profil = { ...PROFIL_BASE, nb_enfants: 1, animaux: true }
+    const annonce: Annonce = { ville: "Paris", jardin: true, pieces: 3, chambres: 2 }
+    expect(scoreFoyer(annonce, profil)).toBe(20)
+  })
+
+  it("annonce sans aucune des features ciblées → 0 pts (pas de malus)", () => {
+    const profil: Profil = { ...PROFIL_BASE, nb_enfants: 3, animaux: true, situation_familiale: "marié·e" }
+    const annonce: Annonce = { ville: "Paris", pieces: 1, chambres: 0 }
+    expect(scoreFoyer(annonce, profil)).toBe(0)
+  })
+})
