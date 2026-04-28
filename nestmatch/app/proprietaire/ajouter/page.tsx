@@ -270,9 +270,23 @@ export default function AjouterBien() {
         alert("Le loyer doit être compris entre 1 et 50 000 €.")
         return
       }
+      // Validation surface (Paul 2026-04-27 V1.2) : la loi française decence
+      // (decret 2002-120) impose 9m² minimum pour une location decente. On
+      // bloque l'envoi sous ce seuil, sauf si surface vide (=non renseignee).
       const surface = parseInt(form.surface || "0", 10) || 0
+      if (form.surface && (surface > 0 && surface < 9)) {
+        alert("La surface doit être d'au moins 9 m² (loi décence — décret 2002-120).")
+        return
+      }
       if (surface < 0 || surface > 1000) {
         alert("La surface doit être comprise entre 0 et 1000 m².")
+        return
+      }
+      // Validation chambres > pieces : incoherent (chambres incluses dans pieces)
+      const piecesNum = parseInt(form.pieces || "0", 10) || 0
+      const chambresNum = parseInt(form.chambres || "0", 10) || 0
+      if (piecesNum > 0 && chambresNum > 0 && chambresNum > piecesNum) {
+        alert(`Le nombre de chambres (${chambresNum}) ne peut pas dépasser le nombre de pièces (${piecesNum}).`)
         return
       }
       setSaving(true)
@@ -1422,6 +1436,21 @@ function Step7Publier({
             }} />
           </button>
         </div>
+        {/* Warning si is_test=true alors que statut="disponible" — paradoxe
+            UX (annonce dispo non-publique = invisible aux locataires).
+            Paul 2026-04-27 V1.2. */}
+        {form.is_test && form.statut === "disponible" && (
+          <div style={{ marginTop: 10, padding: "10px 14px", background: km.warnBg, border: `1px solid ${km.warnLine}`, borderRadius: 10, display: "flex", alignItems: "flex-start", gap: 10 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={km.warnText} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }}>
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <p style={{ fontSize: 12, color: km.warnText, margin: 0, lineHeight: 1.5 }}>
+              <strong>Attention :</strong> votre annonce est marquée &laquo;&nbsp;disponible&nbsp;&raquo; mais en mode test. Aucun locataire ne pourra la trouver. Désactivez le toggle pour la rendre publique.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Récap visuel — checklist complétude avec lien « Modifier » vers l'étape */}
