@@ -237,7 +237,7 @@ export default function Navbar() {
     gate?: { enabled: boolean; reason: GatedActionReason }
   }
   const espaceLinks: EspaceLink[] = proprietaireActive ? [
-    { href: "/profil",                 label: "Mon profil",         desc: "Informations personnelles" },
+    { href: "/profil",                 label: "Mon espace propriétaire", desc: "Informations personnelles" },
     { href: "/proprietaire",           label: "Mes biens",          desc: "Gestion de mes annonces" },
     { href: "/proprietaire/ajouter",   label: "Publier un bien",    desc: "Ajouter une nouvelle annonce" },
     { href: "/proprietaire/estimateur",label: "Estimer un loyer",   desc: "Comparer avec le marché avant de publier" },
@@ -246,7 +246,7 @@ export default function Navbar() {
     // Ordre intentionnel : non-gated en haut (utiles dès la phase recherche),
     // gated en bas (nécessitent un bail KeyMatch). Mes visites est non-gated
     // car le locataire en a besoin avant signature de bail.
-    { href: "/profil",        label: "Mon profil",         desc: "Critères de recherche & matching" },
+    { href: "/profil",        label: "Mon espace locataire", desc: "Critères de recherche & matching" },
     { href: "/dossier",       label: "Mon dossier",        desc: "Documents & complétion" },
     { href: "/visites",       label: "Mes visites",        desc: "Demandes & confirmations", badge: badgeVisites },
     { href: "/mon-logement",  label: "Mon logement",       desc: "Bail actif, loyer, documents",
@@ -453,13 +453,13 @@ export default function Navbar() {
 
                     {/* Items avec icônes et indicateur actif */}
                     {(proprietaireActive ? [
-                      { href: "/profil",               label: "Mon profil",      icon: "user" },
+                      { href: "/profil",               label: "Mon espace propriétaire", icon: "user" },
                       { href: "/proprietaire",         label: "Mes biens",       icon: "home" },
                       { href: "/proprietaire/ajouter", label: "Publier un bien", icon: "plus" },
                       { href: "/carnet",               label: "Carnet d'entretien", icon: "wrench" },
                       { href: "/messages",             label: "Messages",        icon: "chat", count: badgeMessages },
                     ] : [
-                      { href: "/profil",       label: "Mon profil",   icon: "user" },
+                      { href: "/profil",       label: "Mon espace locataire",   icon: "user" },
                       { href: "/dossier",      label: "Mon dossier",  icon: "file" },
                       { href: "/visites",      label: "Mes visites",  icon: "calendar", count: badgeVisites },
                       { href: "/favoris",      label: "Mes favoris",  icon: "heart" },

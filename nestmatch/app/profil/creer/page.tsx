@@ -386,7 +386,7 @@ export default function CreerProfil() {
               {toggles.fumeur && <RecapLine label="Fumeur" value="Oui" />}
               {erreur && <div style={{ background: "#FEECEC", color: "#b91c1c", border: "1px solid #F4C9C9", padding: "12px 16px", borderRadius: 14, marginTop: 16, fontSize: 13 }}>{erreur}</div>}
               <p style={{ fontSize: 12, color: "#8a8477", marginTop: 20, lineHeight: 1.6 }}>
-                Vous pourrez modifier chaque section directement depuis la page <strong>Mon profil</strong>.
+                Vous pourrez modifier chaque section directement depuis <strong>Mon espace locataire</strong>.
               </p>
             </div>
           )}

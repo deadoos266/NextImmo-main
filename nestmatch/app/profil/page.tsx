@@ -458,12 +458,13 @@ function Profil() {
 
         {/* V8 — Hero editorial style /dossier : eyebrow + rule + meta + grand
             titre Fraunces avec accent italic. Score card a droite reprend le
-            visuel /dossier. Remplace l'ancien header avatar + nom dans une
-            card tristement pleine. */}
+            visuel /dossier.
+            V9.0 (Paul 2026-04-28) — rename "Mon profil" → "Mon espace
+            locataire" / "Mon espace propriétaire" selon le rôle. */}
         {!proprietaireActive && (
           <DossierHero
             isMobile={isMobile}
-            eyebrow="Mon profil"
+            eyebrow="Mon espace locataire"
             metaRight={session.user?.email}
             title={session.user?.name?.split(" ")[0] || "Bienvenue"}
             titleAccent={(
@@ -487,25 +488,28 @@ function Profil() {
           />
         )}
 
-        {/* Proprio : header simple, on garde le pattern card car il y a peu
-            de contenu (CTA dashboard / publier). */}
+        {/* Proprio : hero dossier-style aussi pour rester coherent. */}
         {proprietaireActive && (
-          <div style={{ background: T.white, border: `1px solid ${T.line}`, borderRadius: 20, padding: isMobile ? "20px 18px" : 32, marginBottom: 20, display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "space-between", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 16 : 0, boxShadow: "0 1px 0 #ebe4d6" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 14 : 24 }}>
-              {(photoCustom || session.user?.image)
-                ? <img src={photoCustom || session.user?.image || ""} alt="p" referrerPolicy="no-referrer" style={{ width: isMobile ? 52 : 72, height: isMobile ? 52 : 72, borderRadius: "50%", objectFit: "cover" }} />
-                : <div style={{ width: isMobile ? 52 : 72, height: isMobile ? 52 : 72, borderRadius: "50%", background: T.ink, display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? 20 : 28, color: T.white, fontWeight: 600, fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic" }}>{session.user?.name?.[0]}</div>
-              }
-              <div>
-                <p style={{ fontSize: 10, fontWeight: 700, color: T.soft, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 6px" }}>Mon profil</p>
-                <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: isMobile ? 24 : 32, letterSpacing: "-0.5px", color: T.ink, margin: 0 }}>{session.user?.name}</h1>
-                <p style={{ color: T.meta, marginTop: 4, fontSize: isMobile ? 13 : 14 }}>{session.user?.email}</p>
+          <DossierHero
+            isMobile={isMobile}
+            eyebrow="Mon espace propriétaire"
+            metaRight={session.user?.email}
+            title={session.user?.name?.split(" ")[0] || "Bienvenue"}
+            titleAccent={(
+              <>vos biens<br />en gestion.</>
+            )}
+            subtitle="Pilotez vos annonces, vos candidats et vos baux depuis un seul endroit."
+            rightSlot={
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <a href="/proprietaire" style={{ background: T.ink, color: T.white, padding: "12px 22px", borderRadius: 999, textDecoration: "none", fontWeight: 700, fontSize: 13, fontFamily: "'DM Sans', sans-serif", textAlign: "center" as const }}>
+                  Dashboard propriétaire →
+                </a>
+                <a href="/proprietaire/ajouter" style={{ background: T.white, color: T.ink, border: `1px solid ${T.line}`, padding: "12px 22px", borderRadius: 999, textDecoration: "none", fontWeight: 600, fontSize: 13, fontFamily: "'DM Sans', sans-serif", textAlign: "center" as const }}>
+                  Publier un bien
+                </a>
               </div>
-            </div>
-            <a href="/proprietaire" style={{ background: T.ink, color: T.white, padding: "10px 22px", borderRadius: 999, textDecoration: "none", fontWeight: 600, fontSize: 11, textAlign: "center", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-              Mes biens →
-            </a>
-          </div>
+            }
+          />
         )}
 
         {/* Nav onglets unifiée — 5 onglets symétriques avec /parametres :
@@ -909,7 +913,7 @@ function Profil() {
           num="04"
           kicker="Locataire"
           subtitle="Profil, revenus, garant"
-          title="Mon profil locataire"
+          title="Mon profil de locataire"
           footer={<DossierSaveBtn state={savingSection === "profil-locataire" ? "saving" : "idle"} onClick={() => saveSection("profil-locataire")}>{savingSection === "profil-locataire" ? "Enregistrement…" : "Enregistrer cette section"}</DossierSaveBtn>}
         >
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
