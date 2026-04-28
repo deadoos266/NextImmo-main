@@ -459,7 +459,7 @@ export default function AjouterBien() {
     { key: "surface",     label: "Surface",        ok: !!form.surface,                                             editStep: 3 as StepNum },
     { key: "pieces",      label: "Pièces",         ok: !!form.pieces,                                              editStep: 3 as StepNum },
     { key: "description", label: "Description",    ok: (form.description || "").trim().length >= 80,               editStep: 5 as StepNum },
-    { key: "photos",      label: "Photos",         ok: photos.length >= 1,                                         editStep: 5 as StepNum },
+    { key: "photos",      label: "Photos (3+ recommandées)", ok: photos.length >= 3,                                editStep: 5 as StepNum },
     { key: "dpe",         label: "DPE",            ok: !!form.dpe,                                                 editStep: 1 as StepNum },
   ]
   const nOk = checks.filter(c => c.ok).length
@@ -1058,6 +1058,24 @@ function Step5Recit({
         <div style={{ background: km.errBg, border: `1px solid ${km.errLine}`, borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <p style={{ fontSize: 13, color: km.errText }}>{photoError}</p>
           <button type="button" aria-label="Fermer le message d'erreur" onClick={() => setPhotoError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: km.errText, fontSize: 18, lineHeight: 1, fontFamily: "inherit" }}>×</button>
+        </div>
+      )}
+
+      {/* V3.3 — warning qualite photos. Pas de blocage : on prefere encourager
+          l'ajout plutot que rejeter une annonce sans photos (le proprio peut
+          publier puis enrichir). 3+ photos = recommande pour un bon CTR. */}
+      {photos.length === 0 && (
+        <div style={{ background: km.warnBg, border: `1px solid ${km.warnLine}`, borderRadius: 10, padding: "10px 14px", marginBottom: 16 }}>
+          <p style={{ fontSize: 12.5, color: km.warnText, margin: 0, lineHeight: 1.5 }}>
+            <strong>Aucune photo ajoutée.</strong> Une annonce sans photo reçoit ~5× moins de candidatures. Ajoutez au moins 3 photos (extérieur, séjour, cuisine).
+          </p>
+        </div>
+      )}
+      {photos.length > 0 && photos.length < 3 && (
+        <div style={{ background: km.warnBg, border: `1px solid ${km.warnLine}`, borderRadius: 10, padding: "10px 14px", marginBottom: 16 }}>
+          <p style={{ fontSize: 12.5, color: km.warnText, margin: 0, lineHeight: 1.5 }}>
+            Pour un bon taux de réponse, visez <strong>au moins 3 photos</strong> (séjour, cuisine, salle de bain). Vous pouvez en ajouter jusqu&apos;à 10.
+          </p>
         </div>
       )}
 
