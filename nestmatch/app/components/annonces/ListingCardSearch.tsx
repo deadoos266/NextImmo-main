@@ -345,30 +345,9 @@ export default function ListingCardSearch({
               NOUVEAU
             </span>
           )}
-          {matchPct !== null && (
-            <span
-              style={{
-                padding: "5px 10px",
-                background: "rgba(255,255,255,0.94)",
-                color: "#111",
-                borderRadius: 999,
-                fontSize: 11,
-                fontWeight: 600,
-                backdropFilter: "blur(6px)",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              {matchPct}% match
-              {/* V7.3 — rang relatif si liste >= 10 */}
-              {rang !== null && rang !== undefined && rangTotal !== null && rangTotal !== undefined && (
-                <span style={{ fontSize: 10, fontWeight: 500, color: "#8a8477", letterSpacing: "0.1px" }}>
-                  · #{rang}/{rangTotal}
-                </span>
-              )}
-            </span>
-          )}
+          {/* V15.2 (Paul 2026-04-28) — pill match% retiré de la photo top-left.
+              Repositionné sous la ligne prix/specs plus bas (plus gros + tier
+              color vert/ambre/rouge selon score). User feedback : "très petit". */}
           {isOwn && (
             <span
               style={{
@@ -492,9 +471,48 @@ export default function ListingCardSearch({
             }}
           >
             {annonce.prix?.toLocaleString("fr-FR") ?? "—"} €
+            {/* V15.1 (Paul 2026-04-28) — suffixe CC/HC selon charges saisies */}
+            {typeof (annonce as { charges?: number | null }).charges === "number" && ((annonce as { charges?: number | null }).charges ?? 0) > 0 ? (
+              <span style={{ fontWeight: 700, fontSize: 9.5, color: "#15803d", marginLeft: 3, letterSpacing: "0.3px" }} title="Charges comprises">CC</span>
+            ) : (
+              <span style={{ fontWeight: 600, fontSize: 9.5, color: "#8a8477", marginLeft: 3, letterSpacing: "0.3px" }} title="Hors charges">HC</span>
+            )}
             <span style={{ fontWeight: 400, color: "#8a8477", fontSize: 10 }}>/mois</span>
           </span>
         </div>
+
+        {/* V15.2 (Paul 2026-04-28) — match% pill repositionné sous la ligne
+            prix/specs, plus visible que l'overlay photo (retiré ci-dessus).
+            Tier color : vert ≥75%, ambre 50-74%, rouge < 50%. */}
+        {matchPct !== null && (() => {
+          const tier = matchPct >= 75
+            ? { bg: "#F0FAEE", border: "#C6E9C0", ink: "#15803d", dot: "#16A34A" }
+            : matchPct >= 50
+              ? { bg: "#FBF6EA", border: "#EADFC6", ink: "#a16207", dot: "#a16207" }
+              : { bg: "#FEECEC", border: "#F4C9C9", ink: "#b91c1c", dot: "#b91c1c" }
+          return (
+            <div style={{
+              marginTop: 10,
+              display: "inline-flex", alignItems: "center", gap: 8,
+              padding: "6px 12px",
+              background: tier.bg,
+              border: `1px solid ${tier.border}`,
+              borderRadius: 999,
+              fontSize: 13,
+              fontWeight: 700,
+              color: tier.ink,
+              alignSelf: "flex-start",
+            }}>
+              <span aria-hidden style={{ width: 7, height: 7, background: tier.dot, borderRadius: "50%" }} />
+              <span style={{ fontVariantNumeric: "tabular-nums" }}>{matchPct}% match</span>
+              {rang !== null && rang !== undefined && rangTotal !== null && rangTotal !== undefined && (
+                <span style={{ fontSize: 11, fontWeight: 500, color: "#8a8477", letterSpacing: "0.2px" }}>
+                  · #{rang}/{rangTotal}
+                </span>
+              )}
+            </div>
+          )
+        })()}
 
         {/* Actions ghost (Aperçu + Comparer) — Paul 2026-04-27 : deplaces de
             l'overlay photo top-right vers le footer card pour ne plus bloquer

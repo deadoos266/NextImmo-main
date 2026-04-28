@@ -32,6 +32,7 @@ interface Props {
 interface Suggestion {
   nom: string
   codePostaux: string[]
+  population?: number
 }
 
 // Utilise normalizeCityKey de lib/cityCoords pour cohérence avec le reste du code
@@ -81,7 +82,11 @@ export default function CityAutocomplete({ value, onChange, onSelect, placeholde
   ]
   const localFallback: Suggestion[] = TOP_CITIES.map(nom => ({ nom, codePostaux: [] }))
 
-  // Recherche distante : par code postal (numérique) ou par nom
+  // Recherche distante : par code postal (numérique) ou par nom.
+  // V15.5 (Paul 2026-04-28) — User feedback : "il faut que ça propose seul
+  // la ville". On ajoute fields=population + filtre client-side > 5000 hab.
+  // pour exclure les hameaux et petites communes peu pertinentes (sauf
+  // recherche par CP exact qui doit lister toutes les communes du CP).
   useEffect(() => {
     if (trimmed.length < 2) { setRemote([]); return }
     let cancelled = false
@@ -90,7 +95,7 @@ export default function CityAutocomplete({ value, onChange, onSelect, placeholde
       try {
         const numeric = isNumericQuery(trimmed)
         const param = numeric ? `codePostal=${encodeURIComponent(trimmed)}` : `nom=${encodeURIComponent(trimmed)}`
-        const url = `https://geo.api.gouv.fr/communes?${param}&fields=nom,codesPostaux&boost=population&limit=15`
+        const url = `https://geo.api.gouv.fr/communes?${param}&fields=nom,codesPostaux,population&boost=population&limit=20`
         const res = await fetch(url)
         const data = await res.json()
         if (cancelled) return
@@ -98,9 +103,17 @@ export default function CityAutocomplete({ value, onChange, onSelect, placeholde
           ? data.map((c: any) => ({
               nom: c.nom || "",
               codePostaux: Array.isArray(c.codesPostaux) ? c.codesPostaux : [],
+              population: typeof c.population === "number" ? c.population : 0,
             })).filter((s: Suggestion) => s.nom)
           : []
-        setRemote(parsed)
+        // Filtrage par population : on garde >5k hab (recherche par nom),
+        // ou on garde tout (recherche par CP — l'user a tapé un code précis).
+        const filtered = numeric
+          ? parsed
+          : parsed.filter(s => (s.population ?? 0) >= 5000)
+        // Si le filtre vide tout (commune <5k cherchée par nom exact), on
+        // tombe back sur les résultats non-filtrés pour ne pas casser l'UX.
+        setRemote(filtered.length > 0 ? filtered.slice(0, 12) : parsed.slice(0, 8))
       } catch {
         if (!cancelled) setRemote([])
       }

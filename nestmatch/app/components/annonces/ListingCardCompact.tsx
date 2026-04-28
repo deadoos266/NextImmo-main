@@ -177,23 +177,14 @@ export default function ListingCardCompact({
           />
         ) : null}
 
-        {/* Badges top-left : NOUVEAU + match% */}
+        {/* V15.2 (Paul 2026-04-28) — pill match% RETIRÉ de la photo. Moved
+            sous la ligne "Disponible" plus bas dans la card pour être plus
+            visible et plus gros (user feedback : "c'est très petit").
+            On conserve uniquement le badge NOUVEAU ici. */}
         <div style={{ position: "absolute", top: 8, left: 8, display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start", pointerEvents: "none", zIndex: 2 }}>
           {showNew && (
             <span style={{ padding: "3px 8px", background: "#111", color: "#fff", borderRadius: 999, fontSize: 9, fontWeight: 700, letterSpacing: "1px" }}>
               NOUVEAU
-            </span>
-          )}
-          {match !== null && (
-            <span style={{ padding: "3px 8px", background: "rgba(255,255,255,0.96)", color: "#111", borderRadius: 999, fontSize: 10, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}>
-              <span style={{ width: 4, height: 4, background: "#16A34A", borderRadius: "50%" }} />
-              {match}%
-              {/* V7.3 — rang relatif compact si liste >= 10 */}
-              {rang !== null && rang !== undefined && rangTotal !== null && rangTotal !== undefined && (
-                <span style={{ fontSize: 9, fontWeight: 500, color: "#8a8477" }}>
-                  · #{rang}/{rangTotal}
-                </span>
-              )}
             </span>
           )}
         </div>
@@ -284,9 +275,17 @@ export default function ListingCardCompact({
           <div style={{ textAlign: "right", flexShrink: 0 }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: "#111", fontVariantNumeric: "tabular-nums" as const, letterSpacing: "-0.3px", lineHeight: 1 }}>
               {annonce.prix?.toLocaleString("fr-FR") ?? "—"}<span style={{ fontWeight: 500, fontSize: 13 }}> €</span>
+              {/* V15.1 (Paul 2026-04-28) — suffixe CC (charges comprises) si
+                  charges saisies, sinon HC (hors charges). Affichage explicite
+                  pour matcher la convention immo française. */}
+              {charges !== null && charges > 0 ? (
+                <span style={{ fontWeight: 700, fontSize: 10, color: "#15803d", marginLeft: 4, letterSpacing: "0.3px" }} title="Charges comprises">CC</span>
+              ) : (
+                <span style={{ fontWeight: 600, fontSize: 10, color: "#8a8477", marginLeft: 4, letterSpacing: "0.3px" }} title="Hors charges">HC</span>
+              )}
             </div>
-            {charges !== null && (
-              <div style={{ fontSize: 9.5, color: "#8a8477", marginTop: 2 }}>+{charges} € ch.</div>
+            {charges !== null && charges > 0 && (
+              <div style={{ fontSize: 9.5, color: "#8a8477", marginTop: 2 }}>dont {charges} € ch.</div>
             )}
           </div>
         </div>
@@ -332,6 +331,39 @@ export default function ListingCardCompact({
             {dispoLabel}
           </div>
         )}
+
+        {/* V15.2 (Paul 2026-04-28) — pill match% repositionné SOUS Disponible,
+            plus gros et plus visible (user feedback : "c'est très petit").
+            Tier color : vert ≥75%, ambre 50-74%, gris/rouge < 50%. */}
+        {match !== null && (() => {
+          const tier = match >= 75
+            ? { bg: "#F0FAEE", border: "#C6E9C0", ink: "#15803d", dot: "#16A34A" }
+            : match >= 50
+              ? { bg: "#FBF6EA", border: "#EADFC6", ink: "#a16207", dot: "#a16207" }
+              : { bg: "#FEECEC", border: "#F4C9C9", ink: "#b91c1c", dot: "#b91c1c" }
+          return (
+            <div style={{
+              marginTop: 8,
+              display: "inline-flex", alignItems: "center", gap: 8,
+              padding: "6px 12px",
+              background: tier.bg,
+              border: `1px solid ${tier.border}`,
+              borderRadius: 999,
+              fontSize: 13,
+              fontWeight: 700,
+              color: tier.ink,
+              alignSelf: "flex-start",
+            }}>
+              <span aria-hidden style={{ width: 7, height: 7, background: tier.dot, borderRadius: "50%" }} />
+              <span style={{ fontVariantNumeric: "tabular-nums" }}>{match}% match</span>
+              {rang !== null && rang !== undefined && rangTotal !== null && rangTotal !== undefined && (
+                <span style={{ fontSize: 11, fontWeight: 500, color: "#8a8477", letterSpacing: "0.2px" }}>
+                  · #{rang}/{rangTotal}
+                </span>
+              )}
+            </div>
+          )
+        })()}
 
         {/* Action bar (Paul 2026-04-27) : Aperçu + Comparer ghost a gauche,
             CTA "Voir l'annonce" a droite. stopPropagation pour ne pas

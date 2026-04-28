@@ -1247,14 +1247,12 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           </div>
         )}
 
-        {/* V14c (Paul 2026-04-28) — bandeau "filtres modifiés" — visible
-            uniquement quand divergence ENTRE URL params et critères profil.
-            Le bouton "Mes critères" est désormais toujours visible dans la
-            FiltersBar (prop monProfilHref), donc plus besoin de le mettre
-            ici. Ce bandeau se concentre sur le CTA "Réinitialiser à mes
-            préférences" + "Voir toutes" pour donner à l'user les actions
-            contextuelles quand il a modifié des filtres. */}
-        {!isProprietaire && profil && !isDesktopListCarte && !(isMobileV5 && showMap) && (() => {
+        {/* V14c + V15.4 (Paul 2026-04-28) — bandeau "filtres modifiés" :
+            visible quand divergence URL vs profil OU params actifs. Affiché
+            sur TOUS les modes (mobile/desktop/carte) — V14c le cachait sur
+            isDesktopListCarte + isMobileV5+showMap, ce qui rendait la pill
+            Réinitialiser invisible côté user. Maintenant inconditionnel. */}
+        {!isProprietaire && profil && (() => {
           const diverge = paramsDivergeFromProfil(initialSearchParams, profil)
           const hasParams = !!initialSearchParams && Object.keys(initialSearchParams).some(k => {
             const v = initialSearchParams[k]; return v && (!Array.isArray(v) || v.length > 0)
@@ -1638,6 +1636,7 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                     activeFilterCount={activeFilterCount}
                     onOpenAllFilters={() => setModalOpen(true)}
                     showMatchOption={showMatchOption}
+                    monProfilHref={!isProprietaire && session?.user?.email ? "/profil" : null}
                   />
 
                   {/* Ligne 3 : Tri segmented control fidèle handoff (3) l. 666-678 */}
@@ -1998,6 +1997,7 @@ function QuickFiltersRow({
   activeFilterCount,
   onOpenAllFilters,
   showMatchOption,
+  monProfilHref,
 }: {
   scoreMin: number
   setScoreMin: (v: number) => void
@@ -2008,6 +2008,7 @@ function QuickFiltersRow({
   activeFilterCount: number
   onOpenAllFilters: () => void
   showMatchOption: boolean
+  monProfilHref?: string | null
 }) {
   const [active, setActive] = useState<QuickKind>(null)
   const matchValue = scoreMin > 0 ? `≥ ${scoreMin} %` : "Toutes"
@@ -2016,6 +2017,37 @@ function QuickFiltersRow({
 
   return (
     <div style={{ position: "relative" }}>
+      {/* V15.3 (Paul 2026-04-28) — Pill "Mes critères" toujours visible
+          au-dessus des chips QuickFilter sur mobile/carte. Bulletproof :
+          rendu inconditionnel quand monProfilHref est passé (locataire
+          connecté). User feedback rounds 1-3 : ce bouton disparaissait. */}
+      {monProfilHref && (
+        <Link
+          href={monProfilHref}
+          aria-label="Mon profil locataire — éditer mes critères"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            background: "#111",
+            color: "#fff",
+            borderRadius: 999,
+            padding: "8px 16px",
+            fontSize: 12.5,
+            fontWeight: 700,
+            textDecoration: "none",
+            fontFamily: "inherit",
+            whiteSpace: "nowrap",
+            marginBottom: 8,
+          }}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          Mes critères
+        </Link>
+      )}
       <div style={{ display: "grid", gridTemplateColumns: showMatchOption ? "repeat(3, 1fr)" : "repeat(2, 1fr)", gap: 6, marginBottom: 6 }}>
         {showMatchOption && (
           <QuickFilterChip
