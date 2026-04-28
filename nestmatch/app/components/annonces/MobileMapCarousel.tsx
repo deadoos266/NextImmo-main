@@ -308,6 +308,9 @@ export default function MobileMapCarousel({
         {/* V19.4 (Paul 2026-04-29) — bottom dock 2 boutons style SeLoger :
             "Voir la liste" + "Sauvegarder la recherche". Visible uniquement
             quand aucune card n'est ouverte. */}
+        {/* V19b (Paul 2026-04-29) — dock bottom 2 boutons côte à côte
+            full-width 50/50. Bouton "Voir la liste" RESTAURÉ avec label
+            complet (V19 avait raccourci à "Liste" → user pas reconnu). */}
         {!showCard && (
           <div style={{
             position: "absolute",
@@ -315,23 +318,23 @@ export default function MobileMapCarousel({
             left: 12,
             right: 12,
             zIndex: 999,
-            display: "flex", gap: 8, justifyContent: "center",
+            display: "flex",
+            gap: 8,
           }}>
             <button
               type="button"
               onClick={onClose}
               aria-label="Voir la liste des annonces"
               style={{
+                flex: "1 1 0", minWidth: 0,
                 background: "#111", color: "#fff", border: "none",
-                borderRadius: 999, padding: "12px 18px",
+                borderRadius: 999, padding: "12px 14px",
                 fontSize: 12, fontWeight: 700,
-                textTransform: "uppercase", letterSpacing: "0.6px",
+                textTransform: "uppercase", letterSpacing: "0.5px",
                 fontFamily: "inherit", cursor: "pointer",
                 boxShadow: "0 6px 20px rgba(0,0,0,0.25)",
-                display: "inline-flex", alignItems: "center", gap: 8,
+                display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
                 WebkitTapHighlightColor: "transparent",
-                flex: onSaveSearch && canSaveSearch !== false ? "1 1 auto" : "0 1 auto",
-                minWidth: 0,
                 whiteSpace: "nowrap",
               }}
             >
@@ -343,7 +346,7 @@ export default function MobileMapCarousel({
                 <line x1="3" y1="12" x2="3.01" y2="12" />
                 <line x1="3" y1="18" x2="3.01" y2="18" />
               </svg>
-              Liste
+              Voir la liste
             </button>
             {onSaveSearch && canSaveSearch !== false && (
               <button
@@ -351,16 +354,15 @@ export default function MobileMapCarousel({
                 onClick={onSaveSearch}
                 aria-label="Sauvegarder cette recherche"
                 style={{
+                  flex: "1 1 0", minWidth: 0,
                   background: "#fff", color: "#111", border: "1px solid #111",
-                  borderRadius: 999, padding: "12px 18px",
+                  borderRadius: 999, padding: "12px 14px",
                   fontSize: 12, fontWeight: 700,
-                  textTransform: "uppercase", letterSpacing: "0.6px",
+                  textTransform: "uppercase", letterSpacing: "0.5px",
                   fontFamily: "inherit", cursor: "pointer",
                   boxShadow: "0 6px 20px rgba(0,0,0,0.18)",
-                  display: "inline-flex", alignItems: "center", gap: 8,
+                  display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
                   WebkitTapHighlightColor: "transparent",
-                  flex: "1 1 auto",
-                  minWidth: 0,
                   whiteSpace: "nowrap",
                 }}
               >
