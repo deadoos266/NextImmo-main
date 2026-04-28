@@ -5,6 +5,7 @@ import { supabase } from "../../../lib/supabase"
 import { useRole } from "../../providers"
 import { calculerScore } from "../../../lib/matching"
 import { useHeroPassed } from "./useHeroPassed"
+import { useAutoHideOnScroll } from "../../hooks/useAutoHideOnScroll"
 import ContactButton from "./ContactButton"
 
 /**
@@ -33,6 +34,10 @@ export default function StickyCTABanner({ annonce }: { annonce: any }) {
   const { role } = useRole()
   const [profil, setProfil] = useState<any>(null)
   const visible = useHeroPassed()
+  // V5.2 — auto-hide au scroll-down mobile (revele au scroll-up). Comme le
+  // BetaBanner mais avec direction "bottom" : translateY +110% au lieu de
+  // -110%. Desactive si !visible (pas la peine de calculer).
+  const hidden = useAutoHideOnScroll({ enabled: visible })
 
   const loyerCC = Number(annonce.prix || 0) + Number(annonce.charges || 0)
 
@@ -86,10 +91,10 @@ export default function StickyCTABanner({ annonce }: { annonce: any }) {
           background: "white",
           borderTop: "1.5px solid #EAE6DF",
           boxShadow: "0 -4px 24px rgba(0,0,0,0.08)",
-          transform: visible ? "translateY(0)" : "translateY(100%)",
-          opacity: visible ? 1 : 0,
-          transition: "transform 200ms ease, opacity 200ms ease",
-          pointerEvents: visible ? "auto" : "none",
+          transform: !visible || hidden ? "translateY(110%)" : "translateY(0)",
+          opacity: visible && !hidden ? 1 : 0,
+          transition: "transform 220ms ease, opacity 200ms ease",
+          pointerEvents: visible && !hidden ? "auto" : "none",
           paddingBottom: "env(safe-area-inset-bottom, 0)",
           fontFamily: "'DM Sans', sans-serif",
         }}
