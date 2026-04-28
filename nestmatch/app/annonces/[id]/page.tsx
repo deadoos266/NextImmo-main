@@ -632,6 +632,18 @@ export default async function Annonce({ params }: any) {
                     ["Jardin", asTriBool(annonce.jardin) === true ? "Oui" : null],
                     ["Ascenseur", asTriBool(annonce.ascenseur) === true ? "Oui" : null],
                     ["Fibre optique", asTriBool(annonce.fibre) === true ? "Oui" : null],
+                    // Animaux : prioritise la politique tri-state (Step 6 wizard,
+                    // V1.7 Paul 2026-04-27) avec fallback boolean legacy.
+                    ["Animaux", (() => {
+                      const pol = (annonce.animaux_politique || "").toLowerCase()
+                      if (pol === "oui") return "Acceptés"
+                      if (pol === "non") return "Refusés"
+                      // Fallback boolean
+                      const aBool = asTriBool(annonce.animaux)
+                      if (aBool === true) return "Acceptés"
+                      if (aBool === false) return "Refusés"
+                      return null  // Indifferent ou non renseigne → skip row
+                    })()],
                     ["Disponibilité", annonce.dispo || null],
                     ["Publié le", publieLe],
                   ]
@@ -819,13 +831,22 @@ export default async function Annonce({ params }: any) {
                     q: "Y a-t-il des frais d'agence ?",
                     a: "Non. KeyMatch met en relation directe locataires et propriétaires — zéro frais d'agence, zéro honoraires.",
                   })
-                  if (typeof annonce.animaux === "boolean") {
-                    faqs.push({
-                      q: "Les animaux sont-ils acceptés ?",
-                      a: annonce.animaux
+                  // Politique animaux : prioritise tri-state animaux_politique
+                  // (Paul 2026-04-27 V1.7) avec fallback boolean legacy. Skip
+                  // si "indifferent" ou non renseigne — pas d'info utile.
+                  {
+                    const pol = (annonce.animaux_politique || "").toLowerCase()
+                    let answer: string | null = null
+                    if (pol === "oui") answer = "Oui, ce logement accepte les animaux."
+                    else if (pol === "non") answer = "Non, le propriétaire n'accepte pas les animaux dans ce logement."
+                    else if (typeof annonce.animaux === "boolean") {
+                      answer = annonce.animaux
                         ? "Oui, ce logement accepte les animaux."
-                        : "Le propriétaire n'accepte pas les animaux dans ce logement.",
-                    })
+                        : "Le propriétaire n'accepte pas les animaux dans ce logement."
+                    }
+                    if (answer) {
+                      faqs.push({ q: "Les animaux sont-ils acceptés ?", a: answer })
+                    }
                   }
                   return faqs.map((f, i) => (
                     <details key={i} style={{ borderBottom: "1px solid #F7F4EF", paddingBottom: 12 }}>
