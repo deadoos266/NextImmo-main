@@ -63,8 +63,9 @@ export default defineConfig({
       "lib/**/__tests__/*.test.ts",
       "app/**/*.test.tsx",
       "app/**/__tests__/*.test.tsx",
-      // V6.4 — integration tests racine
+      // V6.4 + V10.1 — integration tests racine
       "__tests__/**/*.test.ts",
+      "__tests__/**/*.test.tsx",
     ],
   },
 })
