@@ -83,17 +83,40 @@ function useFrenchLeaflet() {
 //
 // Le score n'est PLUS encod\u00e9 dans la couleur du marker (\u00e7a vit sur la card,
 // pill match% top-left photo). Marker = info g\u00e9o + prix point d'ancrage.
-function priceMarker(prix: number, selected: boolean, _score: number | null) {
-  void _score
-  const price = prix ? prix.toLocaleString("fr-FR") + " \u20ac" : "\u2014"
+// V19 (Paul 2026-04-29) \u2014 pin prix enrichi style SeLoger :
+//   - prix CC (loyer + charges) au lieu du loyer brut
+//   - tier color border selon match% (vert \u226575 / ambre 50-74 / rouge <50)
+//   - badge "NOUV" ambre si annonce < 7 jours
+//   - selected = bg noir comme avant
+function priceMarker(
+  prix: number,
+  charges: number | null,
+  selected: boolean,
+  scorePct: number | null,
+  isNew: boolean,
+) {
+  const total = (Number(prix) || 0) + (Number(charges) > 0 ? Number(charges) : 0)
+  const price = total > 0 ? total.toLocaleString("fr-FR") + "\u00a0\u20ac" : "\u2014"
+  // Tier color : vert \u226575, ambre 50-74, rouge <50, gris si pas de score
+  const borderColor = selected ? "#111"
+    : scorePct === null ? "#111"
+    : scorePct >= 75 ? "#15803d"
+    : scorePct >= 50 ? "#a16207"
+    : "#b91c1c"
+  const dotColor = scorePct === null ? "#16A34A"
+    : scorePct >= 75 ? "#15803d"
+    : scorePct >= 50 ? "#a16207"
+    : "#b91c1c"
   const bg = selected ? "#111" : "#fff"
   const text = selected ? "#fff" : "#111"
   const borderW = selected ? 2 : 1.5
   const scale = selected ? 1.08 : 1
-  const dotColor = "#16A34A"
-  // Arrow bottom-center : div 10\u00d710 rotated 45deg en absolute, juste sous le pill
   const arrow = selected
     ? `<span style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%) rotate(45deg);width:10px;height:10px;background:#111;"></span>`
+    : ""
+  // V19.3 \u2014 badge NOUV (annonce < 7 jours) en pastille ambre top-right du pin
+  const newBadge = isNew && !selected
+    ? `<span style="position:absolute;top:-7px;right:-4px;background:#a16207;color:#fff;font-size:8.5px;font-weight:800;letter-spacing:0.4px;padding:1px 5px;border-radius:999px;border:1.5px solid #fff;line-height:1.2;">NOUV</span>`
     : ""
   return L.divIcon({
     html: `<div style="
@@ -102,11 +125,11 @@ function priceMarker(prix: number, selected: boolean, _score: number | null) {
       transform-origin:center bottom;
       background:${bg};
       color:${text};
-      border:${borderW}px solid #111;
-      padding:6px 12px 6px 10px;
+      border:${borderW}px solid ${borderColor};
+      padding:6px 10px;
       border-radius:999px;
       font-weight:700;
-      font-size:13px;
+      font-size:12.5px;
       font-family:'DM Sans',sans-serif;
       font-variant-numeric:tabular-nums;
       white-space:nowrap;
@@ -119,11 +142,13 @@ function priceMarker(prix: number, selected: boolean, _score: number | null) {
     ">
       <span style="width:6px;height:6px;border-radius:50%;background:${dotColor};flex-shrink:0;"></span>
       ${price}
+      <span style="font-size:9px;font-weight:700;letter-spacing:0.3px;color:${selected ? "#a7f3d0" : "#15803d"};">CC</span>
+      ${newBadge}
       ${arrow}
     </div>`,
     className: "",
-    iconSize: [80, 30],
-    iconAnchor: [40, 30],
+    iconSize: [96, 30],
+    iconAnchor: [48, 30],
   })
 }
 
@@ -165,6 +190,7 @@ function HoverableMarker({
   onSelect,
   popupContent,
   disablePopup,
+  priceTotal,
 }: {
   position: [number, number]
   icon: L.DivIcon
@@ -174,6 +200,9 @@ function HoverableMarker({
    *  Utilise sur mobile mode carte ou la card slide-up SeLoger remplace
    *  le popup — sinon doublon visuel au tap marker. Paul 2026-04-27. */
   disablePopup?: boolean
+  /** V19 — prix total CC (loyer + charges) injecté dans Marker.title pour
+   *  permettre à iconCreateFunction du cluster de calculer "dès X €". */
+  priceTotal?: number
 }) {
   const markerRef = useRef<L.Marker | null>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -182,6 +211,7 @@ function HoverableMarker({
       ref={(ref) => { markerRef.current = ref }}
       position={position}
       icon={icon}
+      title={priceTotal != null && priceTotal > 0 ? String(priceTotal) : undefined}
       eventHandlers={{
         click: () => onSelect(),
         mouseover: () => {
@@ -480,26 +510,47 @@ export default function MapAnnonces({
           showCoverageOnHover={false}
           spiderfyOnMaxZoom={true}
           maxClusterRadius={60}
+          // V19.1 (Paul 2026-04-29) — disable clustering at zoom 14+ pour
+          // déplier en pins prix individuels style SeLoger
+          disableClusteringAtZoom={14}
           iconCreateFunction={(cluster: L.MarkerCluster) => {
             const count = cluster.getChildCount()
-            // Tailles graduées selon densité (palette KeyMatch noir/beige)
-            const size = count >= 100 ? 56 : count >= 25 ? 48 : 40
+            // V19.2 (Paul 2026-04-29) — cluster avec aperçu "dès X €" min.
+            // Iterate les markers pour trouver le prix min (option pour
+            // contourner l'API privée : les markers exposent options.title
+            // qu'on remplit côté Marker via title prop = String(prix)).
+            let minPrix = Infinity
+            try {
+              const markers = (cluster as unknown as { getAllChildMarkers: () => L.Marker[] }).getAllChildMarkers?.() ?? []
+              for (const m of markers) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const p = Number((m.options as any)?.title) || 0
+                if (p > 0 && p < minPrix) minPrix = p
+              }
+            } catch { /* ignore */ }
+            const desLabel = Number.isFinite(minPrix)
+              ? `dès ${Math.round(minPrix).toLocaleString("fr-FR")} €`
+              : ""
+            // Cluster shape pill horizontale avec count+price stack
             return L.divIcon({
               html: `<div style="
-                width:${size}px;height:${size}px;
-                border-radius:50%;
+                min-width:64px;
+                padding:8px 14px;
+                border-radius:14px;
                 background:#111;
                 color:#fff;
                 font-family:'DM Sans',sans-serif;
-                font-weight:700;
-                font-size:${count >= 100 ? 14 : 13}px;
-                display:flex;align-items:center;justify-content:center;
+                display:flex;flex-direction:column;align-items:center;justify-content:center;
                 border:3px solid rgba(255,255,255,0.92);
                 box-shadow:0 6px 16px rgba(0,0,0,0.32);
                 cursor:pointer;
-              ">${count}</div>`,
+                line-height:1.1;
+              ">
+                <span style="font-weight:800;font-size:${count >= 100 ? 16 : 15}px;font-variant-numeric:tabular-nums;">${count}</span>
+                ${desLabel ? `<span style="font-size:10px;font-weight:500;color:#a7a09a;margin-top:2px;letter-spacing:0.2px;font-variant-numeric:tabular-nums;white-space:nowrap;">${desLabel}</span>` : ""}
+              </div>`,
               className: "",
-              iconSize: [size, size],
+              iconSize: [Math.max(64, desLabel ? 84 : 64), 44],
             })
           }}
         >
@@ -514,11 +565,19 @@ export default function MapAnnonces({
           //   - eyebrow VILLE · QUARTIER, titre 14/600, specs+prix inline
           //   - chip match top-left photo si scoreMatching présent
           //   - bouton favori top-right photo
+          // V19 (Paul 2026-04-29) — calculs pour le pin enrichi
+          const ch = Number((a as { charges?: number | null }).charges ?? 0)
+          const total = Number(a.prix || 0) + (ch > 0 ? ch : 0)
+          const createdAt = (a as { created_at?: string | null }).created_at
+          const isNew = createdAt
+            ? (Date.now() - new Date(createdAt).getTime()) < 7 * 24 * 60 * 60 * 1000
+            : false
           return (
             <HoverableMarker
               key={a.id}
               position={[a._lat, a._lng]}
-              icon={priceMarker(a.prix, selectedId === a.id, a.scoreMatching ?? null)}
+              icon={priceMarker(a.prix, ch > 0 ? ch : null, selectedId === a.id, matchPct, isNew)}
+              priceTotal={total}
               onSelect={() => onSelect(a.id)}
               disablePopup={disablePopup}
               popupContent={

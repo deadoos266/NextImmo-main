@@ -42,6 +42,8 @@ export default function MobileMapCarousel({
   activeVille,
   onOpenFilters,
   activeFilterCount,
+  onSaveSearch,
+  canSaveSearch,
 }: {
   annonces: any[]
   selectedId: number | null
@@ -61,6 +63,10 @@ export default function MobileMapCarousel({
   onOpenFilters?: () => void
   /** Nombre de filtres actifs — affiche en badge sur le bouton Filtres si > 0. */
   activeFilterCount?: number
+  /** V19.4 (Paul 2026-04-29) — handler pour le bouton "Sauvegarder" en
+   *  bottom. Si non fourni, le bouton n'apparaît pas. Pattern SeLoger. */
+  onSaveSearch?: () => void
+  canSaveSearch?: boolean
 }) {
   const cardAnnonces = useMemo(() => annonces.filter(a => a._lat && a._lng), [annonces])
 
@@ -299,45 +305,72 @@ export default function MobileMapCarousel({
             au tap d'un marker (la card prend le relais visuellement),
             revient au close de la card. Style pill blanc avec icone liste
             a gauche. Position bottom-center du viewport map. */}
+        {/* V19.4 (Paul 2026-04-29) — bottom dock 2 boutons style SeLoger :
+            "Voir la liste" + "Sauvegarder la recherche". Visible uniquement
+            quand aucune card n'est ouverte. */}
         {!showCard && (
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Voir la liste des annonces"
-            style={{
-              position: "absolute",
-              bottom: "calc(20px + env(safe-area-inset-bottom, 0px))",
-              left: "50%",
-              transform: "translateX(-50%)",
-              zIndex: 999,
-              background: "#111",
-              color: "#fff",
-              border: "none",
-              borderRadius: 999,
-              padding: "12px 22px",
-              fontSize: 12,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.6px",
-              fontFamily: "inherit",
-              cursor: "pointer",
-              boxShadow: "0 6px 20px rgba(0,0,0,0.25)",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <line x1="8" y1="6" x2="21" y2="6" />
-              <line x1="8" y1="12" x2="21" y2="12" />
-              <line x1="8" y1="18" x2="21" y2="18" />
-              <line x1="3" y1="6" x2="3.01" y2="6" />
-              <line x1="3" y1="12" x2="3.01" y2="12" />
-              <line x1="3" y1="18" x2="3.01" y2="18" />
-            </svg>
-            Voir la liste
-          </button>
+          <div style={{
+            position: "absolute",
+            bottom: "calc(16px + env(safe-area-inset-bottom, 0px))",
+            left: 12,
+            right: 12,
+            zIndex: 999,
+            display: "flex", gap: 8, justifyContent: "center",
+          }}>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Voir la liste des annonces"
+              style={{
+                background: "#111", color: "#fff", border: "none",
+                borderRadius: 999, padding: "12px 18px",
+                fontSize: 12, fontWeight: 700,
+                textTransform: "uppercase", letterSpacing: "0.6px",
+                fontFamily: "inherit", cursor: "pointer",
+                boxShadow: "0 6px 20px rgba(0,0,0,0.25)",
+                display: "inline-flex", alignItems: "center", gap: 8,
+                WebkitTapHighlightColor: "transparent",
+                flex: onSaveSearch && canSaveSearch !== false ? "1 1 auto" : "0 1 auto",
+                minWidth: 0,
+                whiteSpace: "nowrap",
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="8" y1="6" x2="21" y2="6" />
+                <line x1="8" y1="12" x2="21" y2="12" />
+                <line x1="8" y1="18" x2="21" y2="18" />
+                <line x1="3" y1="6" x2="3.01" y2="6" />
+                <line x1="3" y1="12" x2="3.01" y2="12" />
+                <line x1="3" y1="18" x2="3.01" y2="18" />
+              </svg>
+              Liste
+            </button>
+            {onSaveSearch && canSaveSearch !== false && (
+              <button
+                type="button"
+                onClick={onSaveSearch}
+                aria-label="Sauvegarder cette recherche"
+                style={{
+                  background: "#fff", color: "#111", border: "1px solid #111",
+                  borderRadius: 999, padding: "12px 18px",
+                  fontSize: 12, fontWeight: 700,
+                  textTransform: "uppercase", letterSpacing: "0.6px",
+                  fontFamily: "inherit", cursor: "pointer",
+                  boxShadow: "0 6px 20px rgba(0,0,0,0.18)",
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  WebkitTapHighlightColor: "transparent",
+                  flex: "1 1 auto",
+                  minWidth: 0,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                </svg>
+                Sauvegarder
+              </button>
+            )}
+          </div>
         )}
 
         {/* Card overlay slide-up — pattern SeLoger.

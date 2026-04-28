@@ -1832,6 +1832,15 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           activeVille={activeVille || ""}
           onOpenFilters={() => setModalOpen(true)}
           activeFilterCount={activeFilterCount}
+          onSaveSearch={() => {
+            // V19.4 — pré-rempli avec le buildDefaultSearchName + prompt simple
+            const name = window.prompt("Nom de la recherche", buildDefaultSearchName())
+            if (name && name.trim()) {
+              sauverRecherche(name.trim())
+              alert("Recherche sauvegardée")
+            }
+          }}
+          canSaveSearch={!!session?.user?.email && !isProprietaire}
         />
       )}
 
