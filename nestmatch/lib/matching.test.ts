@@ -316,3 +316,46 @@ describe("V2.2 estExclu — dpe_min_actif filtre dur", () => {
     expect(exc).toBe(false)
   })
 })
+
+// ─── V2.3 — Bonus geographique haversine (Paul 2026-04-27) ────────────────
+describe("V2.3 calculerScore — bonus geographique rayon_recherche_km", () => {
+  const baseProfil: Profil = { ville_souhaitee: "Paris", budget_max: 1500, surface_min: 30 }
+  const baseAnnonce: Annonce = { prix: 1200, surface: 40 }
+
+  it("rayon 20km + annonce Paris (=0km, distance/rayon=0) → bonus +50", () => {
+    const sansRayon = calculerScore({ ...baseAnnonce, ville: "Paris" }, baseProfil)
+    const avecRayon = calculerScore({ ...baseAnnonce, ville: "Paris" }, { ...baseProfil, rayon_recherche_km: 20 })
+    expect(avecRayon - sansRayon).toBe(50)
+  })
+
+  it("rayon 20km + annonce Versailles (~17km de Paris, ratio 0.85) → bonus +10", () => {
+    const sansRayon = calculerScore({ ...baseAnnonce, ville: "Versailles" }, baseProfil)
+    const avecRayon = calculerScore({ ...baseAnnonce, ville: "Versailles" }, { ...baseProfil, rayon_recherche_km: 20 })
+    // Versailles ~17km de Paris, ratio 0.85 → tier 0.8-1.0 → +10
+    expect(avecRayon - sansRayon).toBe(10)
+  })
+
+  it("rayon 100km + annonce Paris (ratio ~0) → bonus +50", () => {
+    const sansRayon = calculerScore({ ...baseAnnonce, ville: "Paris" }, baseProfil)
+    const avecRayon = calculerScore({ ...baseAnnonce, ville: "Paris" }, { ...baseProfil, rayon_recherche_km: 100 })
+    expect(avecRayon - sansRayon).toBe(50)
+  })
+
+  it("rayon 5km + annonce Lyon (>>5km de Paris) → bonus 0", () => {
+    const sansRayon = calculerScore({ ...baseAnnonce, ville: "Lyon" }, baseProfil)
+    const avecRayon = calculerScore({ ...baseAnnonce, ville: "Lyon" }, { ...baseProfil, rayon_recherche_km: 5 })
+    expect(avecRayon - sansRayon).toBe(0)
+  })
+
+  it("rayon absent → pas de bonus geo (compat ancien profil)", () => {
+    const score = calculerScore({ ...baseAnnonce, ville: "Paris" }, baseProfil)
+    const scoreSimple = calculerScore({ ...baseAnnonce, ville: "Paris" }, { ...baseProfil })
+    expect(score).toBe(scoreSimple)
+  })
+
+  it("rayon defini mais ville inconnue (pas dans CITY_COORDS) → pas de bonus", () => {
+    const sansRayon = calculerScore({ ...baseAnnonce, ville: "VilleMartiale" }, baseProfil)
+    const avecRayon = calculerScore({ ...baseAnnonce, ville: "VilleMartiale" }, { ...baseProfil, rayon_recherche_km: 20 })
+    expect(avecRayon).toBe(sansRayon)
+  })
+})

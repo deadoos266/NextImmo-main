@@ -3,6 +3,8 @@
 // Score sur 1000 — Production Premium
 // =====================
 
+import { getCityCoords, haversineKm } from "./cityCoords"
+
 // Normalisation defensive des valeurs booleennes venant de la DB.
 // Supabase peut renvoyer boolean, null, ou (legacy) string "true"/"false".
 // undefined = info absente (ni oui, ni non) — score neutre.
@@ -314,6 +316,32 @@ export function calculerScore(annonce: Annonce, profil: Profil): number {
   }
 
   score += criteresBonus
+
+  // ── BONUS GEOGRAPHIQUE (V2.3 Paul 2026-04-27) ──
+  // Si le profil a un rayon_recherche_km defini ET sa ville_souhaitee a
+  // des coords ET l'annonce.ville aussi → bonus selon distance.
+  // - Distance <= 20% du rayon : +50 (parfait, in town ou tres proche)
+  // - <= 50% : +35
+  // - <= 80% : +20
+  // - <= 100% : +10 (limite acceptable)
+  // - > 100% : 0 (hors rayon, mais pas exclu — l'user peut quand meme voir)
+  // Pas de malus : on considere que si l'annonce est passee les filtres ville,
+  // c'est qu'elle est dans la zone. Le bonus prime juste la proximite.
+  if (typeof profil.rayon_recherche_km === "number" && profil.rayon_recherche_km > 0
+      && profil.ville_souhaitee && annonce.ville) {
+    const sourceCoords = getCityCoords(profil.ville_souhaitee)
+    const targetCoords = getCityCoords(annonce.ville)
+    if (sourceCoords && targetCoords) {
+      const distanceKm = haversineKm(sourceCoords, targetCoords)
+      const ratioDist = distanceKm / profil.rayon_recherche_km
+      let geoBonus = 0
+      if (ratioDist <= 0.2) geoBonus = 50
+      else if (ratioDist <= 0.5) geoBonus = 35
+      else if (ratioDist <= 0.8) geoBonus = 20
+      else if (ratioDist <= 1.0) geoBonus = 10
+      score += geoBonus
+    }
+  }
 
   // ── COEFFICIENT DE COHÉRENCE ──────────────────
   score = Math.round(score * facteurCoherence)

@@ -146,9 +146,9 @@ export function normalizeCityKey(name: string): string {
 
 /**
  * Distance haversine en km entre 2 points lat/lng. Sphere terrestre ~6371 km.
- * Utilise pour findNearbyCities (recherche 0 resultat -> suggestions).
+ * Utilise pour findNearbyCities + matching v2 scoreGeographique (V2.3).
  */
-function haversineKm(a: [number, number], b: [number, number]): number {
+export function haversineKm(a: [number, number], b: [number, number]): number {
   const toRad = (deg: number) => (deg * Math.PI) / 180
   const R = 6371
   const dLat = toRad(b[0] - a[0])
