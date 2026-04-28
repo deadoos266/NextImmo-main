@@ -3809,7 +3809,10 @@ function MessagesInner() {
                           si annonces map pas encore hydraté) — on a juste besoin de
                           convActiveData.annonceId. La 2e condition utilise optional
                           chaining pour ne pas crash si annonceActive null. */}
-                      {proprietaireActive && convActiveData?.annonceId && !isCandidatureValideeDB && !(annonceActive?.statut === "loué" && (annonceActive?.locataire_email || "").toLowerCase() === convActiveData.other.toLowerCase()) && (
+                      {/* V4.7 — sur mobile, ce bouton encombrait le header (full
+                          width + chips dessous). Cache sur mobile (deplace dans
+                          la bottom sheet kebab). Reste visible desktop. */}
+                      {!isMobile && proprietaireActive && convActiveData?.annonceId && !isCandidatureValideeDB && !(annonceActive?.statut === "loué" && (annonceActive?.locataire_email || "").toLowerCase() === convActiveData.other.toLowerCase()) && (
                         <button
                           type="button"
                           onClick={async () => {
@@ -3826,9 +3829,6 @@ function MessagesInner() {
                               alert(`Validation échouée : ${json.error || res.statusText}`)
                               return
                             }
-                            // Optimistic : injecter un message [CANDIDATURE_VALIDEE]
-                            // local pour mettre à jour le flag immédiatement.
-                            // À défaut on recharge la conv au prochain re-render.
                             location.reload()
                           }}
                           title="Présélectionner ce candidat — débloque sa demande de visite"
@@ -4898,6 +4898,39 @@ function MessagesInner() {
                         <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1px", margin: "6px 20px 6px", padding: "0 0 6px", borderBottom: "1px solid #F7F4EF" }}>
                           Actions
                         </p>
+
+                        {/* V4.7 — Valider la candidature (deplace ici depuis le
+                            header mobile pour decongestionner). Affiche
+                            uniquement si pertinent (proprio + pas deja validee
+                            + pas en bail signe avec ce candidat). */}
+                        {proprietaireActive && convActiveData.annonceId && !isCandidatureValideeDB && !(annonceActive?.statut === "loué" && (annonceActive?.locataire_email || "").toLowerCase() === convActiveData.other.toLowerCase()) && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              close()
+                              const res = await fetch("/api/candidatures/valider", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  annonceId: convActiveData.annonceId,
+                                  locataireEmail: convActiveData.other,
+                                }),
+                              })
+                              const json = await res.json().catch(() => ({}))
+                              if (!res.ok || !json.ok) {
+                                alert(`Validation échouée : ${json.error || res.statusText}`)
+                                return
+                              }
+                              location.reload()
+                            }}
+                            style={{ ...rowStyle, color: "#15803d", fontWeight: 600 }}
+                          >
+                            <span style={{ ...iconWrap, background: "#F0FAEE", borderColor: "#C6E9C0", color: "#15803d" }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                            </span>
+                            Valider la candidature
+                          </button>
+                        )}
 
                         <Link href={`/annonces/${convActiveData.annonceId}`} onClick={close} style={rowStyle}>
                           <span style={iconWrap}>
