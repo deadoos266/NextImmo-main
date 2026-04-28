@@ -4,7 +4,7 @@ import type { ReactNode } from "react"
 import { MapContainer, TileLayer, Marker, Popup, Polygon, GeoJSON, useMap, useMapEvents } from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
-import { pointInPolygon, type LatLng as GeoLatLng } from "../../lib/geo"
+import { pointInPolygon, expandPolygon, type LatLng as GeoLatLng } from "../../lib/geo"
 // Clustering : regroupe les markers proches en bulles avec compteur. Au-delà
 // d'un certain zoom, le cluster s'éclate en markers individuels. Style
 // SeLoger / Idealista. La lib gère elle-même le CSS de leaflet.markercluster.
@@ -580,6 +580,9 @@ export default function MapAnnonces({
   const [drawMode, setDrawMode] = useState(false)
   const [drawingVertices, setDrawingVertices] = useState<GeoLatLng[]>([])
   const [committedPolygon, setCommittedPolygon] = useState<GeoLatLng[] | null>(null)
+  // V27.2 — buffer en mètres pour élargir la zone (annonces aux coords
+  // approximatives — geocodées au centre-ville). 0 = strict, 200/500 = élargie.
+  const [polygonBufferM, setPolygonBufferM] = useState<number>(0)
   // Persiste le polygone en localStorage pour réutilisation au refresh
   useEffect(() => {
     try {
@@ -615,11 +618,16 @@ export default function MapAnnonces({
   }
 
   // Filtre dur : si polygone committed, on ne garde que les annonces
-  // dont (lat, lng) est dans le polygone. Appliqué AVANT spread overlap.
-  const annoncesInPolygon = committedPolygon
+  // dont (lat, lng) est dans le polygone (élargi par polygonBufferM si > 0).
+  // V27.2 — applique buffer expandPolygon pour rattraper les coords
+  // approximatives (annonces géocodées au centre-ville).
+  const effectivePolygon = committedPolygon && polygonBufferM > 0
+    ? expandPolygon(committedPolygon, polygonBufferM)
+    : committedPolygon
+  const annoncesInPolygon = effectivePolygon
     ? annonces.filter(a => {
         if (!a._lat || !a._lng) return false
-        return pointInPolygon({ lat: a._lat, lng: a._lng }, committedPolygon)
+        return pointInPolygon({ lat: a._lat, lng: a._lng }, effectivePolygon)
       })
     : annonces
   const withCoords = spreadOverlappingMarkers(annoncesInPolygon.filter(a => a._lat && a._lng))
@@ -806,7 +814,7 @@ export default function MapAnnonces({
           />
         )}
 
-        {/* V26.1 — polygon committed (filtre actif) */}
+        {/* V26.1 — polygon committed (filtre strict) */}
         {committedPolygon && committedPolygon.length >= 3 && (
           <Polygon
             positions={committedPolygon.map(v => [v.lat, v.lng] as [number, number])}
@@ -815,6 +823,20 @@ export default function MapAnnonces({
               fillColor: "#FBF6EA",
               fillOpacity: 0.18,
               weight: 2,
+            }}
+          />
+        )}
+        {/* V27.2 — polygon buffer "halo" si polygonBufferM > 0 (zone élargie
+            visualisée en pointillé ambre, rattrape coords imprécises). */}
+        {committedPolygon && polygonBufferM > 0 && effectivePolygon && (
+          <Polygon
+            positions={effectivePolygon.map(v => [v.lat, v.lng] as [number, number])}
+            pathOptions={{
+              color: "#a16207",
+              fillColor: "#FBF6EA",
+              fillOpacity: 0.05,
+              weight: 1.5,
+              dashArray: "4 4",
             }}
           />
         )}
@@ -1141,9 +1163,34 @@ export default function MapAnnonces({
           )}
           {!drawMode && committedPolygon && (
             <>
-              <span style={{ fontSize: 12, fontWeight: 600, color: "#111", padding: "0 10px" }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#111", padding: "0 6px 0 10px" }}>
                 Zone active · {withCoords.length} bien{withCoords.length > 1 ? "s" : ""}
               </span>
+              {/* V27.2 — buffer chips : 0 / 200m / 500m */}
+              <div style={{ display: "inline-flex", gap: 2, background: "#F7F4EF", borderRadius: 999, padding: 2 }}>
+                {[
+                  { v: 0, label: "Strict" },
+                  { v: 200, label: "+200 m" },
+                  { v: 500, label: "+500 m" },
+                ].map(o => (
+                  <button
+                    key={o.v}
+                    type="button"
+                    onClick={() => setPolygonBufferM(o.v)}
+                    aria-pressed={polygonBufferM === o.v}
+                    style={{
+                      background: polygonBufferM === o.v ? "#fff" : "transparent",
+                      color: "#111", border: "none", borderRadius: 999,
+                      padding: "4px 10px", fontSize: 11, fontWeight: 700,
+                      fontFamily: "inherit", cursor: "pointer",
+                      boxShadow: polygonBufferM === o.v ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
               <button
                 type="button"
                 onClick={clearPolygon}
@@ -1154,10 +1201,77 @@ export default function MapAnnonces({
                   fontFamily: "inherit", cursor: "pointer", whiteSpace: "nowrap",
                 }}
               >
-                Effacer la zone
+                Effacer
               </button>
             </>
           )}
+        </div>
+      )}
+
+      {/* V27.1 (Paul 2026-04-29) — empty state quand polygon committed mais
+          0 annonces. Card centrale avec disclaimer + suggestion d'élargir. */}
+      {committedPolygon && !drawMode && withCoords.length === 0 && (
+        <div style={{
+          position: "absolute",
+          top: 80, left: "50%", transform: "translateX(-50%)",
+          zIndex: 1450,
+          background: "#fff", borderRadius: 14,
+          border: "1px solid #EAE6DF",
+          boxShadow: "0 8px 28px rgba(0,0,0,0.18)",
+          padding: "16px 18px",
+          maxWidth: 380, width: "calc(100% - 32px)",
+          fontFamily: "'DM Sans', sans-serif",
+          textAlign: "center" as const,
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#a16207", textTransform: "uppercase", letterSpacing: "1.2px", marginBottom: 6 }}>
+            Aucune annonce dans cette zone
+          </div>
+          <p style={{ fontSize: 13, color: "#111", lineHeight: 1.5, margin: "0 0 12px" }}>
+            Les coordonnées des annonces peuvent être approximatives (geocodées au centre-ville).
+            Élargis la zone ou efface-la pour voir plus d&apos;annonces.
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+            {polygonBufferM === 0 && (
+              <button
+                type="button"
+                onClick={() => setPolygonBufferM(200)}
+                style={{
+                  background: "#a16207", color: "#fff", border: "none",
+                  borderRadius: 999, padding: "8px 16px",
+                  fontSize: 12, fontWeight: 700, fontFamily: "inherit",
+                  cursor: "pointer", whiteSpace: "nowrap",
+                }}
+              >
+                Élargir +200 m
+              </button>
+            )}
+            {polygonBufferM > 0 && polygonBufferM < 500 && (
+              <button
+                type="button"
+                onClick={() => setPolygonBufferM(500)}
+                style={{
+                  background: "#a16207", color: "#fff", border: "none",
+                  borderRadius: 999, padding: "8px 16px",
+                  fontSize: 12, fontWeight: 700, fontFamily: "inherit",
+                  cursor: "pointer", whiteSpace: "nowrap",
+                }}
+              >
+                Élargir +500 m
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={clearPolygon}
+              style={{
+                background: "transparent", color: "#111",
+                border: "1px solid #EAE6DF", borderRadius: 999,
+                padding: "8px 16px", fontSize: 12, fontWeight: 600,
+                fontFamily: "inherit", cursor: "pointer", whiteSpace: "nowrap",
+              }}
+            >
+              Effacer la zone
+            </button>
+          </div>
         </div>
       )}
 
@@ -1343,6 +1457,15 @@ export default function MapAnnonces({
                 {pricesByVille.length} ville{pricesByVille.length !== 1 ? "s" : ""}
               </span>
             </button>
+            {/* V27.3 (Paul 2026-04-29) — disclaimer permanent sur le polygon */}
+            <p style={{
+              fontSize: 10.5, color: "#8a8477", margin: "8px 12px 6px", lineHeight: 1.45,
+              padding: "8px 10px", background: "#FBF6EA", border: "1px solid #EADFC6",
+              borderRadius: 8,
+            }}>
+              ⓘ Les coordonnées des annonces peuvent être approximatives (geocodées au centre-ville).
+              Pour une zone précise, dessine un polygone large.
+            </p>
             {/* V26.1 — Dessiner une zone (polygon custom) */}
             <button
               type="button"

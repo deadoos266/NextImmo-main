@@ -52,3 +52,41 @@ describe("V26.1 pointInPolygon — ray-casting", () => {
     expect(pointInPolygon({ lat: 7, lng: 7 }, lShape)).toBe(false)
   })
 })
+
+import { expandPolygon } from "./geo"
+
+describe("V27.2 expandPolygon — radial buffer depuis centroide", () => {
+  const square = [
+    { lat: 48.85, lng: 2.34 },
+    { lat: 48.86, lng: 2.34 },
+    { lat: 48.86, lng: 2.35 },
+    { lat: 48.85, lng: 2.35 },
+  ]
+
+  it("buffer 0m → polygone identique", () => {
+    expect(expandPolygon(square, 0)).toEqual(square)
+  })
+
+  it("buffer < 3 vertices → identique", () => {
+    expect(expandPolygon([], 100)).toEqual([])
+    expect(expandPolygon([{ lat: 1, lng: 1 }], 100)).toEqual([{ lat: 1, lng: 1 }])
+  })
+
+  it("buffer 200m → vertices plus loin du centroide", () => {
+    const expanded = expandPolygon(square, 200)
+    expect(expanded.length).toBe(4)
+    const cLat = (48.85 + 48.86) / 2
+    const cLng = (2.34 + 2.35) / 2
+    for (let i = 0; i < square.length; i++) {
+      const distOrig = Math.hypot(square[i].lng - cLng, square[i].lat - cLat)
+      const distNew = Math.hypot(expanded[i].lng - cLng, expanded[i].lat - cLat)
+      expect(distNew).toBeGreaterThan(distOrig)
+    }
+  })
+
+  it("point hors original mais dans expanded 300m", () => {
+    const justOutside = { lat: 48.8605, lng: 2.345 }
+    expect(pointInPolygon(justOutside, square)).toBe(false)
+    expect(pointInPolygon(justOutside, expandPolygon(square, 300))).toBe(true)
+  })
+})

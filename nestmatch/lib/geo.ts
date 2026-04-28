@@ -14,6 +14,40 @@ export interface LatLng {
 }
 
 /**
+ * V27.2 (Paul 2026-04-29) — étend (buffer) un polygone radialement depuis
+ * son centroïde de N mètres. Approximation simple :
+ *   - Centroïde = moyenne des vertices
+ *   - Pour chaque vertex, pousse vers l'extérieur depuis le centroïde
+ *     d'une distance de N mètres
+ * Ne préserve pas exactement la forme pour les polygones concaves (les
+ * concavités s'arrondissent), mais suffisant pour des zones rough
+ * dessinées à la main par l'utilisateur.
+ *
+ * Conversion mètres ↔ degrés : 1° lat ≈ 111km, 1° lng ≈ 111km × cos(lat).
+ */
+export function expandPolygon(polygon: LatLng[], meters: number): LatLng[] {
+  if (!polygon || polygon.length < 3 || meters <= 0) return polygon
+  // Centroïde
+  let cLat = 0, cLng = 0
+  for (const v of polygon) { cLat += v.lat; cLng += v.lng }
+  cLat /= polygon.length
+  cLng /= polygon.length
+  const cosLat = Math.cos((cLat * Math.PI) / 180)
+  const dLatPerMeter = 1 / 111_000
+  const dLngPerMeter = 1 / (111_000 * Math.max(0.01, cosLat))
+  return polygon.map(v => {
+    const dx = v.lng - cLng
+    const dy = v.lat - cLat
+    const dist = Math.hypot(dx, dy)
+    if (dist === 0) return v
+    // Direction normalisée + offset proportionnel
+    const offsetLng = (dx / dist) * meters * dLngPerMeter
+    const offsetLat = (dy / dist) * meters * dLatPerMeter
+    return { lat: v.lat + offsetLat, lng: v.lng + offsetLng }
+  })
+}
+
+/**
  * Point-in-polygon ray-casting algorithm.
  * Polygon = array of LatLng vertices (closed = first==last optional).
  * Returns true if (lat, lng) is strictly inside the polygon.
