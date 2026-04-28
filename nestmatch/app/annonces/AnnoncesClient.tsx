@@ -1560,7 +1560,11 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           aria-label="Voir les annonces sur la carte"
           style={{
             position: "fixed",
-            bottom: 20,
+            // V5.3 (Paul 2026-04-28) — quand Comparer tray pill est visible (a droite,
+            // bottom 20px), le FAB centre rentrait en collision sur viewports < 400px.
+            // Solution : decaler le FAB en haut de 70px quand compareIds.length > 0
+            // → la pill Comparer reste bottom-right libre, FAB juste au-dessus.
+            bottom: compareIds.length > 0 ? "calc(20px + env(safe-area-inset-bottom, 0px) + 70px)" : "calc(20px + env(safe-area-inset-bottom, 0px))",
             left: "50%",
             transform: "translateX(-50%)",
             zIndex: 7200,
@@ -1579,6 +1583,7 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
             display: "inline-flex",
             alignItems: "center",
             gap: 8,
+            transition: "bottom 220ms ease",
           }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
