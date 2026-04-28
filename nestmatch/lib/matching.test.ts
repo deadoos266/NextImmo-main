@@ -510,3 +510,70 @@ describe("V3.5 calculerScore — equipements_extras (lave_linge, wifi, etc.)", (
     expect(refus).toBeLessThan(ref)
   })
 })
+
+// ──────────────────────────────────────────────
+// V7 chantier 1 — Indispensable = exclusion totale
+// ──────────────────────────────────────────────
+import { estExcluAvecRaison } from "./matching"
+
+describe("V7.1 estExclu — Indispensable manquant = exclusion", () => {
+  const baseProfil: Profil = {
+    ville_souhaitee: "Paris",
+    budget_max: 1500,
+    surface_min: 35,
+    pieces_min: 2,
+  }
+  const baseAnnonce: Annonce = {
+    ville: "Paris", prix: 1200, surface: 50, pieces: 3,
+  }
+
+  it("Profil parking=Indispensable + Annonce sans parking → exclu", () => {
+    const profil: Profil = { ...baseProfil, preferences_equipements: { parking: "indispensable" } }
+    const annonce: Annonce = { ...baseAnnonce, parking: false }
+    expect(estExclu(annonce, profil)).toBe(true)
+  })
+
+  it("Profil parking=Indispensable + Annonce avec parking → pas exclu, score normal", () => {
+    const profil: Profil = { ...baseProfil, preferences_equipements: { parking: "indispensable" } }
+    const annonce: Annonce = { ...baseAnnonce, parking: true }
+    expect(estExclu(annonce, profil)).toBe(false)
+    expect(calculerScore(annonce, profil)).toBeGreaterThan(500)
+  })
+
+  it("Profil parking=Souhaité + Annonce sans parking → score réduit pas exclu", () => {
+    const profil: Profil = { ...baseProfil, preferences_equipements: { parking: "souhaite" } }
+    const annonce: Annonce = { ...baseAnnonce, parking: false }
+    expect(estExclu(annonce, profil)).toBe(false)
+  })
+
+  it("Profil legacy parking=true (boolean) + Annonce sans parking → pas exclu (legacy = souhaite)", () => {
+    const profil: Profil = { ...baseProfil, parking: true }
+    const annonce: Annonce = { ...baseAnnonce, parking: false }
+    expect(estExclu(annonce, profil)).toBe(false)
+  })
+
+  it("Indispensable extra (lave_linge) + annonce equipements_extras absent → exclu", () => {
+    const profil: Profil = { ...baseProfil, preferences_equipements: { lave_linge: "indispensable" } }
+    expect(estExclu(baseAnnonce, profil)).toBe(true)
+  })
+
+  it("Indispensable extra (lave_linge) + annonce equipements_extras.lave_linge=true → pas exclu", () => {
+    const profil: Profil = { ...baseProfil, preferences_equipements: { lave_linge: "indispensable" } }
+    const annonce: Annonce = { ...baseAnnonce, equipements_extras: { lave_linge: true } }
+    expect(estExclu(annonce, profil)).toBe(false)
+  })
+
+  it("estExcluAvecRaison renvoie raison correcte pour Indispensable manquant", () => {
+    const profil: Profil = { ...baseProfil, preferences_equipements: { parking: "indispensable" } }
+    const annonce: Annonce = { ...baseAnnonce, parking: false }
+    const r = estExcluAvecRaison(annonce, profil)
+    expect(r.excluded).toBe(true)
+    expect(r.raison).toMatch(/parking.*indispensable/i)
+  })
+
+  it("Plusieurs Indispensables (parking + balcon) + annonce avec parking sans balcon → exclu sur balcon", () => {
+    const profil: Profil = { ...baseProfil, preferences_equipements: { parking: "indispensable", balcon: "indispensable" } }
+    const annonce: Annonce = { ...baseAnnonce, parking: true, balcon: false }
+    expect(estExclu(annonce, profil)).toBe(true)
+  })
+})

@@ -222,7 +222,89 @@ export function estExclu(annonce: Annonce, profil: Profil): boolean {
     }
   }
 
+  // V7 chantier 1 (Paul 2026-04-28) — Equipement \"Indispensable\" manquant
+  // = exclusion totale. Pas de tolerance. Seul le tri-state explicite peut
+  // exclure : un boolean legacy true reste \"souhaite\" (pas Indispensable).
+  // Loop sur preferences_equipements jsonb du profil. Pour chaque cle a
+  // \"indispensable\", verifie cote annonce :
+  //   - main equipement (parking, balcon, ...) : annonce.<key> via toBool
+  //   - extra (lave_linge, wifi, ...) : annonce.equipements_extras[key]
+  // Si l'observation est === false ou undefined → exclu. true uniquement
+  // laisse passer.
+  const prefs = profil.preferences_equipements
+  if (prefs && typeof prefs === "object") {
+    for (const key of Object.keys(prefs)) {
+      if (prefs[key] !== "indispensable") continue
+      let has: boolean | undefined
+      if (MAIN_EQUIP_KEYS.has(key)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        has = toBool((annonce as any)[key])
+      } else {
+        const extras = annonce.equipements_extras
+        has = extras && typeof extras === "object" ? toBool(extras[key]) : undefined
+      }
+      if (has !== true) return true
+    }
+  }
+
   return false
+}
+
+/**
+ * V7 chantier 1 — variante de estExclu qui retourne aussi la raison.
+ * Utile pour expliquer a l'user pourquoi une annonce est filtree (UI
+ * \"X annonces filtrees par tes criteres Indispensables\"). Accept fallback
+ * a estExclu pur boolean si l'appelant ne s'en sert pas.
+ */
+export function estExcluAvecRaison(annonce: Annonce, profil: Profil): { excluded: boolean; raison?: string } {
+  if (!profil) return { excluded: false }
+  if (profil.mode_localisation === "strict" && profil.ville_souhaitee && annonce.ville) {
+    const vA = annonce.ville.toLowerCase()
+    const vP = profil.ville_souhaitee.toLowerCase()
+    if (!vA.includes(vP) && !vP.includes(vA)) return { excluded: true, raison: `Ville hors zone (vous voulez ${profil.ville_souhaitee})` }
+  }
+  if (profil.budget_max && annonce.prix) {
+    const tolPct = typeof profil.tolerance_budget_pct === "number" && profil.tolerance_budget_pct >= 0
+      ? profil.tolerance_budget_pct : 20
+    if (annonce.prix > profil.budget_max * (1 + tolPct / 100)) {
+      return { excluded: true, raison: `Loyer ${annonce.prix} € au-delà de votre budget +${tolPct}%` }
+    }
+  }
+  if (profil.dpe_min_actif === true && profil.dpe_min && annonce.dpe) {
+    const order = ["A", "B", "C", "D", "E", "F", "G"]
+    const seuil = order.indexOf(profil.dpe_min.toUpperCase())
+    const annonceIdx = order.indexOf(annonce.dpe.toUpperCase())
+    if (seuil >= 0 && annonceIdx >= 0 && annonceIdx > seuil) {
+      return { excluded: true, raison: `DPE ${annonce.dpe} pire que votre minimum ${profil.dpe_min}` }
+    }
+  }
+  if (toBool(profil.animaux) === true) {
+    if (annonce.animaux_politique === "non") return { excluded: true, raison: "Animaux refusés par le propriétaire" }
+    if (annonce.animaux_politique == null && toBool(annonce.animaux) === false) return { excluded: true, raison: "Animaux refusés par le propriétaire" }
+  }
+  if (toBool(profil.rez_de_chaussee_ok) === false) {
+    const etage = String(annonce.etage ?? "").toLowerCase().trim()
+    if (etage && (etage === "0" || etage.includes("rdc") || etage.includes("rez"))) {
+      return { excluded: true, raison: "Rez-de-chaussée non souhaité" }
+    }
+  }
+  // V7 chantier 1 — Indispensable manquant
+  const prefs = profil.preferences_equipements
+  if (prefs && typeof prefs === "object") {
+    for (const key of Object.keys(prefs)) {
+      if (prefs[key] !== "indispensable") continue
+      let has: boolean | undefined
+      if (MAIN_EQUIP_KEYS.has(key)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        has = toBool((annonce as any)[key])
+      } else {
+        const extras = annonce.equipements_extras
+        has = extras && typeof extras === "object" ? toBool(extras[key]) : undefined
+      }
+      if (has !== true) return { excluded: true, raison: `« ${key} » indispensable manquant` }
+    }
+  }
+  return { excluded: false }
 }
 
 // ──────────────────────────────────────────────

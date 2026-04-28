@@ -1061,6 +1061,14 @@ function EquipementPreferencePicker({
           )
         })}
       </div>
+      {/* V7 chantier 1 — disclaimer si Indispensable selected. Le user doit
+          comprendre qu'il filtre dur (annonces sans cet equip ne s'afficheront
+          PAS, plus juste un score reduit). */}
+      {value === "indispensable" && (
+        <p style={{ fontSize: 11, color: "#a16207", margin: "0", lineHeight: 1.45, fontStyle: "italic" as const, gridColumn: stack ? "1" : undefined }}>
+          ⚠ <strong>Indispensable</strong> = on ne te montre PAS les annonces sans {label.toLowerCase()}.
+        </p>
+      )}
     </div>
   )
 }

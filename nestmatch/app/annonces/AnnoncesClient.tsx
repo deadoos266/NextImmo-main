@@ -209,6 +209,9 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
 
   // ── Filtres : numériques
   const [scoreMin, setScoreMin] = useState(0)
+  // V7 chantier 1 — toggle qui retrograde les "indispensable" en "souhaite"
+  // pour relacher le filtre dur si la liste est trop courte.
+  const [disableIndispensable, setDisableIndispensable] = useState(false)
   const [budgetMaxFiltre, setBudgetMaxFiltre] = useState<number | null>(null)
   const [surfaceMin, setSurfaceMin] = useState("")
   const [surfaceMax, setSurfaceMax] = useState("")
@@ -518,9 +521,46 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
       }
     : null
 
+  // V7 chantier 1 — count des Indispensables actifs sur le profil + escape
+  // hatch pour les desactiver temporairement (bandeau "Voir toutes" en cas
+  // de liste tres courte).
+  const indispensableKeys = profilEffectif?.preferences_equipements
+    ? Object.keys(profilEffectif.preferences_equipements).filter(
+        k => profilEffectif.preferences_equipements?.[k] === "indispensable"
+      )
+    : []
+  const profilForFilter = !disableIndispensable ? profilEffectif : profilEffectif ? {
+    ...profilEffectif,
+    // On retire les "indispensable" en les retrogradant en "souhaite" pour le filtre
+    preferences_equipements: profilEffectif.preferences_equipements
+      ? Object.fromEntries(Object.entries(profilEffectif.preferences_equipements).map(([k, v]) =>
+          [k, v === "indispensable" ? "souhaite" : v]
+        ))
+      : null,
+  } : null
+
+  // Compte sans indispensable pour decider d'afficher le bandeau escape hatch
+  const countWithIndisp = profilEffectif
+    ? annonces.filter(a => !estExclu(a, profilEffectif)).length
+    : annonces.length
+  const countWithoutIndisp = profilEffectif && indispensableKeys.length > 0
+    ? annonces.filter(a => {
+        const fakeProfil = {
+          ...profilEffectif,
+          preferences_equipements: profilEffectif.preferences_equipements
+            ? Object.fromEntries(Object.entries(profilEffectif.preferences_equipements).map(([k, v]) =>
+                [k, v === "indispensable" ? "souhaite" : v]
+              ))
+            : null,
+        }
+        return !estExclu(a, fakeProfil)
+      }).length
+    : countWithIndisp
+  const indispensableExcluding = countWithoutIndisp - countWithIndisp
+
   // ── Enrichissement coords
   const annoncesEnrichies = annonces
-    .filter(a => !profilEffectif || !estExclu(a, profilEffectif))
+    .filter(a => !profilForFilter || !estExclu(a, profilForFilter))
     .map(a => {
       const canUseDbCoords = !!a.localisation_exacte && typeof a.lat === "number" && typeof a.lng === "number"
       let lat: number | null = null
@@ -1090,6 +1130,40 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                 </span>
               )}
             </div>
+          </div>
+        )}
+
+        {/* V7 chantier 1 — escape hatch pour les Indispensables. Si l'user
+            a 1+ \"indispensable\" et que le filtre dur exclut au moins 3
+            annonces, on lui propose de relacher le filtre. */}
+        {!loading && profilEffectif && indispensableKeys.length > 0 && indispensableExcluding >= 3 && (
+          <div style={{
+            background: disableIndispensable ? "#FBF6EA" : "#F0FAEE",
+            border: `1px solid ${disableIndispensable ? "#EADFC6" : "#C6E9C0"}`,
+            borderRadius: 12,
+            padding: "10px 14px",
+            marginBottom: 12,
+            display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap",
+            fontSize: 13,
+          }}>
+            <span style={{ color: disableIndispensable ? "#a16207" : "#15803d", lineHeight: 1.5 }}>
+              {disableIndispensable
+                ? <>Filtres « Indispensable » désactivés temporairement — <strong>{indispensableExcluding}</strong> annonces de plus visibles.</>
+                : <><strong>{indispensableExcluding}</strong> annonces filtrées par tes critères Indispensable ({indispensableKeys.join(", ")}).</>}
+            </span>
+            <button
+              type="button"
+              onClick={() => setDisableIndispensable(v => !v)}
+              style={{
+                background: km.ink, color: km.white, border: "none",
+                borderRadius: 999, padding: "6px 14px",
+                fontSize: 11, fontWeight: 700, fontFamily: "inherit",
+                textTransform: "uppercase", letterSpacing: "0.4px",
+                cursor: "pointer", whiteSpace: "nowrap",
+              }}
+            >
+              {disableIndispensable ? "Réactiver" : "Voir toutes →"}
+            </button>
           </div>
         )}
 
