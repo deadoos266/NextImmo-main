@@ -23,6 +23,9 @@ type FormShape = {
   situation_pro: string; revenus_mensuels: string; type_garant: string
   nb_occupants: string; profil_locataire: string
   meuble_pref: string
+  // V2.6 (Paul 2026-04-27) — matching v2 user-controlled
+  tolerance_budget_pct: string  // "0".."50" — slider valeur en %
+  rayon_recherche_km: string    // "" si non defini, sinon "0".."100"
 }
 type TogglesShape = {
   animaux: boolean; parking: boolean; cave: boolean
@@ -30,7 +33,23 @@ type TogglesShape = {
   ascenseur: boolean; rez_de_chaussee_ok: boolean; fumeur: boolean
   proximite_metro: boolean; proximite_ecole: boolean
   proximite_commerces: boolean; proximite_parcs: boolean
+  dpe_min_actif: boolean  // V2.6 — si true, dpe_min devient filtre dur
 }
+
+// V2.6 — preference tri-state par equipement (jsonb preferences_equipements).
+type EquipPref = "indispensable" | "souhaite" | "indifferent" | "refuse"
+const EQUIP_LIST: Array<{ key: string; label: string }> = [
+  { key: "parking",   label: "Parking" },
+  { key: "cave",      label: "Cave" },
+  { key: "fibre",     label: "Fibre optique" },
+  { key: "balcon",    label: "Balcon" },
+  { key: "terrasse",  label: "Terrasse" },
+  { key: "jardin",    label: "Jardin" },
+  { key: "ascenseur", label: "Ascenseur" },
+]
+const EQUIP_DEFAULT: Record<string, EquipPref> = Object.fromEntries(
+  EQUIP_LIST.map(e => [e.key, "indifferent"])
+) as Record<string, EquipPref>
 
 const SECTIONS: Array<{
   id: string
@@ -42,15 +61,18 @@ const SECTIONS: Array<{
     id: "criteres",
     label: "Critères de recherche",
     formKeys: ["ville_souhaitee", "mode_localisation", "type_quartier", "budget_min", "budget_max",
-      "surface_min", "surface_max", "pieces_min", "chambres_min", "dpe_min", "type_bail"],
-    toggleKeys: ["rez_de_chaussee_ok"],
+      "surface_min", "surface_max", "pieces_min", "chambres_min", "dpe_min", "type_bail",
+      // V2.6 — tolerance budget + rayon (slider/input)
+      "tolerance_budget_pct", "rayon_recherche_km"],
+    toggleKeys: ["rez_de_chaussee_ok", "dpe_min_actif"],
   },
   {
     id: "equipements",
     label: "Équipements",
-    // meuble géré séparément (3-state form.meuble_pref → DB boolean nullable)
+    // meuble géré séparément (3-state form.meuble_pref → DB boolean nullable).
+    // V2.6 — preferences_equipements jsonb géré dans saveSection (not in formKeys/toggleKeys).
     formKeys: ["meuble_pref"],
-    toggleKeys: ["animaux", "parking", "cave", "fibre", "balcon", "terrasse", "jardin", "ascenseur"],
+    toggleKeys: ["animaux"],
   },
   {
     id: "proximites",
@@ -107,6 +129,7 @@ function Profil() {
     label: string
     prevForm: FormShape
     prevToggles: TogglesShape
+    prevPrefsEquip: Record<string, EquipPref>
     expiresAt: number
   } | null>(null)
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -118,6 +141,9 @@ function Profil() {
     nb_occupants: "1", profil_locataire: "jeune actif",
     // 3-state : "peu_importe" | "oui" | "non". Mappé en DB sur boolean nullable.
     meuble_pref: "peu_importe",
+    // V2.6 — defaults : tolerance 20% (legacy), rayon vide (pas de bonus geo)
+    tolerance_budget_pct: "20",
+    rayon_recherche_km: "",
   })
   const [toggles, setToggles] = useState<TogglesShape>({
     animaux: false, parking: false, cave: false,
@@ -125,7 +151,10 @@ function Profil() {
     ascenseur: false, rez_de_chaussee_ok: true,
     fumeur: false, proximite_metro: false, proximite_ecole: false,
     proximite_commerces: false, proximite_parcs: false,
+    dpe_min_actif: false,  // V2.6 — default off (DPE = bonus, pas filtre dur)
   })
+  // V2.6 — preferences_equipements jsonb (separate state pour ne pas exploser FormShape)
+  const [prefsEquip, setPrefsEquip] = useState<Record<string, EquipPref>>(EQUIP_DEFAULT)
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth")
@@ -154,6 +183,11 @@ function Profil() {
               meuble_pref: data.meuble === null || data.meuble === undefined
                 ? "peu_importe"
                 : data.meuble ? "oui" : "non",
+              // V2.6 — defaults safe si colonnes absentes (compat ancien profil)
+              tolerance_budget_pct: typeof data.tolerance_budget_pct === "number"
+                ? String(data.tolerance_budget_pct) : "20",
+              rayon_recherche_km: typeof data.rayon_recherche_km === "number"
+                ? String(data.rayon_recherche_km) : "",
             })
             setToggles({
               animaux: !!data.animaux,
@@ -167,7 +201,21 @@ function Profil() {
               proximite_ecole: !!data.proximite_ecole,
               proximite_commerces: !!data.proximite_commerces,
               proximite_parcs: !!data.proximite_parcs,
+              dpe_min_actif: data.dpe_min_actif === true,  // V2.6
             })
+            // V2.6 — load preferences_equipements jsonb avec fallback boolean legacy
+            const rawPrefs = (data as { preferences_equipements?: Record<string, string> | null }).preferences_equipements
+            const merged: Record<string, EquipPref> = { ...EQUIP_DEFAULT }
+            for (const { key } of EQUIP_LIST) {
+              const explicit = rawPrefs?.[key]
+              if (explicit === "indispensable" || explicit === "souhaite" || explicit === "indifferent" || explicit === "refuse") {
+                merged[key] = explicit
+              } else if ((data as Record<string, unknown>)[key] === true) {
+                // fallback : boolean legacy true -> "souhaite"
+                merged[key] = "souhaite"
+              }
+            }
+            setPrefsEquip(merged)
           }
           setDataLoaded(true)
         })
@@ -206,6 +254,16 @@ function Profil() {
       profil_locataire: form.profil_locataire,
       meuble: meubleDb,
       ...toggles,
+      // V2.6 — matching v2 fields
+      tolerance_budget_pct: form.tolerance_budget_pct ? parseInt(form.tolerance_budget_pct) : 20,
+      rayon_recherche_km: form.rayon_recherche_km ? parseInt(form.rayon_recherche_km) : null,
+      preferences_equipements: prefsEquip,
+      // Sync legacy booleans avec prefsEquip pour compat read-side (lib/matching) :
+      // "souhaite" ou "indispensable" -> true ; sinon false.
+      ...Object.fromEntries(EQUIP_LIST.map(e => [
+        e.key,
+        prefsEquip[e.key] === "souhaite" || prefsEquip[e.key] === "indispensable",
+      ])),
     }
     const { error } = await supabase.from("profils").upsert(data, { onConflict: "email" })
     if (error) {
@@ -231,6 +289,7 @@ function Profil() {
     // Snapshot AVANT mutation (pour undo) — clone pour pas bouger.
     const prevForm = { ...form }
     const prevToggles = { ...toggles }
+    const prevPrefsEquip = { ...prefsEquip }
 
     setSavingSection(sectionId)
     setErreur("")
@@ -240,8 +299,11 @@ function Profil() {
     for (const k of sec.formKeys) {
       const raw = form[k]
       // Colonnes int en base : on cast, sinon on laisse string/ville_souhaitee.
-      if (["budget_min", "budget_max", "surface_min", "surface_max", "pieces_min", "chambres_min", "nb_occupants", "revenus_mensuels"].includes(k)) {
+      if (["budget_min", "budget_max", "surface_min", "surface_max", "pieces_min", "chambres_min", "nb_occupants", "revenus_mensuels", "rayon_recherche_km"].includes(k)) {
         patch[k] = toInt(raw)
+      } else if (k === "tolerance_budget_pct") {
+        // V2.6 — slider 0..50, default 20 si vide
+        patch[k] = raw ? parseInt(raw) : 20
       } else if (k === "meuble_pref") {
         // 3-state UI → DB boolean nullable
         patch.meuble = raw === "peu_importe" ? null : raw === "oui"
@@ -250,6 +312,14 @@ function Profil() {
       }
     }
     for (const k of sec.toggleKeys) patch[k] = !!toggles[k]
+    // V2.6 — section "equipements" : push aussi le jsonb preferences_equipements
+    // + sync les booleans legacy (parking/cave/...) pour compat read-side legacy.
+    if (sectionId === "equipements") {
+      patch.preferences_equipements = prefsEquip
+      for (const e of EQUIP_LIST) {
+        patch[e.key] = prefsEquip[e.key] === "souhaite" || prefsEquip[e.key] === "indispensable"
+      }
+    }
 
     const { error } = await supabase.from("profils").upsert(patch, { onConflict: "email" })
     if (error) {
@@ -266,6 +336,7 @@ function Profil() {
       label: sec.label,
       prevForm,
       prevToggles,
+      prevPrefsEquip,
       expiresAt: Date.now() + 5000,
     })
     undoTimerRef.current = setTimeout(() => setUndo(null), 5000)
@@ -278,18 +349,29 @@ function Profil() {
     // Restaurer UI immédiatement (optimistic), puis persister.
     setForm(undo.prevForm)
     setToggles(undo.prevToggles)
+    setPrefsEquip(undo.prevPrefsEquip)
     const toInt = (v: string) => v ? parseInt(v) : null
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const patch: Record<string, any> = { email: session.user.email }
     for (const k of sec.formKeys) {
       const raw = undo.prevForm[k]
-      if (["budget_min", "budget_max", "surface_min", "surface_max", "pieces_min", "chambres_min", "nb_occupants", "revenus_mensuels"].includes(k)) {
+      if (["budget_min", "budget_max", "surface_min", "surface_max", "pieces_min", "chambres_min", "nb_occupants", "revenus_mensuels", "rayon_recherche_km"].includes(k)) {
         patch[k] = toInt(raw)
+      } else if (k === "tolerance_budget_pct") {
+        patch[k] = raw ? parseInt(raw) : 20
+      } else if (k === "meuble_pref") {
+        patch.meuble = raw === "peu_importe" ? null : raw === "oui"
       } else {
         patch[k] = raw
       }
     }
     for (const k of sec.toggleKeys) patch[k] = !!undo.prevToggles[k]
+    if (undo.sectionId === "equipements") {
+      patch.preferences_equipements = undo.prevPrefsEquip
+      for (const e of EQUIP_LIST) {
+        patch[e.key] = undo.prevPrefsEquip[e.key] === "souhaite" || undo.prevPrefsEquip[e.key] === "indispensable"
+      }
+    }
     await supabase.from("profils").upsert(patch, { onConflict: "email" })
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
     setUndo(null)
@@ -541,6 +623,62 @@ function Profil() {
             </F>
           </div>
           <Toggle label="Rez-de-chaussée accepté" k="rez_de_chaussee_ok" toggles={toggles} setToggles={setToggles} />
+          <Toggle
+            label={`Filtrer strictement sur le DPE ${form.dpe_min}`}
+            k="dpe_min_actif"
+            toggles={toggles}
+            setToggles={setToggles}
+          />
+
+          {/* V2.6 — Tolerance budget slider 0..50% */}
+          <div style={{ marginTop: 18, padding: "16px 18px", background: km.beige, border: `1px solid ${km.line}`, borderRadius: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8, gap: 8, flexWrap: "wrap" }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: km.ink }}>
+                Tolérance budget
+                <Tooltip text="Pourcentage au-delà du budget max où une annonce reste visible. À 20%, une annonce à 1200 € passe le filtre si votre budget est 1000. À 0%, plus aucun dépassement n'est toléré." />
+              </label>
+              <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 18, color: km.ink }}>
+                {form.tolerance_budget_pct || "20"}%
+              </span>
+            </div>
+            <input
+              type="range" min={0} max={50} step={5}
+              value={form.tolerance_budget_pct || "20"}
+              onChange={set("tolerance_budget_pct")}
+              style={{ width: "100%", accentColor: km.ink }}
+              aria-label="Tolerance budget en pourcentage"
+            />
+            <p style={{ fontSize: 11, color: km.muted, marginTop: 6, lineHeight: 1.5 }}>
+              {form.budget_max
+                ? `Annonces visibles jusqu'à ${Math.round(parseInt(form.budget_max) * (1 + parseInt(form.tolerance_budget_pct || "20") / 100))} €/mois.`
+                : "Définissez un budget max pour voir l'effet."}
+            </p>
+          </div>
+
+          {/* V2.6 — Rayon de recherche en km */}
+          <div style={{ marginTop: 14, padding: "16px 18px", background: km.beige, border: `1px solid ${km.line}`, borderRadius: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, gap: 12, flexWrap: "wrap" }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: km.ink }}>
+                Rayon de recherche
+                <Tooltip text="Distance maximale (en km) depuis votre ville souhaitée. Les annonces dans ce rayon reçoivent un bonus selon leur proximité. Laisser vide pour ne pas en tenir compte." />
+              </label>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <input
+                  type="number" min={0} max={200}
+                  value={form.rayon_recherche_km}
+                  onChange={set("rayon_recherche_km")}
+                  placeholder="—"
+                  style={{ ...inp, width: 90, padding: "8px 12px", textAlign: "right" }}
+                  aria-label="Rayon recherche km"
+                />
+                <span style={{ fontSize: 13, color: km.muted }}>km</span>
+              </div>
+            </div>
+            <p style={{ fontSize: 11, color: km.muted, marginTop: 4, lineHeight: 1.5 }}>
+              Bonus de pertinence pour les annonces proches de la ville souhaitée.
+              {form.ville_souhaitee && form.rayon_recherche_km && ` Ex. : annonces jusqu'à ${form.rayon_recherche_km} km de ${form.ville_souhaitee}.`}
+            </p>
+          </div>
         </Sec>
 
         <Sec
@@ -582,15 +720,24 @@ function Profil() {
               })}
             </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginBottom: 12 }}>
             <Toggle label="Animaux acceptés" k="animaux" toggles={toggles} setToggles={setToggles} />
-            <Toggle label="Parking" k="parking" toggles={toggles} setToggles={setToggles} />
-            <Toggle label="Cave" k="cave" toggles={toggles} setToggles={setToggles} />
-            <Toggle label="Fibre optique" k="fibre" toggles={toggles} setToggles={setToggles} />
-            <Toggle label="Balcon" k="balcon" toggles={toggles} setToggles={setToggles} />
-            <Toggle label="Terrasse" k="terrasse" toggles={toggles} setToggles={setToggles} />
-            <Toggle label="Jardin" k="jardin" toggles={toggles} setToggles={setToggles} />
-            <Toggle label="Ascenseur" k="ascenseur" toggles={toggles} setToggles={setToggles} />
+          </div>
+
+          {/* V2.6 — picker tri-state par equipement (indispensable / souhaité / indifférent / refusé) */}
+          <p style={{ fontSize: 11, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "16px 0 10px" }}>
+            Mes équipements souhaités
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {EQUIP_LIST.map(e => (
+              <EquipementPreferencePicker
+                key={e.key}
+                label={e.label}
+                value={prefsEquip[e.key] || "indifferent"}
+                onChange={(v) => setPrefsEquip(prev => ({ ...prev, [e.key]: v }))}
+                isMobile={isMobile}
+              />
+            ))}
           </div>
         </Sec>
 
@@ -773,6 +920,69 @@ function ProfilTOC({ active, isMobile }: { active: string; isMobile: boolean }) 
         })}
       </ul>
     </aside>
+  )
+}
+
+// V2.6 (Paul 2026-04-27) — picker tri-state par equipement.
+// 4 etats : indispensable / souhaite / indifferent / refuse. Hors du composant
+// principal pour preserver le focus (convention CLAUDE.md).
+function EquipementPreferencePicker({
+  label, value, onChange, isMobile,
+}: {
+  label: string
+  value: EquipPref
+  onChange: (v: EquipPref) => void
+  isMobile: boolean
+}) {
+  const opts: Array<{ v: EquipPref; l: string; tone: string }> = [
+    { v: "indispensable", l: "Indispensable", tone: "#16a34a" },
+    { v: "souhaite",      l: "Souhaité",      tone: "#0ea5e9" },
+    { v: "indifferent",   l: "Indifférent",   tone: "#9ca3af" },
+    { v: "refuse",        l: "Refusé",        tone: "#dc2626" },
+  ]
+  return (
+    <div style={{
+      display: "flex",
+      flexDirection: isMobile ? "column" : "row",
+      alignItems: isMobile ? "stretch" : "center",
+      justifyContent: "space-between",
+      gap: isMobile ? 8 : 12,
+      padding: "10px 12px",
+      borderRadius: 12,
+      border: `1px solid ${km.line}`,
+      background: km.white,
+    }}>
+      <span style={{ fontSize: 13, fontWeight: 600, color: km.ink }}>{label}</span>
+      <div role="radiogroup" aria-label={`Préférence ${label}`} style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {opts.map(opt => {
+          const active = value === opt.v
+          return (
+            <button
+              key={opt.v}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => onChange(opt.v)}
+              style={{
+                padding: "7px 12px",
+                borderRadius: 999,
+                border: `1.5px solid ${active ? opt.tone : km.line}`,
+                background: active ? opt.tone : "transparent",
+                color: active ? "#fff" : km.ink,
+                fontSize: 11.5,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                transition: "all 140ms",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {opt.l}
+            </button>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
