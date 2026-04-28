@@ -91,15 +91,44 @@ export function computeQualiteAnnonce(input: QualiteInput): QualiteBreakdown {
     { key: "caracteristiques", pts: caracPts, max: CARAC_MAX, label: "Caractéristiques complètes", ok: caracPts > 0 },
   ]
 
+  // V11.5 — wording revu : badge deltaPts = gain immediat (pas max
+  // theorique). Texte plus concis et naturel.
   const suggestions: QualiteBreakdown["suggestions"] = []
   if (photosPts < PHOTOS_MAX) {
-    if (np < 3) suggestions.push({ key: "photos", deltaPts: 15 - photosPts, hint: `Ajoutez ${3 - np} photo${3 - np > 1 ? "s" : ""} pour atteindre 3 minimum (+${15 - photosPts} pts).` })
-    else if (np < 6) suggestions.push({ key: "photos", deltaPts: PHOTOS_MAX - photosPts, hint: `Ajoutez ${6 - np} photo${6 - np > 1 ? "s" : ""} de plus pour passer en mode premium (+${PHOTOS_MAX - photosPts} pts).` })
+    if (np < 3) {
+      const need = 3 - np
+      suggestions.push({
+        key: "photos",
+        deltaPts: 15 - photosPts,
+        hint: `Ajoutez ${need} photo${need > 1 ? "s" : ""} (+${15 - photosPts} pts).`,
+      })
+    } else if (np < 6) {
+      const need = 6 - np
+      suggestions.push({
+        key: "photos",
+        deltaPts: PHOTOS_MAX - photosPts,
+        hint: `Ajoutez ${need} photo${need > 1 ? "s" : ""} pour passer en mode premium (+${PHOTOS_MAX - photosPts} pts).`,
+      })
+    }
   }
   if (descPts < DESC_MAX) {
-    suggestions.push({ key: "description", deltaPts: DESC_MAX - descPts, hint: dl < 80
-      ? `Ajoutez au moins ${80 - dl} caractères à la description (+${10 - descPts} pts au passage de 80 chars, +${DESC_MAX - descPts} si > 300 chars).`
-      : `Détaillez davantage la description (>300 chars, +${DESC_MAX - descPts} pts).` })
+    if (dl < 80) {
+      // Gain immediat = +10 (passage 80 chars). Boost a +20 mentionne en
+      // suffixe.
+      const immediate = 10 - descPts
+      suggestions.push({
+        key: "description",
+        deltaPts: immediate,
+        hint: `Ajoutez ${80 - dl} caractères à la description (boost à +${DESC_MAX - descPts} si vous dépassez 300 caractères).`,
+      })
+    } else {
+      // Deja >= 80 chars, suggestion = passer le cap 300.
+      suggestions.push({
+        key: "description",
+        deltaPts: DESC_MAX - descPts,
+        hint: `Détaillez davantage la description (>300 caractères, +${DESC_MAX - descPts} pts).`,
+      })
+    }
   }
   if (msgPts === 0) suggestions.push({ key: "message", deltaPts: MSG_MAX, hint: `Ajoutez un mot du propriétaire (+${MSG_MAX} pts).` })
   if (dpePts < DPE_MAX) suggestions.push({ key: "dpe", deltaPts: DPE_MAX - dpePts, hint: dpePts === 0
