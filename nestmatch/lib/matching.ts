@@ -126,6 +126,55 @@ function computeAge(dateNaissance?: string | null): number | undefined {
   return years
 }
 
+// V3.5 — set des cles \"main\" en colonnes booleans annonces. Tout le reste
+// (lave_linge, wifi, etc.) est cherche dans annonce.equipements_extras.
+const MAIN_EQUIP_KEYS = new Set([
+  "parking", "balcon", "terrasse", "jardin", "cave", "fibre", "ascenseur",
+])
+
+/**
+ * V3.5 — collecte la liste des equipements actionnables (pref != indifferent)
+ * et lit l'observation cote annonce avec fallback :
+ *   - cle main : annonce.<key> (boolean)
+ *   - autre : annonce.equipements_extras[key]
+ *
+ * Permet a l'utilisateur de declarer indispensable: { lave_linge, wifi, ... }
+ * sans creer une nouvelle colonne par item.
+ */
+function collectEquipObservations(annonce: Annonce, profil: Profil): {
+  actionnable: Array<{ key: string; pref: EquipPref; has: boolean | undefined }>
+  hasAnyInfo: boolean
+} {
+  const out: Array<{ key: string; pref: EquipPref; has: boolean | undefined }> = []
+  const seen = new Set<string>()
+  // 1) main keys (toujours considerer pour fallback boolean)
+  for (const key of MAIN_EQUIP_KEYS) {
+    const pref = getEquipementPreference(profil, key)
+    seen.add(key)
+    if (pref === "indifferent") continue
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const has = toBool((annonce as any)[key])
+    out.push({ key, pref, has })
+  }
+  // 2) extras explicitement listes dans preferences_equipements
+  const prefs = profil.preferences_equipements
+  if (prefs && typeof prefs === "object") {
+    for (const key of Object.keys(prefs)) {
+      if (seen.has(key)) continue
+      const pref = normalizePref(prefs[key])
+      if (!pref || pref === "indifferent") continue
+      const extras = annonce.equipements_extras
+      const raw = extras && typeof extras === "object" ? extras[key] : undefined
+      const has = toBool(raw)
+      out.push({ key, pref, has })
+    }
+  }
+  return {
+    actionnable: out,
+    hasAnyInfo: out.some(e => e.has !== undefined),
+  }
+}
+
 // ──────────────────────────────────────────────
 // FILTRES DURS — bien exclu si true
 // ──────────────────────────────────────────────
@@ -278,44 +327,37 @@ export function calculerScore(annonce: Annonce, profil: Profil): number {
 
   // ── ÉQUIPEMENTS (100 pts, plancher 0) ─────────
   // V2.4 — tri-state per equipement via preferences_equipements jsonb.
-  // Fallback boolean legacy preserve. Bareme :
+  // V3.5 (Paul 2026-04-28) — etendu aux equipements_extras jsonb (lave_linge,
+  //   wifi, etc.). Si la pref vise une cle qui n'est pas dans la liste main,
+  //   on regarde dans annonce.equipements_extras.
+  // Bareme :
   //   indispensable + present : +25 ; absent : -20 ; inconnu : -5
   //   souhaite      + present : +10 ; absent :   0 ; inconnu : +2
   //   refuse        + present : -15 ; absent :  +5 ; inconnu :  0
   //   indifferent   : 0 (skip)
   // Score = clamp(0, 100, 50 + somme).
   // Compat : si toutes prefs == indifferent → 70 (legacy "rien souhaité").
-  const EQUIP_KEYS = ["parking", "balcon", "terrasse", "jardin", "cave", "fibre", "ascenseur"] as const
-  const equips = EQUIP_KEYS.map(key => ({
-    key,
-    pref: getEquipementPreference(profil, key),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    has: toBool((annonce as any)[key]),
-  }))
-  const actionnable = equips.filter(e => e.pref !== "indifferent")
-  if (actionnable.length === 0) {
+  const equipsObs = collectEquipObservations(annonce, profil)
+  if (equipsObs.actionnable.length === 0) {
     score += 70
+  } else if (!equipsObs.hasAnyInfo) {
+    score += 50
   } else {
-    const hasAnyInfo = actionnable.some(e => e.has !== undefined)
-    if (!hasAnyInfo) {
-      score += 50
-    } else {
-      let raw = 0
-      for (const { pref, has } of actionnable) {
-        if (pref === "indispensable") {
-          if (has === true) raw += 25
-          else if (has === false) raw -= 20
-          else raw -= 5
-        } else if (pref === "souhaite") {
-          if (has === true) raw += 10
-          else if (has === undefined) raw += 2
-        } else if (pref === "refuse") {
-          if (has === true) raw -= 15
-          else if (has === false) raw += 5
-        }
+    let raw = 0
+    for (const { pref, has } of equipsObs.actionnable) {
+      if (pref === "indispensable") {
+        if (has === true) raw += 25
+        else if (has === false) raw -= 20
+        else raw -= 5
+      } else if (pref === "souhaite") {
+        if (has === true) raw += 10
+        else if (has === undefined) raw += 2
+      } else if (pref === "refuse") {
+        if (has === true) raw -= 15
+        else if (has === false) raw += 5
       }
-      score += Math.max(0, Math.min(100, 50 + raw))
     }
+    score += Math.max(0, Math.min(100, 50 + raw))
   }
 
   // ── DPE (50 pts) ──────────────────────────────
@@ -541,41 +583,33 @@ export function breakdownScore(annonce: Annonce, profil: Profil): BreakdownItem[
     items.push({ key: "meuble", label: "Meublé", pts: 70, max: 100, status: "neutre" })
   }
 
-  // Equipements — max 100. Reutilise la logique tri-state de calculerScore.
-  const EQUIP_KEYS = ["parking", "balcon", "terrasse", "jardin", "cave", "fibre", "ascenseur"] as const
-  const equips = EQUIP_KEYS.map(key => ({
-    pref: getEquipementPreference(profil, key),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    has: toBool((annonce as any)[key]),
-  }))
-  const actionnable = equips.filter(e => e.pref !== "indifferent")
+  // Equipements — max 100. V3.5 reutilise collectEquipObservations
+  // (couvre main equipements + extras jsonb).
+  const equipsObsBd = collectEquipObservations(annonce, profil)
   let equipPts: number
   let equipStatus: BreakdownItem["status"] = "neutre"
-  if (actionnable.length === 0) {
+  if (equipsObsBd.actionnable.length === 0) {
     equipPts = 70
+  } else if (!equipsObsBd.hasAnyInfo) {
+    equipPts = 50
+    equipStatus = "partiel"
   } else {
-    const hasAnyInfo = actionnable.some(e => e.has !== undefined)
-    if (!hasAnyInfo) {
-      equipPts = 50
-      equipStatus = "partiel"
-    } else {
-      let raw = 0
-      for (const { pref, has } of actionnable) {
-        if (pref === "indispensable") {
-          if (has === true) raw += 25
-          else if (has === false) raw -= 20
-          else raw -= 5
-        } else if (pref === "souhaite") {
-          if (has === true) raw += 10
-          else if (has === undefined) raw += 2
-        } else if (pref === "refuse") {
-          if (has === true) raw -= 15
-          else if (has === false) raw += 5
-        }
+    let raw = 0
+    for (const { pref, has } of equipsObsBd.actionnable) {
+      if (pref === "indispensable") {
+        if (has === true) raw += 25
+        else if (has === false) raw -= 20
+        else raw -= 5
+      } else if (pref === "souhaite") {
+        if (has === true) raw += 10
+        else if (has === undefined) raw += 2
+      } else if (pref === "refuse") {
+        if (has === true) raw -= 15
+        else if (has === false) raw += 5
       }
-      equipPts = Math.max(0, Math.min(100, 50 + raw))
-      equipStatus = equipPts >= 80 ? "match" : equipPts >= 40 ? "partiel" : "miss"
     }
+    equipPts = Math.max(0, Math.min(100, 50 + raw))
+    equipStatus = equipPts >= 80 ? "match" : equipPts >= 40 ? "partiel" : "miss"
   }
   items.push({ key: "equipements", label: "Équipements", pts: equipPts, max: 100, status: equipStatus })
 

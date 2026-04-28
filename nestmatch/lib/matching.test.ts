@@ -469,3 +469,44 @@ describe("V2.4 calculerScore — bonus/malus tri-state equipements", () => {
     expect(score).toBe(scoreSansPref)
   })
 })
+
+// ──────────────────────────────────────────────
+// V3.5 — Branchement equipements_extras jsonb
+// ──────────────────────────────────────────────
+describe("V3.5 calculerScore — equipements_extras (lave_linge, wifi, etc.)", () => {
+  const baseProfil: Profil = {
+    budget_max: 1500,
+    surface_min: 40,
+    pieces_min: 2,
+  }
+  const baseAnnonce: Annonce = {
+    ville: "Paris", prix: 1400, surface: 50, pieces: 3,
+  }
+
+  it("indispensable lave_linge + extras lave_linge=true → bonus", () => {
+    const profil: Profil = { ...baseProfil, preferences_equipements: { lave_linge: "indispensable" } }
+    const sansExtras = calculerScore(baseAnnonce, baseProfil)
+    const avecExtras = calculerScore({ ...baseAnnonce, equipements_extras: { lave_linge: true } }, profil)
+    expect(avecExtras).toBeGreaterThan(sansExtras)
+  })
+
+  it("indispensable wifi + annonce sans extras → forte penalite", () => {
+    const profil: Profil = { ...baseProfil, preferences_equipements: { wifi: "indispensable" } }
+    const ref = calculerScore(baseAnnonce, baseProfil)
+    const malus = calculerScore({ ...baseAnnonce, equipements_extras: { wifi: false } }, profil)
+    expect(malus).toBeLessThan(ref)
+  })
+
+  it("souhaite wifi + extras absent (annonce sans equipements_extras) → score \"inconnu\" leger", () => {
+    const profil: Profil = { ...baseProfil, preferences_equipements: { wifi: "souhaite" } }
+    const score = calculerScore(baseAnnonce, profil)
+    expect(score).toBeGreaterThan(0)
+  })
+
+  it("refuse climatisation + extras climatisation=true → malus", () => {
+    const profil: Profil = { ...baseProfil, preferences_equipements: { climatisation: "refuse" } }
+    const ref = calculerScore({ ...baseAnnonce, equipements_extras: { climatisation: true } }, baseProfil)
+    const refus = calculerScore({ ...baseAnnonce, equipements_extras: { climatisation: true } }, profil)
+    expect(refus).toBeLessThan(ref)
+  })
+})
