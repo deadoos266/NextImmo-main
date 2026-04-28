@@ -1,4 +1,5 @@
 "use client"
+import Link from "next/link"
 import FilterPopover from "../ui/FilterPopover"
 import CityAutocomplete from "../CityAutocomplete"
 
@@ -64,6 +65,11 @@ export interface FiltersBarProps {
   // isolé (scroll liste = scroll parent custom). 72 quand le scroll est le
   // document (mode grille, mobile) et qu'il faut rester sous la Navbar.
   stickyTop?: number
+
+  // V14c (Paul 2026-04-28) — pill "Mes critères" toujours visible côté
+  // locataire, placée à gauche dans la barre. Si null/undefined, pas
+  // de pill (proprio par exemple). Cliquer = navigue vers href donné.
+  monProfilHref?: string | null
 }
 
 function IconFilters() {
@@ -124,6 +130,7 @@ export default function FiltersBar(props: FiltersBarProps) {
     resultCount,
     loading,
     stickyTop = 0,
+    monProfilHref,
   } = props
 
   const showInlinePopovers = !isMobile // desktop + tablette
@@ -262,6 +269,38 @@ export default function FiltersBar(props: FiltersBarProps) {
             </FilterPopover>
           )}
         </>
+      )}
+
+      {/* V14c (Paul 2026-04-28) — Pill "Mes critères" — toujours visible
+          côté locataire connecté, accès direct au /profil. Placée à gauche
+          juste avant "Filtres" pour être impossible à rater. */}
+      {monProfilHref && (
+        <Link
+          href={monProfilHref}
+          aria-label="Mon profil locataire — éditer mes critères"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            background: "#111",
+            color: "#fff",
+            border: "1px solid #111",
+            borderRadius: 999,
+            padding: "8px 14px",
+            fontSize: 13,
+            fontWeight: 700,
+            textDecoration: "none",
+            fontFamily: "inherit",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+          }}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          {isMobile ? "Profil" : "Mes critères"}
+        </Link>
       )}
 
       {/* Bouton Filtres (centre gauche) */}

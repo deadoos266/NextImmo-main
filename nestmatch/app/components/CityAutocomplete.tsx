@@ -221,11 +221,11 @@ export default function CityAutocomplete({ value, onChange, onSelect, placeholde
               <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {s.nom}
               </span>
-              {s.codePostaux.length > 0 && (
-                <span style={{ fontSize: 12, color: "#8a8477", fontWeight: 500, flexShrink: 0 }}>
-                  {displayCP(s.codePostaux)}
-                </span>
-              )}
+              {/* V14c (Paul 2026-04-28) — code postal masqué par défaut.
+                  User feedback : "il faut que ça propose seul la ville".
+                  On garde la recherche par CP (input numeric) mais l'affichage
+                  liste reste épuré, juste le nom de commune. Si on veut
+                  réafficher le CP plus tard, restaurer le bloc displayCP. */}
             </div>
           ))}
         </div>
