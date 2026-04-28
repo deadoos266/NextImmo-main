@@ -1608,12 +1608,12 @@ function Step7Publier({
         )}
       </div>
 
-      {/* V9.3 — Score qualite live de l'annonce. Affiche dans Step 7 pour
-          que le proprio voie son score et puisse remonter aux etapes pour
-          ameliorer (photos, description, mot proprio, DPE). */}
+      {/* V9.3 + V11.8 — Score Qualité ÉDITORIALE de l'annonce. Section
+          prioritaire (impact direct sur le matching). Distincte de la
+          checklist Champs obligatoires en dessous (V11.8). */}
       <div style={{ borderTop: `1px solid ${km.beige}`, paddingTop: 22, marginTop: 28 }}>
         <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 12px" }}>
-          Qualité de votre annonce
+          Qualité éditoriale
         </p>
         <QualiteLive
           form={form}
@@ -1624,11 +1624,14 @@ function Step7Publier({
         />
       </div>
 
-      {/* Récap visuel — checklist complétude avec lien « Modifier » vers l'étape */}
+      {/* V11.8 — Récap "Champs obligatoires" — checklist completude. Section
+          secondaire en dessous de la Qualité éditoriale (la qualité prime
+          car elle impacte le matching ; les champs obligatoires sont juste
+          le minimum techniquement requis pour publier). */}
       <div style={{ borderTop: `1px solid ${km.beige}`, paddingTop: 22, marginTop: 28 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
           <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: 0 }}>
-            Dernier regard · {completion}% complet
+            Champs obligatoires · {completion}% complétés
           </p>
           <span style={{ fontSize: 11, color: completion === 100 ? km.successText : km.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
             {completion === 100 ? "Annonce complète" : `${checks.filter(c => !c.ok).length} éléments manquants`}
