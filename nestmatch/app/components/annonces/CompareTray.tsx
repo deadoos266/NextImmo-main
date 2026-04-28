@@ -1,6 +1,7 @@
 "use client"
 
 import Image from "next/image"
+import { useEffect, useState } from "react"
 import { km } from "../ui/km"
 
 /**
@@ -35,11 +36,79 @@ export interface CompareTrayProps {
 }
 
 export default function CompareTray({ items, onRemove, onClear, onCompare, max }: CompareTrayProps) {
+  // V4.5 (Paul 2026-04-28) — sur mobile, comportement bottom-sheet :
+  //   collapsed = pill compact bottom-right, ne chevauche pas le FAB carte
+  //   expanded = tray pleine largeur (comme avant) avec backdrop scrim
+  // Sur desktop : comportement inchange (tray fixe en bas).
+  const [isMobile, setIsMobile] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const mq = window.matchMedia("(max-width: 767px)")
+    const update = () => setIsMobile(mq.matches)
+    update()
+    mq.addEventListener("change", update)
+    return () => mq.removeEventListener("change", update)
+  }, [])
+
   if (items.length === 0) return null
   const disabled = items.length < 2
 
+  // V4.5 — mobile collapsed pill (par defaut). Bottom-right pour eviter le
+  // FAB \"Voir sur la carte\" centre. Tap → ouvre le sheet plein.
+  if (isMobile && !expanded) {
+    return (
+      <button
+        type="button"
+        onClick={() => setExpanded(true)}
+        aria-label={`Comparer ${items.length} annonce${items.length > 1 ? "s" : ""} — ouvrir`}
+        aria-expanded={false}
+        style={{
+          position: "fixed",
+          right: 16,
+          bottom: "calc(20px + env(safe-area-inset-bottom, 0px))",
+          zIndex: 8500,
+          background: km.ink,
+          color: km.white,
+          border: "none",
+          borderRadius: 999,
+          padding: "12px 18px",
+          fontSize: 12,
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "0.4px",
+          fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
+          cursor: "pointer",
+          boxShadow: "0 6px 20px rgba(0,0,0,0.25)",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          WebkitTapHighlightColor: "transparent",
+        }}
+      >
+        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", background: "rgba(255,255,255,0.15)", fontSize: 11, fontWeight: 800 }}>
+          {items.length}
+        </span>
+        Comparer
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <polyline points="18 15 12 9 6 15" />
+        </svg>
+      </button>
+    )
+  }
+
   return (
     <>
+      {/* V4.5 — backdrop scrim quand le sheet est expanded (mobile) pour
+          marquer l'overlay et permettre tap-outside-to-close. Desktop : pas
+          de scrim, le tray est juste un widget bottom. */}
+      {isMobile && expanded && (
+        <div
+          onClick={() => setExpanded(false)}
+          aria-hidden="true"
+          style={{ position: "fixed", inset: 0, zIndex: 8400, background: "rgba(0,0,0,0.35)" }}
+        />
+      )}
       <style>{`
         @keyframes km-compare-rise { from { transform: translateY(120%) } to { transform: translateY(0) } }
         .km-compare-thumbs::-webkit-scrollbar { display: none }
@@ -53,6 +122,8 @@ export default function CompareTray({ items, onRemove, onClear, onCompare, max }
           zIndex: 8500,
           background: km.white,
           borderTop: `1px solid ${km.line}`,
+          borderTopLeftRadius: isMobile ? 20 : 0,
+          borderTopRightRadius: isMobile ? 20 : 0,
           boxShadow: "0 -8px 24px rgba(17,17,17,0.12)",
           padding: "10px 16px calc(10px + env(safe-area-inset-bottom, 0px))",
           display: "flex", alignItems: "center", gap: 12,
@@ -61,6 +132,28 @@ export default function CompareTray({ items, onRemove, onClear, onCompare, max }
           animation: "km-compare-rise 0.25s cubic-bezier(0.22, 1, 0.36, 1)",
         }}
       >
+        {/* V4.5 — drag handle visuel (mobile only). N'est pas reellement
+            draggable mais signale l'aspect bottom-sheet. Cliquer ferme. */}
+        {isMobile && (
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            aria-label="Réduire le comparateur"
+            style={{
+              position: "absolute",
+              top: 6,
+              left: "50%",
+              transform: "translateX(-50%)",
+              background: "transparent",
+              border: "none",
+              padding: "4px 16px",
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            <span aria-hidden="true" style={{ display: "block", width: 36, height: 4, borderRadius: 999, background: km.line }} />
+          </button>
+        )}
         {/* Eyebrow + count à gauche, compact 1 ligne */}
         <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 2 }}>
           <span style={{ fontSize: 9, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.2px", lineHeight: 1 }}>
