@@ -433,7 +433,57 @@ export default function MapAnnonces({
   // un bouton icone Layers + un bouton (i) info — moins encombrant.
   const [panelOpen, setPanelOpen] = useState<"layers" | "legend" | null>(null)
 
+  // V25.2 (Paul 2026-04-29) — toggle "Carte des prix" : overlay stats €/m²
+  // par ville (style SeLoger lite). Persisted en localStorage.
+  const [showPrices, setShowPrices] = useState(false)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("nestmatch_map_show_prices")
+      if (saved === "true") setShowPrices(true)
+    } catch { /* ignore */ }
+  }, [])
+  function togglePrices() {
+    setShowPrices(prev => {
+      const next = !prev
+      try { localStorage.setItem("nestmatch_map_show_prices", next ? "true" : "false") } catch { /* ignore */ }
+      return next
+    })
+  }
+
   const withCoords = spreadOverlappingMarkers(annonces.filter(a => a._lat && a._lng))
+
+  // V25.2 — agrège les prix €/m² par ville (lite, sans GeoJSON arrondissements).
+  // Calcul à la volée depuis annonces actives. Memoized via useMemo serait
+  // mieux mais on a withCoords qui change à chaque render — coût négligeable
+  // sur ~100-500 annonces.
+  const pricesByVille = (() => {
+    const map = new Map<string, { count: number; sumPrixM2: number; sumLoyer: number }>()
+    for (const a of annonces) {
+      const ville = typeof a.ville === "string" ? a.ville.trim() : ""
+      const prix = Number(a.prix) || 0
+      const surface = Number(a.surface) || 0
+      if (!ville || prix <= 0 || surface <= 0) continue
+      const prixM2 = prix / surface
+      const cur = map.get(ville)
+      if (cur) {
+        cur.count++
+        cur.sumPrixM2 += prixM2
+        cur.sumLoyer += prix
+      } else {
+        map.set(ville, { count: 1, sumPrixM2: prixM2, sumLoyer: prix })
+      }
+    }
+    // Convert to sorted array : top villes by count
+    return Array.from(map.entries())
+      .map(([ville, s]) => ({
+        ville,
+        count: s.count,
+        meanPrixM2: Math.round(s.sumPrixM2 / s.count),
+        meanLoyer: Math.round(s.sumLoyer / s.count),
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8)
+  })()
 
   // Centre prioritaire : centerHint (ville URL/profil) > 1ere annonce > Centre de la France (pas Paris)
   const center: [number, number] = centerHint
@@ -776,6 +826,69 @@ export default function MapAnnonces({
         {withCoords.length} bien{withCoords.length > 1 ? "s" : ""} &middot; France
       </div>
 
+      {/* V25.2 (Paul 2026-04-29) — card "Carte des prix" lite : top villes
+          rankées par count + €/m² moyen. Affiché bottom-left au-dessus du
+          chip "X biens" quand showPrices est actif. Tier color sur €/m² :
+          vert ≤15, ambre 15-25, rouge >25. */}
+      {showPrices && pricesByVille.length > 0 && (
+        <div style={{
+          position: "absolute",
+          bottom: 56, left: 12, zIndex: 1400,
+          background: "white", borderRadius: 12,
+          border: "1px solid #EAE6DF",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
+          padding: "10px 12px",
+          fontFamily: "'DM Sans', sans-serif",
+          maxWidth: 260,
+          maxHeight: "50%",
+          overflowY: "auto",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.1px", margin: 0 }}>
+              Prix moyens / m²
+            </p>
+            <button
+              type="button"
+              onClick={togglePrices}
+              aria-label="Fermer la carte des prix"
+              style={{ background: "transparent", border: "none", cursor: "pointer", color: "#8a8477", fontSize: 16, padding: 0, lineHeight: 1 }}
+            >×</button>
+          </div>
+          <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+            {pricesByVille.map(v => {
+              const tier = v.meanPrixM2 <= 15
+                ? { bg: "#F0FAEE", ink: "#15803d" }
+                : v.meanPrixM2 <= 25
+                  ? { bg: "#FBF6EA", ink: "#a16207" }
+                  : { bg: "#FEECEC", ink: "#b91c1c" }
+              return (
+                <li key={v.ville} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, fontSize: 12 }}>
+                  <span style={{ fontWeight: 600, color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
+                    {v.ville}
+                  </span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                    <span style={{ fontSize: 10, color: "#8a8477", fontVariantNumeric: "tabular-nums" }}>
+                      {v.count}
+                    </span>
+                    <span style={{
+                      background: tier.bg, color: tier.ink,
+                      padding: "2px 8px", borderRadius: 999,
+                      fontSize: 11, fontWeight: 700,
+                      fontVariantNumeric: "tabular-nums",
+                    }}>
+                      {v.meanPrixM2}&nbsp;€/m²
+                    </span>
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+          <p style={{ fontSize: 9.5, color: "#8a8477", margin: "8px 0 0", lineHeight: 1.4 }}>
+            Moyenne loyer/m² basée sur les annonces actives. Vert ≤ 15 €/m², rouge &gt; 25 €/m².
+          </p>
+        </div>
+      )}
+
       {/* Top-right : stack 2 boutons icones (Layers + Legend info).
           Paul 2026-04-27 : remplace les 3 boutons inline qui prenaient toute
           la barre top-right. Click ouvre un popup contextuel sous le bouton. */}
@@ -861,24 +974,52 @@ export default function MapAnnonces({
                 {TILES[t].label}
               </button>
             ))}
-            {/* Layers premium "Bientot" — placeholder pour rassurer sur la roadmap */}
+            {/* Layers premium */}
             <div style={{ height: 1, background: "#F7F4EF", margin: "6px 12px" }} />
-            {[
-              { key: "prix", label: "Carte des prix" },
-              { key: "ecoles", label: "Carte des écoles" },
-            ].map(item => (
-              <div key={item.key} style={{
+            {/* V25.2 — toggle "Carte des prix" actif (lite) */}
+            <button
+              type="button"
+              onClick={togglePrices}
+              style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
-                padding: "10px 12px", borderRadius: 8,
-                fontSize: 13, fontWeight: 500, color: "#8a8477", fontFamily: "inherit",
-              }}>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ width: 16, height: 16, borderRadius: 4, border: "2px solid #EAE6DF", flexShrink: 0 }} />
-                  {item.label}
+                width: "100%", padding: "10px 12px", borderRadius: 8,
+                background: showPrices ? "#F7F4EF" : "transparent",
+                border: "none", cursor: "pointer", fontFamily: "inherit",
+                fontSize: 13, fontWeight: showPrices ? 700 : 500, color: "#111",
+                textAlign: "left", WebkitTapHighlightColor: "transparent",
+              }}
+              aria-pressed={showPrices}
+            >
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+                <span style={{
+                  width: 16, height: 16, borderRadius: 4,
+                  border: `2px solid ${showPrices ? "#111" : "#EAE6DF"}`,
+                  display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  {showPrices && (
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
                 </span>
-                <span style={{ fontSize: 9, fontWeight: 700, color: "#a16207", background: "#FBF6EA", border: "1px solid #EADFC6", padding: "2px 7px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "0.6px" }}>Bientôt</span>
-              </div>
-            ))}
+                Carte des prix
+              </span>
+              <span style={{ fontSize: 10, color: "#8a8477", fontWeight: 500 }}>
+                {pricesByVille.length} ville{pricesByVille.length !== 1 ? "s" : ""}
+              </span>
+            </button>
+            {/* Carte des écoles — coming soon */}
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+              padding: "10px 12px", borderRadius: 8,
+              fontSize: 13, fontWeight: 500, color: "#8a8477", fontFamily: "inherit",
+            }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+                <span style={{ width: 16, height: 16, borderRadius: 4, border: "2px solid #EAE6DF", flexShrink: 0 }} />
+                Carte des écoles
+              </span>
+              <span style={{ fontSize: 9, fontWeight: 700, color: "#a16207", background: "#FBF6EA", border: "1px solid #EADFC6", padding: "2px 7px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "0.6px" }}>Bientôt</span>
+            </div>
           </div>
         )}
 
