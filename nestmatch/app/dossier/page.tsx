@@ -236,15 +236,24 @@ const STYLES = {
   },
 
   layout: {
+    // V11.12 (Paul 2026-04-28) — NUCLEAR : minmax(0, 1fr) sur mobile + desktop.
+    // "1fr" = "minmax(auto, 1fr)" qui empeche le shrink sous min-content.
+    // Si un input/image/map a un min-content > viewport, la column overflow
+    // et toute la page scroll horizontalement (cf user "déborde côté droit").
+    // minmax(0, 1fr) autorise le shrink sous min-content => zero overflow.
     grid: (isMobile: boolean): React.CSSProperties => ({
       display: "grid",
-      gridTemplateColumns: isMobile ? "1fr" : "240px 1fr 380px",
+      gridTemplateColumns: isMobile ? "minmax(0, 1fr)" : "240px minmax(0, 1fr) 380px",
       gap: isMobile ? 20 : 32,
       alignItems: "flex-start",
       marginTop: isMobile ? 24 : 40,
+      width: "100%",
+      minWidth: 0,
+      maxWidth: "100%",
+      boxSizing: "border-box",
     }),
-    body: { display: "flex", flexDirection: "column", gap: 20, minWidth: 0 } as React.CSSProperties,
-    sidebar: (isSticky: boolean): React.CSSProperties => ({ display: "flex", flexDirection: "column", gap: 16, ...(isSticky ? { position: "sticky", top: 90 } : {}) }),
+    body: { display: "flex", flexDirection: "column", gap: 20, minWidth: 0, width: "100%", maxWidth: "100%", boxSizing: "border-box" } as React.CSSProperties,
+    sidebar: (isSticky: boolean): React.CSSProperties => ({ display: "flex", flexDirection: "column", gap: 16, minWidth: 0, width: "100%", maxWidth: "100%", boxSizing: "border-box", ...(isSticky ? { position: "sticky", top: 90 } : {}) }),
   },
 
   summary: {
@@ -2119,7 +2128,7 @@ export default function Dossier() {
                     <TextInput type="number" value={form.revenus_mensuels} onChange={v => setForm(f => ({ ...f, revenus_mensuels: v }))} placeholder="2 500" isMobile={isMobile} />
                   </Field>
                   <Field label={<>Loyer max recommandé <Tooltip text="Règle des 33% (ou règle du tiers) : on considère qu'un locataire est solvable si son loyer charges comprises ne dépasse pas 33 % de ses revenus nets. C'est une pratique du marché, pas une obligation légale." /></>}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 14px", background: T.mutedBg, borderRadius: 10, fontSize: 14, fontWeight: 600, color: T.ink, border: `1px solid ${T.line}`, boxSizing: "border-box" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 14px", background: T.mutedBg, borderRadius: 10, fontSize: 14, fontWeight: 600, color: T.ink, border: `1px solid ${T.line}`, boxSizing: "border-box", flexWrap: "wrap", minWidth: 0, width: "100%", maxWidth: "100%" }}>
                       {Number(form.revenus_mensuels) > 0 ? (
                         <>
                           <span style={{ fontSize: 18, fontWeight: 400, color: T.success, fontVariantNumeric: "tabular-nums" }}>

@@ -18,6 +18,30 @@ html, body {
   touch-action: pan-y;
   overscroll-behavior-y: auto;
 }
+
+/* ───────── V11.12 (Paul 2026-04-28) — NUCLEAR mobile overflow guard ─────────
+   User feedback : sur iPhone, "presque toute la page qui ne s'affiche pas
+   bien elle déborde sur le côté droit". Symptômes : labels coupés à droite
+   ("(facult..."), coupés à gauche ("'YER MAX"), chips truncates.
+
+   Cause racine : un enfant quelque part (input large, image, map Leaflet,
+   chip non-wrap) a un min-content > viewport. Cela force le parent à
+   overflow horizontalement, et la page entière scroll latéralement.
+
+   Fix nucléaire : page-level `overflow-x: clip` au niveau html + body.
+   `clip` (iOS 16+, fallback hidden) empêche TOUT scroll horizontal,
+   incluant le swipe back-gesture iOS. Aucun élément ne peut faire scroller
+   la page latéralement, point. */
+html, body {
+  overflow-x: clip;
+  max-width: 100vw;
+}
+/* Fallback navigateurs sans support overflow:clip (Safari < 16) */
+@supports not (overflow-x: clip) {
+  html, body {
+    overflow-x: hidden;
+  }
+}
 /* Whitelist : composants qui doivent garder le pinch-zoom natif. */
 .leaflet-container,
 [data-allow-pinch-zoom="true"] {
