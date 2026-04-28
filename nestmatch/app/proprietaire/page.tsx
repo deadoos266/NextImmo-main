@@ -615,29 +615,36 @@ export default function Proprietaire() {
 
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: isMobile ? "24px 16px" : "32px 48px" }}>
 
-        {/* Header éditorial — calque handoff dashboard.jsx L70-96
-            Eyebrow uppercase + titre magazine avec accent italique Fraunces
-            sur le prénom du propriétaire. CTA "Publier" à droite.           */}
+        {/* V10.5 — Header éditorial align avec /dossier : eyebrow row avec
+            rule horizontal hairline + titre Fraunces accent + meta droite,
+            puis sous-titre stats. Pattern identique a DossierHero pour
+            coherence visuelle quand l'user switch role locataire/proprio. */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "2.2px", textTransform: "uppercase", color: "#666" }}>
+            Mon espace propriétaire
+          </span>
+          <span style={{ flex: 1, height: 1, background: "#EAE6DF", maxWidth: 220, minWidth: 40 }} aria-hidden="true" />
+          <span style={{ fontSize: 11, color: "#8a8477", fontVariantNumeric: "tabular-nums" }}>
+            {biens.length} {biens.length > 1 ? "annonces" : "annonce"}
+          </span>
+        </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "flex-end", marginBottom: 28, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 14 : 16, flexWrap: "wrap" }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "2.2px", textTransform: "uppercase", color: "#666", marginBottom: 8 }}>
-              Espace propriétaire
-            </div>
-            <h1 style={{ fontSize: isMobile ? 30 : 44, fontWeight: 500, letterSpacing: "-1.2px", margin: 0, lineHeight: 1.05, color: km.ink }}>
+            <h1 style={{ fontSize: isMobile ? 36 : 56, fontWeight: 300, letterSpacing: isMobile ? "-1.2px" : "-1.6px", margin: 0, lineHeight: 1.05, color: km.ink, fontFamily: "'Fraunces', Georgia, serif", fontFeatureSettings: "'ss01'" }}>
               Tableau de bord
               {ownerFirstName && (
                 <>
-                  {" "}
+                  <br />
                   <span
                     className="km-serif"
-                    style={{ fontStyle: "italic", fontWeight: 400, color: km.muted }}
+                    style={{ fontStyle: "italic", fontWeight: 300, color: km.muted }}
                   >
-                    {ownerFirstName}
+                    {ownerFirstName}.
                   </span>
                 </>
               )}
             </h1>
-            <p style={{ fontSize: 13, color: "#666", margin: "6px 0 0" }}>
+            <p style={{ fontSize: 14, color: "#666", margin: "14px 0 0", lineHeight: 1.5, maxWidth: 520 }}>
               {biens.length === 0
                 ? "Aucun bien en gestion pour le moment."
                 : `${biens.length} annonce${biens.length > 1 ? "s" : ""} · ${biensActifs} active${biensActifs > 1 ? "s" : ""}${loyersAttendus > 0 ? ` · ${loyersAttendus} loyer${loyersAttendus > 1 ? "s" : ""} à confirmer` : ""}`}
