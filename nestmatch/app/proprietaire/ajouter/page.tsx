@@ -694,18 +694,15 @@ function Step1Nature({
         </div>
       </div>
 
-      <Grid2 isMobile={isMobile}>
-        <F l="Type de bien">
-          <select style={sel} value={form.type_bien} onChange={set("type_bien")}>
-            {["Appartement","Maison","Studio","Chambre","Colocation","Loft","Villa","Autre"].map(v => <option key={v}>{v}</option>)}
-          </select>
-        </F>
-        <F l={<>Statut du bien <Tooltip text="« Déjà loué » crée le bien pour gestion (bail, quittances, EDL) sans le publier publiquement." /></>}>
-          <select style={sel} value={form.statut} onChange={set("statut")}>
-            {SEL_STATUT.map(s => <option key={s.v} value={s.v}>{s.label}</option>)}
-          </select>
-        </F>
-      </Grid2>
+      {/* V3.1 — statut deplace en Step 7 (Publier). En Step 1, le proprio
+          choisit la nature physique du bien. La decision \"deja loue ou non\"
+          est plutot un choix de fin de wizard, qu'on pose juste avant de
+          publier. */}
+      <F l="Type de bien">
+        <select style={sel} value={form.type_bien} onChange={set("type_bien")}>
+          {["Appartement","Maison","Studio","Chambre","Colocation","Loft","Villa","Autre"].map(v => <option key={v}>{v}</option>)}
+        </select>
+      </F>
     </>
   )
 }
@@ -1420,6 +1417,17 @@ function Step7Publier({
     setForm(f => ({ ...f, [key]: e.target.value }))
   return (
     <>
+      {/* V3.1 — statut du bien en tete de Step 7 : decision \"je publie pour
+          chercher un locataire\" vs \"je gere un bail existant\". */}
+      <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 14px" }}>Statut du bien</p>
+      <div style={{ marginBottom: 28 }}>
+        <F l={<>Statut <Tooltip text="« Déjà loué » crée le bien pour gestion (bail, quittances, EDL) sans le publier publiquement." /></>}>
+          <select style={sel} value={form.statut} onChange={set("statut")}>
+            {SEL_STATUT.map(s => <option key={s.v} value={s.v}>{s.label}</option>)}
+          </select>
+        </F>
+      </div>
+
       <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 14px" }}>Loyer & charges</p>
       {/* Estimateur de loyer marché — remonté AVANT les champs pour aider
           le proprio à fixer un prix avant qu'il ne tape (Paul 2026-04-26
