@@ -17,6 +17,7 @@ import GatedAction from "../components/ui/GatedAction"
 import AddToCalendarButton from "../components/AddToCalendarButton"
 import MessageSkeleton from "../components/ui/MessageSkeleton"
 import Modal from "../components/ui/Modal"
+import ValidationStatusCard from "./ValidationStatusCard"
 
 // Lazy : modals/dialogs ouverts à la demande (1-2× / session). Économie
 // estimée ~10-15 kB sur First Load JS de /messages (cible 270 kB,
@@ -1001,14 +1002,18 @@ function CandidatureRetireeCard({ contenu, isMine }: { contenu: string; isMine: 
     ? new Date(data.retireLe).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
     : ""
   return (
-    <div style={{ background: "#fef2f2", border: "1.5px dashed #F4C9C9", borderRadius: 14, padding: "12px 16px", minWidth: 220, maxWidth: 320 }}>
-      <p style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 4px" }}>Candidature retirée</p>
-      <p style={{ fontSize: 13, color: "#b91c1c", margin: 0, lineHeight: 1.4 }}>
-        {isMine ? "Vous avez retiré votre candidature" : "Le candidat a retiré sa candidature"}
-        {data.bienTitre ? ` pour « ${data.bienTitre} »` : ""}.
-      </p>
-      {dateStr && <p style={{ fontSize: 11, color: "#b91c1c", margin: "4px 0 0" }}>{dateStr}</p>}
-    </div>
+    <ValidationStatusCard
+      kind="warning"
+      eyebrow="Candidature retirée"
+      body={
+        <>
+          {isMine ? "Vous avez retiré votre candidature" : "Le candidat a retiré sa candidature"}
+          {data.bienTitre ? <> pour <strong style={{ fontWeight: 700 }}>{`« ${data.bienTitre} »`}</strong></> : null}
+          {"."}
+        </>
+      }
+      date={dateStr}
+    />
   )
 }
 
@@ -1029,18 +1034,26 @@ function CandidatureValideeCard({ contenu, isMine }: { contenu: string; isMine: 
     ? new Date(data.validatedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
     : ""
   return (
-    <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 340, fontFamily: "'DM Sans', sans-serif" }}>
-      <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 6px", display: "inline-flex", alignItems: "center", gap: 6 }}>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12" /></svg>
-        Candidature validée
-      </p>
-      <p style={{ fontSize: 13, color: "#111", margin: 0, lineHeight: 1.5 }}>
-        {isMine
-          ? `Vous avez validé la candidature${data.bienTitre ? ` pour « ${data.bienTitre} »` : ""}. Le candidat peut désormais proposer une visite.`
-          : `Le propriétaire a validé votre candidature${data.bienTitre ? ` pour « ${data.bienTitre} »` : ""}. Vous pouvez maintenant proposer un créneau de visite.`}
-      </p>
-      {dateStr && <p style={{ fontSize: 11, color: "#15803d", margin: "6px 0 0" }}>{dateStr}</p>}
-    </div>
+    <ValidationStatusCard
+      kind="success"
+      eyebrow="Candidature validée"
+      body={
+        isMine ? (
+          <>
+            Vous avez validé la candidature
+            {data.bienTitre ? <> pour <strong style={{ fontWeight: 700 }}>{`« ${data.bienTitre} »`}</strong></> : null}
+            . Le candidat peut désormais proposer une visite.
+          </>
+        ) : (
+          <>
+            Le propriétaire a validé votre candidature
+            {data.bienTitre ? <> pour <strong style={{ fontWeight: 700 }}>{`« ${data.bienTitre} »`}</strong></> : null}
+            . Vous pouvez maintenant proposer un créneau de visite.
+          </>
+        )
+      }
+      date={dateStr}
+    />
   )
 }
 
@@ -1052,17 +1065,26 @@ function CandidatureDevalideeCard({ contenu, isMine }: { contenu: string; isMine
     ? new Date(data.devalidatedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
     : ""
   return (
-    <div style={{ background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 340, fontFamily: "'DM Sans', sans-serif" }}>
-      <p style={{ fontSize: 11, fontWeight: 700, color: "#a16207", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 6px" }}>
-        {isMine ? "Validation retirée" : "Validation retirée"}
-      </p>
-      <p style={{ fontSize: 13, color: "#111", margin: 0, lineHeight: 1.5 }}>
-        {isMine
-          ? `Vous avez annulé la validation${data.bienTitre ? ` pour « ${data.bienTitre} »` : ""}. Le candidat ne peut plus proposer de visite tant que vous n'aurez pas revalidé.`
-          : `Le propriétaire a retiré la validation de votre candidature${data.bienTitre ? ` pour « ${data.bienTitre} »` : ""}. Vous ne pouvez plus proposer de visite pour le moment.`}
-      </p>
-      {dateStr && <p style={{ fontSize: 11, color: "#a16207", margin: "6px 0 0" }}>{dateStr}</p>}
-    </div>
+    <ValidationStatusCard
+      kind="warning"
+      eyebrow="Validation retirée"
+      body={
+        isMine ? (
+          <>
+            Vous avez annulé la validation
+            {data.bienTitre ? <> pour <strong style={{ fontWeight: 700 }}>{`« ${data.bienTitre} »`}</strong></> : null}
+            . Le candidat ne peut plus proposer de visite tant que vous n&apos;aurez pas revalidé.
+          </>
+        ) : (
+          <>
+            Le propriétaire a retiré la validation de votre candidature
+            {data.bienTitre ? <> pour <strong style={{ fontWeight: 700 }}>{`« ${data.bienTitre} »`}</strong></> : null}
+            . Vous ne pouvez plus proposer de visite pour le moment.
+          </>
+        )
+      }
+      date={dateStr}
+    />
   )
 }
 
@@ -1078,22 +1100,31 @@ function CandidatureNonRetenueCard({ contenu, isMine }: { contenu: string; isMin
     ? new Date(data.refuseLe).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
     : ""
   return (
-    <div style={{ background: "#FEECEC", border: "1px solid #F4C9C9", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 340, fontFamily: "'DM Sans', sans-serif" }}>
-      <p style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 6px" }}>
-        {isMine ? "Candidat non retenu — notifié" : "Candidature non retenue"}
-      </p>
-      <p style={{ fontSize: 13, color: "#111", margin: 0, lineHeight: 1.5 }}>
-        {isMine
-          ? `Vous avez retenu un autre candidat${data.bienTitre ? ` pour « ${data.bienTitre} »` : ""}. Le candidat a été notifié par message et email.`
-          : `Le propriétaire a retenu un autre candidat${data.bienTitre ? ` pour « ${data.bienTitre} »` : ""}. Votre dossier reste valable pour vos autres recherches.`}
-      </p>
-      {dateStr && <p style={{ fontSize: 11, color: "#8a8477", margin: "6px 0 0" }}>{dateStr}</p>}
-      {!isMine && (
-        <a href="/annonces" style={{ display: "inline-block", marginTop: 10, background: "#fff", color: "#111", border: "1px solid #EAE6DF", borderRadius: 999, padding: "8px 16px", fontSize: 12, fontWeight: 600, textDecoration: "none", letterSpacing: "0.3px" }}>
+    <ValidationStatusCard
+      kind="danger"
+      eyebrow={isMine ? "Candidat non retenu — notifié" : "Candidature non retenue"}
+      body={
+        isMine ? (
+          <>
+            Vous avez retenu un autre candidat
+            {data.bienTitre ? <> pour <strong style={{ fontWeight: 700 }}>{`« ${data.bienTitre} »`}</strong></> : null}
+            . Le candidat a été notifié par message et email.
+          </>
+        ) : (
+          <>
+            Le propriétaire a retenu un autre candidat
+            {data.bienTitre ? <> pour <strong style={{ fontWeight: 700 }}>{`« ${data.bienTitre} »`}</strong></> : null}
+            . Votre dossier reste valable pour vos autres recherches.
+          </>
+        )
+      }
+      date={dateStr}
+      cta={!isMine ? (
+        <a href="/annonces" style={{ display: "inline-block", background: "#fff", color: "#111", border: "1px solid #EAE6DF", borderRadius: 999, padding: "8px 16px", fontSize: 12, fontWeight: 600, textDecoration: "none", letterSpacing: "0.3px" }}>
           Voir d&apos;autres annonces →
         </a>
-      )}
-    </div>
+      ) : undefined}
+    />
   )
 }
 
