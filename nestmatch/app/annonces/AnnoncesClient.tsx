@@ -16,6 +16,7 @@ import { useResponsive } from "../hooks/useResponsive"
 import EmptyState from "../components/ui/EmptyState"
 import AnnonceSkeleton from "../components/ui/AnnonceSkeleton"
 import FiltersBar from "../components/annonces/FiltersBar"
+import Link from "next/link"
 import ListingCardSearch from "../components/annonces/ListingCardSearch"
 import ListingCardCompact from "../components/annonces/ListingCardCompact"
 import BandeauDossier from "../components/annonces/BandeauDossier"
@@ -125,6 +126,51 @@ function spGet(sp: SP | undefined, key: string): string {
   const v = sp?.[key]
   if (Array.isArray(v)) return v[0] ?? ""
   return v ?? ""
+}
+
+// V14.1 (Paul 2026-04-28) — clés URL filtre considérées comme "critères
+// du profil" pour l'auto-apply à l'arrivée et la détection de divergence.
+const PROFIL_FILTER_KEYS = ["ville", "budget_max", "surface_min", "surface_max", "pieces_min", "dpe_min"] as const
+
+/**
+ * V14.1 — construit les URLSearchParams représentant les critères du profil
+ * locataire. Utilisé pour l'auto-apply à l'arrivée et le bouton "Réinitialiser
+ * mes préférences". Inclut uniquement les champs renseignés (skip null/empty).
+ */
+function buildProfilParams(profil: Record<string, unknown> | null | undefined): URLSearchParams {
+  const p = new URLSearchParams()
+  if (!profil) return p
+  const ville = typeof profil.ville_souhaitee === "string" ? profil.ville_souhaitee.trim() : ""
+  if (ville) p.set("ville", ville)
+  const budget = Number(profil.budget_max ?? 0)
+  if (Number.isFinite(budget) && budget > 0) p.set("budget_max", String(budget))
+  const sMin = Number(profil.surface_min ?? 0)
+  if (Number.isFinite(sMin) && sMin > 0) p.set("surface_min", String(sMin))
+  const sMax = Number(profil.surface_max ?? 0)
+  if (Number.isFinite(sMax) && sMax > 0) p.set("surface_max", String(sMax))
+  const piecesMin = Number(profil.pieces_min ?? 0)
+  if (Number.isFinite(piecesMin) && piecesMin > 0) p.set("pieces_min", String(piecesMin))
+  // dpe_min uniquement si user a coche le filtre dur (dpe_min_actif)
+  const dpe = typeof profil.dpe_min === "string" ? profil.dpe_min : ""
+  if (dpe && profil.dpe_min_actif === true) p.set("dpe_min", dpe)
+  return p
+}
+
+/**
+ * V14.3 — détecte si les params URL actuels divergent des critères du profil
+ * (= l'utilisateur a explicitement modifié un filtre depuis son arrivée).
+ * Compare uniquement les keys du profil (PROFIL_FILTER_KEYS), ignore les
+ * autres filtres (parking, balcon, type, q, etc.) qui sont transverses.
+ */
+function paramsDivergeFromProfil(current: SP | undefined, profil: Record<string, unknown> | null): boolean {
+  if (!profil) return false
+  const wanted = buildProfilParams(profil)
+  for (const k of PROFIL_FILTER_KEYS) {
+    const actual = spGet(current, k)
+    const expected = wanted.get(k) ?? ""
+    if (actual !== expected) return true
+  }
+  return false
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -270,6 +316,11 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   const { data: session, status } = useSession()
   const { role } = useRole()
   const isProprietaire = role === "proprietaire"
+  // V14.1 (Paul 2026-04-28) — auto-apply profil critères : flag persistant
+  // pour ne pas re-déclencher l'auto-apply si user tape "Voir toutes les
+  // annonces ↺" (cas où il vide manuellement l'URL).
+  const autoAppliedRef = useRef(false)
+  const [autoAppliedBannerOpen, setAutoAppliedBannerOpen] = useState(false)
   const { isMobile, isTablet } = useResponsive()
   // v5 : breakpoint mobile strict 768 (au-dessus de useResponsive isMobile=640).
   // Utilisé pour modale carte plein écran, header simplifié, FAB flottant.
@@ -482,6 +533,25 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
             if (p.budget_max && budgetMaxFiltre === null) setBudgetMaxFiltre(Number(p.budget_max))
             if (p.dpe_min && !filtreDpeMax) setFiltreDpeMax(String(p.dpe_min))
             if (p.animaux === true) setFiltreAnimauxLock(true)
+
+            // V14.1 (Paul 2026-04-28) — auto-apply profil critères dans l'URL
+            // si l'arrivée se fait SANS aucun filtre URL. router.replace pour
+            // ne pas créer d'entrée history. Une seule fois par chargement
+            // (le flag autoAppliedRef évite les re-déclenchements). User peut
+            // toujours vider via "Voir toutes les annonces ↺".
+            const urlEmpty = !initialSearchParams || Object.keys(initialSearchParams).every(k => {
+              const v = initialSearchParams[k]
+              return !v || (Array.isArray(v) && v.length === 0)
+            })
+            if (urlEmpty && !autoAppliedRef.current) {
+              autoAppliedRef.current = true
+              const params = buildProfilParams(p)
+              const qs = params.toString()
+              if (qs) {
+                setAutoAppliedBannerOpen(true)
+                router.replace(`/annonces?${qs}`, { scroll: false })
+              }
+            }
           }
         }
       }
@@ -1176,6 +1246,86 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
             </button>
           </div>
         )}
+
+        {/* V14 (Paul 2026-04-28) — bandeau "critères du profil appliqués"
+            + raccourci vers /profil + bouton "Réinitialiser à mes préférences"
+            quand les filtres URL divergent des critères du profil locataire.
+            Se cache : sur proprio, sans profil, ou sur la modale carte mobile. */}
+        {!isProprietaire && profil && !isDesktopListCarte && !(isMobileV5 && showMap) && (() => {
+          const diverge = paramsDivergeFromProfil(initialSearchParams, profil)
+          const hasParams = !!initialSearchParams && Object.keys(initialSearchParams).some(k => {
+            const v = initialSearchParams[k]; return v && (!Array.isArray(v) || v.length > 0)
+          })
+          // Si rien à afficher (pas de params ET pas auto-applied) → null silencieux.
+          if (!hasParams && !autoAppliedBannerOpen) return null
+          const wantedQs = buildProfilParams(profil).toString()
+          return (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+              padding: isMobileV5 ? "10px 12px" : "10px 16px",
+              margin: isMobileV5 ? "8px 0 0" : "10px 0 0",
+              background: "#FAF8F3",
+              border: "1px solid #EAE6DF",
+              borderRadius: 14,
+              fontSize: 12.5,
+              color: "#111",
+            }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                <span aria-hidden style={{
+                  width: 22, height: 22, borderRadius: "50%",
+                  background: "#fff", border: "1px solid #EAE6DF",
+                  display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                </span>
+                <span style={{ fontWeight: 600 }}>
+                  {diverge ? "Filtres modifiés" : "Tes critères sont appliqués"}
+                </span>
+                <Link
+                  href="/profil#equipements"
+                  style={{ color: "#666", textDecoration: "underline", textUnderlineOffset: 3, fontSize: 11.5 }}
+                >
+                  Mes critères →
+                </Link>
+              </span>
+              <span style={{ display: "inline-flex", gap: 8, flexWrap: "wrap" }}>
+                {diverge && wantedQs && (
+                  <button
+                    type="button"
+                    onClick={() => router.replace(`/annonces?${wantedQs}`, { scroll: false })}
+                    style={{
+                      background: "#111", color: "#fff", border: "none",
+                      borderRadius: 999, padding: "6px 14px",
+                      fontSize: 11.5, fontWeight: 700, fontFamily: "inherit",
+                      cursor: "pointer", whiteSpace: "nowrap",
+                      WebkitTapHighlightColor: "transparent",
+                    }}
+                  >
+                    Réinitialiser à mes préférences
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAutoAppliedBannerOpen(false)
+                    router.replace("/annonces", { scroll: false })
+                  }}
+                  style={{
+                    background: "transparent", border: "1px solid #EAE6DF", color: "#111",
+                    borderRadius: 999, padding: "6px 14px",
+                    fontSize: 11.5, fontWeight: 600, fontFamily: "inherit",
+                    cursor: "pointer", whiteSpace: "nowrap",
+                  }}
+                >
+                  Voir toutes les annonces ↺
+                </button>
+              </span>
+            </div>
+          )
+        })()}
 
         {/* ── FiltersBar sticky — MASQUÉ en mode liste+carte desktop ET en
             mobile mode carte (Paul 2026-04-27 sur retour user — la barre
