@@ -1262,34 +1262,48 @@ function SettingsCardInline({ compact = false }: { compact?: boolean }) {
 }
 
 function UndoToast({ label, onUndo, onDismiss }: { label: string; onUndo: () => void; onDismiss: () => void }) {
+  // V11.3 (Paul 2026-04-28) — fix bug du toast qui wrappait sur 3 lignes
+  // avec orphan « / » sur des lignes seules. Layout flex revu :
+  // - max-width min(92vw, 480px) au lieu de calc(100vw - 32px) pour
+  //   ne pas etre trop etroit
+  // - borderRadius 16 (pas pill 999) — content multi-words fit mieux
+  //   dans rectangle a coins arrondis
+  // - text container : flex 1 1 auto + minWidth 0 → permet le shrink
+  //   mais empeche les chevrons orphelins (white-space normal naturel)
+  // - boutons : flex-shrink 0 + minHeight 44 (V10.3 tap-target)
+  // - safe-area-inset-bottom pour iPhone notch
   return (
     <div
       role="status"
       aria-live="polite"
       style={{
         position: "fixed",
-        bottom: 24,
+        bottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
         left: "50%",
         transform: "translateX(-50%)",
         zIndex: 8000,
         background: km.ink,
         color: km.white,
-        borderRadius: 999,
-        padding: "12px 18px 12px 22px",
+        borderRadius: 16,
+        padding: "10px 12px 10px 16px",
         boxShadow: "0 8px 30px rgba(0,0,0,0.25)",
         display: "flex",
         alignItems: "center",
-        gap: 14,
+        gap: 10,
         fontSize: 13,
         fontWeight: 500,
-        maxWidth: "calc(100vw - 32px)",
+        flexWrap: "nowrap",
+        maxWidth: "min(92vw, 480px)",
+        boxSizing: "border-box",
       }}
     >
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-        <span aria-hidden style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "rgba(255,255,255,0.18)" }}>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flex: "1 1 auto", minWidth: 0 }}>
+        <span aria-hidden style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", background: "rgba(255,255,255,0.18)", flexShrink: 0 }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
         </span>
-        {label}
+        <span style={{ flex: "1 1 auto", minWidth: 0, lineHeight: 1.4, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+          {label}
+        </span>
       </span>
       <button
         type="button"
@@ -1299,13 +1313,18 @@ function UndoToast({ label, onUndo, onDismiss }: { label: string; onUndo: () => 
           color: km.white,
           border: `1px solid rgba(255,255,255,0.35)`,
           borderRadius: 999,
-          padding: "6px 14px",
+          padding: "8px 14px",
           fontFamily: "inherit",
           fontSize: 11,
           fontWeight: 700,
           textTransform: "uppercase",
           letterSpacing: "1px",
           cursor: "pointer",
+          flexShrink: 0,
+          minHeight: 44,
+          minWidth: 80,
+          WebkitTapHighlightColor: "transparent",
+          touchAction: "manipulation",
         }}
       >Annuler</button>
       <button
@@ -1316,11 +1335,19 @@ function UndoToast({ label, onUndo, onDismiss }: { label: string; onUndo: () => 
           background: "transparent",
           border: "none",
           color: "rgba(255,255,255,0.7)",
-          fontSize: 18,
+          fontSize: 20,
           cursor: "pointer",
           padding: 0,
           lineHeight: 1,
           fontFamily: "inherit",
+          flexShrink: 0,
+          width: 44,
+          height: 44,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          WebkitTapHighlightColor: "transparent",
+          touchAction: "manipulation",
         }}
       >×</button>
     </div>
