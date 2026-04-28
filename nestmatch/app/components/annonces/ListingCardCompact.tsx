@@ -3,6 +3,7 @@ import { useState, useRef } from "react"
 import Image from "next/image"
 import { CARD_GRADIENTS as GRADIENTS } from "../../../lib/cardGradients"
 import { asNumber } from "../../../lib/asValue"
+import { getDateDebutBailFromAnnonce } from "../../../lib/bailDates"
 import DpeBadge from "./DpeBadge"
 
 /**
@@ -60,10 +61,10 @@ function isNewAnnonce(createdAt: string | null | undefined): boolean {
 function formatDispo(annonce: any): string {
   const dispo = annonce.dispo
   if (typeof dispo === "string" && dispo.trim()) return dispo
-  if (annonce.date_debut_bail) {
-    try {
-      return `Libre ${new Date(annonce.date_debut_bail).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}`
-    } catch { /* ignore */ }
+  // V25.1 — single source of truth via helper (annonces > import_metadata)
+  const debut = getDateDebutBailFromAnnonce(annonce)
+  if (debut) {
+    return `Libre ${debut.toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}`
   }
   return ""
 }

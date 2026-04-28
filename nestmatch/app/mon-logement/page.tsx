@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "../../lib/supabase"
+import { getDateDebutBailFr } from "../../lib/bailDates"
 import { useResponsive } from "../hooks/useResponsive"
 import { joursRetardLoyer } from "../../lib/loyerHelpers"
 import { BRAND } from "../../lib/brand"
@@ -523,11 +524,15 @@ export default function MonLogement() {
                   </div>
                 ) : null}
               </div>
-              {bien.date_debut_bail && (
-                <p style={{ fontSize: 12, color: "#8a8477", margin: "16px 0 0" }}>
-                  Bail signé le <strong style={{ color: "#111", fontWeight: 600 }}>{new Date(bien.date_debut_bail).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</strong>
-                </p>
-              )}
+              {/* V25.1 — single source via helper (annonces > import_metadata) */}
+              {(() => {
+                const dateFr = getDateDebutBailFr(bien)
+                return dateFr ? (
+                  <p style={{ fontSize: 12, color: "#8a8477", margin: "16px 0 0" }}>
+                    Bail signé le <strong style={{ color: "#111", fontWeight: 600 }}>{dateFr}</strong>
+                  </p>
+                ) : null
+              })()}
               <div style={{ marginTop: "auto", paddingTop: 20, display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <Link
                   href={`/messages?with=${encodeURIComponent(bien.proprietaire_email)}`}
@@ -737,11 +742,15 @@ export default function MonLogement() {
                   </span>
                 )}
               </div>
-              {bien.date_debut_bail && (
-                <p style={{ fontSize: 13, color: "#8a8477", margin: "0 0 14px" }}>
-                  Bail du {new Date(bien.date_debut_bail).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}{bailFichierUrl ? " — document fourni par votre propriétaire" : " — généré via KeyMatch"}.
-                </p>
-              )}
+              {/* V25.1 — helper getDateDebutBailFr */}
+              {(() => {
+                const dateFr = getDateDebutBailFr(bien)
+                return dateFr ? (
+                  <p style={{ fontSize: 13, color: "#8a8477", margin: "0 0 14px" }}>
+                    Bail du {dateFr}{bailFichierUrl ? " — document fourni par votre propriétaire" : " — généré via KeyMatch"}.
+                  </p>
+                ) : null
+              })()}
 
               {/* Résumé signatures */}
               {signatures.length > 0 && (
