@@ -7,6 +7,7 @@ import { useResponsive } from "../hooks/useResponsive"
 import { useRole } from "../providers"
 import Link from "next/link"
 import CityAutocomplete from "../components/CityAutocomplete"
+import QuartierPicker from "../components/QuartierPicker"
 import Tooltip from "../components/Tooltip"
 
 // Composants HORS du composant principal pour éviter le bug de focus
@@ -155,6 +156,10 @@ function Profil() {
   })
   // V2.6 — preferences_equipements jsonb (separate state pour ne pas exploser FormShape)
   const [prefsEquip, setPrefsEquip] = useState<Record<string, EquipPref>>(EQUIP_DEFAULT)
+  // V7 chantier 2 — quartier prefere lat/lng/label (migration 028)
+  const [quartierLat, setQuartierLat] = useState<number | null>(null)
+  const [quartierLng, setQuartierLng] = useState<number | null>(null)
+  const [quartierLabel, setQuartierLabel] = useState<string | null>(null)
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth")
@@ -216,6 +221,10 @@ function Profil() {
               }
             }
             setPrefsEquip(merged)
+            // V7 chantier 2 — load quartier prefere
+            setQuartierLat(typeof data.quartier_prefere_lat === "number" ? data.quartier_prefere_lat : null)
+            setQuartierLng(typeof data.quartier_prefere_lng === "number" ? data.quartier_prefere_lng : null)
+            setQuartierLabel(typeof data.quartier_prefere_label === "string" ? data.quartier_prefere_label : null)
           }
           setDataLoaded(true)
         })
@@ -258,6 +267,10 @@ function Profil() {
       tolerance_budget_pct: form.tolerance_budget_pct ? parseInt(form.tolerance_budget_pct) : 20,
       rayon_recherche_km: form.rayon_recherche_km ? parseInt(form.rayon_recherche_km) : null,
       preferences_equipements: prefsEquip,
+      // V7 chantier 2 — quartier prefere
+      quartier_prefere_lat: quartierLat,
+      quartier_prefere_lng: quartierLng,
+      quartier_prefere_label: quartierLabel,
       // Sync legacy booleans avec prefsEquip pour compat read-side (lib/matching) :
       // "souhaite" ou "indispensable" -> true ; sinon false.
       ...Object.fromEntries(EQUIP_LIST.map(e => [
@@ -319,6 +332,12 @@ function Profil() {
       for (const e of EQUIP_LIST) {
         patch[e.key] = prefsEquip[e.key] === "souhaite" || prefsEquip[e.key] === "indispensable"
       }
+    }
+    // V7 chantier 2 — quartier prefere persist dans la section "criteres"
+    if (sectionId === "criteres") {
+      patch.quartier_prefere_lat = quartierLat
+      patch.quartier_prefere_lng = quartierLng
+      patch.quartier_prefere_label = quartierLabel
     }
 
     const { error } = await supabase.from("profils").upsert(patch, { onConflict: "email" })
@@ -745,6 +764,21 @@ function Profil() {
               {form.ville_souhaitee && form.rayon_recherche_km && ` Ex. : annonces jusqu'à ${form.rayon_recherche_km} km de ${form.ville_souhaitee}.`}
             </p>
           </div>
+
+          {/* V7 chantier 2 — picker quartier prefere (Leaflet marker draggable). */}
+          <QuartierPicker
+            ville={form.ville_souhaitee}
+            lat={quartierLat}
+            lng={quartierLng}
+            label={quartierLabel}
+            onChange={({ lat, lng, label }) => {
+              setQuartierLat(lat)
+              setQuartierLng(lng)
+              if (label) setQuartierLabel(label)
+            }}
+            onClear={() => { setQuartierLat(null); setQuartierLng(null); setQuartierLabel(null) }}
+            isMobile={isMobile}
+          />
         </Sec>
 
         <Sec

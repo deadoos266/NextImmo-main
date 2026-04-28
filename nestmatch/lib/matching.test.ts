@@ -577,3 +577,62 @@ describe("V7.1 estExclu — Indispensable manquant = exclusion", () => {
     expect(estExclu(annonce, profil)).toBe(true)
   })
 })
+
+// ──────────────────────────────────────────────
+// V7 chantier 2 — scoreQuartier lat/lng marker
+// ──────────────────────────────────────────────
+import { scoreQuartier } from "./matching"
+
+describe("V7.2 scoreQuartier — marker quartier prefere", () => {
+  // Bastille Paris ~ 48.853, 2.369
+  const profilBastille: Profil = {
+    ville_souhaitee: "Paris",
+    quartier_prefere_lat: 48.853,
+    quartier_prefere_lng: 2.369,
+    quartier_prefere_label: "Bastille, Paris 11e",
+  }
+  const profilSansQuartier: Profil = {
+    ville_souhaitee: "Paris",
+    rayon_recherche_km: 10,
+  }
+
+  it("Quartier Bastille + annonce a Bastille (50m) → 50 pts", () => {
+    const annonce: Annonce = { ville: "Paris", lat: 48.8534, lng: 2.3692 }
+    expect(scoreQuartier(annonce, profilBastille)).toBe(50)
+  })
+
+  it("Quartier Bastille + annonce La Defense (~8 km) → faible bonus (0)", () => {
+    const annonce: Annonce = { ville: "Paris", lat: 48.8918, lng: 2.2380 }
+    const score = scoreQuartier(annonce, profilBastille)
+    expect(score).toBeLessThanOrEqual(10)
+  })
+
+  it("Quartier Bastille + annonce a 1.5 km → 25 pts", () => {
+    // ~1.5km de Bastille (a peu pres place de la Republique)
+    const annonce: Annonce = { ville: "Paris", lat: 48.8676, lng: 2.3636 }
+    expect(scoreQuartier(annonce, profilBastille)).toBe(25)
+  })
+
+  it("Pas de quartier prefere → null (laisse fallback V2.3 rayon ville)", () => {
+    const annonce: Annonce = { ville: "Paris", lat: 48.8566, lng: 2.3522 }
+    expect(scoreQuartier(annonce, profilSansQuartier)).toBe(null)
+  })
+
+  it("Annonce sans coords + quartier set → null (skip silencieux)", () => {
+    const annonce: Annonce = { ville: "Paris" }
+    expect(scoreQuartier(annonce, profilBastille)).toBe(null)
+  })
+
+  it("calculerScore avec quartier_prefere prime sur rayon_recherche_km", () => {
+    const profil: Profil = {
+      ...profilBastille,
+      budget_max: 1500,
+      rayon_recherche_km: 100, // V2.3 donnerait beaucoup, mais quartier prime
+    }
+    const annonceLoinDeBastille: Annonce = { ville: "Paris", prix: 1200, surface: 50, pieces: 3, lat: 48.8918, lng: 2.2380 }
+    const annonceProcheBastille: Annonce = { ville: "Paris", prix: 1200, surface: 50, pieces: 3, lat: 48.8534, lng: 2.3692 }
+    const scoreLoin = calculerScore(annonceLoinDeBastille, profil)
+    const scoreProche = calculerScore(annonceProcheBastille, profil)
+    expect(scoreProche).toBeGreaterThan(scoreLoin)
+  })
+})

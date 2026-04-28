@@ -72,6 +72,12 @@ export interface Profil {
   rayon_recherche_km?: number | null
   /** Tri-state per equipement (V2.4). Lu via getEquipementPreference. */
   preferences_equipements?: Record<string, "indispensable" | "souhaite" | "indifferent" | "refuse"> | null
+  // V7 chantier 2 (Paul 2026-04-28) — quartier prefere via marker Leaflet
+  // dans /profil. Si set, scoreQuartier remplace le bonus geo V2.3 pour
+  // une granularite quartier au lieu de rayon-depuis-ville.
+  quartier_prefere_lat?: number | null
+  quartier_prefere_lng?: number | null
+  quartier_prefere_label?: string | null
   // R10.6 — dérivés du dossier locataire, lus depuis table `profils`.
   // `fumeur` / `nb_occupants` existent depuis la baseline ; `date_naissance` depuis 007.
   // `date_naissance` → on calcule l'âge à la volée, pour comparaison avec annonce.age_min/age_max.
@@ -111,6 +117,37 @@ export interface Annonce {
   animaux_politique?: "indifferent" | "oui" | "non" | null
   fumeur_politique?: "indifferent" | "oui" | "non" | null
   equipements_extras?: Record<string, boolean> | null
+  // V7 chantier 2 — coords reelles du bien si renseignees (sinon fallback
+  // CITY_COORDS sur ville). Permet scoreQuartier haversine fin.
+  lat?: number | null
+  lng?: number | null
+}
+
+/**
+ * V7 chantier 2 — score de proximite au quartier prefere du candidat.
+ * Si profil.quartier_prefere_lat/lng set ET annonce.lat/lng set : haversine
+ * + bareme degressif (0-50 pts).
+ *  - 0 km : +50
+ *  - <= 1 km : +35
+ *  - <= 2 km : +25
+ *  - <= 5 km : +10
+ *  - >= 10 km : 0
+ * Si pas de quartier prefere ou annonce sans coords : retourne null
+ * (laisse le bonus V2.3 rayon ville prendre le relais).
+ */
+export function scoreQuartier(annonce: Annonce, profil: Profil): number | null {
+  const pLat = profil.quartier_prefere_lat
+  const pLng = profil.quartier_prefere_lng
+  if (typeof pLat !== "number" || typeof pLng !== "number") return null
+  const aLat = typeof annonce.lat === "number" ? annonce.lat : null
+  const aLng = typeof annonce.lng === "number" ? annonce.lng : null
+  if (aLat === null || aLng === null) return null
+  const distance = haversineKm([pLat, pLng], [aLat, aLng])
+  if (distance <= 0.1) return 50
+  if (distance <= 1) return 35
+  if (distance <= 2) return 25
+  if (distance <= 5) return 10
+  return 0
 }
 
 // R10.6 — calcule l'âge en années depuis date_naissance ISO. Renvoie undefined
@@ -485,18 +522,18 @@ export function calculerScore(annonce: Annonce, profil: Profil): number {
 
   score += criteresBonus
 
-  // ── BONUS GEOGRAPHIQUE (V2.3 Paul 2026-04-27) ──
-  // Si le profil a un rayon_recherche_km defini ET sa ville_souhaitee a
-  // des coords ET l'annonce.ville aussi → bonus selon distance.
-  // - Distance <= 20% du rayon : +50 (parfait, in town ou tres proche)
-  // - <= 50% : +35
-  // - <= 80% : +20
-  // - <= 100% : +10 (limite acceptable)
-  // - > 100% : 0 (hors rayon, mais pas exclu — l'user peut quand meme voir)
-  // Pas de malus : on considere que si l'annonce est passee les filtres ville,
-  // c'est qu'elle est dans la zone. Le bonus prime juste la proximite.
-  if (typeof profil.rayon_recherche_km === "number" && profil.rayon_recherche_km > 0
+  // V7 chantier 2 (Paul 2026-04-28) — bonus quartier prefere prend la priorite
+  // sur le bonus rayon ville V2.3. Si le candidat a pose un marker sur SON
+  // quartier favori dans /profil, on score sur la distance reelle au lieu
+  // du rayon depuis le centre-ville. Pas les deux additionnes.
+  const bonusQuartier = scoreQuartier(annonce, profil)
+  if (bonusQuartier !== null) {
+    // Quartier prefere actif → utilise scoreQuartier
+    score += bonusQuartier
+  } else if (typeof profil.rayon_recherche_km === "number" && profil.rayon_recherche_km > 0
       && profil.ville_souhaitee && annonce.ville) {
+    // ── BONUS GEOGRAPHIQUE V2.3 (fallback rayon ville) ──
+    // - Distance <= 20% du rayon : +50 ; <= 50% : +35 ; <= 80% : +20 ; <= 100% : +10 ; > 100% : 0
     const sourceCoords = getCityCoords(profil.ville_souhaitee)
     const targetCoords = getCityCoords(annonce.ville)
     if (sourceCoords && targetCoords) {
