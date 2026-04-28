@@ -784,12 +784,35 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
       return 0
     })
 
-  // V7 chantier 3 + V9.5 (Paul 2026-04-28) — rang de chaque annonce sur
-  // l'UNIVERS GLOBAL des annonces qui matchent le profil (annoncesEnrichies,
-  // post-estExclu mais pre-filtres UI). Permet "#3 sur 188" stable au lieu
-  // de "#3 sur 12" qui change selon les chips coches. Plus signifiant
-  // marketing-wise.
-  const rangs = calcRangsGlobal(annoncesEnrichies)
+  // V17 (Paul 2026-04-28) — rang scopé sur la ZONE city, pas global.
+  // User feedback : "le score sur 189 c'est trop large, scope sur la ville
+  // + 50km serait plus parlant". On filtre annoncesEnrichies par le même
+  // villeFilter que celui utilisé en V16 pour la liste affichée. Les
+  // autres filtres UI (budget, équipements, etc.) ne réduisent PAS la zone
+  // — on garde la stabilité V9.5 sur ces filtres-là.
+  // Edge case : pas de villeFilter (anonyme + pas de profil) → fallback
+  // global comme V9.5 (le rang reste utile pour signaler le marché total).
+  const annoncesInZone = villeFilter
+    ? annoncesEnrichies.filter(a => {
+        const q = villeFilter
+        const isCP = /^\d{5}$/.test(q)
+        if (isCP) {
+          const depart = q.slice(0, 2)
+          const fallbackVille =
+            depart === "75" ? "paris" :
+            depart === "69" ? "lyon" :
+            depart === "13" ? "marseille" : null
+          if (!fallbackVille) return false
+          const villeNorm = normalizeCityKey(a.ville || "")
+          return villeNorm.includes(fallbackVille)
+        }
+        const vA = normalizeCityKey(a.ville || "")
+        const vF = normalizeCityKey(q)
+        if (!vA || !vF) return false
+        return vA.includes(vF) || vF.includes(vA)
+      })
+    : annoncesEnrichies
+  const rangs = calcRangsGlobal(annoncesInZone)
   const totalRangs = rangs.size
   const showRanks = shouldShowRank(totalRangs)
 

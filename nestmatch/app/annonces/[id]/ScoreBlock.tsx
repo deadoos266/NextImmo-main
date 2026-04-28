@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { supabase } from "../../../lib/supabase"
 import { calculerScore, estExclu, labelScore, breakdownScore, suggestImprovements } from "../../../lib/matching"
 import { calcRangsGlobal, shouldShowRank } from "../../../lib/rangs"
+import { normalizeCityKey } from "../../../lib/cityCoords"
 import { useRole } from "../../providers"
 
 export default function ScoreBlock({ annonce }: { annonce: any }) {
@@ -11,8 +12,11 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
   const { role } = useRole()
   const [profil, setProfil] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  // V7.3 — fetch toutes annonces visibles pour calculer le rang relatif
-  const [allAnnonces, setAllAnnonces] = useState<Array<{ id: number; scoreMatching: number | null }>>([])
+  // V7.3 — fetch toutes annonces visibles pour calculer le rang relatif.
+  // V17 (Paul 2026-04-28) — scoped sur la même ville que l'annonce courante
+  // pour un rang plus parlant ("#3 sur 22 à Paris" plutôt que "#15/189
+  // toutes villes"). Stockage avec ville pour le filtrage post-fetch.
+  const [allAnnonces, setAllAnnonces] = useState<Array<{ id: number; scoreMatching: number | null; ville: string | null }>>([])
 
   useEffect(() => {
     if (session?.user?.email) {
@@ -35,7 +39,11 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
         if (cancelled || !data) return
         const ranked = data
           .filter(a => !estExclu(a as never, profil as never))
-          .map(a => ({ id: a.id as number, scoreMatching: calculerScore(a as never, profil as never) }))
+          .map(a => ({
+            id: a.id as number,
+            scoreMatching: calculerScore(a as never, profil as never),
+            ville: typeof (a as { ville?: string | null }).ville === "string" ? (a as { ville: string }).ville : null,
+          }))
         setAllAnnonces(ranked)
       })
     return () => { cancelled = true }
@@ -95,13 +103,26 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
   const suggestions = suggestImprovements(annonce, profil)
   const pct = Math.round(score / 10)
 
-  // V7.3 + V9.5 — rang sur l'univers global des annonces actives (post-
-  // estExclu via le profil, mais pas filtre par les chips UI). Plus stable
-  // et plus signifiant que la liste filtree.
-  const rangs = calcRangsGlobal(allAnnonces)
+  // V7.3 + V9.5 — rang sur l'univers global des annonces actives.
+  // V17 (Paul 2026-04-28) — scoped sur la ville de l'annonce courante
+  // pour un rang plus parlant ("#3 sur 22 à Paris" > "#15/189"). Si la
+  // zone city < 10 annonces, fallback global pour ne pas perdre l'info.
+  const annonceVille = typeof annonce.ville === "string" ? annonce.ville : null
+  const villeKey = annonceVille ? normalizeCityKey(annonceVille) : ""
+  const allInZone = villeKey
+    ? allAnnonces.filter(a => {
+        const aKey = a.ville ? normalizeCityKey(a.ville) : ""
+        if (!aKey) return false
+        return aKey.includes(villeKey) || villeKey.includes(aKey)
+      })
+    : allAnnonces
+  const rangsZone = calcRangsGlobal(allInZone)
+  const useZone = shouldShowRank(rangsZone.size)
+  const rangs = useZone ? rangsZone : calcRangsGlobal(allAnnonces)
   const totalRangs = rangs.size
   const myRang = rangs.get(annonce.id) ?? null
   const showRang = shouldShowRank(totalRangs) && myRang !== null
+  const rangScopeLabel = useZone && annonceVille ? ` à ${annonceVille}` : ""
 
   // V2.8 — breakdown visible par defaut (plus de toggle "voir détails"),
   // bar mini horizontale par categorie + 0..3 suggestions actionnables.
@@ -120,10 +141,10 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
           border: `1px solid ${info.color}33`,
         }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: info.color, textTransform: "uppercase", letterSpacing: "1.2px", margin: 0, opacity: 0.85 }}>
-            Rang sur le marché actuel
+            Rang{rangScopeLabel}
           </p>
           <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, color: info.color, margin: "4px 0 0", letterSpacing: "-0.4px", lineHeight: 1.2 }}>
-            #{myRang} {myRang === 1 ? "meilleure annonce" : myRang! <= 3 ? "meilleure annonce" : "annonce"} sur {totalRangs}
+            #{myRang} {myRang === 1 ? "meilleure annonce" : myRang! <= 3 ? "meilleure annonce" : "annonce"} sur {totalRangs}{rangScopeLabel}
           </p>
           <p style={{ fontSize: 12, color: info.color, margin: "4px 0 0", opacity: 0.85 }}>
             {pct}% de compatibilité avec ton profil.
