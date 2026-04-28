@@ -411,17 +411,35 @@ function Profil() {
   }
 
   // R10.3a — IntersectionObserver pour surligner la section active dans le TOC.
+  // V11.18 (Paul 2026-04-28) — refonte algo : l'ancienne approche
+  // "section avec plus grand ratio visible" était cassée pour les longues
+  // sections (criteres tient parfois tout le viewport, donc le ratio 1.0
+  // empêche les autres de prendre le focus). Nouvelle approche : on
+  // observe une bande étroite à ~20% du top viewport. Dès qu'une section
+  // entre dans cette bande (= son haut passe sous le top 20%), elle
+  // devient active. Pattern Linear/Notion-like.
+  // rootMargin "-20% 0px -75% 0px" : la zone d'observation est une bande
+  // horizontale entre 20% et 25% du top viewport.
   useEffect(() => {
     if (!dataLoaded || proprietaireActive) return
     const nodes = SECTIONS.map(s => document.getElementById(s.id)).filter((n): n is HTMLElement => n !== null)
     if (nodes.length === 0) return
+
+    // État interne : map id -> isIntersecting. À chaque changement, on
+    // pick l'id le plus haut dans le DOM qui est intersectant. Si rien
+    // n'intersecte (entre 2 sections), on garde l'ancien actif.
+    const intersectingIds = new Set<string>()
     const io = new IntersectionObserver(
       (entries) => {
-        // Section avec le plus grand ratio visible = active.
-        const visible = entries.filter(e => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)
-        if (visible[0]) setActiveSection(visible[0].target.id)
+        for (const e of entries) {
+          if (e.isIntersecting) intersectingIds.add(e.target.id)
+          else intersectingIds.delete(e.target.id)
+        }
+        // Pick la première section (ordre DOM) qui est dans la bande.
+        const firstActive = SECTIONS.find(s => intersectingIds.has(s.id))
+        if (firstActive) setActiveSection(firstActive.id)
       },
-      { rootMargin: "-20% 0px -50% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] },
+      { rootMargin: "-20% 0px -75% 0px", threshold: 0 },
     )
     nodes.forEach(n => io.observe(n))
     return () => io.disconnect()
@@ -1009,7 +1027,27 @@ function ProfilTOC({ active, isMobile }: { active: string; isMobile: boolean }) 
   // explicite. Le TOC desktop devient `position: sticky` DANS sa cellule
   // grid (column 1), le hero/sections sont dans la column 2. Aucun
   // chevauchement possible — c'est le grid qui gère l'espace.
+  // V11.18 (Paul 2026-04-28) — ajout click handler smooth-scroll explicite
+  // avec offset pour la Navbar sticky 72px. Avant, le href="#id" natif
+  // scrollait l'élément à top:0 qui se retrouvait sous la Navbar (le
+  // scrollMarginTop:96 de la section aidait pour Chrome desktop mais
+  // pas iOS Safari < 17 ni Firefox dans tous les cas).
   const wide = useProfilTocWide()
+
+  function handleClick(e: React.MouseEvent<HTMLAnchorElement>, id: string) {
+    e.preventDefault()
+    const el = document.getElementById(id)
+    if (!el) return
+    // Offset = navbar 72 + buffer 16 = 88. Compatible avec Safari iOS,
+    // Firefox, Chrome — calcule la position absolue du target puis scroll.
+    const rect = el.getBoundingClientRect()
+    const targetY = window.scrollY + rect.top - 88
+    window.scrollTo({ top: targetY, behavior: "smooth" })
+    // Met à jour le hash sans re-scroll (replaceState évite le saut natif)
+    if (typeof history !== "undefined" && history.replaceState) {
+      history.replaceState(null, "", `#${id}`)
+    }
+  }
 
   if (isMobile || !wide) {
     // V8 — Barre horizontale scrollable (mobile + tablette) restyle dossier.
@@ -1024,7 +1062,7 @@ function ProfilTOC({ active, isMobile }: { active: string; isMobile: boolean }) 
           {SECTIONS.map((s, idx) => {
             const on = s.id === active
             return (
-              <a key={s.id} href={`#${s.id}`} style={{
+              <a key={s.id} href={`#${s.id}`} onClick={(e) => handleClick(e, s.id)} style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
                 padding: "7px 14px", borderRadius: 999,
                 border: `1px solid ${on ? T.ink : T.line}`,
@@ -1059,7 +1097,7 @@ function ProfilTOC({ active, isMobile }: { active: string; isMobile: boolean }) 
           const on = s.id === active
           return (
             <li key={s.id}>
-              <a href={`#${s.id}`} style={{
+              <a href={`#${s.id}`} onClick={(e) => handleClick(e, s.id)} style={{
                 display: "grid",
                 gridTemplateColumns: "auto 1fr",
                 alignItems: "center",
