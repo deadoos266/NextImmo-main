@@ -111,10 +111,10 @@ describe("computeScreening — solvabilité (règle 33%)", () => {
     expect(r.flags.some(f => f.includes("insuffisants"))).toBe(false)
   })
 
-  it("ratio 2.5-2.99× → pénalité (flag marché 3×)", () => {
+  it("ratio 2.5-2.99× → pénalité (flag proprio attend 3×)", () => {
     const p: ScreeningProfil = { revenus_mensuels: 2700, situation_pro: "CDI", garant: true }
     const r = computeScreening(p, 1000) // ratio = 2.7
-    expect(r.flags.some(f => f.includes("marché : 3×"))).toBe(true)
+    expect(r.flags.some(f => /proprio attend 3\.0×/i.test(f))).toBe(true)
   })
 
   it("ratio < 2× → flag 'Revenus insuffisants'", () => {
@@ -201,5 +201,71 @@ describe("computeScreening — garant dérivé de type_garant (régression batch
   it("flag garant=true prime sur type_garant vide", () => {
     const r = computeScreening({ ...base, garant: true, type_garant: "" }, loyer)
     expect(r.flags).not.toContain("Pas de garant")
+  })
+})
+
+// ─── V1.5 — Brancher critères annonce dans le screening ───────────────────
+describe("computeScreening — critères annonce (V1.5 Paul 2026-04-27)", () => {
+  it("min_revenus_ratio 4× — locataire à 3× est juste insuffisant", () => {
+    const p: ScreeningProfil = { revenus_mensuels: 3000, situation_pro: "CDI", garant: true }
+    // Sans annonce : ratio 3× = parfait, score solva 45
+    const baseline = computeScreening(p, 1000)
+    expect(baseline.flags.every(f => !f.includes("attendu"))).toBe(true)
+    // Avec annonce 4× : ratio 3× est juste 1 point en dessous → tier moyen
+    const ajuste = computeScreening(p, 1000, { min_revenus_ratio: 4 })
+    expect(ajuste.flags.some(f => /attendu 4\.0×/i.test(f))).toBe(true)
+  })
+
+  it("min_revenus_ratio 3.5× — locataire à 3.5× ratio passe", () => {
+    const p: ScreeningProfil = { revenus_mensuels: 3500, situation_pro: "CDI", garant: true }
+    const r = computeScreening(p, 1000, { min_revenus_ratio: 3.5 })
+    expect(r.flags.every(f => !f.includes("Revenus") || !f.includes("loyer"))).toBe(true)
+  })
+
+  it("garants_acceptes ['Visale'] — garant 'Garantme' candidat est flag", () => {
+    const p: ScreeningProfil = { revenus_mensuels: 3000, situation_pro: "CDI", type_garant: "Garantme" }
+    const r = computeScreening(p, 1000, { garants_acceptes: ["Visale"] })
+    expect(r.flags.some(f => f.includes("non listé dans les acceptés"))).toBe(true)
+  })
+
+  it("garants_acceptes ['Visale', 'Indifférent'] — Indifférent désactive le filtre", () => {
+    const p: ScreeningProfil = { revenus_mensuels: 3000, situation_pro: "CDI", type_garant: "Garantme" }
+    const r = computeScreening(p, 1000, { garants_acceptes: ["Visale", "Indifférent"] })
+    expect(r.flags.every(f => !f.includes("non listé"))).toBe(true)
+  })
+
+  it("garants_acceptes ['Visale'] — garant 'Visale' candidat est accepté", () => {
+    const p: ScreeningProfil = { revenus_mensuels: 3000, situation_pro: "CDI", type_garant: "Organisme (Visale)" }
+    const r = computeScreening(p, 1000, { garants_acceptes: ["Visale"] })
+    expect(r.flags.every(f => !f.includes("non listé"))).toBe(true)
+  })
+
+  it("profils_acceptes ['CDI'] — candidat CDD est flag", () => {
+    const p: ScreeningProfil = { revenus_mensuels: 3000, situation_pro: "CDD", garant: true }
+    const r = computeScreening(p, 1000, { profils_acceptes: ["CDI"] })
+    expect(r.flags.some(f => f.includes("non listé dans les acceptés"))).toBe(true)
+  })
+
+  it("profils_acceptes ['CDI', 'Fonctionnaire'] — candidat CDI est accepté", () => {
+    const p: ScreeningProfil = { revenus_mensuels: 3000, situation_pro: "CDI", garant: true }
+    const r = computeScreening(p, 1000, { profils_acceptes: ["CDI", "Fonctionnaire"] })
+    expect(r.flags.every(f => !f.includes("non listé"))).toBe(true)
+  })
+
+  it("annonce null — comportement identique au screening v1 (backward compat)", () => {
+    const p: ScreeningProfil = { revenus_mensuels: 3000, situation_pro: "CDI", garant: true }
+    const v1 = computeScreening(p, 1000)
+    const v2null = computeScreening(p, 1000, null)
+    const v2undef = computeScreening(p, 1000, undefined)
+    expect(v2null.score).toBe(v1.score)
+    expect(v2undef.score).toBe(v1.score)
+  })
+
+  it("garants_acceptes vide ou null — pas de filtre", () => {
+    const p: ScreeningProfil = { revenus_mensuels: 3000, situation_pro: "CDI", type_garant: "Garantme" }
+    const r1 = computeScreening(p, 1000, { garants_acceptes: [] })
+    const r2 = computeScreening(p, 1000, { garants_acceptes: null })
+    expect(r1.flags.every(f => !f.includes("non listé"))).toBe(true)
+    expect(r2.flags.every(f => !f.includes("non listé"))).toBe(true)
   })
 })

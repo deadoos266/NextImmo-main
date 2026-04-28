@@ -104,6 +104,10 @@ type Annonce = {
   statut?: string | null
   locataire_email?: string | null
   created_at?: string | null
+  // Critères proprio (Step 6 wizard) — passes au screening V1.5.
+  min_revenus_ratio?: number | string | null
+  garants_acceptes?: string[] | null
+  profils_acceptes?: string[] | null
 }
 
 export default function CandidaturesParAnnonce() {
@@ -185,9 +189,16 @@ export default function CandidaturesParAnnonce() {
     if (!bien) return []
     const loyer = (Number(bien.prix) || 0) + (Number(bien.charges) || 0)
     const bienIsRented = bien.statut === "loué"
+    // Critères proprio specifiques a cette annonce (Paul 2026-04-27 V1.5).
+    // Lus depuis l'annonce et passes au screening pour ajuster les seuils.
+    const annonceCriteria = {
+      min_revenus_ratio: bien.min_revenus_ratio ?? null,
+      garants_acceptes: Array.isArray(bien.garants_acceptes) ? bien.garants_acceptes : null,
+      profils_acceptes: Array.isArray(bien.profils_acceptes) ? bien.profils_acceptes : null,
+    }
     return candidatures.map(c => {
       const profil = dossiers[c.from_email] || null
-      const screening = computeScreening(profil, loyer)
+      const screening = computeScreening(profil, loyer, annonceCriteria)
       const compatRaw = profil ? calculerScore(bien as never, profil as never) : null
       const compatPct = compatRaw !== null ? Math.round(compatRaw / 10) : null
       const myVisite = visites.find(v => (v.locataire_email || "").toLowerCase() === (c.from_email || "").toLowerCase())

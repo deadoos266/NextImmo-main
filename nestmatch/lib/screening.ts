@@ -34,6 +34,21 @@ export interface ScreeningProfil {
   presentation?: string | null
 }
 
+/**
+ * Critères proprio cote annonce (Paul 2026-04-27 V1.5). Lus pour ajuster
+ * dynamiquement le screening en fonction des exigences de chaque annonce.
+ * Si non fournis, le screening utilise les seuils marche par defaut (3×).
+ */
+export interface ScreeningAnnonceCriteria {
+  /** Multiplicateur revenus / loyer attendu. Default 3.0 (marche standard). */
+  min_revenus_ratio?: number | string | null
+  /** Liste de garants explicitement acceptes par le proprio. Si vide ou null,
+   *  tous les garants sont acceptes. Match insensible a la casse + substring. */
+  garants_acceptes?: string[] | null
+  /** Liste de profils pro acceptes. Idem : si vide, tous acceptes. */
+  profils_acceptes?: string[] | null
+}
+
 export interface ScreeningResult {
   score: number                 // 0-100
   tier: "excellent" | "bon" | "moyen" | "faible" | "incomplet"
@@ -81,8 +96,16 @@ function buildSummary(p: ScreeningProfil, ratio: number | null): string {
  * Calcule le screening d'un candidat.
  * @param profil Le profil locataire du candidat (depuis `profils`)
  * @param loyer Le loyer mensuel du bien visé (charges incluses recommandé)
+ * @param annonce Optionnel — critères proprio (min_revenus_ratio, garants
+ *   acceptes, profils acceptes). Si fournis, le screening adapte ses
+ *   seuils dynamiquement (Paul 2026-04-27 V1.5). Backward compat : si
+ *   absent, comportement identique au screening v1 (seuils marche 3×).
  */
-export function computeScreening(profil: ScreeningProfil | null | undefined, loyer: number | null | undefined): ScreeningResult {
+export function computeScreening(
+  profil: ScreeningProfil | null | undefined,
+  loyer: number | null | undefined,
+  annonce?: ScreeningAnnonceCriteria | null,
+): ScreeningResult {
   const flags: string[] = []
 
   if (!profil) {
@@ -104,20 +127,27 @@ export function computeScreening(profil: ScreeningProfil | null | undefined, loy
   const ratio = revenus !== null && loyerNum !== null && loyerNum > 0 ? revenus / loyerNum : null
 
   // ─── Solvabilité (0-45) ─────────────────────────────────
+  // Seuil dynamique : si l'annonce specifie min_revenus_ratio (Step 6 du
+  // wizard), on l'utilise. Sinon fallback 3× marche standard. Paul 2026-04-27 V1.5.
+  const seuilRatio = (() => {
+    if (!annonce) return 3
+    const v = parseNumber(annonce.min_revenus_ratio)
+    return v !== null && v > 0 ? v : 3
+  })()
   let solvabiliteScore = 0
   if (ratio === null) {
     flags.push(revenus === null ? "Revenus non renseignés" : "Loyer inconnu")
-  } else if (ratio >= 3) {
+  } else if (ratio >= seuilRatio) {
     solvabiliteScore = 45
-  } else if (ratio >= 2.5) {
+  } else if (ratio >= seuilRatio - 0.5) {
     solvabiliteScore = 30
-    flags.push(`Revenus ${ratio.toFixed(1)}× loyer (marché : 3×)`)
-  } else if (ratio >= 2) {
+    flags.push(`Revenus ${ratio.toFixed(1)}× loyer (proprio attend ${seuilRatio.toFixed(1)}×)`)
+  } else if (ratio >= seuilRatio - 1) {
     solvabiliteScore = 15
-    flags.push(`Revenus faibles : ${ratio.toFixed(1)}× loyer`)
+    flags.push(`Revenus faibles : ${ratio.toFixed(1)}× loyer (attendu ${seuilRatio.toFixed(1)}×)`)
   } else {
     solvabiliteScore = 5
-    flags.push(`Revenus insuffisants : ${ratio.toFixed(1)}× loyer`)
+    flags.push(`Revenus insuffisants : ${ratio.toFixed(1)}× loyer (attendu ${seuilRatio.toFixed(1)}×)`)
   }
 
   // ─── Situation professionnelle (0-25) ───────────────────
@@ -134,6 +164,26 @@ export function computeScreening(profil: ScreeningProfil | null | undefined, loy
     flags.push(`Situation : ${sit}`)
   } else {
     situationScore = 12
+  }
+
+  // Filtre profils acceptes par le proprio (Paul 2026-04-27 V1.5).
+  // Si l'annonce specifie une whitelist (`profils_acceptes`) et que la
+  // situation_pro candidat n'y figure pas, on flag explicitement et on
+  // pénalise -10 (score brut, pas exclusion). Si la liste contient
+  // "Indifférent" ou est vide, pas de filtre.
+  const profilsAcceptesArr = Array.isArray(annonce?.profils_acceptes) ? annonce!.profils_acceptes! : []
+  const profilsIndifferent = profilsAcceptesArr.some(p => p && (p.toLowerCase().includes("indifférent") || p.toLowerCase().includes("indifferent")))
+  const profilsListe = profilsAcceptesArr.filter(p => p && !p.toLowerCase().includes("indifférent") && !p.toLowerCase().includes("indifferent"))
+  if (!profilsIndifferent && profilsListe.length > 0 && sit) {
+    const matchProfil = profilsListe.some(p =>
+      p.toLowerCase().trim() === sit.toLowerCase().trim() ||
+      sit.toLowerCase().includes(p.toLowerCase()) ||
+      p.toLowerCase().includes(sit.toLowerCase())
+    )
+    if (!matchProfil) {
+      situationScore = Math.max(0, situationScore - 10)
+      flags.push(`Profil "${sit}" non listé dans les acceptés (${profilsListe.join(", ")})`)
+    }
   }
 
   // ─── Garant (0-20) ──────────────────────────────────────
@@ -154,6 +204,31 @@ export function computeScreening(profil: ScreeningProfil | null | undefined, loy
     flags.push("Pas de garant")
   } else {
     flags.push("Garant non renseigné")
+  }
+
+  // Filtre garants acceptes par le proprio (Paul 2026-04-27 V1.5).
+  // Si l'annonce specifie une whitelist (`garants_acceptes`) et que le
+  // type_garant candidat n'y figure pas, on flag + penalise -10. Liste
+  // vide ou "Indifférent" → pas de filtre.
+  const garantsAcceptesArr = Array.isArray(annonce?.garants_acceptes) ? annonce!.garants_acceptes! : []
+  const garantsIndifferent = garantsAcceptesArr.some(g => g && (g.toLowerCase().includes("indifférent") || g.toLowerCase().includes("indifferent")))
+  const garantsListe = garantsAcceptesArr.filter(g => g && !g.toLowerCase().includes("indifférent") && !g.toLowerCase().includes("indifferent"))
+  if (!garantsIndifferent && garantsListe.length > 0 && aGarant && typeGarant) {
+    const matchGarant = garantsListe.some(g => {
+      const gn = g.toLowerCase().trim()
+      return gn === typeGarant ||
+        typeGarant.includes(gn) ||
+        gn.includes(typeGarant) ||
+        // Cas particuliers connus
+        (gn.includes("visale") && typeGarant.includes("visale")) ||
+        (gn.includes("garantme") && typeGarant.includes("garantme")) ||
+        (gn.includes("parents") && typeGarant.includes("parent")) ||
+        (gn.includes("caution") && typeGarant.includes("caution"))
+    })
+    if (!matchGarant) {
+      garantScore = Math.max(0, garantScore - 10)
+      flags.push(`Garant "${profil.type_garant}" non listé dans les acceptés (${garantsListe.join(", ")})`)
+    }
   }
 
   // ─── Complétude du profil (0-10) ────────────────────────
