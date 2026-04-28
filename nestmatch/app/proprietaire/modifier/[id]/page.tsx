@@ -9,6 +9,7 @@ import { useResponsive } from "../../../hooks/useResponsive"
 import LocataireEmailField from "../../../components/LocataireEmailField"
 import CityAutocomplete from "../../../components/CityAutocomplete"
 import AddressAutocomplete from "../../../components/AddressAutocomplete"
+import MarketRentHint from "../../ajouter/MarketRentHint"
 import Tooltip from "../../../components/Tooltip"
 
 import { Toggle, Sec, F } from "../../../components/FormHelpers"
@@ -238,7 +239,19 @@ export default function ModifierBien() {
     const prix = parseInt(form.prix || "0", 10) || 0
     if (prix <= 0 || prix > 50000) { alert("Le loyer doit être compris entre 1 et 50 000 €."); return }
     const surface = parseInt(form.surface || "0", 10) || 0
+    // Validation surface >= 9 (loi decence) + chambres <= pieces — parite avec
+    // wizard ajouter (Paul 2026-04-27 V1.6).
+    if (form.surface && (surface > 0 && surface < 9)) {
+      alert("La surface doit être d'au moins 9 m² (loi décence — décret 2002-120).")
+      return
+    }
     if (surface < 0 || surface > 1000) { alert("La surface doit être comprise entre 0 et 1000 m²."); return }
+    const piecesNum = parseInt(form.pieces || "0", 10) || 0
+    const chambresNum = parseInt(form.chambres || "0", 10) || 0
+    if (piecesNum > 0 && chambresNum > 0 && chambresNum > piecesNum) {
+      alert(`Le nombre de chambres (${chambresNum}) ne peut pas dépasser le nombre de pièces (${piecesNum}).`)
+      return
+    }
     if (dejaLoue && form.locataire_email) {
       const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRe.test(form.locataire_email.trim())) {
@@ -557,6 +570,17 @@ export default function ModifierBien() {
             <F l="Loyer mensuel (€)"><input style={inp} type="number" value={form.prix} onChange={set("prix")} placeholder="1100" /></F>
             <F l="Charges (€/mois)"><input style={inp} type="number" value={form.charges} onChange={set("charges")} placeholder="80" /></F>
             <F l="Dépôt de garantie (€)"><input style={inp} type="number" value={form.caution} onChange={set("caution")} placeholder="1100" /></F>
+          </div>
+          {/* MarketRentHint — parite avec wizard ajouter (Paul 2026-04-27 V1.6).
+              Affiche fourchette marche pour cette ville/surface/pieces. */}
+          <div style={{ marginTop: 14 }}>
+            <MarketRentHint
+              ville={form.ville}
+              surface={form.surface}
+              pieces={form.pieces}
+              prix={form.prix}
+              onUseMedian={(median) => setForm(f => ({ ...f, prix: String(median) }))}
+            />
           </div>
         </Sec>
 
