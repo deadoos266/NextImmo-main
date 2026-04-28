@@ -80,9 +80,9 @@ export default function CandidaturesCounter({ annonceId, annonceCreatedAt, propr
       flexWrap: "wrap",
       fontFamily: "'DM Sans', sans-serif",
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ fontSize: 16 }} aria-hidden="true">{tone.emoji}</span>
-        <span style={{ fontSize: 13, color: tone.color, fontWeight: 600 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+        <span style={{ fontSize: 16, flexShrink: 0 }} aria-hidden="true">{tone.emoji}</span>
+        <span style={{ fontSize: 13, color: tone.color, fontWeight: 600, overflowWrap: "anywhere", wordBreak: "break-word" }}>
           {count === 0
             ? "Aucune candidature pour le moment"
             : `${count} ${count > 1 ? "personnes ont déjà candidaté" : "personne a déjà candidaté"}`}

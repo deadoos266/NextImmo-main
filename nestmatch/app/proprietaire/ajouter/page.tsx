@@ -1689,7 +1689,6 @@ function QualiteLive({
   goToStep: (n: StepNum) => void
   isMobile: boolean
 }) {
-  void isMobile
   const r = computeQualiteAnnonce({
     photos,
     description: form.description,
@@ -1719,12 +1718,12 @@ function QualiteLive({
           <span style={{
             fontFamily: "'Fraunces', Georgia, serif",
             fontFeatureSettings: "'ss01'",
-            fontSize: 32, fontWeight: 400,
+            fontSize: isMobile ? 24 : 32, fontWeight: 400,
             color: r.color, fontVariantNumeric: "tabular-nums",
             letterSpacing: "-0.5px", lineHeight: 1,
           }}>
             {r.score}
-            <span style={{ fontSize: 15, marginLeft: 1, opacity: 0.6 }}>/100</span>
+            <span style={{ fontSize: isMobile ? 12 : 15, marginLeft: 1, opacity: 0.6 }}>/100</span>
           </span>
           <span style={{ fontSize: 13, fontWeight: 700, color: r.color }}>{r.label}</span>
         </div>
