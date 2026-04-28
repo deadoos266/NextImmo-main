@@ -109,6 +109,13 @@ export default function AjouterBien() {
   // (Paul 2026-04-27). Le proprio peut désactiver s'il a déjà retouché ses
   // photos (Lightroom, etc.) et ne veut pas qu'on touche.
   const [enhancePhotos, setEnhancePhotos] = useState(true)
+  // Toggle "Logement spécialisé étudiants/seniors" (Paul 2026-04-27 V1.3) :
+  // les criteres age_min/age_max sont DESACTIVES par defaut. L'user doit
+  // explicitement activer ce toggle pour les saisir, avec un disclaimer
+  // legal renforce. La loi 89-462 article 1 interdit la discrimination par
+  // l'age sauf logements specialises (etudiants, seniors, residences
+  // gerees). Reduit le risque juridique pour la plateforme.
+  const [logementSpecialise, setLogementSpecialise] = useState(false)
   const photoInputRef = useRef<HTMLInputElement>(null)
 
   const [form, setForm] = useState<AnnonceForm>({
@@ -176,7 +183,12 @@ export default function AjouterBien() {
       const raw = localStorage.getItem(draftStorageKey(session.user.email))
       if (!raw) { setDraftPromptOpen(false); return }
       const draft = JSON.parse(raw)
-      if (draft.form) setForm((f) => ({ ...f, ...draft.form }))
+      if (draft.form) {
+        setForm((f) => ({ ...f, ...draft.form }))
+        // Si le draft a age_min ou age_max non vide → re-toggle "Logement
+        // specialise" (sinon les champs seraient invisibles dans l'UI).
+        if (draft.form.age_min || draft.form.age_max) setLogementSpecialise(true)
+      }
       if (draft.toggles) setToggles((t) => ({ ...t, ...draft.toggles }))
       if (draft.equipExtras && typeof draft.equipExtras === "object") setEquipExtras(draft.equipExtras)
       if (Array.isArray(draft.photos)) setPhotos(draft.photos)
@@ -514,7 +526,7 @@ export default function AjouterBien() {
             />
           )}
           {step === 6 && (
-            <Step6Criteres form={form} setForm={setForm} isMobile={isMobile} />
+            <Step6Criteres form={form} setForm={setForm} isMobile={isMobile} logementSpecialise={logementSpecialise} setLogementSpecialise={setLogementSpecialise} />
           )}
           {step === 7 && (
             <Step7Publier
@@ -1104,11 +1116,13 @@ function Step5Recit({
 // Ces critères ne génèrent que des bonus au score (jamais de malus) côté
 // matching.ts, à l'exception d'une incompatibilité dure animaux=non.
 function Step6Criteres({
-  form, setForm, isMobile,
+  form, setForm, isMobile, logementSpecialise, setLogementSpecialise,
 }: {
   form: AnnonceForm
   setForm: React.Dispatch<React.SetStateAction<AnnonceForm>>
   isMobile: boolean
+  logementSpecialise: boolean
+  setLogementSpecialise: React.Dispatch<React.SetStateAction<boolean>>
 }) {
   const loyer = parseInt(form.prix || "0", 10) || 1000
   const minIncome = Math.round(loyer * form.min_revenus_ratio)
@@ -1243,29 +1257,78 @@ function Step6Criteres({
         </p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
-        <F l="Âge minimum candidat (optionnel)">
-          <input
-            style={inp}
-            type="number"
-            min={18}
-            max={99}
-            value={form.age_min}
-            onChange={e => setForm(f => ({ ...f, age_min: e.target.value }))}
-            placeholder="18"
-          />
-        </F>
-        <F l="Âge maximum candidat (optionnel)">
-          <input
-            style={inp}
-            type="number"
-            min={18}
-            max={99}
-            value={form.age_max}
-            onChange={e => setForm(f => ({ ...f, age_max: e.target.value }))}
-            placeholder="99"
-          />
-        </F>
+      {/* Age min/max — gated derriere "Logement specialise" (Paul 2026-04-27 V1.3).
+          Loi 89-462 article 1 interdit la discrimination par l'age sauf
+          logements specialises (etudiants, seniors, residences gerees). On
+          masque les inputs par defaut + on les deverrouille via toggle
+          opt-in avec disclaimer renforce. Quand le toggle est OFF, on
+          force age_min/age_max a "" pour que rien ne parte en DB. */}
+      <div style={{ background: km.warnBg, border: `1px solid ${km.warnLine}`, borderRadius: 12, padding: "14px 16px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 12, justifyContent: "space-between", flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: km.ink, margin: "0 0 4px" }}>
+              Logement spécialisé étudiants ou seniors
+            </p>
+            <p style={{ fontSize: 12, color: km.warnText, lineHeight: 1.55, margin: 0 }}>
+              L&apos;âge est un critère <strong>discriminant légalement encadré</strong> (article 1 loi 89-462 du 6 juillet 1989). Activez ce toggle <strong>uniquement</strong> si vous êtes un opérateur agréé pour logements étudiants ou seniors.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={logementSpecialise}
+            onClick={() => {
+              const next = !logementSpecialise
+              setLogementSpecialise(next)
+              if (!next) {
+                // Reset age fields quand on désactive
+                setForm(f => ({ ...f, age_min: "", age_max: "" }))
+              }
+            }}
+            style={{
+              width: 44, height: 24, borderRadius: 999,
+              background: logementSpecialise ? km.warnText : km.line,
+              cursor: "pointer", position: "relative",
+              transition: "background 0.2s",
+              border: "none", padding: 0, flexShrink: 0,
+            }}
+          >
+            <div style={{
+              width: 18, height: 18, borderRadius: "50%",
+              background: km.white,
+              position: "absolute", top: 3, left: logementSpecialise ? 23 : 3,
+              transition: "left 0.2s",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
+            }} />
+          </button>
+        </div>
+
+        {logementSpecialise && (
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginTop: 14, paddingTop: 14, borderTop: `1px solid ${km.warnLine}` }}>
+            <F l="Âge minimum candidat (optionnel)">
+              <input
+                style={inp}
+                type="number"
+                min={18}
+                max={99}
+                value={form.age_min}
+                onChange={e => setForm(f => ({ ...f, age_min: e.target.value }))}
+                placeholder="18"
+              />
+            </F>
+            <F l="Âge maximum candidat (optionnel)">
+              <input
+                style={inp}
+                type="number"
+                min={18}
+                max={99}
+                value={form.age_max}
+                onChange={e => setForm(f => ({ ...f, age_max: e.target.value }))}
+                placeholder="99"
+              />
+            </F>
+          </div>
+        )}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 18 }}>
