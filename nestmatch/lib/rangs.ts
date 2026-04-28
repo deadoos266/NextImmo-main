@@ -40,3 +40,21 @@ export const RANK_DISPLAY_MIN_TOTAL = 10
 export function shouldShowRank(total: number): boolean {
   return total >= RANK_DISPLAY_MIN_TOTAL
 }
+
+/**
+ * V9.5 (Paul 2026-04-28) — variante calcRangsGlobal qui calcule le rang
+ * sur la TOTALITE des annonces actives qui matchent le profil, pas la
+ * sous-liste filtree par les filtres UI de l'user (budget, equipements
+ * coches, etc).
+ *
+ * Avantage : le rang est plus stable et plus signifiant. "#3 sur 188"
+ * (univers complet) > "#3 sur 12" (liste filtree par 1 chip cochee). Le
+ * user comprend que son annonce est top sur le marche reel, pas sur sa
+ * vue tronquee.
+ *
+ * Implementation : meme algo que calcRangs. La difference est cote
+ * appelant qui passe annonces unfiltered au lieu de filtered.
+ */
+export function calcRangsGlobal(annonces: ReadonlyArray<RankInput>): Map<number, number> {
+  return calcRangs(annonces)  // meme logique, signature explicite pour le contrat metier
+}

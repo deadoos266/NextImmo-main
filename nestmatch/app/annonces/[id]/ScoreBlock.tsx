@@ -3,7 +3,7 @@ import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { supabase } from "../../../lib/supabase"
 import { calculerScore, estExclu, labelScore, breakdownScore, suggestImprovements } from "../../../lib/matching"
-import { calcRangs, shouldShowRank } from "../../../lib/rangs"
+import { calcRangsGlobal, shouldShowRank } from "../../../lib/rangs"
 import { useRole } from "../../providers"
 
 export default function ScoreBlock({ annonce }: { annonce: any }) {
@@ -95,8 +95,10 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
   const suggestions = suggestImprovements(annonce, profil)
   const pct = Math.round(score / 10)
 
-  // V7.3 — rang relatif dans la liste filtree par le profil
-  const rangs = calcRangs(allAnnonces)
+  // V7.3 + V9.5 — rang sur l'univers global des annonces actives (post-
+  // estExclu via le profil, mais pas filtre par les chips UI). Plus stable
+  // et plus signifiant que la liste filtree.
+  const rangs = calcRangsGlobal(allAnnonces)
   const totalRangs = rangs.size
   const myRang = rangs.get(annonce.id) ?? null
   const showRang = shouldShowRank(totalRangs) && myRang !== null
@@ -118,7 +120,7 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
           border: `1px solid ${info.color}33`,
         }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: info.color, textTransform: "uppercase", letterSpacing: "1.2px", margin: 0, opacity: 0.85 }}>
-            Rang dans ta recherche
+            Rang sur le marché actuel
           </p>
           <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, color: info.color, margin: "4px 0 0", letterSpacing: "-0.4px", lineHeight: 1.2 }}>
             #{myRang} {myRang === 1 ? "meilleure annonce" : myRang! <= 3 ? "meilleure annonce" : "annonce"} sur {totalRangs}

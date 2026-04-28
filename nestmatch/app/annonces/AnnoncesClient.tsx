@@ -5,7 +5,7 @@ import dynamic from "next/dynamic"
 import type { MapAnnoncesProps } from "../components/MapAnnonces"
 import { supabase } from "../../lib/supabase"
 import { calculerScore, estExclu, labelScore } from "../../lib/matching"
-import { calcRangs, shouldShowRank } from "../../lib/rangs"
+import { calcRangsGlobal, shouldShowRank } from "../../lib/rangs"
 import { useSession } from "next-auth/react"
 import { useRole } from "../providers"
 import { getCityCoords, normalizeCityKey, findNearbyCities } from "../../lib/cityCoords"
@@ -701,10 +701,12 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
       return 0
     })
 
-  // V7 chantier 3 — rang de chaque annonce dans la liste filtree actuelle.
-  // Calcul cote client (188 annonces, negligeable). Refresh a chaque change
-  // de liste/filtre. Map<id, rang> 1..N par score decroissant.
-  const rangs = calcRangs(annoncesTraitees)
+  // V7 chantier 3 + V9.5 (Paul 2026-04-28) — rang de chaque annonce sur
+  // l'UNIVERS GLOBAL des annonces qui matchent le profil (annoncesEnrichies,
+  // post-estExclu mais pre-filtres UI). Permet "#3 sur 188" stable au lieu
+  // de "#3 sur 12" qui change selon les chips coches. Plus signifiant
+  // marketing-wise.
+  const rangs = calcRangsGlobal(annoncesEnrichies)
   const totalRangs = rangs.size
   const showRanks = shouldShowRank(totalRangs)
 
