@@ -19,7 +19,7 @@ import Image from "next/image"
 import { supabase } from "../../../../../lib/supabase"
 import { useResponsive } from "../../../../hooks/useResponsive"
 import { computeScreening, type ScreeningProfil } from "../../../../../lib/screening"
-import { calculerScore } from "../../../../../lib/matching"
+import { calculerScore, breakdownScore } from "../../../../../lib/matching"
 
 type StatutCand = "contact" | "dossier" | "visite" | "bail" | "rejete"
 
@@ -201,6 +201,8 @@ export default function CandidaturesParAnnonce() {
       const screening = computeScreening(profil, loyer, annonceCriteria)
       const compatRaw = profil ? calculerScore(bien as never, profil as never) : null
       const compatPct = compatRaw !== null ? Math.round(compatRaw / 10) : null
+      // V2.9 — breakdown matching pour drilldown UI proprio
+      const compatBreakdown = profil ? breakdownScore(bien as never, profil as never) : []
       const myVisite = visites.find(v => (v.locataire_email || "").toLowerCase() === (c.from_email || "").toLowerCase())
       let statut: StatutCand
       if (bienIsRented && (bien.locataire_email || "").toLowerCase() === (c.from_email || "").toLowerCase()) {
@@ -215,7 +217,7 @@ export default function CandidaturesParAnnonce() {
       } else {
         statut = "contact"
       }
-      return { c, profil, screening, compatPct, statut, visite: myVisite || null }
+      return { c, profil, screening, compatPct, compatBreakdown, statut, visite: myVisite || null }
     })
   }, [candidatures, dossiers, visites, bien])
 
@@ -371,6 +373,7 @@ export default function CandidaturesParAnnonce() {
               profil={e.profil}
               screening={e.screening}
               compatPct={e.compatPct}
+              compatBreakdown={e.compatBreakdown}
               statut={e.statut}
               visite={e.visite}
               statutCandidature={e.c.statut_candidature ?? null}
@@ -434,6 +437,7 @@ function CandidatureCard({
   profil,
   screening,
   compatPct,
+  compatBreakdown,
   statut,
   visite,
   statutCandidature,
@@ -447,12 +451,14 @@ function CandidatureCard({
   profil: ScreeningProfil | null
   screening: ReturnType<typeof computeScreening>
   compatPct: number | null
+  compatBreakdown: ReturnType<typeof breakdownScore>
   statut: StatutCand
   visite: VisiteRow | null
   statutCandidature: "en_attente" | "validee" | "refusee" | null
   onValidated: () => void
   onRefused: () => void
 }) {
+  const [showBreakdown, setShowBreakdown] = useState(false)
   const [validating, setValidating] = useState(false)
   const [refusing, setRefusing] = useState(false)
   const isValidated = statutCandidature === "validee"
@@ -562,8 +568,29 @@ function CandidatureCard({
           {compatPct !== null && (
             <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 600, color: scoreColor(compatPct) }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: scoreColor(compatPct) }} />
-              {compatPct}% compatibilité
+              {compatPct}% compat.
             </span>
+          )}
+          {/* V2.9 — Solvabilite chip aux cotes de compat */}
+          {screening.tier !== "incomplet" && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 600, color: screening.color }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: screening.color }} />
+              {screening.score}% solvabilité
+            </span>
+          )}
+          {(compatPct !== null || screening.tier !== "incomplet") && (
+            <button
+              type="button"
+              onClick={(ev) => { ev.stopPropagation(); setShowBreakdown(v => !v) }}
+              style={{
+                background: "transparent", border: "none", padding: 0, cursor: "pointer",
+                fontFamily: "inherit", fontSize: 11, fontWeight: 600,
+                color: "#8a8477", textDecoration: "underline",
+              }}
+              aria-expanded={showBreakdown}
+            >
+              {showBreakdown ? "Masquer" : "Détail"}
+            </button>
           )}
         </div>
         <div style={{ fontSize: 12.5, color: "#8a8477", marginTop: 4, letterSpacing: "0.1px" }}>
@@ -591,6 +618,59 @@ function CandidatureCard({
         {contenu && (
           <div style={{ fontSize: 12, color: "#8a8477", marginTop: 6, fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 420 }}>
             « {contenu.length > 90 ? contenu.slice(0, 90) + "…" : contenu} »
+          </div>
+        )}
+
+        {/* V2.9 — drilldown unifie Compat + Solvabilite */}
+        {showBreakdown && (
+          <div style={{ marginTop: 10, padding: "10px 12px", background: "#F7F4EF", border: "1px solid #EAE6DF", borderRadius: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            {/* Colonne 1 : Compatibilite */}
+            <div>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 6px" }}>Compatibilité</p>
+              {compatBreakdown.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {compatBreakdown.map(item => {
+                    const ratio = item.max > 0 ? item.pts / item.max : 0
+                    const widthPct = Math.max(0, Math.min(100, Math.round(ratio * 100)))
+                    const barColor =
+                      item.status === "match"   ? "#15803d" :
+                      item.status === "partiel" ? "#a16207" :
+                      item.status === "miss"    ? "#b91c1c" :
+                                                   "#9ca3af"
+                    return (
+                      <div key={item.key} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 10, fontWeight: 600, color: "#111", minWidth: 70 }}>{item.label}</span>
+                        <div style={{ flex: 1, height: 4, background: "#EAE6DF", borderRadius: 999, overflow: "hidden" }}>
+                          <div style={{ width: `${widthPct}%`, height: "100%", background: barColor }} />
+                        </div>
+                        <span style={{ fontSize: 9.5, fontWeight: 700, color: "#8a8477", minWidth: 42, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{item.pts}/{item.max}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p style={{ fontSize: 11, color: "#8a8477", margin: 0 }}>Profil candidat incomplet.</p>
+              )}
+            </div>
+
+            {/* Colonne 2 : Solvabilite */}
+            <div>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 6px" }}>Solvabilité</p>
+              {screening.tier === "incomplet" ? (
+                <p style={{ fontSize: 11, color: "#8a8477", margin: 0 }}>Dossier candidat à compléter.</p>
+              ) : (
+                <>
+                  <p style={{ fontSize: 11, color: screening.color, margin: "0 0 6px", fontWeight: 600 }}>{screening.label} — {screening.summary}</p>
+                  {screening.flags.length > 0 && (
+                    <ul style={{ margin: 0, padding: "0 0 0 14px", display: "flex", flexDirection: "column", gap: 2 }}>
+                      {screening.flags.slice(0, 4).map((f, i) => (
+                        <li key={i} style={{ fontSize: 11, color: "#6b6559", lineHeight: 1.4 }}>{f}</li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         )}
       </div>
