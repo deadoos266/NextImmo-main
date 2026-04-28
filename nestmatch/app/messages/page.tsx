@@ -3498,9 +3498,24 @@ function MessagesInner() {
                 return (
                   <div key={conv.key}
                     onClick={() => { setConvActive(conv.key); setMenuConv(null); setVisitesConv([]); loadMessages(myEmail!, conv.other, conv.annonceId); loadVisitesConv(conv.other, conv.annonceId) }}
-                    style={{ padding: "14px 16px", cursor: "pointer", background: isActive ? "#F7F4EF" : "white", borderBottom: "1px solid #F2EEE6", borderLeft: isActive ? "3px solid #111" : conv.unread > 0 && !mutedHere ? "3px solid #b91c1c" : "3px solid transparent", position: "relative", transition: "background 160ms ease", opacity: mutedHere && !isActive ? 0.6 : 1 }}
-                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "#FBF8F3"; const btn = e.currentTarget.querySelector(".menu-btn") as HTMLElement; if (btn) btn.style.opacity = "1" }}
-                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "white"; if (menuConv !== conv.key) { const btn = e.currentTarget.querySelector(".menu-btn") as HTMLElement; if (btn) btn.style.opacity = "0" } }}
+                    style={{ padding: "14px 16px", cursor: "pointer", background: isActive ? "#F7F4EF" : "white", borderBottom: "1px solid #F2EEE6", borderLeft: isActive ? "3px solid #111" : conv.unread > 0 && !mutedHere ? "3px solid #b91c1c" : "3px solid transparent", position: "relative", transition: "background 160ms ease", opacity: mutedHere && !isActive ? 0.6 : 1, WebkitTapHighlightColor: "rgba(17,17,17,0.04)" }}
+                    // V4.2 — fix \"click 2 fois\" iOS : mouseEnter sticky-hover sur
+                    // touch devices declenche un faux \"hover\" qui mange le 1er tap.
+                    // Solution : ignorer l'enter quand pointerType !== 'mouse'.
+                    onPointerEnter={e => {
+                      if (e.pointerType !== "mouse") return
+                      if (!isActive) e.currentTarget.style.background = "#FBF8F3"
+                      const btn = e.currentTarget.querySelector(".menu-btn") as HTMLElement | null
+                      if (btn) btn.style.opacity = "1"
+                    }}
+                    onPointerLeave={e => {
+                      if (e.pointerType !== "mouse") return
+                      if (!isActive) e.currentTarget.style.background = "white"
+                      if (menuConv !== conv.key) {
+                        const btn = e.currentTarget.querySelector(".menu-btn") as HTMLElement | null
+                        if (btn) btn.style.opacity = "0"
+                      }
+                    }}
                   >
                     <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                       {/* Avatar annonce (ou peer si pas d'annonce) + ring candidateStatus (handoff L227-230) + badge unread */}
