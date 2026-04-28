@@ -646,3 +646,70 @@ describe("V7.2 scoreQuartier — marker quartier prefere", () => {
     expect(scoreProche).toBeGreaterThan(scoreLoin)
   })
 })
+
+// ─── V13 — Équipements secondaires ─────────────────────────────────────────
+import { scoreEquipementsSecondaires } from "./matching"
+
+describe("V13 scoreEquipementsSecondaires — bonus checkbox-only équipements extras", () => {
+  const PROFIL_BASE: Profil = { ville_souhaitee: "Paris", budget_max: 1500 }
+
+  it("locataire sans __secondaires → 0 pts", () => {
+    const profil: Profil = {
+      ...PROFIL_BASE,
+      preferences_equipements: { parking: "souhaite" }, // pas de __secondaires
+    }
+    const annonce: Annonce = { ville: "Paris", equipements_extras: { lave_linge: true, wifi: true } }
+    expect(scoreEquipementsSecondaires(annonce, profil)).toBe(0)
+  })
+
+  it("locataire coche 5 équipements, annonce en a 3 sur les 5 → +15 pts", () => {
+    const profil: Profil = {
+      ...PROFIL_BASE,
+      preferences_equipements: {
+        parking: "souhaite",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        __secondaires: ["lave_linge", "wifi", "climatisation", "lave_vaisselle", "double_vitrage"] as any,
+      },
+    }
+    const annonce: Annonce = {
+      ville: "Paris",
+      equipements_extras: {
+        lave_linge: true, wifi: true, climatisation: true,
+        lave_vaisselle: false, double_vitrage: false,
+      },
+    }
+    expect(scoreEquipementsSecondaires(annonce, profil)).toBe(15) // 3 × 5
+  })
+
+  it("plafond 30 pts atteint si ≥6 matches", () => {
+    const profil: Profil = {
+      ...PROFIL_BASE,
+      preferences_equipements: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        __secondaires: ["lave_linge", "wifi", "climatisation", "lave_vaisselle", "double_vitrage", "rangements", "interphone", "four"] as any,
+      },
+    }
+    const annonce: Annonce = {
+      ville: "Paris",
+      equipements_extras: {
+        lave_linge: true, wifi: true, climatisation: true,
+        lave_vaisselle: true, double_vitrage: true, rangements: true,
+        interphone: true, four: true,
+      },
+    }
+    // 8 matches × 5 = 40, mais cap 30
+    expect(scoreEquipementsSecondaires(annonce, profil)).toBe(30)
+  })
+
+  it("annonce sans equipements_extras → 0 pts (pas de malus)", () => {
+    const profil: Profil = {
+      ...PROFIL_BASE,
+      preferences_equipements: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        __secondaires: ["lave_linge", "wifi"] as any,
+      },
+    }
+    const annonce: Annonce = { ville: "Paris" } // pas de extras
+    expect(scoreEquipementsSecondaires(annonce, profil)).toBe(0)
+  })
+})

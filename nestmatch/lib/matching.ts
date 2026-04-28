@@ -5,6 +5,7 @@
 
 import { getCityCoords, haversineKm } from "./cityCoords"
 import { computeQualiteAnnonce, qualiteFacteur } from "./qualiteAnnonce"
+import { readEquipementsSecondaires } from "./equipementsSecondaires"
 
 // Normalisation defensive des valeurs booleennes venant de la DB.
 // Supabase peut renvoyer boolean, null, ou (legacy) string "true"/"false".
@@ -136,6 +137,30 @@ export interface Annonce {
  * Si pas de quartier prefere ou annonce sans coords : retourne null
  * (laisse le bonus V2.3 rayon ville prendre le relais).
  */
+/**
+ * V13 (Paul 2026-04-28) — score bonus "équipements secondaires".
+ *
+ * Le locataire coche dans la popup /profil un sous-ensemble d'équipements
+ * du catalogue (lib/equipements.ts) qu'il SOUHAITE. Stocké comme string[]
+ * dans `profil.preferences_equipements.__secondaires` (cf
+ * lib/equipementsSecondaires.ts).
+ *
+ * Pour chaque clé cochée, on regarde si l'annonce a `equipements_extras[k]
+ * === true`. Match = +5 pts. Miss = 0 pts (pas de malus, c'est secondaire).
+ * Plafond cumulé 30 pts (≈ 6 matches). Volontairement borné — au-delà, le
+ * scoring principal doit dominer.
+ */
+export function scoreEquipementsSecondaires(annonce: Annonce, profil: Profil): number {
+  const wanted = readEquipementsSecondaires(profil.preferences_equipements ?? null)
+  if (wanted.length === 0) return 0
+  const extras = annonce.equipements_extras ?? {}
+  let score = 0
+  for (const k of wanted) {
+    if ((extras as Record<string, unknown>)[k] === true) score += 5
+  }
+  return Math.min(score, 30)
+}
+
 export function scoreQuartier(annonce: Annonce, profil: Profil): number | null {
   const pLat = profil.quartier_prefere_lat
   const pLng = profil.quartier_prefere_lng
@@ -558,6 +583,11 @@ export function calculerScore(annonce: Annonce, profil: Profil): number {
   // Remplace par preferences_equipements jsonb tri-state (V2.4) qui couvre
   // la meme intention (preferences user-driven sur equipements) sans le
   // multiplicateur opaque ni la double comptabilite avec le bloc EQUIPEMENTS.
+
+  // V13 (Paul 2026-04-28) — bonus "équipements secondaires" coches par le
+  // locataire dans la popup /profil. +5 par match, cap 30 pts. Volontairement
+  // borné pour ne pas vampiriser les 970 autres pts du barème.
+  score += scoreEquipementsSecondaires(annonce, profil)
 
   // V9.3 (Paul 2026-04-28) — score qualite annonce comme multiplicateur.
   // Une annonce avec 0 photo + desc 5 chars + sans DPE = score qualite ~0

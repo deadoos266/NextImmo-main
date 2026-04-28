@@ -28,6 +28,10 @@ import {
 } from "./dossierTheme"
 import { calculerCompletudeProfil } from "../../lib/profilCompleteness"
 import { km, KMButton } from "../components/ui/km"
+// V13 — équipements secondaires (popup checkbox + storage helper)
+import { readEquipementsSecondaires, writeEquipementsSecondaires } from "../../lib/equipementsSecondaires"
+import { type EquipementKey } from "../../lib/equipements"
+import EquipementsSecondairesModal from "./EquipementsSecondairesModal"
 
 // ─── Sections du profil (source de vérité pour sommaire + saves sectionnels) ─
 // Chaque section énumère ses clés form + toggles pour un upsert ciblé. R10.3a.
@@ -170,6 +174,10 @@ function Profil() {
   })
   // V2.6 — preferences_equipements jsonb (separate state pour ne pas exploser FormShape)
   const [prefsEquip, setPrefsEquip] = useState<Record<string, EquipPref>>(EQUIP_DEFAULT)
+  // V13 (Paul 2026-04-28) — équipements secondaires checkbox-only,
+  // stocked dans preferences_equipements.__secondaires.
+  const [equipementsSecondaires, setEquipementsSecondaires] = useState<string[]>([])
+  const [secondairesModalOpen, setSecondairesModalOpen] = useState(false)
   // V7 chantier 2 — quartier prefere lat/lng/label (migration 028)
   const [quartierLat, setQuartierLat] = useState<number | null>(null)
   const [quartierLng, setQuartierLng] = useState<number | null>(null)
@@ -235,6 +243,8 @@ function Profil() {
               }
             }
             setPrefsEquip(merged)
+            // V13 (Paul 2026-04-28) — load équipements secondaires checkbox.
+            setEquipementsSecondaires(readEquipementsSecondaires(rawPrefs ?? null))
             // V7 chantier 2 — load quartier prefere
             setQuartierLat(typeof data.quartier_prefere_lat === "number" ? data.quartier_prefere_lat : null)
             setQuartierLng(typeof data.quartier_prefere_lng === "number" ? data.quartier_prefere_lng : null)
@@ -280,7 +290,8 @@ function Profil() {
       // V2.6 — matching v2 fields
       tolerance_budget_pct: form.tolerance_budget_pct ? parseInt(form.tolerance_budget_pct) : 10,
       rayon_recherche_km: form.rayon_recherche_km ? parseInt(form.rayon_recherche_km) : null,
-      preferences_equipements: prefsEquip,
+      // V13 — embarque la liste des équipements secondaires sous __secondaires.
+      preferences_equipements: writeEquipementsSecondaires(prefsEquip, equipementsSecondaires),
       // V7 chantier 2 — quartier prefere
       quartier_prefere_lat: quartierLat,
       quartier_prefere_lng: quartierLng,
@@ -341,8 +352,11 @@ function Profil() {
     for (const k of sec.toggleKeys) patch[k] = !!toggles[k]
     // V2.6 — section "equipements" : push aussi le jsonb preferences_equipements
     // + sync les booleans legacy (parking/cave/...) pour compat read-side legacy.
+    // V13 (Paul 2026-04-28) — la jsonb embarque AUSSI la liste des
+    // équipements secondaires sous la clé __secondaires (cf
+    // lib/equipementsSecondaires.ts). Co-existe avec les keys tri-state.
     if (sectionId === "equipements") {
-      patch.preferences_equipements = prefsEquip
+      patch.preferences_equipements = writeEquipementsSecondaires(prefsEquip, equipementsSecondaires)
       for (const e of EQUIP_LIST) {
         patch[e.key] = prefsEquip[e.key] === "souhaite" || prefsEquip[e.key] === "indispensable"
       }
@@ -853,6 +867,87 @@ function Profil() {
               />
             ))}
           </div>
+
+          {/* V13 (Paul 2026-04-28) — bouton "+ Plus d'équipements" -> popup
+              checkboxes pour les équipements secondaires (lave_linge, wifi,
+              climatisation, etc.). Bonus matching +5/match cap 30 pts. */}
+          <div style={{ marginTop: 18 }}>
+            <button
+              type="button"
+              onClick={() => setSecondairesModalOpen(true)}
+              style={{
+                width: "100%",
+                minHeight: 44,
+                display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+                padding: "12px 16px",
+                background: T.white,
+                border: `1px dashed ${T.line}`,
+                borderRadius: 14,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                fontSize: 13.5,
+                fontWeight: 600,
+                color: T.ink,
+                textAlign: "left" as const,
+                transition: "all 0.15s",
+                WebkitTapHighlightColor: "transparent",
+                touchAction: "manipulation",
+              }}
+            >
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                <span aria-hidden style={{
+                  width: 22, height: 22, borderRadius: "50%",
+                  background: T.mutedBg,
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  flexShrink: 0,
+                }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.ink} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </span>
+                <span>
+                  Plus d&apos;équipements
+                  <span style={{ display: "block", fontSize: 11, fontWeight: 400, color: T.soft, marginTop: 2, letterSpacing: "0.1px" }}>
+                    Lave-linge, wifi, climatisation, vue dégagée…
+                  </span>
+                </span>
+              </span>
+              {equipementsSecondaires.length > 0 && (
+                <span style={{
+                  background: T.ink, color: T.white, borderRadius: 999,
+                  padding: "3px 10px", fontSize: 11, fontWeight: 700,
+                  fontVariantNumeric: "tabular-nums", flexShrink: 0,
+                }}>
+                  {equipementsSecondaires.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          <EquipementsSecondairesModal
+            open={secondairesModalOpen}
+            initial={equipementsSecondaires as EquipementKey[]}
+            onClose={() => setSecondairesModalOpen(false)}
+            onValidate={async (next) => {
+              setEquipementsSecondaires(next)
+              // Sauvegarde immédiate de la section Équipements pour éviter
+              // de demander un click "Enregistrer" supplémentaire — UX
+              // attendue : valider la popup = enregistré.
+              try {
+                if (!session?.user?.email) return
+                const patch = {
+                  email: session.user.email,
+                  preferences_equipements: writeEquipementsSecondaires(prefsEquip, next),
+                }
+                await supabase.from("profils").upsert(patch, { onConflict: "email" })
+              } catch {
+                // Silencieux — l'utilisateur voit la fermeture de la popup
+                // comme une confirmation. La section sera resauvegardée
+                // au prochain "Enregistrer cette section" si erreur.
+              }
+            }}
+          />
         </DossierSection>
 
         <DossierSection
