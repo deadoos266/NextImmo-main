@@ -283,8 +283,14 @@ const STYLES = {
     wrap: (isMobile: boolean): React.CSSProperties => ({
       background: T.white,
       borderRadius: 24,
-      padding: isMobile ? "22px 20px 24px" : "30px 32px 32px",
+      padding: isMobile ? "22px 16px 24px" : "30px 32px 32px",
       boxShadow: "0 1px 0 #ebe4d6",
+      // V11.1 — defensif overflow mobile : box-sizing + maxWidth pour qu'un
+      // input/chip large ne pousse pas la section au-dela du viewport.
+      boxSizing: "border-box",
+      maxWidth: "100%",
+      minWidth: 0,
+      overflow: "hidden",
     }),
     head: { display: "flex", alignItems: "baseline", gap: 16, marginBottom: 4, flexWrap: "wrap" as const } as React.CSSProperties,
     num: { fontSize: 16, fontStyle: "italic", color: T.soft, fontVariantNumeric: "tabular-nums", fontWeight: 400 } as React.CSSProperties,
@@ -297,15 +303,20 @@ const STYLES = {
   row2: (isMobile: boolean): React.CSSProperties => ({ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }),
 
   field: {
-    wrap: { marginBottom: 18 } as React.CSSProperties,
-    label: { display: "block", fontSize: 11, fontWeight: 700, color: T.soft, marginBottom: 8, textTransform: "uppercase", letterSpacing: "1.4px" } as React.CSSProperties,
+    wrap: { marginBottom: 18, minWidth: 0 } as React.CSSProperties,
+    // V11.1 — overflowWrap + wordBreak pour que les longs labels avec
+    // (facultatif) et tooltip wrappent proprement sur mobile au lieu d'etre
+    // tronques. La letterSpacing 1.4px + uppercase rend les chaines plus
+    // longues que prevu — defensif.
+    label: { display: "block", fontSize: 11, fontWeight: 700, color: T.soft, marginBottom: 8, textTransform: "uppercase", letterSpacing: "1.4px", overflowWrap: "anywhere", wordBreak: "break-word" } as React.CSSProperties,
     input: (isMobile: boolean): React.CSSProperties => ({ width: "100%", padding: "11px 14px", border: `1px solid ${T.line}`, borderRadius: 10, fontSize: isMobile ? 16 : 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box", background: T.white, color: T.ink, fontVariantNumeric: "tabular-nums" }),
     inputDisabled: { background: T.mutedBg, color: T.soft } as React.CSSProperties,
     textarea: (isMobile: boolean): React.CSSProperties => ({ width: "100%", padding: "14px 16px", border: `1px solid ${T.line}`, borderRadius: 14, fontSize: isMobile ? 16 : 14.5, fontFamily: "'DM Sans', sans-serif", fontStyle: "italic", fontWeight: 400, outline: "none", resize: "vertical", boxSizing: "border-box", lineHeight: 1.55, color: "#222", background: T.mutedBg }),
   },
 
   chip: {
-    wrap: { display: "flex", gap: 8, flexWrap: "wrap" as const } as React.CSSProperties,
+    // V11.1 — maxWidth 100% defensif pour le container, evite tout overflow.
+    wrap: { display: "flex", gap: 8, flexWrap: "wrap" as const, maxWidth: "100%" } as React.CSSProperties,
     base: (active: boolean): React.CSSProperties => ({
       padding: "8px 14px",
       borderRadius: 999,
@@ -318,6 +329,9 @@ const STYLES = {
       color: active ? T.white : "#333",
       borderColor: active ? T.ink : T.line,
       transition: "all 0.15s",
+      // V11.1 — empeche un chip de devenir plus large que le container,
+      // permet le wrap meme si le mot est tres long (PACS, etc).
+      maxWidth: "100%",
     }),
   },
 
@@ -1100,7 +1114,7 @@ function FreeDocsSection({
               placeholder={`Ex : Attestation d'hébergement (${LABEL_LIBRE_MIN}–${LABEL_LIBRE_MAX} caractères)`}
               maxLength={LABEL_LIBRE_MAX}
               disabled={uploading}
-              style={{ flex: 1, minWidth: 220, padding: "9px 12px", border: `1px solid ${T.line}`, borderRadius: 8, fontSize: 14, fontFamily: "inherit", background: "#fff", color: T.ink, outline: "none" }}
+              style={{ flex: 1, minWidth: 0, padding: "9px 12px", border: `1px solid ${T.line}`, borderRadius: 8, fontSize: 14, fontFamily: "inherit", background: "#fff", color: T.ink, outline: "none", boxSizing: "border-box" }}
             />
             <input
               type="file"
