@@ -19,6 +19,7 @@ import StickyCTABanner from "./StickyCTABanner"
 import CandidaturesCounter from "./CandidaturesCounter"
 import DpeWarningBanner from "./DpeWarningBanner"
 import QualiteAnnonceBadge from "./QualiteAnnonceBadge"
+import QualiteAnnonceBadgeAdaptive from "./QualiteAnnonceBadgeAdaptive"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -738,6 +739,25 @@ export default async function Annonce({ params }: any) {
               <EquipementsBlock extras={annonce.equipements_extras as Record<string, unknown> | null} />
             </section>
 
+            {/* V11.7 — Badge qualite annonce, version locataire (BOTTOM).
+                S'affiche uniquement pour les non-proprios. Sur mobile : pill
+                compact avec modal expand au tap. Sur desktop : grosse card.
+                Le proprio voit deja la version TOP plus haut (return null ici). */}
+            <QualiteAnnonceBadgeAdaptive
+              placement="bottom"
+              proprietaireEmail={annonce.proprietaire_email}
+              annonce={{
+                photos: annonce.photos,
+                description: annonce.description,
+                message_proprietaire: annonce.message_proprietaire,
+                dpe: annonce.dpe,
+                localisation_exacte: annonce.localisation_exacte,
+                chambres: annonce.chambres,
+                pieces: annonce.pieces,
+                surface: annonce.surface,
+              }}
+            />
+
             {/* ─── R10.9 Informations pratiques ─────────────────────── */}
             <section style={{ background: "white", borderRadius: 20, padding: "28px 28px 22px", marginBottom: 20 }}>
               <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.6px", margin: 0, marginBottom: 8 }}>
@@ -921,17 +941,25 @@ export default async function Annonce({ params }: any) {
 
               <ScoreBlock annonce={annonce} />
 
-              {/* V9.3 — Badge qualité de l'annonce (score 0..100 + tier). */}
-              <QualiteAnnonceBadge annonce={{
-                photos: annonce.photos,
-                description: annonce.description,
-                message_proprietaire: annonce.message_proprietaire,
-                dpe: annonce.dpe,
-                localisation_exacte: annonce.localisation_exacte,
-                chambres: annonce.chambres,
-                pieces: annonce.pieces,
-                surface: annonce.surface,
-              }} />
+              {/* V9.3 + V11.7 — Badge qualité de l'annonce. Pour le proprio
+                  (owner) : grosse card visible en TOP juste apres le hero
+                  ScoreBlock. Pour les locataires : bouge en BAS de la fiche
+                  (cf. instance bottom plus loin) + version compact pill sur
+                  mobile avec modal expand au tap. */}
+              <QualiteAnnonceBadgeAdaptive
+                placement="top"
+                proprietaireEmail={annonce.proprietaire_email}
+                annonce={{
+                  photos: annonce.photos,
+                  description: annonce.description,
+                  message_proprietaire: annonce.message_proprietaire,
+                  dpe: annonce.dpe,
+                  localisation_exacte: annonce.localisation_exacte,
+                  chambres: annonce.chambres,
+                  pieces: annonce.pieces,
+                  surface: annonce.surface,
+                }}
+              />
 
               {/* V9.4 — Compteur candidatures public + ancienneté annonce.
                   Color coding selon densite (gris/ambre/rouge). Owner-side cache. */}
