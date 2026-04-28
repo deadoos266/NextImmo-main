@@ -1266,6 +1266,27 @@ function MessagesInner() {
   // de la zone composer mobile. Decongestionne le thread overloaded.
   const [mobileQuickActionsOpen, setMobileQuickActionsOpen] = useState<boolean>(false)
   useEffect(() => { setMobileSheetOpen(false) }, [convActive])
+  // V11.1 (Paul 2026-04-28) — hide global Navbar quand on est dans un thread
+  // sur mobile. Pattern Instagram/iMessage : conversation full-screen, le
+  // back-arrow thread suffit pour revenir. Reduit le header empile (~140px)
+  // a juste le header thread compact (~60px).
+  // Detection mobile inline via matchMedia (le useResponsive hook est plus
+  // bas dans le composant, on ne peut pas l'utiliser ici sans hoisting).
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const mq = window.matchMedia("(max-width: 767px)")
+    function update() {
+      const inThread = mq.matches && convActive !== null
+      window.dispatchEvent(new CustomEvent("km:thread-mobile-open", { detail: { open: inThread } }))
+    }
+    update()
+    mq.addEventListener("change", update)
+    return () => {
+      mq.removeEventListener("change", update)
+      // Cleanup au unmount : remet la Navbar visible
+      window.dispatchEvent(new CustomEvent("km:thread-mobile-open", { detail: { open: false } }))
+    }
+  }, [convActive])
   // Historique annulées dans la modale : collapsible local (fermé par défaut).
   const [historiqueAnnOuvert, setHistoriqueAnnOuvert] = useState<boolean>(false)
   useEffect(() => { setHistoriqueAnnOuvert(false); setJustAcceptedAnnonceId(null) }, [convActive])
@@ -3818,8 +3839,11 @@ function MessagesInner() {
                               </span>
                             )
                           })()}
-                          {/* Statut candidat (proprio) pill — handoff messages.jsx L277-282 */}
-                          {proprietaireActive && (() => {
+                          {/* Statut candidat (proprio) pill — handoff messages.jsx L277-282
+                              V11.1 (Paul 2026-04-28) : cache sur mobile (deja accessible
+                              dans le kebab bottom sheet via section "Statut candidature").
+                              Sur desktop reste visible pour la densite info au survol. */}
+                          {!isMobile && proprietaireActive && (() => {
                             const statut = deriveCandidateStatus(convActiveData)
                             if (statut === "standard") return null
                             const cand = CANDIDATE_STATUS[statut]

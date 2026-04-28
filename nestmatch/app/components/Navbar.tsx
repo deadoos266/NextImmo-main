@@ -202,6 +202,21 @@ export default function Navbar() {
     window.dispatchEvent(new CustomEvent("km:drawer-state", { detail: { open: mobileOpen } }))
   }, [mobileOpen])
 
+  // V11.1 (Paul 2026-04-28) — hide Navbar quand on est dans un thread
+  // /messages sur mobile. Pattern Instagram/iMessage : la conversation
+  // prend tout l'espace, le back-arrow du thread suffit pour revenir.
+  // L'event 'km:thread-mobile-open' est dispatch par /messages/page.tsx
+  // quand convActive est set en mobile.
+  const [threadOpen, setThreadOpen] = useState(false)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    function onThread(e: Event) {
+      setThreadOpen((e as CustomEvent).detail?.open === true)
+    }
+    window.addEventListener("km:thread-mobile-open", onThread)
+    return () => window.removeEventListener("km:thread-mobile-open", onThread)
+  }, [])
+
   // Focus le bouton close a l'ouverture pour les utilisateurs clavier
   // (a11y : leur permet d'ouvrir avec espace/enter sur le burger puis de
   // refermer avec espace/enter ou Esc sans tab-search).
@@ -276,7 +291,7 @@ export default function Navbar() {
   }
 
   return (
-    <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: isSmall ? "0 16px" : "0 48px", background: km.white, borderBottom: `1px solid ${km.line}`, position: "sticky", top: 0, zIndex: 10000, height: 72, boxShadow: "0 1px 8px rgba(0,0,0,0.05)" }}>
+    <nav style={{ display: threadOpen && isSmall ? "none" : "flex", justifyContent: "space-between", alignItems: "center", padding: isSmall ? "0 16px" : "0 48px", background: km.white, borderBottom: `1px solid ${km.line}`, position: "sticky", top: 0, zIndex: 10000, height: 72, boxShadow: "0 1px 8px rgba(0,0,0,0.05)" }}>
 
       {/* Logo */}
       <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
