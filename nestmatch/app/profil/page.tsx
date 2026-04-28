@@ -12,6 +12,20 @@ import Tooltip from "../components/Tooltip"
 
 // Composants HORS du composant principal pour éviter le bug de focus
 import { Toggle, Sec, F } from "../components/FormHelpers"
+// V8 (Paul 2026-04-28) — design system local mirror de /dossier pour
+// homogeneiser visuellement les 2 onglets du hub Critères/Dossier.
+import {
+  T,
+  TOKENS,
+  DossierHero,
+  DossierScoreCard,
+  DossierSection,
+  DossierField,
+  DossierToggle,
+  DossierChip,
+  DossierSaveBtn,
+  dossierInputStyle,
+} from "./dossierTheme"
 import { calculerCompletudeProfil } from "../../lib/profilCompleteness"
 import { km, KMButton } from "../components/ui/km"
 
@@ -430,38 +444,69 @@ function Profil() {
   )
   if (!session) return null
 
-  const inp: any = { width: "100%", padding: "11px 14px", border: `1px solid ${km.line}`, borderRadius: 10, fontSize: 16, outline: "none", boxSizing: "border-box", fontFamily: "inherit", background: km.white }
-  const sel: any = { ...inp, background: km.white }
+  const inp: any = dossierInputStyle(isMobile)
+  const sel: any = { ...inp, background: T.white }
+
+  // V8 — saveBar state pour cosmetique du bouton DossierSaveBtn
+  const saveBarState: "idle" | "saving" | "saved" = saving ? "saving" : saved ? "saved" : "idle"
 
   return (
-    <main style={{ minHeight: "100vh", background: km.beige, fontFamily: "'DM Sans', sans-serif" }}>
+    <main style={TOKENS.main}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,500&display=swap');`}</style>
 
-      {/* V4.8 — padding tablette adapte (24px) pour eviter que le contenu
-          colle au bord ou que les cards soient compressees. Mobile inchange,
-          desktop large garde 48px. */}
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 16px" : "clamp(24px, 5vw, 48px)" }}>
+      <div style={TOKENS.container(isMobile)}>
 
-        <div style={{ background: km.white, border: `1px solid ${km.line}`, borderRadius: 20, padding: isMobile ? "20px 18px" : 32, marginBottom: 20, display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "space-between", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 16 : 0, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 14 : 24 }}>
-            {(photoCustom || session.user?.image)
-              ? <img src={photoCustom || session.user?.image || ""} alt="p" referrerPolicy="no-referrer" style={{ width: isMobile ? 52 : 72, height: isMobile ? 52 : 72, borderRadius: "50%", objectFit: "cover" }} />
-              : <div style={{ width: isMobile ? 52 : 72, height: isMobile ? 52 : 72, borderRadius: "50%", background: km.ink, display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? 20 : 28, color: km.white, fontWeight: 600, fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic" }}>{session.user?.name?.[0]}</div>
+        {/* V8 — Hero editorial style /dossier : eyebrow + rule + meta + grand
+            titre Fraunces avec accent italic. Score card a droite reprend le
+            visuel /dossier. Remplace l'ancien header avatar + nom dans une
+            card tristement pleine. */}
+        {!proprietaireActive && (
+          <DossierHero
+            isMobile={isMobile}
+            eyebrow="Mon profil"
+            metaRight={session.user?.email}
+            title={session.user?.name?.split(" ")[0] || "Bienvenue"}
+            titleAccent={(
+              <>vos critères<br />de recherche.</>
+            )}
+            subtitle="Définissez ce que vous cherchez vraiment. Plus c'est précis, mieux on matche les annonces qui collent à votre vie."
+            rightSlot={
+              <DossierScoreCard
+                isMobile={isMobile}
+                eyebrow="Complétude critères"
+                number={scoreCompletion}
+                suffix="%"
+                label={scoreCompletion === 100 ? "Profil complet — vous maximisez vos chances." : `${manquants.length} champ${manquants.length > 1 ? "s" : ""} manquant${manquants.length > 1 ? "s" : ""}`}
+                alert={scoreCompletion < 50 ? {
+                  title: "Profil à compléter",
+                  body: "Un profil incomplet réduit la qualité du matching et masque certaines annonces.",
+                  tone: "warn",
+                } : undefined}
+              />
             }
-            <div>
-              <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 6px" }}>Mon profil</p>
-              <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: isMobile ? 24 : 32, letterSpacing: "-0.5px", color: km.ink, margin: 0 }}>{session.user?.name}</h1>
-              <p style={{ color: km.muted, marginTop: 4, fontSize: isMobile ? 13 : 14 }}>{session.user?.email}</p>
-              <span style={{ background: km.successBg, color: km.successText, border: `1px solid ${km.successLine}`, padding: "4px 12px", borderRadius: 999, fontSize: 10, fontWeight: 700, marginTop: 10, display: "inline-flex", alignItems: "center", gap: 6, textTransform: "uppercase", letterSpacing: "1.2px" }}>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
-                Compte vérifié
-              </span>
+          />
+        )}
+
+        {/* Proprio : header simple, on garde le pattern card car il y a peu
+            de contenu (CTA dashboard / publier). */}
+        {proprietaireActive && (
+          <div style={{ background: T.white, border: `1px solid ${T.line}`, borderRadius: 20, padding: isMobile ? "20px 18px" : 32, marginBottom: 20, display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "space-between", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 16 : 0, boxShadow: "0 1px 0 #ebe4d6" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 14 : 24 }}>
+              {(photoCustom || session.user?.image)
+                ? <img src={photoCustom || session.user?.image || ""} alt="p" referrerPolicy="no-referrer" style={{ width: isMobile ? 52 : 72, height: isMobile ? 52 : 72, borderRadius: "50%", objectFit: "cover" }} />
+                : <div style={{ width: isMobile ? 52 : 72, height: isMobile ? 52 : 72, borderRadius: "50%", background: T.ink, display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? 20 : 28, color: T.white, fontWeight: 600, fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic" }}>{session.user?.name?.[0]}</div>
+              }
+              <div>
+                <p style={{ fontSize: 10, fontWeight: 700, color: T.soft, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 6px" }}>Mon profil</p>
+                <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: isMobile ? 24 : 32, letterSpacing: "-0.5px", color: T.ink, margin: 0 }}>{session.user?.name}</h1>
+                <p style={{ color: T.meta, marginTop: 4, fontSize: isMobile ? 13 : 14 }}>{session.user?.email}</p>
+              </div>
             </div>
+            <a href="/proprietaire" style={{ background: T.ink, color: T.white, padding: "10px 22px", borderRadius: 999, textDecoration: "none", fontWeight: 600, fontSize: 11, textAlign: "center", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+              Mes biens →
+            </a>
           </div>
-          <a href={proprietaireActive ? "/proprietaire" : "/annonces"} style={{ background: km.ink, color: km.white, padding: "10px 22px", borderRadius: 999, textDecoration: "none", fontWeight: 600, fontSize: 11, textAlign: "center", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-            {proprietaireActive ? "Mes biens →" : "Voir les annonces →"}
-          </a>
-        </div>
+        )}
 
         {/* Nav onglets unifiée — 5 onglets symétriques avec /parametres :
             Préférences (page courante = /profil) + 4 liens vers /parametres?tab=…
@@ -538,17 +583,14 @@ function Profil() {
           ))}
         </nav>
 
-        {/* V6.3 (Paul 2026-04-28) — Hub tabs : Mes critères / Mon dossier.
-            Le user a flag "la difference entre profil et dossier n'est pas
-            claire". Ces 2 tabs visualisent l'unification. /profil reste
-            l'onglet actif (critères + équipements). /dossier conserve son
-            design pixel-perfect — on link vers la route inchangee. */}
+        {/* V6.3 + V8 — Hub tabs Critères / Dossier alignees dossier-style. */}
         {!proprietaireActive && (
           <div style={{
             display: "flex",
             gap: 0,
-            marginBottom: 20,
-            borderBottom: `1px solid ${km.line}`,
+            marginTop: 28,
+            marginBottom: 24,
+            borderBottom: `1px solid ${T.line}`,
             overflowX: "auto",
           }}>
             <span
@@ -557,13 +599,13 @@ function Profil() {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
-                padding: "12px 18px 14px",
-                color: km.ink,
+                padding: "14px 22px 16px",
+                color: T.ink,
                 fontSize: 14,
                 fontWeight: 700,
                 fontFamily: "inherit",
                 whiteSpace: "nowrap",
-                borderBottom: `2px solid ${km.ink}`,
+                borderBottom: `2px solid ${T.ink}`,
                 marginBottom: -1,
               }}
             >
@@ -574,7 +616,7 @@ function Profil() {
                 <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
               </svg>
               Mes critères
-              <span style={{ marginLeft: 4, padding: "1px 8px", borderRadius: 999, background: km.beige, fontSize: 10, fontWeight: 700, color: scoreColor }}>{scoreCompletion}%</span>
+              <span style={{ marginLeft: 4, padding: "1px 8px", borderRadius: 999, background: T.mutedBg, fontSize: 10, fontWeight: 700, color: scoreColor, border: `1px solid ${T.line}` }}>{scoreCompletion}%</span>
             </span>
             <Link
               href="/dossier"
@@ -582,8 +624,8 @@ function Profil() {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
-                padding: "12px 18px 14px",
-                color: km.muted,
+                padding: "14px 22px 16px",
+                color: T.soft,
                 fontSize: 14,
                 fontWeight: 500,
                 fontFamily: "inherit",
@@ -635,21 +677,13 @@ function Profil() {
           </div>
         )}
 
-        {/* Locataire : Score de complétion — inline uniquement si viewport étroit
-            (< 1280px). Sur desktop large, la card va dans l'aside sticky droit. */}
-        {!proprietaireActive && !wideAside && (
-          <CompletionCard
-            scoreCompletion={scoreCompletion}
-            scoreColor={scoreColor}
-            manquants={manquants}
-          />
-        )}
+        {/* V8 — la CompletionCard inline est supprimee : le score est deja dans
+            le hero (DossierScoreCard a droite). Plus besoin de doublon. */}
 
-        {/* Lien discret « Reprendre la configuration guidée » pour les profils 20–80 %
-            (le CTA plein bouton est déjà affiché dans le score card si <= 20). */}
+        {/* Lien discret « Reprendre la configuration guidée » pour les profils 20–80 %. */}
         {!proprietaireActive && scoreCompletion > 20 && scoreCompletion < 100 && (
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-            <a href="/profil/creer" style={{ fontSize: 11, fontWeight: 700, color: km.ink, textDecoration: "underline", textUnderlineOffset: 4, textTransform: "uppercase", letterSpacing: "1.2px" }}>
+            <a href="/profil/creer" style={{ fontSize: 11, fontWeight: 700, color: T.ink, textDecoration: "underline", textUnderlineOffset: 4, textTransform: "uppercase", letterSpacing: "1.2px" }}>
               Reprendre la configuration guidée →
             </a>
           </div>
@@ -662,22 +696,29 @@ function Profil() {
             placée juste avant les sections. */}
         <ProfilTOC active={activeSection} isMobile={isMobile} />
 
-        <Sec
+        {/* V8 — column flex avec gap 20 entre sections, comme /dossier body. */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+        <DossierSection
           id="criteres"
-          t="Mes critères de recherche"
-          footer={<SectionSaveBtn sectionId="criteres" saving={savingSection === "criteres"} onSave={() => saveSection("criteres")} />}
+          isMobile={isMobile}
+          num="01"
+          kicker="Critères"
+          subtitle="Lieu, budget, surface"
+          title="Mes critères de recherche"
+          footer={<DossierSaveBtn state={savingSection === "criteres" ? "saving" : "idle"} onClick={() => saveSection("criteres")}>{savingSection === "criteres" ? "Enregistrement…" : "Enregistrer cette section"}</DossierSaveBtn>}
         >
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
-            <F l={<>Ville souhaitée <Tooltip text="Choisissez une ville dans la liste. Elle sera utilisée pour centrer la carte et matcher les annonces. Tapez pour filtrer les suggestions." /></>}>
+            <DossierField label={<>Ville souhaitée <Tooltip text="Choisissez une ville dans la liste. Elle sera utilisée pour centrer la carte et matcher les annonces. Tapez pour filtrer les suggestions." /></>}>
               <CityAutocomplete value={form.ville_souhaitee} onChange={v => setForm(f => ({ ...f, ville_souhaitee: v }))} placeholder="Commencez à taper..." />
-            </F>
-            <F l={<>Mode de localisation <Tooltip text="Strict : seules les annonces dans votre ville exacte s'affichent. Souple : les villes voisines sont aussi visibles, avec un score ajusté." /></>}>
+            </DossierField>
+            <DossierField label={<>Mode de localisation <Tooltip text="Strict : seules les annonces dans votre ville exacte s'affichent. Souple : les villes voisines sont aussi visibles, avec un score ajusté." /></>}>
               <select style={sel} value={form.mode_localisation} onChange={set("mode_localisation")}>
                 <option value="souple">Souple — autres villes visibles</option>
                 <option value="strict">Strict — uniquement ma ville</option>
               </select>
-            </F>
-            <F l="Type de quartier">
+            </DossierField>
+            <DossierField label="Type de quartier">
               <select style={sel} value={form.type_quartier} onChange={set("type_quartier")}>
                 <option value="">Peu importe</option>
                 <option value="centre-ville">Centre-ville</option>
@@ -689,61 +730,68 @@ function Profil() {
                 <option value="calme">Calme</option>
                 <option value="anime">Animé</option>
               </select>
-            </F>
-            <F l="Budget min (€/mois)"><input style={inp} type="number" value={form.budget_min} onChange={set("budget_min")} placeholder="600" /></F>
-            <F l="Budget max (€/mois)"><input style={inp} type="number" value={form.budget_max} onChange={set("budget_max")} placeholder="1200" /></F>
-            <F l="Surface min (m²)"><input style={inp} type="number" value={form.surface_min} onChange={set("surface_min")} placeholder="30" /></F>
-            <F l="Surface max (m²)"><input style={inp} type="number" value={form.surface_max} onChange={set("surface_max")} placeholder="80" /></F>
-            <F l="Pièces minimum">
+            </DossierField>
+            <DossierField label="Budget min (€/mois)"><input style={inp} type="number" value={form.budget_min} onChange={set("budget_min")} placeholder="600" /></DossierField>
+            <DossierField label="Budget max (€/mois)"><input style={inp} type="number" value={form.budget_max} onChange={set("budget_max")} placeholder="1200" /></DossierField>
+            <DossierField label="Surface min (m²)"><input style={inp} type="number" value={form.surface_min} onChange={set("surface_min")} placeholder="30" /></DossierField>
+            <DossierField label="Surface max (m²)"><input style={inp} type="number" value={form.surface_max} onChange={set("surface_max")} placeholder="80" /></DossierField>
+            <DossierField label="Pièces minimum">
               <select style={sel} value={form.pieces_min} onChange={set("pieces_min")}>{["1","2","3","4","5+"].map(v=><option key={v}>{v}</option>)}</select>
-            </F>
-            <F l="Chambres minimum">
+            </DossierField>
+            <DossierField label="Chambres minimum">
               <select style={sel} value={form.chambres_min} onChange={set("chambres_min")}>{["0","1","2","3","4+"].map(v=><option key={v}>{v}</option>)}</select>
-            </F>
-            <F l={<>DPE minimum accepté <Tooltip text="Le Diagnostic de Performance Énergétique classe un logement de A (très économe) à G (très énergivore). Choisir D signifie que vous refusez les classes E, F, G (logements considérés passoires thermiques)." /></>}>
+            </DossierField>
+            <DossierField label={<>DPE minimum accepté <Tooltip text="Le Diagnostic de Performance Énergétique classe un logement de A (très économe) à G (très énergivore). Choisir D signifie que vous refusez les classes E, F, G (logements considérés passoires thermiques)." /></>}>
               <select style={sel} value={form.dpe_min} onChange={set("dpe_min")}>{["A","B","C","D","E","F","G"].map(v=><option key={v}>{v}</option>)}</select>
-            </F>
-            <F l={<>Type de bail <Tooltip text="Longue durée : bail classique 3 ans (ou 1 an meublé). Courte durée : bail saisonnier. Bail mobilité : 1 à 10 mois pour étudiants/salariés en mission. Colocation : bail partagé entre plusieurs locataires." /></>}>
+            </DossierField>
+            <DossierField label={<>Type de bail <Tooltip text="Longue durée : bail classique 3 ans (ou 1 an meublé). Courte durée : bail saisonnier. Bail mobilité : 1 à 10 mois pour étudiants/salariés en mission. Colocation : bail partagé entre plusieurs locataires." /></>}>
               <select style={sel} value={form.type_bail} onChange={set("type_bail")}>{["longue durée","courte durée","bail mobilité","colocation"].map(v=><option key={v}>{v}</option>)}</select>
-            </F>
+            </DossierField>
           </div>
-          <Toggle label="Rez-de-chaussée accepté" k="rez_de_chaussee_ok" toggles={toggles} setToggles={setToggles} />
-          <Toggle
-            label={`Filtrer strictement sur le DPE ${form.dpe_min}`}
-            k="dpe_min_actif"
-            toggles={toggles}
-            setToggles={setToggles}
-          />
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 18 }}>
+            <DossierToggle
+              checked={!!toggles.rez_de_chaussee_ok}
+              onChange={v => setToggles(t => ({ ...t, rez_de_chaussee_ok: v }))}
+              label="Rez-de-chaussée accepté"
+              subText="Si désactivé, les annonces au RDC ne sont pas affichées."
+            />
+            <DossierToggle
+              checked={!!toggles.dpe_min_actif}
+              onChange={v => setToggles(t => ({ ...t, dpe_min_actif: v }))}
+              label={`Filtrer strictement sur le DPE ${form.dpe_min}`}
+              subText="Si activé, les annonces avec un DPE pire que votre minimum sont exclues. Sinon, juste un score réduit."
+            />
+          </div>
 
-          {/* V2.6 — Tolerance budget slider 0..50% */}
-          <div style={{ marginTop: 18, padding: "16px 18px", background: km.beige, border: `1px solid ${km.line}`, borderRadius: 14 }}>
+          {/* Tolerance budget slider — restyle dossier-aligned */}
+          <div style={{ marginTop: 18, padding: "16px 18px", background: T.mutedBg, border: `1px solid ${T.hairline}`, borderRadius: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8, gap: 8, flexWrap: "wrap" }}>
-              <label style={{ fontSize: 13, fontWeight: 600, color: km.ink }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>
                 Tolérance budget
-                <Tooltip text="Pourcentage au-delà du budget max où une annonce reste visible. À 20%, une annonce à 1200 € passe le filtre si votre budget est 1000. À 0%, plus aucun dépassement n'est toléré." />
+                <Tooltip text="Pourcentage au-delà du budget max où une annonce reste visible. À 10%, une annonce à 1100 € passe le filtre si votre budget est 1000. À 0%, plus aucun dépassement n'est toléré." />
               </label>
-              <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 18, color: km.ink }}>
-                {form.tolerance_budget_pct || "20"}%
+              <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontFeatureSettings: "'ss01'", fontStyle: "italic", fontWeight: 400, fontSize: 22, color: T.ink, fontVariantNumeric: "tabular-nums" }}>
+                {form.tolerance_budget_pct || "10"}%
               </span>
             </div>
             <input
               type="range" min={0} max={50} step={5}
-              value={form.tolerance_budget_pct || "20"}
+              value={form.tolerance_budget_pct || "10"}
               onChange={set("tolerance_budget_pct")}
-              style={{ width: "100%", accentColor: km.ink }}
+              style={{ width: "100%", accentColor: T.ink }}
               aria-label="Tolerance budget en pourcentage"
             />
-            <p style={{ fontSize: 11, color: km.muted, marginTop: 6, lineHeight: 1.5 }}>
+            <p style={{ fontSize: 11, color: T.soft, marginTop: 6, lineHeight: 1.5 }}>
               {form.budget_max
-                ? `Annonces visibles jusqu'à ${Math.round(parseInt(form.budget_max) * (1 + parseInt(form.tolerance_budget_pct || "20") / 100))} €/mois.`
+                ? `Annonces visibles jusqu'à ${Math.round(parseInt(form.budget_max) * (1 + parseInt(form.tolerance_budget_pct || "10") / 100))} €/mois.`
                 : "Définissez un budget max pour voir l'effet."}
             </p>
           </div>
 
-          {/* V2.6 — Rayon de recherche en km */}
-          <div style={{ marginTop: 14, padding: "16px 18px", background: km.beige, border: `1px solid ${km.line}`, borderRadius: 14 }}>
+          {/* Rayon de recherche en km — restyle */}
+          <div style={{ marginTop: 14, padding: "16px 18px", background: T.mutedBg, border: `1px solid ${T.hairline}`, borderRadius: 14 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, gap: 12, flexWrap: "wrap" }}>
-              <label style={{ fontSize: 13, fontWeight: 600, color: km.ink }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>
                 Rayon de recherche
                 <Tooltip text="Distance maximale (en km) depuis votre ville souhaitée. Les annonces dans ce rayon reçoivent un bonus selon leur proximité. Laisser vide pour ne pas en tenir compte." />
               </label>
@@ -756,10 +804,10 @@ function Profil() {
                   style={{ ...inp, width: 90, padding: "8px 12px", textAlign: "right" }}
                   aria-label="Rayon recherche km"
                 />
-                <span style={{ fontSize: 13, color: km.muted }}>km</span>
+                <span style={{ fontSize: 13, color: T.soft }}>km</span>
               </div>
             </div>
-            <p style={{ fontSize: 11, color: km.muted, marginTop: 4, lineHeight: 1.5 }}>
+            <p style={{ fontSize: 11, color: T.soft, marginTop: 4, lineHeight: 1.5 }}>
               Bonus de pertinence pour les annonces proches de la ville souhaitée.
               {form.ville_souhaitee && form.rayon_recherche_km && ` Ex. : annonces jusqu'à ${form.rayon_recherche_km} km de ${form.ville_souhaitee}.`}
             </p>
@@ -779,53 +827,50 @@ function Profil() {
             onClear={() => { setQuartierLat(null); setQuartierLng(null); setQuartierLabel(null) }}
             isMobile={isMobile}
           />
-        </Sec>
+        </DossierSection>
 
-        <Sec
+        <DossierSection
           id="equipements"
-          t="Équipements souhaités"
-          footer={<SectionSaveBtn sectionId="equipements" saving={savingSection === "equipements"} onSave={() => saveSection("equipements")} />}
+          isMobile={isMobile}
+          num="02"
+          kicker="Équipements"
+          subtitle="Meublé, animaux, équipements"
+          title="Équipements souhaités"
+          footer={<DossierSaveBtn state={savingSection === "equipements" ? "saving" : "idle"} onClick={() => saveSection("equipements")}>{savingSection === "equipements" ? "Enregistrement…" : "Enregistrer cette section"}</DossierSaveBtn>}
         >
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 13, fontWeight: 600, color: "#111", display: "block", marginBottom: 8 }}>
-              Meublé <span style={{ fontWeight: 400, color: "#6b7280" }}>— ta préférence</span>
+          {/* Meublé tri-state — chips DossierChip */}
+          <div style={{ marginBottom: 18 }}>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.soft, marginBottom: 8, textTransform: "uppercase", letterSpacing: "1.4px" }}>
+              Meublé — votre préférence
             </label>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {[
                 { v: "peu_importe", l: "Peu importe" },
                 { v: "oui", l: "Meublé" },
                 { v: "non", l: "Non meublé" },
-              ].map(opt => {
-                const active = form.meuble_pref === opt.v
-                return (
-                  <button
-                    key={opt.v}
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, meuble_pref: opt.v }))}
-                    style={{
-                      padding: "9px 16px",
-                      borderRadius: 999,
-                      border: `1.5px solid ${active ? "#111" : "#e5e7eb"}`,
-                      background: active ? "#111" : "white",
-                      color: active ? "white" : "#111",
-                      fontWeight: 600,
-                      fontSize: 13,
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                    }}
-                  >
-                    {opt.l}
-                  </button>
-                )
-              })}
+              ].map(opt => (
+                <DossierChip
+                  key={opt.v}
+                  active={form.meuble_pref === opt.v}
+                  onClick={() => setForm(f => ({ ...f, meuble_pref: opt.v }))}
+                >
+                  {opt.l}
+                </DossierChip>
+              ))}
             </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginBottom: 12 }}>
-            <Toggle label="Animaux acceptés" k="animaux" toggles={toggles} setToggles={setToggles} />
+
+          <div style={{ marginBottom: 14 }}>
+            <DossierToggle
+              checked={!!toggles.animaux}
+              onChange={v => setToggles(t => ({ ...t, animaux: v }))}
+              label="Animaux acceptés"
+              subText="Cochez si vous avez un animal — les annonces refusant les animaux seront exclues."
+            />
           </div>
 
           {/* V2.6 — picker tri-state par equipement (indispensable / souhaité / indifférent / refusé) */}
-          <p style={{ fontSize: 11, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "16px 0 10px" }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: T.soft, textTransform: "uppercase", letterSpacing: "1.4px", margin: "20px 0 12px" }}>
             Mes équipements souhaités
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -839,69 +884,103 @@ function Profil() {
               />
             ))}
           </div>
-        </Sec>
+        </DossierSection>
 
-        <Sec
+        <DossierSection
           id="proximites"
-          t="Proximités souhaitées"
-          footer={<SectionSaveBtn sectionId="proximites" saving={savingSection === "proximites"} onSave={() => saveSection("proximites")} />}
+          isMobile={isMobile}
+          num="03"
+          kicker="Environnement"
+          subtitle="Transports, écoles, commerces"
+          title="Proximités souhaitées"
+          footer={<DossierSaveBtn state={savingSection === "proximites" ? "saving" : "idle"} onClick={() => saveSection("proximites")}>{savingSection === "proximites" ? "Enregistrement…" : "Enregistrer cette section"}</DossierSaveBtn>}
         >
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
-            <Toggle label="Proche métro/bus" k="proximite_metro" toggles={toggles} setToggles={setToggles} />
-            <Toggle label="Proche écoles" k="proximite_ecole" toggles={toggles} setToggles={setToggles} />
-            <Toggle label="Proche commerces" k="proximite_commerces" toggles={toggles} setToggles={setToggles} />
-            <Toggle label="Proche parcs" k="proximite_parcs" toggles={toggles} setToggles={setToggles} />
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10 }}>
+            <DossierToggle checked={!!toggles.proximite_metro} onChange={v => setToggles(t => ({ ...t, proximite_metro: v }))} label="Proche métro/bus" />
+            <DossierToggle checked={!!toggles.proximite_ecole} onChange={v => setToggles(t => ({ ...t, proximite_ecole: v }))} label="Proche écoles" />
+            <DossierToggle checked={!!toggles.proximite_commerces} onChange={v => setToggles(t => ({ ...t, proximite_commerces: v }))} label="Proche commerces" />
+            <DossierToggle checked={!!toggles.proximite_parcs} onChange={v => setToggles(t => ({ ...t, proximite_parcs: v }))} label="Proche parcs" />
           </div>
-        </Sec>
+        </DossierSection>
 
-        <Sec
+        <DossierSection
           id="profil-locataire"
-          t="Mon profil locataire"
-          footer={<SectionSaveBtn sectionId="profil-locataire" saving={savingSection === "profil-locataire"} onSave={() => saveSection("profil-locataire")} />}
+          isMobile={isMobile}
+          num="04"
+          kicker="Locataire"
+          subtitle="Profil, revenus, garant"
+          title="Mon profil locataire"
+          footer={<DossierSaveBtn state={savingSection === "profil-locataire" ? "saving" : "idle"} onClick={() => saveSection("profil-locataire")}>{savingSection === "profil-locataire" ? "Enregistrement…" : "Enregistrer cette section"}</DossierSaveBtn>}
         >
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
-            <F l={<>Situation professionnelle <Tooltip text="Votre situation actuelle. Les propriétaires y sont sensibles : CDI et fonctionnaire rassurent le plus, mais un garant solide peut compenser un CDD, une situation d'indépendant ou d'étudiant." /></>}>
+            <DossierField label={<>Situation professionnelle <Tooltip text="Votre situation actuelle. Les propriétaires y sont sensibles : CDI et fonctionnaire rassurent le plus, mais un garant solide peut compenser un CDD, une situation d'indépendant ou d'étudiant." /></>}>
               <select style={sel} value={form.situation_pro} onChange={set("situation_pro")}>{["CDI","CDD","indépendant","étudiant","retraité","fonctionnaire","autre"].map(v=><option key={v}>{v}</option>)}</select>
-            </F>
-            <F l="Revenus mensuels nets (€)"><input style={inp} type="number" value={form.revenus_mensuels} onChange={set("revenus_mensuels")} placeholder="2500" /></F>
-            <F l="Profil">
+            </DossierField>
+            <DossierField label="Revenus mensuels nets (€)"><input style={inp} type="number" value={form.revenus_mensuels} onChange={set("revenus_mensuels")} placeholder="2500" /></DossierField>
+            <DossierField label="Profil">
               <select style={sel} value={form.profil_locataire} onChange={set("profil_locataire")}>{["étudiant","jeune actif","couple","famille","senior","colocation"].map(v=><option key={v}>{v}</option>)}</select>
-            </F>
-            <F l="Nombre d'occupants">
+            </DossierField>
+            <DossierField label="Nombre d'occupants">
               <select style={sel} value={form.nb_occupants} onChange={set("nb_occupants")}>{["1","2","3","4","5+"].map(v=><option key={v}>{v}</option>)}</select>
-            </F>
-            <F l={<>Type de garant <Tooltip text="Personnel : un proche (parent, etc.) se porte caution. Visale : garantie gratuite d'Action Logement, très acceptée par les propriétaires. Caution bancaire : somme bloquée en banque. Avoir un garant multiplie vos chances d'obtenir un logement." /></>}>
+            </DossierField>
+            <DossierField label={<>Type de garant <Tooltip text="Personnel : un proche (parent, etc.) se porte caution. Visale : garantie gratuite d'Action Logement, très acceptée par les propriétaires. Caution bancaire : somme bloquée en banque. Avoir un garant multiplie vos chances d'obtenir un logement." /></>}>
               <select style={sel} value={form.type_garant} onChange={set("type_garant")}>{["","personnel","organisme (Visale)","caution bancaire","aucun"].map(v=><option key={v} value={v}>{v||"Non renseigné"}</option>)}</select>
-            </F>
+            </DossierField>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginTop: 8 }}>
-            <Toggle label="Fumeur" k="fumeur" toggles={toggles} setToggles={setToggles} />
+          <div style={{ marginTop: 14 }}>
+            <DossierToggle
+              checked={!!toggles.fumeur}
+              onChange={v => setToggles(t => ({ ...t, fumeur: v }))}
+              label="Fumeur"
+              subText="Honnête vis-à-vis du propriétaire — certaines annonces refusent les fumeurs."
+            />
           </div>
-          <p style={{ fontSize: 12, color: km.muted, marginTop: 16, lineHeight: 1.6 }}>
-            Le champ <strong>Profil</strong> (notamment l'option &quot;couple&quot;) est utilisé uniquement pour améliorer la pertinence du matching et l&apos;évaluation de votre dossier. Il n&apos;est jamais partagé sans votre accord, conformément au RGPD.
+          <p style={{ fontSize: 12, color: T.soft, marginTop: 18, lineHeight: 1.6 }}>
+            Le champ <strong>Profil</strong> (notamment l&apos;option « couple ») est utilisé uniquement pour améliorer la pertinence du matching et l&apos;évaluation de votre dossier. Il n&apos;est jamais partagé sans votre accord, conformément au RGPD.
           </p>
-        </Sec>
+        </DossierSection>
 
-        {erreur && <div style={{ background: km.errBg, color: km.errText, border: `1px solid ${km.errLine}`, padding: "12px 20px", borderRadius: 14, marginBottom: 16, fontSize: 14 }}>{erreur}</div>}
+        </div>{/* V8 — close column flex sections */}
 
-        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-          {saved && (
+        {erreur && (
+          <div style={{ background: "#FEECEC", color: "#b91c1c", border: "1px solid #F4C9C9", padding: "12px 20px", borderRadius: 14, marginTop: 20, fontSize: 14 }}>
+            {erreur}
+          </div>
+        )}
+
+        {/* V8 — Save bar finale alignee dossier : grande pill noire pleine largeur
+            sur mobile, alignee a droite sur desktop. Etat saving/saved cohérent. */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap", marginTop: 24 }}>
+          {saved ? (
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: km.successText, fontWeight: 600, fontSize: 13 }}>
-                <span aria-hidden style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: km.successBg, border: `1px solid ${km.successLine}`, color: km.successText }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, color: T.success, fontWeight: 600, fontSize: 13 }}>
+                <span aria-hidden style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "50%", background: T.successBg, border: `1px solid ${T.successLine}`, color: T.success }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 </span>
-                Sauvegardé !
+                Sauvegardé.
               </span>
-              <a href="/annonces" style={{ background: km.ink, color: km.white, padding: "10px 22px", borderRadius: 999, textDecoration: "none", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.3px" }}>
-                Voir les annonces →
-              </a>
             </div>
-          )}
-          <button onClick={sauvegarder} disabled={saving}
-            style={{ background: km.ink, color: km.white, border: "none", borderRadius: 999, padding: "12px 28px", fontWeight: 600, fontSize: 12, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1, textTransform: "uppercase", letterSpacing: "0.3px", fontFamily: "inherit" }}>
-            {saving ? "Sauvegarde…" : "Sauvegarder mes préférences"}
-          </button>
+          ) : <span />}
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <a href="/annonces" style={{ background: T.white, color: T.ink, border: `1px solid ${T.line}`, padding: "12px 22px", borderRadius: 999, textDecoration: "none", fontWeight: 600, fontSize: 13, fontFamily: "inherit" }}>
+              Voir les annonces →
+            </a>
+            <button onClick={sauvegarder} disabled={saving}
+              style={{
+                background: saveBarState === "saving" ? "#8a8477" : saveBarState === "saved" ? T.success : T.ink,
+                color: T.white,
+                border: "none",
+                borderRadius: 999,
+                padding: "12px 28px",
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: saving ? "not-allowed" : "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+                whiteSpace: "nowrap",
+              }}>
+              {saving ? "Enregistrement…" : "Enregistrer mes préférences"}
+            </button>
+          </div>
         </div>
         </>}
 
@@ -970,51 +1049,72 @@ function ProfilTOC({ active, isMobile }: { active: string; isMobile: boolean }) 
   }, [])
 
   if (isMobile || !wide) {
-    // Barre horizontale scrollable (mobile + tablette).
+    // V8 — Barre horizontale scrollable (mobile + tablette) restyle dossier.
     return (
       <nav aria-label="Sommaire du profil" style={{
-        position: "sticky", top: 72, zIndex: 10, background: km.beige,
-        padding: "10px 0 12px", marginBottom: 14,
+        position: "sticky", top: 72, zIndex: 10, background: T.bg,
+        padding: "10px 0 14px", marginBottom: 16,
         overflowX: "auto", whiteSpace: "nowrap",
-        borderBottom: `1px solid ${km.line}`,
+        borderBottom: `1px solid ${T.hairline}`,
       }}>
         <div style={{ display: "inline-flex", gap: 8, padding: "0 2px" }}>
-          {SECTIONS.map(s => {
+          {SECTIONS.map((s, idx) => {
             const on = s.id === active
             return (
               <a key={s.id} href={`#${s.id}`} style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
                 padding: "7px 14px", borderRadius: 999,
-                border: `1px solid ${on ? km.ink : km.line}`,
-                background: on ? km.ink : km.white, color: on ? km.white : km.ink,
-                textDecoration: "none", fontSize: 11, fontWeight: 600,
-                textTransform: "uppercase", letterSpacing: "1.1px",
-              }}>{s.label}</a>
+                border: `1px solid ${on ? T.ink : T.line}`,
+                background: on ? T.ink : T.white, color: on ? T.white : T.ink,
+                textDecoration: "none", fontSize: 12, fontWeight: 600,
+              }}>
+                <span style={{ fontStyle: "italic", fontFamily: "'Fraunces', Georgia, serif", fontSize: 11, color: on ? "rgba(255,255,255,0.6)" : T.soft }}>
+                  {String(idx + 1).padStart(2, "0")}
+                </span>
+                {s.label}
+              </a>
             )
           })}
         </div>
       </nav>
     )
   }
+  // V8 — TOC desktop sticky restyle dossier : numerotation italic + label.
   return (
     <aside aria-label="Sommaire du profil" style={{
       position: "fixed", left: "calc(50vw - 610px)", top: 120,
-      width: 200, zIndex: 5,
+      width: 220, zIndex: 5,
       padding: "18px 0",
     }}>
-      <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 12px 14px" }}>Sommaire</p>
+      <p style={{ fontSize: 10, fontWeight: 700, color: T.soft, textTransform: "uppercase", letterSpacing: "1.8px", margin: "0 12px 14px" }}>
+        Sommaire
+      </p>
       <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-        {SECTIONS.map(s => {
+        {SECTIONS.map((s, idx) => {
           const on = s.id === active
           return (
             <li key={s.id}>
               <a href={`#${s.id}`} style={{
-                display: "block", padding: "10px 14px", borderRadius: 10,
-                fontSize: 12.5, fontWeight: on ? 700 : 500,
-                color: on ? km.ink : km.muted,
-                background: on ? km.beige : "transparent",
-                borderLeft: `2px solid ${on ? km.ink : "transparent"}`,
-                textDecoration: "none", transition: "all 160ms",
-              }}>{s.label}</a>
+                display: "grid",
+                gridTemplateColumns: "auto 1fr",
+                alignItems: "center",
+                gap: 10,
+                padding: on ? "12px 16px" : "10px 12px",
+                borderRadius: 10,
+                background: on ? T.ink : "transparent",
+                color: on ? T.white : "inherit",
+                borderLeft: on ? `2px solid ${T.ink}` : "2px solid transparent",
+                marginLeft: on ? -2 : 0,
+                textDecoration: "none",
+                transition: "background 200ms ease, color 200ms ease, padding 200ms ease",
+              }}>
+                <span style={{ fontSize: 13, fontStyle: "italic", color: on ? T.white : T.soft, fontVariantNumeric: "tabular-nums", fontWeight: 400, fontFamily: "'Fraunces', Georgia, serif" }}>
+                  {String(idx + 1).padStart(2, "0")}
+                </span>
+                <span style={{ fontSize: 14, fontWeight: on ? 700 : 500, color: on ? T.white : T.meta }}>
+                  {s.label}
+                </span>
+              </a>
             </li>
           )
         })}
@@ -1053,19 +1153,21 @@ function EquipementPreferencePicker({
     { v: "indifferent",   l: "Indifférent",   tone: "#9ca3af" },
     { v: "refuse",        l: "Refusé",        tone: "#dc2626" },
   ]
+  // V8 — restyle dossier-aligned : carte mutedBg + radius 14, pickers en
+  // chips DossierChip-like avec tone different par etat.
   return (
     <div style={{
       display: "flex",
       flexDirection: stack ? "column" : "row",
       alignItems: stack ? "stretch" : "center",
       justifyContent: "space-between",
-      gap: stack ? 8 : 12,
-      padding: "10px 12px",
-      borderRadius: 12,
-      border: `1px solid ${km.line}`,
-      background: km.white,
+      gap: stack ? 10 : 14,
+      padding: "14px 16px",
+      borderRadius: 14,
+      border: `1px solid ${T.hairline}`,
+      background: T.mutedBg,
     }}>
-      <span style={{ fontSize: 13, fontWeight: 600, color: km.ink }}>{label}</span>
+      <span style={{ fontSize: 13.5, fontWeight: 600, color: T.ink, letterSpacing: "-0.1px" }}>{label}</span>
       <div role="radiogroup" aria-label={`Préférence ${label}`} style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
         {opts.map(opt => {
           const active = value === opt.v
@@ -1077,12 +1179,12 @@ function EquipementPreferencePicker({
               aria-checked={active}
               onClick={() => onChange(opt.v)}
               style={{
-                padding: "7px 12px",
+                padding: "8px 13px",
                 borderRadius: 999,
-                border: `1.5px solid ${active ? opt.tone : km.line}`,
-                background: active ? opt.tone : "transparent",
-                color: active ? "#fff" : km.ink,
-                fontSize: 11.5,
+                border: `1px solid ${active ? opt.tone : T.line}`,
+                background: active ? opt.tone : T.white,
+                color: active ? "#fff" : "#333",
+                fontSize: 12.5,
                 fontWeight: 600,
                 cursor: "pointer",
                 fontFamily: "inherit",
@@ -1095,12 +1197,10 @@ function EquipementPreferencePicker({
           )
         })}
       </div>
-      {/* V7 chantier 1 — disclaimer si Indispensable selected. Le user doit
-          comprendre qu'il filtre dur (annonces sans cet equip ne s'afficheront
-          PAS, plus juste un score reduit). */}
+      {/* V7 chantier 1 — disclaimer si Indispensable selected */}
       {value === "indispensable" && (
-        <p style={{ fontSize: 11, color: "#a16207", margin: "0", lineHeight: 1.45, fontStyle: "italic" as const, gridColumn: stack ? "1" : undefined }}>
-          ⚠ <strong>Indispensable</strong> = on ne te montre PAS les annonces sans {label.toLowerCase()}.
+        <p style={{ fontSize: 11.5, color: T.warning, margin: "0", lineHeight: 1.45, fontStyle: "italic" as const, width: stack ? "100%" : undefined, fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
+          ⚠ <strong style={{ fontStyle: "normal", fontFamily: "'DM Sans', sans-serif", fontWeight: 700 }}>Indispensable</strong> = on ne te montre pas les annonces sans {label.toLowerCase()}.
         </p>
       )}
     </div>
