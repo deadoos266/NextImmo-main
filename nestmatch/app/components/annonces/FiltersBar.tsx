@@ -66,10 +66,15 @@ export interface FiltersBarProps {
   // document (mode grille, mobile) et qu'il faut rester sous la Navbar.
   stickyTop?: number
 
-  // V14c (Paul 2026-04-28) — pill "Mes critères" toujours visible côté
-  // locataire, placée à gauche dans la barre. Si null/undefined, pas
-  // de pill (proprio par exemple). Cliquer = navigue vers href donné.
+  // V14c + V15c (Paul 2026-04-28) — pill "Mes critères" toujours visible
+  // côté locataire, placée à gauche dans la barre. Si null/undefined,
+  // pas de pill (proprio par exemple). Morphée en "Réinitialiser mes
+  // critères" quand divergence détectée + onResetToProfil fourni :
+  // - default state → pill noire "Mes critères" → click /profil
+  // - divergence state → pill ambre "Réinitialiser mes critères" → click reset
   monProfilHref?: string | null
+  isDivergent?: boolean
+  onResetToProfil?: () => void
 }
 
 function IconFilters() {
@@ -131,6 +136,8 @@ export default function FiltersBar(props: FiltersBarProps) {
     loading,
     stickyTop = 0,
     monProfilHref,
+    isDivergent,
+    onResetToProfil,
   } = props
 
   const showInlinePopovers = !isMobile // desktop + tablette
@@ -271,36 +278,72 @@ export default function FiltersBar(props: FiltersBarProps) {
         </>
       )}
 
-      {/* V14c (Paul 2026-04-28) — Pill "Mes critères" — toujours visible
-          côté locataire connecté, accès direct au /profil. Placée à gauche
-          juste avant "Filtres" pour être impossible à rater. */}
+      {/* V14c + V15c (Paul 2026-04-28) — Pill morph "Mes critères" ↔
+          "Réinitialiser mes critères". À gauche en tête de la FiltersBar.
+          - default → pill noire icone user → /profil
+          - divergence → pill ambre icone refresh → reset URL aux valeurs profil
+          Animation transition 200ms entre les 2 états. */}
       {monProfilHref && (
-        <Link
-          href={monProfilHref}
-          aria-label="Mon profil locataire — éditer mes critères"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            background: "#111",
-            color: "#fff",
-            border: "1px solid #111",
-            borderRadius: 999,
-            padding: "8px 14px",
-            fontSize: 13,
-            fontWeight: 700,
-            textDecoration: "none",
-            fontFamily: "inherit",
-            whiteSpace: "nowrap",
-            flexShrink: 0,
-          }}
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </svg>
-          {isMobile ? "Profil" : "Mes critères"}
-        </Link>
+        isDivergent && onResetToProfil ? (
+          <button
+            type="button"
+            onClick={onResetToProfil}
+            aria-label="Réinitialiser les filtres à mes critères du profil"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              background: "#a16207",
+              color: "#fff",
+              border: "1px solid #a16207",
+              borderRadius: 999,
+              padding: "8px 14px",
+              fontSize: 13,
+              fontWeight: 700,
+              fontFamily: "inherit",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+              cursor: "pointer",
+              transition: "background 200ms, border-color 200ms",
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+              <path d="M21 3v5h-5" />
+              <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+              <path d="M3 21v-5h5" />
+            </svg>
+            {isMobile ? "Réinit." : "Réinitialiser mes critères"}
+          </button>
+        ) : (
+          <Link
+            href={monProfilHref}
+            aria-label="Mon profil locataire — éditer mes critères"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              background: "#111",
+              color: "#fff",
+              border: "1px solid #111",
+              borderRadius: 999,
+              padding: "8px 14px",
+              fontSize: 13,
+              fontWeight: 700,
+              textDecoration: "none",
+              fontFamily: "inherit",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+              transition: "background 200ms, border-color 200ms",
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            {isMobile ? "Profil" : "Mes critères"}
+          </Link>
+        )
       )}
 
       {/* Bouton Filtres (centre gauche) */}

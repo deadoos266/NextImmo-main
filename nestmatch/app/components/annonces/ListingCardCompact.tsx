@@ -273,20 +273,28 @@ export default function ListingCardCompact({
             </h3>
           </div>
           <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: "#111", fontVariantNumeric: "tabular-nums" as const, letterSpacing: "-0.3px", lineHeight: 1 }}>
-              {annonce.prix?.toLocaleString("fr-FR") ?? "—"}<span style={{ fontWeight: 500, fontSize: 13 }}> €</span>
-              {/* V15.1 (Paul 2026-04-28) — suffixe CC (charges comprises) si
-                  charges saisies, sinon HC (hors charges). Affichage explicite
-                  pour matcher la convention immo française. */}
-              {charges !== null && charges > 0 ? (
-                <span style={{ fontWeight: 700, fontSize: 10, color: "#15803d", marginLeft: 4, letterSpacing: "0.3px" }} title="Charges comprises">CC</span>
-              ) : (
-                <span style={{ fontWeight: 600, fontSize: 10, color: "#8a8477", marginLeft: 4, letterSpacing: "0.3px" }} title="Hors charges">HC</span>
-              )}
-            </div>
-            {charges !== null && charges > 0 && (
-              <div style={{ fontSize: 9.5, color: "#8a8477", marginTop: 2 }}>dont {charges} € ch.</div>
-            )}
+            {/* V15.1 + V15c (Paul 2026-04-28) — CC = Charges Comprises =
+                loyer + charges. User : "je veux que le prix soit marqué CC".
+                Si charges saisies : afficher (loyer + charges) € CC.
+                Si pas de charges : afficher loyer € CC (assumé all-inclusive). */}
+            {(() => {
+              const loyer = Number(annonce.prix ?? 0)
+              const ch = Number(charges ?? 0)
+              const total = loyer + (ch > 0 ? ch : 0)
+              return (
+                <>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "#111", fontVariantNumeric: "tabular-nums" as const, letterSpacing: "-0.3px", lineHeight: 1 }}>
+                    {total > 0 ? total.toLocaleString("fr-FR") : "—"}<span style={{ fontWeight: 500, fontSize: 13 }}> €</span>
+                    <span style={{ fontWeight: 700, fontSize: 10, color: "#15803d", marginLeft: 4, letterSpacing: "0.3px" }} title="Charges comprises (loyer + charges)">CC</span>
+                  </div>
+                  {ch > 0 && (
+                    <div style={{ fontSize: 9.5, color: "#8a8477", marginTop: 2 }}>
+                      {loyer.toLocaleString("fr-FR")} € + {ch} € ch.
+                    </div>
+                  )}
+                </>
+              )
+            })()}
           </div>
         </div>
 

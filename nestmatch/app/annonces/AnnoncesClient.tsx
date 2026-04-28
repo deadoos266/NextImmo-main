@@ -17,6 +17,7 @@ import EmptyState from "../components/ui/EmptyState"
 import AnnonceSkeleton from "../components/ui/AnnonceSkeleton"
 import FiltersBar from "../components/annonces/FiltersBar"
 import Link from "next/link"
+import CityAutocomplete from "../components/CityAutocomplete"
 import ListingCardSearch from "../components/annonces/ListingCardSearch"
 import ListingCardCompact from "../components/annonces/ListingCardCompact"
 import BandeauDossier from "../components/annonces/BandeauDossier"
@@ -676,10 +677,22 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   }, [annonces, geocoded])
 
   // ── Filtre global (sans mapBounds) — partagé avec les markers carte
+  // V16 (Paul 2026-04-28) — filtre ville effectif : si l'URL a `?ville=`,
+  // on l'utilise. Sinon fallback sur `profil.ville_souhaitee` quand
+  // user logged-in avec mode_localisation=strict (default). Garantit qu'un
+  // user qui veut Paris ne voit jamais Marseille même si l'auto-apply
+  // V14.1 n'a pas tourné (premier load, profil sans criteres, etc.).
+  const profilVilleStrict = !isProprietaire && profil
+    && (profil.mode_localisation !== "souple")
+    && typeof profil.ville_souhaitee === "string"
+    ? String(profil.ville_souhaitee).trim()
+    : ""
+  const villeFilter = activeVille.trim() || profilVilleStrict
+
   const annoncesForMap = annoncesEnrichies.filter(a => {
     // Ville : match accent-insensible + code postal dept fallback (75/69/13)
-    if (activeVille) {
-      const q = activeVille.trim()
+    if (villeFilter) {
+      const q = villeFilter
       const isCP = /^\d{5}$/.test(q)
       if (isCP) {
         const depart = q.slice(0, 2)
@@ -1247,87 +1260,9 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           </div>
         )}
 
-        {/* V14c + V15.4 (Paul 2026-04-28) — bandeau "filtres modifiés" :
-            visible quand divergence URL vs profil OU params actifs. Affiché
-            sur TOUS les modes (mobile/desktop/carte) — V14c le cachait sur
-            isDesktopListCarte + isMobileV5+showMap, ce qui rendait la pill
-            Réinitialiser invisible côté user. Maintenant inconditionnel. */}
-        {!isProprietaire && profil && (() => {
-          const diverge = paramsDivergeFromProfil(initialSearchParams, profil)
-          const hasParams = !!initialSearchParams && Object.keys(initialSearchParams).some(k => {
-            const v = initialSearchParams[k]; return v && (!Array.isArray(v) || v.length > 0)
-          })
-          const wantedQs = buildProfilParams(profil).toString()
-          const profilHasCriteres = wantedQs.length > 0
-          // Affiche le bandeau seulement si quelque chose à dire :
-          // - divergence (= reset utile) OU hasParams (= clear utile).
-          if (!diverge && !hasParams) return null
-          const label = diverge
-            ? "Filtres modifiés par rapport à tes critères"
-            : "Tes critères sont appliqués"
-          return (
-            <div style={{
-              display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
-              padding: isMobileV5 ? "10px 12px" : "10px 16px",
-              margin: isMobileV5 ? "8px 0 0" : "10px 0 0",
-              background: diverge ? "#FBF6EA" : "#FAF8F3",
-              border: `1px solid ${diverge ? "#EADFC6" : "#EAE6DF"}`,
-              borderRadius: 14,
-              fontSize: 12.5,
-              color: "#111",
-            }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
-                <span aria-hidden style={{
-                  width: 22, height: 22, borderRadius: "50%",
-                  background: "#fff", border: `1px solid ${diverge ? "#EADFC6" : "#EAE6DF"}`,
-                  display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={diverge ? "#a16207" : "#111"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    {diverge
-                      ? <><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M21 3v5h-5" /></>
-                      : <><polyline points="20 6 9 17 4 12" /></>
-                    }
-                  </svg>
-                </span>
-                <span style={{ fontWeight: 600 }}>{label}</span>
-              </span>
-              <span style={{ display: "inline-flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                {diverge && profilHasCriteres && (
-                  <button
-                    type="button"
-                    onClick={() => router.replace(`/annonces?${wantedQs}`, { scroll: false })}
-                    style={{
-                      background: "#111", color: "#fff", border: "none",
-                      borderRadius: 999, padding: "7px 16px",
-                      fontSize: 12, fontWeight: 700, fontFamily: "inherit",
-                      cursor: "pointer", whiteSpace: "nowrap",
-                      WebkitTapHighlightColor: "transparent",
-                    }}
-                  >
-                    Réinitialiser à mes préférences
-                  </button>
-                )}
-                {hasParams && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAutoAppliedBannerOpen(false)
-                      router.replace("/annonces", { scroll: false })
-                    }}
-                    style={{
-                      background: "transparent", border: "1px solid #EAE6DF", color: "#111",
-                      borderRadius: 999, padding: "7px 14px",
-                      fontSize: 12, fontWeight: 600, fontFamily: "inherit",
-                      cursor: "pointer", whiteSpace: "nowrap",
-                    }}
-                  >
-                    Voir toutes ↺
-                  </button>
-                )}
-              </span>
-            </div>
-          )
-        })()}
+        {/* V14c bandeau retiré V15c (Paul 2026-04-28) — la pill morph
+            "Mes critères ↔ Réinitialiser" dans la FiltersBar / QuickFiltersRow
+            remplit ce rôle. User feedback : "qu'une seule pill qui morph". */}
 
         {/* ── FiltersBar sticky — MASQUÉ en mode liste+carte desktop ET en
             mobile mode carte (Paul 2026-04-27 sur retour user — la barre
@@ -1355,6 +1290,12 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           loading={loading}
           stickyTop={!gridMode && !isSmall ? 0 : NAVBAR_HEIGHT}
           monProfilHref={!isProprietaire ? "/profil" : null}
+          isDivergent={!isProprietaire && !!profil && paramsDivergeFromProfil(initialSearchParams, profil)}
+          onResetToProfil={() => {
+            if (!profil) return
+            const qs = buildProfilParams(profil).toString()
+            router.replace(qs ? `/annonces?${qs}` : "/annonces", { scroll: false })
+          }}
         />}
 
         {/* ── Toggle Liste/Carte tablette (640-767) — mobile <768 utilise FAB */}
@@ -1637,6 +1578,12 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                     onOpenAllFilters={() => setModalOpen(true)}
                     showMatchOption={showMatchOption}
                     monProfilHref={!isProprietaire ? "/profil" : null}
+                    isDivergent={!isProprietaire && !!profil && paramsDivergeFromProfil(initialSearchParams, profil)}
+                    onResetToProfil={() => {
+                      if (!profil) return
+                      const qs = buildProfilParams(profil).toString()
+                      router.replace(qs ? `/annonces?${qs}` : "/annonces", { scroll: false })
+                    }}
                   />
 
                   {/* Ligne 3 : Tri segmented control fidèle handoff (3) l. 666-678 */}
@@ -1998,6 +1945,8 @@ function QuickFiltersRow({
   onOpenAllFilters,
   showMatchOption,
   monProfilHref,
+  isDivergent,
+  onResetToProfil,
 }: {
   scoreMin: number
   setScoreMin: (v: number) => void
@@ -2009,6 +1958,8 @@ function QuickFiltersRow({
   onOpenAllFilters: () => void
   showMatchOption: boolean
   monProfilHref?: string | null
+  isDivergent?: boolean
+  onResetToProfil?: () => void
 }) {
   const [active, setActive] = useState<QuickKind>(null)
   const matchValue = scoreMin > 0 ? `≥ ${scoreMin} %` : "Toutes"
@@ -2017,36 +1968,54 @@ function QuickFiltersRow({
 
   return (
     <div style={{ position: "relative" }}>
-      {/* V15.3 (Paul 2026-04-28) — Pill "Mes critères" toujours visible
-          au-dessus des chips QuickFilter sur mobile/carte. Bulletproof :
-          rendu inconditionnel quand monProfilHref est passé (locataire
-          connecté). User feedback rounds 1-3 : ce bouton disparaissait. */}
+      {/* V15.3 + V15c (Paul 2026-04-28) — Pill morph "Mes critères" ↔
+          "Réinitialiser mes critères" en haut des chips QuickFilter mobile. */}
       {monProfilHref && (
-        <Link
-          href={monProfilHref}
-          aria-label="Mon profil locataire — éditer mes critères"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            background: "#111",
-            color: "#fff",
-            borderRadius: 999,
-            padding: "8px 16px",
-            fontSize: 12.5,
-            fontWeight: 700,
-            textDecoration: "none",
-            fontFamily: "inherit",
-            whiteSpace: "nowrap",
-            marginBottom: 8,
-          }}
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </svg>
-          Mes critères
-        </Link>
+        isDivergent && onResetToProfil ? (
+          <button
+            type="button"
+            onClick={onResetToProfil}
+            aria-label="Réinitialiser les filtres à mes critères du profil"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              background: "#a16207", color: "#fff",
+              border: "1px solid #a16207",
+              borderRadius: 999, padding: "8px 16px",
+              fontSize: 12.5, fontWeight: 700,
+              fontFamily: "inherit", cursor: "pointer",
+              whiteSpace: "nowrap", marginBottom: 8,
+              transition: "background 200ms",
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+              <path d="M21 3v5h-5" />
+              <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+              <path d="M3 21v-5h5" />
+            </svg>
+            Réinitialiser mes critères
+          </button>
+        ) : (
+          <Link
+            href={monProfilHref}
+            aria-label="Mon profil locataire — éditer mes critères"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              background: "#111", color: "#fff",
+              borderRadius: 999, padding: "8px 16px",
+              fontSize: 12.5, fontWeight: 700,
+              textDecoration: "none", fontFamily: "inherit",
+              whiteSpace: "nowrap", marginBottom: 8,
+              transition: "background 200ms",
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            Mes critères
+          </Link>
+        )
       )}
       <div style={{ display: "grid", gridTemplateColumns: showMatchOption ? "repeat(3, 1fr)" : "repeat(2, 1fr)", gap: 6, marginBottom: 6 }}>
         {showMatchOption && (
@@ -2158,35 +2127,20 @@ function QuickFiltersRow({
       )}
 
       {active === "lieu" && (
-        <QuickFilterPopover onClose={() => setActive(null)} title="Ville ou code postal">
-          <input
-            autoFocus
-            defaultValue={activeVille}
-            placeholder="Ex. Paris 10e, 75010, Lyon…"
-            onKeyDown={e => {
-              if (e.key === "Enter") {
-                onChangeVille((e.target as HTMLInputElement).value)
-                setActive(null)
-              }
+        <QuickFilterPopover onClose={() => setActive(null)} title="Cherche une ville">
+          {/* V15c.1 (Paul 2026-04-28) — remplacement du plain input par
+              CityAutocomplete (le mobile/carte popup proposait juste "Tape
+              Entrée pour valider" sans aucune suggestion). Maintenant fetch
+              geo.api.gouv.fr et propose les communes triées par population. */}
+          <CityAutocomplete
+            value={activeVille}
+            onChange={(v) => {
+              onChangeVille(v)
+              setActive(null)
             }}
-            onBlur={e => {
-              const v = (e.target as HTMLInputElement).value
-              if (v !== activeVille) onChangeVille(v)
-            }}
-            style={{
-              width: "100%",
-              padding: "10px 14px",
-              borderRadius: 10,
-              border: `1px solid ${km.line}`,
-              fontFamily: "inherit",
-              fontSize: 13,
-              outline: "none",
-              background: km.beige,
-              color: km.ink,
-              boxSizing: "border-box",
-            }}
+            placeholder="Ex. Paris, Lyon, Marseille…"
+            style={{ background: km.beige }}
           />
-          <div style={{ fontSize: 11, color: "#8a8477", marginTop: 8 }}>Tape Entrée pour valider.</div>
         </QuickFilterPopover>
       )}
 

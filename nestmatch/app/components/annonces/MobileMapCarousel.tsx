@@ -654,23 +654,26 @@ function CardContent({
       {/* Contenu sous la photo : prix prominent + ville + titre + specs */}
       <div style={{ padding: "14px 16px 12px", display: "flex", flexDirection: "column", gap: 4 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
-          <span style={{
-            fontSize: 22,
-            fontWeight: 800,
-            color: km.ink,
-            fontVariantNumeric: "tabular-nums",
-            letterSpacing: "-0.4px",
-            lineHeight: 1.1,
-          }}>
-            {annonce.prix?.toLocaleString("fr-FR") ?? "—"} €
-            {/* V15b (Paul 2026-04-28) — suffixe CC/HC selon charges saisies. */}
-            {typeof (annonce as { charges?: number | null }).charges === "number" && ((annonce as { charges?: number | null }).charges ?? 0) > 0 ? (
-              <span style={{ fontWeight: 700, fontSize: 11, color: "#15803d", marginLeft: 4, letterSpacing: "0.3px" }} title="Charges comprises">CC</span>
-            ) : (
-              <span style={{ fontWeight: 600, fontSize: 11, color: "#8a8477", marginLeft: 4, letterSpacing: "0.3px" }} title="Hors charges">HC</span>
-            )}
-            <span style={{ fontWeight: 500, color: "#8a8477", fontSize: 12, marginLeft: 2 }}>/mois</span>
-          </span>
+          {(() => {
+            // V15c (Paul 2026-04-28) — CC = loyer + charges. Pas de HC.
+            const loyer = Number(annonce.prix ?? 0)
+            const ch = Number((annonce as { charges?: number | null }).charges ?? 0)
+            const total = loyer + (ch > 0 ? ch : 0)
+            return (
+              <span style={{
+                fontSize: 22,
+                fontWeight: 800,
+                color: km.ink,
+                fontVariantNumeric: "tabular-nums",
+                letterSpacing: "-0.4px",
+                lineHeight: 1.1,
+              }}>
+                {total > 0 ? total.toLocaleString("fr-FR") : "—"} €
+                <span style={{ fontWeight: 700, fontSize: 11, color: "#15803d", marginLeft: 4, letterSpacing: "0.3px" }} title="Charges comprises (loyer + charges)">CC</span>
+                <span style={{ fontWeight: 500, color: "#8a8477", fontSize: 12, marginLeft: 2 }}>/mois</span>
+              </span>
+            )
+          })()}
           {loc && (
             <span style={{
               fontSize: 10,

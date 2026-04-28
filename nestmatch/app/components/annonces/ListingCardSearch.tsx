@@ -460,25 +460,28 @@ export default function ListingCardSearch({
               </span>
             )}
           </span>
-          <span
-            style={{
-              fontWeight: 700,
-              color: "#111",
-              fontSize: 13.5,
-              fontVariantNumeric: "tabular-nums",
-              letterSpacing: "-0.2px",
-              flexShrink: 0,
-            }}
-          >
-            {annonce.prix?.toLocaleString("fr-FR") ?? "—"} €
-            {/* V15.1 (Paul 2026-04-28) — suffixe CC/HC selon charges saisies */}
-            {typeof (annonce as { charges?: number | null }).charges === "number" && ((annonce as { charges?: number | null }).charges ?? 0) > 0 ? (
-              <span style={{ fontWeight: 700, fontSize: 9.5, color: "#15803d", marginLeft: 3, letterSpacing: "0.3px" }} title="Charges comprises">CC</span>
-            ) : (
-              <span style={{ fontWeight: 600, fontSize: 9.5, color: "#8a8477", marginLeft: 3, letterSpacing: "0.3px" }} title="Hors charges">HC</span>
-            )}
-            <span style={{ fontWeight: 400, color: "#8a8477", fontSize: 10 }}>/mois</span>
-          </span>
+          {(() => {
+            // V15c (Paul 2026-04-28) — CC = loyer + charges. Pas de HC.
+            const loyer = Number(annonce.prix ?? 0)
+            const ch = Number((annonce as { charges?: number | null }).charges ?? 0)
+            const total = loyer + (ch > 0 ? ch : 0)
+            return (
+              <span
+                style={{
+                  fontWeight: 700,
+                  color: "#111",
+                  fontSize: 13.5,
+                  fontVariantNumeric: "tabular-nums",
+                  letterSpacing: "-0.2px",
+                  flexShrink: 0,
+                }}
+              >
+                {total > 0 ? total.toLocaleString("fr-FR") : "—"} €
+                <span style={{ fontWeight: 700, fontSize: 9.5, color: "#15803d", marginLeft: 3, letterSpacing: "0.3px" }} title="Charges comprises (loyer + charges)">CC</span>
+                <span style={{ fontWeight: 400, color: "#8a8477", fontSize: 10 }}>/mois</span>
+              </span>
+            )
+          })()}
         </div>
 
         {/* V15.2 (Paul 2026-04-28) — match% pill repositionné sous la ligne

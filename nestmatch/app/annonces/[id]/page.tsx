@@ -910,12 +910,25 @@ export default async function Annonce({ params }: any) {
               }}
             >
               <div style={{ marginBottom: 16 }}>
-                <span style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-0.8px" }}>{annonce.prix} €</span>
-                <span style={{ color: "#888", fontSize: 15, marginLeft: 4 }}>/mois</span>
-                <p style={{ color: "#666", fontSize: 13, marginTop: 4 }}>
-                  {annonce.charges ? `Charges ${annonce.charges} € · ` : "Charges comprises · "}
-                  Caution {annonce.caution || annonce.prix} €
-                </p>
+                {/* V15c (Paul 2026-04-28) — Prix CC = loyer + charges total. */}
+                {(() => {
+                  const loyer = Number(annonce.prix ?? 0)
+                  const ch = Number(annonce.charges ?? 0)
+                  const total = loyer + (ch > 0 ? ch : 0)
+                  return (
+                    <>
+                      <span style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-0.8px" }}>{total > 0 ? total.toLocaleString("fr-FR") : "—"} €</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#15803d", marginLeft: 6, letterSpacing: "0.3px" }} title="Charges comprises (loyer + charges)">CC</span>
+                      <span style={{ color: "#888", fontSize: 15, marginLeft: 6 }}>/mois</span>
+                      <p style={{ color: "#666", fontSize: 13, marginTop: 4 }}>
+                        {ch > 0
+                          ? `Loyer ${loyer.toLocaleString("fr-FR")} € + ${ch} € charges · `
+                          : "Charges comprises · "}
+                        Caution {annonce.caution || annonce.prix} €
+                      </p>
+                    </>
+                  )
+                })()}
                 {formatPublieIlYA(annonce.created_at) && (
                   <p style={{ color: "#8a8477", fontSize: 11, marginTop: 8, marginBottom: 0, textTransform: "uppercase", letterSpacing: "0.6px" }}>
                     {formatPublieIlYA(annonce.created_at)}
