@@ -185,6 +185,16 @@ function Profil() {
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth")
+    // V51.1 — /profil fait doublon pour les proprios (juste un hub avec
+    // 2 redirects vers /proprietaire). User : "cette page fait doublon
+    // pour les proprio je pense qu'il faudrait l'enlever seulement pour
+    // les proprio". On redirige vers /proprietaire si proprio actif.
+    // Le toggle role dans avatar dropdown reste accessible — si l'user
+    // bascule en mode locataire, il atterrit sur /profil avec ses critères.
+    if (status === "authenticated" && proprietaireActive) {
+      router.replace("/proprietaire")
+      return
+    }
     if (session?.user?.email) {
       // V29.B — /api/profil/me (RLS Phase 5)
       fetch("/api/profil/me", { cache: "no-store" })
@@ -256,7 +266,7 @@ function Profil() {
           setDataLoaded(true)
         })
     }
-  }, [session, status, router])
+  }, [session, status, router, proprietaireActive])
 
   const set = (key: string) => (e: any) => setForm(f => ({ ...f, [key]: e.target.value }))
 
