@@ -288,9 +288,12 @@ export default function EdlPage() {
     }
     if (data) {
       setBien(data)
-      // Verifier que l'email locataire existe sur la plateforme
+      // V50.14 — vérifier l'inscription via `profils` (créé pour TOUS les
+      // users, OAuth ET credentials), pas `users` (seulement credentials).
+      // Avant, un locataire Google OAuth voyait : "Envoi impossible — pas
+      // encore inscrit". Cas reproduit user : keymatchimmo@gmail.com.
       if (data.locataire_email) {
-        const { count } = await supabase.from("users").select("id", { count: "exact", head: true }).eq("email", data.locataire_email.toLowerCase())
+        const { count } = await supabase.from("profils").select("email", { count: "exact", head: true }).eq("email", data.locataire_email.toLowerCase())
         setLocataireVerifie((count ?? 0) > 0)
       }
       if (!edl) {
@@ -765,7 +768,33 @@ export default function EdlPage() {
         ) : (
           <>
             {/* ─── EDITABLE MODE (brouillon / conteste) ─── */}
-            {/* Type */}
+            {/* V50.12 — Toggle Entrée/Sortie masqué quand contexte = post-bail
+                récent (pas de préavis donné, pas d'EDL précédent). User :
+                "ca propose de creer l'etat des lieux de sortie ou d'entrée
+                je trouve ca un peu con alors que le bail vient d'etre signé".
+                Logique :
+                - Pas d'EDL existant ET pas de préavis → forcément Entrée
+                  (le bail vient d'être signé, c'est l'EDL d'entrée).
+                - Sinon → toggle visible (cas EDL contesté ou préavis donné). */}
+            {(() => {
+              const aPreavis = !!(bien?.preavis_donne_par || bien?.preavis_date_envoi)
+              const isFirstEdlPostBail = !edlExistant && !aPreavis
+              if (isFirstEdlPostBail) {
+                return (
+                  <div style={cardS}>
+                    <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>État des lieux d'entrée</h2>
+                    <p style={{ fontSize: 12, color: "#8a8477", margin: "0 0 16px" }}>
+                      Le bail a été signé — voici l'EDL d'entrée. (L'EDL de sortie sera
+                      proposé en fin de bail, après préavis.)
+                    </p>
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
+                      <div><label style={lbl}>Date de l'etat des lieux</label><input style={inp} type="date" value={dateEdl} onChange={e => setDateEdl(e.target.value)} /></div>
+                      <div><label style={lbl}>Cles remises</label><input style={inp} value={cles} onChange={e => setCles(e.target.value)} /></div>
+                    </div>
+                  </div>
+                )
+              }
+              return (
             <div style={cardS}>
               <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 16 }}>Type d'etat des lieux</h2>
               <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
@@ -785,6 +814,8 @@ export default function EdlPage() {
                 <div><label style={lbl}>Cles remises</label><input style={inp} value={cles} onChange={e => setCles(e.target.value)} /></div>
               </div>
             </div>
+              )
+            })()}
 
             {/* Le Bailleur */}
             <div style={cardS}>
