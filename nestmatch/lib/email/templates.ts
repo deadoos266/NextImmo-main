@@ -565,3 +565,95 @@ Louer, sans intermédiaire.`
     text,
   }
 }
+
+/**
+ * V34.1 — Rappel proprio→locataire de signer un bail envoyé.
+ * Migré depuis /api/bail/relance (V32.6 inline → template rebrandé KeyMatch).
+ */
+export function bailRelanceLocataireTemplate(params: {
+  proprioName: string
+  bienTitre: string
+  ville: string | null
+  loyerCC: number
+  jours: number
+  signUrl: string
+}): { subject: string; html: string; text: string } {
+  const contexte = params.ville ? `${escapeHtml(params.bienTitre)} à ${escapeHtml(params.ville)}` : escapeHtml(params.bienTitre)
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      Rappel : votre bail attend votre signature
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Il y a <strong style="color:${PALETTE.text};">${params.jours} jour${params.jours > 1 ? "s" : ""}</strong>, ${escapeHtml(params.proprioName)} vous a envoyé le bail pour <strong style="color:${PALETTE.text};">${contexte}</strong>. Il n'est pas encore signé.
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 8px;">
+      <tr>
+        <td style="background:${PALETTE.bg};border-radius:12px;padding:14px 18px;">
+          <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:${PALETTE.textSubtle};text-transform:uppercase;letter-spacing:1px;">Loyer charges comprises</p>
+          <p style="margin:0;font-size:18px;font-weight:800;color:${PALETTE.text};">${params.loyerCC.toLocaleString("fr-FR")} €/mois</p>
+        </td>
+      </tr>
+    </table>
+    ${button(params.signUrl, "Signer le bail maintenant →")}
+    <p style="margin:18px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
+      Si vous avez changé d'avis ou si ce bail ne vous concerne plus, contactez votre propriétaire via la messagerie KeyMatch.
+    </p>
+  `
+  const html = wrap("Rappel : votre bail KeyMatch attend votre signature.", body, "bailrelancloc")
+  const text = `Rappel : votre bail KeyMatch attend votre signature.
+
+Il y a ${params.jours} jour${params.jours > 1 ? "s" : ""}, ${params.proprioName} vous a envoyé le bail pour ${params.bienTitre}${params.ville ? " à " + params.ville : ""}. Il n'est pas encore signé.
+
+Loyer CC : ${params.loyerCC.toLocaleString("fr-FR")} €/mois
+
+Signer le bail maintenant : ${params.signUrl}
+
+— L'équipe KeyMatch`
+  return {
+    subject: `Rappel : votre bail KeyMatch attend votre signature — ${params.bienTitre}`,
+    html,
+    text,
+  }
+}
+
+/**
+ * V34.1 — Rappel locataire→proprio (envoi du bail OU contresignature).
+ * Migré depuis /api/bail/relance-bailleur (V33.4 inline → template rebrandé).
+ */
+export function bailRelanceProprioTemplate(params: {
+  locataireName: string
+  bienTitre: string
+  ville: string | null
+  contexte: "envoi" | "contresignature"
+  jours: number
+  ctaUrl: string
+}): { subject: string; html: string; text: string } {
+  const ctxLabel = params.ville ? `${escapeHtml(params.bienTitre)} à ${escapeHtml(params.ville)}` : escapeHtml(params.bienTitre)
+  const intro = params.contexte === "envoi"
+    ? `<strong style="color:${PALETTE.text};">${escapeHtml(params.locataireName)}</strong> a accepté votre invitation pour <strong style="color:${PALETTE.text};">${ctxLabel}</strong> il y a ${params.jours} jour${params.jours > 1 ? "s" : ""} et attend que vous lui envoyiez le bail.`
+    : `<strong style="color:${PALETTE.text};">${escapeHtml(params.locataireName)}</strong> a signé le bail pour <strong style="color:${PALETTE.text};">${ctxLabel}</strong> il y a ${params.jours} jour${params.jours > 1 ? "s" : ""} et attend votre contresignature.`
+  const ctaLabel = params.contexte === "envoi" ? "Générer et envoyer le bail →" : "Voir le bail à signer →"
+  const subject = params.contexte === "envoi"
+    ? `Rappel : ${params.locataireName} attend le bail — ${params.bienTitre}`
+    : `Rappel : ${params.locataireName} attend votre contresignature — ${params.bienTitre}`
+
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      Votre locataire vous attend
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">${intro}</p>
+    ${button(params.ctaUrl, ctaLabel)}
+    <p style="margin:18px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
+      Vous recevez ce rappel parce que votre locataire l'a déclenché manuellement depuis son espace KeyMatch.
+    </p>
+  `
+  const html = wrap(`${params.locataireName} vous attend pour avancer sur le bail.`, body, "bailrelanceprop")
+  const text = `Rappel locataire :
+
+${intro.replace(/<[^>]+>/g, "")}
+
+Lien : ${params.ctaUrl}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}

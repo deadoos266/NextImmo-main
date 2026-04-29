@@ -25,48 +25,13 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { sendEmail } from "@/lib/email/resend"
+import { bailRelanceLocataireTemplate } from "@/lib/email/templates"
 
 const MIN_RELANCE_INTERVAL_MS = 24 * 60 * 60 * 1000 // 24h
 const J3_MS = 3 * 24 * 60 * 60 * 1000
 const J7_MS = 7 * 24 * 60 * 60 * 1000
 
-function buildEmail(params: {
-  proprioName: string
-  bienTitre: string
-  ville: string | null
-  loyerCC: number
-  jours: number
-  signUrl: string
-}): { subject: string; html: string; text: string } {
-  const contexte = params.ville ? `${params.bienTitre} à ${params.ville}` : params.bienTitre
-  const html = `<div style="font-family:'DM Sans',Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;background:#F7F4EF;color:#111;">
-  <h1 style="font-size:22px;font-weight:800;margin:0 0 12px;">Rappel : votre bail KeyMatch attend votre signature</h1>
-  <p style="margin:0 0 14px;line-height:1.6;color:#4b5563;">
-    Il y a ${params.jours} jours, <strong>${params.proprioName}</strong> vous a envoyé le bail pour <strong>${contexte}</strong>. Il n'est pas encore signé.
-  </p>
-  <p style="margin:0 0 18px;line-height:1.6;color:#4b5563;">
-    Loyer charges comprises : <strong>${params.loyerCC.toLocaleString("fr-FR")} €/mois</strong>.
-  </p>
-  <a href="${params.signUrl}" style="display:inline-block;background:#111;color:#fff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:700;">Signer le bail maintenant →</a>
-  <p style="margin:20px 0 0;font-size:12px;color:#9ca3af;line-height:1.5;">
-    Si vous avez changé d'avis ou si ce bail ne vous concerne plus, contactez votre propriétaire via la messagerie KeyMatch.
-  </p>
-</div>`
-  const text = `Rappel : votre bail KeyMatch attend votre signature.
-
-Il y a ${params.jours} jours, ${params.proprioName} vous a envoyé le bail pour ${contexte}. Il n'est pas encore signé.
-
-Loyer CC : ${params.loyerCC.toLocaleString("fr-FR")} €/mois
-
-Signer le bail maintenant : ${params.signUrl}
-
-— L'équipe KeyMatch`
-  return {
-    subject: `Rappel : votre bail KeyMatch attend votre signature — ${params.bienTitre}`,
-    html,
-    text,
-  }
-}
+// V34.1 — Template inline migré vers `bailRelanceLocataireTemplate` (rebrand KeyMatch).
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -145,7 +110,7 @@ export async function POST(req: NextRequest) {
   const proprioName =
     [proprioProfil?.prenom, proprioProfil?.nom].filter(Boolean).join(" ").trim() || propEmail
 
-  const tpl = buildEmail({
+  const tpl = bailRelanceLocataireTemplate({
     proprioName,
     bienTitre: annonce.titre || "Logement",
     ville: annonce.ville || null,

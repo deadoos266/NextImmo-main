@@ -22,40 +22,11 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { sendEmail } from "@/lib/email/resend"
+import { bailRelanceProprioTemplate } from "@/lib/email/templates"
 
 const MIN_RELANCE_INTERVAL_MS = 24 * 60 * 60 * 1000
 
-function buildEmail(params: {
-  locataireName: string
-  bienTitre: string
-  ville: string | null
-  contexte: "envoi" | "contresignature"
-  jours: number
-  baseUrl: string
-  annonceId: number
-}): { subject: string; html: string; text: string } {
-  const ctxLabel = params.ville ? `${params.bienTitre} à ${params.ville}` : params.bienTitre
-  const cta = params.contexte === "envoi"
-    ? `${params.baseUrl}/proprietaire/bail/${params.annonceId}`
-    : `${params.baseUrl}/messages?with=${encodeURIComponent("")}&annonce=${params.annonceId}`
-  const intro = params.contexte === "envoi"
-    ? `${params.locataireName} a accepté votre invitation pour <strong>${ctxLabel}</strong> il y a ${params.jours} jour${params.jours > 1 ? "s" : ""} et attend que vous lui envoyiez le bail.`
-    : `${params.locataireName} a signé le bail pour <strong>${ctxLabel}</strong> il y a ${params.jours} jour${params.jours > 1 ? "s" : ""} et attend votre contresignature.`
-  const subject = params.contexte === "envoi"
-    ? `Rappel : ${params.locataireName} attend le bail — ${params.bienTitre}`
-    : `Rappel : ${params.locataireName} attend votre contresignature — ${params.bienTitre}`
-
-  const html = `<div style="font-family:'DM Sans',Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;background:#F7F4EF;color:#111;">
-  <h1 style="font-size:22px;font-weight:800;margin:0 0 12px;">Votre locataire vous attend</h1>
-  <p style="margin:0 0 14px;line-height:1.6;color:#4b5563;">${intro}</p>
-  <a href="${cta}" style="display:inline-block;background:#111;color:#fff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:700;">${params.contexte === "envoi" ? "Générer et envoyer le bail →" : "Voir le bail à signer →"}</a>
-  <p style="margin:20px 0 0;font-size:12px;color:#9ca3af;line-height:1.5;">
-    Vous recevez ce rappel parce que votre locataire l'a déclenché manuellement depuis son espace KeyMatch.
-  </p>
-</div>`
-  const text = `Rappel locataire : ${intro.replace(/<[^>]+>/g, "")}\n\nLien : ${cta}\n\n— L'équipe KeyMatch`
-  return { subject, html, text }
-}
+// V34.1 — Template inline migré vers `bailRelanceProprioTemplate` (rebrand KeyMatch).
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -125,14 +96,16 @@ export async function POST(req: NextRequest) {
   const locataireName = [locProfil?.prenom, locProfil?.nom].filter(Boolean).join(" ").trim() || locEmail
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://keymatch-immo.fr"
-  const tpl = buildEmail({
+  const ctaUrl = contexte === "envoi"
+    ? `${baseUrl}/proprietaire/bail/${annonceId}`
+    : `${baseUrl}/messages?annonce=${annonceId}`
+  const tpl = bailRelanceProprioTemplate({
     locataireName,
     bienTitre: annonce.titre || "Logement",
     ville: annonce.ville || null,
     contexte,
     jours,
-    baseUrl,
-    annonceId,
+    ctaUrl,
   })
 
   const sendRes = await sendEmail({
