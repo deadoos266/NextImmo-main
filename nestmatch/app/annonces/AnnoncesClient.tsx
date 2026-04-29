@@ -617,12 +617,35 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   // V2.7 — profil effectif : merge profil DB + overrides URL pour tolerance/rayon.
   // Permet aux liens partages (?tolerance=10&rayon=30) de surcharger le profil
   // sans muter ce qu'on persiste cote /profil.
+  //
+  // V48 (Paul 2026-04-30) — l'URL `?ville=X` doit aussi override
+  // profil.ville_souhaitee. Avant : user avec profil ville_souhaitee=Paris
+  // strict + URL ?ville=Lyon → estExclu() lisait Paris depuis profilEffectif
+  // → toutes les annonces Lyon filtrées (0 résultat). Maintenant : si l'user
+  // a explicité une ville URL différente, on l'utilise comme nouvelle cible
+  // ET on garde mode_localisation strict (l'user VEUT spécifiquement cette
+  // ville, pas autre chose).
+  // Si ?override=all → on neutralise le mode strict pour vraiment tout voir.
+  const urlOverrideAll = spGet(initialSearchParams, "override") === "all"
   const profilEffectif = profil
-    ? {
-        ...profil,
-        ...(Number.isFinite(urlTolerance) && urlTolerance >= 0 ? { tolerance_budget_pct: urlTolerance } : {}),
-        ...(Number.isFinite(urlRayon) && urlRayon > 0 ? { rayon_recherche_km: urlRayon } : {}),
-      }
+    ? (() => {
+        const base: Record<string, unknown> = {
+          ...profil,
+          ...(Number.isFinite(urlTolerance) && urlTolerance >= 0 ? { tolerance_budget_pct: urlTolerance } : {}),
+          ...(Number.isFinite(urlRayon) && urlRayon > 0 ? { rayon_recherche_km: urlRayon } : {}),
+        }
+        // V48 — URL ville override profil.ville_souhaitee
+        const profilVille = typeof profil.ville_souhaitee === "string" ? profil.ville_souhaitee.trim() : ""
+        if (urlVille && urlVille.trim() && urlVille.trim().toLowerCase() !== profilVille.toLowerCase()) {
+          base.ville_souhaitee = urlVille.trim()
+          base.mode_localisation = "strict" // l'user VEUT spécifiquement cette ville
+        }
+        // V48 — override=all → mode souple (vraiment toutes les villes)
+        if (urlOverrideAll) {
+          base.mode_localisation = "souple"
+        }
+        return base
+      })()
     : null
 
   // V7 chantier 1 — count des Indispensables actifs sur le profil + escape
