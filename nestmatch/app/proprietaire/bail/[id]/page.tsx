@@ -21,7 +21,9 @@ import AvenantCard, { type Avenant } from "../../../components/bail/AvenantCard"
 import ProposerAvenantModal from "../../../components/bail/ProposerAvenantModal"
 import PreavisModal from "../../../components/bail/PreavisModal"
 import { fenetreIndexation, irlDernier, calculerNouveauLoyer } from "../../../../lib/irl"
-import { joursAvantFinPreavis } from "../../../../lib/preavis"
+import { joursAvantFinPreavis, LOCATAIRE_MOTIFS, PROPRIETAIRE_MOTIFS } from "../../../../lib/preavis"
+import { genererIrlPDF } from "../../../../lib/irlPDF"
+import { genererPreavisPDF } from "../../../../lib/preavisPDF"
 import HelpIcon, { PhoneHelpContent } from "../../../components/ui/HelpIcon"
 import AnnexeUploader from "../../../components/AnnexeUploader"
 import { formatNomComplet } from "../../../../lib/profilHelpers"
@@ -1265,9 +1267,31 @@ export default function BailPage() {
                       detail: {
                         type: "success",
                         title: "Loyer indexé sur l'IRL",
-                        body: `Nouveau loyer : ${json.nouveauLoyer?.toLocaleString("fr-FR")} € HC. Locataire notifié.`,
+                        body: `Nouveau loyer : ${json.nouveauLoyer?.toLocaleString("fr-FR")} € HC. Locataire notifié — PDF en téléchargement.`,
                       },
                     }))
+                    // V38.5 — auto-download PDF "Avis de revalorisation IRL"
+                    try {
+                      await genererIrlPDF({
+                        nomBailleur: form.nomBailleur || session?.user?.name || bien.proprietaire_email || "Bailleur",
+                        adresseBailleur: form.adresseBailleur || "",
+                        nomLocataire: form.nomLocataire || bien.locataire_email || "Locataire",
+                        emailLocataire: bien.locataire_email || "",
+                        titreBien: bien.titre || "Logement",
+                        adresseBien: bien.adresse || bien.titre || "",
+                        villeBien: bien.ville || "",
+                        ancienLoyerHC: ancienLoyer,
+                        nouveauLoyerHC: calc.nouveauLoyer,
+                        charges: Number(bien.charges) || 0,
+                        irlAncien,
+                        irlNouveau,
+                        trimestreAncien: `T? ?`,
+                        trimestreNouveau: irlDernier().trimestre,
+                        dateEffet: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString().slice(0, 10),
+                      })
+                    } catch (e) {
+                      console.warn("[indexer-irl] PDF download failed (non bloquant):", e)
+                    }
                     // refresh annonce dans le state local
                     void loadBien()
                   } finally {
@@ -1310,6 +1334,38 @@ export default function BailPage() {
                       « {bien.preavis_motif_detail} »
                     </p>
                   )}
+                  {/* V38.5 — Bouton download PDF lettre congé (audit V37 R37.6). */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const motifList = bien.preavis_donne_par === "locataire" ? LOCATAIRE_MOTIFS : PROPRIETAIRE_MOTIFS
+                      const motifEntry = motifList.find(m => m.code === bien.preavis_motif)
+                      const auteurEstProp = bien.preavis_donne_par === "proprietaire"
+                      try {
+                        await genererPreavisPDF({
+                          qui: bien.preavis_donne_par as "locataire" | "proprietaire",
+                          nomAuteur: auteurEstProp ? (form.nomBailleur || session?.user?.name || bien.proprietaire_email || "Bailleur") : (form.nomLocataire || bien.locataire_email || "Locataire"),
+                          adresseAuteur: auteurEstProp ? (form.adresseBailleur || "") : (bien.adresse || ""),
+                          nomDestinataire: auteurEstProp ? (form.nomLocataire || bien.locataire_email || "Locataire") : (form.nomBailleur || bien.proprietaire_email || "Bailleur"),
+                          adresseDestinataire: auteurEstProp ? (bien.adresse || "") : (form.adresseBailleur || ""),
+                          titreBien: bien.titre || "Logement",
+                          adresseBien: bien.adresse || bien.titre || "",
+                          villeBien: bien.ville || "",
+                          motif: bien.preavis_motif,
+                          motifLabel: motifEntry?.label || bien.preavis_motif || "",
+                          motifDetail: bien.preavis_motif_detail || undefined,
+                          dateEnvoi: bien.preavis_date_envoi ? bien.preavis_date_envoi.slice(0, 10) : new Date().toISOString().slice(0, 10),
+                          delaiMois: 0, // calculé depuis dateFin - dateEnvoi (approx)
+                          dateFinEffective: bien.preavis_fin_calculee,
+                        })
+                      } catch (e) {
+                        alert(`Erreur PDF : ${e instanceof Error ? e.message : String(e)}`)
+                      }
+                    }}
+                    style={{ marginTop: 10, background: "#fff", color: "#9a3412", border: "1px solid #EADFC6", borderRadius: 999, padding: "8px 16px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}
+                  >
+                    📄 Télécharger la lettre de congé (PDF)
+                  </button>
                 </div>
               )
             })()}

@@ -16,7 +16,8 @@ import BailSignatureModal from "../components/BailSignatureModal"
 import IntegrityBadge from "../components/bail/IntegrityBadge"
 import PreavisModal from "../components/bail/PreavisModal"
 import AvenantCard, { type Avenant } from "../components/bail/AvenantCard"
-import { joursAvantFinPreavis, formatJoursRestants } from "../../lib/preavis"
+import { joursAvantFinPreavis, formatJoursRestants, LOCATAIRE_MOTIFS, PROPRIETAIRE_MOTIFS } from "../../lib/preavis"
+import { genererPreavisPDF } from "../../lib/preavisPDF"
 import { estZoneTendue } from "../../lib/bailDefaults"
 import type { BailData, BailSignatureEntry } from "../../lib/bailPDF"
 
@@ -686,6 +687,39 @@ export default function MonLogement() {
                   « {bien.preavis_motif_detail} »
                 </p>
               )}
+              {/* V38.5 — Bouton download PDF lettre congé (audit V37 R37.6). */}
+              <button
+                type="button"
+                onClick={async () => {
+                  const motifList = bien.preavis_donne_par === "locataire" ? LOCATAIRE_MOTIFS : PROPRIETAIRE_MOTIFS
+                  const motifEntry = motifList.find(m => m.code === (bien.preavis_motif as string))
+                  const auteurEstLoc = bien.preavis_donne_par === "locataire"
+                  const myEmail = (session?.user?.email || "").toLowerCase()
+                  try {
+                    await genererPreavisPDF({
+                      qui: bien.preavis_donne_par as "locataire" | "proprietaire",
+                      nomAuteur: auteurEstLoc ? (session?.user?.name || myEmail || "Locataire") : (bien.proprietaire_email || "Bailleur"),
+                      adresseAuteur: auteurEstLoc ? "" : "",
+                      nomDestinataire: auteurEstLoc ? (bien.proprietaire_email || "Bailleur") : (myEmail || "Locataire"),
+                      adresseDestinataire: bien.adresse || "",
+                      titreBien: bien.titre || "Logement",
+                      adresseBien: bien.adresse || bien.titre || "",
+                      villeBien: bien.ville || "",
+                      motif: (bien.preavis_motif || "autre") as never,
+                      motifLabel: motifEntry?.label || (bien.preavis_motif as string) || "",
+                      motifDetail: bien.preavis_motif_detail || undefined,
+                      dateEnvoi: bien.preavis_date_envoi ? bien.preavis_date_envoi.slice(0, 10) : new Date().toISOString().slice(0, 10),
+                      delaiMois: 0,
+                      dateFinEffective: bien.preavis_fin_calculee || new Date().toISOString().slice(0, 10),
+                    })
+                  } catch (e) {
+                    alert(`Erreur PDF : ${e instanceof Error ? e.message : String(e)}`)
+                  }
+                }}
+                style={{ marginTop: 10, background: "#fff", color: urgent ? "#b91c1c" : "#9a3412", border: `1px solid ${urgent ? "#F4C9C9" : "#EADFC6"}`, borderRadius: 999, padding: "8px 16px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}
+              >
+                📄 Télécharger la lettre de congé (PDF)
+              </button>
             </div>
           )
         })()}
