@@ -287,6 +287,23 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
 
     if (!existingMsg && propEmail && locEmail) {
+      // V50.16 — Auto-validate la candidature liée à ce bail. Si le proprio
+      // a sauté l'étape "Valider candidat" et a signé direct, le locataire
+      // restait bloqué sur "candidature en attente" pour proposer une visite.
+      // Maintenant : à signature double, on flagge tous les messages de
+      // candidature de ce locataire pour cette annonce comme `validee`.
+      try {
+        await supabaseAdmin
+          .from("messages")
+          .update({ statut_candidature: "validee" })
+          .eq("annonce_id", annonceId)
+          .eq("from_email", locEmail)
+          .eq("type", "candidature")
+          .neq("statut_candidature", "validee")
+      } catch (e) {
+        console.warn("[bail/signer] auto-validate candidature failed:", e)
+      }
+
       const payload = JSON.stringify({ annonceId, bienTitre: "", dateSignature: now })
       // Message envoyé par l'API → from = proprio (pour rester cohérent côté UI)
       await supabaseAdmin.from("messages").insert([

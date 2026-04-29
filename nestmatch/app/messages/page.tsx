@@ -2778,7 +2778,20 @@ function MessagesInner() {
   // n'est pas validée par le proprio, le locataire ne peut pas proposer.
   // Le proprio est exempté (il propose à ses candidats sans pré-validation).
   // Si pas de candidature liée (conv libre sans annonce), pas de gating.
-  const peutProposerVisite = proprietaireActive || !convActiveData?.annonceId || isCandidatureValideeDB
+  // V50.16 — bypass si l'user EST le locataire actuel de l'annonce (bail
+  // signé). Cas reproduit user : proprio a sauté l'étape "Valider candidat"
+  // et signé le bail direct → candidature reste pending → locataire actuel
+  // bloqué sur "candidature en attente" alors qu'il a un bail. On inline
+  // la check (vs isActiveBail() défini plus bas) pour éviter le forward-ref.
+  const _isLocataireActuel = (() => {
+    const ann = convActiveData?.annonceId != null ? annonces[convActiveData.annonceId] : null
+    if (!ann || !myEmail) return false
+    if (ann.statut !== "loué" && ann.statut !== "bail_envoye") return false
+    return (ann.locataire_email || "").toLowerCase() === myEmail.toLowerCase()
+  })()
+  const peutProposerVisite = proprietaireActive || !convActiveData?.annonceId
+    || isCandidatureValideeDB
+    || _isLocataireActuel
 
   // Alias pour compat des anciens callsites (locked={!candidatureValidee})
   // qui font référence au gating visite, pas au statut DB.
