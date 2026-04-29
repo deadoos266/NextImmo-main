@@ -14,6 +14,12 @@ import Link from "next/link"
 interface Props {
   open: boolean
   onClose: (action: "skip" | "complete") => void
+  /** V44 — count des biens du proprio. Détermine le CTA final :
+   *  - 0 bien : "Terminer · Ajouter mon 1er bien" → /proprietaire/ajouter
+   *  - 1+ bien : "Terminer" → ferme la modale (l'user maîtrise déjà). */
+  nbBiens?: number
+  /** V44 — email pour cache localStorage anti-reshow (sync avec page.tsx). */
+  userEmail?: string | null
 }
 
 const STEPS = [
@@ -65,7 +71,7 @@ const STEPS = [
   },
 ] as const
 
-export default function TutoProprio({ open, onClose }: Props) {
+export default function TutoProprio({ open, onClose, nbBiens = 0, userEmail = null }: Props) {
   const [step, setStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
 
@@ -79,12 +85,21 @@ export default function TutoProprio({ open, onClose }: Props) {
   const isLast = step === STEPS.length - 1
   const isFirst = step === 0
 
+  // V44 — Helper cache localStorage anti-reshow. La DB est source de vérité
+  // (POST /api/proprietaire/tuto) mais le cache local évite un round-trip
+  // au prochain mount de /proprietaire (et survit même si DB rate).
+  function cacheLocalDone() {
+    if (!userEmail) return
+    try { window.localStorage.setItem(`nestmatch_tuto_proprio:${userEmail}`, "done") } catch { /* ignore */ }
+  }
+
   async function handleSkip() {
     if (submitting) return
     setSubmitting(true)
+    cacheLocalDone()
     try {
       await fetch("/api/proprietaire/tuto", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "skip" }) })
-    } catch { /* ignore — user a skip, on n'attend pas */ }
+    } catch { /* ignore — cache local préserve l'intention */ }
     setSubmitting(false)
     onClose("skip")
   }
@@ -92,6 +107,7 @@ export default function TutoProprio({ open, onClose }: Props) {
   async function handleComplete() {
     if (submitting) return
     setSubmitting(true)
+    cacheLocalDone()
     try {
       await fetch("/api/proprietaire/tuto", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "complete" }) })
     } catch { /* ignore */ }
@@ -164,13 +180,27 @@ export default function TutoProprio({ open, onClose }: Props) {
               </button>
             )}
             {isLast ? (
-              <Link
-                href="/proprietaire/ajouter"
-                onClick={() => void handleComplete()}
-                style={{ background: "#111", color: "#fff", borderRadius: 999, padding: "10px 22px", fontSize: 12, fontWeight: 700, fontFamily: "inherit", textDecoration: "none", textTransform: "uppercase", letterSpacing: "0.3px" }}
-              >
-                Terminer · Ajouter mon 1er bien
-              </Link>
+              // V44 — CTA conditionnel selon nbBiens.
+              // 0 bien : "Terminer · Ajouter mon 1er bien" → /proprietaire/ajouter (1ère publication).
+              // 1+ bien : "Terminer" simple bouton (pas de redirect — l'user voit déjà son dashboard).
+              nbBiens === 0 ? (
+                <Link
+                  href="/proprietaire/ajouter"
+                  onClick={() => void handleComplete()}
+                  style={{ background: "#111", color: "#fff", borderRadius: 999, padding: "10px 22px", fontSize: 12, fontWeight: 700, fontFamily: "inherit", textDecoration: "none", textTransform: "uppercase", letterSpacing: "0.3px" }}
+                >
+                  Terminer · Ajouter mon 1er bien
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void handleComplete()}
+                  disabled={submitting}
+                  style={{ background: "#111", color: "#fff", border: "none", borderRadius: 999, padding: "10px 22px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}
+                >
+                  Terminer
+                </button>
+              )
             ) : (
               <button
                 type="button"

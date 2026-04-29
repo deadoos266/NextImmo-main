@@ -467,23 +467,52 @@ export default function Proprietaire() {
     })
   }, [biens])
 
-  // V34.3 — Auto-trigger walkthrough proprio si :
-  // - le user a au moins 1 annonce (sinon contexte trop pauvre)
-  // - ET tuto_proprio_completed_at IS NULL
-  // - ET tuto_proprio_skipped_at IS NULL
+  // V44 — bug fix walkthrough proprio (V34.3 cassé) :
+  // 3 bugs précédents :
+  //   1. supabase.from("profils").select(...) côté client → 401 RLS Phase 5
+  //      depuis migration 036 → completed/skipped toujours undefined →
+  //      modale réapparaissait à chaque visite.
+  //   2. condition `if (biens.length === 0) return` retournait early
+  //      AVANT de check le tuto, alors qu'un user qui débute (0 bien) est
+  //      la cible PRIMAIRE du walkthrough.
+  //   3. user qui a déjà au moins 1 bien (= maîtrise déjà le système)
+  //      n'était JAMAIS gating-out — le tuto pouvait s'ouvrir aussi pour
+  //      les power users.
+  //
+  // Fix : (a) fetch via /api/profil/me (NextAuth-gated, pas 401), (b) trigger
+  // si biens.length === 0 ET pas déjà skipped/completed (gating cible 1er-time
+  // proprio), (c) skip silencieux si biens.length > 0 (user déjà actif).
+  // Cache localStorage en parallèle pour défensive coding (network down OK).
   useEffect(() => {
-    if (!myEmail || biens.length === 0) return
+    if (!myEmail) return
+    // Power user qui a déjà des biens = il connaît, on coupe court.
+    if (biens.length > 0) return
+
+    // Cache localStorage check pour skip réseau si déjà décidé.
+    let cachedDone = false
+    try {
+      const cached = window.localStorage.getItem(`nestmatch_tuto_proprio:${myEmail}`)
+      if (cached === "done") cachedDone = true
+    } catch { /* ignore */ }
+    if (cachedDone) return
+
     let cancelled = false
     void (async () => {
-      const { data } = await supabase
-        .from("profils")
-        .select("tuto_proprio_completed_at, tuto_proprio_skipped_at")
-        .eq("email", myEmail)
-        .maybeSingle()
-      if (cancelled) return
-      const completed = (data as { tuto_proprio_completed_at?: string | null } | null)?.tuto_proprio_completed_at
-      const skipped = (data as { tuto_proprio_skipped_at?: string | null } | null)?.tuto_proprio_skipped_at
-      if (!completed && !skipped) setTutoOpen(true)
+      try {
+        const res = await fetch("/api/profil/me?cols=tuto_proprio_completed_at,tuto_proprio_skipped_at", { cache: "no-store" })
+        if (!res.ok) return
+        const json = await res.json() as { ok: boolean; profil?: { tuto_proprio_completed_at?: string | null; tuto_proprio_skipped_at?: string | null } }
+        if (cancelled || !json.ok) return
+        const completed = json.profil?.tuto_proprio_completed_at
+        const skipped = json.profil?.tuto_proprio_skipped_at
+        if (completed || skipped) {
+          // DB dit déjà skipped/completed → cache local pour skip futurs fetchs.
+          try { window.localStorage.setItem(`nestmatch_tuto_proprio:${myEmail}`, "done") } catch { /* ignore */ }
+          return
+        }
+        // 1er passage proprio (0 bien + jamais skipped/completed) → show.
+        setTutoOpen(true)
+      } catch { /* offline OK : pas de tuto plutôt qu'un crash */ }
     })()
     return () => { cancelled = true }
   }, [myEmail, biens.length])
@@ -1471,7 +1500,12 @@ export default function Proprietaire() {
 
       {/* V34.3 — Walkthrough onboarding auto-affiché au mount si proprio
           n'a ni complété ni skip. Skippable depuis le menu user pour relancer. */}
-      <TutoProprio open={tutoOpen} onClose={() => setTutoOpen(false)} />
+      <TutoProprio
+        open={tutoOpen}
+        onClose={() => setTutoOpen(false)}
+        nbBiens={biens.length}
+        userEmail={myEmail}
+      />
     </main>
   )
 }
