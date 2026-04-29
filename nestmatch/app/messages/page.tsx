@@ -4215,34 +4215,19 @@ function MessagesInner() {
                                 </a>
                               </GatedAction>
                             )}
-                            <GatedAction
-                              enabled={isUnlocked}
-                              disabledReason={validationReason}
-                              onClick={() => {
-                                const el = document.querySelector<HTMLInputElement>('input[placeholder*="Rechercher"]')
-                                if (el) { el.focus(); el.scrollIntoView({ block: "center" }) }
-                              }}
-                            >
-                              <button
-                                type="button"
-                                aria-label="Rechercher dans la conversation"
-                                title="Rechercher dans la conversation"
-                                style={iconBtnStyle}
-                              >
-                                {searchIcon}
-                              </button>
-                            </GatedAction>
+                            {/* V50.3 — Loupe header retirée (user : "enleve la
+                                loupe en haut a droite pas besoin"). La recherche
+                                de conversations existe dans la sidebar gauche
+                                (input "Rechercher une conversation"), donc le
+                                bouton header était redondant. Si re-besoin,
+                                accessible via Ctrl+F ou ajout au kebab mobile. */}
                           </>
                         )
                       })()}
-                      {!isMobile && (
-                        <Link href={`/annonces/${convActiveData.annonceId}`}
-                          onMouseEnter={e => { e.currentTarget.style.background = "#F7F4EF" }}
-                          onMouseLeave={e => { e.currentTarget.style.background = "#fff" }}
-                          style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", background: "#fff", border: "1px solid #EAE6DF", borderRadius: 999, padding: "7px 14px", whiteSpace: "nowrap", transition: "background 160ms ease" }}>
-                          Voir l&apos;annonce
-                        </Link>
-                      )}
+                      {/* V50.4 — "Voir l'annonce" header retiré. User : "enleve
+                          voir l'annonce en haut ici car cela est deja a droite".
+                          Le CTA reste dispo dans le panel droit (l. ~5503)
+                          + dans le bottom sheet mobile. */}
                       {/* Liens raccourcis proprio (commit 6 du flow plan) :
                           si proprietaireActive ET annonceActive est à lui,
                           accès direct à Modifier annonce + Toutes candidatures. */}
@@ -5440,22 +5425,72 @@ function MessagesInner() {
               label: s.label,
               state: i < activeIdx ? "done" : i === activeIdx ? "active" : "todo",
             }))
-            // Documents partagés = [DOSSIER_CARD] messages de la conv courante
-            type Doc = { label: string; sub: string; href: string | null }
-            const docs: Doc[] = []
+            // V50.5 — Documents partagés : [DOSSIER_CARD] + [BAIL_CARD]
+            // Dédup : on garde le dernier dossier par expéditeur (re-share = override)
+            // et le dernier bail par annonce_id (1 bail / annonce). Évite la liste qui
+            // gonfle à chaque re-partage. User : "il manque le bail signé"
+            // + "dédup les entrées dossier en double".
+            type Doc = { label: string; sub: string; href: string | null; ts: number }
+            const dossierByKey = new Map<string, Doc>()
+            const bailByKey = new Map<string, Doc>()
             for (const m of messages) {
-              if (typeof m.contenu === "string" && m.contenu.startsWith(DOSSIER_PREFIX)) {
+              if (typeof m.contenu !== "string") continue
+              const ts = m.created_at ? new Date(m.created_at).getTime() : 0
+              if (m.contenu.startsWith(DOSSIER_PREFIX)) {
                 try {
                   const d = JSON.parse(m.contenu.slice(DOSSIER_PREFIX.length))
                   const isSender = m.from_email?.toLowerCase() === myEmail
-                  docs.push({
-                    label: `Dossier · ${d.nom || d.email || (isSender ? "Vous" : "Candidat")}`,
-                    sub: d.score != null ? `Score ${d.score}% · chiffré` : "chiffré",
-                    href: d.shareUrl || null,
-                  })
+                  // Clé dédup = expéditeur (un même candidat = un seul dossier)
+                  const key = (m.from_email || "").toLowerCase()
+                  const prev = dossierByKey.get(key)
+                  if (!prev || ts >= prev.ts) {
+                    dossierByKey.set(key, {
+                      label: `Dossier · ${d.nom || d.email || (isSender ? "Vous" : "Candidat")}`,
+                      sub: d.score != null ? `Score ${d.score}% · chiffré` : "chiffré",
+                      href: d.shareUrl || null,
+                      ts,
+                    })
+                  }
+                } catch { /* ignore */ }
+              } else if (m.contenu.startsWith(BAIL_PREFIX)) {
+                try {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const d = JSON.parse(m.contenu.slice(BAIL_PREFIX.length)) as any
+                  const annId = m.annonce_id ?? convActiveData.annonceId ?? 0
+                  const sigs = annId ? (signaturesParAnnonce[annId] || []) : []
+                  const sigLoc = sigs.find(s => s.role === "locataire")
+                  const sigBail = sigs.find(s => s.role === "bailleur")
+                  const fullySigned = !!sigLoc && !!sigBail
+                  const partiallySigned = !!sigLoc || !!sigBail
+                  const dateStr = d.dateDebut
+                    ? new Date(d.dateDebut).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
+                    : ""
+                  const sub = fullySigned
+                    ? `Signé par les 2 parties${dateStr ? ` · entrée ${dateStr}` : ""}`
+                    : partiallySigned
+                      ? `Signé · 1 partie${dateStr ? ` · entrée ${dateStr}` : ""}`
+                      : `À signer${dateStr ? ` · entrée ${dateStr}` : ""}`
+                  // Clé dédup = annonce (1 bail par annonce). Si plusieurs versions
+                  // ont été postées, on garde la plus récente (dernier avenant).
+                  const key = `bail:${annId}`
+                  const prev = bailByKey.get(key)
+                  if (!prev || ts >= prev.ts) {
+                    bailByKey.set(key, {
+                      label: `Bail · ${d.titreBien || "résidence"}`,
+                      sub,
+                      href: d.fichierUrl || null,
+                      ts,
+                    })
+                  }
                 } catch { /* ignore */ }
               }
             }
+            // Tri : bails d'abord (étape la plus avancée), puis dossiers,
+            // chacun par date desc (plus récent en haut).
+            const docs: Doc[] = [
+              ...Array.from(bailByKey.values()).sort((a, b) => b.ts - a.ts),
+              ...Array.from(dossierByKey.values()).sort((a, b) => b.ts - a.ts),
+            ]
             return (
               <aside style={{
                 width: 320,
