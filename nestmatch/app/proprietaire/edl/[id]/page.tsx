@@ -367,8 +367,11 @@ export default function EdlPage() {
   async function uploadPhotos(pieceIdx: number, files: FileList) {
     if (!session?.user?.email) return
     const currentCount = pieces[pieceIdx]?.photos.length || 0
-    const maxToAdd = 5 - currentCount
-    if (maxToAdd <= 0) { alert("Maximum 5 photos par piece"); return }
+    // V50.13 — limite 5 → 10 photos par pièce (user : "ajuste la limites de
+    // bail a 10 photos au lieu de 5"). Storage Supabase + PDF supportent
+    // sans modif (pas de hard cap technique).
+    const maxToAdd = 10 - currentCount
+    if (maxToAdd <= 0) { alert("Maximum 10 photos par piece"); return }
     const filesToUpload = Array.from(files).slice(0, maxToAdd)
     setUploadingPiece(pieceIdx)
     const rejected: string[] = []
@@ -955,7 +958,8 @@ export default function EdlPage() {
                       style={{ display: "none" }}
                       onChange={e => { if (e.target.files && e.target.files.length > 0) { uploadPhotos(pieceIdx, e.target.files); e.target.value = "" } }}
                     />
-                    {piece.photos.length < 5 && (
+                    {/* V50.13 — limite 5 → 10 photos par pièce */}
+                    {piece.photos.length < 10 && (
                       <button onClick={() => photoRefs.current[pieceIdx]?.click()}
                         disabled={uploadingPiece === pieceIdx}
                         style={{
