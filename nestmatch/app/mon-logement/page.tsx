@@ -450,7 +450,15 @@ export default function MonLogement() {
   const photoPrincipale = Array.isArray(bien.photos) && bien.photos.length > 0 ? bien.photos[0] : null
   const loyerTotal = (Number(bien.prix) || 0) + (Number(bien.charges) || 0)
   const timelineSteps = computeBailTimeline({
-    annonce: { id: bien.id, statut: bien.statut, bail_genere_at: bien.bail_genere_at, date_debut_bail: bien.date_debut_bail },
+    annonce: {
+      id: bien.id,
+      statut: bien.statut,
+      bail_genere_at: bien.bail_genere_at,
+      date_debut_bail: bien.date_debut_bail,
+      // V33.3 — sous-états signature pour wording locataire ("Vous avez signé").
+      bail_signe_locataire_at: (bien as { bail_signe_locataire_at?: string | null }).bail_signe_locataire_at ?? null,
+      bail_signe_bailleur_at: (bien as { bail_signe_bailleur_at?: string | null }).bail_signe_bailleur_at ?? null,
+    },
     edls: edls as any,
     loyers: loyers as any,
     role: "locataire",

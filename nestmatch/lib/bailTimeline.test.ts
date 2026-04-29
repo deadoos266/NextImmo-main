@@ -98,4 +98,89 @@ describe("computeBailTimeline", () => {
     })
     expect(steps[1].href).toBeUndefined()
   })
+
+  // V33.3 — sous-états signature
+  it("locataire a signé seul → wording 'Vous avez signé'", () => {
+    const steps = computeBailTimeline({
+      annonce: {
+        ...baseAnnonce,
+        statut: "loué",
+        bail_genere_at: "2026-04-01",
+        bail_signe_locataire_at: "2026-04-02",
+        bail_signe_bailleur_at: null,
+      },
+      edls: [],
+      loyers: [],
+      role: "locataire",
+    })
+    expect(steps[1].label).toBe("Vous avez signé le bail")
+    expect(steps[1].description).toContain("bailleur doit maintenant contresigner")
+  })
+
+  it("locataire a signé seul, vue proprio → wording 'Locataire a signé'", () => {
+    const steps = computeBailTimeline({
+      annonce: {
+        ...baseAnnonce,
+        statut: "loué",
+        bail_genere_at: "2026-04-01",
+        bail_signe_locataire_at: "2026-04-02",
+      },
+      edls: [],
+      loyers: [],
+      role: "proprietaire",
+    })
+    expect(steps[1].label).toBe("Locataire a signé le bail")
+    expect(steps[1].description).toContain("contresigner")
+  })
+
+  it("double signature → wording 'Bail signé par les deux parties'", () => {
+    const steps = computeBailTimeline({
+      annonce: {
+        ...baseAnnonce,
+        statut: "loué",
+        bail_genere_at: "2026-04-01",
+        bail_signe_locataire_at: "2026-04-02",
+        bail_signe_bailleur_at: "2026-04-03",
+      },
+      edls: [],
+      loyers: [],
+      role: "locataire",
+    })
+    expect(steps[1].label).toBe("Bail signé par les deux parties")
+    expect(steps[1].description).toContain("juridiquement actif")
+    // La date renvoyée est celle du bailleur (= signature finale)
+    expect(steps[1].date).toBe("2026-04-03")
+  })
+
+  it("bail envoyé sans aucune signature → wording 'Bail à signer' côté locataire", () => {
+    const steps = computeBailTimeline({
+      annonce: { ...baseAnnonce, statut: "bail_envoye", bail_genere_at: "2026-04-01" },
+      edls: [],
+      loyers: [],
+      role: "locataire",
+    })
+    expect(steps[1].label).toBe("Bail à signer")
+    expect(steps[1].description).toContain("messagerie")
+  })
+
+  it("rôle locataire → label étape 1 = 'Candidature acceptée'", () => {
+    const steps = computeBailTimeline({
+      annonce: { ...baseAnnonce, statut: "loué" },
+      edls: [],
+      loyers: [],
+      role: "locataire",
+    })
+    expect(steps[0].label).toBe("Candidature acceptée")
+    expect(steps[0].description).toContain("retenu")
+  })
+
+  it("rôle proprio → label étape 1 = 'Location acceptée'", () => {
+    const steps = computeBailTimeline({
+      annonce: { ...baseAnnonce, statut: "loué" },
+      edls: [],
+      loyers: [],
+      role: "proprietaire",
+    })
+    expect(steps[0].label).toBe("Location acceptée")
+  })
 })

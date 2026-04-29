@@ -1069,7 +1069,14 @@ export default function Proprietaire() {
                   : { bg: km.errBg, color: km.errText, border: km.errLine, label: "Loyer du mois à déclarer" }
                 const edlsBien = edls.filter((e: any) => e.annonce_id === b.id)
                 const timelineSteps = computeBailTimeline({
-                  annonce: { id: b.id, statut: b.statut, bail_genere_at: b.bail_genere_at, date_debut_bail: b.date_debut_bail },
+                  annonce: {
+                    id: b.id,
+                    statut: b.statut,
+                    bail_genere_at: b.bail_genere_at,
+                    date_debut_bail: b.date_debut_bail,
+                    bail_signe_locataire_at: b.bail_signe_locataire_at,
+                    bail_signe_bailleur_at: b.bail_signe_bailleur_at,
+                  },
                   edls: edlsBien,
                   loyers: loyersBien,
                   role: "proprietaire",
