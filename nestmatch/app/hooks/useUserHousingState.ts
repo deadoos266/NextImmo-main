@@ -50,8 +50,15 @@ export function useUserHousingState(): HousingState {
         .select("id", { count: "exact", head: true })
         .ilike("locataire_email", email)
         .neq("statut", "loue_termine"),
-      // Anciens logements stockés en jsonb sur profils.
-      supabase.from("profils").select("anciens_logements").eq("email", email).maybeSingle(),
+      // V42.1 — Anciens logements stockés en jsonb sur profils.
+      // Avant : supabase.from("profils").select("anciens_logements") côté
+      // client → 401 depuis migration 036 (REVOKE SELECT anon).
+      // Maintenant : passe par /api/profil/me?cols=anciens_logements
+      // (NextAuth-gated + supabaseAdmin server-side).
+      fetch("/api/profil/me?cols=anciens_logements", { cache: "no-store" })
+        .then(r => r.ok ? r.json() : null)
+        .then(j => ({ data: j?.ok ? j.profil : null }))
+        .catch(() => ({ data: null })),
     ]).then(([curRes, profilRes]) => {
       if (cancelled) return
       const hasCurrent = (curRes.count ?? 0) > 0

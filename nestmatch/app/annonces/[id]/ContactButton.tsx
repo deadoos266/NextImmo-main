@@ -30,15 +30,22 @@ export default function ContactButton({ annonce }: { annonce: any }) {
   useEffect(() => {
     if (!session?.user?.email) { setProfilCompletude(null); return }
     let cancelled = false
-    void supabase.from("profils")
-      .select("ville_souhaitee, budget_max, revenus_mensuels, surface_min, type_garant, type_quartier")
-      .eq("email", session.user.email)
-      .maybeSingle()
-      .then(({ data }) => {
+    // V42.1 — migré client-side supabase.from("profils").select(...) →
+    // /api/profil/me?cols=... (RLS Phase 5 V29 / migration 036 REVOKE
+    // SELECT anon). Avant : 401 silencieux dans la console qui
+    // empêchait le calcul de completude → gating soft pas appliqué.
+    void fetch(
+      "/api/profil/me?cols=ville_souhaitee,budget_max,revenus_mensuels,surface_min,type_garant,type_quartier",
+      { cache: "no-store" }
+    )
+      .then(r => r.ok ? r.json() : null)
+      .then(j => {
         if (cancelled) return
-        const { score } = calculerCompletudeProfil(data || null)
+        const data = j?.ok ? j.profil : null
+        const { score } = calculerCompletudeProfil(data)
         setProfilCompletude(score)
       })
+      .catch(() => { /* silent fallback : profilCompletude reste null = pas de gating */ })
     return () => { cancelled = true }
   }, [session?.user?.email])
 
