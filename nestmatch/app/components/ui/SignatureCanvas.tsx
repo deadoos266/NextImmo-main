@@ -157,26 +157,40 @@ export default function SignatureCanvas({
           </div>
         )}
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, alignItems: "center" }}>
-        <p style={{ fontSize: 11, color: "#8a8477", margin: 0 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, alignItems: "center", gap: 12 }}>
+        <p style={{ fontSize: 11, color: hasContent ? "#15803d" : "#8a8477", margin: 0, fontWeight: hasContent ? 600 : 400 }}>
           {hasContent ? "✓ Signature capturée" : "Tracez votre signature sur la zone ci-dessus"}
         </p>
+        {/* V33.1 — Touch target 44px min (a11y), icône SVG explicite, aria-label
+            pour lecteurs d'écran. Audit V31 R2.7 quick win. */}
         <button
           type="button"
           onClick={clear}
           disabled={!hasContent}
+          aria-label={hasContent ? "Effacer la signature et recommencer" : "Aucune signature à effacer"}
+          title="Effacer et recommencer"
           style={{
             background: "white",
-            color: hasContent ? "#8a8477" : "#EAE6DF",
-            border: "1px solid #EAE6DF",
-            borderRadius: 8,
-            padding: "6px 14px",
+            color: hasContent ? "#b91c1c" : "#EAE6DF",
+            border: `1px solid ${hasContent ? "#F4C9C9" : "#EAE6DF"}`,
+            borderRadius: 999,
+            padding: "8px 16px",
+            minHeight: 44,
             fontSize: 12,
             fontWeight: 700,
             cursor: hasContent ? "pointer" : "not-allowed",
             fontFamily: "inherit",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            whiteSpace: "nowrap",
           }}
         >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+            <path d="M10 11v6" /><path d="M14 11v6" />
+          </svg>
           Effacer
         </button>
       </div>
