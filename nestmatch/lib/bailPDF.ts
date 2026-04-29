@@ -135,6 +135,10 @@ export type BailData = {
 
   // ── Signatures (injectées au moment du téléchargement PDF) ────────────
   signatures?: BailSignatureEntry[]
+
+  // V32.1 — Bail externe (PDF uploadé par le proprio plutôt que généré). Si
+  // présent, on l'affiche directement dans la preview / la lecture pré-signature.
+  fichierUrl?: string
 }
 
 export type BailSignatureEntry = {

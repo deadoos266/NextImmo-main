@@ -1,8 +1,13 @@
 "use client"
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import Modal from "./ui/Modal"
 import SignatureCanvas from "./ui/SignatureCanvas"
 import type { BailData } from "../../lib/bailPDF"
+import { genererBailPDFBlob } from "../../lib/bailPDF"
+
+// V32.2 — Durée minimum de lecture du PDF avant pouvoir cocher "j'ai lu".
+// Empêche les clics réflexes "yolo" qui sapent l'audit-trail eIDAS.
+const MIN_LECTURE_SECONDS = 15
 
 interface Props {
   open: boolean
@@ -43,6 +48,18 @@ export default function BailSignatureModal({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // V32.2 — Lecture obligatoire du PDF avant la signature (audit V31 R1.2).
+  // pdfUrl = blob URL généré côté client (ou fichierUrl si bail externe).
+  // pdfLu = case cochée par le locataire confirmant la lecture intégrale.
+  // pdfLuAt = timestamp ISO du moment où la case est cochée (envoyé à l'API).
+  // lectureSecsLeft = countdown UX, empêche le clic réflexe sous MIN_LECTURE_SECONDS.
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+  const [pdfError, setPdfError] = useState<string | null>(null)
+  const [pdfLu, setPdfLu] = useState(false)
+  const [pdfLuAt, setPdfLuAt] = useState<string | null>(null)
+  const [lectureSecsLeft, setLectureSecsLeft] = useState(MIN_LECTURE_SECONDS)
+  const blobUrlRef = useRef<string | null>(null)
+
   // Hash SHA-256 du bail (intégrité) — calculé côté client
   const bailHash = useMemo(() => {
     // hash léger (pas cryptographiquement fort côté client — vérification visuelle)
@@ -76,6 +93,59 @@ export default function BailSignatureModal({
     setSignaturePng(null)
     setError(null)
     setSubmitting(false)
+    setPdfLu(false)
+    setPdfLuAt(null)
+    setLectureSecsLeft(MIN_LECTURE_SECONDS)
+  }
+
+  // V32.2 — Génère le PDF blob à l'ouverture de la modale (ou utilise l'URL
+  // externe si bail importé). Cleanup blob URL à la fermeture.
+  useEffect(() => {
+    if (!open) {
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current)
+        blobUrlRef.current = null
+      }
+      setPdfUrl(null)
+      setPdfError(null)
+      return
+    }
+    if (bailData.fichierUrl) {
+      setPdfUrl(bailData.fichierUrl)
+      return
+    }
+    let cancelled = false
+    void (async () => {
+      try {
+        const { blob } = await genererBailPDFBlob(bailData)
+        if (cancelled) return
+        const url = URL.createObjectURL(blob)
+        blobUrlRef.current = url
+        setPdfUrl(url)
+      } catch (e) {
+        if (cancelled) return
+        console.error("[BailSignatureModal] PDF blob error:", e)
+        setPdfError("Impossible de générer le PDF — contactez le support.")
+      }
+    })()
+    return () => { cancelled = true }
+  }, [open, bailData])
+
+  // V32.2 — Countdown lecture minimum (empêche clic réflexe).
+  useEffect(() => {
+    if (!open || step !== 1) return
+    if (lectureSecsLeft <= 0) return
+    const t = setInterval(() => {
+      setLectureSecsLeft(s => Math.max(0, s - 1))
+    }, 1000)
+    return () => clearInterval(t)
+  }, [open, step, lectureSecsLeft])
+
+  function handlePdfLuChange(checked: boolean) {
+    setPdfLu(checked)
+    if (checked && !pdfLuAt) {
+      setPdfLuAt(new Date().toISOString())
+    }
   }
 
   function close() {
@@ -110,6 +180,7 @@ export default function BailSignatureModal({
           mention: mention.trim(),
           signaturePng,
           bailHash,
+          pdfLuAt, // V32.2 — preuve consentement éclairé
         }),
       })
       const json = (await res.json()) as { ok: boolean; error?: string }
@@ -168,15 +239,16 @@ export default function BailSignatureModal({
             {footerCommon}
             <button
               onClick={() => setStep(2)}
+              disabled={!pdfLu}
               style={{
-                background: "#111",
-                color: "white",
+                background: pdfLu ? "#111" : "#EAE6DF",
+                color: pdfLu ? "white" : "#8a8477",
                 border: "none",
                 borderRadius: 999,
                 padding: "10px 22px",
                 fontWeight: 700,
                 fontSize: 14,
-                cursor: "pointer",
+                cursor: pdfLu ? "pointer" : "not-allowed",
                 fontFamily: "inherit",
               }}
             >
@@ -316,6 +388,108 @@ export default function BailSignatureModal({
             (art. 1366 du Code civil + règlement UE 910/2014 eIDAS). Votre
             signature + votre identité + timestamp + IP sont horodatés et
             archivés.
+          </div>
+
+          {/* V32.2 — Lecture obligatoire du PDF avant signature.
+              Audit V31 R1.2 : avant cette feature, le locataire signait
+              sans avoir vu le PDF. Risque légal article 1188 Code civil
+              (consentement éclairé). */}
+          <div style={{ marginTop: 22 }}>
+            <h4 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 8px", color: "#111" }}>
+              Lisez le bail intégral avant de poursuivre
+            </h4>
+            <p style={{ fontSize: 12, color: "#8a8477", margin: "0 0 12px", lineHeight: 1.6 }}>
+              Le bail est un contrat juridiquement contraignant. Prenez le temps
+              de lire chaque clause avant de cocher la confirmation.
+            </p>
+
+            <div
+              style={{
+                background: "#EAE6DF",
+                borderRadius: 12,
+                overflow: "hidden",
+                position: "relative",
+                height: 380,
+              }}
+            >
+              {pdfUrl ? (
+                <iframe
+                  src={pdfUrl + (bailData.fichierUrl ? "" : "#toolbar=1&view=FitH")}
+                  title="Bail à lire avant signature"
+                  style={{ width: "100%", height: "100%", border: "none", background: "#fff" }}
+                />
+              ) : pdfError ? (
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#b91c1c",
+                    fontSize: 13,
+                    padding: 20,
+                    textAlign: "center",
+                  }}
+                >
+                  {pdfError}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#8a8477",
+                    fontSize: 13,
+                  }}
+                >
+                  Génération du PDF en cours…
+                </div>
+              )}
+            </div>
+
+            {pdfUrl && (
+              <p style={{ fontSize: 11, color: "#8a8477", margin: "8px 0 0", textAlign: "right" }}>
+                <a href={pdfUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#1d4ed8", textDecoration: "underline" }}>
+                  Ouvrir en grand dans un nouvel onglet ↗
+                </a>
+              </p>
+            )}
+
+            <label
+              style={{
+                marginTop: 14,
+                display: "flex",
+                gap: 12,
+                padding: "14px 16px",
+                borderRadius: 12,
+                background: pdfLu ? "#F0FAEE" : "#FBF6EA",
+                border: `1px solid ${pdfLu ? "#86efac" : "#EADFC6"}`,
+                cursor: lectureSecsLeft > 0 ? "not-allowed" : "pointer",
+                alignItems: "flex-start",
+                opacity: lectureSecsLeft > 0 ? 0.7 : 1,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={pdfLu}
+                disabled={lectureSecsLeft > 0 || !pdfUrl}
+                onChange={e => handlePdfLuChange(e.target.checked)}
+                style={{ marginTop: 3, cursor: lectureSecsLeft > 0 ? "not-allowed" : "pointer", accentColor: "#15803d" }}
+              />
+              <div style={{ flex: 1, fontSize: 13.5, lineHeight: 1.55, color: "#111" }}>
+                <strong>J&apos;ai lu le bail intégralement</strong> et je comprends
+                ses clauses, durée, loyer et obligations.
+                {lectureSecsLeft > 0 && (
+                  <span style={{ display: "block", fontSize: 11.5, color: "#a16207", marginTop: 4 }}>
+                    Disponible dans {lectureSecsLeft}s — prenez le temps de lire.
+                  </span>
+                )}
+              </div>
+            </label>
           </div>
         </div>
       )}

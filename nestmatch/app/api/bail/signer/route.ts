@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
     mention?: unknown
     signaturePng?: unknown
     bailHash?: unknown
+    pdfLuAt?: unknown
   }
 
   const annonceId = Number(p.annonceId)
@@ -71,6 +72,10 @@ export async function POST(req: NextRequest) {
   const mention = typeof p.mention === "string" ? p.mention.trim() : ""
   const signaturePng = typeof p.signaturePng === "string" ? p.signaturePng : ""
   const bailHash = typeof p.bailHash === "string" ? p.bailHash : null
+  // V32.2 — Le client envoie le timestamp ISO de lecture du PDF avant signature.
+  // On valide qu'il s'agit d'une date valide ; sinon null (legacy clients).
+  const pdfLuAtRaw = typeof p.pdfLuAt === "string" ? p.pdfLuAt : null
+  const pdfLuAt = pdfLuAtRaw && !Number.isNaN(new Date(pdfLuAtRaw).getTime()) ? pdfLuAtRaw : null
 
   // Validation
   if (!annonceId || !Number.isFinite(annonceId)) {
@@ -134,6 +139,9 @@ export async function POST(req: NextRequest) {
       ip_address: ip,
       user_agent: userAgent,
       signe_at: new Date().toISOString(),
+      // V32.2 — Audit-trail eIDAS renforcé : on horodate le moment où le
+      // signataire confirme avoir lu le PDF (case "J'ai lu intégralement").
+      pdf_lu_avant_signature_at: pdfLuAt,
     },
     { onConflict: "annonce_id,signataire_email,signataire_role" },
   )
