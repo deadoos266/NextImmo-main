@@ -564,11 +564,19 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
             // ne pas créer d'entrée history. Une seule fois par chargement
             // (le flag autoAppliedRef évite les re-déclenchements). User peut
             // toujours vider via "Voir toutes les annonces ↺".
+            //
+            // V46 (Paul 2026-04-30) — bug fix : "Réinitialiser tous les filtres"
+            // ne montrait QUE Paris parce que onResetAll() faisait
+            // router.replace("/annonces") qui re-déclenchait V14.1 auto-apply
+            // (URL vide → re-injecte ?ville=Paris depuis le profil). Boucle.
+            // Fix : flag URL `?override=all` qui désactive l'auto-apply.
+            // Le user prend le contrôle explicite.
+            const overrideAll = initialSearchParams?.override === "all"
             const urlEmpty = !initialSearchParams || Object.keys(initialSearchParams).every(k => {
               const v = initialSearchParams[k]
               return !v || (Array.isArray(v) && v.length === 0)
             })
-            if (urlEmpty && !autoAppliedRef.current) {
+            if (urlEmpty && !overrideAll && !autoAppliedRef.current) {
               autoAppliedRef.current = true
               const params = buildProfilParams(p)
               const qs = params.toString()
@@ -869,8 +877,20 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
       if (typeof val === "string") sp.set(k, val)
       else if (Array.isArray(val) && val[0]) sp.set(k, val[0])
     }
-    if (v.trim()) sp.set("ville", v.trim())
-    else sp.delete("ville")
+    if (v.trim()) {
+      sp.set("ville", v.trim())
+      // L'user a saisi une ville explicite → on retire override=all
+      // (sinon on garde la mention "j'ai pris le contrôle").
+      sp.delete("override")
+    } else {
+      sp.delete("ville")
+      // V46 — Si l'user RETIRE la ville (chip × ou input vidé), on bascule
+      // override=all pour ne pas que V14.1 ré-injecte profil.ville_souhaitee.
+      // User : "même quand j'enlève tout en fait je vois que du Paris".
+      sp.set("override", "all")
+      autoAppliedRef.current = true
+      setAutoAppliedBannerOpen(false)
+    }
     setMapBounds(null)
     const qs = sp.toString()
     router.replace(qs ? `/annonces?${qs}` : "/annonces", { scroll: false })
@@ -897,8 +917,14 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
     setAnimauxOverride(false)
     setMotCle("")
     setMapBounds(null)
-    // URL reset (ville + budget_max + type)
-    router.replace("/annonces", { scroll: false })
+    // V46 — flag override=all empêche le re-déclenchement de V14.1 auto-apply
+    // qui réinjectait le profil (ex : ville_souhaitee=Paris) après chaque reset.
+    // User : "même quand j'enlève tout en fait je vois que du Paris".
+    // Le flag autoAppliedRef est aussi reset pour permettre une ré-injection
+    // si l'user revient ensuite avec une URL "vide" sans override.
+    autoAppliedRef.current = true // bloque la prochaine tentative d'auto-apply
+    setAutoAppliedBannerOpen(false)
+    router.replace("/annonces?override=all", { scroll: false })
   }
 
   // ── Count filtres actifs (tous confondus — badge sur bouton "Filtres")
@@ -1391,13 +1417,18 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
             <span aria-hidden style={{ fontSize: 16 }}>✨</span>
             <p style={{ flex: 1, minWidth: 200, fontSize: 13, color: "#1d4ed8", margin: 0, lineHeight: 1.5 }}>
               On a appliqué tes critères profil pour gagner du temps.{" "}
-              <a
-                href="/annonces"
-                onClick={() => setAutoAppliedBannerOpen(false)}
-                style={{ color: "#1d4ed8", textDecoration: "underline", fontWeight: 600 }}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  // V46 — call onResetAll() qui pose ?override=all et empêche
+                  // l'auto-apply V14.1 de re-injecter le profil.
+                  onResetAll()
+                }}
+                style={{ background: "none", border: "none", padding: 0, color: "#1d4ed8", textDecoration: "underline", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}
               >
                 Voir toutes les annonces
-              </a>
+              </button>
               .
             </p>
             <button
