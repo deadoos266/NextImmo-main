@@ -2,11 +2,16 @@
 import Link from "next/link"
 import type { BailStep, BailStepKey } from "../../../lib/bailTimeline"
 
+// V50.15 — labels CTA spécifiques. Avant : "Gérer →" sur loyer = vague et
+// pointait vers /mon-logement (= page actuelle pour locataire = no-op).
+// User : "quel est l'utilité du bouton gerer ?". Maintenant le href du step
+// loyer est undefined côté locataire (pas de CTA), et "Confirmer le paiement"
+// côté proprio (qui a l'action concrète à faire).
 const CTA_LABEL: Record<BailStepKey, string> = {
   acceptee: "Continuer →",
   bail: "Générer le bail →",
   edl: "Faire l'EDL →",
-  loyer: "Gérer →",
+  loyer: "Confirmer le paiement →",
 }
 
 /**

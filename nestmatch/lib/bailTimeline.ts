@@ -150,8 +150,15 @@ export function computeBailTimeline({
           ? "Confirmez dès réception."
           : "Vous recevrez une quittance automatiquement après le paiement.",
       done: loyerDone,
-      href: !loyerDone
-        ? (role === "proprietaire" ? `/proprietaire/stats?id=${annonceId}` : "/mon-logement")
+      // V50.15 — User : "quel est l'utilité du bouton gerer ?". Avant :
+      // locataire → href "/mon-logement" (= la page actuelle, no-op) +
+      // label "Gérer →" (vague). Maintenant :
+      // - Locataire : pas de CTA. Le locataire attend la confirmation
+      //   du proprio, il ne peut rien "gérer" depuis la timeline.
+      // - Proprio : href vers /proprietaire/stats (page Loyers/encaissements).
+      //   Label spécifique côté composant ("Confirmer le paiement →").
+      href: !loyerDone && role === "proprietaire"
+        ? `/proprietaire/stats?id=${annonceId}`
         : undefined,
     },
   ]
