@@ -1200,16 +1200,41 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                 ? (activeVille ? `Logements à ${activeVille}` : "Logements à louer")
                 : `${annoncesTraitees.length} logement${annoncesTraitees.length > 1 ? "s" : ""} ${activeVille ? `à ${activeVille}` : "disponible" + (annoncesTraitees.length > 1 ? "s" : "")}`}
             </KMHeading>
-            {/* Lien de sauvegarde — popover attaché, inline à droite */}
+            {/* Lien de sauvegarde + accès aux recherches sauvegardées (V40.1+V40.2).
+                Avant V40 : seul SavedSearchesPopover (action sauver). User a flag
+                "il faudrait un bouton pour aller dans ses recherches sauvegardées" —
+                ajout d'un lien direct prominent à côté du popover. */}
             {!isProprietaire && session?.user?.email && (
-              <SavedSearchesPopover
-                savedSearches={savedSearches.map(s => ({ id: s.id, name: s.name, savedAt: s.savedAt }))}
-                onSave={sauverRecherche}
-                onApply={appliquerRecherche}
-                onDelete={supprimerRecherche}
-                defaultName={buildDefaultSearchName()}
-                label="Sauvegarder cette recherche"
-              />
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <SavedSearchesPopover
+                  savedSearches={savedSearches.map(s => ({ id: s.id, name: s.name, savedAt: s.savedAt }))}
+                  onSave={sauverRecherche}
+                  onApply={appliquerRecherche}
+                  onDelete={supprimerRecherche}
+                  defaultName={buildDefaultSearchName()}
+                  label="Sauvegarder cette recherche"
+                />
+                <a
+                  href="/recherches-sauvegardees"
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    padding: "7px 14px",
+                    background: "#fff",
+                    border: `1px solid ${km.line}`,
+                    borderRadius: 999,
+                    fontSize: 11.5, fontWeight: 600,
+                    color: km.ink, textDecoration: "none",
+                    fontFamily: "inherit",
+                    whiteSpace: "nowrap",
+                  }}
+                  title="Voir mes recherches sauvegardées"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                  </svg>
+                  Mes recherches{savedSearches.length > 0 ? ` (${savedSearches.length})` : ""}
+                </a>
+              </div>
             )}
           </div>
         ))}
@@ -1632,6 +1657,45 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                         Mis à jour à l&apos;instant
                       </div>
                     </div>
+                    {/* V40.1+V40.2 — Sauvegarder + accès recherches sauvegardées
+                        (audit user 2026-04-29 : "la sauvegarde c'est que sur tel
+                        enfin sur pc ça apparaît pas" + "il faudrait un bouton
+                        pour aller dans ses recherches sauvegardées"). Avant V40,
+                        SavedSearchesPopover existait uniquement dans le header
+                        h2 (modes mobile/grille) — invisible en desktop liste+carte. */}
+                    {!isProprietaire && session?.user?.email && (
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                        <SavedSearchesPopover
+                          savedSearches={savedSearches.map(s => ({ id: s.id, name: s.name, savedAt: s.savedAt }))}
+                          onSave={sauverRecherche}
+                          onApply={appliquerRecherche}
+                          onDelete={supprimerRecherche}
+                          defaultName={buildDefaultSearchName()}
+                          label="Sauvegarder"
+                        />
+                        <a
+                          href="/recherches-sauvegardees"
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: 6,
+                            padding: "7px 14px",
+                            background: "#fff",
+                            border: `1px solid ${km.line}`,
+                            borderRadius: 999,
+                            fontSize: 11.5, fontWeight: 600,
+                            color: km.ink, textDecoration: "none",
+                            fontFamily: "inherit",
+                            whiteSpace: "nowrap",
+                          }}
+                          title="Voir mes recherches sauvegardées"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                          </svg>
+                          Mes recherches{savedSearches.length > 0 ? ` (${savedSearches.length})` : ""}
+                        </a>
+                      </div>
+                    )}
+
                     {/* ViewToggle Grille/Carte — fidèle handoff (3) `app.jsx`
                         l. 586-605. Mode courant = "Carte" (split list+map),
                         click "Grille" bascule vers la grille pleine page. */}
