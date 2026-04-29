@@ -2197,9 +2197,54 @@ function MessagesInner() {
   }
 
   async function supprimerConversation(key: string) {
-    setSupprimant(key)
     const conv = conversations.find(c => c.key === key)
-    if (!conv || !myEmail) { setSupprimant(null); return }
+    if (!conv || !myEmail) return
+    // V50.7 — garde-fou : si bail actif / visite confirmée / candidature
+    // validée / dossier déjà partagé, on bloque ou on warn fort. User :
+    // "il faut un garde-fou pour pas supprimer ses conversations avec son
+    // proprio/locataire". Perdre l'historique d'un bail signé = perdre le
+    // lien légal et compliquer EDL/préavis/quittance.
+    const statut = deriveStatut(conv)
+    const visites = convVisitesMap[conv.key] || []
+    const aBailActif = isActiveBail(conv)
+    const aVisiteConfirmee = visites.some(v => v.statut === "confirmée" || v.statut === "effectuée")
+    const aDossierPartage = !!convDossierFlag[conv.key]
+    const aCandidatureValidee = !!convCandidatureValideeFlag[conv.key]
+
+    if (aBailActif) {
+      // Cas le plus critique : bail signé et toujours actif. On suggère
+      // /mon-logement (locataire) ou /proprietaire/bail/<id> (bailleur)
+      // pour archiver côté UI sans perdre le thread.
+      const otherRole = (annonces[conv.annonceId || -1]?.proprietaire_email || "").toLowerCase() === myEmail.toLowerCase()
+        ? "locataire"
+        : "propriétaire"
+      const ok = confirm(
+        `Vous êtes lié·e à votre ${otherRole} par un bail actif.\n\n` +
+        `Supprimer cette conversation va effacer l'historique des messages, ` +
+        `mais le bail, l'EDL, les quittances et les coordonnées restent ` +
+        `accessibles via /mon-logement ou /proprietaire.\n\n` +
+        `Confirmer la suppression ?`
+      )
+      if (!ok) return
+    } else if (aVisiteConfirmee || aCandidatureValidee || aDossierPartage) {
+      // Cas moins critique : pas de bail mais relation engagée
+      // (visite/validation/dossier). On warn mais on n'archive pas.
+      const reason = aVisiteConfirmee
+        ? "une visite confirmée"
+        : aCandidatureValidee
+          ? "une candidature validée"
+          : "un dossier partagé"
+      const ok = confirm(
+        `Cette conversation contient ${reason}.\n\n` +
+        `Supprimer va effacer tout l'historique. Confirmer ?`
+      )
+      if (!ok) return
+    }
+    // Cas "contact" / "rejete" : on garde le confirm natif Supabase plus bas
+    // (pas de friction supplémentaire pour les rejetés / spam).
+    void statut // statut servait au calcul des flags ci-dessus
+
+    setSupprimant(key)
     // ⚠ IMPORTANT : ne supprimer QUE les messages de CETTE conversation
     // (scopée par annonce_id). Avant, le delete étendu nuquait aussi les
     // convs des autres annonces entre les 2 mêmes emails.
