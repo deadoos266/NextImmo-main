@@ -175,6 +175,7 @@ export async function POST(req: NextRequest) {
         html,
         text: `${intro.replace(/<[^>]+>/g, "")}\n\nMotif : ${motifEntry.label}${detail ? `\nPrécisions : ${detail}` : ""}\nFin de bail : ${dateFinFr}\nPréavis : ${preavis.delaiMois} mois\n\n${preavis.bonus || ""}\n\n— L'équipe KeyMatch`,
         tags: [{ name: "type", value: "preavis_donne" }, { name: "qui", value: qui }],
+        senderEmail: userEmail, // V50.1
       })
     } catch (e) {
       console.warn("[bail/preavis] email send failed (non bloquant):", e)

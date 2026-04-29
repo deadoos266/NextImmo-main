@@ -117,6 +117,7 @@ export async function POST(req: NextRequest) {
       { name: "type", value: "bail_relance_locataire" },
       { name: "contexte", value: contexte },
     ],
+    senderEmail: locEmail, // V50.1
   })
 
   const nowIso = new Date().toISOString()

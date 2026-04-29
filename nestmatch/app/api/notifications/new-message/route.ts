@@ -79,6 +79,7 @@ export async function POST(req: NextRequest) {
     html,
     text,
     tags: [{ name: "category", value: "new-message" }],
+    senderEmail: fromEmail, // V50.1 — defense en profondeur (le check ligne 40 reste actif)
   })
 
   return NextResponse.json({ ok: result.ok, skipped: !result.ok })

@@ -37,11 +37,26 @@ export type SendArgs = {
   tags?: { name: string; value: string }[]
   /** V32.5 — pièces jointes (ex: PDF du bail signé). */
   attachments?: SendAttachment[]
+  /**
+   * V50.1 — email de l'expéditeur applicatif (pas le `from` SMTP).
+   * Sert au guard "self-email" : si `senderEmail === to`, on saute l'envoi.
+   * Cas reproduit : un proprio s'envoie un message → /api/notifications/new-message
+   * lui notifie son propre message par email. Le check existait déjà côté route
+   * new-message, on le déplace ici pour couvrir TOUS les triggers (bail, préavis,
+   * relance, quittance, etc.) by construction. Optionnel : si non fourni, l'envoi
+   * passe (utile pour OTP / reset password où il n'y a pas de "sender" applicatif).
+   */
+  senderEmail?: string
 }
 
 export type SendResult = { ok: true; id?: string } | { ok: false; error: string; skipped?: boolean }
 
-export async function sendEmail({ to, subject, html, text, tags, attachments }: SendArgs): Promise<SendResult> {
+export async function sendEmail({ to, subject, html, text, tags, attachments, senderEmail }: SendArgs): Promise<SendResult> {
+  // V50.1 — guard self-email (voir SendArgs.senderEmail)
+  if (senderEmail && to && senderEmail.toLowerCase() === to.toLowerCase()) {
+    console.warn("[email] sendEmail skipped (self-email)", { to, senderEmail, subject })
+    return { ok: false, error: "Self-email blocked", skipped: true }
+  }
   if (!resend) {
     console.warn("[email] sendEmail skipped (no RESEND_API_KEY)", { to, subject })
     return { ok: false, error: "Resend not configured", skipped: true }

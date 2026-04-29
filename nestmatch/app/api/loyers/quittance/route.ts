@@ -182,6 +182,7 @@ export async function POST(req: Request) {
     html,
     text,
     tags: [{ name: "type", value: "quittance" }],
+    senderEmail: userEmail, // V50.1
   })
   // Best-effort : la quittance est uploadée, le mail rate parfois (Resend pas
   // configuré, domaine pas vérifié, ...) — on log mais on ne fail pas la

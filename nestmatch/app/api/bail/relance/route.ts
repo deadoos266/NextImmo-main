@@ -128,6 +128,7 @@ export async function POST(req: NextRequest) {
       { name: "type", value: "bail_relance" },
       { name: "mode", value: mode },
     ],
+    senderEmail: propEmail, // V50.1
   })
 
   // Update timestamp même si l'email a été skipped (pas de RESEND_API_KEY) —

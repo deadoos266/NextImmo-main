@@ -235,6 +235,7 @@ export async function POST(req: NextRequest) {
     html,
     text,
     tags: [{ name: "type", value: "bail_invitation" }],
+    senderEmail: proprioEmail, // V50.1
   })
 
   return NextResponse.json({
