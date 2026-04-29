@@ -923,6 +923,32 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
     (filtreDpeMax ? 1 : 0) +
     (motCle.trim() ? 1 : 0)
 
+  // V45 — Liste détaillée des filtres actifs pour l'empty state explicite.
+  // User flag : "j'ai mis tout et à Lyon … 0 résultat et je ne sais pas pourquoi".
+  // Avant : pill "Filtres : 7" opaque sans détail. Maintenant : on liste
+  // chaque filtre avec son label + son handler de désactivation pour
+  // permettre à l'user d'identifier quel critère filtre dur.
+  type FilterChip = { label: string; clear: () => void }
+  const activeFiltersList: FilterChip[] = []
+  if (activeVille) activeFiltersList.push({ label: `Ville : ${activeVille}`, clear: () => onChangeVille("") })
+  if (budgetMaxFiltre) activeFiltersList.push({ label: `Budget ≤ ${budgetMaxFiltre.toLocaleString("fr-FR")} €`, clear: () => setBudgetMaxFiltre(null) })
+  if (piecesMin > 0) activeFiltersList.push({ label: `${piecesMin}+ pièces`, clear: () => setPiecesMin(0) })
+  if (surfaceMin) activeFiltersList.push({ label: `Surface ≥ ${surfaceMin} m²`, clear: () => setSurfaceMin("") })
+  if (surfaceMax) activeFiltersList.push({ label: `Surface ≤ ${surfaceMax} m²`, clear: () => setSurfaceMax("") })
+  if (filtreMeubleTri === "oui") activeFiltersList.push({ label: "Meublé", clear: () => setFiltreMeubleTri(null) })
+  if (filtreMeubleTri === "non") activeFiltersList.push({ label: "Non meublé", clear: () => setFiltreMeubleTri(null) })
+  if (scoreMin > 0) activeFiltersList.push({ label: `Match ≥ ${scoreMin}%`, clear: () => setScoreMin(0) })
+  if (dispoImmediate) activeFiltersList.push({ label: "Dispo immédiate", clear: () => setDispoImmediate(false) })
+  if (filtreParking) activeFiltersList.push({ label: "Parking", clear: () => setFiltreParking(false) })
+  if (filtreBalcon) activeFiltersList.push({ label: "Balcon", clear: () => setFiltreBalcon(false) })
+  if (filtreTerrasse) activeFiltersList.push({ label: "Terrasse", clear: () => setFiltreTerrasse(false) })
+  if (filtreJardin) activeFiltersList.push({ label: "Jardin", clear: () => setFiltreJardin(false) })
+  if (filtreCave) activeFiltersList.push({ label: "Cave", clear: () => setFiltreCave(false) })
+  if (filtreFibre) activeFiltersList.push({ label: "Fibre", clear: () => setFiltreFibre(false) })
+  if (filtreAscenseur) activeFiltersList.push({ label: "Ascenseur", clear: () => setFiltreAscenseur(false) })
+  if (filtreDpeMax) activeFiltersList.push({ label: `DPE ≤ ${filtreDpeMax}`, clear: () => setFiltreDpeMax("") })
+  if (motCle.trim()) activeFiltersList.push({ label: `Mot-clé : « ${motCle.trim()} »`, clear: () => setMotCle("") })
+
   const showMatchOption = !isProprietaire && profil !== null
 
   // ── Layout paddings latéraux (mobile 16, tablette 24, desktop 32)
@@ -1453,6 +1479,71 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                   secondaryCtaLabel={activeVille ? "Voir toutes les villes" : undefined}
                   onSecondaryCtaClick={activeVille ? () => onChangeVille("") : undefined}
                 />
+                {/* V45 — Liste explicite des filtres actifs + Indispensables.
+                    L'EmptyState générique ne suffit pas : l'user veut comprendre
+                    quel critère filtre dur. Ici on liste chaque chip avec X
+                    pour désactiver individuellement + section Indispensables
+                    séparée car ce sont des filtres durs venus du profil. */}
+                {(activeFiltersList.length > 0 || (profilEffectif && indispensableKeys.length > 0)) && (
+                  <div style={{ marginTop: 18, background: "#fff", border: "1px solid #EAE6DF", borderRadius: 16, padding: "20px 24px" }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 12px" }}>
+                      Tes filtres actifs
+                    </p>
+                    {activeFiltersList.length > 0 && (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+                        {activeFiltersList.map((f, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={f.clear}
+                            title={`Retirer ce filtre`}
+                            style={{
+                              display: "inline-flex", alignItems: "center", gap: 6,
+                              background: "#F7F4EF", border: "1px solid #EAE6DF",
+                              color: "#111", borderRadius: 999,
+                              padding: "5px 10px 5px 12px", fontSize: 12, fontWeight: 600,
+                              cursor: "pointer", fontFamily: "inherit",
+                            }}
+                          >
+                            {f.label}
+                            <span style={{ fontSize: 14, lineHeight: 1, color: "#8a8477" }}>×</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {profilEffectif && indispensableKeys.length > 0 && (
+                      <div style={{ background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: "#9a3412", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 6px" }}>
+                          Indispensables actifs (filtre dur)
+                        </p>
+                        <p style={{ fontSize: 13, color: "#a16207", margin: "0 0 10px", lineHeight: 1.55 }}>
+                          {indispensableKeys.length} critère{indispensableKeys.length > 1 ? "s" : ""} marqué{indispensableKeys.length > 1 ? "s" : ""} <strong>Indispensable</strong> sur ton profil filtre les annonces sans aucune tolérance : <strong>{indispensableKeys.join(", ")}</strong>.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setDisableIndispensable(v => !v)}
+                          style={{
+                            background: disableIndispensable ? "#fff" : "#9a3412",
+                            color: disableIndispensable ? "#9a3412" : "#fff",
+                            border: disableIndispensable ? "1px solid #EADFC6" : "none",
+                            borderRadius: 999, padding: "8px 16px",
+                            fontSize: 11, fontWeight: 700, cursor: "pointer",
+                            fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px",
+                          }}
+                        >
+                          {disableIndispensable ? "← Réactiver mes Indispensables" : "Désactiver mes Indispensables temporairement"}
+                        </button>
+                      </div>
+                    )}
+                    <p style={{ fontSize: 12, color: "#8a8477", margin: 0, lineHeight: 1.55 }}>
+                      Astuce : clique une chip pour la retirer, ou{" "}
+                      <button type="button" onClick={onResetAll} style={{ background: "none", border: "none", padding: 0, color: "#111", textDecoration: "underline", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600 }}>
+                        réinitialise tous les filtres
+                      </button>
+                      .
+                    </p>
+                  </div>
+                )}
                 {/* Suggestions villes proches (Paul 2026-04-27) — uniquement si
                     la ville est connue dans CITY_COORDS. Click = onChangeVille
                     qui re-route avec la ville suggeree. */}
@@ -1805,18 +1896,74 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                     {[1, 2, 3, 4, 5].map(i => <AnnonceSkeleton key={i} />)}
                   </div>
                 ) : annoncesTraitees.length === 0 ? (
-                  <EmptyState
-                    title="Aucun logement trouvé"
-                    description={mapBounds
-                      ? "Essayez d'élargir la zone de recherche sur la carte."
-                      : activeVille
-                        ? `Aucun résultat à ${activeVille} pour ces critères. Élargissez la recherche ou effacez la ville.`
-                        : "Ajustez vos filtres pour voir plus de résultats."}
-                    ctaLabel={mapBounds ? "Élargir la zone" : activeFilterCount > 0 ? "Réinitialiser les filtres" : undefined}
-                    onCtaClick={mapBounds ? () => setMapBounds(null) : activeFilterCount > 0 ? onResetAll : undefined}
-                    secondaryCtaLabel={activeVille && !mapBounds ? "Voir toutes les villes" : undefined}
-                    onSecondaryCtaClick={activeVille && !mapBounds ? () => onChangeVille("") : undefined}
-                  />
+                  <>
+                    <EmptyState
+                      title="Aucun logement trouvé"
+                      description={mapBounds
+                        ? "Essayez d'élargir la zone de recherche sur la carte."
+                        : activeVille
+                          ? `Aucun résultat à ${activeVille} pour ces critères. Élargissez la recherche ou effacez la ville.`
+                          : "Ajustez vos filtres pour voir plus de résultats."}
+                      ctaLabel={mapBounds ? "Élargir la zone" : activeFilterCount > 0 ? "Réinitialiser les filtres" : undefined}
+                      onCtaClick={mapBounds ? () => setMapBounds(null) : activeFilterCount > 0 ? onResetAll : undefined}
+                      secondaryCtaLabel={activeVille && !mapBounds ? "Voir toutes les villes" : undefined}
+                      onSecondaryCtaClick={activeVille && !mapBounds ? () => onChangeVille("") : undefined}
+                    />
+                    {/* V45 — Liste explicite filtres actifs (cf gridMode plus haut). */}
+                    {(activeFiltersList.length > 0 || (profilEffectif && indispensableKeys.length > 0)) && (
+                      <div style={{ marginTop: 14, background: "#fff", border: "1px solid #EAE6DF", borderRadius: 14, padding: "16px 18px" }}>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 10px" }}>
+                          Tes filtres actifs
+                        </p>
+                        {activeFiltersList.length > 0 && (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+                            {activeFiltersList.map((f, i) => (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={f.clear}
+                                title="Retirer ce filtre"
+                                style={{
+                                  display: "inline-flex", alignItems: "center", gap: 6,
+                                  background: "#F7F4EF", border: "1px solid #EAE6DF",
+                                  color: "#111", borderRadius: 999,
+                                  padding: "5px 10px 5px 12px", fontSize: 12, fontWeight: 600,
+                                  cursor: "pointer", fontFamily: "inherit",
+                                }}
+                              >
+                                {f.label}
+                                <span style={{ fontSize: 14, lineHeight: 1, color: "#8a8477" }}>×</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {profilEffectif && indispensableKeys.length > 0 && (
+                          <div style={{ background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 10, padding: "10px 12px", marginTop: 6 }}>
+                            <p style={{ fontSize: 10, fontWeight: 700, color: "#9a3412", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 4px" }}>
+                              Indispensables (filtre dur)
+                            </p>
+                            <p style={{ fontSize: 12, color: "#a16207", margin: "0 0 8px", lineHeight: 1.5 }}>
+                              <strong>{indispensableKeys.join(", ")}</strong> — aucune tolérance.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setDisableIndispensable(v => !v)}
+                              style={{
+                                background: disableIndispensable ? "#fff" : "#9a3412",
+                                color: disableIndispensable ? "#9a3412" : "#fff",
+                                border: disableIndispensable ? "1px solid #EADFC6" : "none",
+                                borderRadius: 999, padding: "6px 12px",
+                                fontSize: 10.5, fontWeight: 700, cursor: "pointer",
+                                fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px",
+                              }}
+                            >
+                              {disableIndispensable ? "← Réactiver" : "Désactiver temporairement"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column" }}>
                     {annoncesTraitees.slice(0, displayCount).map(a => {
