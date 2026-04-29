@@ -2,6 +2,7 @@
 import { SessionProvider, useSession } from "next-auth/react"
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { supabase } from "../lib/supabase"
+import { setActiveFavorisEmail, setFavorisLocal, clearLocalFavoris } from "../lib/favoris"
 
 type Role = "locataire" | "proprietaire"
 
@@ -76,6 +77,31 @@ function RoleProvider({ children }: { children: ReactNode }) {
       setRoleState("locataire")
       localStorage.removeItem("nestmatch_admin")
       localStorage.removeItem("nestmatch_proprio_active")
+    }
+  }, [session, status])
+
+  // V43 — Sync favoris : scope local par email + fetch DB au login.
+  // Avant : favoris partagés entre tous les comptes du même browser
+  // (privacy leak). Maintenant : clé localStorage scopée + sync API.
+  useEffect(() => {
+    if (status === "loading") return
+    const email = status === "authenticated" ? (session?.user?.email?.toLowerCase() || null) : null
+    setActiveFavorisEmail(email)
+    if (email) {
+      // Fetch DB favoris et écrase le cache local pour cet user.
+      void fetch("/api/favoris", { cache: "no-store" })
+        .then(r => r.ok ? r.json() : null)
+        .then(j => {
+          if (j?.ok && Array.isArray(j.favoris)) {
+            setFavorisLocal(j.favoris.map((n: unknown) => Number(n)).filter((n: number) => Number.isFinite(n)))
+          }
+        })
+        .catch(() => { /* offline OK : on garde le cache local existant */ })
+    } else if (status === "unauthenticated") {
+      // Logout : on clear le cache local de l'user précédent + le legacy
+      // global key est déjà purgé par setActiveFavorisEmail. Le user "anon"
+      // démarre avec un cache vide.
+      clearLocalFavoris()
     }
   }, [session, status])
 
