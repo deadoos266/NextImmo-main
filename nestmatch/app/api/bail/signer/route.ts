@@ -29,6 +29,8 @@ import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
 import { finalizeBail } from "@/lib/bail/finalize"
+import { hashBailData, canonicalPayloadString } from "@/lib/bailHash"
+import type { BailData } from "@/lib/bailPDF"
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -142,6 +144,32 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // V34.2 — Récupère le payload [BAIL_CARD] courant pour calculer le hash
+  // SHA-256 canonique server-side. Stocké dans payload_snapshot pour
+  // permettre une vérification d'intégrité ultérieure (anti-tampering).
+  let payloadSnapshot: string | null = null
+  let payloadHashSha256: string | null = null
+  try {
+    const { data: bailMsg } = await supabaseAdmin
+      .from("messages")
+      .select("contenu")
+      .eq("annonce_id", annonceId)
+      .ilike("contenu", "[BAIL_CARD]%")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (bailMsg?.contenu) {
+      const raw = bailMsg.contenu.slice("[BAIL_CARD]".length)
+      const bailData = JSON.parse(raw) as BailData
+      payloadSnapshot = canonicalPayloadString(bailData)
+      payloadHashSha256 = await hashBailData(bailData)
+    }
+  } catch (e) {
+    // Silent fallback : si le payload n'est pas parseable, on signe quand
+    // même (eIDAS niveau 1 ne requiert pas le PDF intégral).
+    console.warn("[bail/signer] payload snapshot capture failed:", e)
+  }
+
   // Upsert signature (unique par annonce+email+role)
   const userAgent = req.headers.get("user-agent") || ""
   const { error: errIns } = await supabaseAdmin.from("bail_signatures").upsert(
@@ -159,6 +187,9 @@ export async function POST(req: NextRequest) {
       // V32.2 — Audit-trail eIDAS renforcé : on horodate le moment où le
       // signataire confirme avoir lu le PDF (case "J'ai lu intégralement").
       pdf_lu_avant_signature_at: pdfLuAt,
+      // V34.2 — Snapshot canonique + hash SHA-256 pour anti-tampering.
+      payload_snapshot: payloadSnapshot ? JSON.parse(payloadSnapshot) : null,
+      payload_hash_sha256: payloadHashSha256,
     },
     { onConflict: "annonce_id,signataire_email,signataire_role" },
   )

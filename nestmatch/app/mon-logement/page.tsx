@@ -13,6 +13,7 @@ import { computeBailTimeline } from "../../lib/bailTimeline"
 import { projeterEcheancierBail, prochaineEcheance } from "../../lib/loyersProjection"
 import BailTimeline from "../components/ui/BailTimeline"
 import BailSignatureModal from "../components/BailSignatureModal"
+import IntegrityBadge from "../components/bail/IntegrityBadge"
 import type { BailData, BailSignatureEntry } from "../../lib/bailPDF"
 
 /**
@@ -887,19 +888,23 @@ export default function MonLogement() {
             <div style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 20, padding: isMobile ? 22 : 26, marginBottom: 16, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 10, flexWrap: "wrap" }}>
                 <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, margin: 0, letterSpacing: "-0.3px", color: "#111" }}>Mon bail</h2>
-                {doubleSigne ? (
-                  <span style={{ background: "#F0FAEE", color: "#15803d", border: "1px solid #C6E9C0", padding: "4px 12px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
-                    Signé par les deux parties
-                  </span>
-                ) : dejaSigne ? (
-                  <span style={{ background: "#F0FAEE", color: "#15803d", border: "1px solid #C6E9C0", padding: "4px 12px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
-                    Signé — en attente du propriétaire
-                  </span>
-                ) : (
-                  <span style={{ background: "#FBF6EA", color: "#a16207", border: "1px solid #EADFC6", padding: "4px 12px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
-                    Action requise — signer
-                  </span>
-                )}
+                <div style={{ display: "inline-flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  {/* V34.2 — Badge intégrité SHA-256 (caché si no_signature ou legacy) */}
+                  {dejaSigne && <IntegrityBadge annonceId={bien.id} />}
+                  {doubleSigne ? (
+                    <span style={{ background: "#F0FAEE", color: "#15803d", border: "1px solid #C6E9C0", padding: "4px 12px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
+                      Signé par les deux parties
+                    </span>
+                  ) : dejaSigne ? (
+                    <span style={{ background: "#F0FAEE", color: "#15803d", border: "1px solid #C6E9C0", padding: "4px 12px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
+                      Signé — en attente du propriétaire
+                    </span>
+                  ) : (
+                    <span style={{ background: "#FBF6EA", color: "#a16207", border: "1px solid #EADFC6", padding: "4px 12px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
+                      Action requise — signer
+                    </span>
+                  )}
+                </div>
               </div>
               {/* V25.1 — helper getDateDebutBailFr */}
               {(() => {
