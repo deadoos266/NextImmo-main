@@ -91,8 +91,12 @@ function RoleProvider({ children }: { children: ReactNode }) {
     }
     // Pas de choix stocké → on détecte depuis la DB
     const email = session.user.email
+    // V29.B — /api/profil/me?cols=is_proprietaire (RLS Phase 5)
     Promise.all([
-      supabase.from("profils").select("is_proprietaire").eq("email", email).single(),
+      fetch("/api/profil/me?cols=is_proprietaire", { cache: "no-store" })
+        .then(r => r.ok ? r.json() : null)
+        .then(j => ({ data: j?.ok ? j.profil : null }))
+        .catch(() => ({ data: null })),
       supabase.from("annonces").select("id", { count: "exact", head: true }).eq("proprietaire_email", email),
     ]).then(([{ data: profil }, { count }]) => {
       const isProprio = profil?.is_proprietaire === true || (count ?? 0) > 0
@@ -114,8 +118,12 @@ function RoleProvider({ children }: { children: ReactNode }) {
     if (cached === "false") { setCanBeProprio(false); return }
     // Pas de cache — query DB
     const email = session.user.email
+    // V29.B — /api/profil/me?cols=is_proprietaire (RLS Phase 5)
     Promise.all([
-      supabase.from("profils").select("is_proprietaire").eq("email", email).single(),
+      fetch("/api/profil/me?cols=is_proprietaire", { cache: "no-store" })
+        .then(r => r.ok ? r.json() : null)
+        .then(j => ({ data: j?.ok ? j.profil : null }))
+        .catch(() => ({ data: null })),
       supabase.from("annonces").select("id", { count: "exact", head: true }).eq("proprietaire_email", email),
     ]).then(([{ data: profil }, { count }]) => {
       const isProprio = profil?.is_proprietaire === true || (count ?? 0) > 0

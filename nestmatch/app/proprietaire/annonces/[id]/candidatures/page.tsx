@@ -165,13 +165,23 @@ export default function CandidaturesParAnnonce() {
     // 3) Dossiers (profils) pour les candidats
     const emails = Array.from(new Set(candRows.map(c => c.from_email).filter(Boolean)))
     if (emails.length > 0) {
-      const { data: profs } = await supabase.from("profils").select("*").in("email", emails)
-      const map: Record<string, ScreeningProfil & Record<string, unknown>> = {}
-      ;(profs || []).forEach((p: Record<string, unknown>) => {
-        const email = p.email as string | undefined
-        if (email) map[email] = p as ScreeningProfil & Record<string, unknown>
-      })
-      setDossiers(map)
+      // V29.B — via /api/proprietaire/candidates-dossiers (server-side,
+      // vérifie ownership annonce avant de retourner dossier_docs).
+      try {
+        const res = await fetch("/api/proprietaire/candidates-dossiers", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ annonceId: bienId, emails }),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (json.ok && Array.isArray(json.profils)) {
+          const map: Record<string, ScreeningProfil & Record<string, unknown>> = {}
+          json.profils.forEach((p: Record<string, unknown>) => {
+            const email = p.email as string | undefined
+            if (email) map[email] = p as ScreeningProfil & Record<string, unknown>
+          })
+          setDossiers(map)
+        }
+      } catch { /* noop */ }
     }
 
     // 4) Visites liées à ce bien (pour statut "visite programmée")

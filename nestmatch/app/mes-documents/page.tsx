@@ -54,9 +54,14 @@ export default function MesDocuments() {
     const email = session.user.email.toLowerCase()
     ;(async () => {
       // 1. Annonces actives + anciennes
+      // V29.B — profils via /api/profil/me (RLS Phase 5)
+      const profilP = fetch("/api/profil/me?cols=dossier_docs,anciens_logements", { cache: "no-store" })
+        .then(r => r.ok ? r.json() : null)
+        .then(j => j?.ok ? { data: j.profil } : { data: null })
+        .catch(() => ({ data: null }))
       const [{ data: actives }, { data: profil }, { data: loyers }, { data: edls }] = await Promise.all([
         supabase.from("annonces").select("id, titre, ville, statut").eq("locataire_email", email),
-        supabase.from("profils").select("dossier_docs, anciens_logements").eq("email", email).maybeSingle(),
+        profilP,
         supabase.from("loyers").select("id, annonce_id, mois, quittance_pdf_url").eq("locataire_email", email).not("quittance_pdf_url", "is", null),
         supabase.from("etats_des_lieux").select("id").eq("locataire_email", email).limit(1),
       ])

@@ -69,8 +69,12 @@ export default function SwipePage() {
         .limit(60)
       let profil: any = null
       if (session?.user?.email) {
-        const { data: p } = await supabase.from("profils").select("*").eq("email", session.user.email).single()
-        profil = p
+        // V29.B — /api/profil/me (RLS Phase 5)
+        try {
+          const res = await fetch("/api/profil/me", { cache: "no-store" })
+          const json = await res.json().catch(() => ({}))
+          profil = json.ok ? json.profil : null
+        } catch { profil = null }
       }
       const favSet = new Set(getFavoris())
       const enriched = (all || [])

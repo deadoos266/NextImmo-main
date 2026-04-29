@@ -34,23 +34,23 @@ export default function OngletProfil() {
   useEffect(() => {
     const email = session?.user?.email
     if (!email) return
-    supabase.from("profils").select("photo_url_custom, bio_publique, telephone").eq("email", email).single().then(({ data, error }) => {
-      if (error) {
-        // Probable cause : migration 008 pas encore appliquée (colonnes absentes).
-        setSaveError(
-          error.message.includes("column") || error.code === "42703"
-            ? "Configuration incomplète : la migration 008_parametres_profil_public.sql n'a pas été appliquée. Contactez un administrateur."
-            : `Erreur de chargement : ${error.message}`
-        )
-        return
-      }
+    // V29.B — /api/profil/me?cols=... (RLS Phase 5)
+    fetch("/api/profil/me?cols=photo_url_custom,bio_publique,telephone", { cache: "no-store" })
+      .then(r => r.ok ? r.json() : null)
+      .then(j => {
+        if (!j?.ok) {
+          setSaveError("Erreur de chargement du profil.")
+          return
+        }
+        const data = j.profil as { photo_url_custom?: string | null; bio_publique?: string | null; telephone?: string | null } | null
       setPhoto(data?.photo_url_custom || null)
       setBio(data?.bio_publique || "")
       setInitialBio(data?.bio_publique || "")
-      const tel = (data as { telephone?: string | null })?.telephone || ""
+      const tel = data?.telephone || ""
       setTelephone(tel)
       setInitialTel(tel)
-    })
+      })
+      .catch(() => setSaveError("Erreur réseau"))
   }, [session?.user?.email])
 
   async function sauverTel() {

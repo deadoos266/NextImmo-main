@@ -109,12 +109,14 @@ export default function Navbar() {
   useEffect(() => {
     const email = session?.user?.email?.toLowerCase()
     if (!email) { setPhotoCustom(null); return }
-    supabase.from("profils").select("photo_url_custom").eq("email", email).single()
-      .then(({ data, error }) => {
-        if (error) return // colonne absente ou profil pas encore créé
-        const v = (data as { photo_url_custom?: string | null } | null)?.photo_url_custom
+    // V29.B — /api/profil/me?cols=photo_url_custom (RLS Phase 5)
+    fetch("/api/profil/me?cols=photo_url_custom", { cache: "no-store" })
+      .then(r => r.ok ? r.json() : null)
+      .then(j => {
+        const v = (j?.profil as { photo_url_custom?: string | null } | null)?.photo_url_custom
         if (v) setPhotoCustom(v)
       })
+      .catch(() => { /* noop */ })
   }, [session?.user?.email])
 
   useEffect(() => {

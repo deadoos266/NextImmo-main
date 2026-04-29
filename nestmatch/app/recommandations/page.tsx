@@ -38,7 +38,11 @@ export default function Recommandations() {
 
   async function load() {
     const email = session!.user!.email!
-    const { data: p } = await supabase.from("profils").select("*").eq("email", email).single()
+    void email
+    // V29.B — /api/profil/me (RLS Phase 5)
+    const meRes = await fetch("/api/profil/me", { cache: "no-store" })
+    const meJson = await meRes.json().catch(() => ({}))
+    const p = meJson.ok ? meJson.profil : null
     setProfil(p)
 
     // On ignore le filtre ville stricte pour découvrir d'autres zones

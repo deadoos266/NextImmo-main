@@ -186,8 +186,11 @@ function Profil() {
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth")
     if (session?.user?.email) {
-      supabase.from("profils").select("*").eq("email", session.user.email).single()
-        .then(({ data }) => {
+      // V29.B — /api/profil/me (RLS Phase 5)
+      fetch("/api/profil/me", { cache: "no-store" })
+        .then(r => r.ok ? r.json() : null)
+        .then(j => {
+          const data = j?.ok ? j.profil : null
           if (data) {
             setPhotoCustom((data as { photo_url_custom?: string | null }).photo_url_custom || null)
             setForm({

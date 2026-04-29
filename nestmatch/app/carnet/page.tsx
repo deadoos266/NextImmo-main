@@ -73,12 +73,20 @@ export default function Carnet() {
       // Charger les profils des locataires qui ont signalé des entrées
       const locEmails = [...new Set(evts.filter(ev => ev.locataire_email).map(ev => ev.locataire_email))]
       if (locEmails.length > 0) {
-        const { data: profils } = await supabase.from("profils").select("email, prenom, nom").in("email", locEmails)
-        if (profils) {
-          const map: Record<string, any> = {}
-          profils.forEach((p: any) => { map[p.email] = p })
-          setLocataires(map)
-        }
+        // V29.B — via /api/profil/by-emails (server-side, public cols only)
+        try {
+          const res = await fetch("/api/profil/by-emails", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ emails: locEmails, cols: ["email", "prenom", "nom"] }),
+          })
+          const json = await res.json().catch(() => ({}))
+          if (json.ok && Array.isArray(json.profils)) {
+            const map: Record<string, any> = {}
+            json.profils.forEach((p: any) => { map[p.email] = p })
+            setLocataires(map)
+          }
+        } catch { /* noop */ }
       }
     } else {
       // Locataire : on aggrège 2 sources d'éligibilité au carnet :

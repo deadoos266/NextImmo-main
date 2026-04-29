@@ -1393,8 +1393,10 @@ export default function Dossier() {
   }, [session, status])
 
   async function load() {
-    const email = session!.user!.email!.toLowerCase()
-    const { data } = await supabase.from("profils").select("*").eq("email", email).single()
+    // V29.B — /api/profil/me (server-side, RLS Phase 5)
+    const res = await fetch("/api/profil/me", { cache: "no-store" })
+    const json = await res.json().catch(() => ({}))
+    const data = json.ok ? json.profil : null
     if (data) {
       setProfil(data)
       setForm({

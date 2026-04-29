@@ -20,8 +20,11 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
 
   useEffect(() => {
     if (session?.user?.email) {
-      supabase.from("profils").select("*").eq("email", session.user.email).single()
-        .then(({ data }) => { if (data) setProfil(data); setLoading(false) })
+      // V29.B — /api/profil/me (RLS Phase 5)
+      fetch("/api/profil/me", { cache: "no-store" })
+        .then(r => r.ok ? r.json() : null)
+        .then(j => { if (j?.ok && j.profil) setProfil(j.profil); setLoading(false) })
+        .catch(() => setLoading(false))
     } else if (status !== "loading") {
       setLoading(false)
     }

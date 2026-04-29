@@ -128,7 +128,10 @@ export default function OngletCompte() {
     if (!email) return
     // Export RGPD minimal côté client. Les données complètes restent serveur
     // et nécessiteront une API dédiée — ici on fournit le profil utilisateur.
-    const { data: profil } = await supabase.from("profils").select("*").eq("email", email).single()
+    // V29.B — /api/profil/me (RLS Phase 5)
+    const meRes = await fetch("/api/profil/me", { cache: "no-store" })
+    const meJson = await meRes.json().catch(() => ({}))
+    const profil = meJson.ok ? meJson.profil : null
     const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), email, profil }, null, 2)], { type: "application/json" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")

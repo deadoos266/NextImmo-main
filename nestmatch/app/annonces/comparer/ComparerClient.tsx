@@ -49,7 +49,10 @@ export default function ComparerClient({ ids }: { ids: number[] }) {
         setAnnonces(ordered)
       }
       if (session?.user?.email) {
-        const { data: p } = await supabase.from("profils").select("*").eq("email", session.user.email).single()
+        // V29.B — via /api/profil/me (server-side, RLS Phase 5)
+        const res = await fetch("/api/profil/me", { cache: "no-store" })
+        const json = await res.json().catch(() => ({}))
+        const p = json.ok ? json.profil : null
         if (!cancelled && p) setProfil(p)
       }
       if (!cancelled) setLoading(false)

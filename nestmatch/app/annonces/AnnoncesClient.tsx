@@ -519,7 +519,10 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
         .eq("is_test", false) // Modération : exclut les annonces flaguées en test (proprio les voit toujours dans /proprietaire)
       if (a) setAnnonces(a)
       if (session?.user?.email) {
-        const { data: p } = await supabase.from("profils").select("*").eq("email", session.user.email).single()
+        // V29.B — via /api/profil/me (server-side, RLS Phase 5)
+        const meRes = await fetch("/api/profil/me", { cache: "no-store" })
+        const meJson = await meRes.json().catch(() => ({}))
+        const p = meJson.ok ? meJson.profil : null
         if (p) {
           setProfil(p)
           if (!isProprietaire) {

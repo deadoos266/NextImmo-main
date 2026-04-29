@@ -1757,14 +1757,24 @@ function MessagesInner() {
       // Colonnes matching : permet calcul score cote proprio (peer = candidat)
       // + avatar/tel deja en piggyback depuis 2026-04-23.
       const MATCH_COLS = "email, photo_url_custom, telephone, ville_souhaitee, mode_localisation, budget_max, surface_min, pieces_min, chambres_min, rez_de_chaussee_ok, animaux, meuble, parking, balcon, terrasse, jardin, cave, fibre, ascenseur, dpe_min"
-      const [usersRes, profilsRes, myProfileRes] = await Promise.all([
+      const MATCH_COLS_ARR = MATCH_COLS.split(",").map(s => s.trim())
+      // V29.B — profils via /api/profil/by-emails + /api/profil/me (RLS Phase 5)
+      const [usersRes, profilsResJ, myProfileResJ] = await Promise.all([
         supabase.from("users").select("email, image").in("email", peerEmails),
-        supabase.from("profils").select(MATCH_COLS).in("email", peerEmails),
-        // Mon profil pour calculer score cote locataire (score de l'annonce
-        // vs mes preferences). Skip silencieusement si erreur (ex. colonnes
-        // manquantes en prod) — le score tombera sur 500 neutre.
-        supabase.from("profils").select(MATCH_COLS).eq("email", email).maybeSingle(),
+        fetch("/api/profil/by-emails", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ emails: peerEmails, cols: MATCH_COLS_ARR }),
+        }).then(r => r.ok ? r.json() : { ok: false }).catch(() => ({ ok: false })),
+        fetch(`/api/profil/me?cols=${encodeURIComponent(MATCH_COLS)}`, { cache: "no-store" })
+          .then(r => r.ok ? r.json() : null).catch(() => null),
       ])
+      const profilsRes = {
+        data: profilsResJ?.ok ? profilsResJ.profils : null,
+        error: profilsResJ?.ok ? null : { message: "fetch failed" },
+      }
+      const myProfileRes = {
+        data: myProfileResJ?.ok ? myProfileResJ.profil : null,
+      }
       const map: Record<string, string> = {}
       const phoneMap: Record<string, string> = {}
       const profileMap: Record<string, MatchingProfil> = {}
@@ -1789,7 +1799,7 @@ function MessagesInner() {
       setPeerImages(map)
       setPeerPhones(phoneMap)
       setPeerProfiles(profileMap)
-      if (!myProfileRes.error && myProfileRes.data) {
+      if (myProfileRes.data) {
         setMyProfile(myProfileRes.data as unknown as MatchingProfil)
         const myTel = (myProfileRes.data as { telephone?: string | null }).telephone
         if (typeof myTel === "string" && myTel.trim()) setMyPhone(myTel.trim())

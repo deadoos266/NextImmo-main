@@ -43,8 +43,11 @@ export default function StickyCTABanner({ annonce }: { annonce: any }) {
 
   useEffect(() => {
     if (session?.user?.email) {
-      supabase.from("profils").select("*").eq("email", session.user.email).maybeSingle()
-        .then(({ data }) => { setProfil(data || null) })
+      // V29.B — /api/profil/me (RLS Phase 5)
+      fetch("/api/profil/me", { cache: "no-store" })
+        .then(r => r.ok ? r.json() : null)
+        .then(j => setProfil(j?.ok ? j.profil : null))
+        .catch(() => setProfil(null))
     }
   }, [session])
 
