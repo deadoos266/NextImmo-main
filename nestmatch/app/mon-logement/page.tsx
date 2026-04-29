@@ -10,6 +10,7 @@ import { joursRetardLoyer } from "../../lib/loyerHelpers"
 import { BRAND } from "../../lib/brand"
 import { drawLogoPDF } from "../../lib/brandPDF"
 import { computeBailTimeline } from "../../lib/bailTimeline"
+import { projeterEcheancierBail, prochaineEcheance } from "../../lib/loyersProjection"
 import BailTimeline from "../components/ui/BailTimeline"
 import BailSignatureModal from "../components/BailSignatureModal"
 import type { BailData, BailSignatureEntry } from "../../lib/bailPDF"
@@ -804,39 +805,74 @@ export default function MonLogement() {
                   </div>
                 )
               })()}
-              {loyers.length === 0 ? (
-                <p style={{ fontSize: 13, color: "#8a8477", margin: 0 }}>Aucun loyer enregistré pour l&apos;instant.</p>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {loyers.map(l => {
-                    const moisLabel = l.mois
-                      ? new Date(l.mois + "-01T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
-                      : ""
-                    const confirmed = l.statut === "confirmé"
-                    const quittanceEnvoyee = !!l.quittance_envoyee_at
-                    const jRetard = joursRetardLoyer(l.mois, l.statut)
-                    const enRetard = jRetard > 0
-                    const rowBg = confirmed ? "#F0FAEE" : enRetard ? "#FEECEC" : "#FBF6EA"
-                    const rowBorder = confirmed ? "#C6E9C0" : enRetard ? "#F4C9C9" : "#EADFC6"
-                    return (
-                      <div key={l.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", border: `1px solid ${rowBorder}`, borderRadius: 14, gap: 10, background: rowBg }}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1, minWidth: 0 }}>
-                          <span style={{ fontWeight: 600, fontSize: 13, textTransform: "capitalize", color: "#111" }}>{moisLabel}</span>
-                          <span style={{ color: "#8a8477", fontSize: 12 }}>{l.montant} €</span>
-                        </div>
-                        <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
-                          <span style={{ background: "#fff", color: confirmed ? "#15803d" : enRetard ? "#b91c1c" : "#a16207", border: `1px solid ${rowBorder}`, padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
-                            {confirmed ? "Payé" : enRetard ? `Retard ${jRetard} j` : "En attente"}
-                          </span>
-                          {quittanceEnvoyee && (
-                            <Link href="/messages" style={{ fontSize: 10, color: "#111", fontWeight: 600, textDecoration: "none", textTransform: "uppercase", letterSpacing: "0.3px" }}>Quittance →</Link>
-                          )}
-                        </div>
+              {/* V33.5 — Échéancier projection complète : merge loyers DB + mois futurs */}
+              {(() => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const dureeBail = Number((bailPayload as any)?.duree) || 36
+                const loyerCC = Number(bien.prix || 0) + Number(bien.charges || 0)
+                const echeancier = projeterEcheancierBail({
+                  dateDebutBail: bien.date_debut_bail,
+                  dureeMois: dureeBail,
+                  loyerCC,
+                  loyersExistants: loyers,
+                })
+                const next = prochaineEcheance(echeancier)
+                if (echeancier.length === 0) {
+                  return <p style={{ fontSize: 13, color: "#8a8477", margin: 0 }}>Aucun loyer enregistré pour l&apos;instant.</p>
+                }
+                return (
+                  <>
+                    {next && next.statut !== "paye" && (
+                      <div style={{
+                        background: next.statut === "imminent" ? "#FBF6EA" : next.statut === "retard" ? "#FEECEC" : "#EEF3FB",
+                        border: `1px solid ${next.statut === "imminent" ? "#EADFC6" : next.statut === "retard" ? "#F4C9C9" : "#D7E3F4"}`,
+                        borderRadius: 14, padding: "12px 16px", marginBottom: 12, fontSize: 13, lineHeight: 1.55,
+                        color: next.statut === "imminent" ? "#a16207" : next.statut === "retard" ? "#b91c1c" : "#1d4ed8",
+                      }}>
+                        <strong>Prochaine échéance</strong> — {new Date(next.echeanceIso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                        {next.joursAvantEcheance > 0 ? ` (dans ${next.joursAvantEcheance} jour${next.joursAvantEcheance > 1 ? "s" : ""})` : next.joursAvantEcheance === 0 ? " (aujourd'hui)" : ` (en retard de ${Math.abs(next.joursAvantEcheance)} jour${Math.abs(next.joursAvantEcheance) > 1 ? "s" : ""})`}
+                        {" — "}{next.montant.toLocaleString("fr-FR")} €
                       </div>
-                    )
-                  })}
-                </div>
-              )}
+                    )}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {echeancier.map(e => {
+                        const moisLabel = new Date(e.echeanceIso).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
+                        const isPaye = e.statut === "paye"
+                        const isRetard = e.statut === "retard" || e.statut === "passe_inconnu"
+                        const isImminent = e.statut === "imminent"
+                        const isFutur = e.statut === "futur"
+                        const isDeclare = e.statut === "declare"
+                        const rowBg = isPaye ? "#F0FAEE" : isRetard ? "#FEECEC" : isImminent ? "#FBF6EA" : isDeclare ? "#EEF3FB" : "#fff"
+                        const rowBorder = isPaye ? "#C6E9C0" : isRetard ? "#F4C9C9" : isImminent ? "#EADFC6" : isDeclare ? "#D7E3F4" : "#EAE6DF"
+                        const chipColor = isPaye ? "#15803d" : isRetard ? "#b91c1c" : isImminent ? "#a16207" : isDeclare ? "#1d4ed8" : "#8a8477"
+                        const chipLabel =
+                          isPaye ? "Payé"
+                          : e.statut === "retard" ? `Retard ${Math.abs(e.joursAvantEcheance)} j`
+                          : e.statut === "passe_inconnu" ? "À déclarer"
+                          : isImminent ? `Dans ${e.joursAvantEcheance} j`
+                          : isDeclare ? "Déclaré"
+                          : "Futur"
+                        return (
+                          <div key={e.mois} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", border: `1px solid ${rowBorder}`, borderRadius: 14, gap: 10, background: rowBg, opacity: isFutur ? 0.78 : 1 }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1, minWidth: 0 }}>
+                              <span style={{ fontWeight: 600, fontSize: 13, textTransform: "capitalize", color: "#111" }}>{moisLabel}</span>
+                              <span style={{ color: "#8a8477", fontSize: 12 }}>{e.montant.toLocaleString("fr-FR")} €</span>
+                            </div>
+                            <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+                              <span style={{ background: "#fff", color: chipColor, border: `1px solid ${rowBorder}`, padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
+                                {chipLabel}
+                              </span>
+                              {e.quittanceDispo && (
+                                <Link href="/messages" style={{ fontSize: 10, color: "#111", fontWeight: 600, textDecoration: "none", textTransform: "uppercase", letterSpacing: "0.3px" }}>Quittance →</Link>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </>
+                )
+              })()}
             </div>
           )
         })()}
