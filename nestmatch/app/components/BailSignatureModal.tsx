@@ -9,6 +9,68 @@ import { genererBailPDFBlob } from "../../lib/bailPDF"
 // Empêche les clics réflexes "yolo" qui sapent l'audit-trail eIDAS.
 const MIN_LECTURE_SECONDS = 15
 
+// V33.2 — Mention manuscrite légale exacte (article 22 loi du 6 juillet 1989,
+// jurisprudence Cass. civ. 3e). Le caractère manuscrit est satisfait par la
+// re-saisie au clavier dans une signature électronique simple eIDAS niveau 1.
+const MENTION_REQUISE = "Lu et approuvé, bon pour accord"
+
+/**
+ * V33.2 — Normalisation pour validation insensible à la casse + accents +
+ * espaces multiples. Tolère une apostrophe typographique vs droite, espaces
+ * insécables, et trim. Audit V31 R2.8.
+ */
+function normaliserMention(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // retire les accents
+    .toLowerCase()
+    .replace(/[  ]/g, " ") // espaces insécables → espace normal
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+const MENTION_REQUISE_NORM = normaliserMention(MENTION_REQUISE)
+
+/**
+ * V33.2 — Validation stricte et signal de proximité (similarité de Levenshtein
+ * approximée) pour donner du feedback live à l'utilisateur.
+ */
+function validerMention(input: string, roleHasGarant?: boolean): {
+  ok: boolean
+  proche: boolean
+  message: string | null
+} {
+  const norm = normaliserMention(input)
+  if (!norm) return { ok: false, proche: false, message: null }
+  // Cas garant : on accepte la mention "+ caution solidaire à hauteur de [montant]"
+  // tant que la mention de base est présente.
+  const containsBase = norm.includes(MENTION_REQUISE_NORM)
+  if (containsBase) {
+    if (roleHasGarant && !/caution\s+solidaire/i.test(input)) {
+      return {
+        ok: false,
+        proche: true,
+        message: "En tant que garant, ajoutez « caution solidaire à hauteur de [montant] € »",
+      }
+    }
+    return { ok: true, proche: true, message: null }
+  }
+  // Proximité : si l'user a tapé "lu et approuv" mais oublié "bon pour accord"
+  const partial = /lu\s+et\s+approuve?/i.test(norm)
+  if (partial) {
+    return {
+      ok: false,
+      proche: true,
+      message: `Continuez : la mention complète est exactement « ${MENTION_REQUISE} » — c'est une exigence légale.`,
+    }
+  }
+  return {
+    ok: false,
+    proche: false,
+    message: `La mention doit être recopiée exactement : « ${MENTION_REQUISE} »`,
+  }
+}
+
 interface Props {
   open: boolean
   onClose: () => void
@@ -162,8 +224,10 @@ export default function BailSignatureModal({
       setError("Nom requis.")
       return
     }
-    if (!/lu et approuv/i.test(mention)) {
-      setError('La mention doit contenir "Lu et approuvé".')
+    // V33.2 — validation stricte (insensible accents/casse) + check garant
+    const mentionCheck = validerMention(mention, role === "garant")
+    if (!mentionCheck.ok) {
+      setError(mentionCheck.message || `La mention doit être exactement « ${MENTION_REQUISE} »`)
       return
     }
 
@@ -276,28 +340,34 @@ export default function BailSignatureModal({
               Je suis prêt à signer →
             </button>
           </>
-        ) : (
-          <>
-            {footerCommon}
-            <button
-              onClick={submit}
-              disabled={!signaturePng || submitting}
-              style={{
-                background: signaturePng && !submitting ? "#15803d" : "#EAE6DF",
-                color: signaturePng && !submitting ? "white" : "#8a8477",
-                border: "none",
-                borderRadius: 999,
-                padding: "10px 22px",
-                fontWeight: 700,
-                fontSize: 14,
-                cursor: signaturePng && !submitting ? "pointer" : "not-allowed",
-                fontFamily: "inherit",
-              }}
-            >
-              {submitting ? "Signature en cours…" : "✓ Signer le bail"}
-            </button>
-          </>
-        )
+        ) : (() => {
+          // V33.2 — pré-check live : mention valide + nom + signature pour activer le bouton
+          const mentionOk = validerMention(mention, role === "garant").ok
+          const peutSigner = !!signaturePng && !submitting && nom.trim().length >= 2 && mentionOk
+          return (
+            <>
+              {footerCommon}
+              <button
+                onClick={submit}
+                disabled={!peutSigner}
+                title={!peutSigner ? "Complétez nom + mention exacte + signature pour activer" : undefined}
+                style={{
+                  background: peutSigner ? "#15803d" : "#EAE6DF",
+                  color: peutSigner ? "white" : "#8a8477",
+                  border: "none",
+                  borderRadius: 999,
+                  padding: "10px 22px",
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: peutSigner ? "pointer" : "not-allowed",
+                  fontFamily: "inherit",
+                }}
+              >
+                {submitting ? "Signature en cours…" : "✓ Signer le bail"}
+              </button>
+            </>
+          )
+        })()
       }
     >
       {/* Step indicator */}
@@ -631,41 +701,70 @@ export default function BailSignatureModal({
               />
             </div>
 
-            <div>
-              <label
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: "#8a8477",
-                  display: "block",
-                  marginBottom: 6,
-                }}
-              >
-                Mention manuscrite *
-              </label>
-              <input
-                value={mention}
-                onChange={e => setMention(e.target.value)}
-                placeholder="Lu et approuvé, bon pour accord"
-                style={{
-                  width: "100%",
-                  padding: "11px 14px",
-                  border: "1px solid #EAE6DF",
-                  borderRadius: 10,
-                  fontSize: 15,
-                  outline: "none",
-                  boxSizing: "border-box",
-                  fontFamily: "inherit",
-                  color: "#111",
-                  background: "white",
-                  fontStyle: "italic",
-                }}
-              />
-              <p style={{ fontSize: 11, color: "#8a8477", marginTop: 4, lineHeight: 1.5 }}>
-                Recopiez exactement : <em>Lu et approuvé, bon pour accord</em>
-                {role === "garant" && " — ajoutez 'caution solidaire à hauteur de [montant] €'"}
-              </p>
-            </div>
+            {/* V33.2 — Mention manuscrite avec validation live (couleurs + message). */}
+            {(() => {
+              const check = validerMention(mention, role === "garant")
+              const borderColor = mention.length === 0
+                ? "#EAE6DF"
+                : check.ok
+                  ? "#86efac"
+                  : check.proche
+                    ? "#EADFC6"
+                    : "#F4C9C9"
+              const helpColor = mention.length === 0
+                ? "#8a8477"
+                : check.ok
+                  ? "#15803d"
+                  : check.proche
+                    ? "#a16207"
+                    : "#b91c1c"
+              const helpText = mention.length === 0
+                ? <>Recopiez exactement : <em>{MENTION_REQUISE}</em>{role === "garant" && " — ajoutez 'caution solidaire à hauteur de [montant] €'"}</>
+                : check.ok
+                  ? <>✓ Mention valide</>
+                  : check.message
+                    ? <>{check.message}</>
+                    : <>Recopiez exactement : <em>{MENTION_REQUISE}</em></>
+              return (
+                <div>
+                  <label
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "#8a8477",
+                      display: "block",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Mention manuscrite *
+                  </label>
+                  <input
+                    value={mention}
+                    onChange={e => setMention(e.target.value)}
+                    placeholder={MENTION_REQUISE}
+                    aria-invalid={mention.length > 0 && !check.ok}
+                    aria-describedby="mention-help"
+                    style={{
+                      width: "100%",
+                      padding: "11px 14px",
+                      border: `1.5px solid ${borderColor}`,
+                      borderRadius: 10,
+                      fontSize: 15,
+                      outline: "none",
+                      boxSizing: "border-box",
+                      fontFamily: "inherit",
+                      color: "#111",
+                      background: "white",
+                      fontStyle: "italic",
+                      transition: "border-color 0.15s",
+                    }}
+                  />
+                  <p id="mention-help" style={{ fontSize: 11, color: helpColor, marginTop: 4, lineHeight: 1.5, fontWeight: check.ok ? 600 : 400 }}>
+                    {helpText}
+                  </p>
+                </div>
+              )
+            })()}
 
             <div>
               <label

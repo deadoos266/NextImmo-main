@@ -88,9 +88,25 @@ export async function POST(req: NextRequest) {
   if (nom.length < 2) {
     return NextResponse.json({ ok: false, error: "Nom trop court" }, { status: 400 })
   }
-  if (!/lu et approuv/i.test(mention)) {
+  // V33.2 — Validation stricte mention (insensible accents/casse/espaces).
+  // Avant : /lu et approuv/i.test(mention) — trop lâche, accepte "lu et approuvé"
+  // sans "bon pour accord" → audit-trail eIDAS faible.
+  const mentionNorm = mention
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[  ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+  if (!mentionNorm.includes("lu et approuve, bon pour accord")) {
     return NextResponse.json(
-      { ok: false, error: 'Mention "Lu et approuvé" requise' },
+      { ok: false, error: 'Mention requise : "Lu et approuvé, bon pour accord"' },
+      { status: 400 },
+    )
+  }
+  if (role === "garant" && !/caution\s+solidaire/i.test(mention)) {
+    return NextResponse.json(
+      { ok: false, error: 'Garant : la mention doit inclure "caution solidaire à hauteur de [montant] €"' },
       { status: 400 },
     )
   }
