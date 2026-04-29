@@ -76,6 +76,9 @@ export default function Navbar() {
   const pathname = usePathname()
   const [badgeVisites, setBadgeVisites] = useState(0)
   const [badgeMessages, setBadgeMessages] = useState(0)
+  // V38.1 — décompte recherches sauvegardées (audit V37 R37.3).
+  // Fetch via /api/recherches-sauvegardees (sync Supabase V36.6).
+  const [countRecherches, setCountRecherches] = useState(0)
   const [photoCustom, setPhotoCustom] = useState<string | null>(null)
   const { isMobile, isTablet } = useResponsive()
   const isSmall = isMobile || isTablet
@@ -141,6 +144,30 @@ export default function Navbar() {
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [session, proprietaireActive, pathname])
+
+  // V38.1 — fetch count recherches sauvegardées au mount + sur changement
+  // de pathname (refresh quand l'user revient sur l'app après /recherches-sauvegardees).
+  useEffect(() => {
+    if (!session?.user?.email) return
+    let cancelled = false
+    void fetch("/api/recherches-sauvegardees")
+      .then(r => r.ok ? r.json() : null)
+      .then(j => {
+        if (cancelled || !j?.ok) return
+        setCountRecherches(Array.isArray(j.recherches) ? j.recherches.length : 0)
+      })
+      .catch(() => { /* offline OK, fallback localStorage */ })
+    // Fallback localStorage si API rate
+    try {
+      const email = session.user.email.toLowerCase()
+      const raw = localStorage.getItem(`nestmatch:savedSearches:${email}`)
+      if (raw) {
+        const arr = JSON.parse(raw)
+        if (Array.isArray(arr) && !cancelled) setCountRecherches(arr.length)
+      }
+    } catch { /* noop */ }
+    return () => { cancelled = true }
+  }, [session?.user?.email, pathname])
 
   useEffect(() => {
     if (!session?.user?.email) return
@@ -273,7 +300,7 @@ export default function Navbar() {
     // car le locataire en a besoin avant signature de bail.
     { href: "/profil",        label: "Mon espace locataire", desc: "Critères de recherche & matching" },
     { href: "/dossier",       label: "Mon dossier",        desc: "Documents & complétion" },
-    { href: "/recherches-sauvegardees", label: "Mes recherches sauvegardées", desc: "Filtres favoris à relancer" },
+    { href: "/recherches-sauvegardees", label: countRecherches > 0 ? `Mes recherches sauvegardées (${countRecherches})` : "Mes recherches sauvegardées", desc: "Filtres favoris à relancer" },
     { href: "/visites",       label: "Mes visites",        desc: "Demandes & confirmations", badge: badgeVisites },
     { href: "/mon-logement",  label: "Mon logement",       desc: "Bail actif, loyer, documents",
       gate: { enabled: hasCurrentHousing, reason: reasonHousing } },
@@ -487,7 +514,7 @@ export default function Navbar() {
                     ] : [
                       { href: "/profil",       label: "Mon espace locataire",   icon: "user" },
                       { href: "/dossier",      label: "Mon dossier",  icon: "file" },
-                      { href: "/recherches-sauvegardees", label: "Mes recherches", icon: "search" },
+                      { href: "/recherches-sauvegardees", label: "Mes recherches", icon: "search", count: countRecherches },
                       { href: "/visites",      label: "Mes visites",  icon: "calendar", count: badgeVisites },
                       { href: "/favoris",      label: "Mes favoris",  icon: "heart" },
                       { href: "/messages",     label: "Messages",     icon: "chat", count: badgeMessages },
