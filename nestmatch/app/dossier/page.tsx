@@ -1975,6 +1975,83 @@ export default function Dossier() {
 
           </section>
 
+          {/* ══════════ V36.1 — STICKY PROGRESS BAR ══════════
+              Audit V35 R35.4 : avant ce sticky, le score n'était visible
+              qu'au top du hero. L'user scrollait dans les 2400 lignes du
+              form sans feedback, sentiment d'effort gaspillé. Maintenant :
+              barre sticky qui reste visible pendant tout le scroll avec
+              score live + nb docs manquants + lien vers le 1er manquant. */}
+          {(() => {
+            const firstMissing = missingDocs[0]
+            const tier = score >= 80 ? "excellent" : score >= 50 ? "bon" : "incomplet"
+            const tierBg = tier === "excellent" ? "#F0FAEE" : tier === "bon" ? "#FBF6EA" : "#FEECEC"
+            const tierBorder = tier === "excellent" ? "#C6E9C0" : tier === "bon" ? "#EADFC6" : "#F4C9C9"
+            const tierColor = tier === "excellent" ? "#15803d" : tier === "bon" ? "#a16207" : "#b91c1c"
+            return (
+              <div
+                style={{
+                  position: "sticky",
+                  top: isMobile ? 56 : 64, // sous la navbar
+                  zIndex: 50,
+                  marginBottom: 18,
+                  background: tierBg,
+                  border: `1px solid ${tierBorder}`,
+                  borderRadius: 14,
+                  padding: "10px 16px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  flexWrap: "wrap",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                }}
+                aria-label="Progression du dossier"
+              >
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0, flex: "1 1 200px" }}>
+                  <div style={{ position: "relative", width: 36, height: 36, flexShrink: 0 }} aria-hidden>
+                    <svg width="36" height="36" viewBox="0 0 36 36">
+                      <circle cx="18" cy="18" r="15" fill="none" stroke={tierBorder} strokeWidth="3" />
+                      <circle
+                        cx="18" cy="18" r="15" fill="none"
+                        stroke={tierColor} strokeWidth="3"
+                        strokeDasharray={`${(score / 100) * 94.2} 94.2`}
+                        strokeLinecap="round"
+                        transform="rotate(-90 18 18)"
+                      />
+                    </svg>
+                    <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: tierColor, fontVariantNumeric: "tabular-nums" }}>
+                      {score}
+                    </span>
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: tierColor, margin: 0, lineHeight: 1.3, textTransform: "uppercase", letterSpacing: "0.4px" }}>
+                      Dossier {tier === "excellent" ? "complet" : tier === "bon" ? "à finaliser" : "à compléter"}
+                    </p>
+                    <p style={{ fontSize: 12, color: "#111", margin: "2px 0 0", lineHeight: 1.4 }}>
+                      {missingDocs.length > 0
+                        ? <>{missingDocs.length} pièce{missingDocs.length > 1 ? "s" : ""} manquante{missingDocs.length > 1 ? "s" : ""}{firstMissing ? ` — prochaine : ${firstMissing.label.toLowerCase()}` : ""}</>
+                        : <>Toutes les pièces sont présentes ✓</>}
+                    </p>
+                  </div>
+                </div>
+                {firstMissing && (
+                  <a
+                    href={`#sec-${firstMissing.key}`}
+                    style={{
+                      background: "#111", color: "#fff",
+                      borderRadius: 999, padding: "8px 16px",
+                      fontSize: 11, fontWeight: 700, textDecoration: "none",
+                      letterSpacing: "0.3px", textTransform: "uppercase",
+                      whiteSpace: "nowrap", flexShrink: 0,
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    Continuer →
+                  </a>
+                )}
+              </div>
+            )
+          })()}
+
           {/* ══════════ BANDEAU PROFIL SOMBRE ══════════
               Calque handoff dossier.jsx L113-135. S'affiche dès qu'on a le
               nom OU la situation pro saisis (sinon l'étape d'identité n'est
