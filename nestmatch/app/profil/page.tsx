@@ -725,9 +725,17 @@ function Profil() {
             </DossierField>
             <DossierField label={<>Mode de localisation <Tooltip text="Strict : seules les annonces dans votre ville exacte s'affichent. Souple : les villes voisines sont aussi visibles, avec un score ajusté." /></>}>
               <select style={sel} value={form.mode_localisation} onChange={set("mode_localisation")}>
-                <option value="souple">Souple — autres villes visibles</option>
-                <option value="strict">Strict — uniquement ma ville</option>
+                <option value="souple">Souple (élargir aux villes voisines)</option>
+                <option value="strict">Strict (ma ville seulement)</option>
               </select>
+              {/* V47 — helper dynamique explicite sous le dropdown.
+                  User : avait coché "Strict" sans réaliser que ça filtrait
+                  TOUTES les autres villes hors de sa recherche (cf bug V46). */}
+              <p style={{ fontSize: 11.5, color: form.mode_localisation === "strict" ? "#9a3412" : "#15803d", margin: "6px 0 0", lineHeight: 1.5, fontStyle: "italic" }}>
+                {form.mode_localisation === "strict"
+                  ? <>⚠ Tu ne verras QUE les annonces à <strong>{form.ville_souhaitee || "ta ville"}</strong>. Les autres villes seront filtrées.</>
+                  : <>✓ Tu verras les annonces de <strong>{form.ville_souhaitee || "ta ville"}</strong> en priorité, mais les villes voisines apparaîtront aussi.</>}
+              </p>
             </DossierField>
             <DossierField label="Type de quartier">
               <select style={sel} value={form.type_quartier} onChange={set("type_quartier")}>

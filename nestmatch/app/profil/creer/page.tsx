@@ -273,9 +273,15 @@ export default function CreerProfil() {
               </F>
               <F l={<>Mode de localisation <Tooltip text="Strict : uniquement votre ville. Souple : villes voisines visibles, score ajusté." /></>}>
                 <select style={sel} value={form.mode_localisation} onChange={set("mode_localisation")}>
-                  <option value="souple">Souple — voisines visibles</option>
-                  <option value="strict">Strict — ma ville uniquement</option>
+                  <option value="souple">Souple (élargir aux villes voisines)</option>
+                  <option value="strict">Strict (ma ville seulement)</option>
                 </select>
+                {/* V47 — helper dynamique pour clarifier l'effet du choix. */}
+                <p style={{ fontSize: 11.5, color: form.mode_localisation === "strict" ? "#9a3412" : "#15803d", margin: "6px 0 0", lineHeight: 1.5, fontStyle: "italic" }}>
+                  {form.mode_localisation === "strict"
+                    ? <>⚠ Tu ne verras QUE les annonces à <strong>{form.ville_souhaitee || "ta ville"}</strong>.</>
+                    : <>✓ Villes voisines visibles, score ajusté.</>}
+                </p>
               </F>
               <F l="Type de quartier">
                 <select style={sel} value={form.type_quartier} onChange={set("type_quartier")}>

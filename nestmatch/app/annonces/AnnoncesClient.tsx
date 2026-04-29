@@ -1566,6 +1566,32 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                         </button>
                       </div>
                     )}
+                    {/* V47 — hint mode_localisation strict.
+                        Si l'user est en mode "strict" sur son profil, lui
+                        rappeler ici que ce paramètre filtre tout hors de
+                        sa ville. Lien direct vers /profil pour basculer. */}
+                    {profil && profil.mode_localisation === "strict" && (
+                      <div style={{ background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: "#9a3412", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 6px" }}>
+                          Mode localisation : Strict
+                        </p>
+                        <p style={{ fontSize: 13, color: "#a16207", margin: "0 0 10px", lineHeight: 1.55 }}>
+                          Tu es en mode <strong>Strict — uniquement {profil.ville_souhaitee || "ta ville"}</strong>. Toutes les annonces hors de cette ville sont filtrées. Passe en <strong>Souple</strong> pour voir les villes voisines.
+                        </p>
+                        <a
+                          href="/profil"
+                          style={{
+                            display: "inline-block",
+                            background: "#9a3412", color: "#fff",
+                            borderRadius: 999, padding: "8px 16px",
+                            fontSize: 11, fontWeight: 700, textDecoration: "none",
+                            fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px",
+                          }}
+                        >
+                          Passer en Souple →
+                        </a>
+                      </div>
+                    )}
                     <p style={{ fontSize: 12, color: "#8a8477", margin: 0, lineHeight: 1.55 }}>
                       Astuce : clique une chip pour la retirer, ou{" "}
                       <button type="button" onClick={onResetAll} style={{ background: "none", border: "none", padding: 0, color: "#111", textDecoration: "underline", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600 }}>
