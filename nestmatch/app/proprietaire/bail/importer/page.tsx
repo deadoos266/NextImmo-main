@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, FormEvent, ReactNode, useEffect } from "react"
+import { useState, FormEvent, ReactNode, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
@@ -82,7 +82,17 @@ function Field({ label, hint, children }: { label: ReactNode; hint?: string; chi
   )
 }
 
+// V33.6 — Wrapper Suspense pour useSearchParams() — Next.js 15 exige un
+// Suspense boundary autour des hooks de search params côté client.
 export default function ImporterBailPage() {
+  return (
+    <Suspense fallback={<main style={{ minHeight: "60vh", display: "grid", placeItems: "center", background: T.bg }}><p style={{ color: T.muted, fontSize: 14 }}>Chargement…</p></main>}>
+      <ImporterBailPageInner />
+    </Suspense>
+  )
+}
+
+function ImporterBailPageInner() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const searchParams = useSearchParams()

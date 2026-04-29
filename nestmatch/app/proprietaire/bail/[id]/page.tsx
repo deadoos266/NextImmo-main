@@ -415,6 +415,29 @@ export default function BailPage() {
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null)
   const [previewFilename, setPreviewFilename] = useState("")
 
+  // V33.8 — Mode "Premier bail" simplifié. Audit V31 R2.3 : le form 15 sections
+  // est intimidant pour un proprio non-tech. En mode simplifié, on ne montre
+  // que les 5 sections essentielles (3 Locataire, 4 Garant si activé, 6 Dates,
+  // 11 Équipements si meublé, 15 Annexes). Les autres restent remplies avec
+  // les defaults ALUR/raisonnables sans intervention. Toggle persisté en
+  // localStorage pour respecter le choix du proprio.
+  const [simpleMode, setSimpleMode] = useState(true)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      const saved = window.localStorage.getItem("km:bail:simpleMode")
+      if (saved === "false") setSimpleMode(false)
+      else if (saved === "true") setSimpleMode(true)
+    } catch { /* ignore */ }
+  }, [])
+  function toggleSimpleMode() {
+    setSimpleMode(v => {
+      const next = !v
+      try { window.localStorage.setItem("km:bail:simpleMode", String(next)) } catch { /* ignore */ }
+      return next
+    })
+  }
+
   const storageKey = bienId ? `${STORAGE_KEY_PREFIX}${bienId}` : ""
 
   useEffect(() => {
@@ -950,21 +973,70 @@ export default function BailPage() {
           ← Retour à l&apos;espace propriétaire
         </button>
 
-        <div style={{ marginTop: 16, marginBottom: 24 }}>
-          <h1
-            style={{
-              fontSize: isMobile ? 24 : 30,
-              fontWeight: 800,
-              letterSpacing: "-0.5px",
-              margin: 0,
-            }}
-          >
-            Générateur de bail
-          </h1>
-          <p style={{ color: "#8a8477", marginTop: 4, fontSize: 14 }}>
-            {bien.titre} — {bien.ville}
-          </p>
+        <div style={{ marginTop: 16, marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
+          <div>
+            <h1
+              style={{
+                fontSize: isMobile ? 24 : 30,
+                fontWeight: 800,
+                letterSpacing: "-0.5px",
+                margin: 0,
+              }}
+            >
+              Générateur de bail
+            </h1>
+            <p style={{ color: "#8a8477", marginTop: 4, fontSize: 14 }}>
+              {bien.titre} — {bien.ville}
+            </p>
+          </div>
+          {/* V33.8 — Toggle Mode simplifié / avancé */}
+          <div style={{ display: "inline-flex", background: "#fff", border: "1px solid #EAE6DF", borderRadius: 999, padding: 3 }} role="tablist" aria-label="Mode du formulaire">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={simpleMode}
+              onClick={() => { if (!simpleMode) toggleSimpleMode() }}
+              style={{
+                padding: "6px 14px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: "inherit",
+                fontSize: 11.5, fontWeight: 700, letterSpacing: "0.3px",
+                background: simpleMode ? "#111" : "transparent",
+                color: simpleMode ? "#fff" : "#111",
+              }}
+            >
+              Premier bail
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={!simpleMode}
+              onClick={() => { if (simpleMode) toggleSimpleMode() }}
+              style={{
+                padding: "6px 14px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: "inherit",
+                fontSize: 11.5, fontWeight: 700, letterSpacing: "0.3px",
+                background: !simpleMode ? "#111" : "transparent",
+                color: !simpleMode ? "#fff" : "#111",
+              }}
+            >
+              Mode avancé
+            </button>
+          </div>
         </div>
+
+        {/* V33.8 — Banner info Mode simplifié */}
+        {simpleMode && (
+          <div style={{ background: "#EEF3FB", border: "1px solid #D7E3F4", borderRadius: 14, padding: "14px 18px", marginBottom: 20, display: "flex", gap: 12, alignItems: "flex-start" }}>
+            <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }} aria-hidden>🪶</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontWeight: 700, color: "#1d4ed8", margin: 0, fontSize: 13 }}>
+                Mode simplifié — 5 sections essentielles
+              </p>
+              <p style={{ fontSize: 12, color: "#1d4ed8", margin: "4px 0 0", lineHeight: 1.55, opacity: 0.85 }}>
+                Vos infos bailleur, l&apos;encadrement loyer, la révision IRL, les règles de vie, l&apos;assurance et les clauses
+                spéciales sont remplies avec les valeurs standards loi ALUR. Basculez en <strong>Mode avancé</strong> pour les personnaliser.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Bail déjà envoyé — garde-fou + bouton téléchargement */}
         {existingBailAt && (
@@ -1244,7 +1316,8 @@ export default function BailPage() {
           </div>
         )}
 
-        {/* 1. Type de bail */}
+        {/* 1. Type de bail — caché en mode simplifié (auto-déterminé depuis annonce.meuble) */}
+        {!simpleMode && (
         <div style={cardStyle(isMobile)}>
           <h2 style={h2Style}>1. Type de bail</h2>
           <p style={h2SubStyle}>
@@ -1265,8 +1338,10 @@ export default function BailPage() {
             }
           />
         </div>
+        )}
 
-        {/* 2. Bailleur */}
+        {/* 2. Bailleur — caché en mode simplifié (pré-rempli depuis profil) */}
+        {!simpleMode && (
         <div style={cardStyle(isMobile)}>
           <h2 style={h2Style}>2. Bailleur</h2>
           <p style={h2SubStyle}>Informations sur la personne qui loue le bien.</p>
@@ -1313,6 +1388,7 @@ export default function BailPage() {
             />
           </div>
         </div>
+        )}
 
         {/* 3. Locataire */}
         <div style={cardStyle(isMobile)}>
@@ -1503,7 +1579,8 @@ export default function BailPage() {
           )}
         </div>
 
-        {/* 5. Usage & occupation */}
+        {/* 5. Usage & occupation — caché en mode simplifié (default habitation) */}
+        {!simpleMode && (
         <div style={cardStyle(isMobile)}>
           <h2 style={h2Style}>5. Usage du logement</h2>
           <p style={h2SubStyle}>À quoi servira le logement ?</p>
@@ -1542,6 +1619,7 @@ export default function BailPage() {
             </div>
           </div>
         </div>
+        )}
 
         {/* 6. Durée & dates */}
         <div style={cardStyle(isMobile)}>
@@ -1737,7 +1815,8 @@ export default function BailPage() {
           )}
         </div>
 
-        {/* 8. Règlement & révision */}
+        {/* 8. Règlement & révision — caché en mode simplifié (defaults virement + IRL) */}
+        {!simpleMode && (
         <div style={cardStyle(isMobile)}>
           <h2 style={h2Style}>8. Règlement & révision annuelle</h2>
           <p style={h2SubStyle}>
@@ -1824,8 +1903,10 @@ export default function BailPage() {
             </div>
           )}
         </div>
+        )}
 
-        {/* 9. Honoraires */}
+        {/* 9. Honoraires — caché en mode simplifié (default 0 entre particuliers) */}
+        {!simpleMode && (
         <div style={cardStyle(isMobile)}>
           <h2 style={h2Style}>9. Honoraires</h2>
           <p style={h2SubStyle}>
@@ -1856,8 +1937,10 @@ export default function BailPage() {
             />
           </div>
         </div>
+        )}
 
-        {/* 10. Règles de vie */}
+        {/* 10. Règles de vie — caché en mode simplifié (defaults : pas d'animaux, non-fumeur) */}
+        {!simpleMode && (
         <div style={cardStyle(isMobile)}>
           <h2 style={h2Style}>10. Règles de vie</h2>
           <p style={h2SubStyle}>Ce qui est autorisé ou non dans le logement.</p>
@@ -1893,6 +1976,7 @@ export default function BailPage() {
             />
           </div>
         </div>
+        )}
 
         {/* 11. Équipements meublé */}
         {form.type === "meuble" && (
@@ -1952,7 +2036,8 @@ export default function BailPage() {
           </div>
         )}
 
-        {/* 12. État & travaux */}
+        {/* 12. État & travaux — caché en mode simplifié (default "bon état") */}
+        {!simpleMode && (
         <div style={cardStyle(isMobile)}>
           <h2 style={h2Style}>12. État du logement & travaux</h2>
           <p style={h2SubStyle}>
@@ -1979,8 +2064,10 @@ export default function BailPage() {
             />
           </div>
         </div>
+        )}
 
-        {/* 13. Assurance */}
+        {/* 13. Assurance — caché en mode simplifié (default obligation locataire) */}
+        {!simpleMode && (
         <div style={cardStyle(isMobile)}>
           <h2 style={h2Style}>13. Assurances</h2>
           <p style={h2SubStyle}>
@@ -2001,8 +2088,10 @@ export default function BailPage() {
             />
           </div>
         </div>
+        )}
 
-        {/* 14. Clauses particulières */}
+        {/* 14. Clauses particulières — caché en mode simplifié (defaults ALUR) */}
+        {!simpleMode && (
         <div style={cardStyle(isMobile)}>
           <div
             style={{
@@ -2095,6 +2184,7 @@ export default function BailPage() {
             placeholder="Écrivez ici vos propres clauses particulières…"
           />
         </div>
+        )}
 
         {/* 15. Annexes obligatoires — upload réel PDF */}
         <div style={cardStyle(isMobile)}>
