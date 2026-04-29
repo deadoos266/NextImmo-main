@@ -163,13 +163,15 @@ export default function ContactButton({ annonce }: { annonce: any }) {
           enabled={false}
           block
           disabledReason={{
-            // V36.5 — Tone moins anxiogène (audit V35 R35.8). Avant : "Pour
-            // contacter un proprio, votre dossier doit être complété au
-            // minimum" sonnait comme un blocage punitif. Maintenant :
-            // formulation positive qui rassure le locataire sur la finalité.
+            // V36.5 — Tone moins anxiogène. V40.3 — clarifie : on mesure le
+            // PROFIL locataire (ville, budget, revenus, garant) via
+            // calculerCompletudeProfil, pas les documents (CNI/fiches paie).
+            // L'ancien wording "dossier" était inexact — c'est l'espace
+            // locataire (`/profil`) qu'il faut compléter pour pouvoir
+            // contacter, pas téléverser des PDFs.
             title: "Encore une étape avant d'envoyer",
-            body: "Ton dossier aide les propriétaires à te connaître. Complète-le rapidement (5 min) pour augmenter tes chances d'être retenu — pas de spam, tu choisis qui contacter.",
-            cta: { label: "Compléter mon dossier", href: "/dossier" },
+            body: "Ton profil locataire (ville, budget, revenus, type de garant…) aide les propriétaires à te connaître. Complète-le rapidement pour augmenter tes chances d'être retenu — pas de spam, tu choisis qui contacter.",
+            cta: { label: "Compléter mon profil", href: "/profil" },
           }}
         >
           {button}
