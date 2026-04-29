@@ -11,6 +11,8 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
+import crypto from "node:crypto"
+import { encode } from "next-auth/jwt"
 import { supabaseAdmin } from "../../../../lib/supabase-server"
 import { checkRateLimitAsync } from "../../../../lib/rateLimit"
 
@@ -46,7 +48,7 @@ export async function POST(req: NextRequest) {
 
   const { data: user } = await supabaseAdmin
     .from("users")
-    .select("id, email_verify_token, email_verify_expires, email_verified")
+    .select("id, email_verify_token, email_verify_expires, email_verified, role, is_admin, name")
     .eq("email", email)
     .maybeSingle()
 
@@ -98,5 +100,61 @@ export async function POST(req: NextRequest) {
     console.error("[verify-code] lock identite failed", lockErr)
   }
 
-  return NextResponse.json({ success: true })
+  // V42 (Paul 2026-04-29) — Auto-login post-OTP.
+  // User a flag : "quand on se crée notre compte ça nous demande de nous
+  // reconnecter après donc c'est assez relou". Avant V42 : verify-code
+  // renvoyait juste { success: true } et le client redirigeait vers
+  // /auth?verified=1 où l'user devait re-saisir email + password.
+  // Maintenant : on encode un JWT NextAuth (même format que /api/auth/[...nextauth])
+  // et on pose le cookie session-token. Le client peut redirect direct vers
+  // /annonces ; useSession() récupère la session via le cookie.
+  //
+  // Sécurité : le code OTP a été validé juste au-dessus, donc l'auth est
+  // équivalente à un signIn manuel via credentials.
+  const response = NextResponse.json({ success: true, autoLogin: true })
+
+  try {
+    const secret = process.env.NEXTAUTH_SECRET
+    if (!secret) {
+      console.warn("[verify-code] NEXTAUTH_SECRET missing — skip auto-login (user will manually login)")
+      return NextResponse.json({ success: true, autoLogin: false })
+    }
+    const maxAge = 30 * 24 * 60 * 60 // 30 jours, identique à NextAuth default
+    const safeRole: "locataire" | "proprietaire" = user.role === "proprietaire" ? "proprietaire" : "locataire"
+    const tokenPayload = {
+      sub: user.id,
+      id: user.id,
+      email,
+      name: user.name,
+      role: safeRole,
+      isAdmin: user.is_admin === true,
+      // identiteVerrouillee=true : on vient de poser le verrouillage juste au-dessus
+      identiteVerrouillee: true,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + maxAge,
+      jti: crypto.randomUUID(),
+    }
+    const sessionToken = await encode({
+      token: tokenPayload,
+      secret,
+      maxAge,
+    })
+
+    // NextAuth v4 utilise __Secure-next-auth.session-token en HTTPS prod,
+    // next-auth.session-token en dev HTTP.
+    const isProd = process.env.NODE_ENV === "production"
+    const cookieName = isProd ? "__Secure-next-auth.session-token" : "next-auth.session-token"
+    response.cookies.set(cookieName, sessionToken, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: "lax",
+      path: "/",
+      maxAge,
+    })
+  } catch (e) {
+    console.error("[verify-code] auto-login JWT encode failed (fallback : user re-login manuel)", e)
+    return NextResponse.json({ success: true, autoLogin: false })
+  }
+
+  return response
 }

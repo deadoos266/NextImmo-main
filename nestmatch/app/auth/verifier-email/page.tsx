@@ -94,7 +94,31 @@ function VerifierEmailForm() {
         return
       }
       setSuccess(true)
-      setTimeout(() => router.push("/auth?verified=1"), 1200)
+      // V42 — auto-login : si le server a posé le cookie session-token
+      // (autoLogin=true), on redirect direct vers /annonces / /profil.
+      // Sinon fallback /auth?verified=1 où l'user re-saisit ses creds.
+      const target = json.autoLogin ? "/profil" : "/auth?verified=1"
+      // Toast de confirmation pour rassurer (V36.7 pattern).
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("km:toast", {
+          detail: {
+            type: "success",
+            title: json.autoLogin ? "Bienvenue sur KeyMatch ✓" : "Email vérifié ✓",
+            body: json.autoLogin ? "Vous êtes connecté. Bonne recherche !" : "Connectez-vous maintenant.",
+          },
+        }))
+      }
+      // Force un refresh de session côté NextAuth pour que useSession()
+      // récupère le cookie qu'on vient de poser. router.refresh() suivi de
+      // router.push() suffit pour la plupart des pages, mais on utilise
+      // window.location.href en fallback solide.
+      setTimeout(() => {
+        if (typeof window !== "undefined") {
+          window.location.href = target
+        } else {
+          router.push(target)
+        }
+      }, 800)
     } catch {
       setError("Erreur réseau, réessayez.")
       setSubmitting(false)

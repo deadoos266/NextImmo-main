@@ -112,17 +112,21 @@ function AuthContent() {
   const [resetEmail, setResetEmail] = useState("")
   const [resetState, setResetState] = useState<"idle" | "sending" | "sent" | "error">("idle")
   const [resetError, setResetError] = useState("")
+  // V42 — flag spécifique 409 (email existant) pour CTA "Se connecter" inline.
+  const [emailExisteDeja, setEmailExisteDeja] = useState(false)
 
   function handleChange(field: keyof FormState) {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
       setForm(prev => ({ ...prev, [field]: e.target.value }))
       setError("")
+      setEmailExisteDeja(false)
     }
   }
 
   function switchMode(m: Mode) {
     setMode(m)
     setError("")
+    setEmailExisteDeja(false)
     setForm({ prenom: "", nom: "", email: "", password: "" })
   }
 
@@ -140,6 +144,10 @@ function AuthContent() {
         })
         const json = await res.json()
         if (!res.ok) {
+          // V42 — détecte 409 email existant pour afficher CTA "Se connecter".
+          if (res.status === 409) {
+            setEmailExisteDeja(true)
+          }
           setError(json.error ?? "Erreur lors de l'inscription")
           setLoading(false)
           return
@@ -485,7 +493,31 @@ function AuthContent() {
             )}
 
             {error && (
-              <p style={{ color: km.errText, fontSize: 13, margin: 0 }}>{error}</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 14px", background: km.errBg, border: `1px solid ${km.errLine}`, borderRadius: 10 }}>
+                <p style={{ color: km.errText, fontSize: 13, margin: 0, lineHeight: 1.45 }}>{error}</p>
+                {/* V42 — CTA inline pour basculer vers connexion si l'user a tenté
+                    une inscription avec un email existant. Pré-remplit l'email
+                    pour éviter la re-saisie. */}
+                {emailExisteDeja && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      switchMode("connexion")
+                      setForm(prev => ({ ...prev, email: form.email, password: "" }))
+                    }}
+                    style={{
+                      alignSelf: "flex-start",
+                      background: km.ink, color: km.white,
+                      border: "none", borderRadius: 999,
+                      padding: "7px 16px", fontSize: 12, fontWeight: 700,
+                      cursor: "pointer", fontFamily: "inherit",
+                      letterSpacing: "0.3px",
+                    }}
+                  >
+                    Se connecter avec cet email →
+                  </button>
+                )}
+              </div>
             )}
 
             <KMButton type="submit" disabled={loading} size="lg" style={{ width: "100%", marginTop: 4 }}>
