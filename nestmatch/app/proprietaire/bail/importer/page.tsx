@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, FormEvent, ReactNode } from "react"
-import { useRouter } from "next/navigation"
+import { useState, FormEvent, ReactNode, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { km } from "../../../components/ui/km"
+import { supabase } from "../../../../lib/supabase"
 
 interface ImporterForm {
   titre: string
@@ -84,10 +85,58 @@ function Field({ label, hint, children }: { label: ReactNode; hint?: string; chi
 export default function ImporterBailPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [form, setForm] = useState<ImporterForm>(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState<{ annonceId: number; emailSent: boolean } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // V33.6 — Pré-remplissage depuis annonce déclinée (relance après refus)
+  const [refusContexte, setRefusContexte] = useState<{ annonceId: number; raisonLabel: string; motif: string } | null>(null)
+  const [prefillLoading, setPrefillLoading] = useState(false)
+
+  const relanceRefusId = searchParams?.get("relance_refus")
+
+  useEffect(() => {
+    if (!relanceRefusId || !session?.user?.email) return
+    const id = Number(relanceRefusId)
+    if (!Number.isFinite(id)) return
+    setPrefillLoading(true)
+    void (async () => {
+      try {
+        const [{ data: ann }, { data: msgs }] = await Promise.all([
+          supabase.from("annonces").select("id, titre, ville, adresse, surface, pieces, meuble, prix, charges, date_debut_bail, locataire_email").eq("id", id).maybeSingle(),
+          supabase.from("messages").select("contenu, created_at").eq("annonce_id", id).ilike("contenu", "[BAIL_REFUSE]%").order("created_at", { ascending: false }).limit(1),
+        ])
+        if (ann) {
+          setForm(f => ({
+            ...f,
+            titre: ann.titre || f.titre,
+            ville: ann.ville || f.ville,
+            adresse: ann.adresse || f.adresse,
+            surface: ann.surface != null ? String(ann.surface) : f.surface,
+            pieces: ann.pieces != null ? String(ann.pieces) : f.pieces,
+            meuble: !!ann.meuble,
+            loyerHC: ann.prix != null ? String(ann.prix) : f.loyerHC,
+            charges: ann.charges != null ? String(ann.charges) : f.charges,
+            dateDebut: ann.date_debut_bail || f.dateDebut,
+          }))
+        }
+        const last = msgs && msgs[0]
+        if (last?.contenu) {
+          try {
+            const payload = JSON.parse(last.contenu.slice("[BAIL_REFUSE]".length))
+            setRefusContexte({
+              annonceId: id,
+              raisonLabel: String(payload.raisonLabel || "Autre raison"),
+              motif: String(payload.motif || ""),
+            })
+          } catch { /* ignore */ }
+        }
+      } finally {
+        setPrefillLoading(false)
+      }
+    })()
+  }, [relanceRefusId, session])
 
   if (status === "loading") {
     return (
@@ -209,13 +258,33 @@ export default function ImporterBailPage() {
           </Link>
         </div>
 
-        <p style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 10px" }}>Bail existant</p>
+        <p style={{ fontSize: 10, fontWeight: 700, color: refusContexte ? "#9a3412" : T.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 10px" }}>
+          {refusContexte ? "Renvoyer après refus" : "Bail existant"}
+        </p>
         <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 36, letterSpacing: "-0.5px", color: T.ink, margin: "0 0 8px", lineHeight: 1.15 }}>
-          Importer un bail signé hors plateforme
+          {refusContexte ? "Renvoyer une nouvelle invitation" : "Importer un bail signé hors plateforme"}
         </h1>
         <p style={{ fontSize: 14, color: T.muted, margin: "0 0 28px", lineHeight: 1.6, maxWidth: 560 }}>
-          Renseignez les informations clés du bail. Votre locataire recevra un email l'invitant à rejoindre KeyMatch — une fois accepté, vous pourrez générer ses quittances et utiliser tous les outils de gestion locative.
+          {refusContexte
+            ? "Le formulaire a été pré-rempli avec les infos de l'annonce précédente. Ajustez ce qui doit l'être (notamment le loyer si la raison du refus le justifie) puis renvoyez l'invitation."
+            : "Renseignez les informations clés du bail. Votre locataire recevra un email l'invitant à rejoindre KeyMatch — une fois accepté, vous pourrez générer ses quittances et utiliser tous les outils de gestion locative."}
         </p>
+
+        {/* V33.6 — Banner contextuel relance après refus */}
+        {refusContexte && (
+          <div style={{ background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 14, padding: "14px 18px", marginBottom: 24 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: "#9a3412", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 6px" }}>
+              Raison du refus précédent
+            </p>
+            <p style={{ fontSize: 13, color: "#a16207", margin: 0, lineHeight: 1.55 }}>
+              <strong>{refusContexte.raisonLabel}</strong>
+              {refusContexte.motif && <> — « {refusContexte.motif} »</>}
+            </p>
+          </div>
+        )}
+        {prefillLoading && (
+          <p style={{ fontSize: 12, color: T.muted, margin: "0 0 18px", fontStyle: "italic" }}>Pré-remplissage en cours…</p>
+        )}
 
         <form onSubmit={onSubmit} style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 20, padding: 28, display: "flex", flexDirection: "column", gap: 18 }}>
 

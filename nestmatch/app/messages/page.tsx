@@ -31,6 +31,7 @@ import { calculerScore, type Profil as MatchingProfil, type Annonce as MatchingA
 const DOSSIER_PREFIX = "[DOSSIER_CARD]"
 const BAIL_PREFIX = "[BAIL_CARD]"
 const BAIL_SIGNE_PREFIX = "[BAIL_SIGNE]"
+const BAIL_REFUSE_PREFIX = "[BAIL_REFUSE]" // V33.6 — refus invitation par le locataire avec raison
 const EDL_A_PLANIFIER_PREFIX = "[EDL_A_PLANIFIER]"
 const DEMANDE_DOSSIER_PREFIX = "[DEMANDE_DOSSIER]"
 const EDL_PREFIX = "[EDL_CARD]"
@@ -1010,6 +1011,56 @@ function CandidatureRetireeCard({ contenu, isMine }: { contenu: string; isMine: 
           {isMine ? "Vous avez retiré votre candidature" : "Le candidat a retiré sa candidature"}
           {data.bienTitre ? <> pour <strong style={{ fontWeight: 700 }}>{`« ${data.bienTitre} »`}</strong></> : null}
           {"."}
+        </>
+      }
+      date={dateStr}
+    />
+  )
+}
+
+// ─── Bail refusé Card (V33.6) ────────────────────────────────────────────────
+// Rendue côté thread quand le locataire refuse l'invitation bail avec raison.
+// Posté par /api/bail/refuser/[token]. Côté proprio = call-to-action pour
+// renvoyer une nouvelle invitation avec ajustements.
+
+function BailRefuseCard({ contenu, isMine }: { contenu: string; isMine: boolean }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any = {}
+  try { data = JSON.parse(contenu.slice(BAIL_REFUSE_PREFIX.length)) } catch { /* ignore */ }
+  const dateStr = data.declinedAt
+    ? new Date(data.declinedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    : ""
+  const annonceId = data.annonceId
+  const renvoyerHref = annonceId ? `/proprietaire/bail/importer?relance_refus=${annonceId}` : null
+  return (
+    <ValidationStatusCard
+      kind="danger"
+      eyebrow="Invitation refusée"
+      body={
+        <>
+          {isMine ? (
+            <>
+              Vous avez refusé cette invitation au bail
+              {data.raisonLabel ? <> ({String(data.raisonLabel).toLowerCase()})</> : null}
+              .
+              {data.motif ? <><br/><em>« {String(data.motif).slice(0, 200)} »</em></> : null}
+            </>
+          ) : (
+            <>
+              Le locataire a refusé votre invitation au bail
+              {data.raisonLabel ? <> — raison : <strong style={{ fontWeight: 700 }}>{String(data.raisonLabel).toLowerCase()}</strong></> : null}
+              .
+              {data.motif ? <><br/><em>« {String(data.motif).slice(0, 200)} »</em></> : null}
+              {renvoyerHref && (
+                <><br/><Link
+                  href={renvoyerHref}
+                  style={{ display: "inline-block", marginTop: 8, background: "#111", color: "#fff", padding: "8px 16px", borderRadius: 999, textDecoration: "none", fontSize: 11, fontWeight: 700, fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}
+                >
+                  Renvoyer avec ajustements →
+                </Link></>
+              )}
+            </>
+          )}
         </>
       }
       date={dateStr}
@@ -4504,6 +4555,7 @@ function MessagesInner() {
                     const isDevalidee = typeof m.contenu === "string" && m.contenu.startsWith(DEVALIDEE_PREFIX)
                     const isValidee = typeof m.contenu === "string" && m.contenu.startsWith(VALIDEE_PREFIX)
                     const isRefus = typeof m.contenu === "string" && m.contenu.startsWith(REFUS_PREFIX)
+                    const isBailRefuse = typeof m.contenu === "string" && m.contenu.startsWith(BAIL_REFUSE_PREFIX)
                     const isLocation = typeof m.contenu === "string" && m.contenu.startsWith(LOCATION_PREFIX)
                     return (
                       <div key={m.id} style={{ display: "flex", justifyContent: isMine ? "flex-end" : "flex-start" }}>
@@ -4641,6 +4693,13 @@ function MessagesInner() {
                         ) : isRefus ? (
                           <div>
                             <CandidatureNonRetenueCard contenu={m.contenu} isMine={isMine} />
+                            <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
+                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        ) : isBailRefuse ? (
+                          <div>
+                            <BailRefuseCard contenu={m.contenu} isMine={isMine} />
                             <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>

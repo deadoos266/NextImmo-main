@@ -71,6 +71,10 @@ export default function BailInvitationPage({ params }: { params: Promise<{ token
   const [actionLoading, setActionLoading] = useState<"accepter" | "refuser" | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [needsLogin, setNeedsLogin] = useState<{ targetEmail: string; reason: "not-logged" | "wrong-account" } | null>(null)
+  // V33.6 — Modale de refus avec raison
+  const [refusModalOpen, setRefusModalOpen] = useState(false)
+  const [refusRaison, setRefusRaison] = useState<"loyer_eleve" | "surface_insuffisante" | "changement_situation" | "pas_mon_bail" | "autre">("loyer_eleve")
+  const [refusMotif, setRefusMotif] = useState("")
 
   // Action préselectionnée par querystring (?action=refuser depuis l'email)
   const presetAction = searchParams.get("action")
@@ -121,15 +125,24 @@ export default function BailInvitationPage({ params }: { params: Promise<{ token
     }
   }
 
-  async function handleRefuser() {
+  // V33.6 — Ouvre la modale au lieu d'un confirm() natif fragile.
+  function handleRefuser() {
     if (actionLoading) return
-    if (!confirm("Confirmer le refus ? Votre propriétaire en sera informé et pourra refaire une invitation.")) return
+    setRefusModalOpen(true)
+  }
+
+  async function confirmerRefus() {
     setActionLoading("refuser")
     setError(null)
     try {
-      const res = await fetch(`/api/bail/refuser/${token}`, { method: "POST" })
+      const res = await fetch(`/api/bail/refuser/${token}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ raison: refusRaison, motif: refusMotif.trim() }),
+      })
       const d = await res.json()
       if (d.ok) {
+        setRefusModalOpen(false)
         const refreshed = await fetch(`/api/bail/accepter/${token}`).then(r => r.json())
         if (refreshed.ok) setInvit(refreshed.invitation)
         return
@@ -294,9 +307,94 @@ export default function BailInvitationPage({ params }: { params: Promise<{ token
         </div>
 
         <p style={{ fontSize: 12, color: T.muted, textAlign: "center", margin: "20px 0 0", lineHeight: 1.6 }}>
-          KeyMatch est gratuit pour les locataires. Si vous n'attendez pas d'invitation, ignorez cet email — aucune action ne sera prise.
+          KeyMatch est gratuit pour les locataires. Si vous n&apos;attendez pas d&apos;invitation, ignorez cet email — aucune action ne sera prise.
         </p>
       </div>
+
+      {/* V33.6 — Modale de refus avec raison */}
+      {refusModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Confirmer le refus"
+          style={{ position: "fixed", inset: 0, background: "rgba(17,17,17,0.55)", zIndex: 13000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, fontFamily: "'DM Sans', sans-serif" }}
+          onClick={(e) => { if (e.target === e.currentTarget && !actionLoading) setRefusModalOpen(false) }}
+        >
+          <div style={{ background: "#fff", borderRadius: 20, padding: 28, maxWidth: 480, width: "100%", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+            <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 24, margin: "0 0 8px", color: T.ink, letterSpacing: "-0.4px" }}>
+              Refuser cette invitation ?
+            </h2>
+            <p style={{ fontSize: 13, color: T.muted, margin: "0 0 18px", lineHeight: 1.55 }}>
+              Votre propriétaire en sera informé. Indiquez la raison principale — il pourra ajuster et vous renvoyer une nouvelle proposition s&apos;il le souhaite.
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+              {([
+                { v: "loyer_eleve", label: "Loyer trop élevé" },
+                { v: "surface_insuffisante", label: "Surface ou nombre de pièces insuffisants" },
+                { v: "changement_situation", label: "Changement de situation personnelle" },
+                { v: "pas_mon_bail", label: "Ce n'est pas mon bail / mauvais destinataire" },
+                { v: "autre", label: "Autre raison" },
+              ] as const).map(opt => (
+                <label key={opt.v} style={{
+                  display: "flex", gap: 10, padding: "11px 14px",
+                  border: `1.5px solid ${refusRaison === opt.v ? "#111" : T.line}`,
+                  borderRadius: 12, cursor: "pointer", alignItems: "center", fontSize: 13.5, color: T.ink,
+                  background: refusRaison === opt.v ? "#F7F4EF" : "#fff",
+                }}>
+                  <input
+                    type="radio"
+                    name="refus-raison"
+                    value={opt.v}
+                    checked={refusRaison === opt.v}
+                    onChange={() => setRefusRaison(opt.v)}
+                    style={{ accentColor: "#111" }}
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
+
+            <label style={{ fontSize: 11, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "0.3px", display: "block", marginBottom: 6 }}>
+              Précisions (optionnel)
+            </label>
+            <textarea
+              value={refusMotif}
+              onChange={e => setRefusMotif(e.target.value.slice(0, 500))}
+              placeholder="Ex : Le loyer dépasse 30% de mes revenus."
+              rows={3}
+              style={{
+                width: "100%", padding: "10px 14px",
+                border: `1px solid ${T.line}`, borderRadius: 10,
+                fontSize: 13, fontFamily: "inherit", color: T.ink,
+                resize: "vertical", boxSizing: "border-box", outline: "none",
+              }}
+            />
+            <p style={{ fontSize: 10, color: T.muted, margin: "4px 0 18px", textAlign: "right" }}>
+              {refusMotif.length}/500
+            </p>
+
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => setRefusModalOpen(false)}
+                disabled={actionLoading === "refuser"}
+                style={{ background: "#fff", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 999, padding: "10px 22px", fontSize: 13, fontWeight: 600, fontFamily: "inherit", cursor: "pointer" }}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={confirmerRefus}
+                disabled={actionLoading === "refuser"}
+                style={{ background: "#b91c1c", color: "#fff", border: "none", borderRadius: 999, padding: "10px 22px", fontSize: 13, fontWeight: 700, fontFamily: "inherit", cursor: "pointer", opacity: actionLoading === "refuser" ? 0.5 : 1 }}
+              >
+                {actionLoading === "refuser" ? "Envoi…" : "Confirmer le refus"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
