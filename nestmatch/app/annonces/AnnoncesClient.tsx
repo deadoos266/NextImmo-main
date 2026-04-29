@@ -1554,7 +1554,18 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                 flex: isSmall ? 1 : "0 0 600px",
                 minWidth: 0,
                 width: isSmall ? "100%" : undefined,
-                display: isMobileV5 ? "block" : (isSmall && showMap ? "none" : "flex"),
+                // V39 (Paul 2026-04-29) — bug fix : avant ce fix, la liste
+                // était `display: "block"` sur mobile MÊME en mode Carte
+                // (isMobileV5 && showMap). Résultat : la 1ère ListingCardCompact
+                // s'affichait DANS le DOM avant le MobileMapCarousel (rendu en
+                // position fixed top:72). Sur iPhone, le scroll natif faisait
+                // remonter la card visible AU-DESSUS du carousel header
+                // "Search bar Paris + Filtres". User : "il y a toujours le
+                // bug ou on voit au dessus et en même temps la map".
+                // Fix : `display: none` quand mobile + carte. Le carousel est
+                // alors le SEUL composant visible sous la navbar (vraiment
+                // fullscreen).
+                display: isMobileV5 && showMap ? "none" : (isMobileV5 ? "block" : (isSmall && showMap ? "none" : "flex")),
                 flexDirection: "column",
                 height: isSmall ? undefined : "100%",
                 overflow: isSmall ? "visible" : "hidden",
