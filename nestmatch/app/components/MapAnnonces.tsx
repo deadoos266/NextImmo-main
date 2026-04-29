@@ -102,16 +102,24 @@ function priceMarker(
   const ch = asNumber(charges, 0) ?? 0
   const total = loyer + (ch > 0 ? ch : 0)
   const price = total > 0 ? total.toLocaleString("fr-FR") + "\u00a0\u20ac" : "\u2014"
-  // Tier color : vert \u226575, ambre 50-74, rouge <50, gris si pas de score
+  // V36.2 \u2014 Couleurs adoucies pour signal "match avec ton profil" (pas qualit\u00e9 du logement) :
+  //   \u226585 : vert plein #15803d (top match)
+  //   70-84 : vert "OK" #4d8b5e
+  //   50-69 : ambre subtle #a16207
+  //   <50 : gris neutre #6b6559 (pas rouge alarmant \u2014 ce n'est PAS une mauvaise annonce)
+  // Audit V35 R35.3 : avant, rouge #b91c1c sur pins <50% \u00e9voquait "danger"
+  // alors que c'\u00e9tait juste "mauvais match avec TON profil".
   const borderColor = selected ? "#111"
     : scorePct === null ? "#111"
-    : scorePct >= 75 ? "#15803d"
+    : scorePct >= 85 ? "#15803d"
+    : scorePct >= 70 ? "#4d8b5e"
     : scorePct >= 50 ? "#a16207"
-    : "#b91c1c"
+    : "#6b6559"
   const dotColor = scorePct === null ? "#16A34A"
-    : scorePct >= 75 ? "#15803d"
+    : scorePct >= 85 ? "#15803d"
+    : scorePct >= 70 ? "#4d8b5e"
     : scorePct >= 50 ? "#a16207"
-    : "#b91c1c"
+    : "#6b6559"
   const bg = selected ? "#111" : "#fff"
   const text = selected ? "#fff" : "#111"
   const borderW = selected ? 2 : 1.5
@@ -806,9 +814,13 @@ export default function MapAnnonces({
               const code = Number(feat?.properties?.c_ar) || 0
               const label = feat?.properties?.l_ar || `Paris ${code}e`
               const stats = arrStatsByCode.get(code)
+              // V36.2 — Disclaimer explicite (audit V35 R35.2) : ce €/m² est
+              // calculé sur les ANNONCES VISIBLES (filtres + zoom + état du marché),
+              // PAS le prix médian officiel du quartier. Wording transparent
+              // pour ne pas induire l'user en erreur (mensonge silencieux).
               const txt = stats
-                ? `<strong>${label}</strong><br/>${stats.meanPrixM2}&nbsp;€/m² · ${stats.count} annonce${stats.count > 1 ? "s" : ""}`
-                : `<strong>${label}</strong><br/>Aucune annonce`
+                ? `<strong>${label}</strong><br/>${stats.meanPrixM2}&nbsp;€/m² <span style="opacity:0.7">moyenne</span><br/><span style="font-size:10px;opacity:0.7">sur ${stats.count} annonce${stats.count > 1 ? "s" : ""} visible${stats.count > 1 ? "s" : ""} · pas un prix médian officiel</span>`
+                : `<strong>${label}</strong><br/><span style="opacity:0.7">Aucune annonce visible ici</span>`
               layer.bindTooltip(txt, { sticky: true, direction: "top" })
             }}
           />
@@ -1570,20 +1582,24 @@ export default function MapAnnonces({
             <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1px", margin: "0 0 8px" }}>Code couleur des annonces</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "#111" }}>
-                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#16A34A", flexShrink: 0 }} />
-                <span><strong>Vert</strong> · compatibilité ≥ 70 %</span>
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#15803d", flexShrink: 0 }} />
+                <span><strong>Vert plein</strong> · top match ≥ 85 %</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "#111" }}>
-                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#F59E0B", flexShrink: 0 }} />
-                <span><strong>Orange</strong> · 50 – 70 %</span>
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#4d8b5e", flexShrink: 0 }} />
+                <span><strong>Vert pâle</strong> · bon match 70 – 84 %</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "#111" }}>
-                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#9CA3AF", flexShrink: 0 }} />
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#a16207", flexShrink: 0 }} />
+                <span><strong>Ambre</strong> · 50 – 69 %</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "#111" }}>
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#6b6559", flexShrink: 0 }} />
                 <span><strong>Gris</strong> · &lt; 50 % ou non calculé</span>
               </div>
             </div>
             <p style={{ fontSize: 11, color: "#8a8477", margin: "12px 0 0", lineHeight: 1.5 }}>
-              Connectez-vous et complétez votre dossier pour voir votre score de compatibilité sur chaque annonce.
+              La couleur reflète le <strong>match avec ton profil</strong>, pas la qualité de l&apos;annonce. Une couleur grise n&apos;est PAS un signal négatif — c&apos;est juste que tes critères ne collent pas (ex&nbsp;: zone, pièces, budget).
             </p>
           </div>
         )}
