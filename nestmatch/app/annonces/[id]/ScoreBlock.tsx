@@ -201,8 +201,16 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
       {/* Breakdown par categorie — visible par defaut */}
       {breakdown.length > 0 && (
         <div style={{ marginTop: 14, padding: "14px 16px", background: "#F7F4EF", border: "1px solid #EAE6DF", borderRadius: 14 }}>
-          <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 10px" }}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 6px" }}>
             Détail du score
+          </p>
+          {/* V36.5 — Contexte pédagogique (audit V35 R35.7).
+              Avant : breakdown affiché en barres sans explication des poids,
+              user voyait "Surface 140/270" et ne comprenait pas pourquoi
+              certaines lignes pèsent plus que d'autres. */}
+          <p style={{ fontSize: 11, color: "#8a8477", margin: "0 0 12px", lineHeight: 1.5 }}>
+            Le score pondère selon ton profil — Budget compte 30 %, Surface 27 %,
+            Pièces 15 %, Meublé 10 %, Équipements 10 %, DPE 5 %, Critères perso 3 %.
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {breakdown.map(item => {

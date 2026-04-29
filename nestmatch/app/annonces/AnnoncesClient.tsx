@@ -1306,6 +1306,51 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
             "Mes critères ↔ Réinitialiser" dans la FiltersBar / QuickFiltersRow
             remplit ce rôle. User feedback : "qu'une seule pill qui morph". */}
 
+        {/* V36.5 — Banner auto-apply confirmation (audit V35 R35.6) :
+            avant ce banner, l'user débarquait sur /annonces avec ses critères
+            profil appliqués silencieusement → ambiguïté "c'est mon filtre ou
+            les vrais résultats ?" Maintenant : confirmation explicite +
+            bouton "Voir tout" pour réinitialiser. Auto-dismiss 8s. */}
+        {autoAppliedBannerOpen && (
+          <div
+            role="status"
+            aria-live="polite"
+            style={{
+              background: "#EEF3FB",
+              border: "1px solid #D7E3F4",
+              borderRadius: 14,
+              padding: "10px 16px",
+              marginBottom: 12,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              flexWrap: "wrap",
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+          >
+            <span aria-hidden style={{ fontSize: 16 }}>✨</span>
+            <p style={{ flex: 1, minWidth: 200, fontSize: 13, color: "#1d4ed8", margin: 0, lineHeight: 1.5 }}>
+              On a appliqué tes critères profil pour gagner du temps.{" "}
+              <a
+                href="/annonces"
+                onClick={() => setAutoAppliedBannerOpen(false)}
+                style={{ color: "#1d4ed8", textDecoration: "underline", fontWeight: 600 }}
+              >
+                Voir toutes les annonces
+              </a>
+              .
+            </p>
+            <button
+              type="button"
+              onClick={() => setAutoAppliedBannerOpen(false)}
+              aria-label="Fermer"
+              style={{ background: "transparent", border: "none", color: "#1d4ed8", fontSize: 18, cursor: "pointer", padding: 4, lineHeight: 1 }}
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         {/* ── FiltersBar sticky — MASQUÉ en mode liste+carte desktop ET en
             mobile mode carte (Paul 2026-04-27 sur retour user — la barre
             apparaissait au milieu de l'ecran sur la map mobile, moche et

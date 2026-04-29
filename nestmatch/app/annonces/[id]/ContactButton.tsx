@@ -163,8 +163,12 @@ export default function ContactButton({ annonce }: { annonce: any }) {
           enabled={false}
           block
           disabledReason={{
-            title: "Complétez votre dossier",
-            body: "Pour contacter un propriétaire, votre dossier doit être complété au minimum (ville, budget, revenus). Un dossier complet a beaucoup plus de chances d'être retenu.",
+            // V36.5 — Tone moins anxiogène (audit V35 R35.8). Avant : "Pour
+            // contacter un proprio, votre dossier doit être complété au
+            // minimum" sonnait comme un blocage punitif. Maintenant :
+            // formulation positive qui rassure le locataire sur la finalité.
+            title: "Encore une étape avant d'envoyer",
+            body: "Ton dossier aide les propriétaires à te connaître. Complète-le rapidement (5 min) pour augmenter tes chances d'être retenu — pas de spam, tu choisis qui contacter.",
             cta: { label: "Compléter mon dossier", href: "/dossier" },
           }}
         >
