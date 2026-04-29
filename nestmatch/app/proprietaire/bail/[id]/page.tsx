@@ -423,6 +423,47 @@ export default function BailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status, bienId])
 
+  // V32.4 — Realtime listener sur bail_signatures filtré par cette annonce.
+  // Audit V31 R1.4 : avant ce listener, le proprio devait refresh la page
+  // pour voir la signature du locataire. Maintenant : MAJ live + toast.
+  useEffect(() => {
+    if (!bienId) return
+    const annonceIdNum = Number(bienId)
+    if (!Number.isFinite(annonceIdNum)) return
+    const channel = supabase
+      .channel(`bail-sigs-${annonceIdNum}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "bail_signatures",
+          filter: `annonce_id=eq.${annonceIdNum}`,
+        },
+        (payload) => {
+          const row = payload.new as { signataire_role?: string; signataire_nom?: string } | null
+          if (!row) return
+          const role = row.signataire_role
+          if (role === "locataire") {
+            setLocataireSigne(true)
+            window.dispatchEvent(new CustomEvent("km:toast", {
+              detail: {
+                type: "visite_confirmee",
+                title: "Le locataire vient de signer le bail",
+                body: row.signataire_nom ? `Signature de ${row.signataire_nom}` : undefined,
+              },
+            }))
+          } else if (role === "bailleur") {
+            setBailleurSigne(true)
+          }
+        },
+      )
+      .subscribe()
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [bienId])
+
   async function loadBien() {
     const { data } = await supabase
       .from("annonces")
