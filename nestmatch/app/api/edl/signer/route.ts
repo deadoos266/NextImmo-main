@@ -66,9 +66,18 @@ export async function POST(req: NextRequest) {
   if (nom.length < 2) {
     return NextResponse.json({ ok: false, error: "Nom trop court" }, { status: 400 })
   }
-  if (!/lu et approuv/i.test(mention)) {
+  // V50.11 — STRICT equality après normalisation (avant : /lu et approuv/i
+  // acceptait n'importe quelle phrase contenant "lu et approuv" → laissait
+  // passer "Lu et approuvé Lu et approuvé" en doublon).
+  const mentionNorm = mention
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim()
+  if (mentionNorm !== "lu et approuve, bon pour accord") {
     return NextResponse.json(
-      { ok: false, error: 'Mention "Lu et approuvé" requise' },
+      { ok: false, error: 'La mention doit être recopiée exactement : "Lu et approuvé, bon pour accord" — c\'est une exigence légale.' },
       { status: 400 },
     )
   }

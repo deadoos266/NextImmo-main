@@ -164,6 +164,35 @@ function formatEuros(n: number | undefined | null): string {
   return v.toLocaleString("fr-FR") + " €"
 }
 
+/**
+ * V50.9 — Safety net pour les baux legacy : si la mention contient le canonical
+ * en doublon ("Lu et approuvé, bon pour accord Lu et approuvé, bon pour accord"),
+ * on n'affiche qu'une seule fois. Pour les baux post-V50.11, la mention DB est
+ * déjà strict (eq) donc no-op.
+ */
+function dedupMention(raw: string): string {
+  if (!raw) return raw
+  const trimmed = raw.trim()
+  // Normalisation pour détecter le doublon (insensible accents/casse/espaces)
+  const norm = trimmed
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+  const CANONICAL = "lu et approuve, bon pour accord"
+  // Si exactement deux (ou plus) occurrences consécutives, on tronque à la 1ère.
+  // Regex tolérante aux séparateurs typographiques.
+  const reDup = new RegExp(
+    `^(${CANONICAL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})[\\s,;.\\-]*\\1`,
+    "i",
+  )
+  if (reDup.test(norm)) {
+    // Le user a tapé deux fois la même phrase → on garde la première seule.
+    return "Lu et approuvé, bon pour accord"
+  }
+  return trimmed
+}
+
 // ─── Générateur ───────────────────────────────────────────────────────────
 
 /**
@@ -900,10 +929,14 @@ export async function buildBailPDFDoc(data: BailData): Promise<{ doc: import("js
     const xImg = xCenter - sigWidth / 2
     if (sig) {
       // Mention manuscrite du signataire (ex: "Lu et approuvé, bon pour accord")
+      // V50.9 — safety net : pour les baux legacy où la validation .includes()
+      // a laissé passer un doublon ("...accord ...accord"), on dédup avant
+      // rendu PDF. Pour les baux post-V50.11, sig.mention est déjà strict.
       doc.setFontSize(8)
       doc.setFont("helvetica", "italic")
       doc.setTextColor(60, 60, 60)
-      const mention = sig.mention || 'Lu et approuvé, bon pour accord'
+      const rawMention = sig.mention || 'Lu et approuvé, bon pour accord'
+      const mention = dedupMention(rawMention)
       doc.text(mention, xCenter, y, { align: "center" })
       // Image signature 5mm en dessous du texte
       const imgY = y + 5

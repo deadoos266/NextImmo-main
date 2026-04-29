@@ -100,9 +100,16 @@ export async function POST(req: NextRequest) {
     .replace(/[  ]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
-  if (!mentionNorm.includes("lu et approuve, bon pour accord")) {
+  // V50.11 — STRICT equality (avant : .includes() acceptait "lu et approuve,
+  // bon pour accord lu et approuve, bon pour accord" en doublon → V50.9 bug PDF).
+  // Cas garant = canonical + suffixe libre " + caution solidaire à hauteur de X €".
+  const CANONICAL = "lu et approuve, bon pour accord"
+  const isStrictMatch = mentionNorm === CANONICAL
+  const isGarantMatch = role === "garant" &&
+    /^lu et approuve, bon pour accord([ ,].*)?caution solidaire/i.test(mentionNorm)
+  if (!isStrictMatch && !isGarantMatch) {
     return NextResponse.json(
-      { ok: false, error: 'Mention requise : "Lu et approuvé, bon pour accord"' },
+      { ok: false, error: 'La mention doit être recopiée exactement : "Lu et approuvé, bon pour accord" — c\'est une exigence légale.' },
       { status: 400 },
     )
   }

@@ -55,8 +55,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   const mention = typeof p.mention === "string" ? p.mention.trim() : ""
   const signaturePng = typeof p.signaturePng === "string" ? p.signaturePng : ""
 
-  if (!normaliserMention(mention).includes("lu et approuve, bon pour accord")) {
-    return NextResponse.json({ ok: false, error: 'Mention requise : "Lu et approuvé, bon pour accord"' }, { status: 400 })
+  // V50.11 — STRICT equality (avant : .includes() acceptait doublons → V50.9 bug PDF).
+  if (normaliserMention(mention) !== "lu et approuve, bon pour accord") {
+    return NextResponse.json({ ok: false, error: 'La mention doit être recopiée exactement : "Lu et approuvé, bon pour accord" — c\'est une exigence légale.' }, { status: 400 })
   }
   if (!signaturePng.startsWith("data:image/png;base64,")) {
     return NextResponse.json({ ok: false, error: "Signature PNG invalide" }, { status: 400 })

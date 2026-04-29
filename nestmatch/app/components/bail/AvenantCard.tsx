@@ -121,8 +121,9 @@ export default function AvenantCard({ avenant, myRole, myEmail, onRefreshed }: P
   async function submitSign() {
     if (submitting) return
     if (!nom.trim() || nom.trim().length < 2) { setError("Nom requis"); return }
-    if (!normaliserMention(mention).includes("lu et approuve, bon pour accord")) {
-      setError('Mention requise : "Lu et approuvé, bon pour accord"')
+    // V50.11 — STRICT equality (avant : .includes() laissait passer doublons).
+    if (normaliserMention(mention) !== "lu et approuve, bon pour accord") {
+      setError('La mention doit être recopiée exactement : "Lu et approuvé, bon pour accord" — c\'est une exigence légale.')
       return
     }
     if (!signaturePng) { setError("Signez avant de valider"); return }

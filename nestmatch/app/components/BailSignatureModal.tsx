@@ -42,17 +42,24 @@ function validerMention(input: string, roleHasGarant?: boolean): {
 } {
   const norm = normaliserMention(input)
   if (!norm) return { ok: false, proche: false, message: null }
-  // Cas garant : on accepte la mention "+ caution solidaire à hauteur de [montant]"
-  // tant que la mention de base est présente.
-  const containsBase = norm.includes(MENTION_REQUISE_NORM)
-  if (containsBase) {
-    if (roleHasGarant && !/caution\s+solidaire/i.test(input)) {
+  // V50.11 — STRICT equality (avant : .includes() laissait passer doublons →
+  // V50.9 bug PDF avec mention dupliquée).
+  // Cas garant : canonical + suffixe libre " + caution solidaire à hauteur de X €".
+  const isStrictMatch = norm === MENTION_REQUISE_NORM
+  const isGarantMatch = roleHasGarant &&
+    new RegExp(`^${MENTION_REQUISE_NORM}([ ,].*)?caution solidaire`, "i").test(norm)
+  if (isStrictMatch) {
+    // Pour un garant, on exige aussi la mention "caution solidaire" en plus du canonical
+    if (roleHasGarant) {
       return {
         ok: false,
         proche: true,
         message: "En tant que garant, ajoutez « caution solidaire à hauteur de [montant] € »",
       }
     }
+    return { ok: true, proche: true, message: null }
+  }
+  if (isGarantMatch) {
     return { ok: true, proche: true, message: null }
   }
   // Proximité : si l'user a tapé "lu et approuv" mais oublié "bon pour accord"
