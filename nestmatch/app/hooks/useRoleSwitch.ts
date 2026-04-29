@@ -1,5 +1,6 @@
 "use client"
 import { useRouter, usePathname } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { useRole } from "../providers"
 
 export type ActiveRole = "locataire" | "proprietaire"
@@ -9,9 +10,20 @@ export type ActiveRole = "locataire" | "proprietaire"
  * Airbnb. Decoupe de useRole() pour exposer une API claire au composant
  * RoleSwitchToggle (Paul 2026-04-27).
  *
- * - canSwitch : true si l'user a acces aux 2 roles. Tout user authentifie
- *   = locataire par defaut (profil + dossier). canBeProprio depend de la
- *   DB (annonce ou flag is_proprietaire).
+ * V41 (Paul 2026-04-29) — bug fix user "c'est toi qui a enlevé le fait
+ * qu'on puisse changer du proprio au locataire ?". Avant : canSwitch était
+ * gated par canBeProprio (= au moins 1 annonce OU flag is_proprietaire).
+ * Conséquence : pure-locataire ne voyait JAMAIS le toggle, donc impossible
+ * de basculer en mode proprio pour publier sa 1ère annonce. Pareil pour
+ * un proprio dont les annonces ont été supprimées et qui se retrouve
+ * bloqué.
+ *
+ * Maintenant : canSwitch = user logged-in. Le clic "Propriétaire" sur un
+ * pure-locataire le bascule vers le dashboard /proprietaire qui propose
+ * l'onboarding "Publier une annonce". Côté DB, le flag is_proprietaire
+ * n'est posé qu'à la 1ère annonce — le toggle reste cohérent.
+ *
+ * - canSwitch : true si user authentifié.
  * - currentRole : 'proprietaire' si proprietaireActive=true, sinon
  *   'locataire'.
  * - switchTo(role) : update proprietaireActive + redirect home si l'user
@@ -22,11 +34,12 @@ export function useRoleSwitch(): {
   currentRole: ActiveRole
   switchTo: (role: ActiveRole) => void
 } {
-  const { proprietaireActive, setProprietaireActive, canBeProprio } = useRole()
+  const { proprietaireActive, setProprietaireActive } = useRole()
+  const { status } = useSession()
   const router = useRouter()
   const pathname = usePathname()
 
-  const canSwitch = canBeProprio
+  const canSwitch = status === "authenticated"
   const currentRole: ActiveRole = proprietaireActive ? "proprietaire" : "locataire"
 
   function switchTo(targetRole: ActiveRole) {
