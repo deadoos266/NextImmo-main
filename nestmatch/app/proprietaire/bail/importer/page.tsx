@@ -207,6 +207,17 @@ export default function ImporterBailPage() {
         return
       }
       setSuccess({ annonceId: data.annonceId, emailSent: data.emailSent === true })
+      // V33.7 — Notif rejet auto aux autres candidats sur la même annonce
+      // (rate-limit 1/h/annonce côté server). No-op s'il n'y a pas d'autres
+      // candidats. Audit V31 R2.5.
+      const retenuEmail = form.locataireEmail.trim().toLowerCase()
+      if (retenuEmail && data.annonceId) {
+        void fetch("/api/notifications/candidats-orphelins", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ annonceId: data.annonceId, locataireRetenu: retenuEmail }),
+        }).catch(err => console.warn("[importer] candidats-orphelins notify failed:", err))
+      }
       setForm(EMPTY_FORM)
     } catch (err) {
       console.error("[importer] submit failed", err)

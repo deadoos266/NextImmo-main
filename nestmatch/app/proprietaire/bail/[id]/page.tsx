@@ -844,6 +844,20 @@ export default function BailPage() {
           /* ignore */
         }
       }
+      // V33.7 — Notif rejet auto aux AUTRES candidats de cette annonce.
+      // Audit V31 R2.5 : avant ce trigger, attribuer un bail à un candidat
+      // laissait les autres candidats en limbo (statut "rejete" silencieux
+      // côté UI, sans message ni email). Maintenant : appel fire-and-forget
+      // à l'API existante (rate-limit 1/h/annonce server-side, no-op si
+      // déjà déclenché). Send email "respectueux" + insert
+      // [CANDIDATURE_NON_RETENUE] dans chaque thread.
+      if (locataireEmail) {
+        void fetch("/api/notifications/candidats-orphelins", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ annonceId: bien.id, locataireRetenu: locataireEmail }),
+        }).catch(err => console.warn("[generer] candidats-orphelins notify failed:", err))
+      }
       // V32.1 — ferme la modale preview + dispatch un toast de succès.
       annulerPreview()
       window.dispatchEvent(new CustomEvent("km:toast", {
