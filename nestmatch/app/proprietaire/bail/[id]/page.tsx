@@ -17,6 +17,7 @@ import {
 import Modal from "../../../components/ui/Modal"
 import UploadBailModal from "../../../components/UploadBailModal"
 import BailPreviewModal from "../../../components/bail/BailPreviewModal"
+import AvenantCard, { type Avenant } from "../../../components/bail/AvenantCard"
 import HelpIcon, { PhoneHelpContent } from "../../../components/ui/HelpIcon"
 import AnnexeUploader from "../../../components/AnnexeUploader"
 import { formatNomComplet } from "../../../../lib/profilHelpers"
@@ -414,6 +415,23 @@ export default function BailPage() {
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null)
   const [previewFilename, setPreviewFilename] = useState("")
+
+  // V36.3 — Avenants liés à cette annonce
+  const [avenants, setAvenants] = useState<Avenant[]>([])
+  async function refreshAvenants() {
+    if (!bienId) return
+    try {
+      const res = await fetch(`/api/bail/avenant?annonceId=${bienId}`)
+      if (res.ok) {
+        const json = await res.json() as { ok: boolean; avenants?: Avenant[] }
+        if (json.ok && json.avenants) setAvenants(json.avenants)
+      }
+    } catch { /* silent */ }
+  }
+  useEffect(() => {
+    void refreshAvenants()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bienId])
 
   // V33.8 — Mode "Premier bail" simplifié. Audit V31 R2.3 : le form 15 sections
   // est intimidant pour un proprio non-tech. En mode simplifié, on ne montre
@@ -1185,6 +1203,32 @@ export default function BailPage() {
               </button>
             )}
           </div>
+        )}
+
+        {/* V36.3 — Section Avenants côté proprio (audit V35 R35.1).
+            Affiche les avenants actifs/en cours avec actions miroir locataire. */}
+        {avenants.filter(a => a.statut !== "annule").length > 0 && (
+          <section style={{ marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12, gap: 10, flexWrap: "wrap" }}>
+              <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, margin: 0, letterSpacing: "-0.3px", color: "#111" }}>
+                Avenants au bail
+              </h2>
+              <p style={{ fontSize: 11, color: "#8a8477", margin: 0 }}>
+                {avenants.filter(a => a.statut !== "annule").length} en cours
+              </p>
+            </div>
+            {avenants
+              .filter(a => a.statut !== "annule")
+              .map(a => (
+                <AvenantCard
+                  key={a.id}
+                  avenant={a}
+                  myRole="proprietaire"
+                  myEmail={(session?.user?.email || "").toLowerCase()}
+                  onRefreshed={refreshAvenants}
+                />
+              ))}
+          </section>
         )}
 
         {/* Import bail externe — raccourci en haut */}

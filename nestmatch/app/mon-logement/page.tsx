@@ -15,6 +15,7 @@ import BailTimeline from "../components/ui/BailTimeline"
 import BailSignatureModal from "../components/BailSignatureModal"
 import IntegrityBadge from "../components/bail/IntegrityBadge"
 import PreavisModal from "../components/bail/PreavisModal"
+import AvenantCard, { type Avenant } from "../components/bail/AvenantCard"
 import { joursAvantFinPreavis, formatJoursRestants } from "../../lib/preavis"
 import { estZoneTendue } from "../../lib/bailDefaults"
 import type { BailData, BailSignatureEntry } from "../../lib/bailPDF"
@@ -79,6 +80,8 @@ export default function MonLogement() {
   const [signatures, setSignatures] = useState<BailSignatureEntry[]>([])
   const [signModalOpen, setSignModalOpen] = useState(false)
   const [preavisOpen, setPreavisOpen] = useState(false)
+  // V36.3 — Avenants liés au bail courant
+  const [avenants, setAvenants] = useState<Avenant[]>([])
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -160,10 +163,30 @@ export default function MonLogement() {
         )
       }
 
+      // V36.3 — fetch avenants liés au bail (audit V35 R35.1).
+      try {
+        const avRes = await fetch(`/api/bail/avenant?annonceId=${b.id}`)
+        if (avRes.ok) {
+          const json = await avRes.json() as { ok: boolean; avenants?: Avenant[] }
+          if (json.ok && json.avenants) setAvenants(json.avenants)
+        }
+      } catch { /* silent fail — pas bloquant */ }
+
       setLoading(false)
     }
     load()
   }, [session, status, router])
+
+  async function refreshAvenants() {
+    if (!bien) return
+    try {
+      const res = await fetch(`/api/bail/avenant?annonceId=${bien.id}`)
+      if (res.ok) {
+        const json = await res.json() as { ok: boolean; avenants?: Avenant[] }
+        if (json.ok && json.avenants) setAvenants(json.avenants)
+      }
+    } catch { /* silent */ }
+  }
 
   async function telechargerBail() {
     if (!bailPayload || downloadingBail) return
@@ -611,6 +634,33 @@ export default function MonLogement() {
         <div style={{ marginBottom: 24 }}>
           <BailTimeline steps={timelineSteps} />
         </div>
+
+        {/* V36.3 — Section Avenants (audit V35 R35.1). Affiche les avenants
+            actifs/proposés/signés. Filtré : on cache les "annule" (sauf si
+            l'user veut les voir, à activer plus tard). */}
+        {avenants.filter(a => a.statut !== "annule").length > 0 && (
+          <section style={{ marginBottom: 24 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12, gap: 10, flexWrap: "wrap" }}>
+              <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, margin: 0, letterSpacing: "-0.3px", color: "#111" }}>
+                Modifications du bail
+              </h2>
+              <p style={{ fontSize: 11, color: "#8a8477", margin: 0, letterSpacing: "0.3px" }}>
+                {avenants.filter(a => a.statut !== "annule").length} avenant{avenants.filter(a => a.statut !== "annule").length > 1 ? "s" : ""}
+              </p>
+            </div>
+            {avenants
+              .filter(a => a.statut !== "annule")
+              .map(a => (
+                <AvenantCard
+                  key={a.id}
+                  avenant={a}
+                  myRole="locataire"
+                  myEmail={(session?.user?.email || "").toLowerCase()}
+                  onRefreshed={refreshAvenants}
+                />
+              ))}
+          </section>
+        )}
 
         {/* V34.5 — Préavis : countdown si donné, ou bouton "Donner congé" si bail actif */}
         {bailSousEtat === "actif" && bien.preavis_donne_par && bien.preavis_fin_calculee && (() => {
