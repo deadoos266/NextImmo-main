@@ -104,6 +104,7 @@ export default function RecherchesSauvegardeesPage() {
     }
     const email = session?.user?.email?.toLowerCase()
     if (!email) return
+    // V36.6 — Lecture optimiste localStorage (offline cache) puis sync API.
     try {
       const raw = localStorage.getItem(`nestmatch:savedSearches:${email}`)
       if (raw) {
@@ -111,10 +112,28 @@ export default function RecherchesSauvegardeesPage() {
         if (Array.isArray(arr)) setList(arr)
       }
     } catch { /* noop */ }
+    // Fetch API en arrière-plan : si online, écrase le cache local par
+    // la source de vérité serveur (= sync cross-device).
+    void (async () => {
+      try {
+        const res = await fetch("/api/recherches-sauvegardees")
+        if (!res.ok) return
+        const json = await res.json() as { ok: boolean; recherches?: Array<{ id: string; name: string; filtres: Record<string, unknown>; updated_at: string }> }
+        if (!json.ok || !json.recherches) return
+        const merged: SavedSearch[] = json.recherches.map(r => ({
+          id: r.id,
+          name: r.name,
+          savedAt: r.updated_at,
+          ...(r.filtres as Partial<SavedSearch>),
+        }))
+        setList(merged)
+        try { localStorage.setItem(`nestmatch:savedSearches:${email}`, JSON.stringify(merged)) } catch { /* ignore */ }
+      } catch { /* offline OK, on garde le cache */ }
+    })()
     setLoaded(true)
   }, [session, status, router])
 
-  function persist(next: SavedSearch[]) {
+  function persistLocal(next: SavedSearch[]) {
     const email = session?.user?.email?.toLowerCase()
     if (!email) return
     try { localStorage.setItem(`nestmatch:savedSearches:${email}`, JSON.stringify(next)) } catch { /* noop */ }
@@ -124,10 +143,15 @@ export default function RecherchesSauvegardeesPage() {
     router.push(buildUrl(s))
   }
 
-  function supprimer(id: string) {
+  async function supprimer(id: string) {
     const next = list.filter(s => s.id !== id)
     setList(next)
-    persist(next)
+    persistLocal(next)
+    // V36.6 — Sync delete côté server (fire-and-forget). UUID Supabase
+    // pour les nouvelles recherches, fallback OK pour anciennes ID locales.
+    if (id.includes("-")) {
+      void fetch(`/api/recherches-sauvegardees?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => { /* offline OK */ })
+    }
     window.dispatchEvent(new CustomEvent("km:toast", {
       detail: { type: "info", title: "Recherche supprimée" },
     }))

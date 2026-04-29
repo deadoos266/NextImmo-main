@@ -430,6 +430,15 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
     const next = [search, ...savedSearches].slice(0, 10)
     setSavedSearches(next)
     persistSavedSearches(next)
+    // V36.6 — Sync API Supabase fire-and-forget (cross-device).
+    // Le filtres jsonb stocke tout sauf id/name (qui sont en colonnes).
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id: _id, name: _name, savedAt: _sa, ...filtres } = search
+    void fetch("/api/recherches-sauvegardees", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: search.name, filtres }),
+    }).catch(() => { /* offline OK, localStorage assure le fallback */ })
     // V30 — toast confirm (desktop SavedSearchesPopover ou MobileMapCarousel
     // qui a son propre toast déjà).
     if (typeof window !== "undefined") {
