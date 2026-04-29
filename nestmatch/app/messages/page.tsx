@@ -2331,16 +2331,20 @@ function MessagesInner() {
     setVisitesConv(data || [])
   }
 
-  async function demanderDossier() {
+  async function demanderDossier(force: boolean = false) {
     if (!convActive || !myEmail) return
     setDemandantDossier(true)
     const conv = conversations.find(c => c.key === convActive)
     if (!conv) { setDemandantDossier(false); return }
-    // Garde-fou anti-doublon : si la conv a déjà un [DEMANDE_DOSSIER] dans
-    // les messages chargés, ne ré-envoie pas (évite les spams si l'URL
-    // ?action=demande-dossier est triggered plusieurs fois).
-    const dejaDemande = messages.some(m => m.contenu === DEMANDE_DOSSIER_PREFIX && m.from_email === myEmail && (m.annonce_id ?? null) === (conv.annonceId ?? null))
-    if (dejaDemande) { setDemandantDossier(false); return }
+    // V49.1 — Garde-fou anti-doublon UNIQUEMENT pour auto-trigger URL
+    // (cf useEffect ?action=demande-dossier). Le bouton manuel doit
+    // toujours pouvoir re-demander : user a flag "le proprio ne peut pas
+    // re-demander après révocation". L'argument original ("éviter spam URL")
+    // ne s'applique pas aux clicks manuels — on fait confiance à l'user.
+    if (!force) {
+      const dejaDemande = messages.some(m => m.contenu === DEMANDE_DOSSIER_PREFIX && m.from_email === myEmail && (m.annonce_id ?? null) === (conv.annonceId ?? null))
+      if (dejaDemande) { setDemandantDossier(false); return }
+    }
     const msg = {
       from_email: myEmail,
       to_email: conv.other,
@@ -4936,7 +4940,7 @@ function MessagesInner() {
                       </button>
                     )}
                     {proprietaireActive && (
-                      <button onClick={demanderDossier} disabled={demandantDossier}
+                      <button onClick={() => demanderDossier(true)} disabled={demandantDossier}
                         style={{ background: "#fff", border: "1px solid #EADFC6", color: "#b45309", borderRadius: 999, padding: "6px 14px", fontSize: 11.5, fontWeight: 600, cursor: demandantDossier ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, opacity: demandantDossier ? 0.6 : 1, letterSpacing: "0.1px" }}>
                         <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#f59e0b" }} />
                         {demandantDossier ? "Envoi…" : "Demander le dossier"}
@@ -4971,12 +4975,15 @@ function MessagesInner() {
                         </button>
                       )
                     )}
-                    {/* QuickReply "Question sur le loyer" — handoff messages.jsx l. 399.
-                       Pré-remplit le composer pour aider l'user à formuler une
-                       question récurrente. Visible des deux côtés (locataire qui
-                       demande un détail, proprio qui clarifie). Garde-fou : ne
-                       remplace pas le draft si déjà tapé (concat seulement si vide). */}
-                  {convActiveData && (
+                    {/* QuickReply "Question sur le loyer" — V49.2 (Paul 2026-04-30)
+                       gating locataire only. User flag : "côté proprio cette
+                       phrase ne devrait pas être affichée ni cliquable en
+                       accès rapide". Le wording "j'aurais une question
+                       concernant le loyer et les charges" est destiné au
+                       locataire qui pose une question au proprio — le proprio
+                       ne se pose pas cette question à lui-même.
+                       Garde-fou : ne remplace pas le draft si déjà tapé. */}
+                  {convActiveData && !proprietaireActive && (
                     <button
                       type="button"
                       onClick={() => {
@@ -5313,7 +5320,7 @@ function MessagesInner() {
                           <button
                             type="button"
                             disabled={demandantDossier}
-                            onClick={() => { close(); demanderDossier() }}
+                            onClick={() => { close(); demanderDossier(true) }}
                             style={{ ...rowStyle, color: "#b45309", fontWeight: 600 }}
                           >
                             <span style={{ ...iconWrap, background: "#FBF6EA", borderColor: "#EADFC6", color: "#b45309" }}>
@@ -5334,6 +5341,9 @@ function MessagesInner() {
                             Proposer une visite
                           </button>
                         )}
+                        {/* V49.2 — Quick reply "Question sur le loyer"
+                            gating locataire only (cf desktop ci-dessus). */}
+                        {!proprietaireActive && (
                         <button
                           type="button"
                           onClick={() => {
@@ -5350,6 +5360,7 @@ function MessagesInner() {
                           </span>
                           Question sur le loyer
                         </button>
+                        )}
 
                         {/* V5.5 — Note privée (mobile, deplace ici depuis le banner du thread) */}
                         {proprietaireActive && (
