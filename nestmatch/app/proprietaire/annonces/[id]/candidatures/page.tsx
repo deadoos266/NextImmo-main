@@ -736,19 +736,37 @@ function CandidatureCard({
             Refusée
           </span>
         )}
-        {/* Louer = générer le bail. Visible si validée (ou prête bail) ET
-            pas encore au bail. Le wizard /proprietaire/bail/[id] préremplit
-            avec ?locataire={email} (lib existante). */}
+        {/* V32.3 — CTA principal "Générer le bail" rendu prominent (audit V31 R1.3).
+            Visible si validée OU statut visite, ET pas encore au bail.
+            Le wizard /proprietaire/bail/[id] préremplit avec ?locataire={email}. */}
         {(isValidated || statut === "visite") && statut !== "bail" && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+            <span style={{ fontSize: 9.5, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "1.2px" }}>
+              → Étape suivante
+            </span>
+            <Link
+              href={`/proprietaire/bail/${annonceId}?locataire=${encodeURIComponent(email)}`}
+              title="Générer le bail pour ce candidat"
+              style={{ padding: "11px 22px", background: "#15803d", color: "#fff", borderRadius: 999, fontSize: 12, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap", letterSpacing: "0.3px", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 6, boxShadow: "0 2px 8px rgba(21,128,61,0.18)" }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+              </svg>
+              Générer le bail
+            </Link>
+          </div>
+        )}
+        {/* V32.3 — Si bail déjà attribué à ce candidat, lien direct vers le bail. */}
+        {statut === "bail" && (
           <Link
             href={`/proprietaire/bail/${annonceId}?locataire=${encodeURIComponent(email)}`}
-            title="Générer le bail pour ce candidat"
-            style={{ padding: "9px 18px", background: "#111", color: "#fff", borderRadius: 999, fontSize: 11, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap", letterSpacing: "0.3px", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 6 }}
+            title="Voir le bail en cours"
+            style={{ padding: "9px 18px", background: "#fff", color: "#15803d", border: "1px solid #C6E9C0", borderRadius: 999, fontSize: 11, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap", letterSpacing: "0.3px", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 6 }}
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
             </svg>
-            Louer ce candidat
+            Voir le bail en cours
           </Link>
         )}
         {/* Voir les visites du candidat (si une existe). Lien vers /visites
