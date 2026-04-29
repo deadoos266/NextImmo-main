@@ -162,7 +162,14 @@ function formatEuros(n: number | undefined | null): string {
 
 // ─── Générateur ───────────────────────────────────────────────────────────
 
-export async function genererBailPDF(data: BailData): Promise<void> {
+/**
+ * V32.1 — buildBailPDFDoc : construit le doc jsPDF sans le sauvegarder.
+ * Permet preview (Blob), download, ou attachement Resend.
+ *
+ * `genererBailPDF` (legacy, garde l'API) appelle buildBailPDFDoc + doc.save().
+ * `genererBailPDFBlob` retourne un Blob (pour preview iframe).
+ */
+export async function buildBailPDFDoc(data: BailData): Promise<{ doc: import("jspdf").jsPDF; filename: string }> {
   const { default: jsPDF } = await import("jspdf")
   const doc = new jsPDF()
   const W = 170
@@ -1029,7 +1036,33 @@ export async function genererBailPDF(data: BailData): Promise<void> {
     { align: "center" },
   )
 
-  doc.save(
-    `bail-${(data.villeBien || "logement").toLowerCase()}-${data.dateDebut || "nouveau"}.pdf`,
-  )
+  const filename = `bail-${(data.villeBien || "logement").toLowerCase()}-${data.dateDebut || "nouveau"}.pdf`
+  return { doc, filename }
+}
+
+/**
+ * Legacy API : génère + télécharge le PDF côté client (backward-compatible).
+ */
+export async function genererBailPDF(data: BailData): Promise<void> {
+  const { doc, filename } = await buildBailPDFDoc(data)
+  doc.save(filename)
+}
+
+/**
+ * V32.1 — Retourne un Blob PDF pour preview iframe (jamais downloadé).
+ * Le caller crée un object URL via URL.createObjectURL(blob).
+ */
+export async function genererBailPDFBlob(data: BailData): Promise<{ blob: Blob; filename: string }> {
+  const { doc, filename } = await buildBailPDFDoc(data)
+  const blob = doc.output("blob")
+  return { blob, filename }
+}
+
+/**
+ * V32.1 — Retourne un ArrayBuffer (server-side, pour Resend attachment).
+ */
+export async function genererBailPDFBuffer(data: BailData): Promise<{ buffer: ArrayBuffer; filename: string }> {
+  const { doc, filename } = await buildBailPDFDoc(data)
+  const buffer = doc.output("arraybuffer")
+  return { buffer, filename }
 }

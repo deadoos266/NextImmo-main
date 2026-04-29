@@ -5,7 +5,7 @@ import { useRouter, useParams, useSearchParams } from "next/navigation"
 import { supabase } from "../../../../lib/supabase"
 import { useResponsive } from "../../../hooks/useResponsive"
 import { postNotif } from "../../../../lib/notificationsClient"
-import { genererBailPDF, type BailData } from "../../../../lib/bailPDF"
+import { genererBailPDF, genererBailPDFBlob, type BailData } from "../../../../lib/bailPDF"
 import {
   EQUIPEMENTS_MEUBLE_ALUR,
   EQUIPEMENTS_MEUBLE_CONFORT,
@@ -16,6 +16,7 @@ import {
 } from "../../../../lib/bailDefaults"
 import Modal from "../../../components/ui/Modal"
 import UploadBailModal from "../../../components/UploadBailModal"
+import BailPreviewModal from "../../../components/bail/BailPreviewModal"
 import HelpIcon, { PhoneHelpContent } from "../../../components/ui/HelpIcon"
 import AnnexeUploader from "../../../components/AnnexeUploader"
 import { formatNomComplet } from "../../../../lib/profilHelpers"
@@ -407,6 +408,13 @@ export default function BailPage() {
   const [bailleurSigne, setBailleurSigne] = useState(false)
   const [confirmRegen, setConfirmRegen] = useState(false)
 
+  // V32.1 — Preview modal state. Avant l'envoi du bail au locataire, on
+  // affiche le PDF généré pour relecture. Le proprio peut soit envoyer
+  // (déclenche email + insert message), soit revenir au form pour corriger.
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewBlob, setPreviewBlob] = useState<Blob | null>(null)
+  const [previewFilename, setPreviewFilename] = useState("")
+
   const storageKey = bienId ? `${STORAGE_KEY_PREFIX}${bienId}` : ""
 
   useEffect(() => {
@@ -656,6 +664,8 @@ export default function BailPage() {
     }
   }, [form, bien, session])
 
+  // V32.1 — Phase 1 : génère le PDF Blob et ouvre la modale preview.
+  // L'envoi effectif se fait via `confirmEnvoiBail()` après relecture proprio.
   async function generer() {
     if (!bien || !bailData || generating) return
     // Garde-fou : bail déjà signé par le locataire → bloqué (il faut un avenant)
@@ -673,10 +683,35 @@ export default function BailPage() {
     setConfirmRegen(false)
     setGenerating(true)
     try {
-      console.log("[generer] starting — bienId:", bien.id, "statut:", bien.statut)
+      const { blob, filename } = await genererBailPDFBlob(bailData)
+      setPreviewBlob(blob)
+      setPreviewFilename(filename)
+      setPreviewOpen(true)
+    } catch (pdfErr) {
+      console.error("[generer] PDF preview error:", pdfErr)
+      alert(`Erreur PDF : ${pdfErr instanceof Error ? pdfErr.message : String(pdfErr)}`)
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  function annulerPreview() {
+    setPreviewOpen(false)
+    setPreviewBlob(null)
+    setPreviewFilename("")
+  }
+
+  // V32.1 — Phase 2 : envoi confirmé après relecture du PDF preview.
+  // Reproduit l'ancienne logique `generer()` : download local + insert
+  // [BAIL_CARD] dans messages + notif locataire + update annonce.
+  async function confirmEnvoiBail() {
+    if (!bien || !bailData || generating) return
+    setGenerating(true)
+    try {
+      console.log("[generer] confirm — bienId:", bien.id, "statut:", bien.statut)
       const locataireEmail = bailData.emailLocataire
 
-      // PDF client-side (peut échouer si jsPDF plante)
+      // Download local du PDF (côté proprio — archive perso)
       try {
         await genererBailPDF(bailData)
         console.log("[generer] PDF téléchargé")
@@ -768,7 +803,15 @@ export default function BailPage() {
           /* ignore */
         }
       }
-      alert("✓ Bail généré et envoyé au locataire.")
+      // V32.1 — ferme la modale preview + dispatch un toast de succès.
+      annulerPreview()
+      window.dispatchEvent(new CustomEvent("km:toast", {
+        detail: {
+          type: "success",
+          title: "Bail envoyé au locataire",
+          body: "Vous serez notifié dès qu'il aura signé.",
+        },
+      }))
     } catch (err) {
       console.error("[generer] exception:", err)
       const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
@@ -2043,8 +2086,8 @@ export default function BailPage() {
                   ? confirmRegen
                     ? "Confirmer le remplacement"
                     : "Remplacer le bail envoyé"
-                  : "Générer le bail PDF et envoyer au locataire"
-              : "Générer le bail PDF"
+                  : "Prévisualiser et envoyer au locataire"
+              : "Prévisualiser le bail PDF"
           const actif = prete && !generating && !bloque
           return (
             <button
@@ -2465,6 +2508,17 @@ export default function BailPage() {
           defaultType={form.type}
         />
       )}
+
+      {/* V32.1 — Preview PDF avant envoi (R1.1 audit produit). Le proprio
+          peut relire le bail puis confirmer ou revenir au form. */}
+      <BailPreviewModal
+        open={previewOpen}
+        pdfBlob={previewBlob}
+        filename={previewFilename}
+        sending={generating}
+        onCancel={annulerPreview}
+        onConfirm={confirmEnvoiBail}
+      />
     </main>
   )
 }
