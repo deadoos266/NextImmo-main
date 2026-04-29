@@ -4563,11 +4563,29 @@ function MessagesInner() {
                             </p>
                           </div>
                           )
-                        })() : isDemande ? (
+                        })() : isDemande ? (() => {
+                          // V50.6 — dossierRecu PAR demande (pas global) :
+                          // une demande est "satisfaite" SSI il existe un
+                          // [DOSSIER_CARD] envoyé par moi APRÈS cette demande
+                          // (created_at > m.created_at). Si proprio re-demande
+                          // après révocation côté locataire, la nouvelle carte
+                          // doit afficher "Envoyer mon dossier" (CTA actif),
+                          // pas "DOSSIER ENVOYÉ" en dur.
+                          // User screenshot V50.6 : 2 cards "DOSSIER ENVOYÉ"
+                          // empilées à tort après revoke + re-demande.
+                          const demandeAt = new Date(m.created_at).getTime()
+                          const dossierRecuPourCetteDemande = messages.some(x =>
+                            typeof x.contenu === "string" &&
+                            x.contenu.startsWith(DOSSIER_PREFIX) &&
+                            x.from_email === myEmail &&
+                            (x.annonce_id ?? null) === (m.annonce_id ?? null) &&
+                            new Date(x.created_at).getTime() > demandeAt
+                          )
+                          return (
                           <div>
                             <DemandeDossierCard
                               isMine={isMine}
-                              dossierRecu={dossierDejaEnvoye}
+                              dossierRecu={dossierRecuPourCetteDemande}
                               onEnvoyer={envoyerDossier}
                               envoyant={envoyantDossier}
                             />
@@ -4575,7 +4593,8 @@ function MessagesInner() {
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
-                        ) : isEdl ? (
+                          )
+                        })() : isEdl ? (
                           <div>
                             <EdlCard
                               contenu={m.contenu}
