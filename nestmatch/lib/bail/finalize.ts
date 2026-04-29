@@ -111,6 +111,7 @@ export async function finalizeBail(args: FinalizeBailArgs): Promise<{ ok: boolea
 
   // 3. Tente génération PDF server-side (avec signatures injectées)
   let pdfAttachment: { filename: string; content: Buffer } | null = null
+  let pdfPublicUrl: string | null = bailData.fichierUrl ? String(bailData.fichierUrl) : null
   if (!bailData.fichierUrl) {
     try {
       const dataAvecSigs: BailData = { ...bailData, signatures }
@@ -118,6 +119,26 @@ export async function finalizeBail(args: FinalizeBailArgs): Promise<{ ok: boolea
       pdfAttachment = {
         filename,
         content: Buffer.from(buffer),
+      }
+      // V50.10 — upload du PDF dans le bucket "baux" pour le poster aussi
+      // dans la conversation. User : "apres que le proprio a contre signé
+      // il est pas dans la conv le bail seulement reçu par mail".
+      try {
+        const path = `${proprioEmail}/${annonceId}/bail_signe_${Date.now()}.pdf`
+        const { error: uploadErr } = await supabaseAdmin.storage
+          .from("baux")
+          .upload(path, Buffer.from(buffer), {
+            contentType: "application/pdf",
+            upsert: false,
+          })
+        if (!uploadErr) {
+          const { data: urlData } = supabaseAdmin.storage.from("baux").getPublicUrl(path)
+          pdfPublicUrl = urlData.publicUrl
+        } else {
+          console.warn("[finalizeBail] PDF upload failed:", uploadErr.message)
+        }
+      } catch (e) {
+        console.warn("[finalizeBail] PDF upload exception:", e)
       }
     } catch (e) {
       console.warn("[finalizeBail] PDF buffer generation failed (envoi sans pièce jointe):", e)
@@ -182,6 +203,41 @@ export async function finalizeBail(args: FinalizeBailArgs): Promise<{ ok: boolea
   }
   if (resProp.ok === false && !resProp.skipped) {
     console.warn("[finalizeBail] email proprio failed:", resProp.error)
+  }
+
+  // V50.10 — Poster un message [BAIL_FINAL_PDF] dans la conversation pour
+  // que les 2 parties retrouvent le PDF directement dans le thread (sans
+  // fouiller leurs mails). Idempotent : on n'insère que si pas déjà fait.
+  if (pdfPublicUrl) {
+    try {
+      const BAIL_FINAL_PREFIX = "[BAIL_FINAL_PDF]"
+      const { data: existing } = await supabaseAdmin
+        .from("messages")
+        .select("id")
+        .eq("annonce_id", annonceId)
+        .ilike("contenu", `${BAIL_FINAL_PREFIX}%`)
+        .limit(1)
+        .maybeSingle()
+      if (!existing) {
+        const finalPayload = {
+          url: pdfPublicUrl,
+          dateSignatureFinale: signeAt,
+          bienTitre: bailData.titreBien || args.bienTitre || "Logement",
+          ville: bailData.villeBien || args.ville || null,
+          dateDebut: bailData.dateDebut,
+        }
+        await supabaseAdmin.from("messages").insert([{
+          from_email: proprioEmail,
+          to_email: locataireEmail,
+          contenu: BAIL_FINAL_PREFIX + JSON.stringify(finalPayload),
+          lu: false,
+          annonce_id: annonceId,
+          created_at: new Date().toISOString(),
+        }])
+      }
+    } catch (e) {
+      console.warn("[finalizeBail] insert BAIL_FINAL_PDF message failed:", e)
+    }
   }
 
   return { ok: true }

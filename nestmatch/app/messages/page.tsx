@@ -32,6 +32,7 @@ const DOSSIER_PREFIX = "[DOSSIER_CARD]"
 const BAIL_PREFIX = "[BAIL_CARD]"
 const BAIL_SIGNE_PREFIX = "[BAIL_SIGNE]"
 const BAIL_REFUSE_PREFIX = "[BAIL_REFUSE]" // V33.6 — refus invitation par le locataire avec raison
+const BAIL_FINAL_PDF_PREFIX = "[BAIL_FINAL_PDF]" // V50.10 — bail signé par les 2 parties + lien PDF
 const EDL_A_PLANIFIER_PREFIX = "[EDL_A_PLANIFIER]"
 const DEMANDE_DOSSIER_PREFIX = "[DEMANDE_DOSSIER]"
 const EDL_PREFIX = "[EDL_CARD]"
@@ -210,6 +211,57 @@ function DemandeDossierCard({ isMine, dossierRecu, onEnvoyer, envoyant }: {
           {envoyant ? "Envoi en cours…" : "Envoyer mon dossier"}
         </button>
       )}
+    </div>
+  )
+}
+
+// ─── Bail Final PDF Card (V50.10) ───────────────────────────────────────────
+// Carte affichée après double signature, avec lien direct vers le PDF du bail
+// signé. User : "apres que le proprio a contre signé il est pas dans la conv
+// le bail seulement reçu par mail". On le poste dans le thread.
+
+function BailFinalPdfCard({ contenu }: { contenu: string }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any = {}
+  try { data = JSON.parse(contenu.slice(BAIL_FINAL_PDF_PREFIX.length)) } catch { /* ignore */ }
+  const dateSig = data.dateSignatureFinale
+    ? new Date(data.dateSignatureFinale).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    : ""
+  const dateDebut = data.dateDebut
+    ? new Date(data.dateDebut).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    : ""
+  return (
+    <div style={{ background: "#fff", border: "1px solid #C6E9C0", borderRadius: 16, padding: "16px 20px", minWidth: 260, maxWidth: 320, fontFamily: "'DM Sans', sans-serif", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+      <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", background: "#F0FAEE", borderRadius: 999, marginBottom: 10 }}>
+        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#15803d" }} />
+        <span style={{ fontSize: 10, fontWeight: 700, color: "#15803d", letterSpacing: "1.4px", textTransform: "uppercase" }}>Bail actif</span>
+      </div>
+      <p style={{ fontWeight: 600, fontSize: 14, color: "#111", margin: 0, letterSpacing: "-0.2px" }}>Bail signé par les deux parties</p>
+      <p style={{ fontSize: 12, color: "#8a8477", margin: "4px 0 0", lineHeight: 1.5 }}>
+        {data.bienTitre || "Logement"}
+        {data.ville ? ` · ${data.ville}` : ""}
+        {dateDebut ? ` · entrée ${dateDebut}` : ""}
+      </p>
+      {dateSig && (
+        <p style={{ fontSize: 11, color: "#8a8477", margin: "6px 0 0", letterSpacing: "0.1px" }}>
+          Signé le {dateSig}
+        </p>
+      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 14 }}>
+        {data.url && (
+          <a href={data.url} target="_blank" rel="noopener noreferrer"
+            style={{ display: "block", width: "100%", padding: "10px 14px", background: "#111", color: "#fff", border: "none", borderRadius: 999, fontSize: 12, fontWeight: 600, fontFamily: "inherit", textAlign: "center" as const, textDecoration: "none", boxSizing: "border-box" }}>
+            Télécharger le PDF
+          </a>
+        )}
+        <Link href="/mon-logement"
+          style={{ display: "block", width: "100%", padding: "10px 14px", background: "#fff", color: "#111", border: "1px solid #111", borderRadius: 999, fontSize: 12, fontWeight: 600, fontFamily: "inherit", textAlign: "center" as const, textDecoration: "none", boxSizing: "border-box" }}>
+          Voir mon logement →
+        </Link>
+      </div>
+      <p style={{ fontSize: 10, color: "#8a8477", margin: "10px 0 0", lineHeight: 1.5, fontStyle: "italic" as const }}>
+        Conservé 3 ans · conforme eIDAS Niveau 1
+      </p>
     </div>
   )
 }
@@ -3668,6 +3720,7 @@ function MessagesInner() {
                 const previewText = rawPreview.startsWith(DOSSIER_PREFIX) ? "Dossier envoyé"
                   : rawPreview.startsWith(DEMANDE_DOSSIER_PREFIX) ? "Dossier demandé"
                   : rawPreview.startsWith(EDL_PREFIX) ? "État des lieux envoyé"
+                  : rawPreview.startsWith(BAIL_FINAL_PDF_PREFIX) ? "Bail signé · PDF disponible"
                   : rawPreview.startsWith(BAIL_PREFIX) ? "Bail généré"
                   : rawPreview.startsWith(BAIL_SIGNE_PREFIX) ? "Bail signé ✓"
                   : rawPreview.startsWith(EDL_A_PLANIFIER_PREFIX) ? "État des lieux à planifier"
@@ -4577,8 +4630,9 @@ function MessagesInner() {
                     const isDossier = typeof m.contenu === "string" && m.contenu.startsWith(DOSSIER_PREFIX)
                     const isDemande = typeof m.contenu === "string" && m.contenu === DEMANDE_DOSSIER_PREFIX
                     const isEdl = typeof m.contenu === "string" && m.contenu.startsWith(EDL_PREFIX)
-                    const isBail = typeof m.contenu === "string" && m.contenu.startsWith(BAIL_PREFIX)
+                    const isBail = typeof m.contenu === "string" && m.contenu.startsWith(BAIL_PREFIX) && !m.contenu.startsWith(BAIL_FINAL_PDF_PREFIX) && !m.contenu.startsWith(BAIL_SIGNE_PREFIX) && !m.contenu.startsWith(BAIL_REFUSE_PREFIX)
                     const isBailSigne = typeof m.contenu === "string" && m.contenu.startsWith(BAIL_SIGNE_PREFIX)
+                    const isBailFinalPdf = typeof m.contenu === "string" && m.contenu.startsWith(BAIL_FINAL_PDF_PREFIX)
                     const isEdlAPlanifier = typeof m.contenu === "string" && m.contenu.startsWith(EDL_A_PLANIFIER_PREFIX)
                     const isVisiteConfirmee = typeof m.contenu === "string" && m.contenu.startsWith(VISITE_CONFIRMEE_PREFIX)
                     const isVisiteDemande = typeof m.contenu === "string" && m.contenu.startsWith(VISITE_DEMANDE_PREFIX)
@@ -4674,6 +4728,13 @@ function MessagesInner() {
                         ) : isBailSigne ? (
                           <div>
                             <BailSigneCard contenu={m.contenu} isMine={isMine} />
+                            <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
+                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        ) : isBailFinalPdf ? (
+                          <div>
+                            <BailFinalPdfCard contenu={m.contenu} />
                             <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
                             </p>
