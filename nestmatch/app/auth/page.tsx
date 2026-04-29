@@ -149,6 +149,18 @@ function AuthContent() {
         // validé, il revient sur /auth?verified=1 et se connecte normalement.
         // Cela GATE le site : impossible d'accéder à /annonces / /onboarding
         // / /proprietaire avant d'avoir validé le code.
+        // V36.7 — Toast contextuel pour rassurer (audit V35 R35.13).
+        // Avant : redirection silencieuse, l'user pensait être inscrit puis
+        // se demandait pourquoi il voyait un formulaire OTP.
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("km:toast", {
+            detail: {
+              type: "success",
+              title: "Inscription créée ✓",
+              body: "Vérifiez vos emails pour activer votre compte (code à 6 chiffres).",
+            },
+          }))
+        }
         router.push(`/auth/verifier-email?email=${encodeURIComponent(form.email)}`)
         return
       }
@@ -367,8 +379,12 @@ function AuthContent() {
                     />
                   </div>
                 </div>
-                <p style={{ fontSize: 12, color: "#666", margin: "-4px 0 0", fontStyle: "italic", lineHeight: 1.5 }}>
-                  Vos prénom et nom apparaîtront sur votre dossier locataire et sur le bail. Ils ne pourront plus être modifiés ensuite (sauf demande au support). Saisissez-les exactement comme sur votre carte d&apos;identité.
+                {/* V36.7 — Hint adouci (audit V35 R35.12).
+                    Avant : "ne pourront plus être modifiés ensuite" sonnait
+                    comme une menace. Ton plus doux + détail en (?) tooltip. */}
+                <p style={{ fontSize: 12, color: "#666", margin: "-4px 0 0", lineHeight: 1.5 }}>
+                  Saisissez-les comme sur votre carte d&apos;identité — ils apparaîtront sur votre dossier et le bail.
+                  <span title="Une modification après validation nécessite une demande au support. C'est rare et fait pour protéger votre identité contre les changements non sollicités." style={{ marginLeft: 6, color: "#a16207", cursor: "help", fontWeight: 600 }}>(?)</span>
                 </p>
               </>
             )}

@@ -297,7 +297,7 @@ export default function CreerProfil() {
             <>
               <Grid2 isMobile={isMobile}>
                 <F l="Budget min (€/mois)"><input style={inp} type="number" value={form.budget_min} onChange={set("budget_min")} placeholder="600" /></F>
-                <F l="Budget max (€/mois)"><input style={inp} type="number" value={form.budget_max} onChange={set("budget_max")} placeholder="1200" /></F>
+                <F l={<>Budget max (€/mois) <Tooltip text="Conseil : viser ~1/3 de vos revenus nets max (ex : 933 € pour 2800 €/mois). Les propriétaires et garants regardent ce ratio." /></>}><input style={inp} type="number" value={form.budget_max} onChange={set("budget_max")} placeholder="1200" /></F>
                 <F l="Surface min (m²)"><input style={inp} type="number" value={form.surface_min} onChange={set("surface_min")} placeholder="30" /></F>
                 <F l="Surface max (m²)"><input style={inp} type="number" value={form.surface_max} onChange={set("surface_max")} placeholder="80" /></F>
                 <F l="Pièces minimum">
@@ -347,7 +347,7 @@ export default function CreerProfil() {
           {step === 4 && (
             <>
               <Grid2 isMobile={isMobile}>
-                <F l={<>Situation professionnelle <Tooltip text="CDI et fonctionnaire rassurent le plus, mais un garant solide peut compenser." /></>}>
+                <F l={<>Situation professionnelle <Tooltip text="Un garant ou une longue ancienneté augmente vos chances. Pas de panique si vous êtes en CDD ou indépendant — un dossier complet et un projet clair font la différence." /></>}>
                   <select style={sel} value={form.situation_pro} onChange={set("situation_pro")}>{["CDI","CDD","indépendant","étudiant","retraité","fonctionnaire","autre"].map(v=><option key={v}>{v}</option>)}</select>
                 </F>
                 <F l="Revenus mensuels nets (€)"><input style={inp} type="number" value={form.revenus_mensuels} onChange={set("revenus_mensuels")} placeholder="2500" /></F>
