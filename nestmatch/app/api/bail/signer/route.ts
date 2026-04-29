@@ -28,6 +28,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
+import { finalizeBail } from "@/lib/bail/finalize"
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -105,7 +106,7 @@ export async function POST(req: NextRequest) {
   // génération des loyers à double signature.
   const { data: annonce, error: errAnn } = await supabaseAdmin
     .from("annonces")
-    .select("id, proprietaire_email, locataire_email, prix, charges, date_debut_bail")
+    .select("id, proprietaire_email, locataire_email, prix, charges, date_debut_bail, titre, ville")
     .eq("id", annonceId)
     .single()
   if (errAnn || !annonce) {
@@ -267,6 +268,27 @@ export async function POST(req: NextRequest) {
           created_at: now,
         },
       ])
+
+      // V32.5 — Email formel aux 2 parties avec PDF signé en pièce jointe.
+      // Audit V31 R1.5 : avant cette feature, le succès de signature était
+      // silencieux côté locataire (juste le message in-app), créant le doute
+      // "ça a vraiment marché ?". Cet email (Resend) apporte la preuve écrite
+      // + le PDF complet signé, et améliore la confiance produit.
+      // Wrap try/catch : ne JAMAIS bloquer la réponse au signataire si l'email rate.
+      try {
+        await finalizeBail({
+          annonceId,
+          proprioEmail: propEmail,
+          locataireEmail: locEmail,
+          bienTitre: (annonce as { titre?: string | null }).titre ?? null,
+          ville: (annonce as { ville?: string | null }).ville ?? null,
+          prix: (annonce as { prix?: number | null }).prix ?? null,
+          charges: (annonce as { charges?: number | null }).charges ?? null,
+          dateDebutBail: (annonce as { date_debut_bail?: string | null }).date_debut_bail ?? null,
+        })
+      } catch (e) {
+        console.error("[bail/signer] finalizeBail exception:", e)
+      }
     }
   }
 

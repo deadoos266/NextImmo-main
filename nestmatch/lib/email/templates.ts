@@ -462,3 +462,106 @@ Louer, sans intermédiaire.`
     text,
   }
 }
+
+/**
+ * V32.5 — Email envoyé aux 2 parties dès que le bail est pleinement signé
+ * (locataire + bailleur). Audit produit V31 R1.5 : avant cette feature, le
+ * succès de signature était silencieux côté locataire, créant le doute
+ * "ça a marché ?". Cet email apporte la preuve écrite + le PDF en pièce jointe.
+ */
+export function bailFinalActifTemplate(params: {
+  destinataireRole: "locataire" | "bailleur"
+  bienTitre: string
+  ville?: string | null
+  dateDebut: string  // ISO
+  dureeMois: number
+  loyerCC: number
+  nomLocataire: string
+  nomBailleur: string
+  signeAt: string  // ISO
+  monLogementUrl: string
+}): { subject: string; html: string; text: string } {
+  const contexte = params.ville
+    ? `${escapeHtml(params.bienTitre)} à ${escapeHtml(params.ville)}`
+    : escapeHtml(params.bienTitre)
+  const dateDebutFr = new Date(params.dateDebut).toLocaleDateString("fr-FR", {
+    day: "numeric", month: "long", year: "numeric",
+  })
+  const signeAtFr = new Date(params.signeAt).toLocaleDateString("fr-FR", {
+    day: "numeric", month: "long", year: "numeric",
+  })
+  const dureeAns = params.dureeMois >= 12
+    ? `${Math.round(params.dureeMois / 12)} an${params.dureeMois >= 24 ? "s" : ""}`
+    : `${params.dureeMois} mois`
+  const intro = params.destinataireRole === "locataire"
+    ? `Votre bail pour <strong style="color:${PALETTE.text};">${contexte}</strong> est désormais signé par les deux parties.`
+    : `Le bail pour <strong style="color:${PALETTE.text};">${contexte}</strong> a été contresigné par le locataire ${escapeHtml(params.nomLocataire)}.`
+  const nextStep = params.destinataireRole === "locataire"
+    ? "Prochaine étape : l'état des lieux d'entrée avec votre propriétaire."
+    : "Prochaine étape : créer l'état des lieux d'entrée avec votre locataire."
+
+  const body = `
+    <h1 style="font-size:24px;font-weight:800;letter-spacing:-0.5px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      ✓ Votre bail KeyMatch est actif
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      ${intro}
+    </p>
+    <p style="margin:0 0 18px;color:${PALETTE.textMuted};line-height:1.65;">
+      Le PDF complet du bail signé est joint à cet email — conservez-le précieusement, c'est votre preuve juridique.
+    </p>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 18px;">
+      <tr>
+        <td style="background:${PALETTE.bg};border-radius:12px;padding:16px 18px;">
+          <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:${PALETTE.textSubtle};text-transform:uppercase;letter-spacing:1px;">Locataire</p>
+          <p style="margin:0 0 10px;font-size:14px;color:${PALETTE.text};">${escapeHtml(params.nomLocataire)}</p>
+          <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:${PALETTE.textSubtle};text-transform:uppercase;letter-spacing:1px;">Bailleur</p>
+          <p style="margin:0 0 10px;font-size:14px;color:${PALETTE.text};">${escapeHtml(params.nomBailleur)}</p>
+          <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:${PALETTE.textSubtle};text-transform:uppercase;letter-spacing:1px;">Date de prise d'effet</p>
+          <p style="margin:0 0 10px;font-size:14px;color:${PALETTE.text};">${dateDebutFr} (${escapeHtml(dureeAns)})</p>
+          <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:${PALETTE.textSubtle};text-transform:uppercase;letter-spacing:1px;">Loyer charges comprises</p>
+          <p style="margin:0;font-size:18px;font-weight:800;color:${PALETTE.text};">${params.loyerCC.toLocaleString("fr-FR")} €/mois</p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:0 0 16px;color:${PALETTE.text};font-size:14px;line-height:1.65;">
+      <strong>${nextStep}</strong>
+    </p>
+
+    ${button(params.monLogementUrl, params.destinataireRole === "locataire" ? "Voir mon logement" : "Démarrer l'état des lieux")}
+
+    <p style="margin:26px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
+      Bail signé électroniquement le ${signeAtFr}, conformément à l'article 1366 du Code civil
+      et au règlement européen eIDAS (UE 910/2014). Toutes les signatures sont horodatées,
+      géolocalisées (adresse IP) et archivées dans nos systèmes.
+    </p>
+  `
+  const html = wrap("Votre bail KeyMatch est désormais actif.", body, "bailfinal")
+  const text = `Bonjour,
+
+${params.destinataireRole === "locataire"
+  ? `Votre bail pour ${params.bienTitre}${params.ville ? " à " + params.ville : ""} est désormais signé par les deux parties.`
+  : `Le bail pour ${params.bienTitre}${params.ville ? " à " + params.ville : ""} a été contresigné par le locataire ${params.nomLocataire}.`}
+
+Le PDF complet du bail signé est joint à cet email — conservez-le, c'est votre preuve juridique.
+
+Locataire : ${params.nomLocataire}
+Bailleur : ${params.nomBailleur}
+Date de prise d'effet : ${dateDebutFr} (${dureeAns})
+Loyer CC : ${params.loyerCC.toLocaleString("fr-FR")} €/mois
+
+${nextStep}
+${params.monLogementUrl}
+
+Bail signé électroniquement le ${signeAtFr}, conformément à l'article 1366 du Code civil et au règlement eIDAS.
+
+— L'équipe KeyMatch
+Louer, sans intermédiaire.`
+  return {
+    subject: `✓ Votre bail KeyMatch est actif — ${params.bienTitre}`,
+    html,
+    text,
+  }
+}
