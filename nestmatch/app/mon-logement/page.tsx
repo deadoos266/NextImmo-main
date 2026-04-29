@@ -37,6 +37,9 @@ type Bien = {
   statut: string | null
   date_debut_bail: string | null
   bail_genere_at: string | null
+  bail_signe_locataire_at?: string | null
+  bail_signe_bailleur_at?: string | null
+  bail_relance_locataire_at?: string | null
   dpe: string | null
   auto_paiement_actif?: boolean | null
   auto_paiement_confirme_at?: string | null
@@ -464,21 +467,133 @@ export default function MonLogement() {
     role: "locataire",
   })
 
+  // V33.4 — Sous-état du bail pour adapter hero + CTA "Rappel bailleur".
+  // 4 cas distincts : pas-encore-envoye / envoye-pas-signe / signe-locataire-seul / actif.
+  const sigLocAt = bien.bail_signe_locataire_at || null
+  const sigPropAt = bien.bail_signe_bailleur_at || null
+  const bailEnvoye = !!bien.bail_genere_at
+  const bailDoubleSigne = !!sigLocAt && !!sigPropAt
+  let bailSousEtat: "pas_envoye" | "envoye_pas_signe_loc" | "signe_loc_attente_prop" | "actif"
+  if (bailDoubleSigne) bailSousEtat = "actif"
+  else if (sigLocAt) bailSousEtat = "signe_loc_attente_prop"
+  else if (bailEnvoye) bailSousEtat = "envoye_pas_signe_loc"
+  else bailSousEtat = "pas_envoye"
+
+  // Calcule jours d'attente pertinent au sous-état
+  const baseDateForJoursAttente = bailSousEtat === "signe_loc_attente_prop" && sigLocAt
+    ? new Date(sigLocAt).getTime()
+    : bien.bail_genere_at
+      ? new Date(bien.bail_genere_at).getTime()
+      : bien.date_debut_bail
+        ? new Date(bien.date_debut_bail).getTime()
+        : Date.now()
+  const joursAttente = Math.max(0, Math.floor((Date.now() - baseDateForJoursAttente) / (24 * 60 * 60 * 1000)))
+  const peutRelancerBailleur =
+    (bailSousEtat === "pas_envoye" || bailSousEtat === "signe_loc_attente_prop") &&
+    joursAttente >= 3
+  // Rate-limit 24h cliquable côté client
+  const dernierRappel = bien.bail_relance_locataire_at ? new Date(bien.bail_relance_locataire_at).getTime() : 0
+  const peutCliquerRappel = peutRelancerBailleur && (Date.now() - dernierRappel >= 24 * 60 * 60 * 1000)
+
+  // Hero adapté (eyebrow + titre + sous-titre)
+  const heroEyebrow =
+    bailSousEtat === "actif" ? "Bail actif"
+    : bailSousEtat === "signe_loc_attente_prop" ? "Vous avez signé · en attente bailleur"
+    : bailSousEtat === "envoye_pas_signe_loc" ? "Bail à signer"
+    : "Invitation acceptée"
+  const heroEyebrowColor =
+    bailSousEtat === "actif" ? "#15803d"
+    : bailSousEtat === "envoye_pas_signe_loc" ? "#9a3412"
+    : "#a16207"
+  const heroTitle =
+    bailSousEtat === "actif" ? "Mon logement actuel"
+    : bailSousEtat === "signe_loc_attente_prop" ? "Bail signé, en attente du bailleur"
+    : bailSousEtat === "envoye_pas_signe_loc" ? "Votre bail est arrivé"
+    : "Bail en préparation"
+  const heroBody =
+    bailSousEtat === "actif" ? "Retrouvez ici votre logement, votre propriétaire, et tous vos documents."
+    : bailSousEtat === "signe_loc_attente_prop" ? "Vous avez signé le bail. Votre bailleur doit maintenant le contresigner pour finaliser. Une fois fait, vous recevrez le PDF complet par email."
+    : bailSousEtat === "envoye_pas_signe_loc" ? "Votre bailleur vous a envoyé le bail. Ouvrez votre messagerie pour le lire intégralement et le signer."
+    : "Vous avez accepté l'invitation de votre bailleur. Il prépare actuellement le bail PDF. Vous serez notifié dès qu'il vous l'envoie."
+
+  async function relancerBailleur() {
+    if (!bien) return
+    try {
+      const res = await fetch("/api/bail/relance-bailleur", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ annonceId: bien.id }),
+      })
+      const json = (await res.json()) as { ok: boolean; error?: string; sent?: boolean; skipped?: string }
+      if (!res.ok || !json.ok) {
+        alert(json.error || "Erreur — réessayez plus tard")
+        return
+      }
+      window.dispatchEvent(new CustomEvent("km:toast", {
+        detail: {
+          type: "success",
+          title: json.skipped === "no_resend_key" ? "Rappel enregistré (email désactivé en local)" : "Rappel envoyé au bailleur",
+          body: "Une notification + un message viennent d'être envoyés.",
+        },
+      }))
+      // Refresh bien pour update bail_relance_locataire_at
+      setBien(prev => prev ? { ...prev, bail_relance_locataire_at: new Date().toISOString() } : prev)
+    } catch (err) {
+      alert(`Erreur : ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", padding: isMobile ? "24px 16px" : "40px 24px" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,500&display=swap');`}</style>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
 
-        {/* En-tête */}
-        <p style={{ fontSize: 11, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "1.4px", marginBottom: 10 }}>
-          Bail actif
+        {/* En-tête — V33.4 adaptatif selon sous-état du bail */}
+        <p style={{ fontSize: 11, fontWeight: 700, color: heroEyebrowColor, textTransform: "uppercase", letterSpacing: "1.4px", marginBottom: 10 }}>
+          {heroEyebrow}
         </p>
         <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: isMobile ? 32 : 40, lineHeight: 1.1, letterSpacing: "-0.6px", color: "#111", margin: "0 0 10px" }}>
-          Mon logement actuel
+          {heroTitle}
         </h1>
-        <p style={{ fontSize: 14, color: "#8a8477", marginBottom: 24, maxWidth: 520, lineHeight: 1.6 }}>
-          Retrouvez ici votre logement, votre propriétaire, et tous vos documents.
+        <p style={{ fontSize: 14, color: "#8a8477", marginBottom: 24, maxWidth: 600, lineHeight: 1.6 }}>
+          {heroBody}
         </p>
+
+        {/* V33.4 — Bouton "Renvoyer un rappel au bailleur" si > 3j attente */}
+        {peutRelancerBailleur && (
+          <div style={{ background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 14, padding: "14px 18px", marginBottom: 20, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <p style={{ fontWeight: 700, color: "#9a3412", margin: 0, fontSize: 13 }}>
+                {joursAttente} jour{joursAttente > 1 ? "s" : ""} sans nouvelles
+              </p>
+              <p style={{ fontSize: 12, color: "#a16207", margin: "2px 0 0", lineHeight: 1.5 }}>
+                {bailSousEtat === "pas_envoye"
+                  ? "Votre bailleur n'a pas encore envoyé le bail."
+                  : "Votre bailleur n'a pas encore contresigné."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={relancerBailleur}
+              disabled={!peutCliquerRappel}
+              title={!peutCliquerRappel ? "Un rappel a déjà été envoyé dans les 24 dernières heures" : "Envoyer un rappel par email + notif au bailleur"}
+              style={{
+                background: peutCliquerRappel ? "#9a3412" : "#EAE6DF",
+                color: peutCliquerRappel ? "#fff" : "#8a8477",
+                border: "none",
+                borderRadius: 999,
+                padding: "10px 18px",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: peutCliquerRappel ? "pointer" : "not-allowed",
+                fontFamily: "inherit",
+                whiteSpace: "nowrap",
+              }}
+            >
+              🔔 Renvoyer un rappel au bailleur
+            </button>
+          </div>
+        )}
 
         <div style={{ marginBottom: 24 }}>
           <BailTimeline steps={timelineSteps} />
