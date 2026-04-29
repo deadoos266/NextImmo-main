@@ -809,6 +809,119 @@ export default function Proprietaire() {
           )
         })()}
 
+        {/* V51.2 — "À faire maintenant" : section priorité hero qui surface
+            les actions urgentes en 1 coup d'œil. User : "pas du tout lisible
+            y a du taff niveau design". Avant on avait juste des chiffres
+            isolés sans dire "voici ce que tu dois faire MAINTENANT".
+            Visible uniquement si au moins une action urgente existe. */}
+        {biens.length > 0 && (() => {
+          const nbCandidaturesAExaminer = candidatures.filter((c: any) => {
+            const ann = biens.find(b => b.id === c.annonce_id)
+            const sc = (c as { statut_candidature?: string }).statut_candidature
+            return ann && ann.statut !== "loue_termine" && sc !== "validee" && sc !== "refusee"
+          }).length
+          const nbVisitesAValider = visites.filter(v =>
+            v.statut === "proposée" &&
+            (v.propose_par || "").toLowerCase() !== (myEmail || "").toLowerCase()
+          ).length
+          const nbBailsAContreSigner = biens.filter((b: any) =>
+            b.statut === "bail_envoye" && b.bail_signe_locataire_at && !b.bail_signe_bailleur_at
+          ).length
+          const totalActions = nbCandidaturesAExaminer + nbVisitesAValider + loyersAttendus + nbBailsAContreSigner
+          if (totalActions === 0) return null
+          type Action = { label: string; count: number; cta: string; target: Onglet | null; href?: string; tone: "warn" | "info" | "success" | "neutral" }
+          const actions: Action[] = []
+          if (nbBailsAContreSigner > 0) {
+            actions.push({
+              label: nbBailsAContreSigner > 1 ? "Bails à contre-signer" : "Bail à contre-signer",
+              count: nbBailsAContreSigner,
+              cta: "Voir les biens",
+              target: "Mes biens",
+              tone: "warn",
+            })
+          }
+          if (loyersAttendus > 0) {
+            actions.push({
+              label: loyersAttendus > 1 ? "Loyers à confirmer" : "Loyer à confirmer",
+              count: loyersAttendus,
+              cta: "Confirmer",
+              target: "Locataires",
+              tone: "warn",
+            })
+          }
+          if (nbVisitesAValider > 0) {
+            actions.push({
+              label: nbVisitesAValider > 1 ? "Visites à valider" : "Visite à valider",
+              count: nbVisitesAValider,
+              cta: "Voir l'agenda",
+              target: "Visites",
+              tone: "info",
+            })
+          }
+          if (nbCandidaturesAExaminer > 0) {
+            actions.push({
+              label: nbCandidaturesAExaminer > 1 ? "Candidatures à examiner" : "Candidature à examiner",
+              count: nbCandidaturesAExaminer,
+              cta: "Voir les biens",
+              target: "Mes biens",
+              tone: "neutral",
+            })
+          }
+          const toneStyle = (t: Action["tone"]) => t === "warn"
+            ? { bg: km.warnBg, line: "#EADFC6", color: km.warnText }
+            : t === "info"
+              ? { bg: km.infoBg, line: km.infoLine, color: km.infoText }
+              : t === "success"
+                ? { bg: km.successBg, line: km.successLine, color: km.successText }
+                : { bg: km.beige, line: km.line, color: km.ink }
+          return (
+            <section style={{ background: km.white, border: `1px solid ${km.line}`, borderRadius: 20, padding: isMobile ? 18 : 24, marginBottom: 24 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
+                <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: isMobile ? 20 : 22, letterSpacing: "-0.3px", color: km.ink, margin: 0 }}>
+                  À faire maintenant
+                </h2>
+                <span style={{ fontSize: 11, fontWeight: 700, color: km.warnText, background: km.warnBg, border: "1px solid #EADFC6", padding: "4px 12px", borderRadius: 999, textTransform: "uppercase" as const, letterSpacing: "1.2px" }}>
+                  {totalActions} en attente
+                </span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+                {actions.map(a => {
+                  const t = toneStyle(a.tone)
+                  return (
+                    <button
+                      key={a.label}
+                      type="button"
+                      onClick={() => { if (a.target) setOnglet(a.target) }}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column" as const,
+                        alignItems: "flex-start",
+                        gap: 10,
+                        background: t.bg,
+                        border: `1px solid ${t.line}`,
+                        borderRadius: 16,
+                        padding: "16px 18px",
+                        textAlign: "left" as const,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        transition: "transform 0.15s, box-shadow 0.15s",
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.06)" }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "none" }}
+                    >
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                        <span style={{ fontSize: 28, fontWeight: 700, color: t.color, letterSpacing: "-0.6px", lineHeight: 1, fontVariantNumeric: "tabular-nums" as const }}>{a.count}</span>
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: km.ink, letterSpacing: "-0.1px" }}>{a.label}</span>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: t.color, textTransform: "uppercase" as const, letterSpacing: "1.2px" }}>{a.cta} →</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+          )
+        })()}
+
         {/* Onglets */}
         <div style={{ display: "flex", gap: 6, marginBottom: 24, background: km.white, borderRadius: 14, padding: 6, width: isMobile ? "100%" : "fit-content", overflowX: isMobile ? "auto" : undefined }}>
           {ONGLETS.map(o => {
