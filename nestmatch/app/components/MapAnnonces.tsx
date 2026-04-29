@@ -493,12 +493,30 @@ export default function MapAnnonces({
   // donne déjà 90% de la valeur visuelle sans coût technique.
   const [showSchools, setShowSchools] = useState(false)
   const [showTransports, setShowTransports] = useState(false)
+  // V38.2 — Mode "Vue simple" (audit V37 R37.4). Désactive tous les overlays
+  // sauf les pins prix de base. Persisted localStorage.
+  // Quand simpleView=true, force showPrices/Schools/Transports à false en
+  // ignore-mode (les toggles en popup les ré-activent → on les MASQUE
+  // pendant simpleView, l'user désactive Vue simple pour les retrouver).
+  const [simpleView, setSimpleView] = useState(false)
   useEffect(() => {
     try {
+      if (localStorage.getItem("nestmatch_map_simple_view") === "true") setSimpleView(true)
       if (localStorage.getItem("nestmatch_map_show_schools") === "true") setShowSchools(true)
       if (localStorage.getItem("nestmatch_map_show_transports") === "true") setShowTransports(true)
     } catch { /* ignore */ }
   }, [])
+  function toggleSimpleView() {
+    setSimpleView(prev => {
+      const next = !prev
+      try { localStorage.setItem("nestmatch_map_simple_view", next ? "true" : "false") } catch { /* ignore */ }
+      return next
+    })
+  }
+  // V38.2 — En Vue simple, on ignore les états des overlays (= force false visuel)
+  const effShowPrices = simpleView ? false : showPrices
+  const effShowSchools = simpleView ? false : showSchools
+  const effShowTransports = simpleView ? false : showTransports
   function toggleSchools() {
     setShowSchools(prev => {
       const next = !prev
@@ -746,7 +764,7 @@ export default function MapAnnonces({
             simple = utiliser un overlay SVG generated par OSM Carto qui
             highlight les amenity=school. On utilise l'overlay OpenStreetMap
             standard qui retient déjà les POI éducation visibles. */}
-        {showSchools && (
+        {effShowSchools && (
           <TileLayer
             key="ov-schools"
             url="https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png"
@@ -758,7 +776,7 @@ export default function MapAnnonces({
         )}
         {/* V26.3 — overlay "Transports" via OpenRailwayMap (publics, sans clé) :
             metros/RER/tramway/bus visibles en surimpression. */}
-        {showTransports && (
+        {effShowTransports && (
           <TileLayer
             key="ov-transports"
             url="https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png"
@@ -793,7 +811,7 @@ export default function MapAnnonces({
         {/* V26.2 — Heatmap Paris arrondissements (full) — actif si toggle
             Carte des prix ON et GeoJSON chargé. Fill color tier sur €/m².
             Tooltip au hover : "Paris 11e — 32 €/m² · 12 annonces". */}
-        {showPrices && parisGeoJson && (
+        {effShowPrices && parisGeoJson && (
           <GeoJSON
             key="paris-arr-heatmap"
             data={parisGeoJson}
@@ -1291,7 +1309,7 @@ export default function MapAnnonces({
           rankées par count + €/m² moyen. Affiché bottom-left au-dessus du
           chip "X biens" quand showPrices est actif. Tier color sur €/m² :
           vert ≤15, ambre 15-25, rouge >25. */}
-      {showPrices && pricesByVille.length > 0 && (
+      {effShowPrices && pricesByVille.length > 0 && (
         <div style={{
           position: "absolute",
           bottom: 56, left: 12, zIndex: 1400,
@@ -1437,17 +1455,53 @@ export default function MapAnnonces({
             ))}
             {/* Layers premium */}
             <div style={{ height: 1, background: "#F7F4EF", margin: "6px 12px" }} />
+            {/* V38.2 — Toggle "Vue simple" (audit V37 R37.4). Désactive
+                visuellement TOUS les overlays (heatmap, écoles, transports)
+                pour une carte épurée — utile sur mobile ou pour user qui
+                veut juste explorer les pins. */}
+            <button
+              type="button"
+              onClick={toggleSimpleView}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+                width: "100%", padding: "10px 12px", borderRadius: 8,
+                background: simpleView ? "#F7F4EF" : "transparent",
+                border: "none", cursor: "pointer", fontFamily: "inherit",
+                fontSize: 13, fontWeight: simpleView ? 700 : 500, color: "#111",
+                textAlign: "left", WebkitTapHighlightColor: "transparent",
+              }}
+              aria-pressed={simpleView}
+              title="Affiche uniquement les pins prix, masque les overlays"
+            >
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+                <span style={{
+                  width: 16, height: 16, borderRadius: 4,
+                  border: `2px solid ${simpleView ? "#111" : "#EAE6DF"}`,
+                  display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  {simpleView && (
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </span>
+                Vue simple <span style={{ fontSize: 10, fontWeight: 500, color: "#8a8477", marginLeft: 2 }}>· pins uniquement</span>
+              </span>
+            </button>
+            <div style={{ height: 1, background: "#F7F4EF", margin: "6px 12px" }} />
             {/* V25.2 — toggle "Carte des prix" actif (lite) */}
             <button
               type="button"
               onClick={togglePrices}
+              disabled={simpleView}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
                 width: "100%", padding: "10px 12px", borderRadius: 8,
                 background: showPrices ? "#F7F4EF" : "transparent",
-                border: "none", cursor: "pointer", fontFamily: "inherit",
+                border: "none", cursor: simpleView ? "not-allowed" : "pointer", fontFamily: "inherit",
                 fontSize: 13, fontWeight: showPrices ? 700 : 500, color: "#111",
                 textAlign: "left", WebkitTapHighlightColor: "transparent",
+                opacity: simpleView ? 0.4 : 1,
               }}
               aria-pressed={showPrices}
             >
@@ -1511,13 +1565,15 @@ export default function MapAnnonces({
             <button
               type="button"
               onClick={toggleSchools}
+              disabled={simpleView}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
                 width: "100%", padding: "10px 12px", borderRadius: 8,
                 background: showSchools ? "#F7F4EF" : "transparent",
-                border: "none", cursor: "pointer", fontFamily: "inherit",
+                border: "none", cursor: simpleView ? "not-allowed" : "pointer", fontFamily: "inherit",
                 fontSize: 13, fontWeight: showSchools ? 700 : 500, color: "#111",
                 textAlign: "left", WebkitTapHighlightColor: "transparent",
+                opacity: simpleView ? 0.4 : 1,
               }}
               aria-pressed={showSchools}
             >
@@ -1542,13 +1598,15 @@ export default function MapAnnonces({
             <button
               type="button"
               onClick={toggleTransports}
+              disabled={simpleView}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
                 width: "100%", padding: "10px 12px", borderRadius: 8,
                 background: showTransports ? "#F7F4EF" : "transparent",
-                border: "none", cursor: "pointer", fontFamily: "inherit",
+                border: "none", cursor: simpleView ? "not-allowed" : "pointer", fontFamily: "inherit",
                 fontSize: 13, fontWeight: showTransports ? 700 : 500, color: "#111",
                 textAlign: "left", WebkitTapHighlightColor: "transparent",
+                opacity: simpleView ? 0.4 : 1,
               }}
               aria-pressed={showTransports}
             >
