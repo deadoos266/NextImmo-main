@@ -1,0 +1,191 @@
+/**
+ * V34.5 — POST /api/bail/preavis
+ * Donner congé sur un bail actif (locataire OU proprio).
+ *
+ * Body : {
+ *   annonceId: number,
+ *   motif: LocataireMotif | ProprietaireMotif,
+ *   detail?: string,
+ *   dateDepartSouhaitee?: string  // ISO YYYY-MM-DD
+ * }
+ *
+ * Side-effects :
+ * - Update annonces.preavis_donne_par + preavis_date_envoi + preavis_motif
+ *   + preavis_motif_detail + preavis_date_depart_souhaitee + preavis_fin_calculee.
+ * - Insert message [PREAVIS] dans le thread.
+ * - Notif cloche à l'autre partie + email Resend.
+ *
+ * Auth : NextAuth + match locataire OU proprio de l'annonce.
+ */
+
+import { NextRequest, NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+import { supabaseAdmin } from "@/lib/supabase-server"
+import { sendEmail } from "@/lib/email/resend"
+import { calculerPreavis, LOCATAIRE_MOTIFS, PROPRIETAIRE_MOTIFS, type LocataireMotif, type ProprietaireMotif } from "@/lib/preavis"
+import { estZoneTendue } from "@/lib/bailDefaults"
+
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  const userEmail = session?.user?.email?.toLowerCase()
+  if (!userEmail) {
+    return NextResponse.json({ ok: false, error: "Auth requise" }, { status: 401 })
+  }
+
+  let body: unknown
+  try { body = await req.json() } catch {
+    return NextResponse.json({ ok: false, error: "JSON invalide" }, { status: 400 })
+  }
+  const p = body as { annonceId?: unknown; motif?: unknown; detail?: unknown; dateDepartSouhaitee?: unknown }
+  const annonceId = Number(p.annonceId)
+  const motif = typeof p.motif === "string" ? p.motif : ""
+  const detail = typeof p.detail === "string" ? p.detail.trim().slice(0, 500) : ""
+  const dateDepartSouhaiteeRaw = typeof p.dateDepartSouhaitee === "string" ? p.dateDepartSouhaitee : null
+
+  if (!Number.isFinite(annonceId)) {
+    return NextResponse.json({ ok: false, error: "annonceId invalide" }, { status: 400 })
+  }
+  if (!motif) {
+    return NextResponse.json({ ok: false, error: "motif requis" }, { status: 400 })
+  }
+
+  const { data: annonce, error: errAnn } = await supabaseAdmin
+    .from("annonces")
+    .select("id, titre, ville, proprietaire_email, locataire_email, meuble, statut, bail_signe_locataire_at, bail_signe_bailleur_at, preavis_donne_par")
+    .eq("id", annonceId)
+    .single()
+  if (errAnn || !annonce) {
+    return NextResponse.json({ ok: false, error: "Annonce introuvable" }, { status: 404 })
+  }
+
+  const propEmail = (annonce.proprietaire_email || "").toLowerCase()
+  const locEmail = (annonce.locataire_email || "").toLowerCase()
+  let qui: "locataire" | "proprietaire"
+  if (userEmail === locEmail) qui = "locataire"
+  else if (userEmail === propEmail) qui = "proprietaire"
+  else return NextResponse.json({ ok: false, error: "Non autorisé" }, { status: 403 })
+
+  // Le bail doit être actif (au moins une signature locataire)
+  if (!annonce.bail_signe_locataire_at) {
+    return NextResponse.json({ ok: false, error: "Aucun bail actif sur cette annonce" }, { status: 400 })
+  }
+  // Pas de double-préavis
+  if (annonce.preavis_donne_par) {
+    return NextResponse.json({ ok: false, error: `Un préavis a déjà été donné par ${annonce.preavis_donne_par}` }, { status: 409 })
+  }
+
+  // Validation motif selon role
+  const motifLabels = qui === "locataire" ? LOCATAIRE_MOTIFS : PROPRIETAIRE_MOTIFS
+  const motifEntry = motifLabels.find(m => m.code === motif)
+  if (!motifEntry) {
+    return NextResponse.json({ ok: false, error: "Motif invalide pour ce rôle" }, { status: 400 })
+  }
+
+  // Calcul délai légal
+  const dateEnvoi = new Date()
+  const zoneTendue = estZoneTendue(annonce.ville || "")
+  const dateDepartSouhaitee = dateDepartSouhaiteeRaw ? new Date(dateDepartSouhaiteeRaw) : null
+  const preavis = calculerPreavis({
+    qui,
+    meuble: !!annonce.meuble,
+    zoneTendue,
+    motifLocataire: qui === "locataire" ? (motif as LocataireMotif) : undefined,
+    dateEnvoi,
+    dateDepartSouhaitee: dateDepartSouhaitee && !Number.isNaN(dateDepartSouhaitee.getTime()) ? dateDepartSouhaitee : null,
+  })
+
+  // Update annonce
+  const { error: updErr } = await supabaseAdmin
+    .from("annonces")
+    .update({
+      preavis_donne_par: qui,
+      preavis_date_envoi: dateEnvoi.toISOString(),
+      preavis_motif: motif,
+      preavis_motif_detail: detail || null,
+      preavis_date_depart_souhaitee: dateDepartSouhaitee && !Number.isNaN(dateDepartSouhaitee.getTime())
+        ? dateDepartSouhaitee.toISOString().slice(0, 10) : null,
+      preavis_fin_calculee: preavis.dateFinEffective.toISOString().slice(0, 10),
+    })
+    .eq("id", annonceId)
+  if (updErr) {
+    console.error("[bail/preavis] update failed", updErr)
+    return NextResponse.json({ ok: false, error: "Mise à jour échouée" }, { status: 500 })
+  }
+
+  // Message in-app + notif
+  const autre = qui === "locataire" ? propEmail : locEmail
+  const dateFinFr = preavis.dateFinEffective.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+  const payload = JSON.stringify({
+    qui,
+    motif,
+    motifLabel: motifEntry.label,
+    detail,
+    dateFin: preavis.dateFinEffective.toISOString().slice(0, 10),
+    delaiMois: preavis.delaiMois,
+    annonceId,
+  })
+
+  if (autre) {
+    await supabaseAdmin.from("messages").insert([{
+      from_email: userEmail,
+      to_email: autre,
+      contenu: `[PREAVIS]${payload}`,
+      lu: false,
+      annonce_id: annonceId,
+      created_at: dateEnvoi.toISOString(),
+    }])
+    await supabaseAdmin.from("notifications").insert([{
+      user_email: autre,
+      type: "preavis_donne",
+      title: qui === "locataire" ? "Le locataire a donné congé" : "Le bailleur a donné congé",
+      body: `Fin de bail prévue le ${dateFinFr} (préavis ${preavis.delaiMois} mois).`,
+      href: qui === "locataire" ? `/proprietaire/bail/${annonceId}` : "/mon-logement",
+      related_id: String(annonceId),
+      lu: false,
+      created_at: dateEnvoi.toISOString(),
+    }])
+
+    // Email Resend (template inline simple, à rebrand V34.1+)
+    try {
+      const subject = qui === "locataire"
+        ? `Le locataire a donné congé pour ${annonce.titre || "votre logement"}`
+        : `Votre bailleur a donné congé pour ${annonce.titre || "votre logement"}`
+      const intro = qui === "locataire"
+        ? `Votre locataire ${locEmail} a donné congé pour <strong>${annonce.titre || "le logement"}</strong>.`
+        : `Votre bailleur ${propEmail} a donné congé pour <strong>${annonce.titre || "le logement"}</strong>.`
+      const html = `<div style="font-family:'DM Sans',Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;background:#F7F4EF;color:#111;">
+        <h1 style="font-size:22px;font-weight:800;margin:0 0 12px;">Préavis reçu</h1>
+        <p style="margin:0 0 14px;line-height:1.6;color:#4b5563;">${intro}</p>
+        <p style="margin:0 0 14px;line-height:1.6;color:#4b5563;">
+          <strong>Motif :</strong> ${motifEntry.label}
+          ${detail ? `<br/><strong>Précisions :</strong> ${detail.replace(/</g, "&lt;")}` : ""}
+        </p>
+        <p style="margin:0 0 18px;line-height:1.6;color:#4b5563;">
+          Préavis légal : <strong>${preavis.delaiMois} mois</strong>.<br/>
+          Fin de bail effective : <strong>${dateFinFr}</strong>.
+        </p>
+        <p style="margin:0 0 14px;font-size:12px;color:#9ca3af;line-height:1.5;">
+          ${preavis.bonus || ""}
+        </p>
+      </div>`
+      await sendEmail({
+        to: autre,
+        subject,
+        html,
+        text: `${intro.replace(/<[^>]+>/g, "")}\n\nMotif : ${motifEntry.label}${detail ? `\nPrécisions : ${detail}` : ""}\nFin de bail : ${dateFinFr}\nPréavis : ${preavis.delaiMois} mois\n\n${preavis.bonus || ""}\n\n— L'équipe KeyMatch`,
+        tags: [{ name: "type", value: "preavis_donne" }, { name: "qui", value: qui }],
+      })
+    } catch (e) {
+      console.warn("[bail/preavis] email send failed (non bloquant):", e)
+    }
+  }
+
+  return NextResponse.json({
+    ok: true,
+    qui,
+    delaiMois: preavis.delaiMois,
+    dateFin: preavis.dateFinEffective.toISOString().slice(0, 10),
+    bonus: preavis.bonus,
+  })
+}

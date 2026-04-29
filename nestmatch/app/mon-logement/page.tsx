@@ -14,6 +14,9 @@ import { projeterEcheancierBail, prochaineEcheance } from "../../lib/loyersProje
 import BailTimeline from "../components/ui/BailTimeline"
 import BailSignatureModal from "../components/BailSignatureModal"
 import IntegrityBadge from "../components/bail/IntegrityBadge"
+import PreavisModal from "../components/bail/PreavisModal"
+import { joursAvantFinPreavis, formatJoursRestants } from "../../lib/preavis"
+import { estZoneTendue } from "../../lib/bailDefaults"
 import type { BailData, BailSignatureEntry } from "../../lib/bailPDF"
 
 /**
@@ -42,6 +45,13 @@ type Bien = {
   bail_signe_locataire_at?: string | null
   bail_signe_bailleur_at?: string | null
   bail_relance_locataire_at?: string | null
+  meuble?: boolean | null
+  // V34.5 — Préavis
+  preavis_donne_par?: "locataire" | "proprietaire" | null
+  preavis_date_envoi?: string | null
+  preavis_motif?: string | null
+  preavis_motif_detail?: string | null
+  preavis_fin_calculee?: string | null
   dpe: string | null
   auto_paiement_actif?: boolean | null
   auto_paiement_confirme_at?: string | null
@@ -68,6 +78,7 @@ export default function MonLogement() {
   const [bailFichierUrl, setBailFichierUrl] = useState<string | null>(null)
   const [signatures, setSignatures] = useState<BailSignatureEntry[]>([])
   const [signModalOpen, setSignModalOpen] = useState(false)
+  const [preavisOpen, setPreavisOpen] = useState(false)
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -601,6 +612,51 @@ export default function MonLogement() {
           <BailTimeline steps={timelineSteps} />
         </div>
 
+        {/* V34.5 — Préavis : countdown si donné, ou bouton "Donner congé" si bail actif */}
+        {bailSousEtat === "actif" && bien.preavis_donne_par && bien.preavis_fin_calculee && (() => {
+          const jours = joursAvantFinPreavis(bien.preavis_fin_calculee)
+          const par = bien.preavis_donne_par === "locataire" ? "vous" : "votre bailleur"
+          const dateFr = new Date(bien.preavis_fin_calculee).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+          const urgent = jours <= 30
+          return (
+            <div style={{
+              background: urgent ? "#FEECEC" : "#FBF6EA",
+              border: `1px solid ${urgent ? "#F4C9C9" : "#EADFC6"}`,
+              borderRadius: 14, padding: "16px 20px", marginBottom: 20,
+            }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: urgent ? "#b91c1c" : "#9a3412", textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 6px" }}>
+                Préavis donné par {par}
+              </p>
+              <p style={{ fontSize: 14, color: "#111", margin: "0 0 6px", lineHeight: 1.55 }}>
+                Fin de bail le <strong>{dateFr}</strong>
+                {jours > 0 ? ` — ${formatJoursRestants(jours)}` : jours === 0 ? " — aujourd'hui" : ` — passé de ${Math.abs(jours)} jour${Math.abs(jours) > 1 ? "s" : ""}`}
+              </p>
+              {bien.preavis_motif_detail && (
+                <p style={{ fontSize: 12, color: "#6b6559", margin: 0, fontStyle: "italic" }}>
+                  « {bien.preavis_motif_detail} »
+                </p>
+              )}
+            </div>
+          )
+        })()}
+        {bailSousEtat === "actif" && !bien.preavis_donne_par && (
+          <div style={{ marginBottom: 20 }}>
+            <button
+              type="button"
+              onClick={() => setPreavisOpen(true)}
+              style={{
+                background: "#fff", color: "#9a3412",
+                border: "1px solid #EADFC6", borderRadius: 999,
+                padding: "10px 22px", fontSize: 12, fontWeight: 700,
+                cursor: "pointer", fontFamily: "inherit",
+                textTransform: "uppercase", letterSpacing: "0.3px",
+              }}
+            >
+              ✉️ Donner congé
+            </button>
+          </div>
+        )}
+
         {/* Hero unifié — 1 seul card avec photo 380px gauche + infos flex droite,
             mini-stats inline Loyer / Charges / Surface / DPE.
             Fidèle handoff (3) pages.jsx l. 322-340. Avant : 2 cards séparées. */}
@@ -976,6 +1032,29 @@ export default function MonLogement() {
           annonceId={bien.id}
           role="locataire"
           nomDefaut={session?.user?.name || ""}
+        />
+      )}
+
+      {/* V34.5 — Modale "Donner congé" côté locataire */}
+      {bien && (
+        <PreavisModal
+          open={preavisOpen}
+          onClose={() => setPreavisOpen(false)}
+          onSubmitted={() => {
+            // Refresh bien pour récup preavis_*
+            const email = session?.user?.email?.toLowerCase()
+            if (!email) return
+            void supabase
+              .from("annonces")
+              .select("*")
+              .eq("id", bien.id)
+              .single()
+              .then(({ data }) => { if (data) setBien(data as Bien) })
+          }}
+          role="locataire"
+          annonceId={bien.id}
+          meuble={!!bien.meuble}
+          zoneTendue={estZoneTendue(bien.ville || "")}
         />
       )}
     </main>
