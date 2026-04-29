@@ -18,6 +18,9 @@ import Modal from "../../../components/ui/Modal"
 import UploadBailModal from "../../../components/UploadBailModal"
 import BailPreviewModal from "../../../components/bail/BailPreviewModal"
 import AvenantCard, { type Avenant } from "../../../components/bail/AvenantCard"
+import PreavisModal from "../../../components/bail/PreavisModal"
+import { fenetreIndexation, irlDernier, calculerNouveauLoyer } from "../../../../lib/irl"
+import { joursAvantFinPreavis } from "../../../../lib/preavis"
 import HelpIcon, { PhoneHelpContent } from "../../../components/ui/HelpIcon"
 import AnnexeUploader from "../../../components/AnnexeUploader"
 import { formatNomComplet } from "../../../../lib/profilHelpers"
@@ -418,6 +421,9 @@ export default function BailPage() {
 
   // V36.3 — Avenants liés à cette annonce
   const [avenants, setAvenants] = useState<Avenant[]>([])
+  // V36.4 — Préavis modal côté proprio + indexation IRL
+  const [preavisOpen, setPreavisOpen] = useState(false)
+  const [indexerSubmitting, setIndexerSubmitting] = useState(false)
   async function refreshAvenants() {
     if (!bienId) return
     try {
@@ -1203,6 +1209,119 @@ export default function BailPage() {
               </button>
             )}
           </div>
+        )}
+
+        {/* V36.4 — Card "Indexer le loyer (IRL)" si fenêtre éligible
+            (audit V35 R35.9). Visible quand bail actif + anniversaire annuel
+            dans [-90, +30] j + pas indexé < 11 mois. */}
+        {bien && bien.bail_signe_locataire_at && bien.date_debut_bail && (() => {
+          const fen = fenetreIndexation(bien.date_debut_bail, bien.irl_derniere_indexation_at || null)
+          if (!fen.eligible) return null
+          const irlAncien = Number(bien.irl_reference_courant) || Number(bien.irl_reference_initial) || (irlDernier().indice - 1)
+          const irlNouveau = irlDernier().indice
+          const ancienLoyer = Number(bien.prix) || 0
+          if (ancienLoyer <= 0) return null
+          const calc = calculerNouveauLoyer(ancienLoyer, irlAncien, irlNouveau)
+          return (
+            <div style={{ background: "#EEF3FB", border: "1px solid #D7E3F4", borderRadius: 14, padding: "16px 20px", marginBottom: 20 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "#1d4ed8", textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 6px" }}>
+                📈 Indexation IRL annuelle possible
+              </p>
+              <p style={{ fontSize: 13.5, color: "#111", margin: "0 0 4px", lineHeight: 1.55 }}>
+                Anniversaire du bail le {fen.prochaineDateAnniversaire.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}.
+                Loyer actuel <strong>{ancienLoyer.toLocaleString("fr-FR")} € HC</strong> → nouveau loyer
+                {" "}
+                <strong style={{ color: calc.variation >= 0 ? "#15803d" : "#b91c1c" }}>
+                  {calc.nouveauLoyer.toLocaleString("fr-FR")} € HC
+                </strong>
+                {" "}
+                ({calc.variation >= 0 ? "+" : ""}{calc.variation.toFixed(2)} € · {(calc.variationPct * 100).toFixed(2)} %)
+              </p>
+              <p style={{ fontSize: 12, color: "#1d4ed8", margin: "0 0 12px", opacity: 0.85 }}>
+                Indice nouveau {irlDernier().trimestre} = {irlNouveau} · ancien = {irlAncien}.
+                La revalorisation s&apos;applique aux loyers des mois suivants (les loyers déjà payés restent inchangés).
+              </p>
+              <button
+                type="button"
+                disabled={indexerSubmitting}
+                onClick={async () => {
+                  if (!confirm(`Appliquer l'indexation IRL ?\n\nLoyer ${ancienLoyer.toLocaleString("fr-FR")} € → ${calc.nouveauLoyer.toLocaleString("fr-FR")} €.\nLe locataire sera notifié.`)) return
+                  setIndexerSubmitting(true)
+                  try {
+                    const res = await fetch("/api/bail/indexer-irl", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ annonceId: bien.id }),
+                    })
+                    const json = await res.json() as { ok: boolean; error?: string; nouveauLoyer?: number }
+                    if (!res.ok || !json.ok) {
+                      alert(json.error || "Indexation échouée")
+                      return
+                    }
+                    window.dispatchEvent(new CustomEvent("km:toast", {
+                      detail: {
+                        type: "success",
+                        title: "Loyer indexé sur l'IRL",
+                        body: `Nouveau loyer : ${json.nouveauLoyer?.toLocaleString("fr-FR")} € HC. Locataire notifié.`,
+                      },
+                    }))
+                    // refresh annonce dans le state local
+                    void loadBien()
+                  } finally {
+                    setIndexerSubmitting(false)
+                  }
+                }}
+                style={{
+                  background: indexerSubmitting ? "#8a8477" : "#1d4ed8",
+                  color: "#fff", border: "none", borderRadius: 999,
+                  padding: "10px 22px", fontSize: 12, fontWeight: 700,
+                  cursor: indexerSubmitting ? "not-allowed" : "pointer",
+                  fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px",
+                }}
+              >
+                {indexerSubmitting ? "Application…" : "Appliquer l'indexation"}
+              </button>
+            </div>
+          )
+        })()}
+
+        {/* V36.4 — Préavis côté proprio (audit V35 R35.10) :
+            countdown si donné, ou bouton "Donner congé" si bail actif. */}
+        {bien && bien.bail_signe_locataire_at && (
+          <>
+            {bien.preavis_donne_par && bien.preavis_fin_calculee && (() => {
+              const jours = joursAvantFinPreavis(bien.preavis_fin_calculee)
+              const par = bien.preavis_donne_par === "proprietaire" ? "vous" : "le locataire"
+              const dateFr = new Date(bien.preavis_fin_calculee).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+              const urgent = jours <= 30
+              return (
+                <div style={{ background: urgent ? "#FEECEC" : "#FBF6EA", border: `1px solid ${urgent ? "#F4C9C9" : "#EADFC6"}`, borderRadius: 14, padding: "16px 20px", marginBottom: 20 }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: urgent ? "#b91c1c" : "#9a3412", textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 6px" }}>
+                    Préavis donné par {par}
+                  </p>
+                  <p style={{ fontSize: 14, color: "#111", margin: 0, lineHeight: 1.55 }}>
+                    Fin de bail le <strong>{dateFr}</strong> {jours > 0 ? ` — dans ${jours} jour${jours > 1 ? "s" : ""}` : jours === 0 ? " — aujourd'hui" : ` — passé de ${Math.abs(jours)} j`}
+                  </p>
+                  {bien.preavis_motif_detail && (
+                    <p style={{ fontSize: 12, color: "#6b6559", margin: "6px 0 0", fontStyle: "italic" }}>
+                      « {bien.preavis_motif_detail} »
+                    </p>
+                  )}
+                </div>
+              )
+            })()}
+            {!bien.preavis_donne_par && (
+              <div style={{ marginBottom: 20 }}>
+                <button
+                  type="button"
+                  onClick={() => setPreavisOpen(true)}
+                  style={{ background: "#fff", color: "#9a3412", border: "1px solid #EADFC6", borderRadius: 999, padding: "10px 22px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}
+                >
+                  ✉️ Donner congé au locataire
+                </button>
+              </div>
+            )}
+          </>
         )}
 
         {/* V36.3 — Section Avenants côté proprio (audit V35 R35.1).
@@ -2758,6 +2877,19 @@ export default function BailPage() {
         onCancel={annulerPreview}
         onConfirm={confirmEnvoiBail}
       />
+
+      {/* V36.4 — PreavisModal côté proprio (audit V35 R35.10) */}
+      {bien && (
+        <PreavisModal
+          open={preavisOpen}
+          onClose={() => setPreavisOpen(false)}
+          onSubmitted={() => { void loadBien() }}
+          role="proprietaire"
+          annonceId={bien.id}
+          meuble={!!bien.meuble}
+          zoneTendue={estZoneTendue(bien.ville || "")}
+        />
+      )}
     </main>
   )
 }
