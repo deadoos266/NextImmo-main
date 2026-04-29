@@ -430,6 +430,18 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
     const next = [search, ...savedSearches].slice(0, 10)
     setSavedSearches(next)
     persistSavedSearches(next)
+    // V30 — toast confirm (desktop SavedSearchesPopover ou MobileMapCarousel
+    // qui a son propre toast déjà).
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("km:toast", {
+        detail: {
+          type: "success",
+          title: "Recherche sauvegardée",
+          body: `« ${search.name} » — retrouve-la dans Mes recherches`,
+          href: "/recherches-sauvegardees",
+        },
+      }))
+    }
   }
 
   function appliquerRecherche(id: string) {
@@ -1836,12 +1848,10 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
           onOpenFilters={() => setModalOpen(true)}
           activeFilterCount={activeFilterCount}
           onSaveSearch={() => {
-            // V19.4 — pré-rempli avec le buildDefaultSearchName + prompt simple
+            // V19.4 — pré-rempli avec le buildDefaultSearchName + prompt simple.
+            // V30 — toast confirm est dispatch par sauverRecherche directement.
             const name = window.prompt("Nom de la recherche", buildDefaultSearchName())
-            if (name && name.trim()) {
-              sauverRecherche(name.trim())
-              alert("Recherche sauvegardée")
-            }
+            if (name && name.trim()) sauverRecherche(name.trim())
           }}
           canSaveSearch={!!session?.user?.email && !isProprietaire}
         />

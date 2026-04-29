@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react"
 import { usePathname, useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
 
-type ToastType = "message" | "visite_nouvelle" | "visite_confirmee" | "visite_annulee"
+type ToastType = "message" | "visite_nouvelle" | "visite_confirmee" | "visite_annulee" | "info" | "success"
 
 type Toast = {
   id: number
@@ -21,6 +21,8 @@ const COLORS: Record<ToastType, { bg: string; border: string }> = {
   visite_nouvelle:   { bg: "#FBF6EA", border: "#EADFC6" },
   visite_confirmee:  { bg: "#F0FAEE", border: "#C6E9C0" },
   visite_annulee:    { bg: "#FEECEC", border: "#F4C9C9" },
+  info:              { bg: "#F7F4EF", border: "#EAE6DF" },
+  success:           { bg: "#F0FAEE", border: "#C6E9C0" },
 }
 
 /**
@@ -49,6 +51,28 @@ export default function ToastStack() {
     setToasts(prev => [...prev, { ...t, id }])
     setTimeout(() => dismiss(id), 5500)
   }, [dismiss])
+
+  // V30 (Paul 2026-04-29) — listener manuel `km:toast` pour les push
+  // côté client (pas seulement Supabase Realtime). Pattern :
+  //   window.dispatchEvent(new CustomEvent("km:toast", {
+  //     detail: { type: "success", title: "Recherche sauvegardée", body: "...",
+  //               href: "/recherches-sauvegardees" }
+  //   }))
+  useEffect(() => {
+    function onManualToast(e: Event) {
+      const detail = (e as CustomEvent).detail as Partial<Toast> | undefined
+      if (!detail || !detail.title) return
+      const type: ToastType = (detail.type as ToastType) || "info"
+      push({
+        type,
+        title: String(detail.title).slice(0, 120),
+        body: detail.body ? String(detail.body).slice(0, 200) : undefined,
+        href: detail.href,
+      })
+    }
+    window.addEventListener("km:toast", onManualToast)
+    return () => window.removeEventListener("km:toast", onManualToast)
+  }, [push])
 
   useEffect(() => {
     if (!email) return
@@ -154,7 +178,8 @@ export default function ToastStack() {
     return () => { supabase.removeChannel(channel) }
   }, [email, pathname, push])
 
-  if (!mounted || !email || toasts.length === 0) return null
+  // V30 — affiche si toasts présents même sans email (toast manuels post-action).
+  if (!mounted || toasts.length === 0) return null
 
   const stack = (
     <div

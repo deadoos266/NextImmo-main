@@ -187,6 +187,7 @@ export default function Footer() {
                 <p style={head}>Mon espace</p>
                 <a href="/dossier" style={linkBase} onMouseEnter={hoverInk} onMouseLeave={hoverMeta}>Mon dossier</a>
                 <a href="/mes-candidatures" style={linkBase} onMouseEnter={hoverInk} onMouseLeave={hoverMeta}>Mes candidatures</a>
+                <a href="/recherches-sauvegardees" style={linkBase} onMouseEnter={hoverInk} onMouseLeave={hoverMeta}>Mes recherches</a>
                 <a href="/visites" style={linkBase} onMouseEnter={hoverInk} onMouseLeave={hoverMeta}>Mes visites</a>
                 {/* Pattern GatedAction (round 2026-04-27) : entrées toujours
                     visibles, désactivées + popup si l'état n'est pas atteint. */}
