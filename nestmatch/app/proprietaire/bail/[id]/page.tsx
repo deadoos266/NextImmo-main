@@ -18,6 +18,7 @@ import Modal from "../../../components/ui/Modal"
 import UploadBailModal from "../../../components/UploadBailModal"
 import BailPreviewModal from "../../../components/bail/BailPreviewModal"
 import AvenantCard, { type Avenant } from "../../../components/bail/AvenantCard"
+import ProposerAvenantModal from "../../../components/bail/ProposerAvenantModal"
 import PreavisModal from "../../../components/bail/PreavisModal"
 import { fenetreIndexation, irlDernier, calculerNouveauLoyer } from "../../../../lib/irl"
 import { joursAvantFinPreavis } from "../../../../lib/preavis"
@@ -424,6 +425,8 @@ export default function BailPage() {
   // V36.4 — Préavis modal côté proprio + indexation IRL
   const [preavisOpen, setPreavisOpen] = useState(false)
   const [indexerSubmitting, setIndexerSubmitting] = useState(false)
+  // V38.3 — Modale "Proposer un avenant"
+  const [avenantModalOpen, setAvenantModalOpen] = useState(false)
   async function refreshAvenants() {
     if (!bienId) return
     try {
@@ -1325,28 +1328,47 @@ export default function BailPage() {
         )}
 
         {/* V36.3 — Section Avenants côté proprio (audit V35 R35.1).
-            Affiche les avenants actifs/en cours avec actions miroir locataire. */}
-        {avenants.filter(a => a.statut !== "annule").length > 0 && (
+            Affiche les avenants actifs/en cours avec actions miroir locataire.
+            V38.3 — Bouton "Proposer un avenant" toujours visible si bail actif. */}
+        {bien && bien.bail_signe_locataire_at && (
           <section style={{ marginBottom: 20 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12, gap: 10, flexWrap: "wrap" }}>
-              <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, margin: 0, letterSpacing: "-0.3px", color: "#111" }}>
-                Avenants au bail
-              </h2>
-              <p style={{ fontSize: 11, color: "#8a8477", margin: 0 }}>
-                {avenants.filter(a => a.statut !== "annule").length} en cours
-              </p>
+              <div>
+                <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, margin: 0, letterSpacing: "-0.3px", color: "#111" }}>
+                  Avenants au bail
+                </h2>
+                {avenants.filter(a => a.statut !== "annule").length > 0 && (
+                  <p style={{ fontSize: 11, color: "#8a8477", margin: "2px 0 0" }}>
+                    {avenants.filter(a => a.statut !== "annule").length} en cours
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setAvenantModalOpen(true)}
+                style={{ background: "#1d4ed8", color: "#fff", border: "none", borderRadius: 999, padding: "9px 18px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}
+                title="Proposer une modification au bail (loyer, colocataire, garant, clause...)"
+              >
+                + Proposer un avenant
+              </button>
             </div>
-            {avenants
-              .filter(a => a.statut !== "annule")
-              .map(a => (
-                <AvenantCard
-                  key={a.id}
-                  avenant={a}
-                  myRole="proprietaire"
-                  myEmail={(session?.user?.email || "").toLowerCase()}
-                  onRefreshed={refreshAvenants}
-                />
-              ))}
+            {avenants.filter(a => a.statut !== "annule").length === 0 ? (
+              <p style={{ fontSize: 12.5, color: "#8a8477", margin: 0, fontStyle: "italic", padding: "12px 0" }}>
+                Aucun avenant en cours. Si vous voulez modifier une clause du bail (loyer, colocataire, garant…), proposez un avenant.
+              </p>
+            ) : (
+              avenants
+                .filter(a => a.statut !== "annule")
+                .map(a => (
+                  <AvenantCard
+                    key={a.id}
+                    avenant={a}
+                    myRole="proprietaire"
+                    myEmail={(session?.user?.email || "").toLowerCase()}
+                    onRefreshed={refreshAvenants}
+                  />
+                ))
+            )}
           </section>
         )}
 
@@ -2888,6 +2910,18 @@ export default function BailPage() {
           annonceId={bien.id}
           meuble={!!bien.meuble}
           zoneTendue={estZoneTendue(bien.ville || "")}
+        />
+      )}
+
+      {/* V38.3 — ProposerAvenantModal côté proprio (audit V37 R37.1) */}
+      {bien && (
+        <ProposerAvenantModal
+          open={avenantModalOpen}
+          onClose={() => setAvenantModalOpen(false)}
+          onCreated={refreshAvenants}
+          annonceId={bien.id}
+          loyerHC={Number(bien.prix) || undefined}
+          charges={Number(bien.charges) || undefined}
         />
       )}
     </main>
