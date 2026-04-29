@@ -1048,6 +1048,56 @@ export default function BailPage() {
             >
               📄 Télécharger le bail {locataireSigne ? (bailleurSigne ? "signé" : "signé par le locataire") : "envoyé"} (PDF)
             </button>
+
+            {/* V32.7 — Bouton "Renvoyer l'invitation" si bail envoyé mais pas signé.
+                Audit V31 R1.7 : sans cette feature, si l'email Resend bounce ou
+                le locataire n'a rien reçu, le proprio n'avait aucun moyen de
+                relancer hors aller voir Gmail manuellement. */}
+            {!locataireSigne && (
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const res = await fetch("/api/bail/relance", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ annonceId: bien.id, mode: "manual" }),
+                    })
+                    const json = (await res.json()) as { ok: boolean; error?: string; sent?: boolean; skipped?: string }
+                    if (!res.ok || !json.ok) {
+                      alert(json.error || "Erreur — réessayez")
+                      return
+                    }
+                    window.dispatchEvent(new CustomEvent("km:toast", {
+                      detail: {
+                        type: "success",
+                        title: json.skipped === "no_resend_key"
+                          ? "Rappel enregistré (email désactivé en local)"
+                          : "Invitation renvoyée au locataire",
+                        body: "Une notification + un message viennent d'être envoyés.",
+                      },
+                    }))
+                  } catch (err) {
+                    alert(`Erreur : ${err instanceof Error ? err.message : String(err)}`)
+                  }
+                }}
+                style={{
+                  marginLeft: 10,
+                  background: "#fff",
+                  color: "#9a3412",
+                  border: "1px solid #EADFC6",
+                  borderRadius: 10,
+                  padding: "10px 18px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+                title="Renvoyer l'invitation par email + notif au locataire (1 fois max par 24h)"
+              >
+                🔁 Renvoyer l&apos;invitation au locataire
+              </button>
+            )}
           </div>
         )}
 

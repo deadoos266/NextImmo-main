@@ -427,6 +427,41 @@ export default function Proprietaire() {
     if (session?.user?.email) loadData()
   }, [session, status])
 
+  // V32.6 — Auto-rappels J+3 / J+7 pour les baux envoyés non signés.
+  // Audit V31 R1.6 : avant cette feature, un proprio qui ne consultait pas
+  // /messages risquait de laisser un locataire en silence pendant des
+  // semaines. Maintenant : check silencieux au mount du dashboard. Le
+  // rate-limit 24h côté server ET la fenêtre J+3/J+7 (±12h) côté server
+  // garantissent qu'on n'envoie jamais 2 rappels rapprochés.
+  useEffect(() => {
+    if (!biens.length) return
+    const now = Date.now()
+    const candidates = biens.filter((b: any) => {
+      if (!b.bail_genere_at) return false
+      if (b.bail_signe_locataire_at) return false
+      const elapsed = now - new Date(b.bail_genere_at).getTime()
+      const J3 = 3 * 24 * 60 * 60 * 1000
+      const J7 = 7 * 24 * 60 * 60 * 1000
+      const HALF_DAY = 12 * 60 * 60 * 1000
+      const inJ3 = Math.abs(elapsed - J3) < HALF_DAY
+      const inJ7 = Math.abs(elapsed - J7) < HALF_DAY
+      if (!inJ3 && !inJ7) return false
+      // Pas relancé dans les dernières 24h
+      const lastRelance = b.bail_relance_at ? new Date(b.bail_relance_at).getTime() : 0
+      if (lastRelance && now - lastRelance < 24 * 60 * 60 * 1000) return false
+      return true
+    })
+    if (candidates.length === 0) return
+    // Fire-and-forget : on ne bloque pas le rendu et on n'affiche pas d'erreur.
+    candidates.forEach((b: any) => {
+      void fetch("/api/bail/relance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ annonceId: b.id, mode: "auto" }),
+      }).catch(err => console.warn("[auto-relance] error:", err))
+    })
+  }, [biens])
+
   async function loadData() {
     const eo = session!.user!.email!
     const el = eo.toLowerCase()
