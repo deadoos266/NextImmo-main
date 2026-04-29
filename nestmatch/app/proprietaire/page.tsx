@@ -16,6 +16,7 @@ import { useUndo } from "../components/ui/useUndo"
 import { postNotif } from "../../lib/notificationsClient"
 import { computeBailTimeline } from "../../lib/bailTimeline"
 import BailTimeline from "../components/ui/BailTimeline"
+import TutoProprio from "../components/bail/TutoProprio"
 import Image from "next/image"
 import { km } from "../components/ui/km"
 
@@ -383,6 +384,10 @@ export default function Proprietaire() {
   const myEmail = session?.user?.email?.toLowerCase() ?? null
   const [onglet, setOnglet] = useState<Onglet>("Stats & paiements")
   const [biens, setBiens] = useState<any[]>([])
+  // V34.3 — Walkthrough onboarding proprio. Auto-affiché au mount si
+  // - profil.tuto_proprio_completed_at IS NULL ET tuto_proprio_skipped_at IS NULL
+  // - ET au moins une annonce existe (sinon trop tôt, pas encore de contexte)
+  const [tutoOpen, setTutoOpen] = useState(false)
   const [candidatures, setCandidatures] = useState<any[]>([])
   const [loyers, setLoyers] = useState<any[]>([])
   const [visites, setVisites] = useState<any[]>([])
@@ -461,6 +466,27 @@ export default function Proprietaire() {
       }).catch(err => console.warn("[auto-relance] error:", err))
     })
   }, [biens])
+
+  // V34.3 — Auto-trigger walkthrough proprio si :
+  // - le user a au moins 1 annonce (sinon contexte trop pauvre)
+  // - ET tuto_proprio_completed_at IS NULL
+  // - ET tuto_proprio_skipped_at IS NULL
+  useEffect(() => {
+    if (!myEmail || biens.length === 0) return
+    let cancelled = false
+    void (async () => {
+      const { data } = await supabase
+        .from("profils")
+        .select("tuto_proprio_completed_at, tuto_proprio_skipped_at")
+        .eq("email", myEmail)
+        .maybeSingle()
+      if (cancelled) return
+      const completed = (data as { tuto_proprio_completed_at?: string | null } | null)?.tuto_proprio_completed_at
+      const skipped = (data as { tuto_proprio_skipped_at?: string | null } | null)?.tuto_proprio_skipped_at
+      if (!completed && !skipped) setTutoOpen(true)
+    })()
+    return () => { cancelled = true }
+  }, [myEmail, biens.length])
 
   async function loadData() {
     const eo = session!.user!.email!
@@ -1442,6 +1468,10 @@ export default function Proprietaire() {
           <VisitesProprio visites={visites} biens={biens} setVisites={setVisites} myEmail={session?.user?.email} />
         )}
       </div>
+
+      {/* V34.3 — Walkthrough onboarding auto-affiché au mount si proprio
+          n'a ni complété ni skip. Skippable depuis le menu user pour relancer. */}
+      <TutoProprio open={tutoOpen} onClose={() => setTutoOpen(false)} />
     </main>
   )
 }
