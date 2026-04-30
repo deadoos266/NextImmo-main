@@ -1,40 +1,30 @@
 "use client"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useSession } from "next-auth/react"
-import { supabase } from "../../lib/supabase"
 import { useRole } from "../providers"
 import DeleteAccountForm from "./DeleteAccountForm"
+import {
+  NOTIF_EVENTS,
+  NOTIF_CATEGORIES,
+  defaultNotifPreferences,
+  eventsForRole,
+  type NotifEventKey,
+} from "../../lib/notifPreferences"
 
 const VACANCES_MAX_LENGTH = 400
 
-type NotifPrefs = {
-  notif_messages_email: boolean
-  notif_visites_email: boolean
-  notif_candidatures_email: boolean
-  notif_loyer_retard_email: boolean
-}
-
-const DEFAULT_PREFS: NotifPrefs = {
-  notif_messages_email: true,
-  notif_visites_email: true,
-  notif_candidatures_email: true,
-  notif_loyer_retard_email: true,
-}
-
-const LABELS: { key: keyof NotifPrefs; label: string; desc: string }[] = [
-  { key: "notif_messages_email", label: "Nouveaux messages", desc: "Un e-mail lorsqu'un interlocuteur vous envoie un message." },
-  { key: "notif_visites_email", label: "Demandes de visite", desc: "Proposition, confirmation ou annulation d'une visite." },
-  { key: "notif_candidatures_email", label: "Nouvelles candidatures", desc: "Quand un locataire contacte l'une de vos annonces (propriétaires)." },
-  { key: "notif_loyer_retard_email", label: "Loyer en retard", desc: "Rappel automatique si un loyer n'est pas confirmé après le 10 du mois." },
-]
+type NotifPrefsMap = Record<NotifEventKey, boolean>
 
 export default function OngletCompte() {
   const { data: session } = useSession()
   const { proprietaireActive } = useRole()
-  const [prefs, setPrefs] = useState<NotifPrefs>(DEFAULT_PREFS)
+  const [prefs, setPrefs] = useState<NotifPrefsMap>(() => defaultNotifPreferences())
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
+
+  // V54.3 — events visibles dans l'UI = filtrés par rôle (locataire/proprio)
+  const visibleEvents = useMemo(() => eventsForRole(!!proprietaireActive), [proprietaireActive])
 
   // Mode vacances : actif + message auto-répondeur (affichés proprio only)
   const [vacancesActif, setVacancesActif] = useState(false)
@@ -44,24 +34,42 @@ export default function OngletCompte() {
   const [vacancesSaved, setVacancesSaved] = useState(false)
   const [vacancesError, setVacancesError] = useState<string | null>(null)
 
+  // V54.3 — load notif_preferences via /api/profil/me (RLS Phase 5)
   useEffect(() => {
     const email = session?.user?.email
     if (!email) return
-    supabase.from("profils")
-      .select("notif_messages_email, notif_visites_email, notif_candidatures_email, notif_loyer_retard_email")
-      .eq("email", email)
-      .single()
-      .then(({ data }) => {
-        if (data) {
-          setPrefs({
-            notif_messages_email: data.notif_messages_email ?? true,
-            notif_visites_email: data.notif_visites_email ?? true,
-            notif_candidatures_email: data.notif_candidatures_email ?? true,
-            notif_loyer_retard_email: data.notif_loyer_retard_email ?? true,
-          })
+    void (async () => {
+      try {
+        const res = await fetch("/api/profil/me?cols=notif_preferences,notif_messages_email,notif_visites_email,notif_candidatures_email,notif_loyer_retard_email", { cache: "no-store" })
+        const json = await res.json().catch(() => ({}))
+        if (json?.ok && json.profil) {
+          const data = json.profil as {
+            notif_preferences?: Record<string, unknown> | null
+            notif_messages_email?: boolean | null
+            notif_visites_email?: boolean | null
+            notif_candidatures_email?: boolean | null
+            notif_loyer_retard_email?: boolean | null
+          }
+          // Build state : merge defaults + DB notif_preferences + legacy fallback
+          const next = defaultNotifPreferences()
+          const stored = (data.notif_preferences && typeof data.notif_preferences === "object")
+            ? data.notif_preferences as Record<string, unknown>
+            : {}
+          for (const ev of NOTIF_EVENTS) {
+            if (ev.key in stored && typeof stored[ev.key] === "boolean") {
+              next[ev.key] = stored[ev.key] as boolean
+            } else if (ev.legacyKey && typeof data[ev.legacyKey] === "boolean") {
+              next[ev.key] = data[ev.legacyKey] as boolean
+            }
+          }
+          setPrefs(next)
         }
+      } catch (e) {
+        console.warn("[parametres] load notif prefs failed:", e)
+      } finally {
         setLoading(false)
-      })
+      }
+    })()
   }, [session?.user?.email])
 
   // Charge l'état vacances initial côté proprio uniquement
@@ -107,17 +115,42 @@ export default function OngletCompte() {
     }
   }
 
-  async function togglePref(key: keyof NotifPrefs) {
+  // V54.3 — toggle un event individuel : update local + POST /api/profil/save
+  // avec notif_preferences merge.
+  async function togglePref(key: NotifEventKey) {
     const email = session?.user?.email
     if (!email) return
     const next = { ...prefs, [key]: !prefs[key] }
     setPrefs(next)
     setSaving(true)
-    // V24.3 — via /api/profil/save
     try {
       await fetch("/api/profil/save", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(next),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notif_preferences: next }),
+      })
+    } catch { /* noop */ }
+    setSaving(false)
+  }
+
+  // V54.3 — bouton "Tout activer" / "Tout désactiver" sur la portée visible.
+  // Les events `required: true` ne peuvent pas être désactivés.
+  async function setAllVisible(value: boolean) {
+    const email = session?.user?.email
+    if (!email) return
+    const next = { ...prefs }
+    for (const ev of visibleEvents) {
+      // Required events restent on
+      if (ev.required && !value) continue
+      next[ev.key] = value
+    }
+    setPrefs(next)
+    setSaving(true)
+    try {
+      await fetch("/api/profil/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notif_preferences: next }),
       })
     } catch { /* noop */ }
     setSaving(false)
@@ -197,31 +230,78 @@ export default function OngletCompte() {
         </section>
       )}
 
-      <section style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, padding: 28, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
-        <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, letterSpacing: "-0.3px", color: "#111", margin: "0 0 6px" }}>Notifications par e-mail</h2>
+      <section id="notifications-email" style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, padding: 28, boxShadow: "0 1px 2px rgba(0,0,0,0.02)", scrollMarginTop: 24 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12, marginBottom: 6 }}>
+          <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, letterSpacing: "-0.3px", color: "#111", margin: 0 }}>Notifications par e-mail</h2>
+          {!loading && (
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => setAllVisible(true)}
+                disabled={saving}
+                style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 999, padding: "6px 14px", fontSize: 11, fontWeight: 600, color: "#111", cursor: saving ? "wait" : "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}
+              >
+                Tout activer
+              </button>
+              <button
+                type="button"
+                onClick={() => setAllVisible(false)}
+                disabled={saving}
+                style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 999, padding: "6px 14px", fontSize: 11, fontWeight: 600, color: "#8a8477", cursor: saving ? "wait" : "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}
+              >
+                Tout désactiver
+              </button>
+            </div>
+          )}
+        </div>
         <p style={{ fontSize: 13, color: "#8a8477", margin: "0 0 18px", lineHeight: 1.5 }}>
-          Choisissez les événements pour lesquels vous souhaitez recevoir un e-mail. Vos préférences sont enregistrées automatiquement.
+          Choisissez précisément les e-mails que vous souhaitez recevoir. Vos préférences sont enregistrées automatiquement à chaque changement.
           {" "}
-          <em>Note : l&apos;envoi d&apos;e-mails est en cours de mise en place — vos choix seront appliqués dès l&apos;activation.</em>
+          <strong style={{ color: "#111", fontWeight: 600 }}>Les signaux légaux</strong>
+          {" "}(bail signé, préavis, mise en demeure de loyer, etc.) restent toujours envoyés — non désactivables pour des raisons réglementaires.
         </p>
         {loading ? (
           <p style={{ fontSize: 13, color: "#8a8477" }}>Chargement…</p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {LABELS.map(({ key, label, desc }) => (
-              <label key={key} style={{ display: "flex", alignItems: "flex-start", gap: 12, cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={prefs[key]}
-                  onChange={() => togglePref(key)}
-                  style={{ marginTop: 3, width: 18, height: 18, accentColor: "#111", cursor: "pointer" }}
-                />
-                <div>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: "#111", margin: 0 }}>{label}</p>
-                  <p style={{ fontSize: 12, color: "#8a8477", margin: "2px 0 0", lineHeight: 1.5 }}>{desc}</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+            {NOTIF_CATEGORIES.map(cat => {
+              const eventsInCat = visibleEvents.filter(e => e.category === cat.key)
+              if (eventsInCat.length === 0) return null
+              return (
+                <div key={cat.key}>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 4, flexWrap: "wrap" }}>
+                    <h3 style={{ fontSize: 11, fontWeight: 700, color: "#111", letterSpacing: "1.6px", textTransform: "uppercase", margin: 0 }}>{cat.label}</h3>
+                    <span style={{ fontSize: 11, color: "#8a8477", fontWeight: 400 }}>· {cat.description}</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingLeft: 0, marginTop: 10, borderTop: "1px solid #F7F4EF", paddingTop: 12 }}>
+                    {eventsInCat.map(ev => {
+                      const isOn = prefs[ev.key]
+                      const isRequired = ev.required === true
+                      return (
+                        <label key={ev.key} style={{ display: "flex", alignItems: "flex-start", gap: 12, cursor: isRequired ? "not-allowed" : "pointer", opacity: isRequired ? 0.7 : 1 }}>
+                          <input
+                            type="checkbox"
+                            checked={isOn}
+                            onChange={() => { if (!isRequired) togglePref(ev.key) }}
+                            disabled={isRequired}
+                            style={{ marginTop: 3, width: 18, height: 18, accentColor: "#111", cursor: isRequired ? "not-allowed" : "pointer" }}
+                          />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                              <p style={{ fontSize: 14, fontWeight: 600, color: "#111", margin: 0 }}>{ev.label}</p>
+                              {isRequired && (
+                                <span style={{ fontSize: 9, fontWeight: 700, color: "#a16207", background: "#FBF6EA", border: "1px solid #EADFC6", padding: "2px 8px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "1px" }}>Légal · obligatoire</span>
+                              )}
+                            </div>
+                            <p style={{ fontSize: 12, color: "#8a8477", margin: "2px 0 0", lineHeight: 1.5 }}>{ev.description}</p>
+                          </div>
+                        </label>
+                      )
+                    })}
+                  </div>
                 </div>
-              </label>
-            ))}
+              )
+            })}
           </div>
         )}
         {saving && <p style={{ fontSize: 11, color: "#8a8477", marginTop: 12 }}>Enregistrement…</p>}
