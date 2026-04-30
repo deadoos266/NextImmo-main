@@ -20,6 +20,9 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "../../../../lib/auth"
 import { supabaseAdmin } from "../../../../lib/supabase-server"
 import { PREFIXES } from "../../../../lib/messagePrefixes"
+import { sendEmail } from "../../../../lib/email/resend"
+import { candidatureValideeTemplate } from "../../../../lib/email/templates"
+import { displayName } from "../../../../lib/privacy"
 
 export const runtime = "nodejs"
 
@@ -124,6 +127,36 @@ export async function POST(req: Request) {
     related_id: String(annonce.id),
     created_at: nowIso,
   }])
+
+  // 4. V53.4 — email locataire "candidature validée"
+  try {
+    const { data: prof } = await supabaseAdmin
+      .from("profils")
+      .select("nom, prenom, notif_messages_email")
+      .eq("email", proprietaireEmail)
+      .maybeSingle()
+    const proprioName = [prof?.prenom, prof?.nom].filter(Boolean).join(" ").trim()
+      || displayName(proprietaireEmail, session?.user?.name || null)
+      || "Le propriétaire"
+    const ann2 = annonce as { ville?: string | null }
+    const base = process.env.NEXT_PUBLIC_URL || "https://keymatch-immo.fr"
+    const tpl = candidatureValideeTemplate({
+      proprioName,
+      bienTitre: annonce.titre || "Logement",
+      ville: ann2.ville ?? null,
+      convUrl: `${base}/messages?with=${encodeURIComponent(proprietaireEmail)}&annonce=${annonce.id}`,
+    })
+    await sendEmail({
+      to: locataireEmail,
+      subject: tpl.subject,
+      html: tpl.html,
+      text: tpl.text,
+      tags: [{ name: "category", value: "candidature_validee" }],
+      senderEmail: proprietaireEmail,
+    })
+  } catch (e) {
+    console.warn("[valider] email candidature_validee failed:", e)
+  }
 
   return NextResponse.json({ ok: true, validatedAt: nowIso })
 }

@@ -18,6 +18,9 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "../../../../lib/auth"
 import { supabaseAdmin } from "../../../../lib/supabase-server"
 import { PREFIXES } from "../../../../lib/messagePrefixes"
+import { sendEmail } from "../../../../lib/email/resend"
+import { candidatureRefuseeTemplate } from "../../../../lib/email/templates"
+import { displayName } from "../../../../lib/privacy"
 
 export const runtime = "nodejs"
 
@@ -120,6 +123,58 @@ export async function POST(req: Request) {
     related_id: String(annonce.id),
     created_at: nowIso,
   }])
+
+  // V53.7 — email locataire avec recommandations (5 annonces similaires)
+  try {
+    const ann2 = annonce as { id: number; titre: string | null; ville?: string | null; prix?: number | null; surface?: number | null; pieces?: number | null }
+    // Cherche 5 annonces similaires (ville + bracket prix ±20%)
+    const prixMin = ann2.prix ? Math.round(ann2.prix * 0.8) : null
+    const prixMax = ann2.prix ? Math.round(ann2.prix * 1.2) : null
+    let recosQuery = supabaseAdmin
+      .from("annonces")
+      .select("id, titre, ville, prix")
+      .eq("statut", "disponible")
+      .neq("id", ann2.id)
+      .limit(5)
+    if (ann2.ville) recosQuery = recosQuery.eq("ville", ann2.ville)
+    if (prixMin !== null) recosQuery = recosQuery.gte("prix", prixMin)
+    if (prixMax !== null) recosQuery = recosQuery.lte("prix", prixMax)
+    const { data: recosData } = await recosQuery
+    const base = process.env.NEXT_PUBLIC_URL || "https://keymatch-immo.fr"
+    const recommandations = (recosData || []).map(r => ({
+      id: r.id,
+      titre: r.titre || "Logement",
+      ville: r.ville || null,
+      prix: typeof r.prix === "number" ? r.prix : null,
+      href: `${base}/annonces/${r.id}`,
+    }))
+    const { data: prof } = await supabaseAdmin
+      .from("profils")
+      .select("nom, prenom")
+      .eq("email", proprietaireEmail)
+      .maybeSingle()
+    const proprioName = [prof?.prenom, prof?.nom].filter(Boolean).join(" ").trim()
+      || displayName(proprietaireEmail, session?.user?.name || null)
+      || "Le propriétaire"
+    const tpl = candidatureRefuseeTemplate({
+      proprioName,
+      bienTitre: annonce.titre || "Logement",
+      ville: ann2.ville ?? null,
+      raison: motif || null,
+      recommandations,
+      searchUrl: `${base}/annonces`,
+    })
+    await sendEmail({
+      to: locataireEmail,
+      subject: tpl.subject,
+      html: tpl.html,
+      text: tpl.text,
+      tags: [{ name: "category", value: "candidature_refusee" }],
+      senderEmail: proprietaireEmail,
+    })
+  } catch (e) {
+    console.warn("[refuser] email candidature_refusee failed:", e)
+  }
 
   return NextResponse.json({ ok: true, refusedAt: nowIso })
 }
