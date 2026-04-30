@@ -20,8 +20,9 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
-import { sendEmail } from "@/lib/email/resend"
+import { sendEmail, type SendAttachment } from "@/lib/email/resend"
 import { displayName } from "@/lib/privacy"
+import { generateIcs } from "@/lib/icsGenerator"
 import {
   visiteProposeeTemplate,
   visiteConfirmeeTemplate,
@@ -88,6 +89,7 @@ export async function POST(req: NextRequest) {
   let html = ""
   let text = ""
   let tag = ""
+  let attachments: SendAttachment[] | undefined
 
   switch (p.type) {
     case "visite_proposee": {
@@ -116,6 +118,32 @@ export async function POST(req: NextRequest) {
         adresse: p.adresse,
       })
       subject = t.subject; html = t.html; text = t.text; tag = "visite_confirmee"
+      // V53.1 — ICS calendar attachment (RFC 5545). Permet à l'user d'ajouter
+      // la visite à Apple Calendar / Google Calendar / Outlook en 1 clic.
+      try {
+        const startDate = new Date(`${p.date}T${(p.heure || "00:00").padEnd(5, "0")}:00`)
+        if (!isNaN(startDate.getTime())) {
+          const titre = p.bienTitre || "Logement"
+          const ville = p.ville || ""
+          const ics = generateIcs({
+            uid: `visite-${p.date}-${p.heure}-${to}-${fromEmail}`,
+            title: `Visite — ${titre}${ville ? ` à ${ville}` : ""}`,
+            description: `Visite ${p.format === "visio" ? "en visio" : "physique"} pour ${titre}${ville ? ` à ${ville}` : ""}.\n\nVoir la conversation : ${convUrl}`,
+            location: p.adresse || (ville ? ville : undefined),
+            start: startDate,
+            durationMinutes: 30,
+            organizerEmail: fromEmail,
+            attendeeEmails: [to, fromEmail].filter(Boolean),
+          })
+          attachments = [{
+            filename: "visite-keymatch.ics",
+            content: Buffer.from(ics, "utf-8"),
+            contentType: "text/calendar; charset=utf-8",
+          }]
+        }
+      } catch (e) {
+        console.warn("[notifications/event] ICS generation failed:", e)
+      }
       break
     }
     case "visite_annulee": {
@@ -178,6 +206,7 @@ export async function POST(req: NextRequest) {
     text,
     tags: [{ name: "category", value: tag }],
     senderEmail: fromEmail,
+    attachments,
   })
   return NextResponse.json({ ok: result.ok, skipped: !result.ok })
 }
