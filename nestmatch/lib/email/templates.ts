@@ -132,20 +132,23 @@ function wrap(preview: string, body: string, templateId: string): string {
               </a>
               <p style="font-size:11px;color:${PALETTE.textSubtle};margin:18px 0 0;line-height:1.5;">
                 <a href="${base}" target="_blank" style="color:${PALETTE.textSubtle};text-decoration:none;">${escapeHtml(domain)}</a>
-                &nbsp;·&nbsp;
-                <a href="${base}/parametres?tab=compte" target="_blank" style="color:${PALETTE.textSubtle};text-decoration:underline;">Préférences de notifications</a>
               </p>
             </td>
           </tr>
 
         </table>
 
-        <!-- Mention légale -->
+        <!-- V54.4 — Mention "Gérer mes notifications" + RGPD -->
         <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;margin-top:20px;">
           <tr>
             <td align="center" style="padding:0 16px;">
-              <p style="font-size:11px;color:${PALETTE.textSubtle};margin:0;line-height:1.5;">
+              <p style="font-size:11px;color:${PALETTE.textSubtle};margin:0 0 8px;line-height:1.5;">
                 Vous recevez cet email car vous avez un compte ${escapeHtml(BRAND.name || "KeyMatch")}.
+              </p>
+              <p style="font-size:11px;color:${PALETTE.textSubtle};margin:0;line-height:1.5;">
+                <a href="${base}/parametres?tab=compte#notifications-email" target="_blank" style="color:${PALETTE.textMuted};text-decoration:underline;font-weight:600;">
+                  Gérer mes notifications
+                </a>
               </p>
             </td>
           </tr>
