@@ -14,6 +14,7 @@ import { getFavoris, toggleFavori } from "../../lib/favoris"
 import { calculerCompletudeProfil } from "../../lib/profilCompleteness"
 import { useResponsive } from "../hooks/useResponsive"
 import EmptyState from "../components/ui/EmptyState"
+import TutoLocataireWalkthrough from "../components/onboarding/TutoLocataireWalkthrough"
 import AnnonceSkeleton from "../components/ui/AnnonceSkeleton"
 import FiltersBar from "../components/annonces/FiltersBar"
 import Link from "next/link"
@@ -317,6 +318,42 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   const { data: session, status } = useSession()
   const { role } = useRole()
   const isProprietaire = role === "proprietaire"
+
+  // V55.2 — Walkthrough locataire post-signup. Affiché 1 fois si :
+  //  - user authenticated AND not proprietaireActive
+  //  - profils.tuto_locataire_completed_at IS NULL
+  //  - profils.tuto_locataire_skipped_at IS NULL
+  //  - localStorage.km_tuto_locataire:<email> != "done" (anti-reshow rapide)
+  const [tutoOpen, setTutoOpen] = useState(false)
+  useEffect(() => {
+    if (status !== "authenticated") return
+    if (isProprietaire) return
+    const email = session?.user?.email?.toLowerCase()
+    if (!email) return
+    // Cache local : skip si déjà vu
+    try {
+      const cached = window.localStorage.getItem(`nestmatch_tuto_locataire:${email}`)
+      if (cached === "done") return
+    } catch { /* ignore */ }
+    // Fetch DB pour vérifier statut
+    void fetch("/api/profil/me?cols=tuto_locataire_completed_at,tuto_locataire_skipped_at,is_proprietaire", { cache: "no-store" })
+      .then(r => r.ok ? r.json() : null)
+      .then(j => {
+        if (!j?.ok || !j.profil) return
+        const p = j.profil as { tuto_locataire_completed_at?: string | null; tuto_locataire_skipped_at?: string | null; is_proprietaire?: boolean | null }
+        if (p.is_proprietaire) return
+        if (p.tuto_locataire_completed_at) {
+          try { window.localStorage.setItem(`nestmatch_tuto_locataire:${email}`, "done") } catch { /* ignore */ }
+          return
+        }
+        if (p.tuto_locataire_skipped_at) {
+          try { window.localStorage.setItem(`nestmatch_tuto_locataire:${email}`, "done") } catch { /* ignore */ }
+          return
+        }
+        setTutoOpen(true)
+      })
+      .catch(() => { /* silent */ })
+  }, [status, isProprietaire, session?.user?.email])
   // V14.1 (Paul 2026-04-28) — auto-apply profil critères : flag persistant
   // pour ne pas re-déclencher l'auto-apply si user tape "Voir toutes les
   // annonces ↺" (cas où il vide manuellement l'URL).
@@ -1185,6 +1222,13 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   const isDesktopListCarte = !gridMode && !isSmall && !isMobileV5
 
   return (
+    <>
+    {/* V55.2 — Walkthrough locataire post-signup */}
+    <TutoLocataireWalkthrough
+      open={tutoOpen}
+      userEmail={session?.user?.email ?? null}
+      onClose={() => setTutoOpen(false)}
+    />
     <div
       style={{
         background: km.beige,
@@ -2292,6 +2336,7 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
         isMobile={isMobileV5}
       />
     </div>
+    </>
   )
 }
 
