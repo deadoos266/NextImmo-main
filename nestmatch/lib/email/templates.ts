@@ -657,3 +657,326 @@ Lien : ${params.ctaUrl}
 — L'équipe KeyMatch`
   return { subject, html, text }
 }
+
+// ─── V52 — Visite + Dossier + Bail signature partial ────────────────────────
+
+function escapeBienTitre(titre: string, ville: string | null) {
+  return ville ? `${escapeHtml(titre)} à ${escapeHtml(ville)}` : escapeHtml(titre)
+}
+
+function formatSlotsHtml(slots: Array<{ date: string; heure: string }>) {
+  if (!slots.length) return ""
+  return `<ul style="margin:8px 0 14px;padding-left:20px;color:${PALETTE.textMuted};line-height:1.7;">
+    ${slots.map(s => {
+      const d = new Date(`${s.date}T${s.heure || "00:00"}`)
+      const txt = isNaN(d.getTime())
+        ? `${escapeHtml(s.date)} à ${escapeHtml(s.heure || "")}`
+        : d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }) + ` à ${escapeHtml(s.heure || "")}`
+      return `<li>${txt}</li>`
+    }).join("")}
+  </ul>`
+}
+
+/**
+ * V52.1 — Visite proposée (proprio→locataire OU locataire→proprio en
+ * contre-proposition). N créneaux possibles, format physique/visio.
+ */
+export function visiteProposeeTemplate(params: {
+  fromName: string
+  bienTitre: string
+  ville: string | null
+  slots: Array<{ date: string; heure: string }>
+  format: "physique" | "visio"
+  message?: string | null
+  convUrl: string
+  isCounter?: boolean
+}): { subject: string; html: string; text: string } {
+  const titreLabel = escapeBienTitre(params.bienTitre, params.ville)
+  const formatLabel = params.format === "visio" ? "en visio" : "physique"
+  const counterLabel = params.isCounter ? "contre-propose" : "propose"
+  const subject = `${params.fromName} vous ${counterLabel} ${params.slots.length > 1 ? `${params.slots.length} créneaux` : "un créneau"} de visite — ${params.bienTitre}`
+  const introVerb = params.isCounter ? "vous contre-propose" : "vous propose"
+  const slotsLabel = params.slots.length > 1
+    ? `${params.slots.length} créneaux au choix`
+    : "un créneau"
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      Demande de visite${params.isCounter ? " (contre-proposition)" : ""}
+    </h1>
+    <p style="margin:0 0 8px;color:${PALETTE.textMuted};line-height:1.65;">
+      <strong style="color:${PALETTE.text};">${escapeHtml(params.fromName)}</strong>
+      ${introVerb} ${slotsLabel} pour <strong style="color:${PALETTE.text};">${titreLabel}</strong>
+      <span style="color:${PALETTE.textSubtle};"> · ${formatLabel}</span>.
+    </p>
+    ${formatSlotsHtml(params.slots)}
+    ${params.message ? `<blockquote style="margin:14px 0;padding:12px 16px;background:${PALETTE.bg};border-left:3px solid ${PALETTE.accentMid};border-radius:6px;color:${PALETTE.textMuted};font-style:italic;">${escapeHtml(params.message)}</blockquote>` : ""}
+    ${button(params.convUrl, params.isCounter ? "Voir la contre-proposition →" : "Choisir un créneau →")}
+    <p style="margin:18px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
+      Vous recevez cet email parce qu'une demande de visite vous concerne.
+    </p>
+  `
+  const html = wrap(`${params.fromName} ${introVerb} ${slotsLabel} de visite.`, body, "visiteprop")
+  const text = `${params.fromName} ${introVerb} ${slotsLabel} pour ${params.bienTitre}${params.ville ? ` à ${params.ville}` : ""} (${formatLabel}).
+
+${params.slots.map(s => `- ${s.date} à ${s.heure}`).join("\n")}
+${params.message ? `\n"${params.message}"\n` : ""}
+
+Répondre : ${params.convUrl}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}
+
+/**
+ * V52.2 — Visite confirmée. Locataire a retenu un slot proposé par le proprio
+ * (ou inverse). Email aux 2 parties.
+ */
+export function visiteConfirmeeTemplate(params: {
+  bienTitre: string
+  ville: string | null
+  date: string
+  heure: string
+  format: "physique" | "visio"
+  destinataireRole: "locataire" | "proprietaire"
+  convUrl: string
+  adresse?: string | null
+}): { subject: string; html: string; text: string } {
+  const titreLabel = escapeBienTitre(params.bienTitre, params.ville)
+  const formatLabel = params.format === "visio" ? "en visio" : "physique"
+  const d = new Date(`${params.date}T${params.heure || "00:00"}`)
+  const dateLong = isNaN(d.getTime())
+    ? `${params.date} à ${params.heure}`
+    : d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) + ` à ${params.heure}`
+  const subject = `Visite confirmée — ${params.bienTitre} le ${d.toLocaleDateString("fr-FR", { day: "numeric", month: "long" })} à ${params.heure}`
+  const greet = params.destinataireRole === "locataire"
+    ? "Votre visite est confirmée."
+    : "Une visite est confirmée pour votre bien."
+  const adresseBlock = params.adresse
+    ? `<p style="margin:6px 0 14px;color:${PALETTE.textMuted};">📍 ${escapeHtml(params.adresse)}</p>`
+    : ""
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      ${greet}
+    </h1>
+    <p style="margin:0 0 6px;color:${PALETTE.textMuted};line-height:1.65;">
+      <strong style="color:${PALETTE.text};">${titreLabel}</strong>
+    </p>
+    <p style="margin:0 0 6px;color:${PALETTE.text};font-size:17px;font-weight:600;">
+      ${escapeHtml(dateLong)}
+    </p>
+    <p style="margin:0 0 14px;color:${PALETTE.textSubtle};">${formatLabel}</p>
+    ${adresseBlock}
+    ${button(params.convUrl, "Voir la conversation →")}
+    <p style="margin:18px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
+      ${params.format === "physique" ? "Pensez à confirmer le rendez-vous la veille." : "Le lien de visio sera partagé dans la conversation."}
+    </p>
+  `
+  const html = wrap(`Visite confirmée le ${dateLong}.`, body, "visiteconf")
+  const text = `Visite confirmée
+
+${params.bienTitre}${params.ville ? ` à ${params.ville}` : ""}
+${dateLong}
+${formatLabel}${params.adresse ? `\n${params.adresse}` : ""}
+
+Conversation : ${params.convUrl}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}
+
+/**
+ * V52.3 — Visite annulée par l'une des 2 parties.
+ */
+export function visiteAnnuleeTemplate(params: {
+  fromName: string
+  bienTitre: string
+  ville: string | null
+  date: string
+  heure: string
+  raison?: string | null
+  convUrl: string
+}): { subject: string; html: string; text: string } {
+  const titreLabel = escapeBienTitre(params.bienTitre, params.ville)
+  const d = new Date(`${params.date}T${params.heure || "00:00"}`)
+  const dateLong = isNaN(d.getTime())
+    ? `${params.date} à ${params.heure}`
+    : d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }) + ` à ${params.heure}`
+  const subject = `Visite annulée — ${params.bienTitre}`
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      Visite annulée
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      <strong style="color:${PALETTE.text};">${escapeHtml(params.fromName)}</strong> a annulé la visite prévue le
+      <strong style="color:${PALETTE.text};">${escapeHtml(dateLong)}</strong> pour
+      <strong style="color:${PALETTE.text};">${titreLabel}</strong>.
+    </p>
+    ${params.raison ? `<blockquote style="margin:14px 0;padding:12px 16px;background:${PALETTE.bg};border-left:3px solid ${PALETTE.border};border-radius:6px;color:${PALETTE.textMuted};font-style:italic;">${escapeHtml(params.raison)}</blockquote>` : ""}
+    ${button(params.convUrl, "Reprendre contact →")}
+  `
+  const html = wrap(`Visite du ${dateLong} annulée.`, body, "visiteannul")
+  const text = `Visite annulée
+
+${params.fromName} a annulé la visite prévue le ${dateLong} pour ${params.bienTitre}${params.ville ? ` à ${params.ville}` : ""}.${params.raison ? `\n\nRaison : ${params.raison}` : ""}
+
+Conversation : ${params.convUrl}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}
+
+/**
+ * V52.4 — Demande de dossier (proprio → locataire).
+ */
+export function dossierDemandeTemplate(params: {
+  fromName: string
+  bienTitre: string
+  ville: string | null
+  convUrl: string
+}): { subject: string; html: string; text: string } {
+  const titreLabel = escapeBienTitre(params.bienTitre, params.ville)
+  const subject = `${params.fromName} vous demande votre dossier — ${params.bienTitre}`
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      Votre dossier est demandé
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      <strong style="color:${PALETTE.text};">${escapeHtml(params.fromName)}</strong> souhaite consulter votre dossier locataire pour
+      <strong style="color:${PALETTE.text};">${titreLabel}</strong>.
+    </p>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Votre dossier est partagé via un lien sécurisé valable 30 jours, que vous pouvez révoquer à tout moment depuis vos paramètres.
+    </p>
+    ${button(params.convUrl, "Envoyer mon dossier →")}
+  `
+  const html = wrap(`${params.fromName} demande votre dossier.`, body, "dossierdemande")
+  const text = `${params.fromName} demande votre dossier pour ${params.bienTitre}${params.ville ? ` à ${params.ville}` : ""}.
+
+Lien sécurisé valable 30 jours, révocable à tout moment.
+
+Répondre : ${params.convUrl}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}
+
+/**
+ * V52.5 — Dossier partagé (locataire → proprio).
+ */
+export function dossierPartageTemplate(params: {
+  fromName: string
+  bienTitre: string
+  ville: string | null
+  score: number | null
+  shareUrl: string | null
+  convUrl: string
+}): { subject: string; html: string; text: string } {
+  const titreLabel = escapeBienTitre(params.bienTitre, params.ville)
+  const subject = `${params.fromName} a partagé son dossier — ${params.bienTitre}`
+  const scoreLine = typeof params.score === "number"
+    ? `<p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">Score de complétude : <strong style="color:${PALETTE.text};">${params.score}%</strong></p>`
+    : ""
+  const cta = params.shareUrl || params.convUrl
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      Nouveau dossier reçu
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      <strong style="color:${PALETTE.text};">${escapeHtml(params.fromName)}</strong> vient de partager son dossier pour
+      <strong style="color:${PALETTE.text};">${titreLabel}</strong>.
+    </p>
+    ${scoreLine}
+    ${button(cta, "Consulter le dossier →")}
+    <p style="margin:18px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
+      Lien sécurisé chiffré, valable 30 jours. Le candidat peut le révoquer à tout moment.
+    </p>
+  `
+  const html = wrap(`${params.fromName} a partagé son dossier.`, body, "dossierpart")
+  const text = `${params.fromName} a partagé son dossier pour ${params.bienTitre}${params.ville ? ` à ${params.ville}` : ""}.${typeof params.score === "number" ? `\nScore : ${params.score}%` : ""}
+
+Consulter : ${cta}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}
+
+/**
+ * V52.6 — Dossier révoqué par le locataire (proprio averti).
+ */
+export function dossierRevoqueTemplate(params: {
+  fromName: string
+  bienTitre: string | null
+  ville: string | null
+  convUrl: string
+}): { subject: string; html: string; text: string } {
+  const titreLabel = params.bienTitre ? escapeBienTitre(params.bienTitre, params.ville) : "votre échange"
+  const subject = `${params.fromName} a révoqué l'accès à son dossier`
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      Accès au dossier révoqué
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      <strong style="color:${PALETTE.text};">${escapeHtml(params.fromName)}</strong> a révoqué l'accès au dossier qu'il/elle vous avait partagé pour
+      <strong style="color:${PALETTE.text};">${titreLabel}</strong>.
+    </p>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Vous pouvez en redemander un en répondant dans la conversation.
+    </p>
+    ${button(params.convUrl, "Voir la conversation →")}
+  `
+  const html = wrap(`${params.fromName} a révoqué l'accès à son dossier.`, body, "dossierrevoq")
+  const text = `${params.fromName} a révoqué l'accès au dossier qu'il/elle vous avait partagé.
+
+Conversation : ${params.convUrl}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}
+
+/**
+ * V52.7 — Bail signé par 1 partie (notif l'autre partie).
+ * Avant V52, cet event ne déclenchait qu'une notif in-app — l'autre partie
+ * devait ouvrir l'app pour le savoir. Maintenant email + CTA "Signer".
+ */
+export function bailSignePartialTemplate(params: {
+  signataireRole: "locataire" | "bailleur"
+  signataireName: string
+  bienTitre: string
+  ville: string | null
+  destinataireRole: "locataire" | "bailleur"
+  ctaUrl: string
+}): { subject: string; html: string; text: string } {
+  const titreLabel = escapeBienTitre(params.bienTitre, params.ville)
+  const signRoleLabel = params.signataireRole === "bailleur" ? "Le bailleur" : "Le locataire"
+  const signRoleAction = params.destinataireRole === "bailleur"
+    ? "Contre-signer le bail →"
+    : "Signer le bail →"
+  const subject = params.destinataireRole === "bailleur"
+    ? `${signRoleLabel} a signé — à votre tour de contre-signer (${params.bienTitre})`
+    : `${signRoleLabel} a signé — à votre tour (${params.bienTitre})`
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      ${signRoleLabel} a signé
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      <strong style="color:${PALETTE.text};">${escapeHtml(params.signataireName)}</strong> vient de signer le bail pour
+      <strong style="color:${PALETTE.text};">${titreLabel}</strong>.
+    </p>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      C'est à votre tour. Une fois votre signature posée, le bail est définitivement actif et vous recevrez tous les deux le PDF complet par email.
+    </p>
+    ${button(params.ctaUrl, signRoleAction)}
+    <p style="margin:18px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
+      Signature électronique conforme eIDAS Niveau 1.
+    </p>
+  `
+  const html = wrap(`${signRoleLabel} a signé. À votre tour.`, body, "bailsignepart")
+  const text = `${signRoleLabel} (${params.signataireName}) a signé le bail pour ${params.bienTitre}${params.ville ? ` à ${params.ville}` : ""}.
+
+C'est à votre tour de signer.
+
+Lien : ${params.ctaUrl}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}

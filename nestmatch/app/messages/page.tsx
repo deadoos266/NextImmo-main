@@ -2244,6 +2244,21 @@ function MessagesInner() {
     if (data) {
       setMessages(prev => [...prev, data])
       setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: data } : c))
+      // V52.5 — email "dossier partagé" au proprio (fire-and-forget).
+      const annForMail = conv.annonceId ? annonces[conv.annonceId] : null
+      void fetch("/api/notifications/event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "dossier_partage",
+          to: conv.other,
+          bienTitre: annForMail?.titre || "Logement",
+          ville: annForMail?.ville || null,
+          score: payload.score,
+          shareUrl,
+          convUrl: `/messages?with=${encodeURIComponent(conv.other)}${conv.annonceId ? `&annonce=${conv.annonceId}` : ""}`,
+        }),
+      })
     }
     setEnvoyantDossier(false)
   }
@@ -2454,6 +2469,19 @@ function MessagesInner() {
     if (data) {
       setMessages(prev => [...prev, data])
       setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: data } : c))
+      // V52.4 — email "dossier demandé" au locataire (fire-and-forget)
+      const annForMail = conv.annonceId ? annonces[conv.annonceId] : null
+      void fetch("/api/notifications/event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "dossier_demande",
+          to: conv.other,
+          bienTitre: annForMail?.titre || "Logement",
+          ville: annForMail?.ville || null,
+          convUrl: `/messages?with=${encodeURIComponent(conv.other)}${conv.annonceId ? `&annonce=${conv.annonceId}` : ""}`,
+        }),
+      })
     }
     setDemandantDossier(false)
   }
@@ -2572,6 +2600,23 @@ function MessagesInner() {
     })
     if (res.ok) {
       setVisitesConv(prev => prev.map(x => x.id === v.id ? { ...x, statut: "annulée" } : x))
+      // V52.3 — email visite annulée (fire-and-forget)
+      const annId = v.annonce_id ?? null
+      const annForMail = annId != null ? annonces[annId] : null
+      void fetch("/api/notifications/event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "visite_annulee",
+          to: toEmail,
+          bienTitre: annForMail?.titre || "Logement",
+          ville: annForMail?.ville || null,
+          date: v.date_visite,
+          heure: v.heure,
+          raison: motif || null,
+          convUrl: `/messages?with=${encodeURIComponent(toEmail)}${annId ? `&annonce=${annId}` : ""}`,
+        }),
+      })
       // Actualiser les messages pour voir le message auto-posté
       if (convActive) {
         const conv = conversations.find(c => c.key === convActive)
@@ -2675,6 +2720,23 @@ function MessagesInner() {
         href: "/visites",
         relatedId: String(visite.id),
       })
+      // V52.1 — email visite proposée (fire-and-forget, ne bloque pas l'UI)
+      const annForMail = annonces[convActiveData.annonceId!]
+      void fetch("/api/notifications/event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "visite_proposee",
+          to: convActiveData.other,
+          bienTitre: annForMail?.titre || "Logement",
+          ville: annForMail?.ville || null,
+          slots,
+          format: vFormat,
+          message: vMessage.trim() || null,
+          convUrl: `/messages?with=${encodeURIComponent(convActiveData.other)}${convActiveData.annonceId ? `&annonce=${convActiveData.annonceId}` : ""}`,
+          isCounter,
+        }),
+      })
     }
     setShowVisiteForm(false)
     setCounterTarget(null)
@@ -2738,6 +2800,29 @@ function MessagesInner() {
       body: `${dateFormatee} à ${slot.heure}`,
       href: "/visites",
       relatedId: String(visiteId),
+    })
+    // V52.2 — email visite confirmée (fire-and-forget). Le destinataire est
+    // l'autre partie ; on en déduit le rôle pour adapter le wording.
+    const annId = visite.annonce_id ?? null
+    const annForMail = annId != null ? annonces[annId] : null
+    const destinataireRole: "locataire" | "proprietaire" =
+      (annForMail?.proprietaire_email || "").toLowerCase() === (other || "").toLowerCase()
+        ? "proprietaire" : "locataire"
+    void fetch("/api/notifications/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "visite_confirmee",
+        to: other,
+        bienTitre: annForMail?.titre || "Logement",
+        ville: annForMail?.ville || null,
+        date: slot.date,
+        heure: slot.heure,
+        format: visite.format || "physique",
+        destinataireRole,
+        adresse: annForMail?.adresse || null,
+        convUrl: `/messages?with=${encodeURIComponent(other)}${annId ? `&annonce=${annId}` : ""}`,
+      }),
     })
   }
 

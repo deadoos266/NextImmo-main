@@ -29,6 +29,7 @@ import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
 import { finalizeBail } from "@/lib/bail/finalize"
+import { sendEmail } from "@/lib/email/resend"
 import { hashBailData, canonicalPayloadString } from "@/lib/bailHash"
 import type { BailData } from "@/lib/bailPDF"
 
@@ -402,6 +403,39 @@ export async function POST(req: NextRequest) {
       },
     ])
     if (bsNotifErr) console.error("[bail/signer] insert bail_signe notif:", bsNotifErr)
+
+    // V52.7 — email "bail signé par 1 partie" à l'autre partie. On le déclenche
+    // uniquement si la double signature N'EST PAS encore atteinte ; sinon
+    // finalizeBail (appelé plus haut dans le if doubleSigne) envoie déjà un
+    // email final avec PDF en PJ via bailFinalActifTemplate.
+    if (!doubleSigne && (role === "locataire" || role === "bailleur")) {
+      try {
+        const { bailSignePartialTemplate } = await import("@/lib/email/templates")
+        const base = process.env.NEXT_PUBLIC_URL || "https://keymatch-immo.fr"
+        const ctaUrl = role === "locataire"
+          ? `${base}/proprietaire/bail/${annonceId}` // bailleur → contre-signer
+          : `${base}/messages?annonce=${annonceId}` // locataire → signer
+        const destinataireRole = role === "locataire" ? "bailleur" : "locataire"
+        const tpl = bailSignePartialTemplate({
+          signataireRole: role,
+          signataireName: nom,
+          bienTitre: (annonce as { titre?: string | null }).titre || "Logement",
+          ville: (annonce as { ville?: string | null }).ville || null,
+          destinataireRole,
+          ctaUrl,
+        })
+        await sendEmail({
+          to: autre,
+          subject: tpl.subject,
+          html: tpl.html,
+          text: tpl.text,
+          tags: [{ name: "category", value: "bail_signe_partial" }, { name: "role", value: role }],
+          senderEmail: signataireEmail,
+        })
+      } catch (e) {
+        console.warn("[bail/signer] email bail_signe_partial failed:", e)
+      }
+    }
   }
 
   return NextResponse.json({ ok: true, signedAt: now })
