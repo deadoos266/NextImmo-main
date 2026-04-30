@@ -733,6 +733,13 @@ export default function Proprietaire() {
             {biens.length} {biens.length > 1 ? "annonces" : "annonce"}
           </span>
         </div>
+        {/* V52.8 — Hero refonte : on retire le sous-titre stats redondant
+            (les chiffres sont sous "Vue d'ensemble" + "À faire maintenant").
+            Le hero ne porte plus que l'identité (titre + nom) et les CTA.
+            Hiérarchie claire : Hero (qui+quoi) → Vue d'ensemble (état) →
+            À faire (action) → Onglets (gestion). User : "pas du tout
+            lisible y a du taff niveau design" — la sur-information du
+            sous-titre brouillait la lecture. */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "flex-end", marginBottom: 28, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 14 : 16, flexWrap: "wrap" }}>
           <div style={{ minWidth: 0 }}>
             <h1 style={{ fontSize: isMobile ? 36 : 56, fontWeight: 300, letterSpacing: isMobile ? "-1.2px" : "-1.6px", margin: 0, lineHeight: 1.05, color: km.ink, fontFamily: "'Fraunces', Georgia, serif", fontFeatureSettings: "'ss01'" }}>
@@ -749,11 +756,11 @@ export default function Proprietaire() {
                 </>
               )}
             </h1>
-            <p style={{ fontSize: 14, color: "#666", margin: "14px 0 0", lineHeight: 1.5, maxWidth: 520 }}>
-              {biens.length === 0
-                ? "Aucun bien en gestion pour le moment."
-                : `${biens.length} annonce${biens.length > 1 ? "s" : ""} · ${biensActifs} active${biensActifs > 1 ? "s" : ""}${loyersAttendus > 0 ? ` · ${loyersAttendus} loyer${loyersAttendus > 1 ? "s" : ""} à confirmer` : ""}`}
-            </p>
+            {biens.length === 0 && (
+              <p style={{ fontSize: 14, color: km.muted, margin: "14px 0 0", lineHeight: 1.55, maxWidth: 520 }}>
+                Aucun bien en gestion pour le moment. Publiez votre première annonce pour recevoir des candidatures qualifiées.
+              </p>
+            )}
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <Link href="/proprietaire/bail/importer" title="Importer un bail signé hors plateforme et inviter le locataire à le valider"
@@ -766,46 +773,75 @@ export default function Proprietaire() {
           </div>
         </div>
 
-        {/* ── Stat tiles dashboard cliquables (HAUTE #3 du flow plan) ──
-            Vue at-a-glance : combien d'actions sont en attente côté proprio.
-            Click = bascule sur l'onglet pertinent. */}
+        {/* V52.8 — Refonte design : la barre de stat tiles redondante avec
+            "À faire maintenant" a été retirée (les chiffres "Loyers à
+            confirmer" / "Visites en attente" étaient affichés 2× sur 2
+            sections). À la place, une barre "Vue d'ensemble" hairline
+            qui groupe les indicateurs structurels (pas urgents) :
+            biens dispos / loués / revenus mensuel encaissés.
+            User : "ya du taff niveau design" → simplification hiérarchie. */}
         {biens.length > 0 && (() => {
-          const nbCandidaturesActives = candidatures.filter((c: any) => {
-            const ann = biens.find(b => b.id === c.annonce_id)
-            return ann && ann.statut !== "loue_termine"
-          }).length
-          const nbVisitesAttente = visites.filter(v => v.statut === "proposée" && (v.propose_par || "").toLowerCase() !== (myEmail || "").toLowerCase()).length
-          const tiles = [
-            { label: "Biens disponibles", val: biensDispos, accent: km.successBg, color: km.successText, target: "Mes biens" as const },
-            { label: "Candidatures", val: nbCandidaturesActives, accent: km.beige, color: km.ink, target: "Mes biens" as const },
-            { label: "Visites en attente", val: nbVisitesAttente, accent: nbVisitesAttente > 0 ? "#FEF3E2" : km.beige, color: nbVisitesAttente > 0 ? "#A45A19" : km.muted, target: "Visites" as const },
-            { label: "Loyers à confirmer", val: loyersAttendus, accent: loyersAttendus > 0 ? km.warnBg : km.beige, color: loyersAttendus > 0 ? km.warnText : km.muted, target: "Locataires" as const },
+          // Revenus encaissés du mois courant (statut="confirmé" pour ce mois)
+          const now = new Date()
+          const ymCourant = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+          const revenusMois = loyers
+            .filter(l => l.mois === ymCourant && l.statut === "confirmé")
+            .reduce((s, l) => s + (Number(l.montant) || 0), 0)
+          // Loyer théorique mensuel de l'ensemble du parc loué (somme des prix+charges)
+          const loyerTheoriqueMois = biens
+            .filter(b => b.statut === "loué")
+            .reduce((s, b) => s + ((Number(b.prix) || 0) + (Number(b.charges) || 0)), 0)
+          const taux = loyerTheoriqueMois > 0
+            ? Math.round((revenusMois / loyerTheoriqueMois) * 100)
+            : null
+          const stats: Array<{ label: string; value: string; sub?: string; target?: Onglet }> = [
+            { label: "Biens disponibles", value: String(biensDispos), sub: biensDispos === 0 ? "Aucun en ligne" : undefined, target: "Mes biens" },
+            { label: "Biens loués", value: String(biensLoues), sub: biensLoues === 0 ? "Aucun encore" : undefined, target: "Locataires" },
+            {
+              label: "Encaissé ce mois",
+              value: revenusMois > 0 ? `${revenusMois.toLocaleString("fr-FR")} €` : "—",
+              sub: taux !== null && loyerTheoriqueMois > 0 ? `${taux}% du loyer théorique` : undefined,
+              target: "Stats & paiements",
+            },
+            {
+              label: "Total annonces",
+              value: String(biens.length),
+              sub: biens.length > 1 ? "actives + archivées" : undefined,
+            },
           ]
           return (
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? 10 : 14, marginBottom: 24 }}>
-              {tiles.map(t => (
+            <section style={{ background: km.white, border: `1px solid ${km.line}`, borderRadius: 18, padding: isMobile ? "14px 16px" : "16px 22px", marginBottom: 20, display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: isMobile ? 14 : 0 }}>
+              {stats.map((s, i) => (
                 <button
-                  key={t.label}
+                  key={s.label}
                   type="button"
-                  onClick={() => setOnglet(t.target)}
+                  onClick={() => { if (s.target) setOnglet(s.target) }}
+                  disabled={!s.target}
                   style={{
-                    background: t.accent,
-                    border: `1px solid ${km.line}`,
-                    borderRadius: 18,
-                    padding: isMobile ? "16px 18px" : "18px 22px",
+                    background: "transparent",
+                    border: "none",
+                    cursor: s.target ? "pointer" : "default",
+                    padding: 0,
                     textAlign: "left" as const,
-                    cursor: "pointer",
                     fontFamily: "inherit",
-                    transition: "transform 0.15s, box-shadow 0.15s",
+                    borderLeft: !isMobile && i > 0 ? `1px solid ${km.line}` : "none",
+                    paddingLeft: !isMobile && i > 0 ? 22 : 0,
                   }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.06)" }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "none" }}
                 >
-                  <div style={{ fontSize: isMobile ? 24 : 28, fontWeight: 700, color: t.color, letterSpacing: "-0.6px", lineHeight: 1, fontVariantNumeric: "tabular-nums" as const }}>{t.val}</div>
-                  <div style={{ fontSize: 10, color: km.muted, marginTop: 8, textTransform: "uppercase" as const, letterSpacing: "1.2px", fontWeight: 700 }}>{t.label}</div>
+                  <div style={{ fontSize: 10, color: km.muted, fontWeight: 700, letterSpacing: "1.4px", textTransform: "uppercase" as const, marginBottom: 6 }}>
+                    {s.label}
+                  </div>
+                  <div style={{ fontSize: isMobile ? 22 : 26, fontWeight: 700, color: km.ink, letterSpacing: "-0.4px", lineHeight: 1, fontVariantNumeric: "tabular-nums" as const }}>
+                    {s.value}
+                  </div>
+                  {s.sub && (
+                    <div style={{ fontSize: 11, color: km.muted, marginTop: 5, letterSpacing: "0.1px" }}>
+                      {s.sub}
+                    </div>
+                  )}
                 </button>
               ))}
-            </div>
+            </section>
           )
         })()}
 
@@ -875,12 +911,19 @@ export default function Proprietaire() {
                 ? { bg: km.successBg, line: km.successLine, color: km.successText }
                 : { bg: km.beige, line: km.line, color: km.ink }
           return (
-            <section style={{ background: km.white, border: `1px solid ${km.line}`, borderRadius: 20, padding: isMobile ? 18 : 24, marginBottom: 24 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
-                <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: isMobile ? 20 : 22, letterSpacing: "-0.3px", color: km.ink, margin: 0 }}>
-                  À faire maintenant
-                </h2>
-                <span style={{ fontSize: 11, fontWeight: 700, color: km.warnText, background: km.warnBg, border: "1px solid #EADFC6", padding: "4px 12px", borderRadius: 999, textTransform: "uppercase" as const, letterSpacing: "1.2px" }}>
+            <section style={{ background: km.white, border: `1px solid ${km.line}`, borderRadius: 20, padding: isMobile ? 18 : 24, marginBottom: 24, position: "relative", overflow: "hidden" }}>
+              {/* V52.8 — Accent rail gauche pour signaler la priorité hero */}
+              <div aria-hidden style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: 4, background: `linear-gradient(180deg, ${km.warnText} 0%, #b45309 100%)` }} />
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 16, paddingLeft: 8 }}>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: km.warnText, letterSpacing: "1.6px", textTransform: "uppercase" as const, marginBottom: 4 }}>
+                    Priorité du jour
+                  </div>
+                  <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: isMobile ? 22 : 26, letterSpacing: "-0.4px", color: km.ink, margin: 0, lineHeight: 1.2 }}>
+                    À faire maintenant
+                  </h2>
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: km.warnText, background: km.warnBg, border: "1px solid #EADFC6", padding: "4px 12px", borderRadius: 999, textTransform: "uppercase" as const, letterSpacing: "1.2px", whiteSpace: "nowrap" }}>
                   {totalActions} en attente
                 </span>
               </div>

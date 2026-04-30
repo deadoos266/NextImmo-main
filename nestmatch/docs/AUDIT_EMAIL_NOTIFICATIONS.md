@@ -1,6 +1,8 @@
-# Audit emails KeyMatch — V50.2
+# Audit emails KeyMatch — V50.2 + V52 update
 
-État au 2026-04-29. Liste exhaustive de TOUS les triggers emails du produit,
+État au 2026-04-30 (post-V52). 7 emails P0 shippés en V52
+(visite_proposee, visite_confirmee, visite_annulee, dossier_demande,
+dossier_partage, dossier_revoque, bail_signe_partial). Liste exhaustive de TOUS les triggers emails du produit,
 classés par flow. Pour chacun : trigger, template, garde-fous (auth, rate-limit,
 self-email guard V50.1), statut "shippé / TODO".
 
@@ -41,6 +43,9 @@ risque self-email.
 | Action | Template | Trigger | Statut | Garde-fous |
 |--------|----------|---------|--------|-----------|
 | Candidat orphelin (J+7 sans login) | `candidatOrphelinTemplate` | `GET /api/notifications/candidats-orphelins` (cron quotidien) | ✅ | cron auth ; idempotent |
+| Demande de dossier (proprio→locataire) | `dossierDemandeTemplate` (V52.4) | `POST /api/notifications/event { type: "dossier_demande" }` | ✅ | rate-limit ; respect notif_messages_email |
+| Dossier partagé (locataire→proprio) | `dossierPartageTemplate` (V52.5) | `POST /api/notifications/event { type: "dossier_partage" }` | ✅ | inclut score complétude + shareUrl direct |
+| Dossier révoqué (locataire→proprio) | `dossierRevoqueTemplate` (V52.6) | `DELETE /api/dossier/share/[id]` (server, parse label) | ✅ | best-effort ; skip si label non parseable |
 | Candidature reçue (proprio) | — | — | 🔴 missing | Aucun email proprio quand un candidat postule. Le proprio reçoit juste une notif cloche in-app et un message [CANDIDATURE]. **TODO** : email récap quotidien des nouvelles candidatures (anti-flood). |
 | Candidature validée (locataire) | — | — | 🟡 partial | Notif in-app via `[CANDIDATURE_VALIDEE]` mais pas d'email. Locataire doit ouvrir l'app pour le savoir. **TODO** : email "votre candidature est validée + prochaines étapes". |
 | Candidature refusée (locataire) | — | — | 🟡 partial | Notif in-app via `[CANDIDATURE_NON_RETENUE]` mais pas d'email. **TODO** : email courtois (RGPD ok à bref). |
@@ -50,10 +55,11 @@ risque self-email.
 
 | Action | Template | Trigger | Statut | Garde-fous |
 |--------|----------|---------|--------|-----------|
-| Demande de visite | — | — | 🟡 partial | Notif in-app via `[VISITE_DEMANDE]`, pas d'email. **TODO** : email "X propose une visite le ..." (avec lien direct vers conv). |
-| Visite confirmée | — | — | 🟡 partial | Notif in-app via `[VISITE_CONFIRMEE]`. **TODO HIGH** : email avec ICS calendar invite (pour ajouter au calendrier locataire ET proprio). |
-| Visite annulée | — | — | 🟡 partial | Notif in-app uniquement. **TODO** : email avec raison de l'annulation. |
+| Demande de visite | `visiteProposeeTemplate` (V52.1) | `POST /api/notifications/event { type: "visite_proposee" }` (client fire-and-forget après insert visite) | ✅ | rate-limit 30/h ; respect notif_messages_email ; 🛡 senderEmail |
+| Visite confirmée | `visiteConfirmeeTemplate` (V52.2) | `POST /api/notifications/event { type: "visite_confirmee" }` (client après choix slot) | ✅ | wording adapté au destinataireRole (loc/proprio) |
+| Visite annulée | `visiteAnnuleeTemplate` (V52.3) | `POST /api/notifications/event { type: "visite_annulee" }` (client après annulerVisite) | ✅ | raison incluse |
 | Rappel J-1 visite | — | — | 🔴 missing | Pas de cron de rappel. **TODO** : cron daily envoie email aux 2 parties pour les visites confirmées de J+1. |
+| ICS calendar attachment | — | — | 🔴 missing | Le template visite_confirmee est text-based. **TODO** : générer fichier .ics et l'attacher pour ajouter au calendrier en 1 clic. |
 
 ## 5. Bail flow
 
@@ -63,6 +69,7 @@ risque self-email.
 | Invitation bail externe (PDF importé) | `bailInvitationTemplate` | `POST /api/bail/importer` | ✅ | 🛡 senderEmail (V50.1) |
 | Relance locataire (bail à signer) | `bailRelanceLocataireTemplate` | `POST /api/bail/relance` (cron + manuel) | ✅ | 🛡 senderEmail (V50.1) ; throttle 7j ; J+3/J+7 windows |
 | Relance bailleur (locataire signé, attend proprio) | `bailRelanceProprioTemplate` | `POST /api/bail/relance-bailleur` | ✅ | 🛡 senderEmail (V50.1) |
+| Bail signé partial (1 partie sur 2) | `bailSignePartialTemplate` (V52.7) | `POST /api/bail/signer` (server, après insert signature, si !doubleSigne) | ✅ | wording adapté destinataireRole ; CTA route role-aware ; ignore pref_off (signal critique) |
 | Bail double-signé final | `bailFinalActifTemplate` | `lib/bail/finalize.ts` (post double-sig) | ✅ | PDF en pièce jointe ; envoyé aux 2 parties |
 | Bail signé + PDF dans conv (V50.10) | — | `lib/bail/finalize.ts` (insert message) | ✅ | Pas un email mais une carte in-app |
 | Refus invitation bail | — | — | 🟡 partial | Message in-app `[BAIL_REFUSE]`, pas d'email proprio. **TODO** : email "le locataire a refusé le bail (raison: ...)". |
@@ -125,33 +132,33 @@ Routes sans guard (intentionnel — pas de "sender" applicatif) :
 |-----------|-----------|------------|-----------|
 | Auth | 3 | 0 | 0 |
 | Messages | 1 | 0 | 0 |
-| Candidature | 1 | 4 | 1 |
-| Visite | 0 | 3 | 1 |
-| Bail | 5 | 1 | 0 |
+| Candidature | 4 | 4 | 1 |
+| Visite | 3 | 0 | 2 |
+| Bail | 6 | 1 | 0 |
 | EDL | 0 | 3 | 0 |
 | Loyer | 1 | 1 | 1 |
 | Préavis | 0 | 1 | 0 |
 | IRL | 0 | 0 | 1 |
 | Auto-paiement | 0 | 1 | 0 |
-| **TOTAL** | **11** | **14** | **4** |
+| **TOTAL** | **18** | **11** | **5** |
 
-29 actions identifiées. 38 % shippées avec template stylisé. La majorité des
-gaps sont des notifs in-app sans email (le user ne reçoit rien dans son
-inbox tant qu'il n'ouvre pas l'app).
+34 actions identifiées (29 V50.2 + 5 nouvelles V52). **53 % shippées**
+avec template stylisé (vs 38 % pré-V52).
 
-## 13. Priorités V51 (si refonte emails)
+## 13. Priorités restantes
 
 P0 (bloquant produit) :
-- Visite confirmée → ICS calendar invite (high impact, low effort)
+- ICS calendar attachment pour visite_confirmee (low effort, high impact)
 - EDL envoyé à signer (locataire risque de rater)
 - Loyer en retard cron J+5 (recouvrement)
 
 P1 (forte valeur) :
-- Candidature validée (locataire content, retient le proprio)
-- Candidature reçue (proprio sait qu'il a du nouveau)
-- Rappel J-1 visite
+- Candidature validée → email locataire
+- Candidature reçue → email proprio (récap quotidien anti-flood)
+- Rappel J-1 visite (cron)
 
 P2 (nice to have) :
 - Refus candidature (RGPD ok)
 - IRL trimestriel
 - Préavis template stylisé V34.1
+- EDL contesté → email proprio
