@@ -350,6 +350,20 @@ export default function ConsulterEdlPage() {
           href: `/edl/consulter/${edl.id}`,
           relatedId: String(edl.annonce_id || edl.id),
         })
+        // V53.10 — email proprio "EDL contesté" (fire-and-forget)
+        void fetch("/api/notifications/event", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "edl_conteste",
+            to: toEmail,
+            bienTitre: edl.bien_titre || edl.titre || "Logement",
+            ville: edl.ville || null,
+            edlType: edl.type === "sortie" ? "sortie" : "entree",
+            motif: commentaire.trim(),
+            consultUrl: `/edl/consulter/${edl.id}`,
+          }),
+        })
       }
       setEdl({ ...edl, statut: "conteste", commentaire_locataire: commentaire.trim() })
       setShowContest(false)

@@ -23,6 +23,8 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { sendEmail } from "@/lib/email/resend"
+import { preavisDonneTemplate } from "@/lib/email/templates"
+import { displayName } from "@/lib/privacy"
 import { calculerPreavis, LOCATAIRE_MOTIFS, PROPRIETAIRE_MOTIFS, type LocataireMotif, type ProprietaireMotif } from "@/lib/preavis"
 import { estZoneTendue } from "@/lib/bailDefaults"
 
@@ -146,34 +148,35 @@ export async function POST(req: NextRequest) {
       created_at: dateEnvoi.toISOString(),
     }])
 
-    // Email Resend (template inline simple, à rebrand V34.1+)
+    // V53.9 — Email Resend rebrandé V34.1 via preavisDonneTemplate.
     try {
-      const subject = qui === "locataire"
-        ? `Le locataire a donné congé pour ${annonce.titre || "votre logement"}`
-        : `Votre bailleur a donné congé pour ${annonce.titre || "votre logement"}`
-      const intro = qui === "locataire"
-        ? `Votre locataire ${locEmail} a donné congé pour <strong>${annonce.titre || "le logement"}</strong>.`
-        : `Votre bailleur ${propEmail} a donné congé pour <strong>${annonce.titre || "le logement"}</strong>.`
-      const html = `<div style="font-family:'DM Sans',Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;background:#F7F4EF;color:#111;">
-        <h1 style="font-size:22px;font-weight:800;margin:0 0 12px;">Préavis reçu</h1>
-        <p style="margin:0 0 14px;line-height:1.6;color:#4b5563;">${intro}</p>
-        <p style="margin:0 0 14px;line-height:1.6;color:#4b5563;">
-          <strong>Motif :</strong> ${motifEntry.label}
-          ${detail ? `<br/><strong>Précisions :</strong> ${detail.replace(/</g, "&lt;")}` : ""}
-        </p>
-        <p style="margin:0 0 18px;line-height:1.6;color:#4b5563;">
-          Préavis légal : <strong>${preavis.delaiMois} mois</strong>.<br/>
-          Fin de bail effective : <strong>${dateFinFr}</strong>.
-        </p>
-        <p style="margin:0 0 14px;font-size:12px;color:#9ca3af;line-height:1.5;">
-          ${preavis.bonus || ""}
-        </p>
-      </div>`
+      // Récupère nom expéditeur depuis profils pour humaniser l'email
+      const { data: senderProf } = await supabaseAdmin
+        .from("profils")
+        .select("prenom, nom")
+        .eq("email", userEmail)
+        .maybeSingle()
+      const fromName = [senderProf?.prenom, senderProf?.nom].filter(Boolean).join(" ").trim()
+        || displayName(userEmail, null)
+        || (qui === "locataire" ? "Le locataire" : "Le bailleur")
+      const base = process.env.NEXT_PUBLIC_URL || "https://keymatch-immo.fr"
+      const tpl = preavisDonneTemplate({
+        qui,
+        fromName,
+        bienTitre: annonce.titre || "Logement",
+        ville: (annonce as { ville?: string | null }).ville ?? null,
+        motifLabel: motifEntry.label,
+        detail: detail || null,
+        dateFinFr,
+        delaiMois: preavis.delaiMois,
+        bonus: preavis.bonus || null,
+        convUrl: `${base}/messages?with=${encodeURIComponent(autre)}&annonce=${annonceId}`,
+      })
       await sendEmail({
         to: autre,
-        subject,
-        html,
-        text: `${intro.replace(/<[^>]+>/g, "")}\n\nMotif : ${motifEntry.label}${detail ? `\nPrécisions : ${detail}` : ""}\nFin de bail : ${dateFinFr}\nPréavis : ${preavis.delaiMois} mois\n\n${preavis.bonus || ""}\n\n— L'équipe KeyMatch`,
+        subject: tpl.subject,
+        html: tpl.html,
+        text: tpl.text,
         tags: [{ name: "type", value: "preavis_donne" }, { name: "qui", value: qui }],
         senderEmail: userEmail, // V50.1
       })

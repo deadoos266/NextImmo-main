@@ -1316,7 +1316,7 @@ Indexer maintenant : ${params.ctaUrl}
  * V53.9 — Préavis donné (rebrand V34.1, remplace HTML inline de /api/bail/preavis).
  */
 export function preavisDonneTemplate(params: {
-  qui: "locataire" | "bailleur"
+  qui: "locataire" | "proprietaire" | "bailleur"
   fromName: string
   bienTitre: string
   ville: string | null
