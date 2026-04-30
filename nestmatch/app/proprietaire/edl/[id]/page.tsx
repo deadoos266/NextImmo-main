@@ -493,6 +493,19 @@ export default function EdlPage() {
         href: `/edl/consulter/${edlId}`,
         relatedId: String(bienId),
       })
+      // V53.2 — email locataire pour signer l'EDL (fire-and-forget)
+      void fetch("/api/notifications/event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "edl_a_signer",
+          to: toEmail,
+          bienTitre: bien.titre || "Logement",
+          ville: bien.ville || null,
+          edlType: type,
+          consultUrl: `/edl/consulter/${edlId}`,
+        }),
+      })
       setSent(true)
       setTimeout(() => setSent(false), 4000)
     } catch (err) {

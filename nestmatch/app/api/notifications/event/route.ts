@@ -30,6 +30,10 @@ import {
   dossierDemandeTemplate,
   dossierPartageTemplate,
   bailSignePartialTemplate,
+  edlASignerTemplate,
+  candidatureValideeTemplate,
+  candidatureRefuseeTemplate,
+  edlContesteTemplate,
 } from "@/lib/email/templates"
 
 type EventBody =
@@ -39,6 +43,10 @@ type EventBody =
   | { type: "dossier_demande"; to: string; bienTitre: string; ville?: string | null; convUrl?: string }
   | { type: "dossier_partage"; to: string; bienTitre: string; ville?: string | null; score?: number | null; shareUrl?: string | null; convUrl?: string }
   | { type: "bail_signe_partial"; to: string; bienTitre: string; ville?: string | null; signataireRole: "locataire" | "bailleur"; destinataireRole: "locataire" | "bailleur"; ctaUrl?: string }
+  | { type: "edl_a_signer"; to: string; bienTitre: string; ville?: string | null; edlType: "entree" | "sortie"; consultUrl: string }
+  | { type: "candidature_validee"; to: string; bienTitre: string; ville?: string | null; convUrl?: string }
+  | { type: "candidature_refusee"; to: string; bienTitre: string; ville?: string | null; raison?: string | null; recommandations?: Array<{ id: number | string; titre: string; ville: string | null; prix: number | null; href: string }>; searchUrl?: string }
+  | { type: "edl_conteste"; to: string; bienTitre: string; ville?: string | null; edlType: "entree" | "sortie"; motif?: string | null; consultUrl: string }
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -192,6 +200,60 @@ export async function POST(req: NextRequest) {
         ctaUrl,
       })
       subject = t.subject; html = t.html; text = t.text; tag = "bail_signe_partial"
+      break
+    }
+    case "edl_a_signer": {
+      const base2 = process.env.NEXT_PUBLIC_URL || "https://keymatch-immo.fr"
+      const consultUrl = p.consultUrl.startsWith("/") ? `${base2}${p.consultUrl}` : p.consultUrl
+      const t = edlASignerTemplate({
+        fromName,
+        bienTitre: p.bienTitre,
+        ville: p.ville ?? null,
+        edlType: p.edlType,
+        consultUrl,
+      })
+      subject = t.subject; html = t.html; text = t.text; tag = "edl_a_signer"
+      break
+    }
+    case "candidature_validee": {
+      const t = candidatureValideeTemplate({
+        proprioName: fromName,
+        bienTitre: p.bienTitre,
+        ville: p.ville ?? null,
+        convUrl,
+      })
+      subject = t.subject; html = t.html; text = t.text; tag = "candidature_validee"
+      break
+    }
+    case "candidature_refusee": {
+      const base3 = process.env.NEXT_PUBLIC_URL || "https://keymatch-immo.fr"
+      const searchUrl = (p.searchUrl && p.searchUrl.startsWith("/")) ? `${base3}${p.searchUrl}` : (p.searchUrl || `${base3}/annonces`)
+      const t = candidatureRefuseeTemplate({
+        proprioName: fromName,
+        bienTitre: p.bienTitre,
+        ville: p.ville ?? null,
+        raison: p.raison ?? null,
+        recommandations: (p.recommandations || []).map(r => ({
+          ...r,
+          href: r.href.startsWith("/") ? `${base3}${r.href}` : r.href,
+        })),
+        searchUrl,
+      })
+      subject = t.subject; html = t.html; text = t.text; tag = "candidature_refusee"
+      break
+    }
+    case "edl_conteste": {
+      const base4 = process.env.NEXT_PUBLIC_URL || "https://keymatch-immo.fr"
+      const consultUrl = p.consultUrl.startsWith("/") ? `${base4}${p.consultUrl}` : p.consultUrl
+      const t = edlContesteTemplate({
+        fromName,
+        bienTitre: p.bienTitre,
+        ville: p.ville ?? null,
+        edlType: p.edlType,
+        motif: p.motif ?? null,
+        consultUrl,
+      })
+      subject = t.subject; html = t.html; text = t.text; tag = "edl_conteste"
       break
     }
     default: {

@@ -933,6 +933,475 @@ Conversation : ${params.convUrl}
   return { subject, html, text }
 }
 
+// ─── V53 — EDL + Candidature + Loyers retard + IRL + Préavis ─────────────────
+
+/**
+ * V53.2 — État des lieux à signer (proprio→locataire).
+ */
+export function edlASignerTemplate(params: {
+  fromName: string
+  bienTitre: string
+  ville: string | null
+  edlType: "entree" | "sortie"
+  consultUrl: string
+}): { subject: string; html: string; text: string } {
+  const titreLabel = escapeBienTitre(params.bienTitre, params.ville)
+  const typeLabel = params.edlType === "entree" ? "d'entrée" : "de sortie"
+  const subject = `${params.fromName} a partagé l'état des lieux ${typeLabel} — ${params.bienTitre}`
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      État des lieux ${typeLabel} à valider
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      <strong style="color:${PALETTE.text};">${escapeHtml(params.fromName)}</strong> a préparé l'état des lieux ${typeLabel} pour
+      <strong style="color:${PALETTE.text};">${titreLabel}</strong>. Consultez le détail des pièces, les photos, et signez si tout est conforme.
+    </p>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Si une observation est nécessaire (état d'une pièce, équipement manquant…), vous pourrez ajouter un commentaire avant de signer.
+    </p>
+    ${button(params.consultUrl, `Consulter et signer →`)}
+    <p style="margin:18px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
+      Document légal — signature électronique conforme eIDAS Niveau 1.
+    </p>
+  `
+  const html = wrap(`${params.fromName} a partagé l'EDL ${typeLabel}.`, body, "edlasigner")
+  const text = `${params.fromName} a partagé l'état des lieux ${typeLabel} pour ${params.bienTitre}${params.ville ? ` à ${params.ville}` : ""}.
+
+Consultez et signez : ${params.consultUrl}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}
+
+/**
+ * V53.4 — Candidature validée (proprio→locataire).
+ */
+export function candidatureValideeTemplate(params: {
+  proprioName: string
+  bienTitre: string
+  ville: string | null
+  convUrl: string
+}): { subject: string; html: string; text: string } {
+  const titreLabel = escapeBienTitre(params.bienTitre, params.ville)
+  const subject = `Bonne nouvelle ! Votre candidature est validée — ${params.bienTitre}`
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      Votre candidature est validée
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      <strong style="color:${PALETTE.text};">${escapeHtml(params.proprioName)}</strong> a validé votre candidature pour
+      <strong style="color:${PALETTE.text};">${titreLabel}</strong>.
+    </p>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Vous pouvez maintenant proposer un créneau de visite directement depuis la conversation, ou attendre une proposition du propriétaire.
+    </p>
+    ${button(params.convUrl, "Voir la conversation →")}
+  `
+  const html = wrap(`Votre candidature pour ${titreLabel} est validée.`, body, "candvalidee")
+  const text = `Bonne nouvelle ! ${params.proprioName} a validé votre candidature pour ${params.bienTitre}${params.ville ? ` à ${params.ville}` : ""}.
+
+Vous pouvez proposer une visite ou attendre sa proposition.
+
+Conversation : ${params.convUrl}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}
+
+/**
+ * V53.7 — Candidature non retenue (proprio→locataire) avec recommandations.
+ */
+export function candidatureRefuseeTemplate(params: {
+  proprioName: string
+  bienTitre: string
+  ville: string | null
+  raison?: string | null
+  recommandations: Array<{ id: number | string; titre: string; ville: string | null; prix: number | null; href: string }>
+  searchUrl: string
+}): { subject: string; html: string; text: string } {
+  const titreLabel = escapeBienTitre(params.bienTitre, params.ville)
+  const subject = `${params.bienTitre} : votre candidature n'a pas été retenue`
+  const recoBlock = params.recommandations.length > 0
+    ? `<div style="margin:14px 0 4px;font-size:13px;font-weight:700;color:${PALETTE.text};letter-spacing:-0.1px;">D'autres logements qui pourraient vous intéresser</div>
+       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 14px;">
+         ${params.recommandations.slice(0, 5).map(r => `
+           <tr><td style="padding:8px 0;border-top:1px solid ${PALETTE.borderSoft};">
+             <a href="${r.href}" target="_blank" style="text-decoration:none;color:${PALETTE.text};">
+               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                 <tr>
+                   <td valign="middle" style="font-size:14px;font-weight:600;color:${PALETTE.text};">${escapeHtml(r.titre)}</td>
+                   <td valign="middle" align="right" style="font-size:13px;color:${PALETTE.textMuted};white-space:nowrap;padding-left:12px;">${typeof r.prix === "number" ? `${r.prix.toLocaleString("fr-FR")} €` : ""}</td>
+                 </tr>
+                 ${r.ville ? `<tr><td colspan="2" style="font-size:12px;color:${PALETTE.textSubtle};padding-top:2px;">${escapeHtml(r.ville)}</td></tr>` : ""}
+               </table>
+             </a>
+           </td></tr>
+         `).join("")}
+       </table>`
+    : ""
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      Candidature non retenue
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Désolé, <strong style="color:${PALETTE.text};">${escapeHtml(params.proprioName)}</strong> n'a pas retenu votre candidature pour
+      <strong style="color:${PALETTE.text};">${titreLabel}</strong>.
+    </p>
+    ${params.raison ? `<blockquote style="margin:14px 0;padding:12px 16px;background:${PALETTE.bg};border-left:3px solid ${PALETTE.border};border-radius:6px;color:${PALETTE.textMuted};font-style:italic;">${escapeHtml(params.raison)}</blockquote>` : ""}
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Cela ne veut pas dire que la prochaine ne marchera pas. Voici quelques annonces qui correspondent à vos critères :
+    </p>
+    ${recoBlock}
+    ${button(params.searchUrl, "Continuer ma recherche →")}
+  `
+  const html = wrap(`Candidature non retenue — voici 5 alternatives.`, body, "candrefus")
+  const text = `Désolé, ${params.proprioName} n'a pas retenu votre candidature pour ${params.bienTitre}${params.ville ? ` à ${params.ville}` : ""}.${params.raison ? `\n\nRaison : ${params.raison}` : ""}
+
+Continuer votre recherche : ${params.searchUrl}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}
+
+/**
+ * V53.5 — Digest quotidien des candidatures reçues (proprio).
+ */
+export function candidaturesDigestTemplate(params: {
+  proprioName: string
+  candidatures: Array<{ candidatName: string; bienTitre: string; ville: string | null; score: number | null; href: string }>
+  dashboardUrl: string
+}): { subject: string; html: string; text: string } {
+  const n = params.candidatures.length
+  const subject = n === 1
+    ? `1 nouvelle candidature reçue hier`
+    : `${n} nouvelles candidatures reçues hier`
+  const items = params.candidatures.slice(0, 10).map(c => `
+    <tr><td style="padding:10px 0;border-top:1px solid ${PALETTE.borderSoft};">
+      <a href="${c.href}" target="_blank" style="text-decoration:none;color:${PALETTE.text};">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+          <tr>
+            <td valign="middle" style="font-size:14px;font-weight:600;color:${PALETTE.text};">${escapeHtml(c.candidatName)}</td>
+            <td valign="middle" align="right" style="font-size:11px;color:${PALETTE.textSubtle};font-weight:700;letter-spacing:1px;text-transform:uppercase;padding-left:12px;">${typeof c.score === "number" ? `${c.score}% match` : ""}</td>
+          </tr>
+          <tr><td colspan="2" style="font-size:12px;color:${PALETTE.textMuted};padding-top:2px;">${escapeHtml(c.bienTitre)}${c.ville ? ` · ${escapeHtml(c.ville)}` : ""}</td></tr>
+        </table>
+      </a>
+    </td></tr>
+  `).join("")
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      ${n === 1 ? "Une nouvelle candidature" : `${n} nouvelles candidatures`}
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Voici le récapitulatif des candidatures reçues sur vos annonces dans les dernières 24 heures.
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 14px;">
+      ${items}
+    </table>
+    ${button(params.dashboardUrl, "Voir mon tableau de bord →")}
+    <p style="margin:18px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
+      Récap envoyé une fois par jour. Vous pouvez désactiver ces digests dans vos préférences.
+    </p>
+  `
+  const html = wrap(subject, body, "canddigest")
+  const text = `${subject}
+
+${params.candidatures.slice(0, 10).map(c => `- ${c.candidatName} — ${c.bienTitre}${c.ville ? ` · ${c.ville}` : ""}${typeof c.score === "number" ? ` (${c.score}%)` : ""}`).join("\n")}
+
+Tableau de bord : ${params.dashboardUrl}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}
+
+/**
+ * V53.3 — Loyer en retard (J+5) — locataire.
+ */
+export function loyerRetardLocataireTemplate(params: {
+  bienTitre: string
+  ville: string | null
+  mois: string  // "YYYY-MM"
+  montant: number
+  jours: number
+  ctaUrl: string
+  isFinal?: boolean // true = J+15
+}): { subject: string; html: string; text: string } {
+  const titreLabel = escapeBienTitre(params.bienTitre, params.ville)
+  const moisLabel = (() => {
+    const [y, m] = params.mois.split("-").map(Number)
+    if (!y || !m) return params.mois
+    return new Date(y, m - 1, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
+  })()
+  const subject = params.isFinal
+    ? `Action requise — votre loyer ${moisLabel} est en retard de ${params.jours} jours`
+    : `Rappel : votre loyer ${moisLabel} est en retard`
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      ${params.isFinal ? "Loyer en retard depuis " + params.jours + " jours" : "Rappel : votre loyer est en retard"}
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Le loyer de ${escapeHtml(moisLabel)} pour <strong style="color:${PALETTE.text};">${titreLabel}</strong>
+      (${params.montant.toLocaleString("fr-FR")} €) n'a pas encore été marqué comme payé.
+    </p>
+    ${params.isFinal ? `
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Si vous avez déjà réglé, contactez votre propriétaire pour qu'il confirme la réception. À défaut, une procédure de recouvrement peut être engagée.
+    </p>` : `
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Si vous avez déjà réglé, votre propriétaire confirmera bientôt la réception et vous recevrez votre quittance. Sinon, vous pouvez ouvrir une discussion directement.
+    </p>`}
+    ${button(params.ctaUrl, "Contacter mon propriétaire →")}
+  `
+  const html = wrap(subject, body, "loyerretardloc")
+  const text = `${subject}
+
+Loyer ${moisLabel} pour ${params.bienTitre}${params.ville ? ` à ${params.ville}` : ""} : ${params.montant.toLocaleString("fr-FR")} €
+
+Contacter le propriétaire : ${params.ctaUrl}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}
+
+/**
+ * V53.3 — Loyer en retard (J+5) — proprio.
+ */
+export function loyerRetardProprioTemplate(params: {
+  locataireName: string
+  bienTitre: string
+  ville: string | null
+  mois: string
+  montant: number
+  jours: number
+  ctaUrl: string
+  isFinal?: boolean
+}): { subject: string; html: string; text: string } {
+  const titreLabel = escapeBienTitre(params.bienTitre, params.ville)
+  const moisLabel = (() => {
+    const [y, m] = params.mois.split("-").map(Number)
+    if (!y || !m) return params.mois
+    return new Date(y, m - 1, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
+  })()
+  const subject = params.isFinal
+    ? `Action requise — loyer ${moisLabel} en retard de ${params.jours} jours (${params.bienTitre})`
+    : `Loyer ${moisLabel} en retard — ${params.bienTitre}`
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      ${params.isFinal ? "Loyer toujours impayé après " + params.jours + " jours" : "Loyer en retard"}
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      <strong style="color:${PALETTE.text};">${escapeHtml(params.locataireName)}</strong> n'a pas encore réglé le loyer de ${escapeHtml(moisLabel)} pour
+      <strong style="color:${PALETTE.text};">${titreLabel}</strong> (${params.montant.toLocaleString("fr-FR")} €).
+    </p>
+    ${params.isFinal ? `
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Si le retard se prolonge, vous pouvez engager une procédure : lettre de mise en demeure, puis commandement de payer par huissier.
+      Pensez à dialoguer d'abord — un retard ponctuel se règle souvent par un échange direct.
+    </p>` : `
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Si le paiement vient d'arriver, marquez-le comme reçu pour générer la quittance. Sinon, contactez le locataire pour faire le point.
+    </p>`}
+    ${button(params.ctaUrl, "Voir mes loyers →")}
+  `
+  const html = wrap(subject, body, "loyerretardprop")
+  const text = `${subject}
+
+${params.locataireName} — ${params.bienTitre}${params.ville ? ` à ${params.ville}` : ""}
+${moisLabel} : ${params.montant.toLocaleString("fr-FR")} € — retard ${params.jours} jours
+
+Voir mes loyers : ${params.ctaUrl}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}
+
+/**
+ * V53.6 — Rappel J-1 visite (les 2 parties).
+ */
+export function visiteRappelTemplate(params: {
+  bienTitre: string
+  ville: string | null
+  date: string
+  heure: string
+  format: "physique" | "visio"
+  destinataireRole: "locataire" | "proprietaire"
+  adresse?: string | null
+  convUrl: string
+}): { subject: string; html: string; text: string } {
+  const titreLabel = escapeBienTitre(params.bienTitre, params.ville)
+  const formatLabel = params.format === "visio" ? "en visio" : "physique"
+  const d = new Date(`${params.date}T${params.heure || "00:00"}`)
+  const dateLong = isNaN(d.getTime())
+    ? `${params.date} à ${params.heure}`
+    : d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }) + ` à ${params.heure}`
+  const subject = `Rappel : visite demain à ${params.heure} — ${params.bienTitre}`
+  const adresseBlock = params.adresse
+    ? `<p style="margin:6px 0 14px;color:${PALETTE.textMuted};">📍 ${escapeHtml(params.adresse)}</p>`
+    : ""
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      Rappel : visite demain
+    </h1>
+    <p style="margin:0 0 6px;color:${PALETTE.textMuted};line-height:1.65;">
+      <strong style="color:${PALETTE.text};">${titreLabel}</strong>
+    </p>
+    <p style="margin:0 0 6px;color:${PALETTE.text};font-size:17px;font-weight:600;">
+      ${escapeHtml(dateLong)}
+    </p>
+    <p style="margin:0 0 14px;color:${PALETTE.textSubtle};">${formatLabel}</p>
+    ${adresseBlock}
+    ${button(params.convUrl, "Voir la conversation →")}
+    <p style="margin:18px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
+      ${params.format === "physique" ? "Pensez à confirmer le rendez-vous si besoin." : "Le lien de visio est partagé dans la conversation."}
+      Si vous devez annuler, faites-le maintenant pour libérer le créneau.
+    </p>
+  `
+  const html = wrap(`Rappel : visite demain à ${params.heure}.`, body, "visiterappel")
+  const text = `Rappel : visite demain
+
+${params.bienTitre}${params.ville ? ` à ${params.ville}` : ""}
+${dateLong}
+${formatLabel}${params.adresse ? `\n${params.adresse}` : ""}
+
+Conversation : ${params.convUrl}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}
+
+/**
+ * V53.8 — Indexation IRL trimestrielle (proprio).
+ */
+export function irlIndexationProposalTemplate(params: {
+  bienTitre: string
+  ville: string | null
+  loyerActuelCC: number
+  trimestre: string  // ex. "T1 2026"
+  ctaUrl: string
+  delaiAnniv: number  // jours avant ou après l'anniv
+}): { subject: string; html: string; text: string } {
+  const titreLabel = escapeBienTitre(params.bienTitre, params.ville)
+  const subject = `Indice IRL ${params.trimestre} publié — révisez votre loyer`
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      Indice IRL ${escapeHtml(params.trimestre)} publié
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      L'INSEE vient de publier l'indice IRL du ${escapeHtml(params.trimestre)}. C'est l'indice de référence pour réviser votre loyer.
+      L'anniversaire de votre bail pour <strong style="color:${PALETTE.text};">${titreLabel}</strong> approche
+      ${params.delaiAnniv >= 0 ? `(dans ${params.delaiAnniv} jours)` : `(il y a ${Math.abs(params.delaiAnniv)} jours)`}.
+    </p>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Loyer actuel : <strong style="color:${PALETTE.text};">${params.loyerActuelCC.toLocaleString("fr-FR")} € CC</strong>.
+      Le calcul exact se fait automatiquement avec l'indice publié.
+    </p>
+    ${button(params.ctaUrl, "Indexer le loyer maintenant →")}
+    <p style="margin:18px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
+      Indexation conforme loi ALUR / loi du 6 juillet 1989. Vous pouvez aussi décider de ne pas réviser cette année — c'est votre choix.
+    </p>
+  `
+  const html = wrap(`Nouvel indice IRL ${params.trimestre} — révisez votre loyer.`, body, "irlindex")
+  const text = `Indice IRL ${params.trimestre} publié.
+
+${params.bienTitre}${params.ville ? ` à ${params.ville}` : ""}
+Loyer actuel : ${params.loyerActuelCC.toLocaleString("fr-FR")} € CC.
+
+Indexer maintenant : ${params.ctaUrl}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}
+
+/**
+ * V53.9 — Préavis donné (rebrand V34.1, remplace HTML inline de /api/bail/preavis).
+ */
+export function preavisDonneTemplate(params: {
+  qui: "locataire" | "bailleur"
+  fromName: string
+  bienTitre: string
+  ville: string | null
+  motifLabel: string
+  detail?: string | null
+  dateFinFr: string
+  delaiMois: number
+  bonus?: string | null
+  convUrl: string
+}): { subject: string; html: string; text: string } {
+  const titreLabel = escapeBienTitre(params.bienTitre, params.ville)
+  const intro = params.qui === "locataire"
+    ? `Votre locataire <strong style="color:${PALETTE.text};">${escapeHtml(params.fromName)}</strong> a donné congé pour <strong style="color:${PALETTE.text};">${titreLabel}</strong>.`
+    : `Votre bailleur <strong style="color:${PALETTE.text};">${escapeHtml(params.fromName)}</strong> a donné congé pour <strong style="color:${PALETTE.text};">${titreLabel}</strong>.`
+  const subject = params.qui === "locataire"
+    ? `Le locataire a donné congé — ${params.bienTitre}`
+    : `Votre bailleur a donné congé — ${params.bienTitre}`
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      Préavis reçu
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">${intro}</p>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      <strong style="color:${PALETTE.text};">Motif :</strong> ${escapeHtml(params.motifLabel)}
+      ${params.detail ? `<br/><strong style="color:${PALETTE.text};">Précisions :</strong> ${escapeHtml(params.detail)}` : ""}
+    </p>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Préavis légal : <strong style="color:${PALETTE.text};">${params.delaiMois} mois</strong>.<br/>
+      Fin de bail effective : <strong style="color:${PALETTE.text};">${escapeHtml(params.dateFinFr)}</strong>.
+    </p>
+    ${params.bonus ? `<p style="margin:0 0 14px;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">${escapeHtml(params.bonus)}</p>` : ""}
+    ${button(params.convUrl, "Ouvrir la conversation →")}
+  `
+  const html = wrap(`Préavis : fin de bail prévue le ${params.dateFinFr}.`, body, "preavis")
+  const text = `Préavis reçu
+
+${intro.replace(/<[^>]+>/g, "")}
+
+Motif : ${params.motifLabel}${params.detail ? `\nPrécisions : ${params.detail}` : ""}
+Préavis : ${params.delaiMois} mois
+Fin de bail : ${params.dateFinFr}${params.bonus ? `\n\n${params.bonus}` : ""}
+
+Conversation : ${params.convUrl}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}
+
+/**
+ * V53.10 — EDL contesté (locataire→proprio).
+ */
+export function edlContesteTemplate(params: {
+  fromName: string
+  bienTitre: string
+  ville: string | null
+  edlType: "entree" | "sortie"
+  motif?: string | null
+  consultUrl: string
+}): { subject: string; html: string; text: string } {
+  const titreLabel = escapeBienTitre(params.bienTitre, params.ville)
+  const typeLabel = params.edlType === "entree" ? "d'entrée" : "de sortie"
+  const subject = `${params.fromName} a contesté l'état des lieux ${typeLabel} — ${params.bienTitre}`
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      EDL ${typeLabel} contesté
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      <strong style="color:${PALETTE.text};">${escapeHtml(params.fromName)}</strong> a contesté l'état des lieux ${typeLabel} pour
+      <strong style="color:${PALETTE.text};">${titreLabel}</strong>.
+    </p>
+    ${params.motif ? `<blockquote style="margin:14px 0;padding:12px 16px;background:${PALETTE.bg};border-left:3px solid ${PALETTE.accentMid};border-radius:6px;color:${PALETTE.textMuted};font-style:italic;">${escapeHtml(params.motif)}</blockquote>` : ""}
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Consultez les observations détaillées et ajustez l'EDL si besoin avant la signature finale.
+    </p>
+    ${button(params.consultUrl, "Voir la contestation →")}
+  `
+  const html = wrap(`${params.fromName} a contesté l'EDL ${typeLabel}.`, body, "edlconteste")
+  const text = `${params.fromName} a contesté l'état des lieux ${typeLabel} pour ${params.bienTitre}${params.ville ? ` à ${params.ville}` : ""}.${params.motif ? `\n\nMotif : ${params.motif}` : ""}
+
+Consulter : ${params.consultUrl}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}
+
 /**
  * V52.7 — Bail signé par 1 partie (notif l'autre partie).
  * Avant V52, cet event ne déclenchait qu'une notif in-app — l'autre partie
