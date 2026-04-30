@@ -1,6 +1,5 @@
 "use client"
 import { useState, useEffect } from "react"
-import { supabase } from "../../lib/supabase"
 
 // IMPORTANT : ne PAS évaluer `typeof window` au module-level. Ça crée une
 // constante différente entre SSR (fallback URL) et CSR (vraie origin), ce qui
@@ -24,8 +23,14 @@ export default function LocataireEmailField({
     if (!value || !value.includes("@")) { setStatut("idle"); return }
     const timer = setTimeout(async () => {
       setStatut("checking")
-      const { count } = await supabase.from("users").select("id", { count: "exact", head: true }).eq("email", value.toLowerCase().trim())
-      setStatut((count ?? 0) > 0 ? "found" : "not_found")
+      // V55.1 — server-side via /api/users/check-email (anti-scraping)
+      try {
+        const res = await fetch(`/api/users/check-email?email=${encodeURIComponent(value.toLowerCase().trim())}`)
+        const json = await res.json().catch(() => ({}))
+        setStatut(json?.ok && json.exists ? "found" : "not_found")
+      } catch {
+        setStatut("not_found")
+      }
     }, 600)
     return () => clearTimeout(timer)
   }, [value])

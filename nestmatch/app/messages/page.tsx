@@ -1861,9 +1861,13 @@ function MessagesInner() {
       // + avatar/tel deja en piggyback depuis 2026-04-23.
       const MATCH_COLS = "email, photo_url_custom, telephone, ville_souhaitee, mode_localisation, budget_max, surface_min, pieces_min, chambres_min, rez_de_chaussee_ok, animaux, meuble, parking, balcon, terrasse, jardin, cave, fibre, ascenseur, dpe_min"
       const MATCH_COLS_ARR = MATCH_COLS.split(",").map(s => s.trim())
-      // V29.B — profils via /api/profil/by-emails + /api/profil/me (RLS Phase 5)
-      const [usersRes, profilsResJ, myProfileResJ] = await Promise.all([
-        supabase.from("users").select("email, image").in("email", peerEmails),
+      // V29.B + V55.1 — profils via /api/profil/by-emails + /api/profil/me + avatars OAuth
+      // via /api/users/avatars (RLS Phase 5 final)
+      const [avatarsResJ, profilsResJ, myProfileResJ] = await Promise.all([
+        fetch("/api/users/avatars", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ emails: peerEmails }),
+        }).then(r => r.ok ? r.json() : { ok: false, avatars: {} }).catch(() => ({ ok: false, avatars: {} })),
         fetch("/api/profil/by-emails", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ emails: peerEmails, cols: MATCH_COLS_ARR }),
@@ -1881,11 +1885,10 @@ function MessagesInner() {
       const map: Record<string, string> = {}
       const phoneMap: Record<string, string> = {}
       const profileMap: Record<string, MatchingProfil> = {}
-      // Fallback : Google / provider image
-      for (const u of usersRes.data || []) {
-        const e = (u as { email?: string | null }).email?.toLowerCase()
-        const img = (u as { image?: string | null }).image
-        if (e && img) map[e] = img
+      // Fallback : Google / provider image (V55.1 via /api/users/avatars)
+      const avatarsByEmail = (avatarsResJ?.avatars || {}) as Record<string, string>
+      for (const [e, img] of Object.entries(avatarsByEmail)) {
+        if (img) map[e.toLowerCase()] = img
       }
       // Priorité : avatar custom uploadé par l'user (si colonne présente)
       if (!profilsRes.error) {
