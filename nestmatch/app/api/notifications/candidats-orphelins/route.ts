@@ -89,14 +89,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, sent: 0 })
   }
 
-  // Récupère les prefs email de tous les candidats en un seul query.
+  // V54.2 — Récupère les prefs notif_preferences[candidat_orphelin] avec
+  // fallback notif_candidatures_email (legacy) puis true.
   const { data: profs } = await supabaseAdmin
     .from("profils")
-    .select("email, notif_candidatures_email")
+    .select("email, notif_candidatures_email, notif_preferences")
     .in("email", uniqueEmails)
   const optedIn = new Set(
     (profs || [])
-      .filter((p: { notif_candidatures_email?: boolean | null }) => p.notif_candidatures_email !== false)
+      .filter((p: { notif_candidatures_email?: boolean | null; notif_preferences?: Record<string, unknown> | null }) => {
+        // 1. notif_preferences[candidat_orphelin] si défini
+        const prefs = p.notif_preferences
+        if (prefs && typeof prefs === "object" && "candidat_orphelin" in prefs) {
+          return prefs.candidat_orphelin !== false
+        }
+        // 2. legacy column
+        return p.notif_candidatures_email !== false
+      })
       .map((p: { email: string }) => p.email.toLowerCase()),
   )
   // Les users sans row profils (nouveau signup sans prefs) → default true.

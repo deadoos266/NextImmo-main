@@ -32,6 +32,7 @@ import { finalizeBail } from "@/lib/bail/finalize"
 import { sendEmail } from "@/lib/email/resend"
 import { hashBailData, canonicalPayloadString } from "@/lib/bailHash"
 import type { BailData } from "@/lib/bailPDF"
+import { shouldSendEmailForEvent } from "@/lib/notifPreferences"
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -408,7 +409,11 @@ export async function POST(req: NextRequest) {
     // uniquement si la double signature N'EST PAS encore atteinte ; sinon
     // finalizeBail (appelé plus haut dans le if doubleSigne) envoie déjà un
     // email final avec PDF en PJ via bailFinalActifTemplate.
-    if (!doubleSigne && (role === "locataire" || role === "bailleur")) {
+    // V54.2 — bail_signe_partial est `required: true` dans NOTIF_EVENTS
+    // (signal légal), shouldSendEmailForEvent retournera toujours true,
+    // mais on garde le check pour cohérence et future extensibilité.
+    if (!doubleSigne && (role === "locataire" || role === "bailleur")
+        && (await shouldSendEmailForEvent(autre, "bail_signe_partial"))) {
       try {
         const { bailSignePartialTemplate } = await import("@/lib/email/templates")
         const base = process.env.NEXT_PUBLIC_URL || "https://keymatch-immo.fr"

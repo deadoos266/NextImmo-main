@@ -21,6 +21,7 @@ import { supabaseAdmin } from "../../../../lib/supabase-server"
 import { generateQuittancePDFBuffer, buildQuittancePath } from "../../../../lib/quittancePDFServer"
 import { sendEmail } from "../../../../lib/email/resend"
 import { quittanceTemplate } from "../../../../lib/email/templates"
+import { shouldSendEmailForEvent } from "../../../../lib/notifPreferences"
 
 export const runtime = "nodejs"
 
@@ -176,14 +177,18 @@ export async function POST(req: Request) {
     loyerCC: loyerHC + chargesMontant,
     pdfUrl: publicUrl,
   })
-  const emailRes = await sendEmail({
-    to: loyer.locataire_email,
-    subject,
-    html,
-    text,
-    tags: [{ name: "type", value: "quittance" }],
-    senderEmail: userEmail, // V50.1
-  })
+  // V54.2 — respect notif_preferences (loyer_paye = quittance)
+  const allowed = await shouldSendEmailForEvent(loyer.locataire_email, "loyer_paye")
+  const emailRes = allowed
+    ? await sendEmail({
+        to: loyer.locataire_email,
+        subject,
+        html,
+        text,
+        tags: [{ name: "type", value: "quittance" }],
+        senderEmail: userEmail, // V50.1
+      })
+    : { ok: false as const, error: "Pref off", skipped: true }
   // Best-effort : la quittance est uploadée, le mail rate parfois (Resend pas
   // configuré, domaine pas vérifié, ...) — on log mais on ne fail pas la
   // requête. Le locataire peut toujours la consulter sur /mes-quittances.

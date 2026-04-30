@@ -23,6 +23,7 @@ import { PREFIXES } from "../../../../lib/messagePrefixes"
 import { sendEmail } from "../../../../lib/email/resend"
 import { candidatureValideeTemplate } from "../../../../lib/email/templates"
 import { displayName } from "../../../../lib/privacy"
+import { shouldSendEmailForEvent } from "../../../../lib/notifPreferences"
 
 export const runtime = "nodejs"
 
@@ -130,9 +131,14 @@ export async function POST(req: Request) {
 
   // 4. V53.4 — email locataire "candidature validée"
   try {
+    // V54.2 — respect notif_preferences (candidature_validee)
+    const allowed = await shouldSendEmailForEvent(locataireEmail, "candidature_validee")
+    if (!allowed) {
+      return NextResponse.json({ ok: true, validatedAt: nowIso, emailSkipped: "pref_off" })
+    }
     const { data: prof } = await supabaseAdmin
       .from("profils")
-      .select("nom, prenom, notif_messages_email")
+      .select("nom, prenom")
       .eq("email", proprietaireEmail)
       .maybeSingle()
     const proprioName = [prof?.prenom, prof?.nom].filter(Boolean).join(" ").trim()

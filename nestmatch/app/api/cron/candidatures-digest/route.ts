@@ -22,6 +22,7 @@ import { supabaseAdmin } from "@/lib/supabase-server"
 import { sendEmail } from "@/lib/email/resend"
 import { candidaturesDigestTemplate } from "@/lib/email/templates"
 import { calculerScore, type Profil as MatchingProfil, type Annonce as MatchingAnnonce } from "@/lib/matching"
+import { shouldSendEmailForEvent } from "@/lib/notifPreferences"
 
 interface CandidatureMsg {
   id: number
@@ -81,13 +82,14 @@ export async function GET(req: NextRequest) {
 
   for (const [proprioEmail, list] of byProprio) {
     stats.proprios++
-    // Respect pref email
+    // V54.2 — respect notif_preferences (candidatures_digest)
+    const allowed = await shouldSendEmailForEvent(proprioEmail, "candidatures_digest")
+    if (!allowed) continue
     const { data: prof } = await supabaseAdmin
       .from("profils")
-      .select("notif_messages_email, prenom, nom")
+      .select("prenom, nom")
       .eq("email", proprioEmail)
       .maybeSingle()
-    if (prof && prof.notif_messages_email === false) continue
 
     // Construit la liste des candidatures avec score matching et profil candidat
     const items: Array<{ candidatName: string; bienTitre: string; ville: string | null; score: number | null; href: string }> = []

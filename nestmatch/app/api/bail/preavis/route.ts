@@ -25,6 +25,7 @@ import { supabaseAdmin } from "@/lib/supabase-server"
 import { sendEmail } from "@/lib/email/resend"
 import { preavisDonneTemplate } from "@/lib/email/templates"
 import { displayName } from "@/lib/privacy"
+import { shouldSendEmailForEvent } from "@/lib/notifPreferences"
 import { calculerPreavis, LOCATAIRE_MOTIFS, PROPRIETAIRE_MOTIFS, type LocataireMotif, type ProprietaireMotif } from "@/lib/preavis"
 import { estZoneTendue } from "@/lib/bailDefaults"
 
@@ -149,7 +150,21 @@ export async function POST(req: NextRequest) {
     }])
 
     // V53.9 — Email Resend rebrandé V34.1 via preavisDonneTemplate.
+    // V54.2 — preavis_donne est `required: true` (signal légal), donc
+    // shouldSendEmailForEvent retournera toujours true. On l'appelle pour
+    // cohérence et future extensibilité.
     try {
+      const allowed = await shouldSendEmailForEvent(autre, "preavis_donne")
+      if (!allowed) {
+        return NextResponse.json({
+          ok: true,
+          qui,
+          delaiMois: preavis.delaiMois,
+          dateFin: preavis.dateFinEffective.toISOString().slice(0, 10),
+          bonus: preavis.bonus,
+          emailSkipped: "pref_off",
+        })
+      }
       // Récupère nom expéditeur depuis profils pour humaniser l'email
       const { data: senderProf } = await supabaseAdmin
         .from("profils")

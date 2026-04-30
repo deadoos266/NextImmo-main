@@ -21,6 +21,7 @@ import { PREFIXES } from "../../../../lib/messagePrefixes"
 import { sendEmail } from "../../../../lib/email/resend"
 import { candidatureRefuseeTemplate } from "../../../../lib/email/templates"
 import { displayName } from "../../../../lib/privacy"
+import { shouldSendEmailForEvent } from "../../../../lib/notifPreferences"
 
 export const runtime = "nodejs"
 
@@ -126,6 +127,11 @@ export async function POST(req: Request) {
 
   // V53.7 — email locataire avec recommandations (5 annonces similaires)
   try {
+    // V54.2 — respect notif_preferences (candidature_refusee)
+    const allowed = await shouldSendEmailForEvent(locataireEmail, "candidature_refusee")
+    if (!allowed) {
+      return NextResponse.json({ ok: true, refusedAt: nowIso, emailSkipped: "pref_off" })
+    }
     const ann2 = annonce as { id: number; titre: string | null; ville?: string | null; prix?: number | null; surface?: number | null; pieces?: number | null }
     // Cherche 5 annonces similaires (ville + bracket prix ±20%)
     const prixMin = ann2.prix ? Math.round(ann2.prix * 0.8) : null

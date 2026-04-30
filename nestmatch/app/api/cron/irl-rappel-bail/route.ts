@@ -24,6 +24,7 @@ import { supabaseAdmin } from "@/lib/supabase-server"
 import { sendEmail } from "@/lib/email/resend"
 import { irlIndexationProposalTemplate } from "@/lib/email/templates"
 import { IRL_HISTORIQUE } from "@/lib/irl"
+import { shouldSendEmailForEvent } from "@/lib/notifPreferences"
 
 interface BailRow {
   id: number
@@ -93,6 +94,10 @@ export async function GET(req: NextRequest) {
     if (loyerCC === 0) { stats.skipped++; continue }
 
     try {
+      const propEmailLc = b.proprietaire_email.toLowerCase()
+      // V54.2 — respect notif_preferences (irl_proposition)
+      const allowed = await shouldSendEmailForEvent(propEmailLc, "irl_proposition")
+      if (!allowed) { stats.skipped++; continue }
       const tpl = irlIndexationProposalTemplate({
         bienTitre: b.titre || "Logement",
         ville: b.ville,
@@ -102,7 +107,7 @@ export async function GET(req: NextRequest) {
         delaiAnniv: delaiJours,
       })
       const result = await sendEmail({
-        to: b.proprietaire_email.toLowerCase(),
+        to: propEmailLc,
         subject: tpl.subject,
         html: tpl.html,
         text: tpl.text,

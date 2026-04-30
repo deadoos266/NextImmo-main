@@ -23,6 +23,7 @@ import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { sendEmail } from "@/lib/email/resend"
 import { bailRelanceProprioTemplate } from "@/lib/email/templates"
+import { shouldSendEmailForEvent } from "@/lib/notifPreferences"
 
 const MIN_RELANCE_INTERVAL_MS = 24 * 60 * 60 * 1000
 
@@ -108,17 +109,21 @@ export async function POST(req: NextRequest) {
     ctaUrl,
   })
 
-  const sendRes = await sendEmail({
-    to: propEmail,
-    subject: tpl.subject,
-    html: tpl.html,
-    text: tpl.text,
-    tags: [
-      { name: "type", value: "bail_relance_locataire" },
-      { name: "contexte", value: contexte },
-    ],
-    senderEmail: locEmail, // V50.1
-  })
+  // V54.2 — respect notif_preferences (bail_relance)
+  const allowed = await shouldSendEmailForEvent(propEmail, "bail_relance")
+  const sendRes = allowed
+    ? await sendEmail({
+        to: propEmail,
+        subject: tpl.subject,
+        html: tpl.html,
+        text: tpl.text,
+        tags: [
+          { name: "type", value: "bail_relance_locataire" },
+          { name: "contexte", value: contexte },
+        ],
+        senderEmail: locEmail, // V50.1
+      })
+    : { ok: false as const, error: "Pref off", skipped: true }
 
   const nowIso = new Date().toISOString()
   await supabaseAdmin.from("annonces").update({ bail_relance_locataire_at: nowIso }).eq("id", annonceId)

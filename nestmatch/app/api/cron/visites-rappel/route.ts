@@ -18,6 +18,7 @@ import { supabaseAdmin } from "@/lib/supabase-server"
 import { sendEmail } from "@/lib/email/resend"
 import { visiteRappelTemplate } from "@/lib/email/templates"
 import { generateIcs } from "@/lib/icsGenerator"
+import { shouldSendEmailForEvent } from "@/lib/notifPreferences"
 
 interface VisiteRow {
   id: string
@@ -114,44 +115,53 @@ export async function GET(req: NextRequest) {
     }
 
     try {
+      // V54.2 — respect notif_preferences (visite_rappel_j1)
+      const [allowedLoc, allowedProp] = await Promise.all([
+        shouldSendEmailForEvent(locEmail, "visite_rappel_j1"),
+        shouldSendEmailForEvent(propEmail, "visite_rappel_j1"),
+      ])
       // Email locataire
-      const tplLoc = visiteRappelTemplate({
-        bienTitre: titre,
-        ville,
-        date: v.date_visite,
-        heure: v.heure,
-        format,
-        destinataireRole: "locataire",
-        adresse,
-        convUrl: `${base}/messages?with=${encodeURIComponent(propEmail)}${v.annonce_id ? `&annonce=${v.annonce_id}` : ""}`,
-      })
-      await sendEmail({
-        to: locEmail,
-        subject: tplLoc.subject,
-        html: tplLoc.html,
-        text: tplLoc.text,
-        tags: [{ name: "category", value: "visite_rappel_j1" }, { name: "role", value: "locataire" }],
-        attachments: icsAttachment ? [icsAttachment] : undefined,
-      })
+      if (allowedLoc) {
+        const tplLoc = visiteRappelTemplate({
+          bienTitre: titre,
+          ville,
+          date: v.date_visite,
+          heure: v.heure,
+          format,
+          destinataireRole: "locataire",
+          adresse,
+          convUrl: `${base}/messages?with=${encodeURIComponent(propEmail)}${v.annonce_id ? `&annonce=${v.annonce_id}` : ""}`,
+        })
+        await sendEmail({
+          to: locEmail,
+          subject: tplLoc.subject,
+          html: tplLoc.html,
+          text: tplLoc.text,
+          tags: [{ name: "category", value: "visite_rappel_j1" }, { name: "role", value: "locataire" }],
+          attachments: icsAttachment ? [icsAttachment] : undefined,
+        })
+      }
       // Email proprio
-      const tplProp = visiteRappelTemplate({
-        bienTitre: titre,
-        ville,
-        date: v.date_visite,
-        heure: v.heure,
-        format,
-        destinataireRole: "proprietaire",
-        adresse,
-        convUrl: `${base}/messages?with=${encodeURIComponent(locEmail)}${v.annonce_id ? `&annonce=${v.annonce_id}` : ""}`,
-      })
-      await sendEmail({
-        to: propEmail,
-        subject: tplProp.subject,
-        html: tplProp.html,
-        text: tplProp.text,
-        tags: [{ name: "category", value: "visite_rappel_j1" }, { name: "role", value: "proprio" }],
-        attachments: icsAttachment ? [icsAttachment] : undefined,
-      })
+      if (allowedProp) {
+        const tplProp = visiteRappelTemplate({
+          bienTitre: titre,
+          ville,
+          date: v.date_visite,
+          heure: v.heure,
+          format,
+          destinataireRole: "proprietaire",
+          adresse,
+          convUrl: `${base}/messages?with=${encodeURIComponent(locEmail)}${v.annonce_id ? `&annonce=${v.annonce_id}` : ""}`,
+        })
+        await sendEmail({
+          to: propEmail,
+          subject: tplProp.subject,
+          html: tplProp.html,
+          text: tplProp.text,
+          tags: [{ name: "category", value: "visite_rappel_j1" }, { name: "role", value: "proprio" }],
+          attachments: icsAttachment ? [icsAttachment] : undefined,
+        })
+      }
       stats.envoyes++
     } catch (e) {
       console.warn("[cron/visites-rappel] send error for visite", v.id, e)

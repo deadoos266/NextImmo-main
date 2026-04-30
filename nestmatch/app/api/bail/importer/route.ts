@@ -23,6 +23,7 @@ import { authOptions } from "../../../../lib/auth"
 import { supabaseAdmin } from "../../../../lib/supabase-server"
 import { sendEmail } from "../../../../lib/email/resend"
 import { bailInvitationTemplate } from "../../../../lib/email/templates"
+import { shouldSendEmailForEvent } from "../../../../lib/notifPreferences"
 import { checkRateLimitAsync, getClientIp } from "../../../../lib/rateLimit"
 
 export const runtime = "nodejs"
@@ -229,14 +230,18 @@ export async function POST(req: NextRequest) {
     messageProprio: messageProprio || null,
   })
 
-  const emailRes = await sendEmail({
-    to: locataireEmail,
-    subject,
-    html,
-    text,
-    tags: [{ name: "type", value: "bail_invitation" }],
-    senderEmail: proprioEmail, // V50.1
-  })
+  // V54.2 — respect notif_preferences (bail_envoye)
+  const allowed = await shouldSendEmailForEvent(locataireEmail, "bail_envoye")
+  const emailRes = allowed
+    ? await sendEmail({
+        to: locataireEmail,
+        subject,
+        html,
+        text,
+        tags: [{ name: "type", value: "bail_invitation" }],
+        senderEmail: proprioEmail, // V50.1
+      })
+    : { ok: false as const, error: "Pref off", skipped: true }
 
   return NextResponse.json({
     ok: true,

@@ -19,6 +19,7 @@ import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
 import { sendEmail } from "@/lib/email/resend"
 import { newMessageTemplate } from "@/lib/email/templates"
 import { displayName } from "@/lib/privacy"
+import { shouldSendEmailForEvent } from "@/lib/notifPreferences"
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -54,13 +55,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Trop d'envois" }, { status: 429 })
   }
 
-  // Respect des préférences email de l'user destinataire.
-  const { data: prof } = await supabaseAdmin
-    .from("profils")
-    .select("nom, notif_messages_email")
-    .eq("email", to)
-    .maybeSingle()
-  if (prof && prof.notif_messages_email === false) {
+  // V54.2 — respect notif_preferences[message_recu] (avec fallback legacy
+  // notif_messages_email via shouldSendEmailForEvent).
+  const allowed = await shouldSendEmailForEvent(to, "message_recu")
+  if (!allowed) {
     return NextResponse.json({ ok: true, skipped: "pref_off" })
   }
 

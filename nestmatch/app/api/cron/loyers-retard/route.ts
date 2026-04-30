@@ -24,6 +24,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { sendEmail } from "@/lib/email/resend"
 import { loyerRetardLocataireTemplate, loyerRetardProprioTemplate } from "@/lib/email/templates"
+import { shouldSendEmailForEvent } from "@/lib/notifPreferences"
 
 interface LoyerRow {
   id: number
@@ -116,49 +117,60 @@ export async function GET(req: NextRequest) {
     const locataireName = [locProf?.prenom, locProf?.nom].filter(Boolean).join(" ").trim() || locEmail
 
     try {
+      const eventKey = isFinal ? "loyer_retard_j15" : "loyer_retard_j5"
+      // V54.2 — respect notif_preferences (mais loyer_retard_j15 est `required`,
+      // shouldSendEmailForEvent retournera toujours true côté légal).
+      const [allowedLoc, allowedProp] = await Promise.all([
+        shouldSendEmailForEvent(locEmail, eventKey),
+        shouldSendEmailForEvent(propEmail, eventKey),
+      ])
       // Email locataire
-      const tplLoc = loyerRetardLocataireTemplate({
-        bienTitre: ann.titre || "Logement",
-        ville: ann.ville,
-        mois: l.mois,
-        montant,
-        jours: joursRetard,
-        ctaUrl: `${base}/messages?with=${encodeURIComponent(propEmail)}&annonce=${ann.id}`,
-        isFinal,
-      })
-      await sendEmail({
-        to: locEmail,
-        subject: tplLoc.subject,
-        html: tplLoc.html,
-        text: tplLoc.text,
-        tags: [
-          { name: "category", value: "loyer_retard" },
-          { name: "role", value: "locataire" },
-          { name: "phase", value: isFinal ? "j15" : "j5" },
-        ],
-      })
+      if (allowedLoc) {
+        const tplLoc = loyerRetardLocataireTemplate({
+          bienTitre: ann.titre || "Logement",
+          ville: ann.ville,
+          mois: l.mois,
+          montant,
+          jours: joursRetard,
+          ctaUrl: `${base}/messages?with=${encodeURIComponent(propEmail)}&annonce=${ann.id}`,
+          isFinal,
+        })
+        await sendEmail({
+          to: locEmail,
+          subject: tplLoc.subject,
+          html: tplLoc.html,
+          text: tplLoc.text,
+          tags: [
+            { name: "category", value: "loyer_retard" },
+            { name: "role", value: "locataire" },
+            { name: "phase", value: isFinal ? "j15" : "j5" },
+          ],
+        })
+      }
       // Email proprio
-      const tplProp = loyerRetardProprioTemplate({
-        locataireName,
-        bienTitre: ann.titre || "Logement",
-        ville: ann.ville,
-        mois: l.mois,
-        montant,
-        jours: joursRetard,
-        ctaUrl: `${base}/proprietaire/stats?id=${ann.id}`,
-        isFinal,
-      })
-      await sendEmail({
-        to: propEmail,
-        subject: tplProp.subject,
-        html: tplProp.html,
-        text: tplProp.text,
-        tags: [
-          { name: "category", value: "loyer_retard" },
-          { name: "role", value: "proprio" },
-          { name: "phase", value: isFinal ? "j15" : "j5" },
-        ],
-      })
+      if (allowedProp) {
+        const tplProp = loyerRetardProprioTemplate({
+          locataireName,
+          bienTitre: ann.titre || "Logement",
+          ville: ann.ville,
+          mois: l.mois,
+          montant,
+          jours: joursRetard,
+          ctaUrl: `${base}/proprietaire/stats?id=${ann.id}`,
+          isFinal,
+        })
+        await sendEmail({
+          to: propEmail,
+          subject: tplProp.subject,
+          html: tplProp.html,
+          text: tplProp.text,
+          tags: [
+            { name: "category", value: "loyer_retard" },
+            { name: "role", value: "proprio" },
+            { name: "phase", value: isFinal ? "j15" : "j5" },
+          ],
+        })
+      }
 
       // Update timestamp pour anti-spam
       const patch = isFinal

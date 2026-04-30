@@ -22,6 +22,7 @@ import { sendEmail } from "../email/resend"
 import { bailFinalActifTemplate } from "../email/templates"
 import { genererBailPDFBuffer } from "../bailPDF"
 import type { BailData, BailSignatureEntry } from "../bailPDF"
+import { shouldSendEmailForEvent } from "../notifPreferences"
 
 const BAIL_PREFIX = "[BAIL_CARD]"
 
@@ -173,29 +174,39 @@ export async function finalizeBail(args: FinalizeBailArgs): Promise<{ ok: boolea
 
   const attachments = pdfAttachment ? [pdfAttachment] : undefined
 
+  // V54.2 — bail_actif est `required: true` (signal légal). Le check est
+  // donc toujours true pour cohérence.
+  const [allowedLoc, allowedProp] = await Promise.all([
+    shouldSendEmailForEvent(locataireEmail, "bail_actif"),
+    shouldSendEmailForEvent(proprioEmail, "bail_actif"),
+  ])
   const [resLoc, resProp] = await Promise.all([
-    sendEmail({
-      to: locataireEmail,
-      subject: tplLoc.subject,
-      html: tplLoc.html,
-      text: tplLoc.text,
-      attachments,
-      tags: [
-        { name: "type", value: "bail_final_actif" },
-        { name: "role", value: "locataire" },
-      ],
-    }),
-    sendEmail({
-      to: proprioEmail,
-      subject: tplProp.subject,
-      html: tplProp.html,
-      text: tplProp.text,
-      attachments,
-      tags: [
-        { name: "type", value: "bail_final_actif" },
-        { name: "role", value: "bailleur" },
-      ],
-    }),
+    allowedLoc
+      ? sendEmail({
+          to: locataireEmail,
+          subject: tplLoc.subject,
+          html: tplLoc.html,
+          text: tplLoc.text,
+          attachments,
+          tags: [
+            { name: "type", value: "bail_final_actif" },
+            { name: "role", value: "locataire" },
+          ],
+        })
+      : Promise.resolve({ ok: false as const, error: "Pref off", skipped: true }),
+    allowedProp
+      ? sendEmail({
+          to: proprioEmail,
+          subject: tplProp.subject,
+          html: tplProp.html,
+          text: tplProp.text,
+          attachments,
+          tags: [
+            { name: "type", value: "bail_final_actif" },
+            { name: "role", value: "bailleur" },
+          ],
+        })
+      : Promise.resolve({ ok: false as const, error: "Pref off", skipped: true }),
   ])
 
   if (resLoc.ok === false && !resLoc.skipped) {

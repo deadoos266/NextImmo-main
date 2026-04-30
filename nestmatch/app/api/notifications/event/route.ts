@@ -23,6 +23,7 @@ import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
 import { sendEmail, type SendAttachment } from "@/lib/email/resend"
 import { displayName } from "@/lib/privacy"
 import { generateIcs } from "@/lib/icsGenerator"
+import { shouldSendEmailForEvent, type NotifEventKey } from "@/lib/notifPreferences"
 import {
   visiteProposeeTemplate,
   visiteConfirmeeTemplate,
@@ -72,17 +73,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Trop d'envois" }, { status: 429 })
   }
 
-  // Respect des préférences email du destinataire (pour les events qui sont
-  // logiquement assimilables à des messages). Les events critiques (bail
-  // signe partial) ignorent la pref pour ne pas bloquer un signal légal.
-  const ignorePref = p.type === "bail_signe_partial"
-  if (!ignorePref) {
-    const { data: prof } = await supabaseAdmin
-      .from("profils")
-      .select("notif_messages_email")
-      .eq("email", to)
-      .maybeSingle()
-    if (prof && prof.notif_messages_email === false) {
+  // V54.2 — respect des préférences notif_preferences du destinataire.
+  // Les events `required` (bail_actif, bail_signe_partial, loyer_retard_j15,
+  // preavis_donne) ignorent les préférences (signaux légaux). Le mapping
+  // des types dispatcher → NotifEventKey est 1:1 sauf pour certains.
+  const eventKeyMap: Record<EventBody["type"], NotifEventKey> = {
+    visite_proposee: "visite_proposee",
+    visite_confirmee: "visite_confirmee",
+    visite_annulee: "visite_annulee",
+    dossier_demande: "dossier_demande",
+    dossier_partage: "dossier_partage",
+    bail_signe_partial: "bail_signe_partial",
+    edl_a_signer: "edl_a_signer",
+    candidature_validee: "candidature_validee",
+    candidature_refusee: "candidature_refusee",
+    edl_conteste: "edl_conteste",
+  }
+  const eventKey = eventKeyMap[p.type]
+  if (eventKey) {
+    const allowed = await shouldSendEmailForEvent(to, eventKey)
+    if (!allowed) {
       return NextResponse.json({ ok: true, skipped: "pref_off" })
     }
   }

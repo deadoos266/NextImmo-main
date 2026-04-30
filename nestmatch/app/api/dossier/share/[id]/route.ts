@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase-server"
 import { sendEmail } from "@/lib/email/resend"
 import { dossierRevoqueTemplate } from "@/lib/email/templates"
 import { displayName } from "@/lib/privacy"
+import { shouldSendEmailForEvent } from "@/lib/notifPreferences"
 
 /**
  * DELETE /api/dossier/share/[id]
@@ -59,6 +60,9 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
       const bienTitre = label.slice(sepIdx + 3).trim() || null
       // Sanity check : le destinataire doit ressembler à un email
       if (destEmail.includes("@") && destEmail !== email) {
+        // V54.2 — respect notif_preferences (dossier_revoque)
+        const allowed = await shouldSendEmailForEvent(destEmail, "dossier_revoque")
+        if (!allowed) return NextResponse.json({ success: true })
         const base = process.env.NEXT_PUBLIC_URL || "https://keymatch-immo.fr"
         const fromName = displayName(email, session?.user?.name || null) || "Le candidat"
         const tpl = dossierRevoqueTemplate({
