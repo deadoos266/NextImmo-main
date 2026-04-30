@@ -5648,14 +5648,16 @@ function MessagesInner() {
               label: s.label,
               state: i < activeIdx ? "done" : i === activeIdx ? "active" : "todo",
             }))
-            // V50.5 — Documents partagés : [DOSSIER_CARD] + [BAIL_CARD]
-            // Dédup : on garde le dernier dossier par expéditeur (re-share = override)
-            // et le dernier bail par annonce_id (1 bail / annonce). Évite la liste qui
-            // gonfle à chaque re-partage. User : "il manque le bail signé"
-            // + "dédup les entrées dossier en double".
+            // V50.5 + V53.11 — Documents partagés : tous types confondus
+            // (dossier, bail, EDL, quittance, bail final PDF).
+            // Dédup : on garde le dernier par clé (sender pour dossier,
+            // annonce pour bail, edlId pour EDL, mois pour quittance).
             type Doc = { label: string; sub: string; href: string | null; ts: number }
             const dossierByKey = new Map<string, Doc>()
             const bailByKey = new Map<string, Doc>()
+            const edlByKey = new Map<string, Doc>()
+            const quittanceByKey = new Map<string, Doc>()
+            const bailFinalByKey = new Map<string, Doc>()
             for (const m of messages) {
               if (typeof m.contenu !== "string") continue
               const ts = m.created_at ? new Date(m.created_at).getTime() : 0
@@ -5663,7 +5665,6 @@ function MessagesInner() {
                 try {
                   const d = JSON.parse(m.contenu.slice(DOSSIER_PREFIX.length))
                   const isSender = m.from_email?.toLowerCase() === myEmail
-                  // Clé dédup = expéditeur (un même candidat = un seul dossier)
                   const key = (m.from_email || "").toLowerCase()
                   const prev = dossierByKey.get(key)
                   if (!prev || ts >= prev.ts) {
@@ -5671,6 +5672,25 @@ function MessagesInner() {
                       label: `Dossier · ${d.nom || d.email || (isSender ? "Vous" : "Candidat")}`,
                       sub: d.score != null ? `Score ${d.score}% · chiffré` : "chiffré",
                       href: d.shareUrl || null,
+                      ts,
+                    })
+                  }
+                } catch { /* ignore */ }
+              } else if (m.contenu.startsWith(BAIL_FINAL_PDF_PREFIX)) {
+                // V53.11 — Bail final signé (V50.10) → top of docs panel
+                try {
+                  const d = JSON.parse(m.contenu.slice(BAIL_FINAL_PDF_PREFIX.length))
+                  const annId = m.annonce_id ?? convActiveData.annonceId ?? 0
+                  const dateStr = d.dateSignatureFinale
+                    ? new Date(d.dateSignatureFinale).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
+                    : ""
+                  const key = `bailfinal:${annId}`
+                  const prev = bailFinalByKey.get(key)
+                  if (!prev || ts >= prev.ts) {
+                    bailFinalByKey.set(key, {
+                      label: `Bail signé · PDF`,
+                      sub: dateStr ? `Signé le ${dateStr}` : "Signé par les 2 parties",
+                      href: d.url || null,
                       ts,
                     })
                   }
@@ -5693,8 +5713,6 @@ function MessagesInner() {
                     : partiallySigned
                       ? `Signé · 1 partie${dateStr ? ` · entrée ${dateStr}` : ""}`
                       : `À signer${dateStr ? ` · entrée ${dateStr}` : ""}`
-                  // Clé dédup = annonce (1 bail par annonce). Si plusieurs versions
-                  // ont été postées, on garde la plus récente (dernier avenant).
                   const key = `bail:${annId}`
                   const prev = bailByKey.get(key)
                   if (!prev || ts >= prev.ts) {
@@ -5706,12 +5724,59 @@ function MessagesInner() {
                     })
                   }
                 } catch { /* ignore */ }
+              } else if (m.contenu.startsWith(EDL_PREFIX)) {
+                // V53.11 — État des lieux partagés
+                try {
+                  const d = JSON.parse(m.contenu.slice(EDL_PREFIX.length))
+                  const edlId = d.edlId ? Number(d.edlId) : null
+                  const typeLabel = d.type === "sortie" ? "sortie" : "entrée"
+                  const dateStr = d.dateEdl
+                    ? new Date(d.dateEdl).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
+                    : ""
+                  const sig = edlId ? edlSignatures[edlId] : undefined
+                  const sub = sig?.locataire && sig?.bailleur
+                    ? `Validé par les 2 parties${dateStr ? ` · ${dateStr}` : ""}`
+                    : sig?.locataire
+                      ? `Signé locataire${dateStr ? ` · ${dateStr}` : ""}`
+                      : dateStr ? `À signer · ${dateStr}` : "À signer"
+                  const key = `edl:${edlId || "x"}`
+                  const prev = edlByKey.get(key)
+                  if (!prev || ts >= prev.ts) {
+                    edlByKey.set(key, {
+                      label: `État des lieux ${typeLabel}`,
+                      sub,
+                      href: edlId ? `/edl/consulter/${edlId}` : null,
+                      ts,
+                    })
+                  }
+                } catch { /* ignore */ }
+              } else if (m.contenu.startsWith(QUITTANCE_PREFIX)) {
+                // V53.11 — Quittances
+                try {
+                  const d = JSON.parse(m.contenu.slice(QUITTANCE_PREFIX.length))
+                  const moisLabel = d.mois
+                    ? new Date(d.mois + "-01T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
+                    : ""
+                  const key = `q:${d.mois || ts}`
+                  const prev = quittanceByKey.get(key)
+                  if (!prev || ts >= prev.ts) {
+                    quittanceByKey.set(key, {
+                      label: `Quittance · ${moisLabel || "loyer"}`,
+                      sub: typeof d.montant === "number" ? `${d.montant.toLocaleString("fr-FR")} €` : "PDF disponible",
+                      href: d.pdfUrl || "/mes-quittances",
+                      ts,
+                    })
+                  }
+                } catch { /* ignore */ }
               }
             }
-            // Tri : bails d'abord (étape la plus avancée), puis dossiers,
-            // chacun par date desc (plus récent en haut).
+            // Tri : bail final > bail (signature pending) > EDL > quittances > dossiers,
+            // chacun par date desc.
             const docs: Doc[] = [
+              ...Array.from(bailFinalByKey.values()).sort((a, b) => b.ts - a.ts),
               ...Array.from(bailByKey.values()).sort((a, b) => b.ts - a.ts),
+              ...Array.from(edlByKey.values()).sort((a, b) => b.ts - a.ts),
+              ...Array.from(quittanceByKey.values()).sort((a, b) => b.ts - a.ts),
               ...Array.from(dossierByKey.values()).sort((a, b) => b.ts - a.ts),
             ]
             return (

@@ -824,6 +824,177 @@ export default function MonLogement() {
           <QuickLink href="/dossier" title="Mon dossier" value="Mettre à jour" bg="#F0FAEE" border="#C6E9C0" color="#15803d" />
         </div>
 
+        {/* ─── V53.11 — Mes documents (vue centralisée) ───────────────────
+            Aggregation de TOUS les documents du logement : bail, EDL,
+            quittances, préavis. User constraint V53 : "n'oublie pas le
+            stockage des docs dans les conversations et également on a
+            un onglet documents donc ne l'oublie".
+
+            Lit en lecture seule depuis les sources existantes :
+            - Bail : bailPayload (=[BAIL_CARD]) + bailFichierUrl si externe
+            - EDL : edls[] (table etats_des_lieux)
+            - Quittances : loyers[] avec statut="confirmé" + quittance_envoyee_at
+            - Préavis : bien.preavis_donne_par + preavis_date_envoi
+
+            Pas de nouveau bucket à créer — tout est déjà persisté ailleurs.
+            Cette section ne fait QUE l'aggregation et le linking. */}
+        {(() => {
+          const docs: Array<{
+            categorie: "bail" | "edl" | "quittance" | "preavis"
+            label: string
+            sub: string
+            href: string
+            badge?: { text: string; tone: "ok" | "warn" | "neutral" }
+          }> = []
+
+          // 1. Bail
+          if (bailPayload || bailFichierUrl) {
+            const sigCount = signatures.length
+            const hasLoc = signatures.some(s => s.role === "locataire")
+            const hasBail = signatures.some(s => s.role === "bailleur")
+            const isFullySigned = hasLoc && hasBail
+            docs.push({
+              categorie: "bail",
+              label: `Bail · ${bien.titre || "Logement"}`,
+              sub: isFullySigned
+                ? `Signé · ${sigCount} signature${sigCount > 1 ? "s" : ""}`
+                : sigCount > 0
+                  ? `En attente · ${sigCount} signature${sigCount > 1 ? "s" : ""} sur 2`
+                  : "Non signé",
+              href: "#mon-bail",
+              badge: isFullySigned
+                ? { text: "Actif", tone: "ok" }
+                : sigCount > 0
+                  ? { text: "En cours", tone: "warn" }
+                  : { text: "À signer", tone: "warn" },
+            })
+          }
+
+          // 2. EDL — un par entrée/sortie
+          for (const e of edls) {
+            const typeLabel = e.type === "sortie" ? "sortie" : "entrée"
+            const dateLabel = e.date_edl
+              ? new Date(e.date_edl).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
+              : ""
+            const statutLabel = e.statut === "valide"
+              ? "Validé par les 2 parties"
+              : e.statut === "conteste"
+                ? "Contesté"
+                : e.statut === "envoye"
+                  ? "Envoyé · à signer"
+                  : "Brouillon"
+            const badgeTone: "ok" | "warn" | "neutral" =
+              e.statut === "valide" ? "ok"
+              : e.statut === "conteste" || e.statut === "envoye" ? "warn"
+              : "neutral"
+            docs.push({
+              categorie: "edl",
+              label: `État des lieux ${typeLabel}${dateLabel ? ` · ${dateLabel}` : ""}`,
+              sub: statutLabel,
+              href: `/edl/consulter/${e.id}`,
+              badge: { text: statutLabel.split(" ·")[0], tone: badgeTone },
+            })
+          }
+
+          // 3. Quittances confirmées avec PDF disponible
+          const quittancesEnvoyees = loyers
+            .filter(l => l.statut === "confirmé" && l.quittance_envoyee_at)
+            .slice(0, 6)
+          for (const q of quittancesEnvoyees) {
+            const moisLabel = q.mois
+              ? new Date(q.mois + "-01T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
+              : ""
+            docs.push({
+              categorie: "quittance",
+              label: `Quittance ${moisLabel}`,
+              sub: typeof q.montant === "number" ? `${q.montant.toLocaleString("fr-FR")} €` : "—",
+              href: "/mes-quittances",
+              badge: { text: "Disponible", tone: "ok" },
+            })
+          }
+
+          // 4. Préavis donné
+          if (bien.preavis_donne_par) {
+            const par = bien.preavis_donne_par === "locataire" ? "vous" : "votre bailleur"
+            const dateEnvoi = bien.preavis_date_envoi
+              ? new Date(bien.preavis_date_envoi).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+              : ""
+            const dateFin = bien.preavis_fin_calculee
+              ? new Date(bien.preavis_fin_calculee).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+              : ""
+            docs.push({
+              categorie: "preavis",
+              label: `Préavis donné par ${par}`,
+              sub: dateEnvoi
+                ? `Notifié le ${dateEnvoi}${dateFin ? ` · fin de bail le ${dateFin}` : ""}`
+                : "Préavis en cours",
+              href: "#mon-bail",
+              badge: { text: "En cours", tone: "warn" },
+            })
+          }
+
+          if (docs.length === 0) return null
+
+          const toneStyle = (t: "ok" | "warn" | "neutral") =>
+            t === "ok"
+              ? { bg: "#F0FAEE", border: "#C6E9C0", color: "#15803d" }
+              : t === "warn"
+                ? { bg: "#FBF6EA", border: "#EADFC6", color: "#a16207" }
+                : { bg: "#F7F4EF", border: "#EAE6DF", color: "#8a8477" }
+
+          const iconByCat = (c: typeof docs[number]["categorie"]) => {
+            // Petites icônes SVG inline, hairline
+            const stroke = "#111"
+            switch (c) {
+              case "bail":
+                return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`
+              case "edl":
+                return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H7v8h10V11h-2"/><path d="M9 7h6v4H9z"/><path d="M12 3v4"/></svg>`
+              case "quittance":
+                return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8"/><path d="M12 6v2m0 8v2"/></svg>`
+              case "preavis":
+                return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-8-4.5-8-12V5l8-3 8 3v5c0 7.5-8 12-8 12z"/></svg>`
+            }
+          }
+
+          return (
+            <section style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 20, padding: isMobile ? 22 : 26, marginBottom: 16, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 10, flexWrap: "wrap" }}>
+                <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, margin: 0, letterSpacing: "-0.3px", color: "#111" }}>
+                  Mes documents
+                </h2>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", background: "#F7F4EF", border: "1px solid #EAE6DF", padding: "4px 12px", borderRadius: 999, textTransform: "uppercase" as const, letterSpacing: "1.2px" }}>
+                  {docs.length} document{docs.length > 1 ? "s" : ""}
+                </span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 10 }}>
+                {docs.map((d, i) => {
+                  const t = d.badge ? toneStyle(d.badge.tone) : { bg: "#F7F4EF", border: "#EAE6DF", color: "#8a8477" }
+                  const isAnchor = d.href.startsWith("#")
+                  const Tag: typeof Link | "a" = isAnchor ? "a" : Link
+                  return (
+                    <Tag key={i} href={d.href} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "#fff", border: `1px solid ${t.border}`, borderRadius: 14, textDecoration: "none", color: "inherit" }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: t.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }} dangerouslySetInnerHTML={{ __html: iconByCat(d.categorie) || "" }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "#111", letterSpacing: "-0.1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.label}</div>
+                        <div style={{ fontSize: 11, color: "#8a8477", marginTop: 2, letterSpacing: "0.1px" }}>{d.sub}</div>
+                      </div>
+                      {d.badge && (
+                        <span style={{ fontSize: 9, fontWeight: 700, color: t.color, background: t.bg, border: `1px solid ${t.border}`, padding: "3px 8px", borderRadius: 999, textTransform: "uppercase" as const, letterSpacing: "1.1px", whiteSpace: "nowrap" }}>
+                          {d.badge.text}
+                        </span>
+                      )}
+                    </Tag>
+                  )
+                })}
+              </div>
+              <p style={{ fontSize: 11, color: "#8a8477", margin: "14px 0 0", lineHeight: 1.5 }}>
+                Cliquez sur un document pour l'ouvrir. Les versions PDF sont également disponibles via les sections détaillées ci-dessous.
+              </p>
+            </section>
+          )
+        })()}
+
         {/* ─── États des lieux ─── */}
         <div style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 20, padding: isMobile ? 22 : 26, marginBottom: 16, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
@@ -1025,7 +1196,7 @@ export default function MonLogement() {
           const dejaSigne = !!sigLocataire
           const doubleSigne = !!sigLocataire && !!sigBailleur
           return (
-            <div style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 20, padding: isMobile ? 22 : 26, marginBottom: 16, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+            <div id="mon-bail" style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 20, padding: isMobile ? 22 : 26, marginBottom: 16, boxShadow: "0 1px 2px rgba(0,0,0,0.02)", scrollMarginTop: 24 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 10, flexWrap: "wrap" }}>
                 <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, margin: 0, letterSpacing: "-0.3px", color: "#111" }}>Mon bail</h2>
                 <div style={{ display: "inline-flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
