@@ -42,10 +42,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Trop de requêtes" }, { status: 429 })
   }
 
-  // Check profils en priorité (couvre OAuth + credentials).
-  const { count } = await supabaseAdmin
+  // V60.10 — Check profils en priorité (couvre OAuth + credentials).
+  // Use ilike (case-insensitive) au cas où des rows legacy ont l'email en
+  // mixed case (les nouveaux signups sont lowercase via lib/auth.ts l.85).
+  // User a signalé bug récurrent malgré V50.14 → cause probable casing.
+  const { count: profilCount } = await supabaseAdmin
     .from("profils")
     .select("email", { count: "exact", head: true })
-    .eq("email", email)
-  return NextResponse.json({ ok: true, exists: (count ?? 0) > 0 })
+    .ilike("email", email)
+  if ((profilCount ?? 0) > 0) {
+    return NextResponse.json({ ok: true, exists: true, source: "profils" })
+  }
+  // Fallback : check users table (legacy) — couvre les users credentials
+  // dont le profil n'a pas encore été créé (cas edge mais possible).
+  const { count: userCount } = await supabaseAdmin
+    .from("users")
+    .select("email", { count: "exact", head: true })
+    .ilike("email", email)
+  return NextResponse.json({ ok: true, exists: (userCount ?? 0) > 0, source: (userCount ?? 0) > 0 ? "users" : null })
 }

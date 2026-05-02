@@ -322,13 +322,22 @@ export default function EdlPage() {
     }
     if (data) {
       setBien(data)
-      // V50.14 — vérifier l'inscription via `profils` (créé pour TOUS les
-      // users, OAuth ET credentials), pas `users` (seulement credentials).
-      // Avant, un locataire Google OAuth voyait : "Envoi impossible — pas
-      // encore inscrit". Cas reproduit user : keymatchimmo@gmail.com.
+      // V60.10 — RE-FIX bug Google OAuth :
+      // V50.14 utilisait `supabase.from("profils").select(...)` côté anon
+      // pour vérifier l'inscription. Mais V55.1 (mig 051 RLS Phase 5) a
+      // REVOKE SELECT anon sur `profils` → la query retournait 0 rows
+      // même pour un user existant → bug "pas encore inscrit" persistait.
+      // Fix : passer par /api/users/check-email (créé V55.1a) qui fait
+      // le check server-side via supabaseAdmin (bypass RLS) + auth NextAuth.
+      // Couvre OAuth Google + credentials + lowercase normalisation.
       if (data.locataire_email) {
-        const { count } = await supabase.from("profils").select("email", { count: "exact", head: true }).eq("email", data.locataire_email.toLowerCase())
-        setLocataireVerifie((count ?? 0) > 0)
+        try {
+          const res = await fetch(`/api/users/check-email?email=${encodeURIComponent(data.locataire_email.toLowerCase().trim())}`, { cache: "no-store" })
+          const json = await res.json().catch(() => ({}))
+          setLocataireVerifie(!!json?.exists)
+        } catch {
+          setLocataireVerifie(false)
+        }
       }
       if (!edl) {
         // Pre-remplir bailleur seulement si pas d'EDL existant
