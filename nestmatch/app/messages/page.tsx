@@ -4431,31 +4431,13 @@ function MessagesInner() {
                           voir l'annonce en haut ici car cela est deja a droite".
                           Le CTA reste dispo dans le panel droit (l. ~5503)
                           + dans le bottom sheet mobile. */}
-                      {/* Liens raccourcis proprio (commit 6 du flow plan) :
-                          si proprietaireActive ET annonceActive est à lui,
-                          accès direct à Modifier annonce + Toutes candidatures. */}
-                      {!isMobile && proprietaireActive && annonceActive && (annonceActive.proprietaire_email || "").toLowerCase() === (myEmail || "").toLowerCase() && (
-                        <>
-                          <Link
-                            href={`/proprietaire/annonces/${convActiveData.annonceId}/candidatures`}
-                            onMouseEnter={e => { e.currentTarget.style.background = "#F7F4EF" }}
-                            onMouseLeave={e => { e.currentTarget.style.background = "#fff" }}
-                            style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", background: "#fff", border: "1px solid #EAE6DF", borderRadius: 999, padding: "7px 14px", whiteSpace: "nowrap", transition: "background 160ms ease", display: "inline-flex", alignItems: "center", gap: 5 }}>
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                              <circle cx="9" cy="7" r="4"/>
-                            </svg>
-                            Candidatures
-                          </Link>
-                          <Link
-                            href={`/proprietaire/modifier/${convActiveData.annonceId}`}
-                            onMouseEnter={e => { e.currentTarget.style.background = "#F7F4EF" }}
-                            onMouseLeave={e => { e.currentTarget.style.background = "#fff" }}
-                            style={{ fontSize: 12, fontWeight: 600, color: "#111", textDecoration: "none", background: "#fff", border: "1px solid #EAE6DF", borderRadius: 999, padding: "7px 14px", whiteSpace: "nowrap", transition: "background 160ms ease" }}>
-                            Modifier
-                          </Link>
-                        </>
-                      )}
+                      {/* V60.1 + V60.3 — Header thread minimal :
+                          - "Modifier" retiré complètement (chevauchement illisible,
+                            user : "le bouton modifier tu vas l'enlever")
+                          - "Candidatures" retiré du header → déplacé dans le
+                            panel droit sous le bouton "Voir l'annonce"
+                            (user : "déplacer Candidature en dessous de Voir l'annonce")
+                          Si besoin de modifier l'annonce, accès via /proprietaire/annonces. */}
 
                       {/* Kebab ⋯ mobile : ouvre le bottom sheet avec toutes les
                           actions secondaires (Voir l'annonce, Candidatures,
@@ -4514,7 +4496,19 @@ function MessagesInner() {
                     && c.annonceId !== convActiveData.annonceId
                   )
                   if (relatedConvs.length === 0) return null
-                  const chips = [convActiveData, ...relatedConvs]
+                  // V60.2 — DISTINCT par annonceId (user a vu Lyon×2 dans
+                  // les chips alors qu'il n'a qu'1 bien à Lyon).
+                  // Le bug : `conversations` peut contenir 2 rows pour le
+                  // même (other, annonceId) si la conv a été créée via
+                  // 2 channels (ex: re-candidature après refus). On dédup
+                  // par annonceId en gardant la plus récente.
+                  const seenAnnonceIds = new Set<number>()
+                  const chips = [convActiveData, ...relatedConvs].filter(c => {
+                    if (c.annonceId == null) return true
+                    if (seenAnnonceIds.has(c.annonceId)) return false
+                    seenAnnonceIds.add(c.annonceId)
+                    return true
+                  })
                   return (
                     <div style={{ padding: "10px 20px", borderBottom: "1px solid #EAE6DF", background: "#fff", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                       <span style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase" as const, letterSpacing: "1.2px", flexShrink: 0 }}>
@@ -5833,6 +5827,21 @@ function MessagesInner() {
                       <Link href={`/annonces/${convActiveData.annonceId}`} style={{ display: "block", width: "100%", marginTop: 16, padding: "10px 14px", background: "#fff", border: "1px solid #111", borderRadius: 999, fontSize: 12, fontWeight: 600, fontFamily: "inherit", color: "#111", textAlign: "center" as const, textDecoration: "none", boxSizing: "border-box" }}>
                         Voir l&apos;annonce →
                       </Link>
+                      {/* V60.3 — Lien "Candidatures" déplacé du header thread vers ici
+                          (user : "déplacer en dessous de Voir l'annonce, plus de sens").
+                          Visible uniquement si proprio actif ET propriétaire de l'annonce. */}
+                      {proprietaireActive && annonceActive && (annonceActive.proprietaire_email || "").toLowerCase() === (myEmail || "").toLowerCase() && (
+                        <Link
+                          href={`/proprietaire/annonces/${convActiveData.annonceId}/candidatures`}
+                          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", marginTop: 8, padding: "10px 14px", background: "#fff", border: "1px solid #EAE6DF", borderRadius: 999, fontSize: 12, fontWeight: 600, fontFamily: "inherit", color: "#111", textAlign: "center" as const, textDecoration: "none", boxSizing: "border-box" }}
+                        >
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                          </svg>
+                          Candidatures
+                        </Link>
+                      )}
                     </div>
                     {/* Documents partagés (handoff L468-486) */}
                     <div style={{ padding: "16px 20px", borderTop: "1px solid #EAE6DF" }}>
