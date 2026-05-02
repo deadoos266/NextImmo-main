@@ -1452,3 +1452,215 @@ Lien : ${params.ctaUrl}
 — L'équipe KeyMatch`
   return { subject, html, text }
 }
+
+// ─── V57 — Flow post-bail (fin de location) ─────────────────────────────────
+
+/**
+ * V57.4 — Email "merci pour cette location" (locataire post-fin de bail).
+ * Envoyé J+1 après bail_termine_at + EDL sortie validé. Optionnellement
+ * propose 5 annonces similaires si profil locataire est encore actif.
+ */
+export function bailMerciLocataireTemplate(params: {
+  bienTitre: string
+  ville: string | null
+  dureeMois: number
+  recommandations?: Array<{ id: number | string; titre: string; ville: string | null; prix: number | null; href: string }>
+  searchUrl: string
+}): { subject: string; html: string; text: string } {
+  const titreLabel = escapeBienTitre(params.bienTitre, params.ville)
+  const subject = `Merci pour cette location — ${params.bienTitre}`
+  const recoBlock = params.recommandations && params.recommandations.length > 0
+    ? `<div style="margin:14px 0 4px;font-size:13px;font-weight:700;color:${PALETTE.text};letter-spacing:-0.1px;">D'autres logements pour votre prochaine recherche</div>
+       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 14px;">
+         ${params.recommandations.slice(0, 5).map(r => `
+           <tr><td style="padding:8px 0;border-top:1px solid ${PALETTE.borderSoft};">
+             <a href="${r.href}" target="_blank" style="text-decoration:none;color:${PALETTE.text};">
+               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                 <tr>
+                   <td valign="middle" style="font-size:14px;font-weight:600;color:${PALETTE.text};">${escapeHtml(r.titre)}</td>
+                   <td valign="middle" align="right" style="font-size:13px;color:${PALETTE.textMuted};white-space:nowrap;padding-left:12px;">${typeof r.prix === "number" ? `${r.prix.toLocaleString("fr-FR")} €` : ""}</td>
+                 </tr>
+                 ${r.ville ? `<tr><td colspan="2" style="font-size:12px;color:${PALETTE.textSubtle};padding-top:2px;">${escapeHtml(r.ville)}</td></tr>` : ""}
+               </table>
+             </a>
+           </td></tr>
+         `).join("")}
+       </table>`
+    : ""
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      Merci pour cette location
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Vous avez occupé <strong style="color:${PALETTE.text};">${titreLabel}</strong> pendant <strong style="color:${PALETTE.text};">${params.dureeMois} mois</strong>.
+      Le bail est officiellement clos. Bonne continuation !
+    </p>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Tous les documents (bail signé, EDL d'entrée et de sortie, quittances)
+      restent accessibles 3 ans dans votre espace, conformément à la loi ALUR.
+    </p>
+    ${recoBlock}
+    ${button(params.searchUrl, "Continuer ma recherche →")}
+  `
+  const html = wrap(`Merci pour cette location de ${params.dureeMois} mois.`, body, "bailmerci")
+  const text = `Merci pour cette location !
+
+Vous avez occupé ${params.bienTitre}${params.ville ? ` à ${params.ville}` : ""} pendant ${params.dureeMois} mois.
+Le bail est officiellement clos.
+
+Tous les documents restent accessibles 3 ans dans votre espace.
+
+Continuer ma recherche : ${params.searchUrl}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}
+
+/**
+ * V57.4 — Email "votre bail est clos" (proprio post-fin de bail).
+ * Inclut CTA "Republier en 1 click" pour relocation immédiate.
+ */
+export function bailClosProprioTemplate(params: {
+  bienTitre: string
+  ville: string | null
+  dureeMois: number
+  totalLoyersPercus: number
+  republierUrl: string
+}): { subject: string; html: string; text: string } {
+  const titreLabel = escapeBienTitre(params.bienTitre, params.ville)
+  const subject = `Bail clos — relouer ${params.bienTitre} ?`
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      Bail clos
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Le bail pour <strong style="color:${PALETTE.text};">${titreLabel}</strong> est officiellement clos après
+      <strong style="color:${PALETTE.text};">${params.dureeMois} mois</strong> de location.
+      Total perçu : <strong style="color:${PALETTE.text};">${params.totalLoyersPercus.toLocaleString("fr-FR")} €</strong>.
+    </p>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Vous pouvez republier l'annonce en 1 clic — photos, description et
+      critères candidats sont conservés. Pas besoin de tout ressaisir.
+    </p>
+    ${button(params.republierUrl, "Republier l'annonce →")}
+    <p style="margin:18px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
+      Le bail signé et tous les documents associés restent archivés 3 ans
+      dans votre historique (loi ALUR).
+    </p>
+  `
+  const html = wrap(`Bail clos — relouer en 1 clic ?`, body, "bailclos")
+  const text = `Bail clos pour ${params.bienTitre}${params.ville ? ` à ${params.ville}` : ""}.
+
+Durée : ${params.dureeMois} mois.
+Total perçu : ${params.totalLoyersPercus.toLocaleString("fr-FR")} €.
+
+Republier l'annonce en 1 clic : ${params.republierUrl}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}
+
+/**
+ * V57.7 — Cron contentieux dépôt non restitué.
+ * Côté locataire : "Tu peux mettre en demeure le bailleur. Voici comment :"
+ */
+export function depotContentieuxLocataireTemplate(params: {
+  bienTitre: string
+  ville: string | null
+  caution: number
+  joursDepuisFin: number
+  delaiLegalMois: 1 | 2
+  contactProprioUrl: string
+  procedureAdilUrl: string
+}): { subject: string; html: string; text: string } {
+  const titreLabel = escapeBienTitre(params.bienTitre, params.ville)
+  const subject = `Dépôt de garantie non restitué — recours possible`
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      Dépôt non restitué — vos recours
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Votre bail pour <strong style="color:${PALETTE.text};">${titreLabel}</strong> est clos depuis
+      <strong style="color:${PALETTE.text};">${params.joursDepuisFin} jours</strong>.
+      Votre dépôt de garantie de <strong style="color:${PALETTE.text};">${params.caution.toLocaleString("fr-FR")} €</strong>
+      n'a toujours pas été restitué.
+    </p>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Le délai légal ALUR (loi du 6 juillet 1989, art. 22) est de
+      <strong style="color:${PALETTE.text};">${params.delaiLegalMois} mois maximum</strong>.
+      Au-delà, le bailleur vous doit des intérêts (10% du loyer mensuel par mois de retard).
+    </p>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      <strong style="color:${PALETTE.text};">Étape 1 :</strong> contacter votre bailleur pour relancer.<br/>
+      <strong style="color:${PALETTE.text};">Étape 2 :</strong> mise en demeure par lettre recommandée AR.<br/>
+      <strong style="color:${PALETTE.text};">Étape 3 :</strong> saisir l'ADIL (gratuit) pour conciliation.<br/>
+      <strong style="color:${PALETTE.text};">Étape 4 :</strong> tribunal judiciaire si pas de réponse.
+    </p>
+    ${button(params.contactProprioUrl, "Contacter le bailleur →")}
+    <p style="margin:14px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
+      Procédure complète et modèles de courriers : <a href="${params.procedureAdilUrl}" target="_blank" style="color:${PALETTE.textMuted};text-decoration:underline;">ADIL national</a>
+    </p>
+  `
+  const html = wrap(`Dépôt non restitué après ${params.joursDepuisFin} jours.`, body, "depotcontentieux")
+  const text = `Dépôt de garantie non restitué — vos recours
+
+Bail clos pour ${params.bienTitre}${params.ville ? ` à ${params.ville}` : ""} depuis ${params.joursDepuisFin} jours.
+Dépôt de ${params.caution.toLocaleString("fr-FR")} € non restitué.
+
+Délai légal ALUR : ${params.delaiLegalMois} mois maximum.
+Au-delà : intérêts dus (10% du loyer mensuel / mois de retard).
+
+Étapes : 1) Relancer 2) Mise en demeure LRAR 3) ADIL 4) Tribunal.
+
+Contacter le bailleur : ${params.contactProprioUrl}
+Modèles ADIL : ${params.procedureAdilUrl}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}
+
+/**
+ * V57.7 — Warning proprio délai dépôt approche.
+ */
+export function depotWarningProprioTemplate(params: {
+  bienTitre: string
+  ville: string | null
+  caution: number
+  joursDepuisFin: number
+  delaiLegalJours: 30 | 60
+  joursRestants: number
+  restituerUrl: string
+}): { subject: string; html: string; text: string } {
+  const titreLabel = escapeBienTitre(params.bienTitre, params.ville)
+  const subject = `Action requise — restituer le dépôt de garantie sous ${params.joursRestants} jours`
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      Délai légal dépôt qui approche
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Le bail pour <strong style="color:${PALETTE.text};">${titreLabel}</strong> est clos depuis
+      <strong style="color:${PALETTE.text};">${params.joursDepuisFin} jours</strong>.
+      Vous avez <strong style="color:${PALETTE.text};">${params.joursRestants} jours</strong> pour restituer
+      le dépôt de garantie de <strong style="color:${PALETTE.text};">${params.caution.toLocaleString("fr-FR")} €</strong>
+      avant la fin du délai légal ALUR (${params.delaiLegalJours} jours).
+    </p>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Au-delà : vous devez des intérêts au locataire (10% du loyer mensuel
+      par mois de retard, art. 22 loi du 6 juillet 1989).
+    </p>
+    ${button(params.restituerUrl, "Restituer le dépôt →")}
+  `
+  const html = wrap(`Plus que ${params.joursRestants} jours pour restituer le dépôt.`, body, "depotwarning")
+  const text = `Action requise — restituer le dépôt de garantie
+
+Bail ${params.bienTitre}${params.ville ? ` à ${params.ville}` : ""} clos depuis ${params.joursDepuisFin} jours.
+Délai légal ALUR : ${params.delaiLegalJours} jours.
+Plus que ${params.joursRestants} jours pour restituer ${params.caution.toLocaleString("fr-FR")} €.
+
+Au-delà : intérêts dus (10% du loyer mensuel / mois de retard).
+
+Restituer maintenant : ${params.restituerUrl}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}
