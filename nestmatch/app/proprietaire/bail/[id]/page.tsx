@@ -827,13 +827,12 @@ export default function BailPage() {
     }
     setGenerating(true)
     try {
-      console.log("[generer] confirm — bienId:", bien.id, "statut:", bien.statut)
+      // V61.6 — verbose debug logs nettoyés (kept warn/error pour prod debugging)
       const locataireEmail = bailData.emailLocataire
 
       // Download local du PDF (côté proprio — archive perso)
       try {
         await genererBailPDF(bailData)
-        console.log("[generer] PDF téléchargé")
       } catch (pdfErr) {
         console.error("[generer] PDF error:", pdfErr)
         alert(`Erreur PDF : ${pdfErr instanceof Error ? pdfErr.message : String(pdfErr)}`)
@@ -847,13 +846,11 @@ export default function BailPage() {
         }
         if (bien.statut !== "loué") patch.statut = "bail_envoye"
         if (form.dateDebut) patch.date_debut_bail = form.dateDebut
-        console.log("[generer] update annonce patch:", patch)
         const { data: updData, error: updErr } = await supabase
           .from("annonces")
           .update(patch)
           .eq("id", bien.id)
           .select("id")
-        console.log("[generer] update annonce result:", { updData, updErr })
         if (updErr) {
           alert(`Erreur mise à jour annonce : ${updErr.message} (code ${updErr.code || "?"})`)
           return
@@ -877,7 +874,6 @@ export default function BailPage() {
               })
             : ""
           const bailPayload = JSON.stringify(bailData)
-          console.log("[generer] insert message [BAIL_CARD] from:", fromEmail, "to:", locataireEmail)
           const { data: msgData, error: msgErr } = await supabase
             .from("messages")
             .insert([
@@ -891,7 +887,6 @@ export default function BailPage() {
               },
             ])
             .select("id")
-          console.log("[generer] insert message result:", { msgData, msgErr })
           if (msgErr) {
             alert(`Erreur envoi message : ${msgErr.message} (code ${msgErr.code || "?"})`)
             return
