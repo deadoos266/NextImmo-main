@@ -13,6 +13,7 @@ import ScrollLockReset from './components/ScrollLockReset'
 import BetaBanner from './components/BetaBanner'
 import MountedOnly from './components/MountedOnly'
 import ThemeApplier from './components/ThemeApplier'
+import HeartbeatPing from './components/HeartbeatPing'
 import { BRAND } from '../lib/brand'
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || BRAND.url
@@ -226,6 +227,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ServiceWorkerRegister />
           <ZoomGuard />
           <ScrollLockReset />
+          {/* V59.1 — heartbeat 60s pour détecter "online" status (anti-spam emails messages) */}
+          <HeartbeatPing />
         </Providers>
       </body>
     </html>
