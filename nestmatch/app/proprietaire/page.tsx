@@ -17,6 +17,7 @@ import { postNotif } from "../../lib/notificationsClient"
 import { computeBailTimeline } from "../../lib/bailTimeline"
 import BailTimeline from "../components/ui/BailTimeline"
 import TutoProprio from "../components/bail/TutoProprio"
+import RelouerModal from "../components/baux/RelouerModal"
 import Image from "next/image"
 import { km } from "../components/ui/km"
 
@@ -388,6 +389,8 @@ export default function Proprietaire() {
   // - profil.tuto_proprio_completed_at IS NULL ET tuto_proprio_skipped_at IS NULL
   // - ET au moins une annonce existe (sinon trop tôt, pas encore de contexte)
   const [tutoOpen, setTutoOpen] = useState(false)
+  // V58.1 — Modale "Terminer + relouer" sur cards bail clos (préavis échu)
+  const [relouerAnnonce, setRelouerAnnonce] = useState<{ id: number; titre: string | null; ville: string | null; locataire_email: string | null; preavis_donne_par?: string | null } | null>(null)
   const [candidatures, setCandidatures] = useState<any[]>([])
   const [loyers, setLoyers] = useState<any[]>([])
   const [visites, setVisites] = useState<any[]>([])
@@ -1345,6 +1348,29 @@ export default function Proprietaire() {
                         <a href={`/proprietaire/bail/${b.id}`} style={{ background: km.white, border: "1px solid #EAE6DF", color: km.ink, borderRadius: 999, padding: "9px 18px", textDecoration: "none", fontSize: 11, fontWeight: 600, textAlign: "center", flex: isMobile ? 1 : undefined, letterSpacing: "0.3px", fontFamily: "inherit" }}>Bail</a>
                         <a href={`/proprietaire/edl/${b.id}?type=entree`} style={{ background: km.white, border: "1px solid #EAE6DF", color: km.ink, borderRadius: 999, padding: "9px 18px", textDecoration: "none", fontSize: 11, fontWeight: 600, textAlign: "center", flex: isMobile ? 1 : undefined, letterSpacing: "0.3px", fontFamily: "inherit" }}>EDL entrée</a>
                         <a href={`/proprietaire/edl/${b.id}?type=sortie`} style={{ background: km.white, border: "1px solid #EAE6DF", color: km.ink, borderRadius: 999, padding: "9px 18px", textDecoration: "none", fontSize: 11, fontWeight: 600, textAlign: "center", flex: isMobile ? 1 : undefined, letterSpacing: "0.3px", fontFamily: "inherit" }}>EDL sortie</a>
+                        {/* V58.1 — bouton "Terminer + relouer" si bail clos
+                            (préavis échu OU bail_termine_at posé manuellement). */}
+                        {(() => {
+                          const today = new Date().toISOString().slice(0, 10)
+                          const preavisEchu = b.preavis_fin_calculee && String(b.preavis_fin_calculee) <= today
+                          const bailTermine = !!b.bail_termine_at
+                          if (!preavisEchu && !bailTermine) return null
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => setRelouerAnnonce({
+                                id: b.id,
+                                titre: b.titre,
+                                ville: b.ville,
+                                locataire_email: b.locataire_email,
+                                preavis_donne_par: b.preavis_donne_par,
+                              })}
+                              style={{ background: "#a16207", color: "#fff", border: "none", borderRadius: 999, padding: "11px 18px", fontSize: 12, fontWeight: 700, cursor: "pointer", textAlign: "center", flex: isMobile ? 1 : undefined, letterSpacing: "0.3px", fontFamily: "inherit", textTransform: "uppercase" }}
+                            >
+                              🔁 Terminer + Relouer
+                            </button>
+                          )
+                        })()}
                       </div>
                     </div>
                     <BailTimeline steps={timelineSteps} />
@@ -1682,6 +1708,20 @@ export default function Proprietaire() {
         nbBiens={biens.length}
         userEmail={myEmail}
       />
+
+      {/* V58.1 — Modale "Terminer + relouer" déclenchée depuis l'onglet Locataires */}
+      {relouerAnnonce && (
+        <RelouerModal
+          open={!!relouerAnnonce}
+          onClose={() => setRelouerAnnonce(null)}
+          onSuccess={() => {
+            setRelouerAnnonce(null)
+            // Reload pour refresh les biens (l'annonce passe en disponible + historique_baux update)
+            window.location.reload()
+          }}
+          annonce={relouerAnnonce}
+        />
+      )}
     </main>
   )
 }
