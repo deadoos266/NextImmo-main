@@ -219,6 +219,7 @@ export default function Footer() {
             <p style={head}>Informations</p>
             <a href="/contact" style={linkBase} onMouseEnter={hoverInk} onMouseLeave={hoverMeta}>Nous contacter</a>
             <a href="/cgu" style={linkBase} onMouseEnter={hoverInk} onMouseLeave={hoverMeta}>CGU</a>
+            <a href="/cgv" style={linkBase} onMouseEnter={hoverInk} onMouseLeave={hoverMeta}>CGV</a>
             <a href="/mentions-legales" style={linkBase} onMouseEnter={hoverInk} onMouseLeave={hoverMeta}>Mentions légales</a>
             <a href="/confidentialite" style={linkBase} onMouseEnter={hoverInk} onMouseLeave={hoverMeta}>Politique de confidentialité</a>
             <a href="/cookies" style={linkBase} onMouseEnter={hoverInk} onMouseLeave={hoverMeta}>Cookies</a>
@@ -251,6 +252,7 @@ export default function Footer() {
             { label: "Confidentialité", href: "/confidentialite" },
             { label: "Cookies", href: "/cookies" },
             { label: "CGU", href: "/cgu" },
+            { label: "CGV", href: "/cgv" },
             { label: "Mentions légales", href: "/mentions-legales" },
           ].map(l => (
             <a key={l.label} href={l.href}
