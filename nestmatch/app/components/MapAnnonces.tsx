@@ -533,24 +533,43 @@ export default function MapAnnonces({
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [parisGeoJson, setParisGeoJson] = useState<any | null>(null)
+  // V55.3 — Lyon (9 arr) + Marseille (16 arr)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [lyonGeoJson, setLyonGeoJson] = useState<any | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [marseilleGeoJson, setMarseilleGeoJson] = useState<any | null>(null)
   useEffect(() => {
     try {
       const saved = localStorage.getItem("nestmatch_map_show_prices")
       if (saved === "true") setShowPrices(true)
     } catch { /* ignore */ }
   }, [])
-  // V26.2 — fetch lazy du GeoJSON Paris quand showPrices ON et pas déjà chargé
+  // V26.2 + V55.3 — fetch lazy des GeoJSON Paris/Lyon/Marseille quand showPrices ON
+  // et pas déjà chargé. Les 3 fetchs sont indépendants — si Lyon rate, Paris/Marseille
+  // s'affichent quand même.
   useEffect(() => {
-    if (!showPrices || parisGeoJson) return
+    if (!showPrices) return
     let cancelled = false
-    fetch("/data/paris-arrondissements.geojson", { cache: "force-cache" })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (!cancelled && data) setParisGeoJson(data)
-      })
-      .catch(() => { /* fallback : la version lite reste affichée */ })
+    if (!parisGeoJson) {
+      fetch("/data/paris-arrondissements.geojson", { cache: "force-cache" })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (!cancelled && data) setParisGeoJson(data) })
+        .catch(() => { /* fallback : la version lite reste affichée */ })
+    }
+    if (!lyonGeoJson) {
+      fetch("/data/lyon-arrondissements.geojson", { cache: "force-cache" })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (!cancelled && data) setLyonGeoJson(data) })
+        .catch(() => { /* ignore */ })
+    }
+    if (!marseilleGeoJson) {
+      fetch("/data/marseille-arrondissements.geojson", { cache: "force-cache" })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (!cancelled && data) setMarseilleGeoJson(data) })
+        .catch(() => { /* ignore */ })
+    }
     return () => { cancelled = true }
-  }, [showPrices, parisGeoJson])
+  }, [showPrices, parisGeoJson, lyonGeoJson, marseilleGeoJson])
   function togglePrices() {
     setShowPrices(prev => {
       const next = !prev
@@ -559,16 +578,15 @@ export default function MapAnnonces({
     })
   }
 
-  // V26.2 — calcule les stats €/m² par arrondissement Paris (1-20).
-  // Utilise les coordonnées des annonces + pointInPolygon pour assigner
-  // chaque annonce à son arrondissement. Memoized via useMemo serait plus
-  // propre mais le coût est négligeable (~20 polygons × ~200 annonces).
+  // V26.2 + V55.3 — calcule les stats €/m² par arrondissement.
+  // Helper city-agnostic. Pour chaque arrondissement, somme/moyenne le €/m²
+  // des annonces dont (lat, lng) tombe dans le polygone.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const arrStatsByCode = (() => {
-    if (!parisGeoJson) return new Map<number, { count: number; meanPrixM2: number }>()
+  function computeArrStats(geoJson: any | null): Map<number, { count: number; meanPrixM2: number }> {
+    if (!geoJson) return new Map()
     const map = new Map<number, { count: number; sumPrixM2: number }>()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    for (const feat of parisGeoJson.features as any[]) {
+    for (const feat of geoJson.features as any[]) {
       const code = Number(feat.properties?.c_ar)
       if (!Number.isFinite(code)) continue
       const polys: GeoLatLng[][] = []
@@ -598,7 +616,11 @@ export default function MapAnnonces({
       out.set(code, { count: s.count, meanPrixM2: Math.round(s.sumPrixM2 / s.count) })
     }
     return out
-  })()
+  }
+  const arrStatsByCode = computeArrStats(parisGeoJson)
+  // V55.3 — stats Lyon + Marseille (mêmes seuils €/m² que Paris pour cohérence visuelle).
+  const lyonStatsByCode = computeArrStats(lyonGeoJson)
+  const marseilleStatsByCode = computeArrStats(marseilleGeoJson)
 
   // V26.1 (Paul 2026-04-29) — polygon drawing custom (style SeLoger).
   // drawMode = on dessine ; vertices = points du polygone en cours ;
@@ -808,41 +830,48 @@ export default function MapAnnonces({
             }}
           />
         )}
-        {/* V26.2 — Heatmap Paris arrondissements (full) — actif si toggle
-            Carte des prix ON et GeoJSON chargé. Fill color tier sur €/m².
-            Tooltip au hover : "Paris 11e — 32 €/m² · 12 annonces". */}
-        {effShowPrices && parisGeoJson && (
-          <GeoJSON
-            key="paris-arr-heatmap"
-            data={parisGeoJson}
-            style={(feat) => {
-              const code = Number(feat?.properties?.c_ar) || 0
-              const stats = arrStatsByCode.get(code)
-              if (!stats) {
-                return { color: "#8a8477", weight: 1, fillColor: "#FAF8F3", fillOpacity: 0.15 }
-              }
-              const tier = stats.meanPrixM2 <= 20
-                ? { stroke: "#15803d", fill: "#86efac" }
-                : stats.meanPrixM2 <= 30
-                  ? { stroke: "#a16207", fill: "#fcd34d" }
-                  : { stroke: "#b91c1c", fill: "#fca5a5" }
-              return { color: tier.stroke, weight: 1.5, fillColor: tier.fill, fillOpacity: 0.45 }
-            }}
-            onEachFeature={(feat, layer) => {
-              const code = Number(feat?.properties?.c_ar) || 0
-              const label = feat?.properties?.l_ar || `Paris ${code}e`
-              const stats = arrStatsByCode.get(code)
-              // V36.2 — Disclaimer explicite (audit V35 R35.2) : ce €/m² est
-              // calculé sur les ANNONCES VISIBLES (filtres + zoom + état du marché),
-              // PAS le prix médian officiel du quartier. Wording transparent
-              // pour ne pas induire l'user en erreur (mensonge silencieux).
-              const txt = stats
-                ? `<strong>${label}</strong><br/>${stats.meanPrixM2}&nbsp;€/m² <span style="opacity:0.7">moyenne</span><br/><span style="font-size:10px;opacity:0.7">sur ${stats.count} annonce${stats.count > 1 ? "s" : ""} visible${stats.count > 1 ? "s" : ""} · pas un prix médian officiel</span>`
-                : `<strong>${label}</strong><br/><span style="opacity:0.7">Aucune annonce visible ici</span>`
-              layer.bindTooltip(txt, { sticky: true, direction: "top" })
-            }}
-          />
-        )}
+        {/* V26.2 + V55.3 — Heatmap arrondissements (Paris + Lyon + Marseille).
+            Actif si toggle Carte des prix ON et GeoJSON chargé. Fill color
+            tier sur €/m² (vert ≤20, ambre ≤30, rouge >30). Seuils communs
+            aux 3 villes pour cohérence visuelle.
+            Tooltip au hover : "Lyon 6e — 22 €/m² · 4 annonces". */}
+        {(() => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const cities: { key: string; geo: any | null; stats: Map<number, { count: number; meanPrixM2: number }>; defaultLabel: (code: number) => string }[] = [
+            { key: "paris", geo: parisGeoJson, stats: arrStatsByCode, defaultLabel: c => `Paris ${c}e` },
+            { key: "lyon", geo: lyonGeoJson, stats: lyonStatsByCode, defaultLabel: c => `Lyon ${c}e` },
+            { key: "marseille", geo: marseilleGeoJson, stats: marseilleStatsByCode, defaultLabel: c => `Marseille ${c}e` },
+          ]
+          if (!effShowPrices) return null
+          return cities.filter(c => !!c.geo).map(city => (
+            <GeoJSON
+              key={`${city.key}-arr-heatmap`}
+              data={city.geo}
+              style={(feat) => {
+                const code = Number(feat?.properties?.c_ar) || 0
+                const stats = city.stats.get(code)
+                if (!stats) {
+                  return { color: "#8a8477", weight: 1, fillColor: "#FAF8F3", fillOpacity: 0.15 }
+                }
+                const tier = stats.meanPrixM2 <= 20
+                  ? { stroke: "#15803d", fill: "#86efac" }
+                  : stats.meanPrixM2 <= 30
+                    ? { stroke: "#a16207", fill: "#fcd34d" }
+                    : { stroke: "#b91c1c", fill: "#fca5a5" }
+                return { color: tier.stroke, weight: 1.5, fillColor: tier.fill, fillOpacity: 0.45 }
+              }}
+              onEachFeature={(feat, layer) => {
+                const code = Number(feat?.properties?.c_ar) || 0
+                const label = feat?.properties?.l_ar || city.defaultLabel(code)
+                const stats = city.stats.get(code)
+                const txt = stats
+                  ? `<strong>${label}</strong><br/>${stats.meanPrixM2}&nbsp;€/m² <span style="opacity:0.7">moyenne</span><br/><span style="font-size:10px;opacity:0.7">sur ${stats.count} annonce${stats.count > 1 ? "s" : ""} visible${stats.count > 1 ? "s" : ""} · pas un prix médian officiel</span>`
+                  : `<strong>${label}</strong><br/><span style="opacity:0.7">Aucune annonce visible ici</span>`
+                layer.bindTooltip(txt, { sticky: true, direction: "top" })
+              }}
+            />
+          ))
+        })()}
 
         {/* V26.1 — polygon committed (filtre strict) */}
         {committedPolygon && committedPolygon.length >= 3 && (

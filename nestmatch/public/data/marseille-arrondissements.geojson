@@ -1,0 +1,23 @@
+{
+  "type": "FeatureCollection",
+  "name": "marseille-arrondissements-approximate",
+  "_comment": "V55.3 — polygones approximatifs Marseille 16 arrondissements (rectangles autour des centroïdes officiels). Suffisant pour la heatmap €/m² qui matche annonces.lat/lng via pointInPolygon. À remplacer par les contours officiels de data.marseille.fr (open data) si précision pixel-perfect requise.",
+  "features": [
+    { "type": "Feature", "properties": { "c_ar": 1,  "l_ar": "Marseille 1er" }, "geometry": { "type": "Polygon", "coordinates": [[[5.371,43.290],[5.391,43.290],[5.391,43.303],[5.371,43.303],[5.371,43.290]]] } },
+    { "type": "Feature", "properties": { "c_ar": 2,  "l_ar": "Marseille 2e" },  "geometry": { "type": "Polygon", "coordinates": [[[5.353,43.293],[5.378,43.293],[5.378,43.310],[5.353,43.310],[5.353,43.293]]] } },
+    { "type": "Feature", "properties": { "c_ar": 3,  "l_ar": "Marseille 3e" },  "geometry": { "type": "Polygon", "coordinates": [[[5.371,43.302],[5.398,43.302],[5.398,43.319],[5.371,43.319],[5.371,43.302]]] } },
+    { "type": "Feature", "properties": { "c_ar": 4,  "l_ar": "Marseille 4e" },  "geometry": { "type": "Polygon", "coordinates": [[[5.388,43.298],[5.412,43.298],[5.412,43.317],[5.388,43.317],[5.388,43.298]]] } },
+    { "type": "Feature", "properties": { "c_ar": 5,  "l_ar": "Marseille 5e" },  "geometry": { "type": "Polygon", "coordinates": [[[5.388,43.288],[5.410,43.288],[5.410,43.302],[5.388,43.302],[5.388,43.288]]] } },
+    { "type": "Feature", "properties": { "c_ar": 6,  "l_ar": "Marseille 6e" },  "geometry": { "type": "Polygon", "coordinates": [[[5.373,43.282],[5.392,43.282],[5.392,43.298],[5.373,43.298],[5.373,43.282]]] } },
+    { "type": "Feature", "properties": { "c_ar": 7,  "l_ar": "Marseille 7e" },  "geometry": { "type": "Polygon", "coordinates": [[[5.348,43.270],[5.376,43.270],[5.376,43.290],[5.348,43.290],[5.348,43.270]]] } },
+    { "type": "Feature", "properties": { "c_ar": 8,  "l_ar": "Marseille 8e" },  "geometry": { "type": "Polygon", "coordinates": [[[5.376,43.255],[5.408,43.255],[5.408,43.282],[5.376,43.282],[5.376,43.255]]] } },
+    { "type": "Feature", "properties": { "c_ar": 9,  "l_ar": "Marseille 9e" },  "geometry": { "type": "Polygon", "coordinates": [[[5.395,43.230],[5.435,43.230],[5.435,43.270],[5.395,43.270],[5.395,43.230]]] } },
+    { "type": "Feature", "properties": { "c_ar": 10, "l_ar": "Marseille 10e" }, "geometry": { "type": "Polygon", "coordinates": [[[5.412,43.258],[5.448,43.258],[5.448,43.282],[5.412,43.282],[5.412,43.258]]] } },
+    { "type": "Feature", "properties": { "c_ar": 11, "l_ar": "Marseille 11e" }, "geometry": { "type": "Polygon", "coordinates": [[[5.430,43.265],[5.480,43.265],[5.480,43.295],[5.430,43.295],[5.430,43.265]]] } },
+    { "type": "Feature", "properties": { "c_ar": 12, "l_ar": "Marseille 12e" }, "geometry": { "type": "Polygon", "coordinates": [[[5.418,43.290],[5.460,43.290],[5.460,43.315],[5.418,43.315],[5.418,43.290]]] } },
+    { "type": "Feature", "properties": { "c_ar": 13, "l_ar": "Marseille 13e" }, "geometry": { "type": "Polygon", "coordinates": [[[5.412,43.317],[5.460,43.317],[5.460,43.350],[5.412,43.350],[5.412,43.317]]] } },
+    { "type": "Feature", "properties": { "c_ar": 14, "l_ar": "Marseille 14e" }, "geometry": { "type": "Polygon", "coordinates": [[[5.388,43.317],[5.420,43.317],[5.420,43.350],[5.388,43.350],[5.388,43.317]]] } },
+    { "type": "Feature", "properties": { "c_ar": 15, "l_ar": "Marseille 15e" }, "geometry": { "type": "Polygon", "coordinates": [[[5.355,43.337],[5.398,43.337],[5.398,43.370],[5.355,43.370],[5.355,43.337]]] } },
+    { "type": "Feature", "properties": { "c_ar": 16, "l_ar": "Marseille 16e" }, "geometry": { "type": "Polygon", "coordinates": [[[5.318,43.355],[5.360,43.355],[5.360,43.385],[5.318,43.385],[5.318,43.355]]] } }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "type": "FeatureCollection",
+  "name": "lyon-arrondissements-approximate",
+  "_comment": "V55.3 — polygones approximatifs Lyon 9 arrondissements (rectangles autour des centroïdes officiels). Suffisant pour la heatmap €/m² qui matche annonces.lat/lng à un arrondissement via pointInPolygon. À remplacer par les contours officiels de data.grandlyon.com (couche adr_voie_lieu.adrarrond) si nécessaire pour précision pixel-perfect.",
+  "features": [
+    { "type": "Feature", "properties": { "c_ar": 1, "l_ar": "Lyon 1er" }, "geometry": { "type": "Polygon", "coordinates": [[[4.825,45.762],[4.847,45.762],[4.847,45.776],[4.825,45.776],[4.825,45.762]]] } },
+    { "type": "Feature", "properties": { "c_ar": 2, "l_ar": "Lyon 2e" }, "geometry": { "type": "Polygon", "coordinates": [[[4.820,45.744],[4.847,45.744],[4.847,45.762],[4.820,45.762],[4.820,45.744]]] } },
+    { "type": "Feature", "properties": { "c_ar": 3, "l_ar": "Lyon 3e" }, "geometry": { "type": "Polygon", "coordinates": [[[4.847,45.748],[4.882,45.748],[4.882,45.770],[4.847,45.770],[4.847,45.748]]] } },
+    { "type": "Feature", "properties": { "c_ar": 4, "l_ar": "Lyon 4e" }, "geometry": { "type": "Polygon", "coordinates": [[[4.819,45.776],[4.847,45.776],[4.847,45.790],[4.819,45.790],[4.819,45.776]]] } },
+    { "type": "Feature", "properties": { "c_ar": 5, "l_ar": "Lyon 5e" }, "geometry": { "type": "Polygon", "coordinates": [[[4.795,45.752],[4.825,45.752],[4.825,45.776],[4.795,45.776],[4.795,45.752]]] } },
+    { "type": "Feature", "properties": { "c_ar": 6, "l_ar": "Lyon 6e" }, "geometry": { "type": "Polygon", "coordinates": [[[4.847,45.770],[4.875,45.770],[4.875,45.788],[4.847,45.788],[4.847,45.770]]] } },
+    { "type": "Feature", "properties": { "c_ar": 7, "l_ar": "Lyon 7e" }, "geometry": { "type": "Polygon", "coordinates": [[[4.840,45.728],[4.875,45.728],[4.875,45.748],[4.840,45.748],[4.840,45.728]]] } },
+    { "type": "Feature", "properties": { "c_ar": 8, "l_ar": "Lyon 8e" }, "geometry": { "type": "Polygon", "coordinates": [[[4.875,45.728],[4.910,45.728],[4.910,45.756],[4.875,45.756],[4.875,45.728]]] } },
+    { "type": "Feature", "properties": { "c_ar": 9, "l_ar": "Lyon 9e" }, "geometry": { "type": "Polygon", "coordinates": [[[4.770,45.762],[4.819,45.762],[4.819,45.794],[4.770,45.794],[4.770,45.762]]] } }
+  ]
+}
