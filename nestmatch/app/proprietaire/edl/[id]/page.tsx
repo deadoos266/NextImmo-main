@@ -1,7 +1,7 @@
 "use client"
 import { useSession } from "next-auth/react"
 import { useEffect, useState, useRef } from "react"
-import { useRouter, useParams } from "next/navigation"
+import { useRouter, useParams, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "../../../../lib/supabase"
 import { validateImage } from "../../../../lib/fileValidation"
@@ -232,12 +232,18 @@ export default function EdlPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const params = useParams()
+  // V58.3 — query ?type=sortie pour ouvrir directement en mode EDL sortie
+  // (depuis le bouton "EDL sortie" sur la card Locataires post-bail).
+  const searchParams = useSearchParams()
+  const wantedType: "entree" | "sortie" = searchParams?.get("type") === "sortie" ? "sortie" : "entree"
   const bienId = params.id as string
   const { isMobile } = useResponsive()
   const [bien, setBien] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
-  const [type, setType] = useState<"entree" | "sortie">("entree")
+  const [type, setType] = useState<"entree" | "sortie">(wantedType)
+  // V58.3 — flag affichage helper jurisprudence ALUR (usure normale vs dégradation)
+  const showAlurHelper = type === "sortie"
   const [dateEdl, setDateEdl] = useState(new Date().toISOString().split("T")[0])
   const [prenomBailleur, setPrenomBailleur] = useState("")
   const [nomBailleur, setNomBailleur] = useState("")
@@ -266,14 +272,30 @@ export default function EdlPage() {
   }, [session, status, bienId])
 
   async function loadBien() {
-    const [{ data }, { data: edl }] = await Promise.all([
+    // V58.3 — quand on cible explicitement type=sortie (?type=sortie),
+    // on charge le DERNIER EDL de ce type s'il existe, sinon on prefill
+    // depuis l'EDL entrée pour comparaison contradictoire.
+    const [{ data }, edlSpecificRes] = await Promise.all([
       supabase.from("annonces").select("*").eq("id", bienId).single(),
-      supabase.from("etats_des_lieux").select("*").eq("annonce_id", bienId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("etats_des_lieux").select("*").eq("annonce_id", bienId).eq("type", wantedType).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ])
-    if (edl) {
+    let edl = edlSpecificRes.data
+    // Fallback : si pas d'EDL du wantedType, prend le plus récent (compat existant)
+    if (!edl) {
+      const { data: edlFallback } = await supabase.from("etats_des_lieux").select("*").eq("annonce_id", bienId).order("created_at", { ascending: false }).limit(1).maybeSingle()
+      edl = edlFallback
+    }
+    // V58.3 — Pour un EDL sortie naissant, on veut clone les pièces de l'EDL entrée
+    // afin de comparer item par item. On charge l'EDL entrée séparément.
+    let edlEntreePourClone: { pieces_data?: unknown } | null = null
+    if (wantedType === "sortie" && (!edl || edl.type !== "sortie")) {
+      const { data: ee } = await supabase.from("etats_des_lieux").select("pieces_data").eq("annonce_id", bienId).eq("type", "entree").eq("statut", "valide").order("created_at", { ascending: false }).limit(1).maybeSingle()
+      edlEntreePourClone = ee
+    }
+    if (edl && edl.type === wantedType) {
       setEdlExistant(edl)
-      // Restaurer l'EDL sauvegarde
-      setType(edl.type || "entree")
+      // Restaurer l'EDL sauvegarde du même type
+      setType(edl.type || wantedType)
       setDateEdl(edl.date_edl || new Date().toISOString().split("T")[0])
       setPrenomBailleur(edl.prenom_bailleur || "")
       setNomBailleur(edl.nom_bailleur || "")
@@ -285,6 +307,18 @@ export default function EdlPage() {
       setCles(edl.cles || "")
       setObservations(edl.observations || "")
       if (edl.pieces_data) setPieces(edl.pieces_data)
+    } else if (edlEntreePourClone?.pieces_data && Array.isArray(edlEntreePourClone.pieces_data)) {
+      // V58.3 — clone pieces depuis EDL entrée (item par item, photos vidées,
+      // état reset à "Bon" pour que le proprio re-scrute chaque item).
+      setType("sortie")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const cloned = (edlEntreePourClone.pieces_data as any[]).map((p: any) => ({
+        ...p,
+        photos: [],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        elements: Object.fromEntries(Object.entries(p.elements || {}).map(([k, v]: [string, any]) => [k, { etat: "Bon", observation: "" }])),
+      }))
+      setPieces(cloned)
     }
     if (data) {
       setBien(data)
@@ -832,6 +866,28 @@ export default function EdlPage() {
             </div>
               )
             })()}
+
+            {/* V58.3 — Helper jurisprudence ALUR pour EDL sortie : usure normale
+                vs dégradation imputable. Décret 2016-382 + jurisprudence cassation. */}
+            {showAlurHelper && (
+              <div style={{ background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 16, padding: "16px 20px", marginBottom: 16 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: "#a16207", textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 8px" }}>
+                  Aide à la décision · Loi ALUR
+                </p>
+                <p style={{ fontSize: 13, color: "#6b6559", margin: "0 0 8px", lineHeight: 1.55 }}>
+                  Distinguez <strong style={{ color: "#a16207" }}>usure normale</strong> (charge du bailleur)
+                  de <strong style={{ color: "#a16207" }}>dégradation imputable</strong> (retenue
+                  possible sur dépôt avec justificatifs).
+                </p>
+                <ul style={{ fontSize: 12, color: "#6b6559", margin: "8px 0 0", paddingLeft: 18, lineHeight: 1.55 }}>
+                  <li><strong>Usure normale :</strong> peinture jaunie après 3 ans, moquette aplatie sous canapé, traces sur murs autour interrupteurs</li>
+                  <li><strong>Dégradation :</strong> trous au mur (sauf chevilles raisonnables), tâches de gras ou brûlures, casse vitre, équipement détruit</li>
+                </ul>
+                <p style={{ fontSize: 11, color: "#a16207", margin: "8px 0 0", fontStyle: "italic" as const }}>
+                  Décret n°2016-382 du 30 mars 2016, art. 2 et annexe — chaque retenue requiert une preuve (photo + facture devis).
+                </p>
+              </div>
+            )}
 
             {/* Le Bailleur */}
             <div style={cardS}>
