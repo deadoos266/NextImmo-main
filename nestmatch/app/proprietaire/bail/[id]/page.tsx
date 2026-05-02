@@ -25,6 +25,7 @@ import { joursAvantFinPreavis, LOCATAIRE_MOTIFS, PROPRIETAIRE_MOTIFS } from "../
 import { genererIrlPDF } from "../../../../lib/irlPDF"
 import { genererPreavisPDF } from "../../../../lib/preavisPDF"
 import HelpIcon, { PhoneHelpContent } from "../../../components/ui/HelpIcon"
+import BailSignatureModal from "../../../components/BailSignatureModal"
 import AnnexeUploader from "../../../components/AnnexeUploader"
 import { formatNomComplet } from "../../../../lib/profilHelpers"
 
@@ -413,6 +414,13 @@ export default function BailPage() {
   const [existingBailAt, setExistingBailAt] = useState<string | null>(null)
   const [locataireSigne, setLocataireSigne] = useState(false)
   const [bailleurSigne, setBailleurSigne] = useState(false)
+  // V60.7 — modale signature bailleur (quand locataire a signé en premier).
+  // Avant ce fix, le bouton "Prévisualiser et envoyer" pouvait être cliqué
+  // par erreur après signature locataire → bug perçu d'auto-signature.
+  // Maintenant : si locataireSigne && !bailleurSigne, on remplace le bouton
+  // "Envoyer" par "Signer à votre tour" qui ouvre cette modale (canvas +
+  // mention + POST /api/bail/signer avec validations eIDAS strictes).
+  const [signProprioModalOpen, setSignProprioModalOpen] = useState(false)
   const [confirmRegen, setConfirmRegen] = useState(false)
 
   // V32.1 — Preview modal state. Avant l'envoi du bail au locataire, on
@@ -794,6 +802,29 @@ export default function BailPage() {
   // [BAIL_CARD] dans messages + notif locataire + update annonce.
   async function confirmEnvoiBail() {
     if (!bien || !bailData || generating) return
+    // V60.7 — Garde-fou server-side : re-fetch les signatures fraîches juste
+    // avant l'envoi pour éviter race condition (le locataire peut signer entre
+    // l'ouverture de la page et le click "Envoyer"). Si le locataire a signé,
+    // on bloque l'envoi — le proprio doit passer par la modale signature.
+    try {
+      const sigCheckRes = await fetch(`/api/bail/signatures?annonce_id=${bien.id}`, { cache: "no-store" })
+      const sigCheckJson = await sigCheckRes.json().catch(() => ({}))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sigArr = sigCheckJson?.ok ? ((sigCheckJson.signatures as Array<{ signataire_role: string }>) || []) : []
+      const locSigned = sigArr.some(s => s.signataire_role === "locataire")
+      if (locSigned) {
+        setLocataireSigne(true)
+        annulerPreview()
+        alert(
+          "Le locataire vient de signer ce bail. Vous ne pouvez plus le renvoyer — vous devez maintenant le signer à votre tour pour le rendre actif.",
+        )
+        return
+      }
+    } catch (e) {
+      console.warn("[confirmEnvoiBail] signature precheck failed:", e)
+      // En cas d'erreur réseau, on continue (le user a déjà confirmé) mais
+      // on log pour audit. Le serveur reste safe (RLS + bail/signer bloque).
+    }
     setGenerating(true)
     try {
       console.log("[generer] confirm — bienId:", bien.id, "statut:", bien.statut)
@@ -2598,19 +2629,55 @@ export default function BailPage() {
           </div>
         )}
 
-        {(() => {
-          const bloque = locataireSigne
-          const label = bloque
-            ? "Bail déjà signé — modification impossible"
-            : locataireKnown
-              ? generating
-                ? "Génération en cours…"
-                : existingBailAt
-                  ? confirmRegen
-                    ? "Confirmer le remplacement"
-                    : "Remplacer le bail envoyé"
-                  : "Prévisualiser et envoyer au locataire"
-              : "Prévisualiser le bail PDF"
+        {/* V60.7 — CTA principal change selon l'état des signatures :
+            Cas A : locataire a signé + bailleur PAS signé → "Signer à votre
+            tour" qui ouvre la modale signature (canvas + mention eIDAS).
+            Cas B : double signé → CTA disabled "Bail pleinement signé".
+            Cas C (état normal) : "Prévisualiser et envoyer au locataire". */}
+        {locataireSigne && !bailleurSigne ? (
+          <div>
+            <div style={{ background: "#F0FAEE", border: "1px solid #86efac", borderRadius: 12, padding: "12px 16px", marginBottom: 12, fontSize: 13, color: "#15803d", lineHeight: 1.55 }}>
+              ✓ <strong>Le locataire a signé le bail</strong> — c&apos;est à votre tour de signer pour rendre le bail pleinement actif. Cliquez ci-dessous pour ouvrir la modale de signature électronique (canvas + mention manuscrite, conforme eIDAS Niveau 1).
+            </div>
+            <button
+              type="button"
+              onClick={() => setSignProprioModalOpen(true)}
+              style={{
+                width: "100%",
+                padding: "18px 32px",
+                background: "#15803d",
+                color: "white",
+                border: "none",
+                borderRadius: 16,
+                fontWeight: 800,
+                fontSize: 16,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              ✍️ Signer le bail à votre tour →
+            </button>
+          </div>
+        ) : locataireSigne && bailleurSigne ? (
+          <div style={{ background: "#F0FAEE", border: "1px solid #86efac", borderRadius: 16, padding: "18px 24px", textAlign: "center" as const }}>
+            <p style={{ fontSize: 16, fontWeight: 800, color: "#15803d", margin: 0 }}>
+              ✓ Bail pleinement signé par les 2 parties
+            </p>
+            <p style={{ fontSize: 12, color: "#15803d", margin: "6px 0 0", lineHeight: 1.5 }}>
+              Le bail est définitivement actif. Pour toute modification, un avenant sera nécessaire.
+            </p>
+          </div>
+        ) : (() => {
+          const bloque = false
+          const label = locataireKnown
+            ? generating
+              ? "Génération en cours…"
+              : existingBailAt
+                ? confirmRegen
+                  ? "Confirmer le remplacement"
+                  : "Remplacer le bail envoyé"
+                : "Prévisualiser et envoyer au locataire"
+            : "Prévisualiser le bail PDF"
           const actif = prete && !generating && !bloque
           return (
             <button
@@ -2626,17 +2693,15 @@ export default function BailPage() {
                 }
                 void generer()
               }}
-              disabled={bloque || generating}
+              disabled={generating}
               style={{
                 width: "100%",
                 padding: "18px 32px",
-                background: bloque
-                  ? "#EAE6DF"
-                  : confirmRegen
-                    ? "#a16207"
-                    : actif
-                      ? "#111"
-                      : "#EAE6DF",
+                background: confirmRegen
+                  ? "#a16207"
+                  : actif
+                    ? "#111"
+                    : "#EAE6DF",
                 color: actif ? "white" : "#8a8477",
                 border: "none",
                 borderRadius: 16,
@@ -3067,6 +3132,29 @@ export default function BailPage() {
           annonceId={bien.id}
           loyerHC={Number(bien.prix) || undefined}
           charges={Number(bien.charges) || undefined}
+        />
+      )}
+
+      {/* V60.7 — Modale signature bailleur (eIDAS Niveau 1).
+          Ouverte quand le proprio click "Signer le bail à votre tour →"
+          après que le locataire ait signé en premier. Avant ce fix, le
+          bouton ouvrait `confirmEnvoiBail()` qui pouvait perçu comme
+          auto-signature alors qu'il n'a jamais déclenché /api/bail/signer
+          (qui est strict : canvas + mention obligatoires). */}
+      {bien && bailData && (
+        <BailSignatureModal
+          open={signProprioModalOpen}
+          onClose={() => setSignProprioModalOpen(false)}
+          onSigned={() => {
+            setSignProprioModalOpen(false)
+            setBailleurSigne(true)
+            // Refresh state + Realtime push fera le reste
+            void loadBien()
+          }}
+          bailData={bailData}
+          annonceId={bien.id}
+          role="bailleur"
+          nomDefaut={form.nomBailleur || ""}
         />
       )}
     </main>
