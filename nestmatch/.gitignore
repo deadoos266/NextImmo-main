@@ -43,6 +43,11 @@ node_modules/.vite/
 # cache ESLint
 .eslintcache
 
+# V55.4 — Playwright artefacts (rapports HTML, traces, vidéos d'échec)
+playwright-report/
+test-results/
+playwright/.cache/
+
 
 # Dossier temporaire pour sources photos brutes (drop + crop + remplace)
 public/_pending/
