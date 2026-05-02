@@ -1884,34 +1884,97 @@ export default function BailPage() {
             />
             <div>
               <label style={labelStyle}>Durée</label>
-              <select
-                value={form.duree}
-                onChange={e => set("duree")(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "11px 14px",
-                  border: "1px solid #EAE6DF",
-                  borderRadius: 10,
-                  fontSize: 15,
-                  outline: "none",
-                  boxSizing: "border-box",
-                  fontFamily: "inherit",
-                  background: "white",
-                  color: "#111",
-                }}
-              >
-                {form.type === "meuble"
-                  ? [9, 12, 24].map(v => (
-                      <option key={v} value={v}>
-                        {v} mois{v === 9 ? " (étudiant)" : ""}
-                      </option>
-                    ))
-                  : [36, 72].map(v => (
-                      <option key={v} value={v}>
-                        {v / 12} ans
-                      </option>
-                    ))}
-              </select>
+              {/* V60.5 — Dropdown étendu + option "Autre" pour durée libre.
+                  Cas légaux français :
+                  - Meublé : 9 mois étudiant non-renouvelable, 12 mois renouvelable
+                  - Vide : 3 ans (36) bailleur particulier, 6 ans (72) personne morale
+                  - Mobilité : 1 à 10 mois, non-renouvelable (loi ELAN)
+                  - Cas hybrides : 18 mois (CDD long), 24 mois (meublé long), etc. */}
+              {(() => {
+                const standardOptions = form.type === "meuble"
+                  ? [
+                      { v: 1,  l: "1 mois (mobilité)" },
+                      { v: 3,  l: "3 mois (mobilité)" },
+                      { v: 6,  l: "6 mois (mobilité)" },
+                      { v: 9,  l: "9 mois (étudiant non-renouvelable)" },
+                      { v: 10, l: "10 mois (mobilité max)" },
+                      { v: 12, l: "12 mois (meublé standard)" },
+                      { v: 18, l: "18 mois" },
+                      { v: 24, l: "24 mois" },
+                    ]
+                  : [
+                      { v: 12, l: "12 mois (cas spécifique)" },
+                      { v: 24, l: "24 mois" },
+                      { v: 36, l: "3 ans (bail vide standard particulier)" },
+                      { v: 72, l: "6 ans (bail vide bailleur personne morale)" },
+                    ]
+                const dureeNum = Number(form.duree)
+                const isCustom = !standardOptions.find(o => o.v === dureeNum)
+                return (
+                  <>
+                    <select
+                      value={isCustom ? "custom" : form.duree}
+                      onChange={e => {
+                        if (e.target.value === "custom") {
+                          // Bascule vers une valeur custom (default 30 si pas déjà custom)
+                          if (!isCustom) set("duree")("30")
+                        } else {
+                          set("duree")(e.target.value)
+                        }
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "11px 14px",
+                        border: "1px solid #EAE6DF",
+                        borderRadius: 10,
+                        fontSize: 15,
+                        outline: "none",
+                        boxSizing: "border-box",
+                        fontFamily: "inherit",
+                        background: "white",
+                        color: "#111",
+                      }}
+                    >
+                      {standardOptions.map(o => (
+                        <option key={o.v} value={o.v}>{o.l}</option>
+                      ))}
+                      <option value="custom">Autre durée (personnalisée)…</option>
+                    </select>
+                    {isCustom && (
+                      <input
+                        type="number"
+                        min={1}
+                        max={120}
+                        step={1}
+                        value={form.duree}
+                        onChange={e => {
+                          const n = Math.max(1, Math.min(120, Number(e.target.value) || 1))
+                          set("duree")(String(n))
+                        }}
+                        placeholder="Nombre de mois (1 à 120)"
+                        style={{
+                          width: "100%",
+                          marginTop: 8,
+                          padding: "11px 14px",
+                          border: "1.5px solid #a16207",
+                          borderRadius: 10,
+                          fontSize: 15,
+                          outline: "none",
+                          boxSizing: "border-box",
+                          fontFamily: "inherit",
+                          background: "#FBF6EA",
+                          color: "#111",
+                        }}
+                      />
+                    )}
+                    <p style={{ fontSize: 11, color: "#8a8477", margin: "6px 0 0", lineHeight: 1.45 }}>
+                      {form.type === "meuble"
+                        ? "Bail meublé : 12 mois standard ou 9 mois étudiant non-renouvelable. Bail mobilité (1-10 mois, loi ELAN) pour mobilité pro/étudiant."
+                        : "Bail vide : 3 ans minimum bailleur particulier, 6 ans bailleur personne morale (loi 6 juillet 1989, art. 10)."}
+                    </p>
+                  </>
+                )
+              })()}
             </div>
           </div>
         </div>
