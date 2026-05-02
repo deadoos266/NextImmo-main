@@ -1664,3 +1664,64 @@ Restituer maintenant : ${params.restituerUrl}
 — L'équipe KeyMatch`
   return { subject, html, text }
 }
+
+/**
+ * V59.3 — Digest quotidien messages reçus (cron daily 8h).
+ * Pour les users en mode message_recu_mode='digest'.
+ * Aggrège tous les messages non lus depuis le dernier digest, par
+ * conversation. 1 ligne par conv : sender + preview tronqué.
+ */
+export function messagesDigestTemplate(params: {
+  receiverName: string
+  conversations: Array<{
+    senderName: string
+    senderEmail: string
+    bienTitre: string | null
+    nbMessages: number
+    lastPreview: string
+    convUrl: string
+  }>
+  totalMessages: number
+}): { subject: string; html: string; text: string } {
+  const n = params.totalMessages
+  const subject = n === 1
+    ? "1 nouveau message reçu sur KeyMatch"
+    : `${n} nouveaux messages reçus sur KeyMatch`
+  const items = params.conversations.slice(0, 30).map(c => `
+    <tr><td style="padding:10px 0;border-top:1px solid ${PALETTE.borderSoft};">
+      <a href="${c.convUrl}" target="_blank" style="text-decoration:none;color:${PALETTE.text};">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+          <tr>
+            <td valign="middle" style="font-size:14px;font-weight:600;color:${PALETTE.text};">${escapeHtml(c.senderName)}</td>
+            <td valign="middle" align="right" style="font-size:11px;color:${PALETTE.textSubtle};font-weight:600;letter-spacing:0.5px;text-transform:uppercase;padding-left:12px;">${c.nbMessages > 1 ? `${c.nbMessages} messages` : "1 msg"}</td>
+          </tr>
+          ${c.bienTitre ? `<tr><td colspan="2" style="font-size:11px;color:${PALETTE.textSubtle};padding-top:2px;font-style:italic;">${escapeHtml(c.bienTitre)}</td></tr>` : ""}
+          <tr><td colspan="2" style="font-size:13px;color:${PALETTE.textMuted};padding-top:4px;line-height:1.45;">${escapeHtml(c.lastPreview.slice(0, 140))}${c.lastPreview.length > 140 ? "…" : ""}</td></tr>
+        </table>
+      </a>
+    </td></tr>
+  `).join("")
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      ${n === 1 ? "Vous avez 1 nouveau message" : `Vous avez ${n} nouveaux messages`}
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Récap des conversations actives depuis hier. Cliquez sur une ligne pour répondre.
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 14px;">
+      ${items}
+    </table>
+    <p style="margin:18px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
+      Vous recevez ce digest car vous avez choisi le mode « Digest quotidien »
+      pour les nouveaux messages. Vous pouvez changer ce comportement dans
+      <a href="${BRAND.url || "https://keymatch-immo.fr"}/parametres?tab=compte#notifications-email" style="color:${PALETTE.textMuted};text-decoration:underline;">vos préférences</a>.
+    </p>
+  `
+  const html = wrap(subject, body, "msgdigest")
+  const text = `${subject}
+
+${params.conversations.slice(0, 30).map(c => `- ${c.senderName}${c.bienTitre ? ` (${c.bienTitre})` : ""} — ${c.nbMessages > 1 ? `${c.nbMessages} messages` : "1 message"}\n  "${c.lastPreview.slice(0, 100)}${c.lastPreview.length > 100 ? "..." : ""}"`).join("\n\n")}
+
+— L'équipe KeyMatch`
+  return { subject, html, text }
+}
