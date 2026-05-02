@@ -958,14 +958,25 @@ export default function BailPage() {
   if (!bien) return null
 
   const locataireKnown = !!(bien.locataire_email || "").trim()
-  const prete = form.dateDebut && form.nomBailleur
+  // V60.6 — `prete` inclut maintenant equipementsOk (validation ALUR stricte
+  // pour les meublés). Si manquant, le bouton "Prévisualiser et envoyer"
+  // reste désactivé et le warning rouge guide l'user.
   const loyer = Number(bien.prix) || 0
   const charges = Number(bien.charges) || 0
   const totalCC = loyer + charges
   const caution = Number(bien.caution) || loyer
-  const equipementsOk =
-    form.type !== "meuble" ||
-    form.equipementsMeuble.length >= EQUIPEMENTS_MEUBLE_ALUR.length
+  // V60.6 — Validation STRICTE ALUR : les 11 items obligatoires (décret
+  // n°2015-981 du 31 juillet 2015) doivent TOUS être cochés. Avant ce fix,
+  // on comparait juste la longueur totale (qui inclut les facultatifs)
+  // → un meublé pouvait être validé alors qu'il manquait un item ALUR.
+  // User : "il y a marqué les 11 EQUIPEMENTS LOI ALUR mais si tout n'est
+  // pas coché ça fonctionne quand même car il y en a d'autres en dessous".
+  const equipementsAlurMissing = form.type === "meuble"
+    ? EQUIPEMENTS_MEUBLE_ALUR.filter(e => !form.equipementsMeuble.includes(e))
+    : []
+  const equipementsOk = form.type !== "meuble" || equipementsAlurMissing.length === 0
+  // V60.6 — `prete` consolidé : date début + nom bailleur + équipements ALUR ok
+  const prete = !!form.dateDebut && !!form.nomBailleur && equipementsOk
 
   return (
     <main
@@ -2297,22 +2308,39 @@ export default function BailPage() {
               }}
             >
               <div>
-                <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 700,
-                    color: equipementsOk ? "#15803d" : "#9a3412",
-                  }}
-                >
-                  {form.equipementsMeuble.length} équipement
-                  {form.equipementsMeuble.length > 1 ? "s" : ""} coché
-                  {form.equipementsMeuble.length > 1 ? "s" : ""}
-                  {!equipementsOk &&
-                    ` — ${EQUIPEMENTS_MEUBLE_ALUR.length - form.equipementsMeuble.filter(e => EQUIPEMENTS_MEUBLE_ALUR.includes(e as (typeof EQUIPEMENTS_MEUBLE_ALUR)[number])).length} obligatoire(s) manquant(s)`}
-                </div>
-                <div style={{ fontSize: 12, color: "#8a8477", marginTop: 2 }}>
-                  Les 11 équipements ALUR doivent être cochés pour un meublé conforme.
-                </div>
+                {/* V60.6 — UI distincte ALUR (obligatoires) vs Confort (facultatifs)
+                    + warning explicite si items ALUR manquants. */}
+                {(() => {
+                  const alurChecked = EQUIPEMENTS_MEUBLE_ALUR.filter(e => form.equipementsMeuble.includes(e)).length
+                  const totalAlur = EQUIPEMENTS_MEUBLE_ALUR.length
+                  const confortChecked = form.equipementsMeuble.length - alurChecked
+                  return (
+                    <>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 700,
+                          color: equipementsOk ? "#15803d" : "#9a3412",
+                        }}
+                      >
+                        {alurChecked} / {totalAlur} ALUR coché{alurChecked > 1 ? "s" : ""} (obligatoires)
+                        {confortChecked > 0 && (
+                          <span style={{ fontWeight: 500, color: "#6b6559" }}>
+                            {" "}+ {confortChecked} confort{confortChecked > 1 ? "s" : ""} (facultatif{confortChecked > 1 ? "s" : ""})
+                          </span>
+                        )}
+                      </div>
+                      {!equipementsOk && equipementsAlurMissing.length > 0 && (
+                        <div style={{ fontSize: 11.5, color: "#9a3412", marginTop: 4, lineHeight: 1.5 }}>
+                          ⚠ Bail non conforme — manquants : <strong>{equipementsAlurMissing.join(", ")}</strong>
+                        </div>
+                      )}
+                      <div style={{ fontSize: 11, color: "#8a8477", marginTop: 2, lineHeight: 1.45 }}>
+                        Décret n°2015-981 du 31 juillet 2015 — un logement meublé doit obligatoirement comporter les 11 équipements ALUR.
+                      </div>
+                    </>
+                  )
+                })()}
               </div>
               <button
                 type="button"
@@ -2591,7 +2619,9 @@ export default function BailPage() {
                   const missing: string[] = []
                   if (!form.dateDebut) missing.push("la date de début")
                   if (!form.nomBailleur) missing.push("le nom du bailleur")
-                  alert(`Pour générer le bail, remplissez : ${missing.join(" et ")}.`)
+                  // V60.6 — équipements ALUR manquants explicites
+                  if (!equipementsOk) missing.push(`les ${equipementsAlurMissing.length} équipement(s) ALUR : ${equipementsAlurMissing.join(", ")}`)
+                  alert(`Pour générer le bail, remplissez : ${missing.join(" · ")}.`)
                   return
                 }
                 void generer()
