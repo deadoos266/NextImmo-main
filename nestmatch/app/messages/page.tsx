@@ -411,23 +411,25 @@ function BailCard({
       }
       if (!canDownload) return
       const { genererBailPDF } = await import("../../lib/bailPDF")
-      // Fetch les signatures (PNG complet) depuis Supabase pour les injecter dans le PDF.
+      // V55.1b — Fetch les signatures via /api/bail/signatures (RLS Phase 5)
       let sigs: Array<{ role: "bailleur" | "locataire" | "garant"; nom: string; png: string; signeAt: string; mention?: string; ipAddress?: string }> = []
       if (annonceId) {
-        const { data: raw } = await supabase
-          .from("bail_signatures")
-          .select("signataire_role, signataire_nom, signature_png, mention, ip_address, signe_at")
-          .eq("annonce_id", annonceId)
-        if (raw) {
-          sigs = raw.map(s => ({
-            role: s.signataire_role as "bailleur" | "locataire" | "garant",
-            nom: s.signataire_nom,
-            png: s.signature_png,
-            signeAt: s.signe_at,
-            mention: s.mention,
-            ipAddress: s.ip_address,
-          }))
-        }
+        try {
+          const res = await fetch(`/api/bail/signatures?annonce_id=${annonceId}&include_png=true`, { cache: "no-store" })
+          const json = await res.json().catch(() => ({}))
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const raw = json?.ok ? (json.signatures as any[]) : null
+          if (raw) {
+            sigs = raw.map(s => ({
+              role: s.signataire_role as "bailleur" | "locataire" | "garant",
+              nom: s.signataire_nom,
+              png: s.signature_png,
+              signeAt: s.signe_at,
+              mention: s.mention,
+              ipAddress: s.ip_address,
+            }))
+          }
+        } catch { /* ignore — PDF rendu sans signatures plutôt que crash */ }
       }
       await genererBailPDF({ ...data, signatures: sigs })
     } finally {
@@ -2016,21 +2018,23 @@ function MessagesInner() {
     }
     const validEdlIds = edlIds.filter(id => Number.isFinite(id) && id > 0)
     if (validEdlIds.length > 0) {
-      const { data: sigs } = await supabase
-        .from("edl_signatures")
-        .select("edl_id, signataire_role")
-        .in("edl_id", validEdlIds)
-      const map: Record<number, { locataire: boolean; bailleur: boolean }> = {}
-      validEdlIds.forEach(id => { map[id] = { locataire: false, bailleur: false } })
-      if (sigs) {
-        for (const s of sigs) {
-          const id = Number(s.edl_id)
-          if (!map[id]) map[id] = { locataire: false, bailleur: false }
-          if (s.signataire_role === "locataire") map[id].locataire = true
-          if (s.signataire_role === "bailleur") map[id].bailleur = true
+      // V55.1b — batch fetch via /api/edl/signatures avec edl_id=X,Y,Z
+      try {
+        const res = await fetch(`/api/edl/signatures?edl_id=${validEdlIds.join(",")}`, { cache: "no-store" })
+        const json = await res.json().catch(() => ({}))
+        const map: Record<number, { locataire: boolean; bailleur: boolean }> = {}
+        validEdlIds.forEach(id => { map[id] = { locataire: false, bailleur: false } })
+        if (json?.ok && Array.isArray(json.signatures)) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          for (const s of json.signatures as any[]) {
+            const id = Number(s.edl_id)
+            if (!map[id]) map[id] = { locataire: false, bailleur: false }
+            if (s.signataire_role === "locataire") map[id].locataire = true
+            if (s.signataire_role === "bailleur") map[id].bailleur = true
+          }
         }
-      }
-      setEdlSignatures(prev => ({ ...prev, ...map }))
+        setEdlSignatures(prev => ({ ...prev, ...map }))
+      } catch { /* ignore — pas de blocage si fetch rate */ }
     }
   }
 

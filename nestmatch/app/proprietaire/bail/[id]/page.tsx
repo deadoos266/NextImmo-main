@@ -549,25 +549,20 @@ export default function BailPage() {
               .ilike("email", data.locataire_email)
               .maybeSingle()
           : Promise.resolve({ data: null }),
-        supabase
-          .from("bail_signatures")
-          .select("signataire_role")
-          .eq("annonce_id", bienId),
+        // V55.1b — signatures via /api/bail/signatures (RLS Phase 5)
+        fetch(`/api/bail/signatures?annonce_id=${bienId}`, { cache: "no-store" })
+          .then(r => r.ok ? r.json() : { ok: false })
+          .catch(() => ({ ok: false })),
       ])
 
       // État existing bail
       if (data.bail_genere_at) setExistingBailAt(data.bail_genere_at)
-      console.log("[loadBien] signatures fetch:", {
-        error: signaturesRes.error,
-        count: signaturesRes.data?.length ?? 0,
-        roles: signaturesRes.data?.map(s => s.signataire_role) ?? [],
-      })
-      if (signaturesRes.data) {
-        const roles = new Set(signaturesRes.data.map(s => s.signataire_role))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sigArr = (signaturesRes as any)?.ok ? ((signaturesRes as any).signatures as Array<{ signataire_role: string }>) : null
+      if (sigArr) {
+        const roles = new Set(sigArr.map(s => s.signataire_role))
         setLocataireSigne(roles.has("locataire"))
         setBailleurSigne(roles.has("bailleur"))
-      } else if (signaturesRes.error) {
-        console.error("[loadBien] bail_signatures error:", signaturesRes.error)
       }
 
       setBien(data)
@@ -1104,13 +1099,14 @@ export default function BailPage() {
                       .order("id", { ascending: false })
                       .limit(1)
                       .maybeSingle(),
-                    supabase
-                      .from("bail_signatures")
-                      .select("signataire_role, signataire_nom, signature_png, signe_at, mention, ip_address")
-                      .eq("annonce_id", bien.id),
+                    // V55.1b — signatures via /api/bail/signatures
+                    fetch(`/api/bail/signatures?annonce_id=${bien.id}&include_png=true`, { cache: "no-store" })
+                      .then(r => r.ok ? r.json() : { ok: false })
+                      .catch(() => ({ ok: false })),
                   ])
-                  console.log("[bail download] msg:", msgRes, "sigs:", sigsRes)
-                  const signatures = (sigsRes.data || []).map(s => ({
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const sigArr = (sigsRes as any)?.ok ? ((sigsRes as any).signatures as any[]) : []
+                  const signatures = sigArr.map((s: { signataire_role: string; signataire_nom: string; signature_png: string; signe_at: string; mention?: string; ip_address?: string }) => ({
                     role: s.signataire_role as "bailleur" | "locataire" | "garant",
                     nom: s.signataire_nom,
                     png: s.signature_png,

@@ -369,7 +369,10 @@ function StatsInner() {
         supabase.from("messages").select("id", { count: "exact", head: true }).eq("to_email", me).eq("annonce_id", bienId).eq("type", "candidature"),
         supabase.from("messages").select("id", { count: "exact", head: true }).eq("to_email", me).eq("annonce_id", bienId).like("contenu", "[DOSSIER_CARD]%"),
         supabase.from("visites").select("id", { count: "exact", head: true }).eq("annonce_id", bienId).in("statut", ["proposée", "confirmée", "effectuée"]),
-        supabase.from("bail_signatures").select("signataire_role").eq("annonce_id", bienId),
+        // V55.1b — bail_signatures via /api/bail/signatures (RLS Phase 5)
+        fetch(`/api/bail/signatures?annonce_id=${bienId}`, { cache: "no-store" })
+          .then(r => r.ok ? r.json() : { ok: false })
+          .catch(() => ({ ok: false })),
       ])
 
       const b = bienRes.data
@@ -386,8 +389,10 @@ function StatsInner() {
       if (travaux) setTravauxCout(travaux.reduce((s: number, t: any) => s + (Number(t.cout) || 0), 0))
 
       const distinctRoles = new Set<string>()
-      if (Array.isArray(signaturesRes.data)) {
-        signaturesRes.data.forEach((s: { signataire_role?: string | null }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sigArr = (signaturesRes as any)?.ok ? ((signaturesRes as any).signatures as Array<{ signataire_role?: string | null }>) : null
+      if (Array.isArray(sigArr)) {
+        sigArr.forEach((s) => {
           if (s.signataire_role) distinctRoles.add(s.signataire_role)
         })
       }

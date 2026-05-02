@@ -279,14 +279,15 @@ export default function ConsulterEdlPage() {
     const { edl: data, bien: bienData } = await res.json()
     setEdl(data)
     if (bienData) setBien(bienData)
-    // Fetch signatures EDL
-    const { data: sigs } = await supabase
-      .from("edl_signatures")
-      .select("signataire_role, signataire_nom, signe_at")
-      .eq("edl_id", edlId)
-    if (sigs) {
-      setSignatures(sigs.map(s => ({ role: s.signataire_role, nom: s.signataire_nom, signe_at: s.signe_at })))
-    }
+    // V55.1b — Fetch signatures EDL via /api/edl/signatures (RLS Phase 5)
+    try {
+      const sigRes = await fetch(`/api/edl/signatures?edl_id=${encodeURIComponent(edlId as string)}`, { cache: "no-store" })
+      const sigJson = await sigRes.json().catch(() => ({}))
+      if (sigJson?.ok && Array.isArray(sigJson.signatures)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setSignatures(sigJson.signatures.map((s: any) => ({ role: s.signataire_role, nom: s.signataire_nom, signe_at: s.signe_at })))
+      }
+    } catch { /* ignore */ }
     setLoading(false)
   }
 
@@ -296,15 +297,16 @@ export default function ConsulterEdlPage() {
     setSignModalOpen(true)
   }
   async function onSignedEdl() {
-    // Refetch EDL + signatures après signature réussie
+    // V55.1b — Refetch signatures via /api/edl/signatures
     if (!edl) return
-    const { data: sigs } = await supabase
-      .from("edl_signatures")
-      .select("signataire_role, signataire_nom, signe_at")
-      .eq("edl_id", edl.id)
-    if (sigs) {
-      setSignatures(sigs.map(s => ({ role: s.signataire_role, nom: s.signataire_nom, signe_at: s.signe_at })))
-    }
+    try {
+      const sigRes = await fetch(`/api/edl/signatures?edl_id=${encodeURIComponent(String(edl.id))}`, { cache: "no-store" })
+      const sigJson = await sigRes.json().catch(() => ({}))
+      if (sigJson?.ok && Array.isArray(sigJson.signatures)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setSignatures(sigJson.signatures.map((s: any) => ({ role: s.signataire_role, nom: s.signataire_nom, signe_at: s.signe_at })))
+      }
+    } catch { /* ignore */ }
     // Refetch EDL pour avoir le nouveau statut
     const res = await fetch(`/api/edl/${encodeURIComponent(edlId as string)}`, { cache: "no-store" })
     if (res.ok) {
@@ -626,14 +628,18 @@ export default function ConsulterEdlPage() {
         {(statut === "valide" || statut === "envoye") && (
           <div style={{ display: "flex", gap: 12, marginTop: statut === "envoye" ? 0 : 0, flexWrap: "wrap" }}>
             <button onClick={async () => {
-              // Fetch images signatures (full base64) pour les embed dans le PDF
-              const { data: sigsFull } = await supabase
-                .from("edl_signatures")
-                .select("signataire_role, signataire_nom, signature_png, mention, ip_address, signe_at")
-                .eq("edl_id", edl.id)
+              // V55.1b — Fetch images signatures via /api/edl/signatures (RLS Phase 5)
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              let sigsFull: any[] = []
+              try {
+                const res = await fetch(`/api/edl/signatures?edl_id=${encodeURIComponent(String(edl.id))}&include_png=true`, { cache: "no-store" })
+                const json = await res.json().catch(() => ({}))
+                if (json?.ok && Array.isArray(json.signatures)) sigsFull = json.signatures
+              } catch { /* ignore — PDF rendu sans signatures plutôt que crash */ }
               const edlWithSigs = {
                 ...edl,
-                __edl_signatures: (sigsFull || []).map(s => ({
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                __edl_signatures: sigsFull.map((s: any) => ({
                   role: s.signataire_role,
                   nom: s.signataire_nom,
                   png: s.signature_png,

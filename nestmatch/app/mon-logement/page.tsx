@@ -128,10 +128,10 @@ export default function MonLogement() {
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle(),
-        // Signatures pour affichage du statut
-        supabase.from("bail_signatures")
-          .select("signataire_role, signataire_nom, signature_png, signe_at, mention, ip_address")
-          .eq("annonce_id", b.id),
+        // V55.1b — signatures via /api/bail/signatures (RLS Phase 5)
+        fetch(`/api/bail/signatures?annonce_id=${b.id}&include_png=true`, { cache: "no-store" })
+          .then(r => r.ok ? r.json() : { ok: false })
+          .catch(() => ({ ok: false })),
       ])
       setVisitesAVenir(vRes.count ?? 0)
       setEdls(edlRes.data || [])
@@ -150,10 +150,12 @@ export default function MonLogement() {
         }
       }
 
-      // Signatures
-      if (sigRes.data) {
+      // V55.1b — Signatures retournées par /api/bail/signatures (typed loosely)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sigArr = (sigRes as any)?.ok ? ((sigRes as any).signatures as any[]) : null
+      if (sigArr) {
         setSignatures(
-          sigRes.data.map(s => ({
+          sigArr.map(s => ({
             role: s.signataire_role as "bailleur" | "locataire" | "garant",
             nom: s.signataire_nom,
             png: s.signature_png,
@@ -206,24 +208,26 @@ export default function MonLogement() {
   }
 
   async function onSigned() {
-    // Recharge les signatures après signing
+    // V55.1b — recharge signatures via /api/bail/signatures (RLS Phase 5)
     if (!bien) return
-    const { data: sigRes } = await supabase
-      .from("bail_signatures")
-      .select("signataire_role, signataire_nom, signature_png, signe_at, mention, ip_address")
-      .eq("annonce_id", bien.id)
-    if (sigRes) {
-      setSignatures(
-        sigRes.map(s => ({
-          role: s.signataire_role as "bailleur" | "locataire" | "garant",
-          nom: s.signataire_nom,
-          png: s.signature_png,
-          signeAt: s.signe_at,
-          mention: s.mention,
-          ipAddress: s.ip_address,
-        })),
-      )
-    }
+    try {
+      const res = await fetch(`/api/bail/signatures?annonce_id=${bien.id}&include_png=true`, { cache: "no-store" })
+      const json = await res.json().catch(() => ({}))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sigArr = json?.ok ? (json.signatures as any[]) : null
+      if (sigArr) {
+        setSignatures(
+          sigArr.map(s => ({
+            role: s.signataire_role as "bailleur" | "locataire" | "garant",
+            nom: s.signataire_nom,
+            png: s.signature_png,
+            signeAt: s.signe_at,
+            mention: s.mention,
+            ipAddress: s.ip_address,
+          })),
+        )
+      }
+    } catch { /* ignore */ }
     // Statut mis à jour (bail_envoye → loué) — refetch le bien
     const { data: b } = await supabase.from("annonces").select("*").eq("id", bien.id).single()
     if (b) setBien(b as Bien)
