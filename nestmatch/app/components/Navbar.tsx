@@ -539,6 +539,34 @@ export default function Navbar() {
                     {/* Divider */}
                     <div style={{ height: 1, background: km.line, margin: "6px 0" }} />
 
+                    {/* V55.2 — Refaire la visite guidée (tuto onboarding) */}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setMenuOpen(false)
+                        try {
+                          const email = session?.user?.email?.toLowerCase()
+                          if (email) {
+                            try { window.localStorage.removeItem(`nestmatch_tuto_${proprietaireActive ? "proprio" : "locataire"}:${email}`) } catch { /* ignore */ }
+                          }
+                          await fetch(proprietaireActive ? "/api/proprietaire/tuto" : "/api/locataire/tuto", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ action: "reset" }),
+                          })
+                          // Reload pour déclencher l'auto-show du tuto
+                          window.location.href = proprietaireActive ? "/proprietaire" : "/annonces"
+                        } catch { /* ignore */ }
+                      }}
+                      style={{ width: "100%", textAlign: "left" as const, position: "relative", display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", background: "none", border: "none", color: km.ink, cursor: "pointer", fontFamily: "inherit" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = km.beige)}
+                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                      <span aria-hidden style={{ width: 18, height: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", color: km.muted }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      </span>
+                      <span style={{ fontSize: 13, fontWeight: 500 }}>Refaire la visite guidée</span>
+                    </button>
+
                     {/* Paramètres */}
                     <Link href="/parametres" onClick={() => setMenuOpen(false)}
                       style={{ position: "relative", display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", textDecoration: "none", color: km.ink }}
@@ -844,6 +872,29 @@ export default function Navbar() {
                     onMouseLeave={e => drawerItemUnhover(e, isActive("/parametres"))}>
                     Paramètres
                   </Link>
+
+                  {/* V55.2 — Refaire la visite guidée (mobile) */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setMobileOpen(false)
+                      try {
+                        const email = session?.user?.email?.toLowerCase()
+                        if (email) {
+                          try { window.localStorage.removeItem(`nestmatch_tuto_${proprietaireActive ? "proprio" : "locataire"}:${email}`) } catch { /* ignore */ }
+                        }
+                        await fetch(proprietaireActive ? "/api/proprietaire/tuto" : "/api/locataire/tuto", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ action: "reset" }),
+                        })
+                        window.location.href = proprietaireActive ? "/proprietaire" : "/annonces"
+                      } catch { /* ignore */ }
+                    }}
+                    style={{ ...drawerItemStyle(false), background: "none", border: "none", textAlign: "left" as const, cursor: "pointer", fontFamily: "inherit", color: km.ink, fontSize: 14, fontWeight: 500, width: "100%" }}
+                  >
+                    Refaire la visite guidée
+                  </button>
 
                   <div style={{ padding: 16, borderTop: `1px solid ${km.beige}`, marginTop: 8 }}>
                     <button onClick={() => { setMobileOpen(false); signOut({ callbackUrl: "/" }) }}
