@@ -483,8 +483,28 @@ export default function Proprietaire() {
   // si biens.length === 0 ET pas déjà skipped/completed (gating cible 1er-time
   // proprio), (c) skip silencieux si biens.length > 0 (user déjà actif).
   // Cache localStorage en parallèle pour défensive coding (network down OK).
+  // V56.2 — query param ?tuto=1 (depuis Navbar "Refaire la visite guidée")
+  // force l'ouverture immédiate sans passer par le check "biens.length > 0"
+  // (sinon un proprio avec déjà des biens ne pouvait pas relancer son tuto).
   useEffect(() => {
     if (!myEmail) return
+
+    // V56.2 — force-open via ?tuto=1
+    try {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get("tuto") === "1") {
+        try { window.localStorage.removeItem(`nestmatch_tuto_proprio:${myEmail}`) } catch { /* ignore */ }
+        // Clean l'URL pour pas que le tuto re-trigger au prochain reload
+        try {
+          const url = new URL(window.location.href)
+          url.searchParams.delete("tuto")
+          window.history.replaceState({}, "", url.toString())
+        } catch { /* ignore */ }
+        setTutoOpen(true)
+        return
+      }
+    } catch { /* ignore */ }
+
     // Power user qui a déjà des biens = il connaît, on coupe court.
     if (biens.length > 0) return
 

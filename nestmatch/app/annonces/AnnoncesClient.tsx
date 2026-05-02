@@ -319,17 +319,44 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   const { role } = useRole()
   const isProprietaire = role === "proprietaire"
 
-  // V55.2 — Walkthrough locataire post-signup. Affiché 1 fois si :
+  // V55.2 + V56.2 — Walkthrough locataire post-signup. Affiché 1 fois si :
   //  - user authenticated AND not proprietaireActive
   //  - profils.tuto_locataire_completed_at IS NULL
   //  - profils.tuto_locataire_skipped_at IS NULL
   //  - localStorage.km_tuto_locataire:<email> != "done" (anti-reshow rapide)
+  //
+  // V56.2 — query param `?tuto=1` (depuis Navbar "Refaire la visite guidée")
+  // force l'ouverture immédiate sans passer par les checks (DB + localStorage
+  // ont déjà été reset par le handler du bouton).
   const [tutoOpen, setTutoOpen] = useState(false)
   useEffect(() => {
     if (status !== "authenticated") return
     if (isProprietaire) return
     const email = session?.user?.email?.toLowerCase()
     if (!email) return
+
+    // V56.2 — Force-open via ?tuto=1
+    let forceTuto = false
+    try {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get("tuto") === "1") {
+        forceTuto = true
+        // Clear le cache local au cas où (le handler navbar le fait déjà
+        // mais on belt+brace).
+        try { window.localStorage.removeItem(`nestmatch_tuto_locataire:${email}`) } catch { /* ignore */ }
+        // Clean l'URL pour pas que le tuto re-trigger au prochain reload
+        try {
+          const url = new URL(window.location.href)
+          url.searchParams.delete("tuto")
+          window.history.replaceState({}, "", url.toString())
+        } catch { /* ignore */ }
+        setTutoOpen(true)
+        return
+      }
+    } catch { /* ignore */ }
+
+    if (forceTuto) return // déjà ouvert
+
     // Cache local : skip si déjà vu
     try {
       const cached = window.localStorage.getItem(`nestmatch_tuto_locataire:${email}`)

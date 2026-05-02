@@ -554,8 +554,10 @@ export default function Navbar() {
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ action: "reset" }),
                           })
-                          // Reload pour déclencher l'auto-show du tuto
-                          window.location.href = proprietaireActive ? "/proprietaire" : "/annonces"
+                          // V56.2 — query param `?tuto=1` force l'ouverture immédiate au mount,
+                          // sans dépendre de la fenêtre de re-evaluation du useEffect (qui
+                          // peut zapper si on était déjà sur la même page sans full reload).
+                          window.location.href = proprietaireActive ? "/proprietaire?tuto=1" : "/annonces?tuto=1"
                         } catch { /* ignore */ }
                       }}
                       style={{ width: "100%", textAlign: "left" as const, position: "relative", display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", background: "none", border: "none", color: km.ink, cursor: "pointer", fontFamily: "inherit" }}
