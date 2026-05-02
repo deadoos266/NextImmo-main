@@ -1,21 +1,27 @@
 /**
  * V54 — Préférences notifs email granulaires.
  *
+ * **PURE module** : aucun import I/O. Safe à utiliser dans les
+ * client components ("use client") + server components + API routes.
+ *
+ * V56.1 (Paul 2026-04-30) — split anti-leak supabaseAdmin :
+ * `shouldSendEmailForEvent` (qui utilise supabaseAdmin) est déplacé
+ * dans `lib/notifPreferencesServer.ts`. Avant V56.1, `OngletCompte.tsx`
+ * (`"use client"`) importait ce fichier → bundler tirait supabaseAdmin
+ * dans le bundle client → throw runtime "Variables Supabase serveur
+ * manquantes". Crash app en prod.
+ *
  * Source de vérité unique pour :
- * - liste des events email dispatchables
+ * - liste des events email dispatchables (NOTIF_EVENTS)
  * - défaut on/off par event
  * - mapping rôle (locataire / proprio / both) → events pertinents
- * - fallback legacy notif_*_email → notif_preferences[event]
  *
  * Utilisé par :
- * - /api/notifications/event (dispatcher V52)
- * - crons V53 (loyers-retard, candidatures-digest, visites-rappel, irl-rappel-bail)
- * - /api/notifications/new-message (V52.0)
- * - lib/bail/finalize.ts (V32.5)
- * - UI /parametres > OngletCompte (V54.3)
+ * - /api/notifications/event (dispatcher V52, via notifPreferencesServer)
+ * - crons V53 (via notifPreferencesServer)
+ * - lib/bail/finalize.ts (via notifPreferencesServer)
+ * - UI /parametres > OngletCompte (use client — directement pour catalog)
  */
-
-import { supabaseAdmin } from "./supabase-server"
 
 export type NotifEventKey =
   // Bail
@@ -164,58 +170,7 @@ export function eventsForRole(isProprio: boolean): NotifEventDef[] {
   })
 }
 
-/**
- * Resolves whether `email` wants to receive an email for `eventKey`.
- *
- * Lookup order (fallback chain) :
- *   1. profils.notif_preferences[eventKey] si défini → use it
- *   2. legacy column (notif_*_email) si mappé → use it
- *   3. default of the event (NOTIF_EVENTS[*].default)
- *   4. true (fail open — un signal raté = pire qu'un email de trop)
- *
- * Si le profil n'existe pas du tout (user pas encore en DB), fallback true.
- *
- * Best-effort : ne fail jamais. Si Supabase rate, on retourne true (fail open).
- */
-export async function shouldSendEmailForEvent(
-  email: string,
-  eventKey: NotifEventKey,
-): Promise<boolean> {
-  const def = NOTIF_EVENTS.find(e => e.key === eventKey)
-  // Events critiques (signal légal) : on ne respecte pas les préférences,
-  // l'user reçoit toujours.
-  if (def?.required) return true
-
-  const cols = ["notif_preferences"]
-  if (def?.legacyKey) cols.push(def.legacyKey)
-
-  try {
-    const { data } = await supabaseAdmin
-      .from("profils")
-      .select(cols.join(", "))
-      .eq("email", email.toLowerCase())
-      .maybeSingle()
-    if (!data) return def?.default ?? true
-    const row = data as unknown as Record<string, unknown>
-
-    // 1. notif_preferences[event]
-    const prefs = row["notif_preferences"] as Record<string, unknown> | null
-    if (prefs && typeof prefs === "object" && eventKey in prefs) {
-      const v = prefs[eventKey]
-      if (typeof v === "boolean") return v
-    }
-
-    // 2. legacy column
-    if (def?.legacyKey) {
-      const legacyVal = row[def.legacyKey]
-      if (typeof legacyVal === "boolean") return legacyVal
-    }
-
-    // 3. default of the event
-    return def?.default ?? true
-  } catch (e) {
-    console.warn("[notifPreferences] lookup failed for", email, eventKey, e)
-    // 4. fail open
-    return true
-  }
-}
+// V56.1 — `shouldSendEmailForEvent` déplacé dans lib/notifPreferencesServer.ts
+// (anti-leak supabaseAdmin dans le bundle client). Cette fonction n'est plus
+// exportée d'ici. Tous les call sites server-side doivent importer depuis
+// `./notifPreferencesServer`.

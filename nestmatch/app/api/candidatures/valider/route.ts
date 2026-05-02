@@ -23,7 +23,7 @@ import { PREFIXES } from "../../../../lib/messagePrefixes"
 import { sendEmail } from "../../../../lib/email/resend"
 import { candidatureValideeTemplate } from "../../../../lib/email/templates"
 import { displayName } from "../../../../lib/privacy"
-import { shouldSendEmailForEvent } from "../../../../lib/notifPreferences"
+import { shouldSendEmailForEvent } from "../../../../lib/notifPreferencesServer"
 
 export const runtime = "nodejs"
 

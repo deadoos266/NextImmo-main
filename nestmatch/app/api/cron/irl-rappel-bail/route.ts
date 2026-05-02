@@ -24,7 +24,7 @@ import { supabaseAdmin } from "@/lib/supabase-server"
 import { sendEmail } from "@/lib/email/resend"
 import { irlIndexationProposalTemplate } from "@/lib/email/templates"
 import { IRL_HISTORIQUE } from "@/lib/irl"
-import { shouldSendEmailForEvent } from "@/lib/notifPreferences"
+import { shouldSendEmailForEvent } from "@/lib/notifPreferencesServer"
 
 interface BailRow {
   id: number

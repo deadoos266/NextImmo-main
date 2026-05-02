@@ -24,7 +24,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { sendEmail } from "@/lib/email/resend"
 import { loyerRetardLocataireTemplate, loyerRetardProprioTemplate } from "@/lib/email/templates"
-import { shouldSendEmailForEvent } from "@/lib/notifPreferences"
+import { shouldSendEmailForEvent } from "@/lib/notifPreferencesServer"
 
 interface LoyerRow {
   id: number

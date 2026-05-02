@@ -22,7 +22,7 @@ import { sendEmail } from "../email/resend"
 import { bailFinalActifTemplate } from "../email/templates"
 import { genererBailPDFBuffer } from "../bailPDF"
 import type { BailData, BailSignatureEntry } from "../bailPDF"
-import { shouldSendEmailForEvent } from "../notifPreferences"
+import { shouldSendEmailForEvent } from "../notifPreferencesServer"
 
 const BAIL_PREFIX = "[BAIL_CARD]"
 

@@ -25,7 +25,7 @@ import { supabaseAdmin } from "@/lib/supabase-server"
 import { sendEmail } from "@/lib/email/resend"
 import { preavisDonneTemplate } from "@/lib/email/templates"
 import { displayName } from "@/lib/privacy"
-import { shouldSendEmailForEvent } from "@/lib/notifPreferences"
+import { shouldSendEmailForEvent } from "@/lib/notifPreferencesServer"
 import { calculerPreavis, LOCATAIRE_MOTIFS, PROPRIETAIRE_MOTIFS, type LocataireMotif, type ProprietaireMotif } from "@/lib/preavis"
 import { estZoneTendue } from "@/lib/bailDefaults"
 

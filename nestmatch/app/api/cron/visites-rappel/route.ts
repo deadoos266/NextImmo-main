@@ -18,7 +18,7 @@ import { supabaseAdmin } from "@/lib/supabase-server"
 import { sendEmail } from "@/lib/email/resend"
 import { visiteRappelTemplate } from "@/lib/email/templates"
 import { generateIcs } from "@/lib/icsGenerator"
-import { shouldSendEmailForEvent } from "@/lib/notifPreferences"
+import { shouldSendEmailForEvent } from "@/lib/notifPreferencesServer"
 
 interface VisiteRow {
   id: string

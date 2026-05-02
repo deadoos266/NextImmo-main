@@ -21,7 +21,7 @@ import { supabaseAdmin } from "../../../../lib/supabase-server"
 import { generateQuittancePDFBuffer, buildQuittancePath } from "../../../../lib/quittancePDFServer"
 import { sendEmail } from "../../../../lib/email/resend"
 import { quittanceTemplate } from "../../../../lib/email/templates"
-import { shouldSendEmailForEvent } from "../../../../lib/notifPreferences"
+import { shouldSendEmailForEvent } from "../../../../lib/notifPreferencesServer"
 
 export const runtime = "nodejs"
 

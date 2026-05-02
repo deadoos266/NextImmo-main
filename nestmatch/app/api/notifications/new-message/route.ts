@@ -19,7 +19,7 @@ import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
 import { sendEmail } from "@/lib/email/resend"
 import { newMessageTemplate } from "@/lib/email/templates"
 import { displayName } from "@/lib/privacy"
-import { shouldSendEmailForEvent } from "@/lib/notifPreferences"
+import { shouldSendEmailForEvent } from "@/lib/notifPreferencesServer"
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)

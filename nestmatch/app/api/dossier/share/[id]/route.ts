@@ -5,7 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase-server"
 import { sendEmail } from "@/lib/email/resend"
 import { dossierRevoqueTemplate } from "@/lib/email/templates"
 import { displayName } from "@/lib/privacy"
-import { shouldSendEmailForEvent } from "@/lib/notifPreferences"
+import { shouldSendEmailForEvent } from "@/lib/notifPreferencesServer"
 
 /**
  * DELETE /api/dossier/share/[id]

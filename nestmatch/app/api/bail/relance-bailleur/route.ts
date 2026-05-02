@@ -23,7 +23,7 @@ import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { sendEmail } from "@/lib/email/resend"
 import { bailRelanceProprioTemplate } from "@/lib/email/templates"
-import { shouldSendEmailForEvent } from "@/lib/notifPreferences"
+import { shouldSendEmailForEvent } from "@/lib/notifPreferencesServer"
 
 const MIN_RELANCE_INTERVAL_MS = 24 * 60 * 60 * 1000
 

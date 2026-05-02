@@ -24,7 +24,7 @@ import { authOptions } from "../../../../lib/auth"
 import { supabaseAdmin } from "../../../../lib/supabase-server"
 import { sendEmail } from "../../../../lib/email/resend"
 import { bailInvitationTemplate } from "../../../../lib/email/templates"
-import { shouldSendEmailForEvent } from "../../../../lib/notifPreferences"
+import { shouldSendEmailForEvent } from "../../../../lib/notifPreferencesServer"
 import { checkRateLimitAsync, getClientIp } from "../../../../lib/rateLimit"
 
 export const runtime = "nodejs"

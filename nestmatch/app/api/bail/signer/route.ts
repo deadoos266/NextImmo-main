@@ -32,7 +32,7 @@ import { finalizeBail } from "@/lib/bail/finalize"
 import { sendEmail } from "@/lib/email/resend"
 import { hashBailData, canonicalPayloadString } from "@/lib/bailHash"
 import type { BailData } from "@/lib/bailPDF"
-import { shouldSendEmailForEvent } from "@/lib/notifPreferences"
+import { shouldSendEmailForEvent } from "@/lib/notifPreferencesServer"
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)

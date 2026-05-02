@@ -23,7 +23,8 @@ import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
 import { sendEmail, type SendAttachment } from "@/lib/email/resend"
 import { displayName } from "@/lib/privacy"
 import { generateIcs } from "@/lib/icsGenerator"
-import { shouldSendEmailForEvent, type NotifEventKey } from "@/lib/notifPreferences"
+import { shouldSendEmailForEvent } from "@/lib/notifPreferencesServer"
+import { type NotifEventKey } from "@/lib/notifPreferences"
 import {
   visiteProposeeTemplate,
   visiteConfirmeeTemplate,

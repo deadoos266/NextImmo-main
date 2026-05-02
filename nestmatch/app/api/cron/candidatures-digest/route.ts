@@ -22,7 +22,7 @@ import { supabaseAdmin } from "@/lib/supabase-server"
 import { sendEmail } from "@/lib/email/resend"
 import { candidaturesDigestTemplate } from "@/lib/email/templates"
 import { calculerScore, type Profil as MatchingProfil, type Annonce as MatchingAnnonce } from "@/lib/matching"
-import { shouldSendEmailForEvent } from "@/lib/notifPreferences"
+import { shouldSendEmailForEvent } from "@/lib/notifPreferencesServer"
 
 interface CandidatureMsg {
   id: number
