@@ -32,6 +32,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
+import { generateSoldePDFBuffer, type MotifRetenue as PdfMotifRetenue } from "@/lib/quittanceSoldeToutCompte"
 
 export const runtime = "nodejs"
 
@@ -167,6 +168,89 @@ export async function POST(req: NextRequest) {
     created_at: nowIso,
   }])
 
+  // 4. V58.4 — Génération PDF "Quittance solde de tout compte" + upload + msg
+  let soldePdfUrl: string | null = null
+  try {
+    // Récupère les infos profils + dates bail nécessaires au PDF
+    const [{ data: bailleurProf }, { data: locataireProf }, { data: annDetails }] = await Promise.all([
+      supabaseAdmin.from("profils").select("nom, prenom, adresse").eq("email", propEmail).maybeSingle(),
+      supabaseAdmin.from("profils").select("nom, prenom").eq("email", locEmail).maybeSingle(),
+      supabaseAdmin.from("annonces").select("date_debut_bail, prix, charges, adresse").eq("id", annonceId).maybeSingle(),
+    ])
+    // Calcul total loyers + durée
+    let totalLoyersPercus = 0
+    let dureeMois = 0
+    let dateDebutBail = ""
+    if (annDetails?.date_debut_bail) {
+      dateDebutBail = String(annDetails.date_debut_bail)
+      const start = new Date(dateDebutBail).getTime()
+      const end = new Date(ann.bail_termine_at || nowIso).getTime()
+      if (Number.isFinite(start) && Number.isFinite(end)) {
+        dureeMois = Math.max(1, Math.round((end - start) / (30 * 24 * 3600 * 1000)))
+      }
+      const { data: loyers } = await supabaseAdmin
+        .from("loyers")
+        .select("montant, charges, statut, mois")
+        .eq("annonce_id", annonceId)
+        .eq("statut", "confirmé")
+        .gte("mois", dateDebutBail.slice(0, 7))
+      if (loyers) {
+        totalLoyersPercus = loyers.reduce((acc, l) => acc + Number(l.montant || 0) + Number(l.charges || 0), 0)
+      }
+    }
+    const nomBailleur = [bailleurProf?.prenom, bailleurProf?.nom].filter(Boolean).join(" ").trim() || propEmail
+    const nomLocataire = [locataireProf?.prenom, locataireProf?.nom].filter(Boolean).join(" ").trim() || locEmail
+    const pdfBuffer = generateSoldePDFBuffer({
+      nomBailleur,
+      emailBailleur: propEmail,
+      adresseBailleur: bailleurProf?.adresse || null,
+      nomLocataire,
+      emailLocataire: locEmail,
+      titreBien: ann.titre || "Logement",
+      adresseBien: annDetails?.adresse || "",
+      villeBien: ann.ville || "",
+      dateDebutBail,
+      dateFinBail: (ann.bail_termine_at || nowIso).slice(0, 10),
+      dureeMois,
+      totalLoyersPercus,
+      caution,
+      depotMontantRestitue: montantRestitue,
+      depotMontantRetenu: montantRetenu,
+      motifsRetenue: motifsRetenue as PdfMotifRetenue[],
+      dateEmission: nowIso.slice(0, 10),
+    })
+    // Upload bucket `baux` (réutilisation existante, public)
+    const path = `${propEmail}/${annonceId}/solde_tout_compte_${Date.now()}.pdf`
+    const { error: uploadErr } = await supabaseAdmin.storage
+      .from("baux")
+      .upload(path, pdfBuffer, { contentType: "application/pdf", upsert: false })
+    if (!uploadErr) {
+      const { data: urlData } = supabaseAdmin.storage.from("baux").getPublicUrl(path)
+      soldePdfUrl = urlData.publicUrl
+      // Insert message [SOLDE_TOUT_COMPTE] pour qu'il apparaisse dans la conv + Documents partagés
+      const soldePayload = JSON.stringify({
+        annonceId,
+        bienTitre: ann.titre,
+        url: soldePdfUrl,
+        montantRestitue,
+        montantRetenu,
+        emisAt: nowIso,
+      })
+      await supabaseAdmin.from("messages").insert([{
+        from_email: propEmail,
+        to_email: locEmail,
+        contenu: `[SOLDE_TOUT_COMPTE]${soldePayload}`,
+        lu: false,
+        annonce_id: annonceId,
+        created_at: nowIso,
+      }])
+    } else {
+      console.warn("[restitution-depot] solde PDF upload failed:", uploadErr.message)
+    }
+  } catch (e) {
+    console.warn("[restitution-depot] solde PDF generation failed:", e)
+  }
+
   return NextResponse.json({
     ok: true,
     annonceId,
@@ -174,5 +258,6 @@ export async function POST(req: NextRequest) {
     montantRetenu,
     montantRestitue,
     restitueAt: nowIso,
+    soldePdfUrl,
   })
 }
