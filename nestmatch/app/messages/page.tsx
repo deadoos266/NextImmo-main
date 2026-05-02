@@ -558,34 +558,33 @@ function EdlAPlanifierCard({ annonceId, proprietaireActive, isMine }: {
   proprietaireActive: boolean
   isMine: boolean
 }) {
-  const href = proprietaireActive && annonceId ? `/proprietaire/edl/${annonceId}` : "/mon-logement"
-  const cta = proprietaireActive ? "Créer l'état des lieux" : "Voir mon logement"
+  const href = proprietaireActive && annonceId ? `/proprietaire/edl/${annonceId}?type=entree` : "/mon-logement"
+  const cta = proprietaireActive ? "Créer l'état des lieux d'entrée" : "Voir mon logement"
   return (
-    <div style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 16, padding: "16px 20px", minWidth: 240, maxWidth: 340, fontFamily: "'DM Sans', sans-serif", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-        <div style={{ width: 28, height: 28, borderRadius: 10, background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
-        </div>
-        <p style={{ fontSize: 10, fontWeight: 700, color: "#111", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0 }}>
-          Prochaine étape — État des lieux
-        </p>
+    <div style={{ background: "#fff", border: "1px solid #C6E9C0", borderRadius: 16, padding: "16px 20px", minWidth: 240, maxWidth: 360, fontFamily: "'DM Sans', sans-serif", boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <span style={{ background: "#F0FAEE", color: "#15803d", border: "1px solid #C6E9C0", padding: "3px 10px", borderRadius: 999, fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
+          ✓ Bail actif
+        </span>
       </div>
-      <p style={{ fontSize: 13, color: "#111", margin: 0, fontWeight: 500, lineHeight: 1.55 }}>
-        Le bail est signé par les deux parties.
+      <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontSize: 16, color: "#111", margin: "0 0 6px", lineHeight: 1.3, fontWeight: 500, letterSpacing: "-0.2px" }}>
+        Prochaine étape — État des lieux d&apos;entrée
       </p>
-      <p style={{ fontSize: 12, color: "#8a8477", margin: "6px 0 12px", lineHeight: 1.55 }}>
+      {/* V60.8 — wording précis demandé par user :
+          locataire : "Votre proprio est en train de faire l'état des lieux..."
+          proprio : "Tu peux maintenant créer l'état des lieux d'entrée." */}
+      <p style={{ fontSize: 12.5, color: "#6b6559", margin: "0 0 14px", lineHeight: 1.55 }}>
         {proprietaireActive
-          ? "Planifiez l'état des lieux d'entrée avec votre locataire."
-          : "Votre bailleur va maintenant créer l'état des lieux d'entrée — vous serez notifié."}
+          ? "Le bail est pleinement signé. Vous pouvez maintenant créer l'état des lieux d'entrée pour la remise des clés."
+          : "Votre bailleur va maintenant préparer l'état des lieux d'entrée. Vous serez notifié dès qu'il est prêt à signer."}
       </p>
       <a
         href={href}
         style={{
           display: "inline-block",
-          background: "#111",
-          color: "#fff",
+          background: proprietaireActive ? "#15803d" : "#fff",
+          color: proprietaireActive ? "#fff" : "#111",
+          border: proprietaireActive ? "none" : "1px solid #111",
           borderRadius: 999,
           padding: "10px 18px",
           fontSize: 12,

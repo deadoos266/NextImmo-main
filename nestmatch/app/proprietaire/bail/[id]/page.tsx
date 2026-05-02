@@ -2667,17 +2667,50 @@ export default function BailPage() {
               Le bail est définitivement actif. Pour toute modification, un avenant sera nécessaire.
             </p>
           </div>
+        ) : !locataireKnown ? (
+          /* V60.9 — Si pas de candidat sélectionné comme futur locataire,
+              bloquer le bouton "Prévisualiser et envoyer" et guider l'user
+              vers la page Candidatures pour cliquer "Louer à ce candidat".
+              User : "on peut signer le bail sans mettre Louer à ce candidat".
+              Avant : bouton "Prévisualiser le bail PDF" qui restait actif
+              (juste sans envoi) → confusion.
+              Maintenant : encart explicite + lien vers candidatures. */
+          <div>
+            <div style={{ background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 12, padding: "14px 18px", marginBottom: 12, fontSize: 13, color: "#9a3412", lineHeight: 1.55 }}>
+              ⚠ <strong>Aucun candidat sélectionné</strong> — vous devez d&apos;abord cliquer
+              <strong> « Louer à ce candidat »</strong> depuis la liste des candidatures
+              pour identifier le locataire avant de pouvoir générer le bail.
+            </div>
+            <a
+              href={`/proprietaire/annonces/${bienId}/candidatures`}
+              style={{
+                display: "block",
+                width: "100%",
+                padding: "16px 28px",
+                background: "#a16207",
+                color: "white",
+                border: "none",
+                borderRadius: 16,
+                fontWeight: 800,
+                fontSize: 15,
+                textAlign: "center" as const,
+                textDecoration: "none",
+                fontFamily: "inherit",
+                boxSizing: "border-box",
+              }}
+            >
+              Voir les candidatures · Sélectionner un locataire →
+            </a>
+          </div>
         ) : (() => {
           const bloque = false
-          const label = locataireKnown
-            ? generating
-              ? "Génération en cours…"
-              : existingBailAt
-                ? confirmRegen
-                  ? "Confirmer le remplacement"
-                  : "Remplacer le bail envoyé"
-                : "Prévisualiser et envoyer au locataire"
-            : "Prévisualiser le bail PDF"
+          const label = generating
+            ? "Génération en cours…"
+            : existingBailAt
+              ? confirmRegen
+                ? "Confirmer le remplacement"
+                : "Remplacer le bail envoyé"
+              : "Prévisualiser et envoyer au locataire"
           const actif = prete && !generating && !bloque
           return (
             <button
