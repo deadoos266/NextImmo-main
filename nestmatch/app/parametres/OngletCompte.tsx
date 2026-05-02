@@ -15,10 +15,22 @@ const VACANCES_MAX_LENGTH = 400
 
 type NotifPrefsMap = Record<NotifEventKey, boolean>
 
+// V59.4 — mode notification messages (anti-spam)
+type MessageMode = "smart" | "digest" | "all" | "none"
+
+const MESSAGE_MODE_OPTIONS: { value: MessageMode; label: string; desc: string; recommended?: boolean }[] = [
+  { value: "smart", label: "Intelligent (recommandé)", desc: "Email seulement si vous êtes hors-ligne (≥ 10 min sans activité). Plusieurs messages d'affilée = 1 seul email (debounce 5 min).", recommended: true },
+  { value: "digest", label: "Digest quotidien", desc: "1 seul email à 8h chaque matin avec tous les nouveaux messages de la veille." },
+  { value: "all", label: "Tous les messages", desc: "1 email pour chaque message reçu. Risque de spam si conversation active." },
+  { value: "none", label: "Aucun email", desc: "Uniquement les notifications dans l'app (cloche). Vous risquez de manquer un message important." },
+]
+
 export default function OngletCompte() {
   const { data: session } = useSession()
   const { proprietaireActive } = useRole()
   const [prefs, setPrefs] = useState<NotifPrefsMap>(() => defaultNotifPreferences())
+  // V59.4 — mode messages (smart par défaut, anti-spam)
+  const [messageMode, setMessageMode] = useState<MessageMode>("smart")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
@@ -63,6 +75,11 @@ export default function OngletCompte() {
             }
           }
           setPrefs(next)
+          // V59.4 — load message_recu_mode (default "smart" pour migration douce)
+          const storedMode = stored.message_recu_mode
+          if (storedMode === "smart" || storedMode === "digest" || storedMode === "all" || storedMode === "none") {
+            setMessageMode(storedMode)
+          }
         }
       } catch (e) {
         console.warn("[parametres] load notif prefs failed:", e)
@@ -115,8 +132,8 @@ export default function OngletCompte() {
     }
   }
 
-  // V54.3 — toggle un event individuel : update local + POST /api/profil/save
-  // avec notif_preferences merge.
+  // V54.3 + V59.4 — toggle un event individuel : update local + POST /api/profil/save
+  // avec notif_preferences merge. On préserve message_recu_mode dans la jsonb.
   async function togglePref(key: NotifEventKey) {
     const email = session?.user?.email
     if (!email) return
@@ -127,7 +144,23 @@ export default function OngletCompte() {
       await fetch("/api/profil/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notif_preferences: next }),
+        body: JSON.stringify({ notif_preferences: { ...next, message_recu_mode: messageMode } }),
+      })
+    } catch { /* noop */ }
+    setSaving(false)
+  }
+
+  // V59.4 — change le mode messages
+  async function changeMessageMode(mode: MessageMode) {
+    const email = session?.user?.email
+    if (!email) return
+    setMessageMode(mode)
+    setSaving(true)
+    try {
+      await fetch("/api/profil/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notif_preferences: { ...prefs, message_recu_mode: mode } }),
       })
     } catch { /* noop */ }
     setSaving(false)
@@ -150,7 +183,7 @@ export default function OngletCompte() {
       await fetch("/api/profil/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notif_preferences: next }),
+        body: JSON.stringify({ notif_preferences: { ...next, message_recu_mode: messageMode } }),
       })
     } catch { /* noop */ }
     setSaving(false)
@@ -260,6 +293,52 @@ export default function OngletCompte() {
           <strong style={{ color: "#111", fontWeight: 600 }}>Les signaux légaux</strong>
           {" "}(bail signé, préavis, mise en demeure de loyer, etc.) restent toujours envoyés — non désactivables pour des raisons réglementaires.
         </p>
+
+        {/* V59.4 — Mode notification messages (anti-spam) */}
+        {!loading && (
+          <div style={{ marginBottom: 22, padding: "16px 20px", background: "#F7F4EF", borderRadius: 16, border: "1px solid #EAE6DF" }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
+              <h3 style={{ fontSize: 12, fontWeight: 700, color: "#111", letterSpacing: "1.6px", textTransform: "uppercase", margin: 0 }}>
+                Mode pour les nouveaux messages
+              </h3>
+              <span style={{ fontSize: 11, color: "#8a8477", fontWeight: 400 }}>· anti-spam intelligent</span>
+            </div>
+            <p style={{ fontSize: 12, color: "#6b6559", margin: "0 0 12px", lineHeight: 1.5 }}>
+              Pour éviter de recevoir un email à chaque message reçu pendant une conversation active.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {MESSAGE_MODE_OPTIONS.map(opt => (
+                <label key={opt.value} style={{
+                  display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer",
+                  padding: "10px 12px",
+                  borderRadius: 12,
+                  border: messageMode === opt.value ? "1.5px solid #111" : "1px solid #EAE6DF",
+                  background: messageMode === opt.value ? "#fff" : "transparent",
+                  transition: "border 120ms ease, background 120ms ease",
+                }}>
+                  <input
+                    type="radio"
+                    name="messageMode"
+                    value={opt.value}
+                    checked={messageMode === opt.value}
+                    onChange={() => changeMessageMode(opt.value)}
+                    style={{ marginTop: 3, accentColor: "#111" }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: "#111", margin: 0, letterSpacing: "-0.1px" }}>{opt.label}</p>
+                      {opt.recommended && (
+                        <span style={{ fontSize: 9, fontWeight: 700, color: "#15803d", background: "#F0FAEE", border: "1px solid #C6E9C0", padding: "2px 7px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "1px" }}>Recommandé</span>
+                      )}
+                    </div>
+                    <p style={{ fontSize: 12, color: "#6b6559", margin: "2px 0 0", lineHeight: 1.5 }}>{opt.desc}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <p style={{ fontSize: 13, color: "#8a8477" }}>Chargement…</p>
         ) : (
