@@ -18,6 +18,7 @@ import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import RestituerDepotModal from "../../../components/baux/RestituerDepotModal"
 
 interface HistoriqueBail {
   id: number
@@ -68,6 +69,8 @@ export default function HistoriqueBauxPage() {
   const [baux, setBaux] = useState<HistoriqueBail[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // V58.2 — modale Restituer le dépôt
+  const [restituerCtx, setRestituerCtx] = useState<{ annonceId: number; titre: string | null; ville: string | null; caution: number | null; locataireEmail: string; edlSortieId: string | null } | null>(null)
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -197,7 +200,26 @@ export default function HistoriqueBauxPage() {
                           )}
                         </p>
                       ) : (
-                        <p style={{ fontSize: 13, color: "#b91c1c", margin: 0, fontWeight: 500 }}>Non restitué</p>
+                        <div>
+                          <p style={{ fontSize: 13, color: "#b91c1c", margin: "0 0 6px", fontWeight: 500 }}>Non restitué</p>
+                          {/* V58.2 — bouton "Restituer" si dépôt non restitué + caution > 0 */}
+                          {Number(b.caution || 0) > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setRestituerCtx({
+                                annonceId: b.annonce_id,
+                                titre: b.bien_titre,
+                                ville: b.bien_ville,
+                                caution: b.caution,
+                                locataireEmail: b.locataire_email,
+                                edlSortieId: b.edl_sortie_id,
+                              })}
+                              style={{ background: "#15803d", color: "#fff", border: "none", borderRadius: 999, padding: "7px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}
+                            >
+                              💰 Restituer {formatEur(Number(b.caution || 0))}
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -227,6 +249,27 @@ export default function HistoriqueBauxPage() {
         )}
 
       </div>
+
+      {/* V58.2 — modale Restituer le dépôt */}
+      {restituerCtx && (
+        <RestituerDepotModal
+          open={!!restituerCtx}
+          onClose={() => setRestituerCtx(null)}
+          onSuccess={(_result) => {
+            setRestituerCtx(null)
+            // Reload pour refresh la liste (le bail a maintenant depot_restitue_at)
+            window.location.reload()
+          }}
+          annonce={{
+            id: restituerCtx.annonceId,
+            titre: restituerCtx.titre,
+            ville: restituerCtx.ville,
+            caution: restituerCtx.caution,
+            locataire_email: restituerCtx.locataireEmail,
+          }}
+          edlSortieId={restituerCtx.edlSortieId}
+        />
+      )}
     </main>
   )
 }
