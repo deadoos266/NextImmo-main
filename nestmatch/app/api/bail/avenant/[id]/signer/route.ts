@@ -106,25 +106,45 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   }
 
   const now = new Date().toISOString()
-  const updates: Record<string, unknown> = { updated_at: now }
-  if (role === "locataire") updates.signe_locataire_at = now
-  else updates.signe_bailleur_at = now
 
-  // Calcul du nouveau statut après cette signature
-  const sigLocApres = role === "locataire" ? now : avenant.signe_locataire_at
-  const sigPropApres = role === "proprietaire" ? now : avenant.signe_bailleur_at
-  const doubleSigne = !!sigLocApres && !!sigPropApres
-  if (doubleSigne) updates.statut = "actif"
-  else if (sigLocApres) updates.statut = "signe_locataire"
-  else if (sigPropApres) updates.statut = "signe_proprio"
-
-  const { error: updErr } = await supabaseAdmin
+  // V62 — fix race condition double-signature concurrente.
+  // Avant : on calculait `doubleSigne` à partir de l'état lu au début (avant
+  // l'update). Si l'autre partie signait entre notre fetch et notre update,
+  // sa signature était écrasée par notre statut "signe_locataire" /
+  // "signe_proprio" → row avec les 2 timestamps mais statut faux + pas de
+  // propagation au bail. On corrige en faisant l'update du timestamp sans
+  // toucher au statut, puis on relit la row complète pour recalculer le
+  // statut depuis l'état post-update.
+  const sigCol = role === "locataire" ? "signe_locataire_at" : "signe_bailleur_at"
+  const { data: afterUpdate, error: updErr } = await supabaseAdmin
     .from("bail_avenants")
-    .update(updates)
+    .update({ updated_at: now, [sigCol]: now })
     .eq("id", avenantId)
-  if (updErr) {
+    .select("signe_locataire_at, signe_bailleur_at, statut, nouveau_payload")
+    .single()
+  if (updErr || !afterUpdate) {
     console.error("[avenant/signer] update failed", updErr)
     return NextResponse.json({ ok: false, error: "Mise à jour échouée" }, { status: 500 })
+  }
+
+  // Recalcule depuis l'état post-update (couvre la race concurrente).
+  const doubleSigne = !!afterUpdate.signe_locataire_at && !!afterUpdate.signe_bailleur_at
+  const newStatut = doubleSigne
+    ? "actif"
+    : afterUpdate.signe_locataire_at
+      ? "signe_locataire"
+      : "signe_proprio"
+  if (newStatut !== afterUpdate.statut) {
+    const { error: statutErr } = await supabaseAdmin
+      .from("bail_avenants")
+      .update({ statut: newStatut })
+      .eq("id", avenantId)
+      // Ne re-écrase pas un statut déjà passé à "actif" (idempotent contre
+      // un autre worker qui aurait gagné la course).
+      .neq("statut", "actif")
+    if (statutErr) {
+      console.warn("[avenant/signer] statut update failed (non bloquant):", statutErr)
+    }
   }
 
   // Si double signature : propage le delta au bail principal (annonces).
@@ -134,9 +154,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     "prix", "charges", "caution", "locataire_email", "meuble", "surface", "pieces",
     "etage", "ascenseur", "balcon", "terrasse", "jardin", "cave", "fibre", "parking",
   ])
-  if (doubleSigne && avenant.nouveau_payload && typeof avenant.nouveau_payload === "object") {
+  if (doubleSigne && afterUpdate.nouveau_payload && typeof afterUpdate.nouveau_payload === "object") {
     const delta: Record<string, unknown> = {}
-    const np = avenant.nouveau_payload as Record<string, unknown>
+    const np = afterUpdate.nouveau_payload as Record<string, unknown>
     for (const k of Object.keys(np)) {
       if (PROPAGEABLE_KEYS.has(k)) delta[k] = np[k]
     }
@@ -185,5 +205,5 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }])
   }
 
-  return NextResponse.json({ ok: true, doubleSigne, statut: updates.statut })
+  return NextResponse.json({ ok: true, doubleSigne, statut: newStatut })
 }
