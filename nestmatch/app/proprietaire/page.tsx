@@ -647,14 +647,18 @@ export default function Proprietaire() {
       montant: loyer.montant,
       dateConfirmation: nowIso,
     }
-    const { data: msg } = await supabase.from("messages").insert([{
-      from_email: proprietaireEmail,
-      to_email: locataireEmail,
-      contenu: `[QUITTANCE_CARD]${JSON.stringify(payload)}`,
-      lu: false,
-      annonce_id: bien.id,
-      created_at: nowIso,
-    }]).select().single()
+    // V63 — passage par /api/messages (préreq REVOKE INSERT anon migration 058)
+    const msgRes = await fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        toEmail: locataireEmail,
+        annonceId: bien.id,
+        contenu: `[QUITTANCE_CARD]${JSON.stringify(payload)}`,
+      }),
+    })
+    const msgJson = msgRes.ok ? await msgRes.json().catch(() => ({})) : null
+    const msg = msgJson?.ok ? msgJson.message : null
     if (msg?.id) {
       // V24.1 — via /api/loyers/save mode "confirm" with quittance fields
       try {

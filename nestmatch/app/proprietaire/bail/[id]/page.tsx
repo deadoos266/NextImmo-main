@@ -886,21 +886,19 @@ export default function BailPage() {
               })
             : ""
           const bailPayload = JSON.stringify(bailData)
-          const { data: msgData, error: msgErr } = await supabase
-            .from("messages")
-            .insert([
-              {
-                from_email: fromEmail,
-                to_email: locataireEmail,
-                contenu: `[BAIL_CARD]${bailPayload}`,
-                lu: false,
-                annonce_id: bien.id,
-                created_at: new Date().toISOString(),
-              },
-            ])
-            .select("id")
-          if (msgErr) {
-            alert(`Erreur envoi message : ${msgErr.message} (code ${msgErr.code || "?"})`)
+          // V63 — via /api/messages (préreq REVOKE INSERT anon migration 058)
+          const msgRes = await fetch("/api/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              toEmail: locataireEmail,
+              annonceId: bien.id,
+              contenu: `[BAIL_CARD]${bailPayload}`,
+            }),
+          })
+          const msgJson = msgRes.ok ? await msgRes.json().catch(() => ({})) : null
+          if (!msgRes.ok || !msgJson?.ok) {
+            alert(`Erreur envoi message : ${msgJson?.error || `HTTP ${msgRes.status}`}`)
             return
           }
           void postNotif({
@@ -3109,14 +3107,16 @@ export default function BailPage() {
             if (bien.statut !== "loué") uploadPatch.statut = "bail_envoye"
             await supabase.from("annonces").update(uploadPatch).eq("id", bien.id)
 
-            await supabase.from("messages").insert([{
-              from_email: fromEmail,
-              to_email: locataireEmail,
-              contenu: `[BAIL_CARD]${JSON.stringify(payload)}`,
-              lu: false,
-              annonce_id: bien.id,
-              created_at: new Date().toISOString(),
-            }])
+            // V63 — via /api/messages (préreq REVOKE INSERT anon migration 058)
+            await fetch("/api/messages", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                toEmail: locataireEmail,
+                annonceId: bien.id,
+                contenu: `[BAIL_CARD]${JSON.stringify(payload)}`,
+              }),
+            })
 
             void postNotif({
               userEmail: locataireEmail,
