@@ -336,14 +336,16 @@ export default function ConsulterEdlPage() {
       }
       const toEmail = (edl.proprietaire_email || "").toLowerCase().trim()
       if (toEmail) {
-        await supabase.from("messages").insert([{
-          from_email: session.user.email.toLowerCase(),
-          to_email: toEmail,
-          contenu: `⚠ État des lieux contesté par le locataire :\n"${commentaire.trim()}"`,
-          lu: false,
-          annonce_id: edl.annonce_id || null,
-          created_at: new Date().toISOString(),
-        }])
+        // V63 — passage par /api/messages (REVOKE INSERT anon prochainement).
+        await fetch("/api/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            toEmail,
+            annonceId: edl.annonce_id || null,
+            contenu: `⚠ État des lieux contesté par le locataire :\n"${commentaire.trim()}"`,
+          }),
+        })
         void postNotif({
           userEmail: toEmail,
           type: "edl_envoye",
