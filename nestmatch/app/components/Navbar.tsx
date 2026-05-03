@@ -172,15 +172,23 @@ export default function Navbar() {
   useEffect(() => {
     if (!session?.user?.email) return
     const email = session.user.email.toLowerCase()
-    const refresh = () => supabase.from("messages").select("id", { count: "exact", head: true })
-      .eq("to_email", email).eq("lu", false)
-      .then(({ count }) => setBadgeMessages(count ?? 0))
-    refresh()
-    // Real-time : nouveau message reçu OU message marqué lu
+    // V63 — read count via /api/messages/unread-count (préreq migration 058
+    // RLS Phase 5 final qui REVOKE SELECT anon sur messages).
+    const refresh = async () => {
+      try {
+        const res = await fetch("/api/messages/unread-count", { cache: "no-store" })
+        const json = await res.json().catch(() => ({}))
+        if (res.ok && json.ok) setBadgeMessages(json.count ?? 0)
+      } catch {
+        // Silent fallback : le badge restera à sa dernière valeur connue.
+      }
+    }
+    void refresh()
+    // Real-time : nouveau message reçu OU message marqué lu → re-fetch via /api
     const channel = supabase.channel(`navbar-messages-${email}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `to_email=eq.${email}` }, refresh)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages", filter: `to_email=eq.${email}` }, refresh)
-      .on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" }, refresh)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `to_email=eq.${email}` }, () => { void refresh() })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages", filter: `to_email=eq.${email}` }, () => { void refresh() })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" }, () => { void refresh() })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [session, pathname])
