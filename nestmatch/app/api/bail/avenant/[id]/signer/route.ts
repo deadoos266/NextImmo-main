@@ -20,6 +20,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
+import { checkRateLimitAsync } from "@/lib/rateLimit"
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -40,6 +41,20 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   const userEmail = session?.user?.email?.toLowerCase()
   if (!userEmail) {
     return NextResponse.json({ ok: false, error: "Auth requise" }, { status: 401 })
+  }
+
+  // V64 — rate-limit aligné sur /api/bail/signer (5 sigs/h/user). La
+  // signature avenant est un acte eIDAS niveau 1 ; on protège contre les
+  // brute-forces / scripts qui itèrent sur des avenantIds après leak token.
+  const rl = await checkRateLimitAsync(`avenant-sign:${userEmail}`, {
+    max: 5,
+    windowMs: 60 * 60 * 1000,
+  })
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { ok: false, error: "Trop de tentatives, réessayez plus tard" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec ?? 3600) } },
+    )
   }
 
   const { id: avenantId } = await params

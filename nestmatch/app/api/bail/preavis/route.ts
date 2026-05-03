@@ -28,12 +28,28 @@ import { displayName } from "@/lib/privacy"
 import { shouldSendEmailForEvent } from "@/lib/notifPreferencesServer"
 import { calculerPreavis, LOCATAIRE_MOTIFS, PROPRIETAIRE_MOTIFS, type LocataireMotif, type ProprietaireMotif } from "@/lib/preavis"
 import { estZoneTendue } from "@/lib/bailDefaults"
+import { checkRateLimitAsync } from "@/lib/rateLimit"
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   const userEmail = session?.user?.email?.toLowerCase()
   if (!userEmail) {
     return NextResponse.json({ ok: false, error: "Auth requise" }, { status: 401 })
+  }
+
+  // V64 — rate-limit : 3 préavis/h/user (anti-script). Un préavis est un
+  // acte juridique fort qui déclenche email + notif + update DB ; la double
+  // sécurité (`preavis_donne_par` non-null bloque déjà), mais on ajoute
+  // ceinture+bretelle pour éviter le flood d'emails sur un bail donné.
+  const rl = await checkRateLimitAsync(`preavis:${userEmail}`, {
+    max: 3,
+    windowMs: 60 * 60 * 1000,
+  })
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { ok: false, error: "Trop de tentatives, réessayez plus tard" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec ?? 3600) } },
+    )
   }
 
   let body: unknown
