@@ -69,55 +69,36 @@ export default function BookingVisite({
     setSaving(true)
     setErreur("")
 
-    const me = (myEmail || "").toLowerCase()
-    const proprio = (proprietaireEmail || "").toLowerCase()
-    const { data, error } = await supabase.from("visites").insert({
-      annonce_id: annonceId,
-      locataire_email: me,
-      proprietaire_email: proprio,
-      date_visite: date,
-      heure,
-      format,
-      message: message || null,
-      statut: "proposée",
-      propose_par: me,
-    }).select().single()
-
-    if (error) {
-      setErreur("L'envoi de la demande de visite a échoué. Veuillez réessayer.")
+    // V63 — passage par /api/visites/proposer qui orchestre l'insert visite +
+    // message thread + notif cloche en une seule transaction logique
+    // server-side. Préreq migration 058 (REVOKE SELECT/INSERT anon messages).
+    try {
+      const res = await fetch("/api/visites/proposer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ annonceId, date, heure, format, message }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.ok) {
+        setErreur(json.error || "L'envoi de la demande de visite a échoué. Veuillez réessayer.")
+        setSaving(false)
+        return
+      }
+      // Re-load la visite fraîchement créée pour re-render la card "Votre visite"
+      const me = myEmail
+      const { data: nouvelle } = await supabase
+        .from("visites")
+        .select("*")
+        .eq("id", json.visiteId)
+        .eq("locataire_email", me)
+        .maybeSingle()
+      setExistante(nouvelle ?? { id: json.visiteId, statut: "proposée", date_visite: date, heure, format, message })
+      setOpen(false)
+    } catch {
+      setErreur("Erreur réseau — réessayez plus tard.")
+    } finally {
       setSaving(false)
-      return
     }
-
-    // Post un message auto dans la conversation pour que le proprio voie la
-    // demande aussi dans /messages (pas uniquement dans l'onglet Visites).
-    const dateFormat = new Date(date + "T12:00:00").toLocaleDateString("fr-FR", {
-      weekday: "long", day: "numeric", month: "long",
-    })
-    const formatLabel = format === "visio" ? "visio" : "sur place"
-    const contenu = `Demande de visite (${formatLabel}) : ${dateFormat} à ${heure}${message.trim() ? ` — « ${message.trim()} »` : ""}`
-    await supabase.from("messages").insert([{
-      from_email: me,
-      to_email: proprio,
-      contenu,
-      lu: false,
-      annonce_id: annonceId,
-      created_at: new Date().toISOString(),
-    }])
-
-    // Notif cloche proprio pour nouvelle demande de visite
-    void postNotif({
-      userEmail: proprio,
-      type: "visite_proposee",
-      title: "Nouvelle demande de visite",
-      body: `${dateFormat} à ${heure}`,
-      href: "/visites",
-      relatedId: data?.id != null ? String(data.id) : null,
-    })
-
-    setExistante(data)
-    setOpen(false)
-    setSaving(false)
   }
 
   async function annuler() {
