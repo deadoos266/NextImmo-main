@@ -2,11 +2,11 @@
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
-import { supabase } from "../../../lib/supabase"
 import { useRole } from "../../providers"
-import { postNotif } from "../../../lib/notificationsClient"
 import { calculerCompletudeProfil } from "../../../lib/profilCompleteness"
 import GatedAction from "../../components/ui/GatedAction"
+// V63 — supabase + postNotif retirés : la candidature passe désormais par
+// /api/messages/candidature (encapsule dedupe + insert + notif).
 
 export default function ContactButton({ annonce }: { annonce: any }) {
   const { data: session } = useSession()
@@ -96,47 +96,19 @@ export default function ContactButton({ annonce }: { annonce: any }) {
     setLoading(true)
     setErr(null)
     try {
-      const fromEmail = session.user!.email!
-      const me = fromEmail.toLowerCase()
-      const other = toEmail.toLowerCase()
-
-      // Dedupe : si une conversation existe déjà pour CETTE annonce,
-      // on ajoute quand même le nouveau message personnalisé (c'est un
-      // vrai message de relance, pas un doublon du message auto d'origine).
-      // Scope : (from=me, to=other, annonce) ∪ (from=other, to=me, annonce)
-      const [sent, received] = await Promise.all([
-        supabase.from("messages").select("id")
-          .eq("from_email", me).eq("to_email", other).eq("annonce_id", annonce.id).limit(1),
-        supabase.from("messages").select("id")
-          .eq("from_email", other).eq("to_email", me).eq("annonce_id", annonce.id).limit(1),
-      ])
-      const hasConversation = (sent.data && sent.data.length > 0) || (received.data && received.data.length > 0)
-
-      const { error: insErr } = await supabase.from("messages").insert([{
-        from_email: me,
-        to_email: other,
-        contenu,
-        lu: false,
-        annonce_id: annonce.id,
-        // `type: "candidature"` uniquement sur le tout premier message pour
-        // que le proprio voie la conv apparaître dans l'onglet "Candidatures".
-        type: hasConversation ? undefined : "candidature",
-        created_at: new Date().toISOString(),
-      }])
-      if (insErr) { setErr("Envoi échoué : " + insErr.message); return }
-
-      if (!hasConversation) {
-        void postNotif({
-          userEmail: other,
-          type: "message",
-          title: "Nouvelle candidature",
-          body: `Un locataire est intéressé par « ${annonce.titre} »`,
-          href: "/messages",
-          relatedId: String(annonce.id),
-        })
+      // V63 — passage par /api/messages/candidature qui encapsule dedupe
+      // + insert + notif côté serveur (préreq migration 058 RLS).
+      const res = await fetch("/api/messages/candidature", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ annonceId: annonce.id, contenu }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.ok) {
+        setErr(json.error || "Envoi échoué — réessayez plus tard.")
+        return
       }
-
-      router.push(`/messages?with=${encodeURIComponent(other)}`)
+      router.push(`/messages?with=${encodeURIComponent(json.proprietaireEmail || toEmail.toLowerCase())}`)
     } finally {
       setLoading(false)
       // On garde inFlight a true pendant la navigation : le composant va
