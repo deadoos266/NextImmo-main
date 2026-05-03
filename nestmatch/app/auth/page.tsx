@@ -397,9 +397,11 @@ function AuthContent() {
               </>
             )}
             <div>
-              <label style={LABEL_STYLE}>Email</label>
+              <label htmlFor="auth-email" style={LABEL_STYLE}>Email</label>
               <input
+                id="auth-email"
                 type="email"
+                autoComplete="email"
                 placeholder="jean@exemple.fr"
                 value={form.email}
                 onChange={handleChange("email")}
@@ -409,7 +411,7 @@ function AuthContent() {
             </div>
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
-                <label style={{ ...LABEL_STYLE, marginBottom: 0 }}>Mot de passe</label>
+                <label htmlFor="auth-password" style={{ ...LABEL_STYLE, marginBottom: 0 }}>Mot de passe</label>
                 {mode === "connexion" && (
                   <button
                     type="button"
@@ -427,6 +429,7 @@ function AuthContent() {
                 )}
               </div>
               <PasswordInput
+                id="auth-password"
                 value={form.password}
                 onChange={v => setForm(prev => ({ ...prev, password: v }))}
                 placeholder="********"
@@ -447,11 +450,13 @@ function AuthContent() {
                   </div>
                 ) : (
                   <form onSubmit={envoyerResetPassword} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    <p style={{ fontSize: 12, color: "#4b5563", margin: 0, lineHeight: 1.5 }}>
+                    <label htmlFor="reset-email" style={{ fontSize: 12, color: "#4b5563", margin: 0, lineHeight: 1.5 }}>
                       Indiquez votre adresse e-mail, nous vous enverrons un lien pour réinitialiser votre mot de passe.
-                    </p>
+                    </label>
                     <input
+                      id="reset-email"
                       type="email"
+                      autoComplete="email"
                       placeholder="votre@email.fr"
                       value={resetEmail}
                       onChange={e => setResetEmail(e.target.value)}

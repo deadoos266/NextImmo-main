@@ -163,8 +163,9 @@ function VerifierEmailForm() {
             </p>
 
             <form onSubmit={submit}>
-              <label style={LABEL}>Email</label>
+              <label htmlFor="verif-email" style={LABEL}>Email</label>
               <input
+                id="verif-email"
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -180,7 +181,7 @@ function VerifierEmailForm() {
                 }}
               />
 
-              <label style={LABEL}>Code de vérification</label>
+              <label style={LABEL} id="verif-code-label">Code de vérification</label>
               <div style={{ display: "flex", gap: 8, marginBottom: 20, justifyContent: "space-between" }}>
                 {digits.map((d, i) => (
                   <input

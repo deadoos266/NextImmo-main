@@ -1,6 +1,6 @@
 "use client"
 import { useSession } from "next-auth/react"
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useId } from "react"
 import { useRouter, useParams, useSearchParams } from "next/navigation"
 import { supabase } from "../../../../lib/supabase"
 import { useResponsive } from "../../../hooks/useResponsive"
@@ -229,10 +229,14 @@ function FieldInput({
   type?: string
   help?: string
 }) {
+  // V62 a11y — useId() pour associer label↔input automatiquement (WCAG 1.3.1).
+  // Avant : ~50 champs du wizard avaient label sans htmlFor / input sans id.
+  const inputId = useId()
   return (
     <div>
-      <label style={labelStyle}>{label}</label>
+      <label htmlFor={inputId} style={labelStyle}>{label}</label>
       <input
+        id={inputId}
         type={type}
         value={value}
         onChange={e => onChange(e.target.value)}
@@ -270,10 +274,13 @@ function FieldTextarea({
   rows?: number
   help?: string
 }) {
+  // V62 a11y — useId() pour associer label↔textarea (WCAG 1.3.1).
+  const textareaId = useId()
   return (
     <div>
-      <label style={labelStyle}>{label}</label>
+      <label htmlFor={textareaId} style={labelStyle}>{label}</label>
       <textarea
+        id={textareaId}
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}

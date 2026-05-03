@@ -60,6 +60,21 @@ export default function RelouerModal({ open, onClose, onSuccess, annonce }: Prop
     }
   }, [open, annonce.preavis_donne_par])
 
+  // V62 a11y — ESC ferme la modale + scroll lock pendant ouverture (WCAG 2.1.2).
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !submitting) onClose()
+    }
+    window.addEventListener("keydown", onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      window.removeEventListener("keydown", onKey)
+      document.body.style.overflow = prev
+    }
+  }, [open, submitting, onClose])
+
   async function confirm() {
     if (submitting) return
     setSubmitting(true)

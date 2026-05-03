@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, ReactNode } from "react"
+import { useEffect, useRef, ReactNode } from "react"
 
 interface ModalProps {
   open: boolean
@@ -37,18 +37,57 @@ export default function Modal({
   footer,
   strict = false,
 }: ModalProps) {
+  // V62 a11y — focus trap + restitution focus à la fermeture (WCAG 2.4.3).
+  // Avant : Tab pouvait sortir vers la page derrière la modale ; à la
+  // fermeture, le focus était perdu (revenait sur <body>).
+  const dialogRef = useRef<HTMLDivElement | null>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
+
   useEffect(() => {
     if (!open) return
+    // Mémorise l'élément qui avait le focus avant ouverture
+    previousFocusRef.current = (document.activeElement as HTMLElement) || null
+
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !strict) onClose()
+      if (e.key === "Escape" && !strict) {
+        onClose()
+        return
+      }
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusables = dialogRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        )
+        if (focusables.length === 0) return
+        const first = focusables[0]
+        const last = focusables[focusables.length - 1]
+        const active = document.activeElement as HTMLElement
+        if (e.shiftKey && active === first) {
+          e.preventDefault()
+          last.focus()
+        } else if (!e.shiftKey && active === last) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
     }
     window.addEventListener("keydown", handler)
     // Bloque le scroll du body
     const prev = document.body.style.overflow
     document.body.style.overflow = "hidden"
+    // Focus initial : 1er élément focusable du dialog (header close button par défaut)
+    requestAnimationFrame(() => {
+      if (dialogRef.current) {
+        const firstFocusable = dialogRef.current.querySelector<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        )
+        firstFocusable?.focus()
+      }
+    })
     return () => {
       window.removeEventListener("keydown", handler)
       document.body.style.overflow = prev
+      // Restitue le focus à l'élément déclencheur
+      previousFocusRef.current?.focus?.()
     }
   }, [open, strict, onClose])
 
@@ -74,6 +113,7 @@ export default function Modal({
         }}
       />
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="nm-modal-title"

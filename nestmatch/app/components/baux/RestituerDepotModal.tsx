@@ -18,7 +18,7 @@
  *   - Validation côté serveur (route V57.2) : motifs obligatoires si retenue
  */
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 interface MotifRetenue {
   libelle: string
@@ -57,6 +57,21 @@ export default function RestituerDepotModal({ open, onClose, onSuccess, annonce,
   const [motifs, setMotifs] = useState<MotifRetenue[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // V62 a11y — ESC ferme la modale + scroll lock pendant ouverture (WCAG 2.1.2).
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !submitting) onClose()
+    }
+    window.addEventListener("keydown", onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      window.removeEventListener("keydown", onKey)
+      document.body.style.overflow = prev
+    }
+  }, [open, submitting, onClose])
 
   if (!open) return null
 
@@ -171,6 +186,7 @@ export default function RestituerDepotModal({ open, onClose, onSuccess, annonce,
                     value={m.libelle}
                     onChange={e => updateMotif(i, { libelle: e.target.value.slice(0, 100) })}
                     placeholder="Ex : tâche moquette chambre"
+                    aria-label={`Retenue ${i + 1} — libellé`}
                     style={{ padding: "8px 10px", border: "1px solid #EAE6DF", borderRadius: 8, fontSize: 13, fontFamily: "inherit", color: "#111", outline: "none" }}
                   />
                   <input
@@ -180,11 +196,13 @@ export default function RestituerDepotModal({ open, onClose, onSuccess, annonce,
                     value={m.montant || ""}
                     onChange={e => updateMotif(i, { montant: Number(e.target.value) })}
                     placeholder="€"
+                    aria-label={`Retenue ${i + 1} — montant en euros`}
                     style={{ padding: "8px 10px", border: "1px solid #EAE6DF", borderRadius: 8, fontSize: 13, fontFamily: "inherit", color: "#111", outline: "none", textAlign: "right" as const }}
                   />
                   <select
                     value={m.type}
                     onChange={e => updateMotif(i, { type: e.target.value as MotifRetenue["type"] })}
+                    aria-label={`Retenue ${i + 1} — type`}
                     style={{ padding: "8px 10px", border: "1px solid #EAE6DF", borderRadius: 8, fontSize: 13, fontFamily: "inherit", color: "#111", outline: "none", background: "#fff" }}
                   >
                     {TYPE_OPTIONS.map(opt => (
@@ -197,7 +215,7 @@ export default function RestituerDepotModal({ open, onClose, onSuccess, annonce,
                     aria-label="Supprimer cette retenue"
                     style={{ background: "transparent", border: "none", color: "#b91c1c", fontSize: 18, cursor: "pointer", padding: 0, lineHeight: 1 }}
                   >
-                    ×
+                    <span aria-hidden="true">×</span>
                   </button>
                 </div>
               ))}
