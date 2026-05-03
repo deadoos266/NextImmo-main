@@ -3,7 +3,8 @@ import { useState, useMemo, useEffect, useRef } from "react"
 import Modal from "./ui/Modal"
 import SignatureCanvas from "./ui/SignatureCanvas"
 import type { BailData } from "../../lib/bailPDF"
-import { genererBailPDFBlob } from "../../lib/bailPDF"
+// V61.5 perf — bailPDF charge jsPDF (~150kB gzip) ; lazy au premier
+// effect d'aperçu (modale signature ouverte uniquement par le signataire).
 
 // V32.2 — Durée minimum de lecture du PDF avant pouvoir cocher "j'ai lu".
 // Empêche les clics réflexes "yolo" qui sapent l'audit-trail eIDAS.
@@ -186,6 +187,7 @@ export default function BailSignatureModal({
     let cancelled = false
     void (async () => {
       try {
+        const { genererBailPDFBlob } = await import("../../lib/bailPDF")
         const { blob } = await genererBailPDFBlob(bailData)
         if (cancelled) return
         const url = URL.createObjectURL(blob)

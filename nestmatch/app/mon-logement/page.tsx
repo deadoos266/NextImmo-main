@@ -17,7 +17,7 @@ import IntegrityBadge from "../components/bail/IntegrityBadge"
 import PreavisModal from "../components/bail/PreavisModal"
 import AvenantCard, { type Avenant } from "../components/bail/AvenantCard"
 import { joursAvantFinPreavis, formatJoursRestants, LOCATAIRE_MOTIFS, PROPRIETAIRE_MOTIFS } from "../../lib/preavis"
-import { genererPreavisPDF } from "../../lib/preavisPDF"
+// V61.5 perf — preavisPDF charge jsPDF (~150kB gzip), lazy au clic "Lettre de congé".
 import { estZoneTendue } from "../../lib/bailDefaults"
 import type { BailData, BailSignatureEntry } from "../../lib/bailPDF"
 
@@ -700,6 +700,7 @@ export default function MonLogement() {
                   const auteurEstLoc = bien.preavis_donne_par === "locataire"
                   const myEmail = (session?.user?.email || "").toLowerCase()
                   try {
+                    const { genererPreavisPDF } = await import("../../lib/preavisPDF")
                     await genererPreavisPDF({
                       qui: bien.preavis_donne_par as "locataire" | "proprietaire",
                       nomAuteur: auteurEstLoc ? (session?.user?.name || myEmail || "Locataire") : (bien.proprietaire_email || "Bailleur"),

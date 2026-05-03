@@ -5,7 +5,11 @@ import { useRouter, useParams, useSearchParams } from "next/navigation"
 import { supabase } from "../../../../lib/supabase"
 import { useResponsive } from "../../../hooks/useResponsive"
 import { postNotif } from "../../../../lib/notificationsClient"
-import { genererBailPDF, genererBailPDFBlob, type BailData } from "../../../../lib/bailPDF"
+// V61.5 perf — bailPDF / irlPDF / preavisPDF chargent jsPDF (~150kB gzip).
+// On garde ici le type uniquement (zéro coût runtime) et on lazy-import les
+// fonctions au moment de l'appel utilisateur (clic "Générer", "Indexer IRL",
+// "Donner congé"). Économie estimée ~140kB sur First Load JS du wizard bail.
+import type { BailData } from "../../../../lib/bailPDF"
 import {
   EQUIPEMENTS_MEUBLE_ALUR,
   EQUIPEMENTS_MEUBLE_CONFORT,
@@ -22,8 +26,7 @@ import ProposerAvenantModal from "../../../components/bail/ProposerAvenantModal"
 import PreavisModal from "../../../components/bail/PreavisModal"
 import { fenetreIndexation, irlDernier, calculerNouveauLoyer } from "../../../../lib/irl"
 import { joursAvantFinPreavis, LOCATAIRE_MOTIFS, PROPRIETAIRE_MOTIFS } from "../../../../lib/preavis"
-import { genererIrlPDF } from "../../../../lib/irlPDF"
-import { genererPreavisPDF } from "../../../../lib/preavisPDF"
+// V61.5 perf — lazy via import() dynamique au point d'usage
 import HelpIcon, { PhoneHelpContent } from "../../../components/ui/HelpIcon"
 import BailSignatureModal from "../../../components/BailSignatureModal"
 import AnnexeUploader from "../../../components/AnnexeUploader"
@@ -786,6 +789,7 @@ export default function BailPage() {
     setConfirmRegen(false)
     setGenerating(true)
     try {
+      const { genererBailPDFBlob } = await import("../../../../lib/bailPDF")
       const { blob, filename } = await genererBailPDFBlob(bailData)
       setPreviewBlob(blob)
       setPreviewFilename(filename)
@@ -839,6 +843,7 @@ export default function BailPage() {
 
       // Download local du PDF (côté proprio — archive perso)
       try {
+        const { genererBailPDF } = await import("../../../../lib/bailPDF")
         await genererBailPDF(bailData)
       } catch (pdfErr) {
         console.error("[generer] PDF error:", pdfErr)
@@ -1184,6 +1189,7 @@ export default function BailPage() {
                     window.open(String(payload.fichierUrl), "_blank")
                     return
                   }
+                  const { genererBailPDF } = await import("../../../../lib/bailPDF")
                   await genererBailPDF({ ...payload, signatures } as BailData)
                 } catch (err) {
                   alert(`Erreur téléchargement : ${err instanceof Error ? err.message : String(err)}`)
@@ -1312,6 +1318,7 @@ export default function BailPage() {
                     }))
                     // V38.5 — auto-download PDF "Avis de revalorisation IRL"
                     try {
+                      const { genererIrlPDF } = await import("../../../../lib/irlPDF")
                       await genererIrlPDF({
                         nomBailleur: form.nomBailleur || session?.user?.name || bien.proprietaire_email || "Bailleur",
                         adresseBailleur: form.adresseBailleur || "",
@@ -1382,6 +1389,7 @@ export default function BailPage() {
                       const motifEntry = motifList.find(m => m.code === bien.preavis_motif)
                       const auteurEstProp = bien.preavis_donne_par === "proprietaire"
                       try {
+                        const { genererPreavisPDF } = await import("../../../../lib/preavisPDF")
                         await genererPreavisPDF({
                           qui: bien.preavis_donne_par as "locataire" | "proprietaire",
                           nomAuteur: auteurEstProp ? (form.nomBailleur || session?.user?.name || bien.proprietaire_email || "Bailleur") : (form.nomLocataire || bien.locataire_email || "Locataire"),
