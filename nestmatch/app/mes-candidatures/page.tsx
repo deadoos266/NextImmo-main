@@ -259,18 +259,19 @@ export default function MesCandidatures() {
       setRetraitEnCours(false)
       return
     }
-    // 2. Notifier le proprio via message système
+    // 2. Notifier le proprio via message système (V63 — via /api/messages)
     const payload = JSON.stringify({ bienTitre: titre, retireLe: new Date().toISOString() })
-    const { error: msgErr } = await supabase.from("messages").insert([{
-      from_email: email,
-      to_email: proprietaire,
-      contenu: `${RETRAIT_PREFIX}${payload}`,
-      annonce_id,
-      lu: false,
-      created_at: new Date().toISOString(),
-    }])
-    if (msgErr) {
-      console.error("[mes-candidatures] retrait notif failed", msgErr)
+    const msgRes = await fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        toEmail: proprietaire,
+        annonceId: annonce_id,
+        contenu: `${RETRAIT_PREFIX}${payload}`,
+      }),
+    })
+    if (!msgRes.ok) {
+      console.error("[mes-candidatures] retrait notif failed (status:" + msgRes.status + ")")
       alert("Le retrait a été partiellement enregistré (visites annulées) mais le propriétaire n'a pas pu être notifié. Réessayez plus tard.")
       setRetraitEnCours(false)
       return
@@ -284,18 +285,14 @@ export default function MesCandidatures() {
   async function relancerCandidature(annonce_id: number, proprietaire: string, titre: string) {
     if (!session?.user?.email) return
     setRelancantId(annonce_id)
-    const email = session.user.email
     const contenu = `${RELANCE_PREFIX}Bonjour, avez-vous eu l'occasion de consulter ma candidature pour « ${titre || "votre bien"} » ? Je reste très intéressé(e) et disponible pour échanger ou visiter. Merci !`
-    const { error } = await supabase.from("messages").insert([{
-      from_email: email,
-      to_email: proprietaire,
-      contenu,
-      annonce_id,
-      lu: false,
-      created_at: new Date().toISOString(),
-    }])
-    if (error) {
-      console.error("[mes-candidatures] relance failed", error)
+    const res = await fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ toEmail: proprietaire, annonceId: annonce_id, contenu }),
+    })
+    if (!res.ok) {
+      console.error("[mes-candidatures] relance failed (status:" + res.status + ")")
       alert("La relance n'a pas pu être envoyée. Vérifiez votre connexion et réessayez.")
       setRelancantId(null)
       return
