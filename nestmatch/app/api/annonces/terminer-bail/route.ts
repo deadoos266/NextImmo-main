@@ -19,6 +19,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "../../../../lib/auth"
 import { supabaseAdmin } from "../../../../lib/supabase-server"
+import { checkRateLimitAsync } from "../../../../lib/rateLimit"
 
 export const runtime = "nodejs"
 
@@ -31,6 +32,20 @@ export async function POST(req: Request) {
   const userEmail = session?.user?.email?.toLowerCase()
   if (!userEmail) {
     return NextResponse.json({ ok: false, error: "Non authentifié" }, { status: 401 })
+  }
+
+  // V64 — rate-limit 5/h/user. Action de fin de bail irréversible (commentaire
+  // ligne 14 : "pas de bouton réactiver, c'est volontaire"). RL pour éviter
+  // les scripts qui parcourraient les annonces.
+  const rl = await checkRateLimitAsync(`terminer-bail:${userEmail}`, {
+    max: 5,
+    windowMs: 60 * 60 * 1000,
+  })
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { ok: false, error: "Trop de tentatives, réessayez plus tard" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec ?? 3600) } },
+    )
   }
 
   let body: Body

@@ -16,6 +16,12 @@ vi.mock("@/lib/auth", () => ({
   authOptions: {},
 }))
 
+// V64 — rate-limit ajouté à la route ; mock toujours allowed pour tests.
+vi.mock("@/lib/rateLimit", () => ({
+  checkRateLimitAsync: vi.fn().mockResolvedValue({ allowed: true }),
+  getClientIp: () => "127.0.0.1",
+}))
+
 const mockSupaAdmin: Record<string, unknown> = {
   from: vi.fn(),
 }

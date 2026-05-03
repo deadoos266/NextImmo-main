@@ -33,6 +33,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { generateSoldePDFBuffer, type MotifRetenue as PdfMotifRetenue } from "@/lib/quittanceSoldeToutCompte"
+import { checkRateLimitAsync } from "@/lib/rateLimit"
 
 export const runtime = "nodejs"
 
@@ -53,6 +54,20 @@ export async function POST(req: NextRequest) {
   const userEmail = session?.user?.email?.toLowerCase()
   if (!userEmail) {
     return NextResponse.json({ ok: false, error: "Auth requise" }, { status: 401 })
+  }
+
+  // V64 — rate-limit 5/h/user. Action financière (restitution dépôt +
+  // génération PDF "Solde de tout compte"). Le check `depot_restitue_at`
+  // bloque déjà la double-restitution, mais RL évite les bursts.
+  const rl = await checkRateLimitAsync(`restitution-depot:${userEmail}`, {
+    max: 5,
+    windowMs: 60 * 60 * 1000,
+  })
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { ok: false, error: "Trop de tentatives, réessayez plus tard" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec ?? 3600) } },
+    )
   }
 
   let body: Body
