@@ -1,5 +1,9 @@
 import type { Metadata } from "next"
 import { supabase } from "../../../lib/supabase"
+// V63 — server component : utilise supabaseAdmin pour les reads sur tables
+// que la migration 058 va REVOKE SELECT anon (messages, etats_des_lieux,
+// loyers). supabaseAdmin (service_role) bypass RLS en server-only.
+import { supabaseAdmin } from "../../../lib/supabase-server"
 import { getCityCoords } from "../../../lib/cityCoords"
 import { DPE_COLORS } from "../../../lib/dpeColors"
 import ScoreBlock from "./ScoreBlock"
@@ -173,7 +177,7 @@ export default async function Annonce({ params }: any) {
     const ownerEmail = annonce.proprietaire_email || null
     const [{ count: vuesCount }, { count: candCount }, { count: autresBiensCount }] = await Promise.all([
       supabase.from("clics_annonces").select("annonce_id", { count: "exact", head: true }).eq("annonce_id", annonce.id),
-      supabase.from("messages").select("id", { count: "exact", head: true }).eq("annonce_id", annonce.id),
+      supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).eq("annonce_id", annonce.id),
       ownerEmail
         ? supabase.from("annonces").select("id", { count: "exact", head: true }).eq("proprietaire_email", ownerEmail).neq("id", annonce.id).eq("is_test", false)
         : Promise.resolve({ count: 0 } as { count: number | null }),
