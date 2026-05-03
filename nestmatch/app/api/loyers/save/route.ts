@@ -74,6 +74,22 @@ export async function POST(req: NextRequest) {
     if ((annonce.locataire_email || "").toLowerCase() !== email) {
       return NextResponse.json({ error: "Vous n'êtes pas le locataire" }, { status: 403 })
     }
+    // V62 — anti-doublon (auto-paiement effect + double-clic + multi-onglets)
+    // peuvent appeler "declare" 2x pour le même (annonce_id, mois) sans
+    // contrainte UNIQUE en DB → 2 rows. On filtre côté serveur : si une row
+    // existe déjà pour ce mois, on la retourne (idempotent) plutôt que
+    // d'insérer un doublon.
+    const { data: existingLoyer } = await supabaseAdmin
+      .from("loyers")
+      .select("*")
+      .eq("annonce_id", annonceId)
+      .eq("mois", mois)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (existingLoyer) {
+      return NextResponse.json({ ok: true, loyer: existingLoyer, alreadyDeclared: true })
+    }
     const { data, error } = await supabaseAdmin
       .from("loyers")
       .insert({
