@@ -234,20 +234,27 @@ export async function POST(req: NextRequest) {
   if (doubleSigne) {
     // V23.3 (Paul 2026-04-29) — auto-génère 12 mois de loyers à partir de
     // date_debut_bail (ou aujourd'hui si absent). Idempotent : skip si
-    // au moins une row loyers existe déjà pour cet annonce_id. User a
-    // explicitement validé V23.3 (audit V22.1 finding HIGH #5).
+    // au moins une row loyers existe déjà DANS LA NOUVELLE PÉRIODE.
+    //
+    // V62 — fix relouer cycle : avant, le check filtrait sur annonce_id sans
+    // tenir compte du mois. Après un /api/baux/relouer + nouveau bail signé,
+    // les loyers de l'ancien locataire (même annonce_id, mois passés) faisaient
+    // remonter existingLoyers > 0 → aucun loyer généré pour le nouveau bail.
+    // Nouveau check : on cherche un loyer >= mois de début du nouveau bail.
     try {
+      const dateDebutRaw = (annonce as { date_debut_bail?: string | null }).date_debut_bail
+      const startDate = dateDebutRaw ? new Date(dateDebutRaw) : new Date()
+      if (!Number.isFinite(startDate.getTime())) {
+        startDate.setTime(Date.now())
+      }
+      const startMois = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, "0")}`
       const { data: existingLoyers } = await supabaseAdmin
         .from("loyers")
         .select("id")
         .eq("annonce_id", annonceId)
+        .gte("mois", startMois)
         .limit(1)
       if (!existingLoyers || existingLoyers.length === 0) {
-        const dateDebutRaw = (annonce as { date_debut_bail?: string | null }).date_debut_bail
-        const startDate = dateDebutRaw ? new Date(dateDebutRaw) : new Date()
-        if (!Number.isFinite(startDate.getTime())) {
-          startDate.setTime(Date.now())
-        }
         const loyerHC = Number((annonce as { prix?: number | null }).prix ?? 0) || 0
         const charges = Number((annonce as { charges?: number | null }).charges ?? 0) || 0
         const totalCC = loyerHC + charges

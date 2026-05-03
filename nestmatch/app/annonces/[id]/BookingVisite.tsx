@@ -37,8 +37,12 @@ export default function BookingVisite({
   const [candStatut, setCandStatut] = useState<CandidatureStatut>(null)
   const [showLockedPopup, setShowLockedPopup] = useState(false)
 
-  const myEmail = session?.user?.email
-  const isOwner = myEmail === proprietaireEmail
+  // V62 — normalise email pour comparaisons + queries (legacy users avec
+  // mixed case dans annonces.proprietaire_email peuvent faire échouer le
+  // strict-equal et un .eq sur locataire_email).
+  const myEmail = session?.user?.email?.toLowerCase() || ""
+  const proprioEmailNorm = (proprietaireEmail || "").toLowerCase()
+  const isOwner = !!myEmail && myEmail === proprioEmailNorm
 
   useEffect(() => {
     if (!myEmail || isOwner) { setLoading(false); return }
