@@ -1,9 +1,9 @@
 # `.claude/agents/` — KeyMatch agents catalog
 
-**74 agents** disponibles pour la stack KeyMatch (Next.js 15 + Supabase + NextAuth + Resend + Vercel).
+**75 agents** disponibles pour la stack KeyMatch (Next.js 15 + Supabase + NextAuth + Resend + Vercel).
 
 Mix entre :
-- **Custom KeyMatch** (~31 agents) — créés sur mesure pour le projet (auditeurs, helpers, reviewers domaine, meta/docs/wiki, SEO/cost)
+- **Custom KeyMatch** (~32 agents) — créés sur mesure pour le projet (auditeurs, helpers, reviewers domaine, meta/docs/wiki, SEO/cost, site health)
 - **Communauté** (~40 agents) — sélectionnés depuis [VoltAgent/awesome-claude-code-subagents](https://github.com/VoltAgent/awesome-claude-code-subagents) + [wshobson/agents](https://github.com/wshobson/agents) + [rshah515/claude-code-subagents](https://github.com/rshah515/claude-code-subagents) + [disler/claude-code-hooks-mastery](https://github.com/disler/claude-code-hooks-mastery) + [affaan-m/everything-claude-code](https://github.com/affaan-m/everything-claude-code) + [AgriciDaniel/claude-seo](https://github.com/AgriciDaniel/claude-seo) + [AgriciDaniel/claude-email](https://github.com/AgriciDaniel/claude-email) + [Sushegaad/Claude-Skills-GRC](https://github.com/Sushegaad/Claude-Skills-GRC) + [onvoyage-ai/gtm-engineer-skills](https://github.com/onvoyage-ai/gtm-engineer-skills) + [jeremylongshore/claude-code-plugins-plus-skills](https://github.com/jeremylongshore/claude-code-plugins-plus-skills)
 - **Meta** (3 agents) — pour générer/maintenir d'autres agents et docs (`meta-agent`, `prompt-improver`, `docs-keeper`)
 
@@ -56,6 +56,12 @@ Mix entre :
 | `vercel-cost-auditor` | custom KeyMatch | **V70.bonus++ batch 3** — Audit usage Vercel vs plan limits (Hobby/Pro). Détecte bundles trop lourds, ISR regen abusif, cron horaires sur Hobby (broken), image optim. |
 | `supabase-cost-auditor` | custom KeyMatch | **V70.bonus++ batch 3** — Audit usage Supabase (DB size, storage, bandwidth, MAU, realtime peers). Détecte storage orphelin, notifs jamais purgées, RLS overhead |
 | `sql-query-optimizer` | jeremylongshore/claude-code-plugins-plus-skills | **V70.bonus++ batch 3** — Optimise queries Postgres/Supabase. 7 anti-patterns (N+1, missing index, seq scan, ORDER BY+LIMIT, RLS overhead, OFFSET pagination, aggregations sans index) |
+
+## 🩺 Site Health (1)
+
+| Agent | Source | Use case |
+|---|---|---|
+| `site-health-checker` | custom KeyMatch | **V70.bonus++ batch 4** — Scan live `keymatch-immo.fr` end-to-end : routes critiques (HTTP status, TTFB), headers sécurité (HSTS/CSP/X-Frame), SEO baseline (title/meta/og/JSON-LD), robots/sitemap, broken links, cert+DNS. Génère `docs/SITE_HEALTH_CHECK_YYYY-MM-DD.md`. |
 
 ## ⚖️ Compliance / Legal (3)
 
