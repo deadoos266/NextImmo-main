@@ -1,14 +1,15 @@
 # `.claude/agents/` — KeyMatch agents catalog
 
-**59 agents** disponibles pour la stack KeyMatch (Next.js 15 + Supabase + NextAuth + Resend + Vercel).
+**65 agents** disponibles pour la stack KeyMatch (Next.js 15 + Supabase + NextAuth + Resend + Vercel).
 
 Mix entre :
-- **Custom KeyMatch** (~24 agents) — créés sur mesure pour le projet (auditeurs, helpers, reviewers domaine)
-- **Communauté** (~35 agents) — sélectionnés depuis [VoltAgent/awesome-claude-code-subagents](https://github.com/VoltAgent/awesome-claude-code-subagents) + [wshobson/agents](https://github.com/wshobson/agents) + [rshah515/claude-code-subagents](https://github.com/rshah515/claude-code-subagents)
+- **Custom KeyMatch** (~26 agents) — créés sur mesure pour le projet (auditeurs, helpers, reviewers domaine, meta/docs/wiki)
+- **Communauté** (~36 agents) — sélectionnés depuis [VoltAgent/awesome-claude-code-subagents](https://github.com/VoltAgent/awesome-claude-code-subagents) + [wshobson/agents](https://github.com/wshobson/agents) + [rshah515/claude-code-subagents](https://github.com/rshah515/claude-code-subagents) + [disler/claude-code-hooks-mastery](https://github.com/disler/claude-code-hooks-mastery) + [affaan-m/everything-claude-code](https://github.com/affaan-m/everything-claude-code)
+- **Meta** (3 agents) — pour générer/maintenir d'autres agents et docs (`meta-agent`, `prompt-improver`, `docs-keeper`)
 
 ---
 
-## 🏠 Custom KeyMatch (24)
+## 🏠 Custom KeyMatch (26)
 
 | Agent | Use case |
 |---|---|
@@ -23,10 +24,12 @@ Mix entre :
 | `copy-editor-fr` | Relecture FR — accents, ponctuation, voussoiement |
 | `database-reviewer` | Review migrations Supabase + queries (RLS, indexes, N+1) |
 | `doc-updater` | Synchronise MEMORY.md / SKILLS.md / CLAUDE.md avec la réalité du code |
+| `docs-keeper` | **V70.bonus++** — Maintient docs/ARCHITECTURE.md + docs/API.md à jour après changements substantiels (>5 fichiers ou >100 LoC) |
 | `performance-optimizer` | Audit perf bundle client KeyMatch |
 | `planner` | Planning stratégique features complexes (PM breakdown) |
 | `pr-test-analyzer` | Vérifie que les tests couvrent vraiment le comportement changé |
-| `real-estate-compliance-reviewer` | **Audit FR ALUR/eIDAS/RGPD** sur bail/EDL/loyers/préavis (V70.bonus) |
+| `prompt-improver` | **V70.bonus++** — Audite mensuellement les `.claude/agents/*.md`, suggère/applique améliorations system prompts |
+| `real-estate-compliance-reviewer` | **V70.bonus** — Audit FR ALUR/eIDAS/RGPD sur bail/EDL/loyers/préavis |
 | `refactor-cleaner` | Détecte code mort, imports inutilisés, duplications |
 | `responsive-auditor` | Audit responsive mobile/tablet/desktop |
 | `security-reviewer` | Review sécurité routes API + auth + uploads |
@@ -36,7 +39,15 @@ Mix entre :
 | `typescript-reviewer` | Review TS strict (any, as any, !! non justifiés) |
 | `verifier` | Vérifie qu'une modif fait ce qu'elle prétend (anti silent-failure) |
 
-## 🛠️ Communauté installés (35)
+## 🪄 Meta / Docs / Wiki (3)
+
+| Agent | Source | Use case |
+|---|---|---|
+| `meta-agent` | disler/claude-code-hooks-mastery | **Génère** d'autres agents — frontmatter + system prompt + tools selon description user. Use proactively quand user dit "crée un agent qui..." |
+| `adr-writer` | affaan-m/everything-claude-code | Capture les décisions architecturales au format MADR dans `docs/adr/NNNN-titre.md`. Auto-trigger sur "let's go with X", "we should use X instead of Y" |
+| `wiki-compiler` | inspired by ussumant/llm-wiki-compiler | Compile les ~30 `docs/AUDIT_*.md` et similaires en `docs/wiki/INDEX.md` thématique. Pattern Karpathy LLM Wiki. Réduit les coûts context ~90% |
+
+## 🛠️ Communauté installés (36)
 
 ### Core development (4)
 | Agent | Source | Use case |
