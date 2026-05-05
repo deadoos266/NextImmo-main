@@ -28,20 +28,20 @@ export default function MentionsLegales() {
           Le site <strong style={S.strong}>keymatch-immo.fr</strong> est édité par :
         </p>
         <p style={S.p}>
-          <strong style={S.strong}>Raison sociale</strong> : <span style={S.todo}>à renseigner</span><br />
-          <strong style={S.strong}>Forme juridique</strong> : <span style={S.todo}>à renseigner (SAS, SARL, auto-entrepreneur, etc.)</span><br />
-          <strong style={S.strong}>Capital social</strong> : <span style={S.todo}>à renseigner</span><br />
-          <strong style={S.strong}>RCS</strong> : <span style={S.todo}>à renseigner</span><br />
-          <strong style={S.strong}>SIRET</strong> : <span style={S.todo}>à renseigner</span><br />
-          <strong style={S.strong}>Numéro de TVA intracommunautaire</strong> : <span style={S.todo}>à renseigner</span><br />
-          <strong style={S.strong}>Siège social</strong> : <span style={S.todo}>adresse postale à renseigner</span><br />
+          <strong style={S.strong}>Raison sociale</strong> : KeyMatch SAS<br />
+          <strong style={S.strong}>Forme juridique</strong> : Société par Actions Simplifiée (SAS)<br />
+          <strong style={S.strong}>Capital social</strong> : <span style={S.todo}>à renseigner avant lancement commercial</span><br />
+          <strong style={S.strong}>RCS</strong> : <span style={S.todo}>à renseigner avant lancement commercial</span><br />
+          <strong style={S.strong}>SIRET</strong> : <span style={S.todo}>à renseigner avant lancement commercial</span><br />
+          <strong style={S.strong}>Numéro de TVA intracommunautaire</strong> : <span style={S.todo}>à renseigner avant lancement commercial</span><br />
+          <strong style={S.strong}>Siège social</strong> : <span style={S.todo}>adresse postale à renseigner avant lancement commercial</span><br />
           <strong style={S.strong}>Email de contact</strong> : <strong style={S.strong}>contact@keymatch-immo.fr</strong>
         </p>
       </LegalSec>
 
       <LegalSec title="Directeur de la publication">
         <p style={S.p}>
-          <span style={S.todo}>Nom et prénom du directeur de la publication à renseigner</span>
+          <strong style={S.strong}>Paul Sadrant</strong>, fondateur de KeyMatch.
         </p>
       </LegalSec>
 
@@ -49,7 +49,7 @@ export default function MentionsLegales() {
         <p style={S.p}>Le site est hébergé par :</p>
         <p style={S.p}>
           <strong style={S.strong}>Vercel Inc.</strong><br />
-          340 S Lemon Ave #4133, Walnut, CA 91789, États-Unis<br />
+          440 N Barranca Ave #4133, Covina, CA 91723, États-Unis<br />
           <a href="https://vercel.com" style={S.link}>vercel.com</a>
         </p>
         <p style={S.p}>

@@ -97,24 +97,34 @@ export default function Confidentialite() {
           du service :
         </p>
         <ul style={{ ...S.ul, margin: "0 0 10px" }}>
-          <li style={S.li}><strong style={S.strong}>Vercel Inc.</strong> (hébergement applicatif) — États-Unis</li>
-          <li style={S.li}><strong style={S.strong}>Supabase</strong> (base de données, authentification, stockage de fichiers) — Union Européenne</li>
+          <li style={S.li}><strong style={S.strong}>Vercel Inc.</strong> (hébergement applicatif) — États-Unis, certifié Data Privacy Framework UE-USA</li>
+          <li style={S.li}><strong style={S.strong}>Supabase, Inc.</strong> (base de données, authentification, stockage de fichiers) — Union Européenne (région Frankfurt)</li>
+          <li style={S.li}><strong style={S.strong}>Resend</strong> (envoi d&apos;emails transactionnels : confirmations, notifications) — États-Unis, sous-processeur AWS SES</li>
+          <li style={S.li}><strong style={S.strong}>Cloudflare</strong> (réseau de distribution de contenu, protection DDoS) — Mondial, certifié Data Privacy Framework</li>
           <li style={S.li}><strong style={S.strong}>Google</strong> (authentification OAuth pour les Utilisateurs connectés via Google) — États-Unis</li>
           <li style={S.li}><strong style={S.strong}>Anthropic</strong> (services d&apos;IA, uniquement si vous utilisez l&apos;assistant conversationnel) — États-Unis</li>
+          <li style={S.li}><strong style={S.strong}>Upstash</strong> (rate-limiting Redis, stockage éphémère de compteurs anti-abus) — Union Européenne</li>
         </ul>
         <p style={S.p}>
           Tous nos sous-traitants sont soumis à des engagements contractuels de confidentialité et de sécurité
-          conformes au RGPD.
+          conformes au RGPD. Les transferts vers les États-Unis reposent sur le cadre Data Privacy Framework
+          (décision d&apos;adéquation de la Commission européenne du 10 juillet 2023).
         </p>
       </LegalSec>
 
       <LegalSec title="7. Durée de conservation">
         <ul style={{ ...S.ul, margin: "0 0 10px" }}>
           <li style={S.li}><strong style={S.strong}>Compte actif</strong> : vos données sont conservées tant que vous utilisez le service.</li>
-          <li style={S.li}><strong style={S.strong}>Compte supprimé</strong> : les données personnelles sont effacées sous 30 jours, à l&apos;exception de celles devant être conservées pour des obligations légales (journaux de connexion : 12 mois ; données financières : 10 ans selon le Code de commerce).</li>
+          <li style={S.li}><strong style={S.strong}>Compte supprimé</strong> : les données personnelles sont effacées sous 30 jours, à l&apos;exception de celles devant être conservées pour des obligations légales.</li>
+          <li style={S.li}><strong style={S.strong}>Bail signé électroniquement</strong> : 3 ans après la fin du bail (loi ALUR du 24 mars 2014, art. 8) — copie chiffrée conservée pour preuve juridique en cas de litige.</li>
+          <li style={S.li}><strong style={S.strong}>Signatures électroniques eIDAS</strong> : 10 ans après la signature (règlement UE 910/2014, art. 24) pour garantir la valeur probante en justice.</li>
+          <li style={S.li}><strong style={S.strong}>États des lieux et quittances</strong> : 3 ans après la fin du bail (loi du 6 juillet 1989, art. 22).</li>
+          <li style={S.li}><strong style={S.strong}>Données comptables et facturation</strong> : 10 ans (Code de commerce, art. L.123-22).</li>
+          <li style={S.li}><strong style={S.strong}>Données fiscales</strong> : 6 ans (Livre des procédures fiscales, art. L.102 B).</li>
+          <li style={S.li}><strong style={S.strong}>Journaux de connexion (logs)</strong> : 12 mois (LCEN, décret 2011-219).</li>
           <li style={S.li}><strong style={S.strong}>Dossier locataire partagé</strong> : les tokens de partage expirent automatiquement après 7 jours.</li>
           <li style={S.li}><strong style={S.strong}>Messages</strong> : conservés tant que les deux Utilisateurs concernés ont un Compte actif.</li>
-          <li style={S.li}><strong style={S.strong}>Signalements et données de modération</strong> : conservés 3 ans après traitement pour assurer un suivi.</li>
+          <li style={S.li}><strong style={S.strong}>Signalements et données de modération</strong> : 3 ans après traitement.</li>
         </ul>
       </LegalSec>
 
