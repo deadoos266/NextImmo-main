@@ -275,22 +275,32 @@ export default function EdlPage() {
     // V58.3 — quand on cible explicitement type=sortie (?type=sortie),
     // on charge le DERNIER EDL de ce type s'il existe, sinon on prefill
     // depuis l'EDL entrée pour comparaison contradictoire.
+    // V65.2 — EDL via /api/edl/by-annonce (préreq REVOKE SELECT anon migration 059)
     const [{ data }, edlSpecificRes] = await Promise.all([
       supabase.from("annonces").select("*").eq("id", bienId).single(),
-      supabase.from("etats_des_lieux").select("*").eq("annonce_id", bienId).eq("type", wantedType).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      fetch(`/api/edl/by-annonce?annonce_id=${bienId}&type=${wantedType}`, { cache: "no-store" })
+        .then(r => r.ok ? r.json() : { ok: false, edl: null })
+        .catch(() => ({ ok: false, edl: null })),
     ])
-    let edl = edlSpecificRes.data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let edl = (edlSpecificRes as any)?.ok ? (edlSpecificRes as any).edl : null
     // Fallback : si pas d'EDL du wantedType, prend le plus récent (compat existant)
     if (!edl) {
-      const { data: edlFallback } = await supabase.from("etats_des_lieux").select("*").eq("annonce_id", bienId).order("created_at", { ascending: false }).limit(1).maybeSingle()
-      edl = edlFallback
+      const fallbackRes = await fetch(`/api/edl/by-annonce?annonce_id=${bienId}`, { cache: "no-store" })
+        .then(r => r.ok ? r.json() : { ok: false, edl: null })
+        .catch(() => ({ ok: false, edl: null }))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      edl = (fallbackRes as any)?.ok ? (fallbackRes as any).edl : null
     }
     // V58.3 — Pour un EDL sortie naissant, on veut clone les pièces de l'EDL entrée
     // afin de comparer item par item. On charge l'EDL entrée séparément.
     let edlEntreePourClone: { pieces_data?: unknown } | null = null
     if (wantedType === "sortie" && (!edl || edl.type !== "sortie")) {
-      const { data: ee } = await supabase.from("etats_des_lieux").select("pieces_data").eq("annonce_id", bienId).eq("type", "entree").eq("statut", "valide").order("created_at", { ascending: false }).limit(1).maybeSingle()
-      edlEntreePourClone = ee
+      const eeRes = await fetch(`/api/edl/by-annonce?annonce_id=${bienId}&type=entree&statut=valide&fields=pieces_data`, { cache: "no-store" })
+        .then(r => r.ok ? r.json() : { ok: false, edl: null })
+        .catch(() => ({ ok: false, edl: null }))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      edlEntreePourClone = (eeRes as any)?.ok ? (eeRes as any).edl : null
     }
     if (edl && edl.type === wantedType) {
       setEdlExistant(edl)

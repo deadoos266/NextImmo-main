@@ -107,19 +107,18 @@ export default function MonLogement() {
       }
       setBien(b as Bien)
 
-      // Docs du logement + bail payload + signatures
+      // V65.2 — Docs du logement + bail payload + signatures (loyers/edl via /api)
       const [vRes, edlRes, loyRes, bailMsgRes, sigRes] = await Promise.all([
         supabase.from("visites").select("id", { count: "exact", head: true })
           .eq("annonce_id", b.id).ilike("locataire_email", email).eq("statut", "confirmée"),
-        supabase.from("etats_des_lieux")
-          .select("id, type, date_edl, statut, created_at")
-          .eq("annonce_id", b.id)
-          .order("created_at", { ascending: false }),
-        supabase.from("loyers")
-          .select("id, mois, montant, statut, date_confirmation, quittance_envoyee_at")
-          .eq("annonce_id", b.id)
-          .order("mois", { ascending: false })
-          .limit(24),
+        // V65.2 — EDLs via /api/edl/by-annonce (préreq REVOKE SELECT anon migration 059)
+        fetch(`/api/edl/by-annonce?annonce_id=${b.id}`, { cache: "no-store" })
+          .then(r => r.ok ? r.json() : { ok: false, edl: null })
+          .catch(() => ({ ok: false, edl: null })),
+        // V65.2 — Loyers via /api/loyers/list (préreq migration 059)
+        fetch(`/api/loyers/list?annonce_id=${b.id}`, { cache: "no-store" })
+          .then(r => r.ok ? r.json() : { ok: false, loyers: [] })
+          .catch(() => ({ ok: false, loyers: [] })),
         // V65.1 — Dernier [BAIL_CARD] via /api/bail/card-payload (REVOKE SELECT anon prep)
         fetch(`/api/bail/card-payload?annonce_id=${b.id}`, { cache: "no-store" })
           .then(r => r.ok ? r.json() : { ok: false })
@@ -130,8 +129,15 @@ export default function MonLogement() {
           .catch(() => ({ ok: false })),
       ])
       setVisitesAVenir(vRes.count ?? 0)
-      setEdls(edlRes.data || [])
-      setLoyers(loyRes.data || [])
+      // V65.2 — by-annonce ne retourne que LE dernier EDL ; on construit un array.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const edlOne = (edlRes as any)?.ok && (edlRes as any).edl ? [(edlRes as any).edl] : []
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setEdls(edlOne as any)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const loyersData = (loyRes as any)?.ok ? (loyRes as any).loyers.slice(0, 24) : []
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setLoyers(loyersData as any)
 
       // V65.1 — Parse bail payload depuis /api/bail/card-payload (parsé server-side).
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

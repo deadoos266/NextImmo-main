@@ -555,7 +555,10 @@ export default function Proprietaire() {
       fetch("/api/messages/all-mine", { cache: "no-store" })
         .then(r => r.ok ? r.json() : { ok: false, messages: [] })
         .catch(() => ({ ok: false, messages: [] })),
-      supabase.from("loyers").select("*").in("proprietaire_email", variants).order("id", { ascending: false }),
+      // V65.2 — loyers via /api/loyers/list?mine=proprio (préreq migration 059)
+      fetch("/api/loyers/list?mine=proprio", { cache: "no-store" })
+        .then(r => r.ok ? r.json() : { ok: false, loyers: [] })
+        .catch(() => ({ ok: false, loyers: [] })),
       supabase.from("visites").select("*").in("proprietaire_email", variants).order("id", { ascending: false }),
     ])
     let b = annRes.data || []
@@ -568,7 +571,8 @@ export default function Proprietaire() {
     const allMineMsgs: any[] = (allMineRes as any)?.ok && Array.isArray((allMineRes as any).messages) ? (allMineRes as any).messages : []
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const m = allMineMsgs.filter((msg: any) => variants.some(v => (msg.to_email || "").toLowerCase() === v.toLowerCase()))
-    const l = loyRes.data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const l = (loyRes as any)?.ok ? (loyRes as any).loyers : null
     const v = visRes.data
     const ve = visRes.error
     if (b) {
@@ -576,15 +580,20 @@ export default function Proprietaire() {
       // Charger les clics uniques par bien
       const ids = b.map((a: any) => a.id)
       if (ids.length > 0) {
-        const [{ data: clics }, { data: edlRows }] = await Promise.all([
+        // V65.2 — EDLs batch via /api/edl/by-annonces (préreq migration 059)
+        const [{ data: clics }, edlsRes] = await Promise.all([
           supabase.from("clics_annonces").select("annonce_id").in("annonce_id", ids),
-          supabase.from("etats_des_lieux").select("annonce_id, type, statut, date_edl, created_at").in("annonce_id", ids),
+          fetch(`/api/edl/by-annonces?ids=${ids.join(",")}`, { cache: "no-store" })
+            .then(r => r.ok ? r.json() : { ok: false, edls: [] })
+            .catch(() => ({ ok: false, edls: [] })),
         ])
         if (clics) {
           const map: Record<number, number> = {}
           clics.forEach((c: any) => { map[c.annonce_id] = (map[c.annonce_id] || 0) + 1 })
           setClicsParBien(map)
         }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const edlRows = (edlsRes as any)?.ok ? (edlsRes as any).edls : []
         setEdls(edlRows || [])
       }
     }

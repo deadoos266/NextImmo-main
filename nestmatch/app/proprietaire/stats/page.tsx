@@ -361,9 +361,15 @@ function StatsInner() {
         // introuvable (cas où l'URL ?id= pointe sur un bien supprimé ou
         // qui n'appartient pas au user). On gère le bien null après.
         supabase.from("annonces").select("*").eq("id", bienId).maybeSingle(),
-        supabase.from("loyers").select("*").eq("annonce_id", bienId).order("mois"),
+        // V65.2 — loyers via /api/loyers/list (préreq migration 059)
+        fetch(`/api/loyers/list?annonce_id=${bienId}`, { cache: "no-store" })
+          .then(r => r.ok ? r.json() : { ok: false, loyers: [] })
+          .catch(() => ({ ok: false, loyers: [] })),
         supabase.from("carnet_entretien").select("cout").eq("annonce_id", bienId),
-        supabase.from("etats_des_lieux").select("statut").eq("annonce_id", bienId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+        // V65.2 — EDL last via /api/edl/by-annonce (préreq migration 059)
+        fetch(`/api/edl/by-annonce?annonce_id=${bienId}`, { cache: "no-store" })
+          .then(r => r.ok ? r.json() : { ok: false, edl: null })
+          .catch(() => ({ ok: false, edl: null })),
         // Pipeline funnel — head:true pour ne payer que le count, pas les rows.
         supabase.from("clics_annonces").select("annonce_id", { count: "exact", head: true }).eq("annonce_id", bienId),
         // V65.1 — counts candidatures + dossiers via /api server-side (préreq REVOKE SELECT anon migration 058)
@@ -385,9 +391,12 @@ function StatsInner() {
         return
       }
 
-      const l = loyersRes.data
+      // V65.2 — loyers + edl viennent de routes /api maintenant
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const l = (loyersRes as any)?.ok ? (loyersRes as any).loyers : null
       const travaux = travauxRes.data
-      const edlData = edlRes.data
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const edlData = (edlRes as any)?.ok ? (edlRes as any).edl : null
 
       setEdlStatut(edlData?.statut || null)
       if (travaux) setTravauxCout(travaux.reduce((s: number, t: any) => s + (Number(t.cout) || 0), 0))

@@ -59,12 +59,21 @@ export default function MesDocuments() {
         .then(r => r.ok ? r.json() : null)
         .then(j => j?.ok ? { data: j.profil } : { data: null })
         .catch(() => ({ data: null }))
-      const [{ data: actives }, { data: profil }, { data: loyers }, { data: edls }] = await Promise.all([
+      // V65.2 — loyers + edl via /api server-side (préreq migration 059)
+      const [{ data: actives }, { data: profil }, loyersRes, edlRes] = await Promise.all([
         supabase.from("annonces").select("id, titre, ville, statut").eq("locataire_email", email),
         profilP,
-        supabase.from("loyers").select("id, annonce_id, mois, quittance_pdf_url").eq("locataire_email", email).not("quittance_pdf_url", "is", null),
-        supabase.from("etats_des_lieux").select("id").eq("locataire_email", email).limit(1),
+        fetch("/api/loyers/list?mine=locataire&with_quittance=true", { cache: "no-store" })
+          .then(r => r.ok ? r.json() : { ok: false, loyers: [] })
+          .catch(() => ({ ok: false, loyers: [] })),
+        fetch("/api/edl/has-mine", { cache: "no-store" })
+          .then(r => r.ok ? r.json() : { ok: false, hasEdl: false })
+          .catch(() => ({ ok: false, hasEdl: false })),
       ])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const loyers = (loyersRes as any)?.ok ? (loyersRes as any).loyers : []
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const edls = (edlRes as any)?.ok && (edlRes as any).hasEdl ? [{ id: 1 }] : []
       setAnnoncesActuelles((actives || []) as AnnonceMin[])
       const anciensIds = Array.isArray(profil?.anciens_logements)
         ? (profil!.anciens_logements as Array<{ annonce_id?: number }>).map(x => x?.annonce_id).filter((x): x is number => typeof x === "number")
