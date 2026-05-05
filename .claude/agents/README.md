@@ -1,10 +1,10 @@
 # `.claude/agents/` — KeyMatch agents catalog
 
-**65 agents** disponibles pour la stack KeyMatch (Next.js 15 + Supabase + NextAuth + Resend + Vercel).
+**74 agents** disponibles pour la stack KeyMatch (Next.js 15 + Supabase + NextAuth + Resend + Vercel).
 
 Mix entre :
-- **Custom KeyMatch** (~26 agents) — créés sur mesure pour le projet (auditeurs, helpers, reviewers domaine, meta/docs/wiki)
-- **Communauté** (~36 agents) — sélectionnés depuis [VoltAgent/awesome-claude-code-subagents](https://github.com/VoltAgent/awesome-claude-code-subagents) + [wshobson/agents](https://github.com/wshobson/agents) + [rshah515/claude-code-subagents](https://github.com/rshah515/claude-code-subagents) + [disler/claude-code-hooks-mastery](https://github.com/disler/claude-code-hooks-mastery) + [affaan-m/everything-claude-code](https://github.com/affaan-m/everything-claude-code)
+- **Custom KeyMatch** (~31 agents) — créés sur mesure pour le projet (auditeurs, helpers, reviewers domaine, meta/docs/wiki, SEO/cost)
+- **Communauté** (~40 agents) — sélectionnés depuis [VoltAgent/awesome-claude-code-subagents](https://github.com/VoltAgent/awesome-claude-code-subagents) + [wshobson/agents](https://github.com/wshobson/agents) + [rshah515/claude-code-subagents](https://github.com/rshah515/claude-code-subagents) + [disler/claude-code-hooks-mastery](https://github.com/disler/claude-code-hooks-mastery) + [affaan-m/everything-claude-code](https://github.com/affaan-m/everything-claude-code) + [AgriciDaniel/claude-seo](https://github.com/AgriciDaniel/claude-seo) + [AgriciDaniel/claude-email](https://github.com/AgriciDaniel/claude-email) + [Sushegaad/Claude-Skills-GRC](https://github.com/Sushegaad/Claude-Skills-GRC) + [onvoyage-ai/gtm-engineer-skills](https://github.com/onvoyage-ai/gtm-engineer-skills) + [jeremylongshore/claude-code-plugins-plus-skills](https://github.com/jeremylongshore/claude-code-plugins-plus-skills)
 - **Meta** (3 agents) — pour générer/maintenir d'autres agents et docs (`meta-agent`, `prompt-improver`, `docs-keeper`)
 
 ---
@@ -39,6 +39,32 @@ Mix entre :
 | `typescript-reviewer` | Review TS strict (any, as any, !! non justifiés) |
 | `verifier` | Vérifie qu'une modif fait ce qu'elle prétend (anti silent-failure) |
 
+## 🔍 SEO / Marketing / Growth (5)
+
+| Agent | Source | Use case |
+|---|---|---|
+| `seo-agency-orchestrator` | inspired by AgriciDaniel/claude-seo | **V70.bonus++ batch 3** — Orchestre 6 dimensions SEO (tech, content/keywords FR, local/maps, schema, GEO/AEO, backlinks). Auto-trigger sur modif `app/sitemap.ts`, `app/robots.ts`, `app/page.tsx`, `app/annonces/[id]/page.tsx`, `app/location/**` |
+| `aeo-geo-nextjs-optimizer` | onvoyage-ai/gtm-engineer-skills | **V70.bonus++ batch 3** — AEO/GEO pour ChatGPT/Perplexity/Google AI Overviews/Claude. 16 foundational checks + 6 intelligence dimensions. Inclut llms.txt template |
+| `real-estate-listing-schema-auditor` | custom KeyMatch | **V70.bonus++ batch 3** — Audit Schema.org RealEstateListing pour Google Rich Results. Required props (price, areaSize, address, image, datePosted), Open Graph immo, hreflang fr-FR |
+| `location-page-generator-fr` | custom KeyMatch | **V70.bonus++ batch 3** — Génère landing pages SEO `/location/[ville]/[quartier]` avec INSEE data, JSON-LD Place + FAQPage + BreadcrumbList, internal linking silo, anti-doorway |
+| `email-deliverability-auditor` | inspired by AgriciDaniel/claude-email | **V70.bonus++ batch 3** — Audit délivrabilité Resend : SPF/DKIM/DMARC, Gmail/Yahoo bulk sender 2024, blacklists, HTML rendering, spam score, reputation |
+
+## 💰 Cost / Infra Audit (3)
+
+| Agent | Source | Use case |
+|---|---|---|
+| `vercel-cost-auditor` | custom KeyMatch | **V70.bonus++ batch 3** — Audit usage Vercel vs plan limits (Hobby/Pro). Détecte bundles trop lourds, ISR regen abusif, cron horaires sur Hobby (broken), image optim. |
+| `supabase-cost-auditor` | custom KeyMatch | **V70.bonus++ batch 3** — Audit usage Supabase (DB size, storage, bandwidth, MAU, realtime peers). Détecte storage orphelin, notifs jamais purgées, RLS overhead |
+| `sql-query-optimizer` | jeremylongshore/claude-code-plugins-plus-skills | **V70.bonus++ batch 3** — Optimise queries Postgres/Supabase. 7 anti-patterns (N+1, missing index, seq scan, ORDER BY+LIMIT, RLS overhead, OFFSET pagination, aggregations sans index) |
+
+## ⚖️ Compliance / Legal (3)
+
+| Agent | Source | Use case |
+|---|---|---|
+| `gdpr-rgpd-auditor` | inspired by Sushegaad/Claude-Skills-GRC | **V70.bonus++ batch 3** — Audit RGPD UE 2016/679. Articles 5,6,7,12-22,25,30,32,33-34,35,28. Tableau PII KeyMatch (CNI, fiches paie, IBAN, KYC) |
+| `french-legal-page-auditor` | custom KeyMatch | **V70.bonus++ batch 3** — Audit conformité légale FR `app/cgu/`, `app/mentions-legales/`, `app/politique-confidentialite/`, `app/cookies/`. LCEN art. 6-III, RGPD, Code conso L221-5, ePrivacy CNIL |
+| `real-estate-compliance-reviewer` | custom KeyMatch | **V70.bonus** — Audit FR ALUR/eIDAS/RGPD sur bail/EDL/loyers/préavis (cf. section custom) |
+
 ## 🪄 Meta / Docs / Wiki (3)
 
 | Agent | Source | Use case |
@@ -47,7 +73,9 @@ Mix entre :
 | `adr-writer` | affaan-m/everything-claude-code | Capture les décisions architecturales au format MADR dans `docs/adr/NNNN-titre.md`. Auto-trigger sur "let's go with X", "we should use X instead of Y" |
 | `wiki-compiler` | inspired by ussumant/llm-wiki-compiler | Compile les ~30 `docs/AUDIT_*.md` et similaires en `docs/wiki/INDEX.md` thématique. Pattern Karpathy LLM Wiki. Réduit les coûts context ~90% |
 
-## 🛠️ Communauté installés (36)
+## 🛠️ Communauté installés (36 batch 1+2)
+
+> Note : les 5 agents inspirés de batch 3 (seo-agency-orchestrator, aeo-geo-nextjs-optimizer, sql-query-optimizer, gdpr-rgpd-auditor, email-deliverability-auditor) sont listés dans les sections SEO / Cost / Compliance ci-dessus pour faciliter la lecture par domaine.
 
 ### Core development (4)
 | Agent | Source | Use case |
@@ -143,6 +171,13 @@ Les agents auto-trigger via `description:` dans le frontmatter quand ils matchen
 - [VoltAgent/awesome-claude-code-subagents](https://github.com/VoltAgent/awesome-claude-code-subagents) — collection structurée par catégories (utilisée comme source primaire)
 - [wshobson/agents](https://github.com/wshobson/agents) — collection mature multi-domaines
 - [rshah515/claude-code-subagents](https://github.com/rshah515/claude-code-subagents) — quality testing dont Playwright
+- [disler/claude-code-hooks-mastery](https://github.com/disler/claude-code-hooks-mastery) — meta-agent
+- [affaan-m/everything-claude-code](https://github.com/affaan-m/everything-claude-code) — adr-writer
+- [AgriciDaniel/claude-seo](https://github.com/AgriciDaniel/claude-seo) — SEO orchestration multi-dim (batch 3)
+- [AgriciDaniel/claude-email](https://github.com/AgriciDaniel/claude-email) — email deliverability + content (batch 3)
+- [Sushegaad/Claude-Skills-GRC](https://github.com/Sushegaad/Claude-Skills-GRC) — RGPD/CCPA/ISO27001/NIS2 (batch 3)
+- [onvoyage-ai/gtm-engineer-skills](https://github.com/onvoyage-ai/gtm-engineer-skills) — AEO/GEO + GTM engineering (batch 3)
+- [jeremylongshore/claude-code-plugins-plus-skills](https://github.com/jeremylongshore/claude-code-plugins-plus-skills) — SQL optimization + plugins (batch 3)
 
 ## Mise à jour
 
