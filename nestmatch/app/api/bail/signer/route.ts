@@ -78,9 +78,34 @@ export async function POST(req: NextRequest) {
   const signaturePng = typeof p.signaturePng === "string" ? p.signaturePng : ""
   const bailHash = typeof p.bailHash === "string" ? p.bailHash : null
   // V32.2 — Le client envoie le timestamp ISO de lecture du PDF avant signature.
-  // On valide qu'il s'agit d'une date valide ; sinon null (legacy clients).
+  // V68 fix #8 — on valide aussi qu'il s'est écoulé AU MOINS 15 secondes
+  // entre l'ouverture du PDF et le clic Signer (audit-trail eIDAS niveau 1).
+  // Avant : seule la validité de la date était vérifiée → un client malveillant
+  // pouvait envoyer pdfLuAt=now contournant le délai de lecture obligatoire.
+  // Tolérance : on autorise pdfLuAt manquant (legacy clients pre-V32.2) pour
+  // ne pas casser les anciennes intégrations.
   const pdfLuAtRaw = typeof p.pdfLuAt === "string" ? p.pdfLuAt : null
-  const pdfLuAt = pdfLuAtRaw && !Number.isNaN(new Date(pdfLuAtRaw).getTime()) ? pdfLuAtRaw : null
+  let pdfLuAt: string | null = null
+  if (pdfLuAtRaw) {
+    const luAtMs = new Date(pdfLuAtRaw).getTime()
+    if (!Number.isNaN(luAtMs)) {
+      const elapsedSec = (Date.now() - luAtMs) / 1000
+      if (elapsedSec < 15) {
+        return NextResponse.json({
+          ok: false,
+          error: "Lecture du PDF trop rapide. Le délai légal de 15 secondes n'est pas écoulé.",
+        }, { status: 400 })
+      }
+      // Aussi rejeter les pdfLuAt dans le futur ou trop vieux (>24h)
+      if (elapsedSec < 0 || elapsedSec > 24 * 3600) {
+        return NextResponse.json({
+          ok: false,
+          error: "Timestamp pdfLuAt incohérent (futur ou trop ancien).",
+        }, { status: 400 })
+      }
+      pdfLuAt = pdfLuAtRaw
+    }
+  }
 
   // Validation
   if (!annonceId || !Number.isFinite(annonceId)) {
@@ -371,6 +396,26 @@ export async function POST(req: NextRequest) {
         })
       } catch (e) {
         console.error("[bail/signer] finalizeBail exception:", e)
+      }
+
+      // V68 fix #7 — déclencher candidats-orphelins à double-signature.
+      // Avant V68 : ce trigger n'était appelé que par messages/page.tsx
+      // accepterLocation (UI). Si le proprio sautait "accepter" et signait
+      // direct, les candidats 2..N restaient ghostés silencieusement.
+      // Maintenant : à double-signature on poste [CANDIDATURE_NON_RETENUE]
+      // + email aux autres candidats. Idempotent (rate-limit interne 1/h).
+      try {
+        const base = process.env.NEXT_PUBLIC_URL || "https://keymatch-immo.fr"
+        await fetch(`${base}/api/notifications/candidats-orphelins`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            cookie: req.headers.get("cookie") || "",
+          },
+          body: JSON.stringify({ annonceId, locataireRetenu: locEmail }),
+        }).catch(() => { /* fire-and-forget */ })
+      } catch {
+        /* silent — non bloquant */
       }
     }
   }

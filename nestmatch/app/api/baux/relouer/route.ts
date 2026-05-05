@@ -86,6 +86,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Pas de locataire actif sur cette annonce" }, { status: 400 })
   }
 
+  // V68 fix #4 — bloquer relouer si dépôt non restitué (caution > 0).
+  // Avant : un proprio pouvait relouer sans avoir restitué le dépôt → le
+  // locataire perdait la trace côté UI + comptes ouverts. Maintenant : on
+  // exige depot_restitue_at posé sauf si caution=0 (cas rare).
+  if (Number(ann.caution || 0) > 0 && !ann.depot_restitue_at) {
+    return NextResponse.json({
+      ok: false,
+      error: "Restituez le dépôt de garantie au locataire avant de relouer ce bien.",
+    }, { status: 400 })
+  }
+
+  // V68 fix #5 — bloquer relouer si EDL sortie pas validé (loi 89-462).
+  // Avant : un proprio pouvait relouer sans EDL sortie → audit légal
+  // incohérent (impossible de justifier les retenues sur dépôt par la
+  // suite). Exception : si pas de caution (donc pas de retenue possible),
+  // l'EDL est moins critique mais reste recommandé.
+  if (Number(ann.caution || 0) > 0) {
+    const { data: edlSortieValide } = await supabaseAdmin
+      .from("etats_des_lieux")
+      .select("id")
+      .eq("annonce_id", annonceId)
+      .eq("type", "sortie")
+      .eq("statut", "valide")
+      .limit(1)
+      .maybeSingle()
+    if (!edlSortieValide) {
+      return NextResponse.json({
+        ok: false,
+        error: "L'état des lieux de sortie doit être signé par le locataire avant de relouer.",
+      }, { status: 400 })
+    }
+  }
+
   // Idempotence : si déjà archivé récemment, return OK
   const { data: existingArchive } = await supabaseAdmin
     .from("historique_baux")

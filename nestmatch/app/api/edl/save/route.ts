@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     // UPDATE — vérif propriétaire OU locataire (cas contestation)
     const { data: existing } = await supabaseAdmin
       .from("etats_des_lieux")
-      .select("proprietaire_email, locataire_email, email_locataire")
+      .select("proprietaire_email, locataire_email, email_locataire, signe_locataire_at, statut")
       .eq("id", id)
       .single()
     if (!existing) {
@@ -80,6 +80,14 @@ export async function POST(req: NextRequest) {
       (existing.email_locataire || "").toLowerCase() === email
     if (!isProp && !isLoc) {
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 })
+    }
+    // V68 fix #3 — eIDAS : interdire au proprio de modifier l'EDL après
+    // signature locataire (audit-trail intégrité). Le locataire reste
+    // autorisé à updater statut/commentaire (workflow contestation).
+    if (isProp && existing.signe_locataire_at) {
+      return NextResponse.json({
+        error: "EDL déjà signé par le locataire — modification interdite (audit eIDAS).",
+      }, { status: 409 })
     }
     // Locataire : ne peut update QUE statut + commentaire_locataire (contestation)
     if (!isProp && isLoc) {

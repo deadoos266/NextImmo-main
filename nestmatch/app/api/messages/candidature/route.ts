@@ -67,11 +67,17 @@ export async function POST(req: NextRequest) {
   // Lookup annonce
   const { data: annonce } = await supabaseAdmin
     .from("annonces")
-    .select("id, titre, proprietaire_email")
+    .select("id, titre, proprietaire_email, statut, locataire_email")
     .eq("id", annonceId)
     .maybeSingle()
   if (!annonce) {
     return NextResponse.json({ ok: false, error: "Annonce introuvable" }, { status: 404 })
+  }
+  // V68 fix #2 — bloquer la candidature si l'annonce n'est plus disponible.
+  // Avant : un locataire pouvait candidater sur un bien loué (formulaire UI
+  // caché côté locataire mais bypass curl OK). Cohérence côté proprio.
+  if (annonce.statut === "loué" || annonce.statut === "loue_termine" || annonce.locataire_email) {
+    return NextResponse.json({ ok: false, error: "Cette annonce n'est plus disponible." }, { status: 410 })
   }
   const toEmail = (annonce.proprietaire_email || "").toLowerCase()
   if (!toEmail) {
@@ -79,6 +85,25 @@ export async function POST(req: NextRequest) {
   }
   if (toEmail === fromEmail) {
     return NextResponse.json({ ok: false, error: "Vous ne pouvez pas candidater sur votre propre annonce" }, { status: 400 })
+  }
+
+  // V68 fix #1 — gate completude profil 50% server-side (parité avec UI).
+  // Avant : seul ContactButton.tsx checkait calculerCompletudeProfil() ;
+  // un curl direct passait. On reproduit la logique simple côté server.
+  const { data: profil } = await supabaseAdmin
+    .from("profils")
+    .select("ville_souhaitee, budget_max, revenus_mensuels, surface_min, type_garant, type_quartier")
+    .eq("email", fromEmail)
+    .maybeSingle()
+  const filled = profil
+    ? [profil.ville_souhaitee, profil.budget_max, profil.revenus_mensuels, profil.surface_min, profil.type_garant, profil.type_quartier].filter(v => v != null && v !== "").length
+    : 0
+  if (filled < 3) {
+    return NextResponse.json({
+      ok: false,
+      error: "Complétez au moins 50% de votre profil avant de candidater.",
+      profilCompleteness: Math.round((filled / 6) * 100),
+    }, { status: 403 })
   }
 
   // V67 fix — dedupe scoped sur type='candidature' uniquement.

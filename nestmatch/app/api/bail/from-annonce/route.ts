@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
   // Vérifier que l'annonce existe ET appartient au proprio
   const { data: annonce, error: annonceErr } = await supabaseAdmin
     .from("annonces")
-    .select("id, titre, ville, prix, charges, proprietaire_email")
+    .select("id, titre, ville, prix, charges, proprietaire_email, bail_signe_locataire_at, bail_signe_bailleur_at, statut")
     .eq("id", annonceId)
     .maybeSingle()
   if (annonceErr || !annonce) {
@@ -106,6 +106,20 @@ export async function POST(req: NextRequest) {
   }
   if ((annonce.proprietaire_email || "").toLowerCase() !== proprioEmail) {
     return NextResponse.json({ ok: false, error: "Cette annonce ne vous appartient pas" }, { status: 403 })
+  }
+
+  // V68 fix #6 — bloquer la création d'une nouvelle invitation si le bail
+  // a déjà été signé (locataire ou bailleur). Avant : l'idempotence ne
+  // checkait que `bail_invitations.statut="pending"` non expiré, donc le
+  // proprio pouvait re-déclencher /api/bail/from-annonce après que la
+  // première invitation soit `accepted` (signée par le locataire) → 2ᵉ
+  // bail_invitations créée + 2ᵉ email locataire (confusion). V60.7 V67
+  // documenté mais pas codé pour ce cas.
+  if (annonce.bail_signe_locataire_at || annonce.bail_signe_bailleur_at || annonce.statut === "loué") {
+    return NextResponse.json({
+      ok: false,
+      error: "Un bail est déjà en cours de signature ou actif sur cette annonce. Consultez la page bail pour le finaliser.",
+    }, { status: 409 })
   }
 
   // Idempotence : invitation pending existante
