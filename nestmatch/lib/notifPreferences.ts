@@ -41,6 +41,7 @@ export type NotifEventKey =
   | "visite_confirmee"
   | "visite_annulee"
   | "visite_rappel_j1"
+  | "visite_no_show"         // V70.3 — partie absente signalée
   // Dossier
   | "dossier_demande"
   | "dossier_partage"
@@ -115,6 +116,7 @@ export const NOTIF_EVENTS: NotifEventDef[] = [
   { key: "visite_confirmee",     category: "visite",      audience: "both",      default: true,  label: "Visite confirmée (avec ICS)",     description: "Un créneau a été retenu — ajout au calendrier en pièce jointe." },
   { key: "visite_annulee",       category: "visite",      audience: "both",      default: true,  label: "Visite annulée",                   description: "L'autre partie a annulé une visite prévue." },
   { key: "visite_rappel_j1",     category: "visite",      audience: "both",      default: true,  label: "Rappel J-1 visite",               description: "Rappel automatique la veille d'une visite confirmée (avec ICS)." },
+  { key: "visite_no_show",       category: "visite",      audience: "both",      default: true,  label: "Visite no-show signalée",         description: "L'autre partie a signalé que la visite n'a pas eu lieu. Vous pouvez contester." },
 
   // Dossier
   { key: "dossier_demande",      category: "dossier",     audience: "locataire", default: true,  label: "Demande de dossier",              description: "Le propriétaire vous demande de partager votre dossier." },
