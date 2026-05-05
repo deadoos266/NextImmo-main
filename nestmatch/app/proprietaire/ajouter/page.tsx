@@ -370,61 +370,34 @@ export default function AjouterBien() {
 
       Object.keys(data).forEach(k => { if (data[k] === null || data[k] === "") delete data[k] })
 
-      // Fallback progressif si colonnes absentes (migration non lancée).
-      // Ordre : (1) insert complet → (2) retry sans lat/lng → (3) retry sans
-      // critères candidats (colonnes `min_revenus_ratio`, `garants_acceptes`,
-      // `profils_acceptes`, `message_proprietaire` optionnelles).
-      const { data: inserted, error: errIns } = await supabase.from("annonces").insert([data]).select("id")
-      let error = errIns
-      let insertedRows = inserted
-      if (error && /lat|lng|column.*does not exist/i.test(error.message || "")) {
-        const dataNoCoords = { ...data }
-        delete dataNoCoords.lat
-        delete dataNoCoords.lng
-        const retry = await supabase.from("annonces").insert([dataNoCoords]).select("id")
-        error = retry.error
-        insertedRows = retry.data
-      }
-      // Fallback R10.6 — retire les nouveaux champs critères v2 / equipements_extras
-      // si migration 025 pas appliquée.
-      if (error && /age_min|age_max|max_occupants|animaux_politique|fumeur_politique|equipements_extras|column.*does not exist/i.test(error.message || "")) {
-        const dataNoV2 = { ...data }
-        delete dataNoV2.age_min
-        delete dataNoV2.age_max
-        delete dataNoV2.max_occupants
-        delete dataNoV2.animaux_politique
-        delete dataNoV2.fumeur_politique
-        delete dataNoV2.equipements_extras
-        const retry = await supabase.from("annonces").insert([dataNoV2]).select("id")
-        error = retry.error
-        insertedRows = retry.data
-      }
-      if (error && /min_revenus_ratio|garants_acceptes|profils_acceptes|message_proprietaire|column.*does not exist/i.test(error.message || "")) {
-        const dataNoCriteria = { ...data }
-        delete dataNoCriteria.min_revenus_ratio
-        delete dataNoCriteria.garants_acceptes
-        delete dataNoCriteria.profils_acceptes
-        delete dataNoCriteria.message_proprietaire
-        delete dataNoCriteria.age_min
-        delete dataNoCriteria.age_max
-        delete dataNoCriteria.max_occupants
-        delete dataNoCriteria.animaux_politique
-        delete dataNoCriteria.fumeur_politique
-        delete dataNoCriteria.equipements_extras
-        delete dataNoCriteria.lat
-        delete dataNoCriteria.lng
-        const retry = await supabase.from("annonces").insert([dataNoCriteria]).select("id")
-        error = retry.error
-        insertedRows = retry.data
-      }
+      // V69.1f — migration vers /api/annonces/create server-side. Préreq
+      // migration 060 (REVOKE INSERT anon sur annonces) qui va casser
+      // l'insert client direct. La route gère les 3 fallbacks legacy
+      // (lat/lng, critères v2, critères candidats) côté server, force
+      // is_test=false (anti-tricherie), et upsert profils.is_proprietaire.
+      // V67/V68 retirent les champs server-only du payload : proprietaire,
+      // proprietaire_email, is_test, membre, verifie sont posés par la route.
+      delete data.proprietaire
+      delete data.proprietaire_email
+      delete data.is_test
+      delete data.membre
+      delete data.verifie
+
+      const createRes = await fetch("/api/annonces/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      })
+      const createJson = await createRes.json().catch(() => ({}))
+      const error = !createRes.ok || !createJson?.ok
+        ? { message: createJson?.error || `HTTP ${createRes.status}` }
+        : null
+      const insertedRows = createJson?.ok && createJson?.annonceId
+        ? [{ id: createJson.annonceId }]
+        : null
+
       if (!error && insertedRows && insertedRows.length > 0) {
-        // V24.3 — via /api/profil/save
-        try {
-          await fetch("/api/profil/save", {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ is_proprietaire: true }),
-          })
-        } catch { /* noop */ }
+        // V69.1f — is_proprietaire upserté server-side dans /api/annonces/create.
         try { localStorage.removeItem(draftStorageKey(session!.user!.email!)) } catch { /* noop */ }
 
         // V23.2 (Paul 2026-04-29) — si l'annonce est créée comme "déjà
@@ -458,7 +431,7 @@ export default function AjouterBien() {
         router.push("/proprietaire")
       } else if (error) {
         console.error("[publier] insert error:", error)
-        alert(`La publication a échoué : ${error.message || "erreur inconnue"}. Code : ${error.code || "?"}`)
+        alert(`La publication a échoué : ${error.message || "erreur inconnue"}.`)
       } else {
         alert(
           "La publication a échoué silencieusement : aucune ligne créée. " +
