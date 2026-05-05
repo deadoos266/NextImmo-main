@@ -6,6 +6,7 @@ import AdminBar from './components/AdminBar'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import CookieBanner from './components/CookieBanner'
+import PWAInstallBanner from './components/PWAInstallBanner'
 import ToastStack from './components/ToastStack'
 import ServiceWorkerRegister from './components/ServiceWorkerRegister'
 import ZoomGuard from './components/ZoomGuard'
@@ -223,6 +224,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Footer />
           </MountedOnly>
           <CookieBanner />
+          <PWAInstallBanner />
           <ToastStack />
           <ServiceWorkerRegister />
           <ZoomGuard />

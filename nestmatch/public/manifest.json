@@ -1,12 +1,13 @@
 {
-  "name": "KeyMatch",
+  "name": "KeyMatch — Location entre particuliers",
   "short_name": "KeyMatch",
-  "description": "La location entre particuliers, sans frais d'agence",
+  "description": "La location entre particuliers, sans frais d'agence. Matching intelligent locataire/proprio, signature électronique, gestion bail-EDL-quittances en ligne.",
   "start_url": "/",
+  "id": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#F7F4EF",
-  "theme_color": "#FF4A1C",
+  "theme_color": "#111111",
   "lang": "fr",
   "scope": "/",
   "icons": [
@@ -34,5 +35,29 @@
       "type": "image/png"
     }
   ],
-  "categories": ["lifestyle", "business", "productivity"]
+  "shortcuts": [
+    {
+      "name": "Voir les annonces",
+      "short_name": "Annonces",
+      "description": "Parcourir les biens disponibles",
+      "url": "/annonces",
+      "icons": [{ "src": "/logo-mark-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mes messages",
+      "short_name": "Messages",
+      "description": "Conversations avec proprios/locataires",
+      "url": "/messages",
+      "icons": [{ "src": "/logo-mark-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mon profil",
+      "short_name": "Profil",
+      "description": "Mes critères de recherche",
+      "url": "/profil",
+      "icons": [{ "src": "/logo-mark-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "categories": ["lifestyle", "business", "productivity", "real-estate"],
+  "screenshots": []
 }
