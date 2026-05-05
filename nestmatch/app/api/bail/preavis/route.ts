@@ -56,11 +56,18 @@ export async function POST(req: NextRequest) {
   try { body = await req.json() } catch {
     return NextResponse.json({ ok: false, error: "JSON invalide" }, { status: 400 })
   }
-  const p = body as { annonceId?: unknown; motif?: unknown; detail?: unknown; dateDepartSouhaitee?: unknown }
+  const p = body as { annonceId?: unknown; motif?: unknown; detail?: unknown; dateDepartSouhaitee?: unknown; ventePrix?: unknown; venteConditions?: unknown }
   const annonceId = Number(p.annonceId)
   const motif = typeof p.motif === "string" ? p.motif : ""
   const detail = typeof p.detail === "string" ? p.detail.trim().slice(0, 500) : ""
   const dateDepartSouhaiteeRaw = typeof p.dateDepartSouhaitee === "string" ? p.dateDepartSouhaitee : null
+  // V70.2 — champs spécifiques motif='vente' (proprio uniquement)
+  const ventePrix = typeof p.ventePrix === "number" && Number.isFinite(p.ventePrix) && p.ventePrix > 0
+    ? Math.round(p.ventePrix)
+    : null
+  const venteConditions = typeof p.venteConditions === "string"
+    ? p.venteConditions.trim().slice(0, 2000)
+    : ""
 
   if (!Number.isFinite(annonceId)) {
     return NextResponse.json({ ok: false, error: "annonceId invalide" }, { status: 400 })
@@ -117,6 +124,16 @@ export async function POST(req: NextRequest) {
     dateDepartSouhaitee: dateDepartSouhaitee && !Number.isNaN(dateDepartSouhaitee.getTime()) ? dateDepartSouhaitee : null,
   })
 
+  // V70.2 — gating motif='vente' côté bailleur : prix obligatoire (loi
+  // 89-462 art. 15-II — l'offre de vente doit être chiffrée pour valoir
+  // notification du droit de préemption au locataire).
+  if (qui === "proprietaire" && motif === "vente" && !ventePrix) {
+    return NextResponse.json({
+      ok: false,
+      error: "Le prix de vente proposé est obligatoire pour un congé motif vente (loi 89-462 art. 15-II — droit de préemption locataire).",
+    }, { status: 400 })
+  }
+
   // Update annonce
   const { error: updErr } = await supabaseAdmin
     .from("annonces")
@@ -128,6 +145,9 @@ export async function POST(req: NextRequest) {
       preavis_date_depart_souhaitee: dateDepartSouhaitee && !Number.isNaN(dateDepartSouhaitee.getTime())
         ? dateDepartSouhaitee.toISOString().slice(0, 10) : null,
       preavis_fin_calculee: preavis.dateFinEffective.toISOString().slice(0, 10),
+      // V70.2 — uniquement si motif=vente (sinon null)
+      preavis_vente_prix: motif === "vente" ? ventePrix : null,
+      preavis_vente_conditions: motif === "vente" ? (venteConditions || null) : null,
     })
     .eq("id", annonceId)
   if (updErr) {

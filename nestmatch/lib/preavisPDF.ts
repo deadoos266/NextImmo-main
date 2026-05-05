@@ -32,6 +32,12 @@ export interface PreavisPDFData {
   dateEnvoi: string  // ISO YYYY-MM-DD
   delaiMois: number
   dateFinEffective: string  // ISO YYYY-MM-DD
+
+  // V70.2 — Mention obligatoire pour congé proprio motif='vente' (loi
+  // 89-462 art. 15-II) : droit de préemption locataire. Sans ces champs,
+  // le congé est juridiquement vicié et peut être attaqué.
+  ventePrix?: number | null         // Prix de vente proposé en €
+  venteConditions?: string | null   // Conditions de vente (texte libre)
 }
 
 async function buildPdf(data: PreavisPDFData): Promise<{ doc: import("jspdf").jsPDF; filename: string }> {
@@ -110,6 +116,46 @@ async function buildPdf(data: PreavisPDFData): Promise<{ doc: import("jspdf").js
     : `Pendant la période de préavis (6 mois conformément à l'art. 15 de la loi de 1989), vous resterez débiteur des loyers et charges aux échéances prévues. Un état des lieux contradictoire sera réalisé à la fin du préavis.`
   const conclLines = doc.splitTextToSize(conclusion, W)
   doc.text(conclLines, 20, y); y += conclLines.length * 4.5 + 8
+
+  // V70.2 — Si motif='vente', ajout section dédiée avec mention art. 15-II
+  // (droit de préemption du locataire). Sans cette mention, le congé est
+  // juridiquement vicié → bail peut être contesté en justice.
+  if (data.qui === "proprietaire" && data.motif === "vente") {
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(11)
+    doc.text("Offre de vente — Droit de préemption du locataire", 20, y); y += 7
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(10)
+    const offre = `Conformément à l'article 15-II de la loi du 6 juillet 1989, vous bénéficiez d'un droit de préemption sur le logement que vous occupez actuellement. La présente lettre vaut donc offre de vente à votre profit, aux conditions suivantes :`
+    const offreLines = doc.splitTextToSize(offre, W)
+    doc.text(offreLines, 20, y); y += offreLines.length * 4.5 + 4
+
+    if (data.ventePrix && data.ventePrix > 0) {
+      doc.setFont("helvetica", "bold")
+      doc.text(`Prix de vente proposé : ${data.ventePrix.toLocaleString("fr-FR")} €`, 20, y); y += 6
+      doc.setFont("helvetica", "normal")
+    } else {
+      doc.setFont("helvetica", "italic")
+      doc.text(`Prix de vente proposé : à convenir (à compléter par le bailleur).`, 20, y); y += 6
+      doc.setFont("helvetica", "normal")
+    }
+
+    if (data.venteConditions) {
+      doc.text("Conditions :", 20, y); y += 5
+      const condLines = doc.splitTextToSize(data.venteConditions, W)
+      doc.text(condLines, 20, y); y += condLines.length * 4.5 + 4
+    }
+
+    const procedure = `Vous disposez d'un délai de DEUX MOIS à compter de la notification du présent congé pour accepter cette offre. À défaut d'acceptation dans ce délai, l'offre sera réputée caduque. Si vous acceptez, la vente devra être conclue dans les deux mois suivant l'acceptation (ou quatre mois en cas de recours à un prêt).`
+    const procLines = doc.splitTextToSize(procedure, W)
+    doc.text(procLines, 20, y); y += procLines.length * 4.5 + 4
+
+    const recours = `Pour toute question, vous pouvez consulter gratuitement l'ADIL de votre département ou un notaire.`
+    const recoursLines = doc.splitTextToSize(recours, W)
+    doc.setFont("helvetica", "italic")
+    doc.text(recoursLines, 20, y); y += recoursLines.length * 4.5 + 8
+    doc.setFont("helvetica", "normal")
+  }
 
   doc.text("Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.", 20, y); y += 14
 
