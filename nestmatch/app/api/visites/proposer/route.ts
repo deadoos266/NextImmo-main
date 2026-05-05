@@ -94,6 +94,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Vous ne pouvez pas proposer une visite sur votre propre annonce" }, { status: 400 })
   }
 
+  // V67 fix — gating métier : la candidature doit être validée par le proprio
+  // pour que le locataire puisse proposer une visite. Avant : le commentaire
+  // d'en-tête mentionnait ce check mais le code ne l'effectuait pas. Le
+  // gating est aussi appliqué côté UI (BookingVisite popup) mais on garantit
+  // ici la cohérence server-side anti-bypass.
+  const { data: candidature } = await supabaseAdmin
+    .from("messages")
+    .select("statut_candidature")
+    .eq("annonce_id", annonceId)
+    .eq("from_email", me)
+    .eq("to_email", proprio)
+    .eq("type", "candidature")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (!candidature || candidature.statut_candidature !== "validee") {
+    return NextResponse.json({
+      ok: false,
+      error: "Le propriétaire doit d'abord valider votre candidature avant de pouvoir proposer une visite.",
+    }, { status: 403 })
+  }
+
   // 1. Insert visite
   const { data: visite, error: visErr } = await supabaseAdmin
     .from("visites")

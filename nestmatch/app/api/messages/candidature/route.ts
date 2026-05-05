@@ -81,14 +81,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Vous ne pouvez pas candidater sur votre propre annonce" }, { status: 400 })
   }
 
-  // Dedupe : check si une conv existe déjà (dans n'importe quel sens)
-  const [{ data: sent }, { data: received }] = await Promise.all([
-    supabaseAdmin.from("messages").select("id")
-      .eq("from_email", fromEmail).eq("to_email", toEmail).eq("annonce_id", annonceId).limit(1),
-    supabaseAdmin.from("messages").select("id")
-      .eq("from_email", toEmail).eq("to_email", fromEmail).eq("annonce_id", annonceId).limit(1),
-  ])
-  const hasConversation = (sent && sent.length > 0) || (received && received.length > 0)
+  // V67 fix — dedupe scoped sur type='candidature' uniquement.
+  // Avant : on regardait n'importe quel message (sent OU received) → si le
+  // proprio écrivait en premier (cas rare mais possible), le locataire qui
+  // candidate ensuite ne se voyait pas flag type='candidature' → invisible
+  // dans la liste candidats côté proprio.
+  // Maintenant : on cherche UNE candidature existante du locataire vers le
+  // proprio sur cette annonce. Si zero, c'est un premier contact donc on
+  // pose le type='candidature' + statut_candidature='en_attente'.
+  const { data: existingCandidature } = await supabaseAdmin
+    .from("messages").select("id")
+    .eq("from_email", fromEmail).eq("to_email", toEmail).eq("annonce_id", annonceId)
+    .eq("type", "candidature")
+    .limit(1)
+  const hasConversation = !!(existingCandidature && existingCandidature.length > 0)
 
   // Insert message
   const now = new Date().toISOString()

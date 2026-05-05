@@ -207,15 +207,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Erreur serveur" }, { status: 500 })
   }
 
-  // Update annonces avec timestamp du rôle signataire (raccourci pour les queries)
+  // V67 fix — Update annonces avec timestamp du rôle signataire UNIQUEMENT.
+  // Avant : on basculait `statut='loué'` dès la signature locataire seule. Si
+  // le bailleur ne signait jamais (abandonné, oublié, refus), le bien restait
+  // affiché "loué" alors qu'il n'y avait pas de bail juridiquement valide →
+  // annonce disparaît des recherches publiques + locataire ne peut plus
+  // re-candidater. Le passage à "loué" se fait maintenant à la double-sig
+  // dans le bloc `if (doubleSigne)` plus bas.
   const patch: Record<string, string> = {}
   const now = new Date().toISOString()
-  if (role === "locataire") {
-    patch.bail_signe_locataire_at = now
-    // La signature locataire fait basculer le bien de "bail_envoye" à "loué".
-    // Le bien devient officiellement loué dès l'acceptation du locataire.
-    patch.statut = "loué"
-  }
+  if (role === "locataire") patch.bail_signe_locataire_at = now
   if (role === "bailleur") patch.bail_signe_bailleur_at = now
   if (Object.keys(patch).length > 0) {
     await supabaseAdmin.from("annonces").update(patch).eq("id", annonceId)
@@ -232,6 +233,8 @@ export async function POST(req: NextRequest) {
   const doubleSigne = roles.has("locataire") && roles.has("bailleur")
 
   if (doubleSigne) {
+    // V67 fix — bascule statut="loué" UNIQUEMENT à double signature.
+    await supabaseAdmin.from("annonces").update({ statut: "loué" }).eq("id", annonceId)
     // V23.3 (Paul 2026-04-29) — auto-génère 12 mois de loyers à partir de
     // date_debut_bail (ou aujourd'hui si absent). Idempotent : skip si
     // au moins une row loyers existe déjà DANS LA NOUVELLE PÉRIODE.

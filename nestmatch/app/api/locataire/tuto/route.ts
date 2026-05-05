@@ -38,12 +38,15 @@ export async function POST(req: NextRequest) {
     patch.tuto_locataire_completed_at = null
   }
 
+  // V67 fix — upsert au lieu d'update : si le row profils n'existe pas
+  // (cas possible si le upsert au signup a échoué silencieusement),
+  // l'update no-op silencieusement et le tuto re-popup à chaque visite
+  // /annonces. L'upsert avec onConflict="email" crée la row si manquante.
   const { error } = await supabaseAdmin
     .from("profils")
-    .update(patch)
-    .eq("email", email)
+    .upsert({ email, ...patch }, { onConflict: "email" })
   if (error) {
-    console.error("[locataire/tuto] update failed", error)
+    console.error("[locataire/tuto] upsert failed", error)
     return NextResponse.json({ ok: false, error: "Mise à jour a échoué" }, { status: 500 })
   }
 

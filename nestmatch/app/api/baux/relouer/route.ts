@@ -153,8 +153,13 @@ export async function POST(req: NextRequest) {
       proprietaire_email: propEmail,
       locataire_email: locEmail,
       date_debut_bail: ann.date_debut_bail || null,
-      date_fin_bail: nowIso.slice(0, 10),
-      bail_termine_at: nowIso,
+      // V67 fix — date_fin_bail = vraie date de fin, PAS la date de l'action
+      // "relouer". Si proprio relouer 1 mois après le départ effectif, on
+      // veut conserver la date réelle (bail_termine_at déjà posé par
+      // /api/annonces/terminer-bail OU à la fin du préavis). Fallback nowIso
+      // si bail_termine_at vide (rare : action relouer sans terminer-bail).
+      date_fin_bail: ann.bail_termine_at ? String(ann.bail_termine_at).slice(0, 10) : nowIso.slice(0, 10),
+      bail_termine_at: ann.bail_termine_at || nowIso,
       bien_titre: ann.titre,
       bien_ville: ann.ville,
       bien_adresse: ann.adresse,

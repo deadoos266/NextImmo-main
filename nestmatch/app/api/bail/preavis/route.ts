@@ -85,9 +85,12 @@ export async function POST(req: NextRequest) {
   else if (userEmail === propEmail) qui = "proprietaire"
   else return NextResponse.json({ ok: false, error: "Non autorisé" }, { status: 403 })
 
-  // Le bail doit être actif (au moins une signature locataire)
-  if (!annonce.bail_signe_locataire_at) {
-    return NextResponse.json({ ok: false, error: "Aucun bail actif sur cette annonce" }, { status: 400 })
+  // V67 fix — le bail doit être DOUBLEMENT signé (locataire + bailleur) pour
+  // qu'un préavis soit juridiquement valide. Avant : on n'exigeait que la
+  // signature locataire → un locataire pouvait donner congé sur un bail
+  // signé seulement par lui-même (bail non actif). Idem côté bailleur.
+  if (!annonce.bail_signe_locataire_at || !annonce.bail_signe_bailleur_at) {
+    return NextResponse.json({ ok: false, error: "Le bail doit être doublement signé pour donner congé" }, { status: 400 })
   }
   // Pas de double-préavis
   if (annonce.preavis_donne_par) {

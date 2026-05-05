@@ -21,7 +21,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { sendEmail } from "@/lib/email/resend"
 import { candidaturesDigestTemplate } from "@/lib/email/templates"
-import { calculerScore, type Profil as MatchingProfil, type Annonce as MatchingAnnonce } from "@/lib/matching"
+// V67 fix — calculerScore retiré : invariant produit, pas de score côté proprio.
 import { shouldSendEmailForEvent } from "@/lib/notifPreferencesServer"
 
 interface CandidatureMsg {
@@ -98,30 +98,28 @@ export async function GET(req: NextRequest) {
       const ann = annoncesMap.get(annId)
       if (!ann) continue
       const candidatEmail = (c.from_email || "").toLowerCase()
-      // Profil candidat pour calcul score (best-effort)
+      // V67 fix — INVARIANT MÉTIER : un propriétaire ne voit JAMAIS le score
+      // de matching d'un candidat (bias contre les profils "moins compatibles"
+      // qui peuvent être d'excellents locataires sur des dimensions non
+      // mesurées par le score). On retire le calcul score du digest. Le
+      // proprio évalue chaque dossier à l'ouverture sans pré-jugement.
       let candidatName = candidatEmail.split("@")[0]
-      let score: number | null = null
       try {
         const { data: candProf } = await supabaseAdmin
           .from("profils")
-          .select("prenom, nom, budget_min, budget_max, surface_min, surface_max, pieces_min, dpe_min, type_bail, ville_souhaitee, fibre, parking, cave, balcon, terrasse, jardin, ascenseur, animaux, fumeur, garant, type_garant")
+          .select("prenom, nom")
           .eq("email", candidatEmail)
           .maybeSingle()
         if (candProf) {
           const fullName = [candProf.prenom, candProf.nom].filter(Boolean).join(" ").trim()
           if (fullName) candidatName = fullName
-          // Calcul score matching
-          try {
-            score = calculerScore(candProf as unknown as MatchingProfil, ann as unknown as MatchingAnnonce)
-            score = Math.round(score / 10) // 0-100
-          } catch { /* ignore matching errors */ }
         }
       } catch { /* ignore profil fetch errors */ }
       items.push({
         candidatName,
         bienTitre: ann.titre || "Logement",
         ville: ann.ville,
-        score,
+        score: null, // V67 — toujours null, voir invariant ci-dessus
         href: `${base}/messages?with=${encodeURIComponent(candidatEmail)}&annonce=${annId}`,
       })
     }
