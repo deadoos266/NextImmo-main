@@ -59,6 +59,10 @@ export type NotifEventKey =
   | "irl_proposition"
   | "preavis_donne"
   | "preavis_jalon"         // J-30 / J-15 / J-7 / J-1
+  // Fin de bail
+  | "depot_retard"          // V69.2a — dépôt non restitué dans délai légal ALUR
+  // Annonce
+  | "annonce_stagnant"      // V69.2b — annonce sans candidature 30+ jours
   // Messages
   | "message_recu"
 
@@ -133,6 +137,12 @@ export const NOTIF_EVENTS: NotifEventDef[] = [
   { key: "irl_proposition",      category: "irl_preavis", audience: "proprio",   default: true,  label: "Proposition d'indexation IRL",    description: "Anniversaire du bail dans 30 jours — proposition de réviser le loyer (loi ALUR)." },
   { key: "preavis_donne",        category: "irl_preavis", audience: "both",      default: true,  required: true, label: "Préavis donné",                description: "L'autre partie a donné congé — date de fin du bail incluse. Signal légal." },
   { key: "preavis_jalon",        category: "irl_preavis", audience: "both",      default: true,  label: "Jalon de préavis",                description: "Rappels J-30 / J-15 / J-7 / J-1 avant fin du bail." },
+
+  // Fin de bail (V69.2a)
+  { key: "depot_retard",         category: "irl_preavis", audience: "locataire", default: true,  required: true, label: "Dépôt de garantie en retard",    description: "Notification quand le dépôt n'est pas restitué dans le délai légal ALUR (1 ou 2 mois). Signal légal." },
+
+  // Annonce (V69.2b)
+  { key: "annonce_stagnant",     category: "loyer",       audience: "proprio",   default: true,  label: "Annonce stagnante (boost)",       description: "Conseils pour booster votre annonce après 30 jours sans candidature. Max 1 email/3 mois." },
 ]
 
 export const NOTIF_CATEGORIES: { key: NotifCategory; label: string; description: string }[] = [
