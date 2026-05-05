@@ -19,6 +19,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { sendEmail } from "@/lib/email/resend"
 import { shouldSendEmailForEvent } from "@/lib/notifPreferencesServer"
+import { wrapHandler } from "@/lib/logger"
 
 export const runtime = "nodejs"
 
@@ -74,10 +75,11 @@ function emailADIL(args: {
   return { subject, html, text }
 }
 
-export async function GET(req: NextRequest) {
+export const GET = wrapHandler({ route: "/api/cron/edl-contestation-retard", method: "GET" }, async (req: NextRequest, log) => {
   const secret = process.env.CRON_SECRET
   const auth = req.headers.get("authorization")
   if (secret && auth !== `Bearer ${secret}` && process.env.NODE_ENV === "production") {
+    log.warn("unauthorized")
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 })
   }
 
@@ -93,9 +95,10 @@ export async function GET(req: NextRequest) {
     .limit(100)
 
   if (error) {
-    console.error("[cron/edl-contestation-retard] fetch failed", error)
+    log.error("fetch failed", { error: error.message })
     return NextResponse.json({ ok: false, error: "Erreur serveur" }, { status: 500 })
   }
+  log.info("fetched candidates", { count: edls?.length ?? 0 })
 
   const items: EdlConteste[] = (edls || []) as EdlConteste[]
   const results: Array<{ edlId: string; status: "sent" | "skipped"; reason?: string }> = []
@@ -216,10 +219,13 @@ export async function GET(req: NextRequest) {
     results.push({ edlId: e.id, status: "sent" })
   }
 
+  const sentCount = results.filter(r => r.status === "sent").length
+  const skippedCount = results.filter(r => r.status === "skipped").length
+  log.info("done", { scanned: items.length, sent: sentCount, skipped: skippedCount })
   return NextResponse.json({
     ok: true,
     scanned: items.length,
-    sent: results.filter(r => r.status === "sent").length,
-    skipped: results.filter(r => r.status === "skipped").length,
+    sent: sentCount,
+    skipped: skippedCount,
   })
-}
+})

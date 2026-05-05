@@ -19,6 +19,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { hashBailData } from "@/lib/bailHash"
 import { sendEmail } from "@/lib/email/resend"
+import { wrapHandler } from "@/lib/logger"
 import type { BailData } from "@/lib/bailPDF"
 
 export const runtime = "nodejs"
@@ -35,10 +36,11 @@ interface IntegrityResult {
   actualHash?: string
 }
 
-export async function GET(req: NextRequest) {
+export const GET = wrapHandler({ route: "/api/cron/verify-integrity-baux", method: "GET" }, async (req: NextRequest, log) => {
   const secret = process.env.CRON_SECRET
   const auth = req.headers.get("authorization")
   if (secret && auth !== `Bearer ${secret}` && process.env.NODE_ENV === "production") {
+    log.warn("unauthorized")
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 })
   }
 
@@ -51,9 +53,10 @@ export async function GET(req: NextRequest) {
     .limit(500)
 
   if (sigsErr) {
-    console.error("[cron/verify-integrity-baux] fetch sigs failed", sigsErr)
+    log.error("fetch sigs failed", { error: sigsErr.message })
     return NextResponse.json({ ok: false, error: "Erreur serveur" }, { status: 500 })
   }
+  log.info("fetched signatures", { count: sigs?.length ?? 0 })
 
   const results: IntegrityResult[] = []
   const tampered: IntegrityResult[] = []
@@ -100,7 +103,7 @@ export async function GET(req: NextRequest) {
     try {
       actualHash = await hashBailData(bailData)
     } catch (e) {
-      console.error("[cron/verify-integrity-baux] hash failed", e)
+      log.error("hash failed", { annonce_id: annonceId, error: e instanceof Error ? e.message : String(e) })
       for (const s of annSigs) {
         results.push({ annonceId, signatureId: s.id, status: "skipped", reason: "hash_compute_failed" })
       }
@@ -150,10 +153,16 @@ export async function GET(req: NextRequest) {
         tags: [{ name: "type", value: "integrity_alert" }],
       })
     } catch (e) {
-      console.error("[cron/verify-integrity-baux] admin email failed", e)
+      log.error("admin email failed", { error: e instanceof Error ? e.message : String(e) })
     }
   }
 
+  log.info("done", {
+    scanned_sigs: sigs?.length ?? 0,
+    scanned_annonces: byAnnonce.size,
+    tampered: tampered.length,
+    skipped: results.filter(r => r.status === "skipped").length,
+  })
   return NextResponse.json({
     ok: true,
     scannedSignatures: sigs?.length ?? 0,
@@ -161,4 +170,4 @@ export async function GET(req: NextRequest) {
     tamperedCount: tampered.length,
     skippedCount: results.filter(r => r.status === "skipped").length,
   })
-}
+})

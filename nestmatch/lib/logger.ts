@@ -109,3 +109,52 @@ export function createLogger(initial: LogContext = {}): Logger {
     },
   }
 }
+
+/**
+ * V70.6 — Wrapper handler pour route handler API. Auto-log entrée + sortie.
+ *
+ * Usage :
+ *   export const POST = wrapHandler({ route: "/api/foo", method: "POST" },
+ *     async (req, log) => {
+ *       log.bind({ user_email: ... })
+ *       log.info("processing", { ... })
+ *       return NextResponse.json({ ok: true })
+ *     }
+ *   )
+ *
+ * Le wrapper :
+ *   - Crée un logger avec request_id auto + route + method
+ *   - Émet log.info("request received") au début
+ *   - Si throw : émet log.error + done(500)
+ *   - Sinon : émet log.done(response.status) à la fin
+ */
+type HandlerFn<TReq, TParams> = (
+  req: TReq,
+  log: Logger,
+  ctx?: { params: TParams },
+) => Promise<Response>
+
+export function wrapHandler<
+  TReq extends Request = Request,
+  TParams = unknown,
+>(
+  meta: { route: string; method: string },
+  handler: HandlerFn<TReq, TParams>,
+) {
+  return async (req: TReq, ctx?: { params: TParams }): Promise<Response> => {
+    const log = createLogger({ route: meta.route, method: meta.method })
+    log.info("request received")
+    try {
+      const res = await handler(req, log, ctx)
+      log.done(res.status)
+      return res
+    } catch (e) {
+      log.error("handler threw", {
+        error: e instanceof Error ? e.message : String(e),
+        stack: e instanceof Error ? e.stack : undefined,
+      })
+      log.done(500)
+      throw e
+    }
+  }
+}
