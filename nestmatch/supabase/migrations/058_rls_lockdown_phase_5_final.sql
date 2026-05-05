@@ -1,112 +1,67 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- Migration 058 — RLS Phase 5 Lockdown SELECT (FINAL — 3 dernières tables)
+-- Migration 058 — RLS Phase 5 Lockdown SELECT messages (V65.1)
 -- ═══════════════════════════════════════════════════════════════════════════
 --
--- Author: Paul / Claude (V61.3 / V62)
--- Date: 2026-05-03
--- Status: ⚠ DRAFT — PREREQUISITES PENDING (ne PAS appliquer en l'état)
+-- Author: Paul / Claude (V65.1)
+-- Date: 2026-05-04
+-- Status: ✅ MIGRATION READY — APPLIQUER MAINTENANT
 --
--- ─── OBJECTIF ──────────────────────────────────────────────────────────────
+-- ─── PRÉREQUIS APPLIQUÉS V65.1 ──────────────────────────────────────────────
 --
--- Fermer SELECT anon sur les 3 dernières tables sensibles :
---   - messages         (scoping privé : conversation = 2 parties)
---   - loyers           (données financières)
---   - etats_des_lieux  (audit-trail légal)
+-- TOUS les sites client `supabase.from("messages")` migrés vers des routes
+-- API server-side. Vérification : `grep -rn 'supabase.from("messages")'
+-- app --include="*.tsx" --include="*.ts" | grep -v "/api/"` → 0 résultat.
 --
--- Après cette migration, KeyMatch sera 100% RLS sur les 12 tables critiques.
+-- Routes API ajoutées (V63 + V65.1) :
+--   POST   /api/messages                        : insert générique
+--   POST   /api/messages/candidature            : 1ᵉʳ contact locataire→proprio
+--   POST   /api/messages/mark-read              : bulk update lu=true
+--   DELETE /api/messages/[id]                   : suppression (ownership)
+--   PATCH  /api/messages/[id]                   : édition contenu (5 min window)
+--   GET    /api/messages/thread                 : load full conv
+--   GET    /api/messages/all-mine               : tous mes messages (inbox+sent)
+--   GET    /api/messages/unread-count           : badge Navbar
+--   POST   /api/messages/delete-conversation    : bulk delete d'une conv
+--   GET    /api/messages/last-by-prefix         : dernier message système (whitelist)
+--   GET    /api/bail/card-payload               : load [BAIL_CARD] parsé
+--   GET    /api/proprietaire/stats/messages-counts : counts funnel proprio
+--   POST   /api/messages/event                  : déjà existant
 --
--- ─── PRÉREQUIS — SITES CLIENT À MIGRER VERS /api ───────────────────────────
+-- Tous avec auth NextAuth + scope check (proprio/locataire de l'annonce).
 --
--- 48 sites de lecture côté client (Browser → Supabase via clé anon publique)
--- doivent être déplacés derrière des routes API server-side avec auth NextAuth.
--- Tant que ces sites restent côté client, REVOKE SELECT casse l'app en prod.
+-- ─── SCOPE ─────────────────────────────────────────────────────────────────
 --
--- ───────── messages — 37 sites ─────────────────────────────────────────────
---   - app/annonces/[id]/BookingVisite.tsx                  (insert visite)
---   - app/annonces/[id]/ContactButton.tsx ×3               (check + insert candidature)
---   - app/annonces/[id]/page.tsx                           (count msg pour bien)
---   - app/components/Navbar.tsx                            (count unread badge)
---   - app/edl/consulter/[edlId]/page.tsx                   (insert msg post-EDL)
---   - app/mes-candidatures/page.tsx ×2                     (insert + retirer candidature)
---   - app/messages/page.tsx ×24                            (cœur messagerie)
---   - app/mon-logement/page.tsx ×N                         (events post-bail)
---   - app/proprietaire/page.tsx ×N                         (preview convs)
---
--- ROUTES API À CRÉER :
---   GET  /api/messages?with=:email&annonce_id=:id     (load thread)
---   GET  /api/messages/threads                         (liste convs courante)
---   GET  /api/messages/unread-count                    (badge navbar)
---   POST /api/messages                                 (insert texte/préfixé)
---   POST /api/messages/mark-read                       (batch update lu=true)
---   DELETE /api/messages/:id                           (soft delete par owner)
---   PATCH /api/messages/:id                            (édit limité 5 min)
---
--- ───────── loyers — 4 sites ────────────────────────────────────────────────
---   - app/mes-documents/page.tsx           (quittances locataire)
---   - app/mon-logement/page.tsx            (calendrier loyers locataire)
---   - app/proprietaire/page.tsx            (tableau loyers proprio)
---   - app/proprietaire/stats/page.tsx      (analytics loyers)
---
--- ROUTES API À CRÉER (en plus de /api/loyers/save existant) :
---   GET /api/loyers?annonce_id=:id                     (full list bail)
---   GET /api/loyers/locataire?email=:me                (mes loyers + quittances)
---   GET /api/loyers/proprio                            (tous mes loyers)
---   GET /api/loyers/stats?annonce_id=:id               (analytics page stats)
---
--- ───────── etats_des_lieux — 7 sites ──────────────────────────────────────
---   - app/mes-documents/page.tsx                     (count EDL existant)
---   - app/mon-logement/page.tsx                      (load EDL bail courant)
---   - app/proprietaire/edl/[id]/page.tsx ×3          (load + clone pieces sortie)
---   - app/proprietaire/page.tsx                      (statuts EDL pour cards)
---   - app/proprietaire/stats/page.tsx                (statut EDL last)
---
--- ROUTES API À CRÉER (en plus de /api/edl/save existant) :
---   GET /api/edl?annonce_id=:id&type=:t               (load 1 EDL spécifique)
---   GET /api/edl/list?annonce_ids=:csv                (batch pour proprio)
---   GET /api/edl/locataire?email=:me                  (EDLs du locataire)
---
--- Sécurité commune : auth NextAuth + scope check (proprio OU locataire de
--- l'annonce parente uniquement). Réutiliser le pattern de
--- /api/bail/signatures (V55.1b) qui valide via supabaseAdmin
--- service_role.
---
--- ─── CHECKLIST AVANT APPLICATION ───────────────────────────────────────────
---
---   [ ] 1. Créer les routes API ci-dessus (≈ 14 nouvelles routes)
---   [ ] 2. Ajouter auth + scope check sur chacune (test : locataire ne voit
---          pas un thread d'un autre user, proprio ne voit pas les loyers
---          d'une annonce qui ne lui appartient pas)
---   [ ] 3. Migrer chaque site client vers fetch("/api/...") + JSON parse
---   [ ] 4. Tester en local que TOUS les flows fonctionnent (messagerie,
---          /mon-logement, /proprietaire dashboard, /proprietaire/stats)
---   [ ] 5. Smoke test sur staging avec NEXT_PUBLIC_NOINDEX=true
---   [ ] 6. Appliquer cette migration en prod via Supabase MCP
---   [ ] 7. Test prod : SET ROLE anon; SELECT FROM messages; → permission denied
---   [ ] 8. Monitor Sentry 24h pour 401/403 inattendus
---
--- ─── BLOC SQL — DÉCOMMENTER UNIQUEMENT APRÈS CHECKLIST ────────────────────
---
--- BEGIN;
---
--- REVOKE SELECT ON TABLE public.messages         FROM anon;
--- REVOKE SELECT ON TABLE public.loyers           FROM anon;
--- REVOKE SELECT ON TABLE public.etats_des_lieux  FROM anon;
---
--- -- INSERT/UPDATE/DELETE inchangés : seul le SELECT anon est révoqué.
--- -- Les routes /api/* écrivent via supabaseAdmin (service_role) qui bypass
--- -- les grants anon de toute façon.
---
--- NOTIFY pgrst, 'reload schema';
---
--- COMMIT;
---
--- ─── VÉRIFICATION POST-APPLY (manuelle) ────────────────────────────────────
+-- REVOKE SELECT/INSERT/UPDATE/DELETE anon sur `messages` uniquement.
+-- Les routes /api/messages/* écrivent via supabaseAdmin (service_role) qui
+-- bypass RLS. Le grant authenticated reste actif (cf. usage NextAuth).
+
+BEGIN;
+
+REVOKE SELECT, INSERT, UPDATE, DELETE ON TABLE public.messages FROM anon;
+
+NOTIFY pgrst, 'reload schema';
+
+COMMIT;
+
+-- ─── VÉRIFICATION POST-APPLY (manuelle) ───────────────────────────────────
 --
 --   SET ROLE anon;
---   SELECT COUNT(*) FROM messages;          -- should ERROR : permission denied
---   SELECT COUNT(*) FROM loyers;            -- should ERROR
---   SELECT COUNT(*) FROM etats_des_lieux;   -- should ERROR
+--   SELECT COUNT(*) FROM messages;        -- should ERROR : permission denied
+--   INSERT INTO messages(from_email, to_email, contenu) VALUES('a@b.fr','c@d.fr','test');
+--                                         -- should ERROR : permission denied
 --   RESET ROLE;
+--
+-- Smoke test côté app :
+--   ✓ Navbar badge messages non lus
+--   ✓ /messages charge la liste des conversations
+--   ✓ Envoi message dans une conv → s'affiche
+--   ✓ Suppression conv → disparaît
+--   ✓ Suppression message individuel → disparaît
+--   ✓ Mark-read en cliquant sur conv non lue
+--   ✓ /annonces/[id] ContactButton → message envoyé apparaît côté proprio
+--   ✓ /mon-logement → load bail + loyers + EDL
+--   ✓ /proprietaire dashboard → counts messages reçus
+--   ✓ /proprietaire/stats → funnel candidatures + dossiers
 --
 -- ─── ÉTAT RLS PHASE 5 APRÈS MIGRATION 058 ─────────────────────────────────
 --
@@ -119,8 +74,8 @@
 --   ✅ notifications          (V55.1a, mig 051)
 --   ✅ bail_signatures        (V55.1b, mig 053)
 --   ✅ edl_signatures         (V55.1b, mig 053)
---   ✅ messages               (V61.3, mig 058) ⬅ CETTE MIGRATION
---   ✅ loyers                 (V61.3, mig 058) ⬅
---   ✅ etats_des_lieux        (V61.3, mig 058) ⬅
+--   ✅ messages               (V65.1, mig 058) ⬅ CETTE MIGRATION
+--   ⏳ loyers                 (V65.2, mig 059)
+--   ⏳ etats_des_lieux        (V65.2, mig 059)
 --
---   12/12 — RLS Phase 5 COMPLET. KeyMatch 100% lockdown SELECT anon.
+--   10/12 — appliquer 059 ensuite pour 100%.
