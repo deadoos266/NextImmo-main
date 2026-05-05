@@ -36,6 +36,10 @@ function cityFromSlug(slug: string): string | null {
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://keymatch-immo.fr"
 
+// V65.7 — ISR : revalidate la page ville toutes les 10 min (les listings
+// changent peu sur cette page longue traîne SEO).
+export const revalidate = 600
+
 export async function generateMetadata({ params }: any): Promise<Metadata> {
   const { ville } = await params
   const city = cityFromSlug(ville)

@@ -29,6 +29,12 @@ import Image from "next/image"
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || 'https://keymatch-immo.fr'
 
+// V65.7 — ISR : revalidate la fiche toutes les 5 min. Réduit la charge DB
+// (les annonces changent rarement intra-5min) et rend les pages quasi-static
+// pour le crawl Google + visiteurs anonymes. Les CTAs interactifs (favoris,
+// candidature, visite) restent client-side donc pas impactés par le cache.
+export const revalidate = 300
+
 // ─── Helpers fiche enrichie R10.9 ─────────────────────────────────────────
 
 /**
