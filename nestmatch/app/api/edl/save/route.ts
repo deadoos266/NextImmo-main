@@ -114,6 +114,29 @@ export async function POST(req: NextRequest) {
 
   // INSERT — proprietaire_email forcé = session
   payload.proprietaire_email = email
+
+  // V70.1 — ALUR loi 89-462 art. 3-2 : un EDL de sortie n'a de valeur
+  // juridique qu'en COMPARAISON avec un EDL d'entrée préalable signé.
+  // On bloque la création d'un EDL de sortie s'il n'existe pas déjà un
+  // EDL d'entrée avec statut='valide' (= signé par locataire) sur la
+  // même annonce. Sans ça, l'EDL sortie ne peut pas servir à motiver
+  // les retenues sur dépôt → audit ALUR incohérent.
+  if (payload.type === "sortie" && payload.annonce_id) {
+    const { data: edlEntree } = await supabaseAdmin
+      .from("etats_des_lieux")
+      .select("id, statut")
+      .eq("annonce_id", payload.annonce_id)
+      .eq("type", "entree")
+      .eq("statut", "valide")
+      .limit(1)
+      .maybeSingle()
+    if (!edlEntree) {
+      return NextResponse.json({
+        error: "Vous devez d'abord faire l'EDL d'entrée signé par le locataire avant de créer l'EDL de sortie (loi 89-462 art. 3-2).",
+      }, { status: 400 })
+    }
+  }
+
   const { data, error } = await supabaseAdmin
     .from("etats_des_lieux")
     .insert([payload])
