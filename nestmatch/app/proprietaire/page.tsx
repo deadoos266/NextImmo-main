@@ -549,9 +549,12 @@ export default function Proprietaire() {
 
     // ORDER BY id : garanti d'exister (PRIMARY KEY). `created_at` peut manquer
     // dans les DB qui n'ont pas appliqué la migration 000_baseline.
-    const [annRes, msgRes, loyRes, visRes] = await Promise.all([
+    // V65.1 — messages reçus via /api/messages/all-mine (préreq REVOKE SELECT anon migration 058)
+    const [annRes, allMineRes, loyRes, visRes] = await Promise.all([
       supabase.from("annonces").select("*").in("proprietaire_email", variants).order("id", { ascending: false }),
-      supabase.from("messages").select("*").in("to_email", variants).order("id", { ascending: false }),
+      fetch("/api/messages/all-mine", { cache: "no-store" })
+        .then(r => r.ok ? r.json() : { ok: false, messages: [] })
+        .catch(() => ({ ok: false, messages: [] })),
       supabase.from("loyers").select("*").in("proprietaire_email", variants).order("id", { ascending: false }),
       supabase.from("visites").select("*").in("proprietaire_email", variants).order("id", { ascending: false }),
     ])
@@ -560,7 +563,11 @@ export default function Proprietaire() {
       const { data: all } = await supabase.from("annonces").select("*").order("id", { ascending: false }).limit(500)
       b = (all || []).filter(a => norm((a as { proprietaire_email?: string | null }).proprietaire_email) === elTrim)
     }
-    const m = msgRes.data
+    // Filtre les messages reçus (to_email = moi) parmi tous mes messages
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const allMineMsgs: any[] = (allMineRes as any)?.ok && Array.isArray((allMineRes as any).messages) ? (allMineRes as any).messages : []
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const m = allMineMsgs.filter((msg: any) => variants.some(v => (msg.to_email || "").toLowerCase() === v.toLowerCase()))
     const l = loyRes.data
     const v = visRes.data
     const ve = visRes.error

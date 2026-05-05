@@ -1542,17 +1542,31 @@ function MessagesInner() {
     const ann = annonces[annId]
     const titre = ann?.titre || "votre logement"
     const payload = JSON.stringify({ bienTitre: titre, annonceId: annId, accepteLe: new Date().toISOString() })
-    const { data: msg } = await supabase.from("messages").insert([{
+    // V65.1 — via /api/messages
+    const msgRes = await fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        toEmail: peerEmail,
+        annonceId: annId,
+        contenu: `${LOCATION_PREFIX}${payload}`,
+      }),
+    })
+    const msgJson = msgRes.ok ? await msgRes.json().catch(() => ({})) : null
+    const msg = msgJson?.ok ? {
+      id: msgJson.message.id,
       from_email: myEmail,
       to_email: peerEmail,
       contenu: `${LOCATION_PREFIX}${payload}`,
       annonce_id: annId,
       lu: false,
-      created_at: new Date().toISOString(),
-    }]).select().single()
+      created_at: msgJson.message.created_at,
+    } : null
     if (msg) {
-      setMessages(prev => [...prev, msg])
-      setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: msg } : c))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setMessages(prev => [...prev, msg as any])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: msg as any } : c))
     }
     // Notif cloche locataire : candidature acceptée ! Gros event UX.
     void postNotif({
@@ -1674,7 +1688,12 @@ function MessagesInner() {
           return [...prev, m]
         })
         if ((m.to_email || "").toLowerCase() === me) {
-          supabase.from("messages").update({ lu: true }).eq("id", m.id)
+          // V65.1 — mark-read via /api (préreq REVOKE UPDATE anon migration 058)
+          void fetch("/api/messages/mark-read", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ids: [m.id] }),
+          }).catch(() => { /* silent */ })
           setConversations(prev => prev.map(c => c.key === convActive ? { ...c, unread: 0, lastMsg: m } : c))
         }
       })
@@ -1761,16 +1780,18 @@ function MessagesInner() {
     // l'appel (NextAuth status flicker au mount). Guard explicite.
     const email = session?.user?.email
     if (!email) return
-    // Fetch messages + préférences user (pin/mute) en parallèle.
-    const [{ data }, { data: prefsData }] = await Promise.all([
-      supabase.from("messages")
-        .select("*")
-        .or(`from_email.eq.${email},to_email.eq.${email}`)
-        .order("created_at", { ascending: false }),
+    // V65.1 — Fetch messages via /api (préreq REVOKE SELECT anon migration 058)
+    // + préférences user (pin/mute) en parallèle.
+    const [allMineRes, { data: prefsData }] = await Promise.all([
+      fetch("/api/messages/all-mine", { cache: "no-store" })
+        .then(r => r.ok ? r.json() : { ok: false })
+        .catch(() => ({ ok: false })),
       supabase.from("conversation_preferences")
         .select("peer_email, annonce_id, pinned_at, muted_at")
         .eq("user_email", email.toLowerCase()),
     ])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data: any[] | null = (allMineRes as any)?.ok ? (allMineRes as any).messages : null
 
     // Index des prefs keyé par conv.key (même schéma que convMap ci-dessous).
     const prefs: Record<string, { pinned: boolean; muted: boolean }> = {}
@@ -1976,24 +1997,25 @@ function MessagesInner() {
   async function loadMessages(email: string, other: string, annonceId?: number | null) {
     const me = email.toLowerCase()
     const peer = other.toLowerCase()
-    const [{ data: sent }, { data: received }] = await Promise.all([
-      supabase.from("messages").select("*").eq("from_email", me).eq("to_email", peer),
-      supabase.from("messages").select("*").eq("from_email", peer).eq("to_email", me),
-    ])
-    let all = [...(sent || []), ...(received || [])]
-    // Scope par annonce — une conv est liée à UNE annonce. Les messages
-    // sans annonce_id apparaissent dans la conv "libre" (annonceId=null).
-    if (annonceId != null) {
-      all = all.filter(m => m.annonce_id === annonceId)
-    } else {
-      all = all.filter(m => !m.annonce_id)
-    }
-    const data = all.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    // V65.1 — load thread via /api (préreq REVOKE SELECT anon migration 058).
+    // Le filter scope par annonce_id est appliqué server-side.
+    const annonceIdParam = annonceId != null ? String(annonceId) : "null"
+    const res = await fetch(
+      `/api/messages/thread?with=${encodeURIComponent(peer)}&annonceId=${annonceIdParam}`,
+      { cache: "no-store" },
+    )
+    const json = res.ok ? await res.json().catch(() => ({})) : null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data: any[] = json?.ok && Array.isArray(json.messages) ? json.messages : []
     setMessages(data)
-    // Marquer lus seulement les messages de cette conv
+    // V65.1 — mark-read via /api (préreq REVOKE UPDATE anon migration 058)
     const unreadIds = data.filter(m => m.to_email?.toLowerCase() === me && !m.lu).map(m => m.id)
     if (unreadIds.length > 0) {
-      await supabase.from("messages").update({ lu: true }).in("id", unreadIds)
+      await fetch("/api/messages/mark-read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: unreadIds }),
+      }).catch(() => { /* silent */ })
     }
     setConversations(prev => prev.map(c => c.other === other && c.annonceId === (annonceId ?? null) ? { ...c, unread: 0 } : c))
 
@@ -2098,23 +2120,34 @@ function MessagesInner() {
     if (!conv) return
     const contenuFinal = encodeReply(replyTo?.id ?? null, nouveau.trim())
     // Propager annonce_id pour que le message reste scope à la conv du bien
-    const msg: Record<string, unknown> = {
+    // On garde le contenu en mémoire avant clear : si l'insert échoue,
+    // on le restitue dans l'input pour ne pas perdre le message du user.
+    const draftBackup = nouveau
+    // V65.1 — via /api/messages (préreq REVOKE INSERT anon migration 058)
+    const insertRes = await fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        toEmail: conv.other,
+        annonceId: conv.annonceId ?? null,
+        contenu: contenuFinal,
+      }),
+    })
+    const insertJson = insertRes.ok ? await insertRes.json().catch(() => ({})) : null
+    const data = insertJson?.ok ? {
+      id: insertJson.message.id,
       from_email: myEmail,
       to_email: conv.other,
       contenu: contenuFinal,
       lu: false,
-      created_at: new Date().toISOString(),
-    }
-    if (conv.annonceId) msg.annonce_id = conv.annonceId
-    // On garde le contenu en mémoire avant clear : si l'insert échoue,
-    // on le restitue dans l'input pour ne pas perdre le message du user.
-    const draftBackup = nouveau
-    const { data, error } = await supabase.from("messages").insert([msg]).select().single()
-    if (error || !data) {
+      annonce_id: conv.annonceId ?? null,
+      created_at: insertJson.message.created_at,
+    } : null
+    if (!data) {
       // Silent failure historique (audit silent-failure-hunter HIGH#1) :
       // l'utilisateur croyait son message envoyé alors qu'aucun row n'était
       // inséré (RLS, réseau). On signale clairement et on remet le draft.
-      console.error("[messages] envoyer: insert failed", error)
+      console.error("[messages] envoyer: insert failed", insertJson)
       setNouveau(draftBackup)
       setEnvoi(false)
       alert("Votre message n'a pas pu être envoyé. Vérifiez votre connexion et réessayez.")
@@ -2153,8 +2186,9 @@ function MessagesInner() {
     const backup = messages.find(m => m.id === id)
     setMessages(prev => prev.filter(m => m.id !== id))
     setMenuMsgId(null)
-    const { error } = await supabase.from("messages").delete().eq("id", id)
-    if (error && backup) {
+    // V65.1 — via DELETE /api/messages/:id (préreq REVOKE DELETE anon migration 058)
+    const res = await fetch(`/api/messages/${id}`, { method: "DELETE" })
+    if (!res.ok && backup) {
       // Rollback si échec
       setMessages(prev => [...prev, backup].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()))
       alert("Impossible de supprimer le message")
@@ -2238,18 +2272,31 @@ function MessagesInner() {
       score: Math.min(score, 100),
       shareUrl,
     }
-    const msgBody: Record<string, unknown> = {
+    // V65.1 — via /api/messages
+    const dossierMsgRes = await fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        toEmail: conv.other,
+        annonceId: conv.annonceId ?? null,
+        contenu: DOSSIER_PREFIX + JSON.stringify(payload),
+      }),
+    })
+    const dossierMsgJson = dossierMsgRes.ok ? await dossierMsgRes.json().catch(() => ({})) : null
+    const data = dossierMsgJson?.ok ? {
+      id: dossierMsgJson.message.id,
       from_email: myEmail,
       to_email: conv.other,
       contenu: DOSSIER_PREFIX + JSON.stringify(payload),
       lu: false,
-      created_at: new Date().toISOString(),
-    }
-    if (conv.annonceId) msgBody.annonce_id = conv.annonceId
-    const { data } = await supabase.from("messages").insert([msgBody]).select().single()
+      annonce_id: conv.annonceId ?? null,
+      created_at: dossierMsgJson.message.created_at,
+    } : null
     if (data) {
-      setMessages(prev => [...prev, data])
-      setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: data } : c))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setMessages(prev => [...prev, data as any])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: data as any } : c))
       // V52.5 — email "dossier partagé" au proprio (fire-and-forget).
       const annForMail = conv.annonceId ? annonces[conv.annonceId] : null
       void fetch("/api/notifications/event", {
@@ -2318,20 +2365,20 @@ function MessagesInner() {
     void statut // statut servait au calcul des flags ci-dessus
 
     setSupprimant(key)
-    // ⚠ IMPORTANT : ne supprimer QUE les messages de CETTE conversation
-    // (scopée par annonce_id). Avant, le delete étendu nuquait aussi les
-    // convs des autres annonces entre les 2 mêmes emails.
-    let query = supabase.from("messages")
-      .delete()
-      .or(`and(from_email.eq.${myEmail},to_email.eq.${conv.other}),and(from_email.eq.${conv.other},to_email.eq.${myEmail})`)
-    if (conv.annonceId != null) {
-      query = query.eq("annonce_id", conv.annonceId)
-    } else {
-      query = query.is("annonce_id", null)
-    }
-    const { error } = await query
-    if (error) {
-      alert(`Suppression échouée : ${error.message}`)
+    // V65.1 — bulk delete via /api (préreq REVOKE DELETE anon migration 058).
+    // ⚠ IMPORTANT : scope par annonce_id pour ne supprimer QUE cette conv,
+    // pas les convs des autres annonces entre les 2 mêmes emails.
+    const delRes = await fetch("/api/messages/delete-conversation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        with: conv.other,
+        annonceId: conv.annonceId ?? null,
+      }),
+    })
+    if (!delRes.ok) {
+      const j = await delRes.json().catch(() => ({}))
+      alert(`Suppression échouée : ${j.error || `HTTP ${delRes.status}`}`)
       setSupprimant(null)
       return
     }
@@ -2341,11 +2388,15 @@ function MessagesInner() {
   }
 
   async function marquerLu(conv: any) {
-    // Scope par annonce_id pour ne pas marquer lus les msgs d'autres convs
-    let q = supabase.from("messages").update({ lu: true }).eq("to_email", myEmail!).eq("from_email", conv.other)
-    if (conv.annonceId != null) q = q.eq("annonce_id", conv.annonceId)
-    else q = q.is("annonce_id", null)
-    await q
+    // V65.1 — mark-read via /api (préreq REVOKE UPDATE anon migration 058)
+    await fetch("/api/messages/mark-read", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        with: conv.other,
+        annonceId: conv.annonceId ?? null,
+      }),
+    }).catch(() => { /* silent */ })
     setConversations(prev => prev.map(c => c.key === conv.key ? { ...c, unread: 0 } : c))
   }
 
@@ -2463,18 +2514,31 @@ function MessagesInner() {
       const dejaDemande = messages.some(m => m.contenu === DEMANDE_DOSSIER_PREFIX && m.from_email === myEmail && (m.annonce_id ?? null) === (conv.annonceId ?? null))
       if (dejaDemande) { setDemandantDossier(false); return }
     }
-    const msg = {
+    // V65.1 — via /api/messages
+    const dmRes = await fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        toEmail: conv.other,
+        annonceId: conv.annonceId ?? null,
+        contenu: DEMANDE_DOSSIER_PREFIX,
+      }),
+    })
+    const dmJson = dmRes.ok ? await dmRes.json().catch(() => ({})) : null
+    const data = dmJson?.ok ? {
+      id: dmJson.message.id,
       from_email: myEmail,
       to_email: conv.other,
       contenu: DEMANDE_DOSSIER_PREFIX,
       lu: false,
-      annonce_id: conv.annonceId ?? null, // rattache au bien
-      created_at: new Date().toISOString(),
-    }
-    const { data } = await supabase.from("messages").insert([msg]).select().single()
+      annonce_id: conv.annonceId ?? null,
+      created_at: dmJson.message.created_at,
+    } : null
     if (data) {
-      setMessages(prev => [...prev, data])
-      setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: data } : c))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setMessages(prev => [...prev, data as any])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: data as any } : c))
       // V52.4 — email "dossier demandé" au locataire (fire-and-forget)
       const annForMail = conv.annonceId ? annonces[conv.annonceId] : null
       void fetch("/api/notifications/event", {
@@ -2566,14 +2630,31 @@ function MessagesInner() {
     } else {
       contenu = `Statut de visite mis à jour : ${statut}.`
     }
-    const { data: msg } = await supabase.from("messages").insert([{
-      from_email: myEmail, to_email: other, contenu, lu: false,
+    // V65.1 — via /api/messages
+    const visiteMsgRes = await fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        toEmail: other,
+        annonceId: visite.annonce_id ?? null,
+        contenu,
+      }),
+    })
+    const visiteMsgJson = visiteMsgRes.ok ? await visiteMsgRes.json().catch(() => ({})) : null
+    const msg = visiteMsgJson?.ok ? {
+      id: visiteMsgJson.message.id,
+      from_email: myEmail,
+      to_email: other,
+      contenu,
+      lu: false,
       annonce_id: visite.annonce_id ?? null,
-      created_at: new Date().toISOString(),
-    }]).select().single()
+      created_at: visiteMsgJson.message.created_at,
+    } : null
     if (msg) {
-      setMessages(prev => [...prev, msg])
-      setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: msg } : c))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setMessages(prev => [...prev, msg as any])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: msg as any } : c))
     }
     // Notif cloche à l'autre partie (confirmation ou annulation)
     if (statut === "confirmée" || statut === "annulée") {
@@ -2704,17 +2785,31 @@ function MessagesInner() {
         slots: slots.length > 1 ? slots : undefined,
       })
       const contenu = `${VISITE_DEMANDE_PREFIX}${payload}`
-      const { data: msg } = await supabase.from("messages").insert([{
+      // V65.1 — via /api/messages
+      const visiteRes = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toEmail: convActiveData.other,
+          annonceId: convActiveData.annonceId,
+          contenu,
+        }),
+      })
+      const visiteJson = visiteRes.ok ? await visiteRes.json().catch(() => ({})) : null
+      const msg = visiteJson?.ok ? {
+        id: visiteJson.message.id,
         from_email: myEmail,
         to_email: convActiveData.other,
         contenu,
         lu: false,
         annonce_id: convActiveData.annonceId,
-        created_at: new Date().toISOString(),
-      }]).select().single()
+        created_at: visiteJson.message.created_at,
+      } : null
       if (msg) {
-        setMessages(prev => [...prev, msg])
-        setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: msg } : c))
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setMessages(prev => [...prev, msg as any])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: msg as any } : c))
       }
       const countHint = slots.length > 1 ? ` (${slots.length} créneaux)` : ""
       const formatHint = vFormat === "visio" ? " — visio" : ""
@@ -2790,14 +2885,31 @@ function MessagesInner() {
       dateFormatee,
     })
     const contenu = `${VISITE_CONFIRMEE_PREFIX}${payload}`
-    const { data: msg } = await supabase.from("messages").insert([{
-      from_email: myEmail, to_email: other, contenu, lu: false,
+    // V65.1 — via /api/messages
+    const slotMsgRes = await fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        toEmail: other,
+        annonceId: visite.annonce_id ?? null,
+        contenu,
+      }),
+    })
+    const slotMsgJson = slotMsgRes.ok ? await slotMsgRes.json().catch(() => ({})) : null
+    const msg = slotMsgJson?.ok ? {
+      id: slotMsgJson.message.id,
+      from_email: myEmail,
+      to_email: other,
+      contenu,
+      lu: false,
       annonce_id: visite.annonce_id ?? null,
-      created_at: new Date().toISOString(),
-    }]).select().single()
+      created_at: slotMsgJson.message.created_at,
+    } : null
     if (msg) {
-      setMessages(prev => [...prev, msg])
-      setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: msg } : c))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setMessages(prev => [...prev, msg as any])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: msg as any } : c))
     }
     void postNotif({
       userEmail: other,
@@ -3191,14 +3303,17 @@ function MessagesInner() {
     }
     setAnnonces(prev => ({ ...prev, [annId]: { ...(prev[annId] || {}), auto_paiement_actif: true, auto_paiement_confirme_at: now } }))
     // 2. Met à jour le message de demande (ajoute confirmedAt au payload)
-    // On trouve le dernier [AUTO_PAIEMENT_DEMANDE] message de cette conv et on met à jour
+    // V65.1 — note : on ne peut plus éditer ce message côté server-side car
+    // PATCH /api/messages/:id refuse l'édition d'un message d'un autre user
+    // (le demandeMsg vient du locataire). On met à jour seulement l'état
+    // local pour le rendu — la flag annonce.auto_paiement_confirme_at reste
+    // la source de vérité côté UI (cf. AutoPaiementCard).
     const demandeMsg = messages.find(m => typeof m.contenu === "string" && m.contenu.startsWith(AUTO_PAIEMENT_DEMANDE_PREFIX) && m.annonce_id === annId)
     if (demandeMsg) {
       try {
         const payload = JSON.parse((demandeMsg.contenu as string).slice(AUTO_PAIEMENT_DEMANDE_PREFIX.length))
         payload.confirmedAt = now
         const newContenu = `${AUTO_PAIEMENT_DEMANDE_PREFIX}${JSON.stringify(payload)}`
-        await supabase.from("messages").update({ contenu: newContenu }).eq("id", demandeMsg.id)
         setMessages(prev => prev.map(m => m.id === demandeMsg.id ? { ...m, contenu: newContenu } : m))
       } catch { /* ignore */ }
     }

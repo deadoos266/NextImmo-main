@@ -119,10 +119,16 @@ function ImporterBailPageInner() {
     setPrefillLoading(true)
     void (async () => {
       try {
-        const [{ data: ann }, { data: msgs }] = await Promise.all([
+        // V65.1 — [BAIL_REFUSE] via /api (préreq REVOKE SELECT anon migration 058)
+        const [{ data: ann }, refuseRes] = await Promise.all([
           supabase.from("annonces").select("id, titre, ville, adresse, surface, pieces, meuble, prix, charges, date_debut_bail, locataire_email").eq("id", id).maybeSingle(),
-          supabase.from("messages").select("contenu, created_at").eq("annonce_id", id).ilike("contenu", "[BAIL_REFUSE]%").order("created_at", { ascending: false }).limit(1),
+          fetch(`/api/messages/last-by-prefix?annonce_id=${id}&prefix=${encodeURIComponent("[BAIL_REFUSE]")}`, { cache: "no-store" })
+            .then(r => r.ok ? r.json() : { ok: false })
+            .catch(() => ({ ok: false })),
         ])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const refuseMsg = (refuseRes as any)?.ok ? (refuseRes as any).message : null
+        const msgs = refuseMsg ? [refuseMsg] : []
         if (ann) {
           setForm(f => ({
             ...f,
