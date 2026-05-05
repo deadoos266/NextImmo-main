@@ -355,7 +355,7 @@ function StatsInner() {
     try {
       const [
         bienRes, loyersRes, travauxRes, edlRes,
-        vuesRes, candidaturesRes, dossiersRes, visitesRes, signaturesRes,
+        vuesRes, msgsCountsRes, visitesRes, signaturesRes,
       ] = await Promise.all([
         // .maybeSingle() au lieu de .single() : ne throw plus si bien
         // introuvable (cas où l'URL ?id= pointe sur un bien supprimé ou
@@ -366,14 +366,18 @@ function StatsInner() {
         supabase.from("etats_des_lieux").select("statut").eq("annonce_id", bienId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
         // Pipeline funnel — head:true pour ne payer que le count, pas les rows.
         supabase.from("clics_annonces").select("annonce_id", { count: "exact", head: true }).eq("annonce_id", bienId),
-        supabase.from("messages").select("id", { count: "exact", head: true }).eq("to_email", me).eq("annonce_id", bienId).eq("type", "candidature"),
-        supabase.from("messages").select("id", { count: "exact", head: true }).eq("to_email", me).eq("annonce_id", bienId).like("contenu", "[DOSSIER_CARD]%"),
+        // V65.1 — counts candidatures + dossiers via /api server-side (préreq REVOKE SELECT anon migration 058)
+        fetch(`/api/proprietaire/stats/messages-counts?annonce_id=${bienId}`, { cache: "no-store" })
+          .then(r => r.ok ? r.json() : { ok: false, candidatures: 0, dossiers: 0 })
+          .catch(() => ({ ok: false, candidatures: 0, dossiers: 0 })),
         supabase.from("visites").select("id", { count: "exact", head: true }).eq("annonce_id", bienId).in("statut", ["proposée", "confirmée", "effectuée"]),
         // V55.1b — bail_signatures via /api/bail/signatures (RLS Phase 5)
         fetch(`/api/bail/signatures?annonce_id=${bienId}`, { cache: "no-store" })
           .then(r => r.ok ? r.json() : { ok: false })
           .catch(() => ({ ok: false })),
       ])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const msgsCounts = msgsCountsRes as any
 
       const b = bienRes.data
       if (!b) {
@@ -399,8 +403,8 @@ function StatsInner() {
       const bailFullySigned = distinctRoles.has("bailleur") && distinctRoles.has("locataire") ? 1 : 0
       setPipeline({
         vues: vuesRes.count ?? 0,
-        candidatures: candidaturesRes.count ?? 0,
-        dossiers: dossiersRes.count ?? 0,
+        candidatures: msgsCounts?.candidatures ?? 0,
+        dossiers: msgsCounts?.dossiers ?? 0,
         visites: visitesRes.count ?? 0,
         bail: bailFullySigned,
       })
@@ -470,14 +474,16 @@ function StatsInner() {
           montant,
           dateConfirmation: nowIso,
         }
-        await supabase.from("messages").insert([{
-          from_email: proprietaireEmail,
-          to_email: locataireEmail,
-          contenu: `[QUITTANCE_CARD]${JSON.stringify(payload)}`,
-          lu: false,
-          annonce_id: bien.id,
-          created_at: nowIso,
-        }])
+        // V65.1 — via /api/messages
+        await fetch("/api/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            toEmail: locataireEmail,
+            annonceId: bien.id,
+            contenu: `[QUITTANCE_CARD]${JSON.stringify(payload)}`,
+          }),
+        })
       }
     }
     setNewLoyerMois("")
@@ -526,20 +532,24 @@ function StatsInner() {
       montant: loyer.montant,
       dateConfirmation: nowIso,
     }
-    const { data: msg, error: msgErr } = await supabase.from("messages").insert([{
-      from_email: proprietaireEmail,
-      to_email: locataireEmail,
-      contenu: `[QUITTANCE_CARD]${JSON.stringify(payload)}`,
-      lu: false,
-      annonce_id: bien.id,
-      created_at: nowIso,
-    }]).select().single()
+    // V65.1 — via /api/messages (préreq REVOKE INSERT anon migration 058)
+    const msgRes = await fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        toEmail: locataireEmail,
+        annonceId: bien.id,
+        contenu: `[QUITTANCE_CARD]${JSON.stringify(payload)}`,
+      }),
+    })
+    const msgJson = msgRes.ok ? await msgRes.json().catch(() => ({})) : null
+    const msg = msgJson?.ok ? msgJson.message : null
 
-    if (msgErr) {
+    if (!msgRes.ok || !msg) {
       // Loyer confirmé mais quittance non envoyée — on alerte le proprio
       // pour qu'il puisse renvoyer manuellement plutôt que penser que
       // tout s'est passé.
-      console.error("[stats] quittance message insert failed", msgErr)
+      console.error("[stats] quittance message insert failed", msgJson)
       alert("Le loyer a été confirmé mais la quittance n'a pas pu être envoyée au locataire.")
       return
     }

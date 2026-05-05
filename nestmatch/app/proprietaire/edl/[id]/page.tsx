@@ -511,18 +511,20 @@ export default function EdlPage() {
         return
       }
       const cardPayload = JSON.stringify({ edlId, bienTitre: bien.titre, type, dateEdl })
-      const fromEmail = (bien.proprietaire_email || session.user.email || "").toLowerCase()
       const toEmail = emailLocataire.trim().toLowerCase()
-      const { error: msgErr } = await supabase.from("messages").insert([{
-        from_email: fromEmail,
-        to_email: toEmail,
-        contenu: "[EDL_CARD]" + cardPayload,
-        lu: false,
-        annonce_id: Number(bienId),
-        created_at: new Date().toISOString(),
-      }])
-      if (msgErr) {
-        alert(`Erreur envoi message : ${msgErr.message}`)
+      // V65.1 — via /api/messages (préreq REVOKE INSERT anon migration 058).
+      const msgRes = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toEmail,
+          annonceId: Number(bienId),
+          contenu: "[EDL_CARD]" + cardPayload,
+        }),
+      })
+      if (!msgRes.ok) {
+        const j = await msgRes.json().catch(() => ({}))
+        alert(`Erreur envoi message : ${j.error || `HTTP ${msgRes.status}`}`)
         setSending(false)
         return
       }

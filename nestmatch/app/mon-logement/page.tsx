@@ -120,14 +120,10 @@ export default function MonLogement() {
           .eq("annonce_id", b.id)
           .order("mois", { ascending: false })
           .limit(24),
-        // Dernier [BAIL_CARD] pour ce bien — source du payload téléchargeable
-        supabase.from("messages")
-          .select("contenu")
-          .eq("annonce_id", b.id)
-          .ilike("contenu", "[BAIL_CARD]%")
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
+        // V65.1 — Dernier [BAIL_CARD] via /api/bail/card-payload (REVOKE SELECT anon prep)
+        fetch(`/api/bail/card-payload?annonce_id=${b.id}`, { cache: "no-store" })
+          .then(r => r.ok ? r.json() : { ok: false })
+          .catch(() => ({ ok: false })),
         // V55.1b — signatures via /api/bail/signatures (RLS Phase 5)
         fetch(`/api/bail/signatures?annonce_id=${b.id}&include_png=true`, { cache: "no-store" })
           .then(r => r.ok ? r.json() : { ok: false })
@@ -137,17 +133,12 @@ export default function MonLogement() {
       setEdls(edlRes.data || [])
       setLoyers(loyRes.data || [])
 
-      // Parse bail payload
-      if (bailMsgRes.data?.contenu) {
-        try {
-          const payload = JSON.parse(
-            (bailMsgRes.data.contenu as string).slice("[BAIL_CARD]".length),
-          )
-          setBailPayload(payload)
-          if (payload.fichierUrl) setBailFichierUrl(payload.fichierUrl)
-        } catch {
-          /* ignore */
-        }
+      // V65.1 — Parse bail payload depuis /api/bail/card-payload (parsé server-side).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const bailJson = bailMsgRes as any
+      if (bailJson?.ok && bailJson.payload) {
+        setBailPayload(bailJson.payload)
+        if (bailJson.payload.fichierUrl) setBailFichierUrl(bailJson.payload.fichierUrl)
       }
 
       // V55.1b — Signatures retournées par /api/bail/signatures (typed loosely)
@@ -271,20 +262,22 @@ export default function MonLogement() {
 
   async function demanderAutoPaiement() {
     if (!bien || !session?.user?.email) return
-    const locataireEmail = session.user.email.toLowerCase()
     const proprietaireEmail = (bien.proprietaire_email || "").toLowerCase()
     const now = new Date().toISOString()
     const payload = { annonceId: bien.id, declaredAt: now }
-    const { error } = await supabase.from("messages").insert([{
-      from_email: locataireEmail,
-      to_email: proprietaireEmail,
-      contenu: `[AUTO_PAIEMENT_DEMANDE]${JSON.stringify(payload)}`,
-      lu: false,
-      annonce_id: bien.id,
-      created_at: now,
-    }])
-    if (error) {
-      alert(`Erreur : ${error.message}`)
+    // V65.1 — via /api/messages (préreq REVOKE INSERT anon migration 058)
+    const res = await fetch("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        toEmail: proprietaireEmail,
+        annonceId: bien.id,
+        contenu: `[AUTO_PAIEMENT_DEMANDE]${JSON.stringify(payload)}`,
+      }),
+    })
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      alert(`Erreur : ${j.error || `HTTP ${res.status}`}`)
       return
     }
     alert("✓ Demande d'auto-paiement envoyée au propriétaire. Vous serez notifié à sa confirmation.")
@@ -366,14 +359,16 @@ export default function MonLogement() {
     const moisLabel = new Date(mois + "-01T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
     if (proprietaireEmail) {
       const payload = JSON.stringify({ mois, montant: montantAttendu, bienTitre: bien.titre || "" })
-      await supabase.from("messages").insert([{
-        from_email: locataireEmail,
-        to_email: proprietaireEmail,
-        contenu: `[LOYER_PAYE]${payload}`,
-        lu: false,
-        annonce_id: bien.id,
-        created_at: now,
-      }])
+      // V65.1 — via /api/messages
+      await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toEmail: proprietaireEmail,
+          annonceId: bien.id,
+          contenu: `[LOYER_PAYE]${payload}`,
+        }),
+      })
       void fetch("/api/notifications/new-message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
