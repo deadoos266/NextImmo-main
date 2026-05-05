@@ -166,6 +166,38 @@ export async function POST(req: NextRequest) {
       expires_at: expiresAt.toISOString(),
     })
   if (invitErr) {
+    // V70.5 — catch race condition contrainte UNIQUE
+    // (uniq_bail_invitations_pending_per_annonce, mig 062). Si 2 requêtes
+    // simultanées créent une invitation pending pour la même annonce, la
+    // 2ᵉ tape la contrainte → erreur 23505. On retourne un 409 propre
+    // pour que le client refresh (l'autre request a déjà créé l'invit).
+    const code = (invitErr as { code?: string })?.code
+    if (code === "23505") {
+      // Re-fetch l'invitation pending qui vient juste d'être créée par
+      // l'autre concurrent → idempotence comme branche `existing`.
+      const { data: justCreated } = await supabaseAdmin
+        .from("bail_invitations")
+        .select("id, token, expires_at")
+        .eq("annonce_id", annonceId)
+        .eq("statut", "pending")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (justCreated) {
+        return NextResponse.json({
+          ok: true,
+          duplicate: true,
+          invitationId: justCreated.id,
+          invitationToken: justCreated.token,
+          expiresAt: justCreated.expires_at,
+          message: "Une invitation pending existe déjà — l'email peut être renvoyé.",
+        })
+      }
+      return NextResponse.json({
+        ok: false,
+        error: "Une invitation pending existe déjà pour cette annonce. Annulez-la avant d'en créer une nouvelle.",
+      }, { status: 409 })
+    }
     console.error("[bail/from-annonce] invitation insert failed", invitErr)
     return NextResponse.json({ ok: false, error: "Création invitation a échoué" }, { status: 500 })
   }
