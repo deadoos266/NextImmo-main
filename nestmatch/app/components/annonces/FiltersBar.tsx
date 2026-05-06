@@ -25,7 +25,7 @@ import CityAutocomplete from "../CityAutocomplete"
  * même stacking context que les tiles). Aucun risque de masquage.
  */
 
-type TriKey = "match" | "prix_asc" | "prix_desc" | "alpha" | "recent"
+type TriKey = "match" | "prix_asc" | "prix_desc" | "alpha" | "recent" | "populaire"
 
 export interface FiltersBarProps {
   isMobile: boolean
@@ -421,6 +421,7 @@ export default function FiltersBar(props: FiltersBarProps) {
             }}
           >
             {showMatchOption && <option value="match">Matching</option>}
+            <option value="populaire">Plus populaires</option>
             <option value="recent">Plus récent</option>
             <option value="alpha">A-Z</option>
             <option value="prix_asc">Prix croissant</option>

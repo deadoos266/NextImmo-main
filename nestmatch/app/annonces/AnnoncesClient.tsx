@@ -179,7 +179,7 @@ function paramsDivergeFromProfil(current: SP | undefined, profil: Record<string,
 // Types internes
 // ═══════════════════════════════════════════════════════════════════════
 
-type TriKey = "match" | "prix_asc" | "prix_desc" | "alpha" | "recent"
+type TriKey = "match" | "prix_asc" | "prix_desc" | "alpha" | "recent" | "populaire"
 type ViewMode = "list" | "grid"
 type MeubleTri = "oui" | "non" | null
 type AnimauxChip = "oui" | "non" | null
@@ -899,6 +899,28 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
         const dA = a.created_at ? new Date(a.created_at).getTime() : 0
         const dB = b.created_at ? new Date(b.created_at).getTime() : 0
         return dB - dA
+      }
+      if (tri === "populaire") {
+        // V73.4 — score popularité proxy : on n'a pas de colonne nb_vues
+        // ni nb_candidatures (audit V72). Migration 064 = TODO V74.
+        // En attendant, proxy "qualité d'annonce" qui s'approche du même
+        // signal (annonces complètes = engageantes = candidaturées).
+        //  - photos count       (×2)  — visuel = engagement #1
+        //  - description longue (×3)  — signal effort proprio
+        //  - DPE renseigné      (×1)
+        //  - équipements > 5    (×2)
+        //  - récence boost      (×1 si <30j)
+        const score = (l: typeof a) => {
+          const photosLen = Array.isArray(l.photos) ? l.photos.length : 0
+          const descLen = typeof l.description === "string" ? l.description.length : 0
+          const dpe = typeof l.dpe === "string" && l.dpe.length > 0 ? 1 : 0
+          const equip = l.equipements && typeof l.equipements === "object"
+            ? Object.values(l.equipements).filter(Boolean).length
+            : 0
+          const recent = l.created_at && (Date.now() - new Date(l.created_at).getTime()) < 30 * 24 * 3600 * 1000 ? 1 : 0
+          return photosLen * 2 + (descLen > 200 ? 3 : descLen > 80 ? 1.5 : 0) + dpe + (equip > 5 ? 2 : equip > 2 ? 1 : 0) + recent
+        }
+        return score(b) - score(a)
       }
       return 0
     })
@@ -2005,6 +2027,7 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                     <div style={{ display: "inline-flex", gap: 0, background: km.beige, borderRadius: 8, padding: 2 }}>
                       {([
                         ["match", "Compatibilité"],
+                        ["populaire", "Populaires"],
                         ["prix_asc", "Prix"],
                         ["recent", "Récent"],
                       ] as const).map(([k, l]) => (
