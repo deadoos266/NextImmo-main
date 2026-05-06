@@ -16,6 +16,7 @@ import MountedOnly from './components/MountedOnly'
 import ThemeApplier from './components/ThemeApplier'
 import HeartbeatPing from './components/HeartbeatPing'
 import { BRAND } from '../lib/brand'
+import { NO_INDEX } from '../lib/featureFlags'
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || BRAND.url
 
@@ -56,9 +57,10 @@ const fraunces = Fraunces({
 const DEFAULT_TITLE = `${BRAND.name} — Location entre particuliers sans agence`
 const DEFAULT_DESC = `${BRAND.name} connecte propriétaires et locataires directement. Score de matching, gestion du dossier, des visites et des loyers. Zéro frais d'agence.`
 
-// Mode bêta : bloque l'indexation moteurs de recherche (activé via
-// NEXT_PUBLIC_NOINDEX=true dans Vercel env vars). À retirer au lancement.
-const NO_INDEX = process.env.NEXT_PUBLIC_NOINDEX === "true"
+// V71.0 — Mode bêta : bloque l'indexation moteurs de recherche.
+// `NO_INDEX` provient de `lib/featureFlags.ts` qui combine `SITE_INDEXABLE` (flag
+// local code) + `NEXT_PUBLIC_NOINDEX` (env var Vercel). Toggle `SITE_INDEXABLE`
+// à `true` au lancement officiel pour relancer l'indexation.
 
 /**
  * Viewport export (Next 15 — separe du metadata).
@@ -99,7 +101,15 @@ export const metadata: Metadata = {
     ? {
         index: false,
         follow: false,
-        googleBot: { index: false, follow: false, noimageindex: true },
+        nocache: true,
+        googleBot: {
+          index: false,
+          follow: false,
+          noimageindex: true,
+          'max-video-preview': -1,
+          'max-image-preview': 'none',
+          'max-snippet': -1,
+        },
       }
     : {
         index: true,

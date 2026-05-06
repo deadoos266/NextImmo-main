@@ -1,10 +1,17 @@
 import { MetadataRoute } from "next"
 import { supabase } from "../lib/supabase"
 import { CITY_NAMES } from "../lib/cityCoords"
+import { NO_INDEX } from "../lib/featureFlags"
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://keymatch-immo.fr"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // V71.0 — pre-launch indexing lock : sitemap vide tant que `SITE_INDEXABLE`
+  // est false. Cohérent avec robots.txt `Disallow: /` et meta `noindex`.
+  if (NO_INDEX) {
+    return []
+  }
+
   // Seulement les annonces disponibles (statut "disponible" OU statut absent),
   // et exclut les annonces de test (col is_test, modération vitrine publique).
   const { data: annonces } = await supabase

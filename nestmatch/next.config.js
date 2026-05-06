@@ -63,6 +63,10 @@ const nextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
           { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+          // V71.0 — pre-launch indexing lock : ceinture + bretelles avec
+          // robots.txt + meta robots. Retirer ce header au moment du lancement
+          // officiel (toggle SITE_INDEXABLE=true dans lib/featureFlags.ts).
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
         ],
       },
     ]

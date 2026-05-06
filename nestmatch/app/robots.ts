@@ -1,11 +1,12 @@
 import { MetadataRoute } from "next"
+import { NO_INDEX } from "../lib/featureFlags"
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || "https://keymatch-immo.fr"
 
-// Flag de bêta : tant que NEXT_PUBLIC_NOINDEX=true (env Vercel), on demande aux
-// moteurs de recherche de ne pas indexer le site. Permet de tester sur le
-// vrai domaine sans apparaître dans Google.
-const NO_INDEX = process.env.NEXT_PUBLIC_NOINDEX === "true"
+// Flag de bêta — V71.0 : tant que `SITE_INDEXABLE` est false dans
+// `lib/featureFlags.ts` OU `NEXT_PUBLIC_NOINDEX=true` côté Vercel, on
+// renvoie `Disallow: /` pour TOUS les user-agents (Googlebot, Bingbot,
+// GPTBot, ClaudeBot, PerplexityBot, etc.).
 
 export default function robots(): MetadataRoute.Robots {
   if (NO_INDEX) {
