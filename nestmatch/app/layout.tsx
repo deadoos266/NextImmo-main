@@ -15,6 +15,7 @@ import BetaBanner from './components/BetaBanner'
 import MountedOnly from './components/MountedOnly'
 import ThemeApplier from './components/ThemeApplier'
 import HeartbeatPing from './components/HeartbeatPing'
+import BottomNavMobile from './components/BottomNavMobile'
 import { BRAND } from '../lib/brand'
 import { NO_INDEX } from '../lib/featureFlags'
 
@@ -243,6 +244,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ScrollLockReset />
           {/* V59.1 — heartbeat 60s pour détecter "online" status (anti-spam emails messages) */}
           <HeartbeatPing />
+          {/* V73.9 — bottom navigation mobile (auto-hide desktop + threads
+              mobile + drawer ouvert + /admin/auth pages). */}
+          <MountedOnly>
+            <BottomNavMobile />
+          </MountedOnly>
         </Providers>
       </body>
     </html>

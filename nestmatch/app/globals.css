@@ -4,6 +4,17 @@
   padding: 0;
 }
 
+/* V73.9 — bottom nav mobile : réserve l'espace en bas du body pour ne
+   pas masquer le contenu derrière la nav (56 px + safe-area iPhone notch).
+   Inclut aussi les pages où BottomNav n'apparaît pas (admin/auth/threads
+   messages mobile) — petit espace vide acceptable, pas de coupure de
+   contenu. */
+@media (max-width: 767px) {
+  body {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 /* ───────── Mobile pinch-zoom guard (Paul 2026-04-27) ─────────
    En complement du viewport meta `maximumScale: 1, userScalable: false`,
    on force `touch-action: pan-y` sur html + body : meme si iOS ignore
