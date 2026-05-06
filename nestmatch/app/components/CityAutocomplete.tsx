@@ -215,10 +215,19 @@ export default function CityAutocomplete({ value, onChange, onSelect, placeholde
           {suggestions.map((s, i) => (
             <div
               key={`${s.nom}-${i}`}
+              role="button"
+              tabIndex={0}
+              // V72.1b — fix recherche mobile (point 2 user) : onMouseDown
+              // seul ne se déclenche pas systématiquement sur tactile iOS
+              // Safari + Android Chrome (suggestion tappée mais ignorée).
+              // On ajoute onPointerDown qui couvre mouse + touch + pen, et
+              // garde onMouseDown pour la rétro-compat (preventDefault sur
+              // les deux pour ne pas perdre le focus avant select()).
+              onPointerDown={e => { e.preventDefault(); select(s) }}
               onMouseDown={e => { e.preventDefault(); select(s) }}
               onMouseEnter={() => setHighlight(i)}
               style={{
-                padding: "10px 14px",
+                padding: "12px 14px",
                 cursor: "pointer",
                 fontSize: 14,
                 background: i === highlight ? "#F7F4EF" : "white",
@@ -229,6 +238,9 @@ export default function CityAutocomplete({ value, onChange, onSelect, placeholde
                 alignItems: "center",
                 gap: 10,
                 borderBottom: i < suggestions.length - 1 ? "1px solid #F7F4EF" : "none",
+                minHeight: 44, // WCAG 2.5.5 + ergonomie pouce mobile
+                WebkitTapHighlightColor: "rgba(0,0,0,0.05)",
+                touchAction: "manipulation",
               }}
             >
               <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
