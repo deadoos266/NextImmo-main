@@ -45,7 +45,12 @@ export default function AdminBar() {
     <div style={{
       position: "sticky",
       top: 0,
-      zIndex: 1100,
+      // V73.7 — fix audit V72.5 : AdminBar à 1100 passait sous la Navbar
+      // (10000). Bumpée à 10001 pour rester visible pendant le scroll.
+      // Sera proprement résolu V74 quand le wrapper <TopChrome /> sera
+      // adopté dans app/layout.tsx (1 seul container sticky pour les
+      // 3 éléments BetaBanner + AdminBar + Navbar).
+      zIndex: 10001,
       background: "#111",
       color: "white",
       padding: "6px 16px",
