@@ -905,6 +905,27 @@ export default function Navbar() {
                     Paramètres
                   </Link>
 
+                  {/* V72.1c — accès admin mobile (point 3 user). La pill ADMIN
+                      à côté du logo est trop discrète sur mobile (taille 11px).
+                      On expose ici un bloc dédié avec couleur signature noire
+                      pour que les admins ne soient pas obligés de viser le
+                      petit pill à côté du logo. */}
+                  {isAdmin && (
+                    <Link href="/admin" onClick={() => setMobileOpen(false)}
+                      style={{ ...drawerItemStyle(isActive("/admin")), background: km.ink, color: km.white, fontWeight: 700 }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ display: "inline-block", padding: "2px 6px", borderRadius: 999, background: km.white, color: km.ink, fontSize: 10, fontWeight: 800, letterSpacing: "0.5px" }}>ADMIN</span>
+                        <span>Tableau de bord</span>
+                      </span>
+                    </Link>
+                  )}
+                  {isAdmin && (
+                    <Link href="/admin/health" onClick={() => setMobileOpen(false)}
+                      style={drawerItemStyle(isActive("/admin/health"))}>
+                      Santé des services
+                    </Link>
+                  )}
+
                   {/* V55.2 — Refaire la visite guidée (mobile) */}
                   <button
                     type="button"
