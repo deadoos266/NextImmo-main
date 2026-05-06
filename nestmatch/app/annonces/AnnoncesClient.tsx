@@ -2224,6 +2224,57 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                       onToggleFavori={handleToggleFavoriId}
                     />
                   ) : null}
+
+                  {/* V73.3 — toggle "Mes critères" overlay carte (point 14).
+                      Permet de basculer ON/OFF le filtrage profil sans
+                      retourner sur la liste. Position top-right au-dessus
+                      des contrôles Leaflet zoom (qui sont à top-left par
+                      défaut). État ON = pill noire, OFF = pill blanche. */}
+                  {!isProprietaire && profil && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const divergent = paramsDivergeFromProfil(initialSearchParams, profil)
+                        if (divergent) {
+                          // Applique critères du profil
+                          const qs = buildProfilParams(profil).toString()
+                          router.replace(qs ? `/annonces?${qs}` : "/annonces", { scroll: false })
+                        } else {
+                          // Retire les critères profil → reset à /annonces nu
+                          router.replace("/annonces", { scroll: false })
+                        }
+                      }}
+                      style={{
+                        position: "absolute",
+                        top: 12,
+                        right: 12,
+                        zIndex: 10,
+                        background: paramsDivergeFromProfil(initialSearchParams, profil) ? "white" : "#111",
+                        color: paramsDivergeFromProfil(initialSearchParams, profil) ? "#111" : "white",
+                        border: `1px solid ${paramsDivergeFromProfil(initialSearchParams, profil) ? km.line : "#111"}`,
+                        borderRadius: 999,
+                        padding: "8px 16px",
+                        fontWeight: 700,
+                        fontSize: 12,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        WebkitTapHighlightColor: "transparent",
+                      }}
+                      aria-pressed={!paramsDivergeFromProfil(initialSearchParams, profil)}
+                      aria-label={paramsDivergeFromProfil(initialSearchParams, profil) ? "Appliquer mes critères du profil" : "Retirer les critères du profil"}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill={paramsDivergeFromProfil(initialSearchParams, profil) ? "none" : "currentColor"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"/>
+                        <circle cx="12" cy="12" r="6"/>
+                        <circle cx="12" cy="12" r="2" fill="currentColor"/>
+                      </svg>
+                      Mes critères
+                    </button>
+                  )}
                 </div>
               </div>
             )}
