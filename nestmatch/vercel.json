@@ -1,14 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "_comment": "V75.4 — Vercel Hobby plan limits : max 2 crons total, 1×/jour chacun (pas de hourly). Les 13 autres crons V64-V71 sont retirés de cette config mais restent dans le code source (app/api/cron/*) — voir docs/VERCEL_HOBBY_LIMITS.md pour la liste + plan de réactivation post-upgrade Pro ou via UptimeRobot externe.",
   "crons": [
     {
-      "_comment": "loyers-retard : critique ALUR loi 89-462 (notification locataire/proprio + intérêts moratoires). Daily 8h Paris.",
       "path": "/api/cron/loyers-retard",
       "schedule": "0 8 * * *"
     },
     {
-      "_comment": "health-check : monitoring services /status + /admin/health + auto-incident sur transition up→down. Passé de hourly (Pro only) à daily 9h Paris (Hobby compatible). Pour granularité fine : UptimeRobot externe gratuit qui ping /api/health/full toutes les 5 min.",
       "path": "/api/cron/health-check",
       "schedule": "0 9 * * *"
     }
