@@ -19,6 +19,7 @@
  */
 
 import { useEffect, useState } from "react"
+import { Z_INDEX } from "../../../lib/zIndex"
 
 interface MotifRetenue {
   libelle: string
@@ -135,7 +136,7 @@ export default function RestituerDepotModal({ open, onClose, onSuccess, annonce,
       aria-modal="true"
       aria-label="Restituer le dépôt de garantie"
       onClick={e => { if (e.target === e.currentTarget && !submitting) onClose() }}
-      style={{ position: "fixed", inset: 0, background: "rgba(17,17,17,0.55)", zIndex: 13100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, fontFamily: "'DM Sans', sans-serif", overflow: "auto" }}
+      style={{ position: "fixed", inset: 0, background: "rgba(17,17,17,0.55)", zIndex: Z_INDEX.modal, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, fontFamily: "'DM Sans', sans-serif", overflow: "auto" }}
     >
       <div style={{ background: "#fff", borderRadius: 24, maxWidth: 640, width: "100%", boxShadow: "0 24px 64px rgba(0,0,0,0.25)", overflow: "hidden", maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
         <div style={{ padding: "28px 32px 0", flexShrink: 0 }}>

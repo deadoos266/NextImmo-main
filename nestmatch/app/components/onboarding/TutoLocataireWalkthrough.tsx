@@ -14,6 +14,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { Z_INDEX } from "../../../lib/zIndex"
 
 interface Props {
   open: boolean
@@ -184,7 +185,7 @@ export default function TutoLocataireWalkthrough({ open, onClose, userEmail = nu
       role="dialog"
       aria-modal="true"
       aria-label="Bienvenue sur KeyMatch — Visite guidée locataire"
-      style={{ position: "fixed", inset: 0, background: "rgba(17,17,17,0.55)", zIndex: 13500, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, fontFamily: "'DM Sans', sans-serif" }}
+      style={{ position: "fixed", inset: 0, background: "rgba(17,17,17,0.55)", zIndex: Z_INDEX.modal, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, fontFamily: "'DM Sans', sans-serif" }}
       onClick={e => { if (e.target === e.currentTarget && !submitting) handleSkip() }}
     >
       <div style={{ background: "#fff", borderRadius: 24, maxWidth: 600, width: "100%", maxHeight: "92vh", boxShadow: "0 24px 64px rgba(0,0,0,0.25)", overflow: "hidden", display: "flex", flexDirection: "column" }}>

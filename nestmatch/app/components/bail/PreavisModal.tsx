@@ -4,6 +4,7 @@
 
 import { useState, useMemo } from "react"
 import { LOCATAIRE_MOTIFS, PROPRIETAIRE_MOTIFS, calculerPreavis, type LocataireMotif, type ProprietaireMotif } from "../../../lib/preavis"
+import { Z_INDEX } from "../../../lib/zIndex"
 
 interface Props {
   open: boolean
@@ -71,7 +72,7 @@ export default function PreavisModal({ open, onClose, onSubmitted, role, annonce
       role="dialog"
       aria-modal="true"
       aria-label="Donner congé"
-      style={{ position: "fixed", inset: 0, background: "rgba(17,17,17,0.55)", zIndex: 13500, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, fontFamily: "'DM Sans', sans-serif" }}
+      style={{ position: "fixed", inset: 0, background: "rgba(17,17,17,0.55)", zIndex: Z_INDEX.modal, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, fontFamily: "'DM Sans', sans-serif" }}
       onClick={e => { if (e.target === e.currentTarget && !submitting) onClose() }}
     >
       <div style={{ background: "#fff", borderRadius: 24, maxWidth: 520, width: "100%", boxShadow: "0 24px 64px rgba(0,0,0,0.25)", padding: 28 }}>

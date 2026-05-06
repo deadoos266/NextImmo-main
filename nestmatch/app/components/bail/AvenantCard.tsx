@@ -7,6 +7,7 @@
 
 import { useState } from "react"
 import SignatureCanvas from "../ui/SignatureCanvas"
+import { Z_INDEX } from "../../../lib/zIndex"
 
 export interface Avenant {
   id: string
@@ -237,7 +238,7 @@ export default function AvenantCard({ avenant, myRole, myEmail, onRefreshed }: P
         <div
           role="dialog"
           aria-modal="true"
-          style={{ position: "fixed", inset: 0, background: "rgba(17,17,17,0.55)", zIndex: 13500, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, fontFamily: "'DM Sans', sans-serif" }}
+          style={{ position: "fixed", inset: 0, background: "rgba(17,17,17,0.55)", zIndex: Z_INDEX.modal, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, fontFamily: "'DM Sans', sans-serif" }}
           onClick={e => { if (e.target === e.currentTarget && !submitting) setOpen(false) }}
         >
           <div style={{ background: "#fff", borderRadius: 24, maxWidth: 540, width: "100%", boxShadow: "0 24px 64px rgba(0,0,0,0.25)", padding: 28, maxHeight: "90vh", overflowY: "auto" }}>

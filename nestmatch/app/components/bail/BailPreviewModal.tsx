@@ -17,6 +17,7 @@
 // pour le titre).
 
 import { useEffect, useState } from "react"
+import { Z_INDEX } from "../../../lib/zIndex"
 
 interface BailPreviewModalProps {
   open: boolean
@@ -69,7 +70,10 @@ export default function BailPreviewModal({
         position: "fixed",
         inset: 0,
         background: "rgba(17, 17, 17, 0.55)",
-        zIndex: 13000,
+        // V74.5 — était 13000 hardcodé > Navbar (10000) → burger inaccessible.
+        // Migration vers Z_INDEX.modal (4100) qui respecte la hiérarchie
+        // modal > drawer (3200) > navbar (500).
+        zIndex: Z_INDEX.modal,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
