@@ -901,16 +901,22 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
         return dB - dA
       }
       if (tri === "populaire") {
-        // V73.4 — score popularité proxy : on n'a pas de colonne nb_vues
-        // ni nb_candidatures (audit V72). Migration 064 = TODO V74.
-        // En attendant, proxy "qualité d'annonce" qui s'approche du même
-        // signal (annonces complètes = engageantes = candidaturées).
-        //  - photos count       (×2)  — visuel = engagement #1
-        //  - description longue (×3)  — signal effort proprio
-        //  - DPE renseigné      (×1)
-        //  - équipements > 5    (×2)
-        //  - récence boost      (×1 si <30j)
+        // V73.4 → V74.4 : score popularité hybride.
+        // Si la migration 064 est appliquée et alimentée → on utilise les
+        // vraies metrics (nb_vues + nb_candidatures). Sinon on retombe sur
+        // le proxy "qualité d'annonce" V73.4.
+        //
+        // Formule combinée :
+        //   score = nb_candidatures × 3 + nb_vues × 0.05 + qualité × 0.5
+        // — candidaturé > vu (engagement plus fort)
+        // — qualité reste un boost pour ne pas figer les nouvelles annonces
+        //   qui n'ont pas encore eu le temps d'accumuler des vues.
         const score = (l: typeof a) => {
+          const aRow = l as typeof l & { nb_vues?: number | null; nb_candidatures?: number | null }
+          const candidatures = typeof aRow.nb_candidatures === "number" ? aRow.nb_candidatures : 0
+          const vues = typeof aRow.nb_vues === "number" ? aRow.nb_vues : 0
+
+          // Proxy qualité (V73.4) — toujours actif comme tie-breaker.
           const photosLen = Array.isArray(l.photos) ? l.photos.length : 0
           const descLen = typeof l.description === "string" ? l.description.length : 0
           const dpe = typeof l.dpe === "string" && l.dpe.length > 0 ? 1 : 0
@@ -918,7 +924,9 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
             ? Object.values(l.equipements).filter(Boolean).length
             : 0
           const recent = l.created_at && (Date.now() - new Date(l.created_at).getTime()) < 30 * 24 * 3600 * 1000 ? 1 : 0
-          return photosLen * 2 + (descLen > 200 ? 3 : descLen > 80 ? 1.5 : 0) + dpe + (equip > 5 ? 2 : equip > 2 ? 1 : 0) + recent
+          const qualite = photosLen * 2 + (descLen > 200 ? 3 : descLen > 80 ? 1.5 : 0) + dpe + (equip > 5 ? 2 : equip > 2 ? 1 : 0) + recent
+
+          return candidatures * 3 + vues * 0.05 + qualite * 0.5
         }
         return score(b) - score(a)
       }
