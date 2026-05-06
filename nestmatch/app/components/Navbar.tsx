@@ -759,10 +759,23 @@ export default function Navbar() {
             aria-hidden={!mobileOpen}
             aria-label="Menu de navigation"
             style={{
-              position: "fixed", top: 72, left: 0, bottom: 0,
+              // V72.2f (point 11 user) — fix burger qui s'affiche mal au scroll.
+              // Avant : top: 72 + bottom: 0 → sur iOS Safari quand la url-bar
+              // se rétracte, le viewport "vrai" change et le drawer se
+              // décale visuellement (impression de jump). On passe à
+              // height: calc(100dvh - 72px) qui suit dynamiquement l'URL-bar
+              // (dvh = dynamic viewport height, supporté iOS 15.4+ et tous
+              // les Chrome récents). Fallback à 100vh pour les très vieux
+              // navigateurs (légèrement faux mais usable).
+              position: "fixed",
+              top: 72,
+              left: 0,
+              height: "calc(100vh - 72px)",
+              maxHeight: "calc(100dvh - 72px)",
               width: "min(85vw, 360px)",
               maxWidth: "100vw",
               background: km.white, zIndex: 11001, overflowY: "auto",
+              WebkitOverflowScrolling: "touch",
               // Coins droits arrondis (slide-in depuis la gauche, cote droit
               // visible dans la viewport — Paul 2026-04-27).
               borderTopRightRadius: 20,
@@ -770,6 +783,9 @@ export default function Navbar() {
               boxShadow: mobileOpen ? "12px 0 32px rgba(0,0,0,0.18)" : "none",
               transform: mobileOpen ? "translateX(0)" : "translateX(-100%)",
               transition: "transform 0.32s cubic-bezier(0.4, 0, 0.2, 1)",
+              // GPU compositing pour éviter le re-layout pendant l'animation.
+              willChange: "transform",
+              backfaceVisibility: "hidden",
             }}
           >
             {/* Bouton X (close) — ergonomie tactile WCAG 2.5.5 (44x44) */}

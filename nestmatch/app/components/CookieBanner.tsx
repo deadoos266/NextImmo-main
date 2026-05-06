@@ -95,8 +95,13 @@ function FloatingCookieButton({ onClick }: { onClick: () => void }) {
       aria-label="Modifier les préférences cookies"
       style={{
         position: "fixed",
-        bottom: 20,
-        left: 20,
+        // V72.2e — passage en bottom-right (était bottom-left) pour ne pas
+        // chevaucher les boutons primaires "+" composer messages mobile et
+        // les CTA principaux qui sont systématiquement à gauche dans le
+        // design system KeyMatch (drawer mobile slide-in left).
+        // Safe-area-inset bottom pour iPhone notch.
+        bottom: "calc(20px + env(safe-area-inset-bottom, 0px))",
+        right: 20,
         zIndex: 400,
         width: 40,
         height: 40,
@@ -136,12 +141,19 @@ export default function CookieBanner() {
   const [dismissed, setDismissed] = useState(false)
   const [animateIn, setAnimateIn] = useState(false)
 
-  // Masquer l'icône flottante sur toutes les pages avec carte Leaflet pour
-  // éviter le chevauchement avec les contrôles zoom / attribution.
+  // Masquer l'icône flottante sur :
+  //  - toutes les pages avec carte Leaflet (chevauchement contrôles zoom)
+  //  - V72.2e (point 10 user) : /messages où le bouton "+" composer mobile
+  //    est aussi bottom-left/right → conflit. On masque le cookie sur la
+  //    conv active.
+  //  - les pages dossier/profil avec FAB d'upload (idem).
   const hideFloatingOnThisPage =
     pathname === "/annonces" ||
     pathname?.startsWith("/annonces/") === true ||
-    pathname?.startsWith("/location/") === true
+    pathname?.startsWith("/location/") === true ||
+    pathname?.startsWith("/messages") === true ||
+    pathname?.startsWith("/dossier") === true ||
+    pathname?.startsWith("/proprietaire") === true
 
   useEffect(() => {
     const stored = getStoredConsent()
