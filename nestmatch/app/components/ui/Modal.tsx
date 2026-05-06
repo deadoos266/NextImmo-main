@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useRef, ReactNode } from "react"
+import { useExclusiveModal } from "../../hooks/useExclusiveModal"
 
 interface ModalProps {
   open: boolean
@@ -42,6 +43,12 @@ export default function Modal({
   // fermeture, le focus était perdu (revenait sur <body>).
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
+
+  // V72.1d — singleton modal : si une autre modal Modal.tsx est ouverte,
+  // elle se ferme à l'ouverture de celle-ci. strict=true (rare, signature
+  // bail/EDL) → exclusive=false : on tolère le coexistant car la signature
+  // ne doit pas être interrompue par un autre flow incidental.
+  useExclusiveModal({ id: `modal:${title}`, open, onClose, exclusive: !strict })
 
   useEffect(() => {
     if (!open) return

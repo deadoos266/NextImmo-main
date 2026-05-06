@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useState } from "react"
+import { useExclusiveModal } from "../hooks/useExclusiveModal"
 
 interface AnnoncePreview {
   titre?: string | null
@@ -82,15 +83,9 @@ export default function ProposerVisiteDialog({
     }
   }, [open, initialDate, initialHeure])
 
-  // ESC ferme
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
-    }
-    window.addEventListener("keydown", handler)
-    return () => window.removeEventListener("keydown", handler)
-  }, [open, onClose])
+  // V72.1d — ESC + body scroll-lock + éviction des autres modals via hook
+  // useExclusiveModal (plus de gestion locale du keydown).
+  useExclusiveModal({ id: "proposer-visite", open, onClose })
 
   if (!open) return null
 

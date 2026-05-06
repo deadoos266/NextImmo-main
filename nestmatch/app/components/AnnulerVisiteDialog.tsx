@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect } from "react"
+import { useExclusiveModal } from "../hooks/useExclusiveModal"
 
 interface Props {
   open: boolean
@@ -32,15 +33,8 @@ export default function AnnulerVisiteDialog({ open, onClose, onConfirm, mode = "
     }
   }, [open])
 
-  // ESC pour fermer
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
-    }
-    window.addEventListener("keydown", handler)
-    return () => window.removeEventListener("keydown", handler)
-  }, [open, onClose])
+  // V72.1d — ESC + body lock + éviction des autres modals via hook unifié.
+  useExclusiveModal({ id: `annuler-visite:${mode}`, open, onClose })
 
   if (!open) return null
 
