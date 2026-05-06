@@ -1,65 +1,16 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "_comment": "V75.4 — Vercel Hobby plan limits : max 2 crons total, 1×/jour chacun (pas de hourly). Les 13 autres crons V64-V71 sont retirés de cette config mais restent dans le code source (app/api/cron/*) — voir docs/VERCEL_HOBBY_LIMITS.md pour la liste + plan de réactivation post-upgrade Pro ou via UptimeRobot externe.",
   "crons": [
     {
-      "path": "/api/cron/check-irl",
-      "schedule": "0 9 5 1,4,7,10 *"
-    },
-    {
-      "path": "/api/cron/preavis-jalons",
-      "schedule": "0 8 * * *"
-    },
-    {
+      "_comment": "loyers-retard : critique ALUR loi 89-462 (notification locataire/proprio + intérêts moratoires). Daily 8h Paris.",
       "path": "/api/cron/loyers-retard",
       "schedule": "0 8 * * *"
     },
     {
-      "path": "/api/cron/visites-rappel",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/cron/candidatures-digest",
-      "schedule": "0 8 * * *"
-    },
-    {
-      "path": "/api/cron/irl-rappel-bail",
-      "schedule": "0 9 6 1,4,7,10 *"
-    },
-    {
-      "path": "/api/cron/post-bail",
-      "schedule": "0 10 * * *"
-    },
-    {
-      "path": "/api/cron/messages-digest",
-      "schedule": "0 8 * * *"
-    },
-    {
-      "path": "/api/cron/db-backup",
-      "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/cron/depot-retard",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/cron/annonces-stagnantes",
-      "schedule": "0 9 * * 1"
-    },
-    {
-      "path": "/api/cron/verify-integrity-baux",
-      "schedule": "0 4 * * 0"
-    },
-    {
-      "path": "/api/cron/edl-contestation-retard",
-      "schedule": "0 10 * * 1"
-    },
-    {
-      "path": "/api/cron/scrape-irl-insee",
-      "schedule": "0 6 1 * *"
-    },
-    {
+      "_comment": "health-check : monitoring services /status + /admin/health + auto-incident sur transition up→down. Passé de hourly (Pro only) à daily 9h Paris (Hobby compatible). Pour granularité fine : UptimeRobot externe gratuit qui ping /api/health/full toutes les 5 min.",
       "path": "/api/cron/health-check",
-      "schedule": "0 * * * *"
+      "schedule": "0 9 * * *"
     }
   ]
 }
