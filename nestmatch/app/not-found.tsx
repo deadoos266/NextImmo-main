@@ -2,6 +2,7 @@ import Link from "next/link"
 import Logo from "./components/Logo"
 import { BRAND } from "../lib/brand"
 import { km, KMCard, KMEyebrow, KMHeading } from "./components/ui/km"
+import NotFoundCTAs from "./not-found.client"
 
 export const metadata = {
   title: "Page introuvable",
@@ -61,34 +62,10 @@ export default function NotFound() {
           Retour à l&apos;accueil
         </Link>
 
-        {/* Liens utiles */}
-        <div style={{
-          display: "flex",
-          gap: 10,
-          flexWrap: "wrap",
-          justifyContent: "center",
-          marginTop: 8,
-        }}>
-          {[
-            { href: "/annonces", label: "Voir les annonces" },
-            { href: "/auth", label: "Se connecter" },
-            { href: "/auth?mode=inscription", label: "Créer un compte" },
-          ].map(l => (
-            <Link key={l.href} href={l.href} style={{
-              padding: "8px 16px",
-              border: `1px solid ${km.line}`,
-              borderRadius: 999,
-              textDecoration: "none",
-              color: km.ink,
-              fontWeight: 600,
-              fontSize: 11,
-              textTransform: "uppercase",
-              letterSpacing: "0.6px",
-            }}>
-              {l.label}
-            </Link>
-          ))}
-        </div>
+        {/* Liens utiles — V72.1a : conditionnés à la session NextAuth.
+            Si user authentifié → "Voir annonces / Mon profil / Contacter le support".
+            Sinon → "Voir annonces / Se connecter / Créer un compte". */}
+        <NotFoundCTAs />
       </KMCard>
     </main>
   )

@@ -2,17 +2,34 @@
 
 import { useEffect } from "react"
 import Link from "next/link"
+import { useSession } from "next-auth/react"
 import * as Sentry from "@sentry/nextjs"
 
 /**
  * Error boundary global pour toutes les routes sous /app.
  * Capture les runtime errors côté client et évite le crash blanc.
  * Remonte à Sentry pour monitoring prod.
+ *
+ * V72.1a — ajustement CTA : si la session NextAuth est active, on n'affiche
+ * plus "Se connecter / S'inscrire" (cas du screenshot admin perdu en page
+ * d'erreur qui voyait des boutons de login). Pour les users connectés on
+ * propose "Réessayer / Accueil / Contacter le support" avec le digest
+ * pré-rempli dans le sujet du mailto pour traçabilité.
  */
-export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  const { status } = useSession()
+  const isAuthed = status === "authenticated"
+
   useEffect(() => {
     Sentry.captureException(error)
   }, [error])
+
+  const supportSubject = encodeURIComponent(
+    error.digest ? `Erreur KeyMatch — référence ${error.digest}` : "Erreur KeyMatch",
+  )
+  const supportBody = encodeURIComponent(
+    `Bonjour,\n\nJ'ai rencontré une erreur sur KeyMatch.\n\nRéférence : ${error.digest || "—"}\nPage : ${typeof window !== "undefined" ? window.location.href : "—"}\nDate : ${new Date().toISOString()}\n\nDétails (optionnel) :\n`,
+  )
 
   return (
     <main style={{ minHeight: "80vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
@@ -24,8 +41,12 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
           Quelque chose s&apos;est mal passé
         </h1>
         <p style={{ fontSize: 14, color: "#8a8477", lineHeight: 1.6, marginBottom: 24 }}>
-          L&apos;équipe a été notifiée. Vous pouvez réessayer, retourner à l&apos;accueil, ou{" "}
-          <Link href="/contact" style={{ color: "#111", fontWeight: 700 }}>nous contacter</Link> si le problème persiste.
+          {isAuthed ? (
+            <>L&apos;équipe a été notifiée. Réessayez ou retournez à l&apos;accueil — votre session reste active.</>
+          ) : (
+            <>L&apos;équipe a été notifiée. Vous pouvez réessayer, retourner à l&apos;accueil, ou{" "}
+              <Link href="/contact" style={{ color: "#111", fontWeight: 700 }}>nous contacter</Link> si le problème persiste.</>
+          )}
         </p>
         {error.digest && (
           <p style={{ fontSize: 11, color: "#8a8477", marginBottom: 20, fontFamily: "monospace" }}>
@@ -45,6 +66,14 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
           >
             Retour à l&apos;accueil
           </Link>
+          {isAuthed && (
+            <a
+              href={`mailto:contact@keymatch-immo.fr?subject=${supportSubject}&body=${supportBody}`}
+              style={{ background: "white", border: "1px solid #EAE6DF", color: "#111", borderRadius: 999, padding: "12px 28px", fontWeight: 700, fontSize: 14, textDecoration: "none" }}
+            >
+              Contacter le support
+            </a>
+          )}
         </div>
       </div>
     </main>
