@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../lib/supabase"
+import { useSwipeReveal } from "../hooks/useSwipeReveal"
 
 type Notif = {
   id: number
@@ -13,6 +14,159 @@ type Notif = {
   related_id: string | null
   lu: boolean
   created_at: string
+}
+
+/**
+ * V73.1 — sous-composant Row avec swipe-to-delete (pattern iOS Mail).
+ * Wrap chaque notif et expose un bouton "Supprimer" rouge révélé au
+ * swipe-left. Tap simple → onClick (ouverture). Tap sur Supprimer →
+ * onDismiss. Pas de modal de confirmation (action peu destructive).
+ *
+ * Définit hors du composant parent pour préserver le focus des inputs
+ * (règle CLAUDE.md inline-styles).
+ */
+function NotifRow({
+  notif,
+  onClick,
+  onDismiss,
+}: {
+  notif: { id: number; title: string; body: string | null; href: string | null; lu: boolean; created_at: string }
+  onClick: () => void
+  onDismiss: () => void
+}) {
+  const { wrapperProps, contentStyle, isOpen, close, translateX } = useSwipeReveal({
+    threshold: 80,
+    direction: "left",
+  })
+
+  function handleRowClick() {
+    if (isOpen) {
+      // Si swipe ouvert, le tap sur le contenu ferme (pattern iOS Mail).
+      close()
+      return
+    }
+    onClick()
+  }
+
+  function handleDelete() {
+    onDismiss()
+    close()
+  }
+
+  return (
+    <div
+      {...wrapperProps}
+      style={{
+        position: "relative",
+        overflow: "hidden",
+        background: "#DC2626", // visible derrière quand swipe ouvert
+        ...wrapperProps.style,
+      }}
+    >
+      {/* Bouton "Supprimer" rouge révélé par le swipe — toujours présent
+          dans le DOM, juste masqué par le contenu jusqu'à ce que le user
+          swipe. */}
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); handleDelete() }}
+        aria-label="Supprimer cette notification"
+        style={{
+          position: "absolute",
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: 80,
+          background: "#DC2626",
+          color: "white",
+          border: "none",
+          fontFamily: "inherit",
+          fontSize: 12,
+          fontWeight: 700,
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column",
+          gap: 4,
+          opacity: Math.min(1, Math.abs(translateX) / 80),
+        }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+        </svg>
+        Supprimer
+      </button>
+
+      {/* Contenu — translate selon swipe */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={handleRowClick}
+        onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleRowClick() } }}
+        style={{
+          ...contentStyle,
+          display: "block",
+          width: "100%",
+          textAlign: "left",
+          padding: "12px 40px 12px 16px",
+          border: "none",
+          background: notif.lu ? "white" : "#FBF6EA",
+          borderBottom: "1px solid #F7F4EF",
+          cursor: notif.href ? "pointer" : "default",
+          fontFamily: "inherit",
+          WebkitTapHighlightColor: "rgba(0,0,0,0.04)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+          {!notif.lu && (
+            <span aria-hidden style={{ width: 8, height: 8, borderRadius: 999, background: "#b91c1c", marginTop: 6, flexShrink: 0 }} />
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 13, fontWeight: notif.lu ? 600 : 800, color: "#111", margin: 0 }}>{notif.title}</p>
+            {notif.body && (
+              <p style={{ fontSize: 12, color: "#8a8477", margin: "2px 0 0", lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                {notif.body}
+              </p>
+            )}
+            <p style={{ fontSize: 11, color: "#8a8477", margin: "4px 0 0" }}>{timeAgo(notif.created_at)}</p>
+          </div>
+        </div>
+        {/* Croix × pour suppression desktop (tactile mobile peut aussi
+            utiliser la croix OU le swipe — au choix). stopPropagation
+            pour ne pas déclencher handleRowClick. */}
+        <button
+          type="button"
+          aria-label="Supprimer cette notification"
+          onClick={e => { e.stopPropagation(); handleDelete() }}
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            width: 28,
+            height: 28,
+            borderRadius: "50%",
+            background: "transparent",
+            border: "none",
+            color: "#8a8477",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontFamily: "inherit",
+            WebkitTapHighlightColor: "transparent",
+            transition: "background 150ms ease, color 150ms ease",
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#F7F4EF"; (e.currentTarget as HTMLButtonElement).style.color = "#111" }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "#8a8477" }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  )
 }
 
 function timeAgo(iso: string): string {
@@ -231,76 +385,14 @@ export default function NotificationBell() {
           ) : (
             <div style={{ maxHeight: 400, overflowY: "auto" }}>
               {notifs.map(n => (
-                /* V72.2d (point 9) — div + onClick au lieu de button pour
-                   permettre une croix × imbriquée (button-in-button = HTML
-                   invalide). role/tabIndex pour préserver la sémantique. */
-                <div
+                /* V73.1 — chaque row utilise NotifRow qui combine swipe-left
+                   (mobile) + croix × (mobile + desktop) pour supprimer. */
+                <NotifRow
                   key={n.id}
-                  role="button"
-                  tabIndex={0}
+                  notif={n}
                   onClick={() => handleClickNotif(n)}
-                  onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleClickNotif(n) } }}
-                  style={{
-                    position: "relative",
-                    display: "block",
-                    width: "100%",
-                    textAlign: "left",
-                    padding: "12px 40px 12px 16px", // padding-right augmenté pour la croix
-                    border: "none",
-                    background: n.lu ? "white" : "#FBF6EA",
-                    borderBottom: "1px solid #F7F4EF",
-                    cursor: n.href ? "pointer" : "default",
-                    fontFamily: "inherit",
-                    WebkitTapHighlightColor: "rgba(0,0,0,0.04)",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                    {!n.lu && (
-                      <span aria-hidden style={{ width: 8, height: 8, borderRadius: 999, background: "#b91c1c", marginTop: 6, flexShrink: 0 }} />
-                    )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 13, fontWeight: n.lu ? 600 : 800, color: "#111", margin: 0 }}>{n.title}</p>
-                      {n.body && (
-                        <p style={{ fontSize: 12, color: "#8a8477", margin: "2px 0 0", lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
-                          {n.body}
-                        </p>
-                      )}
-                      <p style={{ fontSize: 11, color: "#8a8477", margin: "4px 0 0" }}>{timeAgo(n.created_at)}</p>
-                    </div>
-                  </div>
-                  {/* V72.2d — croix × pour supprimer. stopPropagation pour
-                      ne pas déclencher handleClickNotif (qui ouvre le href). */}
-                  <button
-                    type="button"
-                    aria-label="Supprimer cette notification"
-                    onClick={e => { e.stopPropagation(); dismissNotif(n.id) }}
-                    style={{
-                      position: "absolute",
-                      top: 8,
-                      right: 8,
-                      width: 28,
-                      height: 28,
-                      borderRadius: "50%",
-                      background: "transparent",
-                      border: "none",
-                      color: "#8a8477",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontFamily: "inherit",
-                      WebkitTapHighlightColor: "transparent",
-                      transition: "background 150ms ease, color 150ms ease",
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#F7F4EF"; (e.currentTarget as HTMLButtonElement).style.color = "#111" }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "#8a8477" }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <line x1="18" y1="6" x2="6" y2="18"/>
-                      <line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                  </button>
-                </div>
+                  onDismiss={() => dismissNotif(n.id)}
+                />
               ))}
             </div>
           )}
