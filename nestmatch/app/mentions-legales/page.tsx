@@ -109,11 +109,66 @@ export default function MentionsLegales() {
         </p>
       </LegalSec>
 
+      <LegalSec title="Données personnelles">
+        <p style={S.p}>
+          KeyMatch traite des données à caractère personnel conformément au Règlement (UE) 2016/679
+          (RGPD) et à la loi Informatique et Libertés. Les détails (finalités, bases légales, durées
+          de conservation, destinataires, transferts hors UE, droits des personnes) sont décrits dans
+          la <Link href="/confidentialite" style={S.link}>politique de confidentialité</Link>.
+        </p>
+        <p style={S.p}>
+          Pour toute question relative à vos données : <strong style={S.strong}>privacy@keymatch-immo.fr</strong>.
+          Vous disposez du droit d&apos;introduire une réclamation auprès de la{" "}
+          <a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener noreferrer" style={S.link}>
+            CNIL
+          </a>.
+        </p>
+      </LegalSec>
+
+      <LegalSec title="Cookies et traceurs">
+        <p style={S.p}>
+          La gestion des cookies et traceurs (catégories, durée de conservation, modalités de
+          retrait du consentement) est décrite dans la{" "}
+          <Link href="/cookies" style={S.link}>politique cookies</Link>. Vous pouvez modifier
+          vos préférences à tout moment depuis l&apos;icône cookies en bas à gauche de l&apos;écran.
+        </p>
+      </LegalSec>
+
+      <LegalSec title="Médiation de la consommation">
+        <p style={S.p}>
+          Conformément aux articles L.611-1 et suivants du Code de la consommation, en cas de litige
+          non résolu avec l&apos;éditeur, les Utilisateurs consommateurs peuvent recourir gratuitement
+          au médiateur de la consommation suivant :
+        </p>
+        <p style={S.p}>
+          <strong style={S.strong}>Médiateur :</strong> <span style={S.todo}>à désigner avant lancement commercial — par exemple Médiateur du e-commerce (FEVAD), Médiateur de l&apos;immobilier, ou autre médiateur agréé CECMC</span><br />
+          <strong style={S.strong}>Site :</strong> <span style={S.todo}>URL du médiateur à renseigner</span>
+        </p>
+        <p style={S.p}>
+          Plateforme européenne de règlement en ligne des litiges :{" "}
+          <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener noreferrer" style={S.link}>
+            ec.europa.eu/consumers/odr
+          </a>.
+        </p>
+      </LegalSec>
+
+      <LegalSec title="Droit applicable et juridiction">
+        <p style={S.p}>
+          Les présentes mentions légales et l&apos;ensemble des relations entre l&apos;éditeur et les
+          Utilisateurs sont régis par le droit français. En cas de litige, à défaut de résolution
+          amiable ou par voie de médiation, les tribunaux français sont seuls compétents.
+          Le consommateur peut saisir, à son choix, la juridiction du lieu où il demeure ou du
+          lieu où l&apos;éditeur est établi (article R.631-3 du Code de la consommation).
+        </p>
+      </LegalSec>
+
       <LegalSec title="Liens connexes">
         <p style={S.p}>
           <Link href="/cgu" style={S.link}>Conditions Générales d&apos;Utilisation</Link><br />
+          <Link href="/cgv" style={S.link}>Conditions Générales de Vente</Link><br />
           <Link href="/confidentialite" style={S.link}>Politique de confidentialité</Link><br />
           <Link href="/cookies" style={S.link}>Politique cookies</Link><br />
+          <Link href="/plan-du-site" style={S.link}>Plan du site</Link><br />
           <Link href="/contact" style={S.link}>Nous contacter</Link>
         </p>
       </LegalSec>

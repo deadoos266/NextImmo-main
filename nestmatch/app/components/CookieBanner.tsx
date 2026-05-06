@@ -236,8 +236,8 @@ export default function CookieBanner() {
 
           {/* Description */}
           <p style={{ fontSize: 13, color: "#8a8477", lineHeight: 1.6, margin: "0 0 16px" }}>
-            KeyMatch utilise des cookies pour assurer le bon fonctionnement du site et améliorer votre expérience.
-            Vous pouvez personnaliser vos choix à tout moment.{" "}
+            KeyMatch utilise des cookies pour le bon fonctionnement du site et la mesure d&apos;audience anonyme.
+            Vous pouvez accepter, refuser ou personnaliser vos choix — votre décision est conservée 6 mois.{" "}
             <Link href="/cookies" style={{ color: "#111", fontWeight: 600, textDecoration: "underline", textUnderlineOffset: 2 }}>
               En savoir plus
             </Link>
@@ -284,6 +284,13 @@ export default function CookieBanner() {
           >
             {!showDetails ? (
               <>
+                {/* CNIL 2020 — "Tout refuser" doit avoir le même poids visuel
+                    que "Tout accepter" (même hauteur, même padding, même
+                    fontWeight, même fontSize). On utilise variantes
+                    primaire (noir plein) vs secondaire (blanc bordure noire),
+                    strictement équivalentes en surface tactile et lisibilité.
+                    "Personnaliser" reste en 3ᵉ option visuellement plus
+                    légère (lien souligné) car non binaire. */}
                 <button
                   onClick={handleAcceptAll}
                   style={{
@@ -293,7 +300,7 @@ export default function CookieBanner() {
                     padding: "10px 24px",
                     fontWeight: 700,
                     fontSize: 13,
-                    border: "none",
+                    border: "1px solid #111",
                     cursor: "pointer",
                     fontFamily: "'DM Sans', sans-serif",
                     transition: "background 0.2s ease",
@@ -304,43 +311,43 @@ export default function CookieBanner() {
                   Tout accepter
                 </button>
                 <button
+                  onClick={handleRefuseAll}
+                  style={{
+                    background: "white",
+                    color: "#111",
+                    borderRadius: 999,
+                    padding: "10px 24px",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    border: "1px solid #111",
+                    cursor: "pointer",
+                    fontFamily: "'DM Sans', sans-serif",
+                    transition: "background 0.2s ease",
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#F5F2EC" }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "white" }}
+                >
+                  Tout refuser
+                </button>
+                <button
                   onClick={() => setShowDetails(true)}
                   style={{
                     background: "none",
-                    border: "1px solid #EAE6DF",
-                    borderRadius: 999,
-                    padding: "8px 20px",
+                    border: "none",
+                    padding: "10px 16px",
                     fontWeight: 600,
                     fontSize: 13,
                     cursor: "pointer",
                     color: "#111",
                     fontFamily: "'DM Sans', sans-serif",
-                    transition: "border-color 0.2s ease",
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#111" }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#EAE6DF" }}
-                >
-                  Personnaliser
-                </button>
-                <button
-                  onClick={handleRefuseAll}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    padding: "8px 16px",
-                    fontWeight: 500,
-                    fontSize: 13,
-                    cursor: "pointer",
-                    color: "#8a8477",
-                    fontFamily: "'DM Sans', sans-serif",
                     textDecoration: "underline",
-                    textUnderlineOffset: 2,
+                    textUnderlineOffset: 3,
                     transition: "color 0.2s ease",
                   }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#8a8477" }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "#8a8477" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#666" }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "#111" }}
                 >
-                  Tout refuser
+                  Personnaliser
                 </button>
               </>
             ) : (
