@@ -65,15 +65,17 @@ const DEFAULT_DESC = `${BRAND.name} connecte propriétaires et locataires direct
 /**
  * Viewport export (Next 15 — separe du metadata).
  *
- * Bug v2 (Paul 2026-04-27) — User : "Y A TOUJOURS LE BUG DE QUAND C'EST
- * DEZOOMER AU MAX ON PEUT PAS SCROLLE SUR TEL".
- *
- * Le precedent `maximumScale: 5, userScalable: true` ne suffisait pas :
- * iOS Safari ignore certaines directives pour a11y. On cap maintenant
- * `minimumScale: 1` ET `maximumScale: 1` ensemble — empeche TOUT pinch
- * zoom (in OU out) qui casse le scroll. Trade-off a11y assume : les
- * malvoyants zoom-in via Settings iOS / Display Zoom systeme, pas via
- * pinch in-page.
+ * Historique :
+ *  - Bug v2 (Paul 2026-04-27) — zoom OUT cassait le scroll mobile.
+ *    Fix : minimumScale 1 + maximumScale 1 + userScalable false. Trade-off
+ *    a11y violait WCAG 1.4.4 (audit V72.5).
+ *  - V73.6 — restitution conformité WCAG 1.4.4 :
+ *      - minimumScale: 1   → bloque le zoom OUT (résout le bug scroll
+ *        cassé sans pénaliser l'a11y, le zoom out n'est jamais demandé
+ *        par les utilisateurs malvoyants)
+ *      - maximumScale: 5   → autorise le zoom IN jusqu'à 500 % (WCAG
+ *        demande au moins 200 %, on dépasse largement)
+ *      - userScalable: true → enforce le respect des directives ci-dessus
  *
  * `viewport-fit: cover` pour bonne gestion safe-area iPhone notch.
  */
@@ -81,8 +83,8 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   minimumScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
   viewportFit: 'cover',
 }
 
