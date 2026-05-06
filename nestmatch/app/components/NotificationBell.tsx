@@ -95,6 +95,29 @@ export default function NotificationBell() {
     if (n.href) router.push(n.href)
   }
 
+  // V72.2d — supprime une notif individuelle (croix × top-right de chaque card).
+  // Optimistic update + rollback si l'API échoue.
+  async function dismissNotif(id: number) {
+    const target = notifs.find(n => n.id === id)
+    setNotifs(prev => prev.filter(n => n.id !== id))
+    if (target && !target.lu) setUnreadCount(c => Math.max(0, c - 1))
+    try {
+      const res = await fetch(`/api/notifications/${id}/dismiss`, { method: "POST" })
+      if (!res.ok) {
+        // Rollback si KO
+        if (target) {
+          setNotifs(prev => [...prev, target].sort((a, b) => b.id - a.id))
+          if (!target.lu) setUnreadCount(c => c + 1)
+        }
+      }
+    } catch {
+      if (target) {
+        setNotifs(prev => [...prev, target].sort((a, b) => b.id - a.id))
+        if (!target.lu) setUnreadCount(c => c + 1)
+      }
+    }
+  }
+
   async function markAllRead() {
     // Optimistic
     setNotifs(prev => prev.map(x => ({ ...x, lu: true })))
@@ -208,20 +231,27 @@ export default function NotificationBell() {
           ) : (
             <div style={{ maxHeight: 400, overflowY: "auto" }}>
               {notifs.map(n => (
-                <button
+                /* V72.2d (point 9) — div + onClick au lieu de button pour
+                   permettre une croix × imbriquée (button-in-button = HTML
+                   invalide). role/tabIndex pour préserver la sémantique. */
+                <div
                   key={n.id}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => handleClickNotif(n)}
+                  onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleClickNotif(n) } }}
                   style={{
+                    position: "relative",
                     display: "block",
                     width: "100%",
                     textAlign: "left",
-                    padding: "12px 16px",
+                    padding: "12px 40px 12px 16px", // padding-right augmenté pour la croix
                     border: "none",
                     background: n.lu ? "white" : "#FBF6EA",
                     borderBottom: "1px solid #F7F4EF",
                     cursor: n.href ? "pointer" : "default",
                     fontFamily: "inherit",
+                    WebkitTapHighlightColor: "rgba(0,0,0,0.04)",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
@@ -238,7 +268,39 @@ export default function NotificationBell() {
                       <p style={{ fontSize: 11, color: "#8a8477", margin: "4px 0 0" }}>{timeAgo(n.created_at)}</p>
                     </div>
                   </div>
-                </button>
+                  {/* V72.2d — croix × pour supprimer. stopPropagation pour
+                      ne pas déclencher handleClickNotif (qui ouvre le href). */}
+                  <button
+                    type="button"
+                    aria-label="Supprimer cette notification"
+                    onClick={e => { e.stopPropagation(); dismissNotif(n.id) }}
+                    style={{
+                      position: "absolute",
+                      top: 8,
+                      right: 8,
+                      width: 28,
+                      height: 28,
+                      borderRadius: "50%",
+                      background: "transparent",
+                      border: "none",
+                      color: "#8a8477",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontFamily: "inherit",
+                      WebkitTapHighlightColor: "transparent",
+                      transition: "background 150ms ease, color 150ms ease",
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#F7F4EF"; (e.currentTarget as HTMLButtonElement).style.color = "#111" }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "#8a8477" }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <line x1="18" y1="6" x2="6" y2="18"/>
+                      <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
+                </div>
               ))}
             </div>
           )}
