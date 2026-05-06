@@ -11,6 +11,24 @@ import * as Sentry from "@sentry/nextjs"
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
     Sentry.captureException(error)
+    // V72.4 — incident-auto pour /admin/health. Severity 'critical' ici car
+    // global-error ne se déclenche QUE si le layout racine lui-même crash —
+    // bien plus grave qu'une erreur de page (error.tsx).
+    try {
+      fetch("/api/admin/incident-auto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: `Erreur critique layout — ${error.name || "Error"}`,
+          description: error.message + (error.stack ? `\n\n${error.stack.slice(0, 3000)}` : ""),
+          severity: "critical",
+          service: "app",
+          digest: error.digest,
+          url: typeof window !== "undefined" ? window.location.href : undefined,
+        }),
+        keepalive: true,
+      }).catch(() => { /* silent */ })
+    } catch { /* SSR safety */ }
   }, [error])
 
   return (

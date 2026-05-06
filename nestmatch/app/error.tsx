@@ -22,6 +22,25 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
 
   useEffect(() => {
     Sentry.captureException(error)
+    // V72.4 — POST best-effort vers /api/admin/incident-auto pour qu'un
+    // incident apparaisse dans /admin/health (en plus de Sentry). La route
+    // dédup via title+service sur les 30 dernières minutes pour éviter le
+    // déluge de doublons sur un bug en boucle.
+    try {
+      fetch("/api/admin/incident-auto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: `Erreur runtime — ${error.name || "Error"}`,
+          description: error.message + (error.stack ? `\n\n${error.stack.slice(0, 3000)}` : ""),
+          severity: "major",
+          service: "app",
+          digest: error.digest,
+          url: typeof window !== "undefined" ? window.location.href : undefined,
+        }),
+        keepalive: true,
+      }).catch(() => { /* silent — Sentry a déjà capturé */ })
+    } catch { /* SSR safety */ }
   }, [error])
 
   const supportSubject = encodeURIComponent(
