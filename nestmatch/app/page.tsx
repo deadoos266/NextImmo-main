@@ -1,49 +1,93 @@
-"use client"
-import { useResponsive } from "./hooks/useResponsive"
-import { useFeaturedListings } from "./components/home/useFeaturedListings"
-import Hero from "./components/home/Hero"
-import ProfilsMarquee from "./components/home/ProfilsMarquee"
-import LiveFeed from "./components/home/LiveFeed"
-import HowItWorks from "./components/home/HowItWorks"
-import MessagerieSection from "./components/home/MessagerieSection"
-import Testimonials from "./components/home/Testimonials"
-import CitiesGrid from "./components/home/CitiesGrid"
-import FinalCTA from "./components/home/FinalCTA"
+import HomeClient from "./components/home/HomeClient"
+import { fetchFeaturedListings } from "../lib/featuredListingsServer"
+import { BRAND } from "../lib/brand"
+
+const BASE_URL = process.env.NEXT_PUBLIC_URL || BRAND.url
 
 /**
- * Home KeyMatch — design system bundle, no-lies mode + premium.
+ * Home KeyMatch — V71.2 RSC migration.
  *
- * Séquence :
- *   Hero → ProfilsMarquee → LiveFeed → HowItWorks → MessagerieSection
- *   → Testimonials → CitiesGrid → FinalCTA
+ * Avant V71 : `app/page.tsx` était un Client Component complet → le HTML
+ * envoyé aux crawlers (Googlebot, GPTBot, ClaudeBot, PerplexityBot) ne
+ * contenait quasiment aucun contenu utile. Les value props et le hero
+ * étaient injectés au runtime via React, donc invisibles tant que le JS
+ * ne s'exécutait pas.
  *
- * Données :
- *   useFeaturedListings() fetche les annonces disponibles (whitelist
- *   statut = 'disponible' OR NULL) avec photos. Empty state honnête
- *   "Bientôt en ligne" + CTA /dossier si 0 résultat.
+ * Maintenant : la page est un Server Component qui :
+ *   1. Fetche les annonces vedettes côté serveur via Supabase (cache ISR
+ *      via `revalidate`).
+ *   2. Injecte un JSON-LD `WebPage` + `ItemList` riche en SSR (visible aux
+ *      crawlers IA-search dès le first byte).
+ *   3. Délègue le rendu visuel/interactif à `HomeClient` qui reçoit les
+ *      listings en props (donc rendus dès le premier paint, pas en effet
+ *      différé).
  *
- * Contenu fictif balisé :
- *   - ProfilsMarquee : 12 profils locataires fictifs (illustration diversité)
- *   - Testimonials : 3 témoignages fictifs avec eyebrow "EXEMPLE D'UTILISATION"
- *
- * Scope strict : app/page.tsx + app/components/home/* + /public/. SEO/metadata
- * dans app/layout.tsx intact. Accessibilité prefers-reduced-motion respectée
- * sur tous les auto-advance.
+ * Les sous-composants Hero / LiveFeed / etc. restent client (animations,
+ * useResponsive, useRouter…) — c'est OK : le HTML SSR émis par Next 15
+ * inclut leur markup statique initial. Ce qu'on gagne, c'est :
+ *   - Plus rapide au TTFB visible aux crawlers
+ *   - JSON-LD ItemList avec les vraies annonces du moment (pas du cache stale)
+ *   - Pas de flash "0 résultat" à l'hydration
  */
-export default function Home() {
-  const { isMobile, isTablet } = useResponsive()
-  const { listings, loading } = useFeaturedListings()
+
+// ISR — la home est régénérée toutes les 5 min côté Vercel. Compromis entre
+// fraîcheur des annonces vedettes et coût Vercel (cf. audit vercel-cost).
+export const revalidate = 300
+
+export default async function HomePage() {
+  const listings = await fetchFeaturedListings(8)
+
+  // JSON-LD WebPage + ItemList — visible aux IA-search dès le SSR.
+  // Le schema Organization + WebSite global est déjà dans `app/layout.tsx`.
+  const webPageJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${BASE_URL}/#webpage`,
+    url: BASE_URL,
+    name: `${BRAND.name} — La location entre particuliers, sans agence`,
+    description: BRAND.tagline,
+    isPartOf: { "@id": `${BASE_URL}/#website` },
+    inLanguage: "fr-FR",
+    primaryImageOfPage: { "@type": "ImageObject", url: `${BASE_URL}/og-default.png` },
+    breadcrumb: {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Accueil", item: BASE_URL },
+      ],
+    },
+  }
+
+  const itemListJsonLd = listings.length > 0 && {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Annonces vedettes KeyMatch",
+    itemListOrder: "https://schema.org/ItemListOrderDescending",
+    numberOfItems: listings.length,
+    itemListElement: listings.map((a, idx) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      url: `${BASE_URL}/annonces/${a.id}`,
+      name: a.titre || `Logement ${a.ville || "France"}`,
+    })),
+  }
 
   return (
-    <main style={{ fontFamily: "'DM Sans', sans-serif", color: "#111", background: "#F7F4EF" }}>
-      <Hero listings={listings} isMobile={isMobile} isTablet={isTablet} />
-      <ProfilsMarquee />
-      <LiveFeed listings={listings} loading={loading} isMobile={isMobile} isTablet={isTablet} />
-      <HowItWorks isMobile={isMobile} />
-      <MessagerieSection isMobile={isMobile} isTablet={isTablet} />
-      <Testimonials isMobile={isMobile} />
-      <CitiesGrid isMobile={isMobile} />
-      <FinalCTA listings={listings} isMobile={isMobile} />
-    </main>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(webPageJsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
+      {itemListJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(itemListJsonLd).replace(/</g, "\\u003c"),
+          }}
+        />
+      )}
+      <HomeClient initialListings={listings} />
+    </>
   )
 }
