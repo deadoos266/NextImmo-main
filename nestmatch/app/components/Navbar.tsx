@@ -337,7 +337,29 @@ export default function Navbar() {
   }
 
   return (
-    <nav style={{ display: hideNavMobile && isSmall ? "none" : "flex", justifyContent: "space-between", alignItems: "center", padding: isSmall ? "0 16px" : "0 48px", background: km.white, borderBottom: `1px solid ${km.line}`, position: "sticky", top: 0, zIndex: 10000, height: 72, boxShadow: "0 1px 8px rgba(0,0,0,0.05)" }}>
+    <nav style={{
+      display: hideNavMobile && isSmall ? "none" : "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: isSmall ? "0 16px" : "0 48px",
+      background: km.white,
+      borderBottom: `1px solid ${km.line}`,
+      position: "sticky",
+      top: 0,
+      zIndex: 10000,
+      height: 72,
+      boxShadow: "0 1px 8px rgba(0,0,0,0.05)",
+      // V72.1f — anti-jitter mobile : force GPU compositing pour éviter
+      // le re-layout repeint pendant le scroll iOS Safari (effet de "vibration"
+      // signalé sur les screenshots). translateZ(0) crée une couche de
+      // composition dédiée qui isole le repaint du contenu en dessous.
+      transform: "translate3d(0, 0, 0)",
+      WebkitTransform: "translate3d(0, 0, 0)",
+      willChange: "transform",
+      backfaceVisibility: "hidden",
+      WebkitBackfaceVisibility: "hidden",
+      contain: "layout style paint",
+    }}>
 
       {/* Logo */}
       <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
