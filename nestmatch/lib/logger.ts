@@ -128,53 +128,37 @@ export function createLogger(initial: LogContext = {}): Logger {
  *   - Si throw : émet log.error + done(500)
  *   - Sinon : émet log.done(response.status) à la fin
  */
-// V75.1 — overload pour faire matcher la signature retournée à ce que
-// Next.js 15 attend selon le type de route :
-//   - Route NON-dynamic (/api/cron/foo)         → (req) => Response
-//   - Route dynamic    (/api/users/[id])         → (req, ctx: { params: Promise<TParams> }) => Response
+// V75.2 — signature unique stricte SANS aucun support de params.
 //
-// Avant V75.1 : `wrapHandler` retournait toujours `(req, ctx?: {params:unknown})`
-// → Next.js inspectait l'export GET, voyait `params: unknown`, jugeait
-// invalide pour les 2 patterns, et faisait crasher le build avec :
-//   "Type '{ params: unknown; }' is not a valid type for the function's
-//    second argument."
-// (cassé depuis V69.2b 5 mai → 25 h+ de prod figée).
+// Historique :
+//  - V66.3 : `wrapHandler` accepte un handler `(req, log, ctx?)` et retourne
+//    `(req, ctx?: { params: unknown }) => Response`.
+//  - V69.2b → première utilisation sur cron `annonces-stagnantes` qui
+//    matche la signature → l'export GET hérite de
+//    `(req, ctx?: { params: unknown })`. Build OK localement à l'époque
+//    (probablement Next 14) mais cassé depuis Next 15 strict (5 mai 22h41
+//    UTC = dernier build prod figé).
+//  - V75.1 : tentative overload TypeScript pour faire varier la signature
+//    selon que le handler utilise ou non `ctx`. Échec en build Vercel : TS
+//    semble émettre la signature de l'implémentation au lieu de celle de
+//    l'overload résolu pour les `export const GET = wrapHandler(...)`.
+//  - V75.2 (ici) : signature unique sans support de params. Si une route
+//    dynamic veut wrapHandler, elle récupère ses params dans la fonction
+//    via `req.nextUrl.searchParams` ou un helper séparé.
 //
-// Maintenant : 2 overloads (sans params / avec params Promise) selon que
-// le handler utilise ou non le 3e arg ctx.
+// Next.js 15 attend pour une route NON-dynamic :
+//   `export async function GET(req): Promise<Response>` (1 arg)
+// Cette signature ci-dessous match exactement.
 
-type HandlerFnNoParams<TReq> = (req: TReq, log: Logger) => Promise<Response>
-type HandlerFnWithParams<TReq, TParams> = (
-  req: TReq,
-  log: Logger,
-  ctx: { params: Promise<TParams> },
-) => Promise<Response>
-
-// Overload 1 — handler sans ctx (cron, route plate). Retourne (req) → Response.
 export function wrapHandler<TReq extends Request = Request>(
   meta: { route: string; method: string },
-  handler: HandlerFnNoParams<TReq>,
-): (req: TReq) => Promise<Response>
-
-// Overload 2 — handler avec ctx params (route dynamic Next 15 = Promise).
-export function wrapHandler<
-  TReq extends Request = Request,
-  TParams extends Record<string, string | string[]> = Record<string, string>,
->(
-  meta: { route: string; method: string },
-  handler: HandlerFnWithParams<TReq, TParams>,
-): (req: TReq, ctx: { params: Promise<TParams> }) => Promise<Response>
-
-// Implémentation unique
-export function wrapHandler(
-  meta: { route: string; method: string },
-  handler: (req: Request, log: Logger, ctx?: { params: Promise<unknown> }) => Promise<Response>,
-) {
-  return async (req: Request, ctx?: { params: Promise<unknown> }): Promise<Response> => {
+  handler: (req: TReq, log: Logger) => Promise<Response>,
+): (req: TReq) => Promise<Response> {
+  return async (req: TReq): Promise<Response> => {
     const log = createLogger({ route: meta.route, method: meta.method })
     log.info("request received")
     try {
-      const res = await handler(req, log, ctx)
+      const res = await handler(req, log)
       log.done(res.status)
       return res
     } catch (e) {
