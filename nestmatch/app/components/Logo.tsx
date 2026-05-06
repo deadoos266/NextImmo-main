@@ -25,7 +25,10 @@ const SIZES: Record<LogoVariant, {
   footer:  { iconSize: 36, fontSize: 19, weight: 800, letterSpacing: "-0.3px", gap: 10, showText: true  },
   auth:    { iconSize: 72, fontSize: 30, weight: 900, letterSpacing: "-0.8px", gap: 14, showText: true  },
   hero:    { iconSize: 96, fontSize: 44, weight: 900, letterSpacing: "-1.2px", gap: 18, showText: true  },
-  compact: { iconSize: 40, fontSize: 16, weight: 800, letterSpacing: "-0.3px", gap: 8,  showText: false },
+  // V72.3c (point 15 user) — variant compact (mobile navbar) réduit de 40
+  // → 32 px. 40 prenait trop d'espace dans la barre 72px et donnait
+  // l'impression d'un logo "écrasant" face aux autres icônes (28-44px).
+  compact: { iconSize: 32, fontSize: 16, weight: 800, letterSpacing: "-0.3px", gap: 8,  showText: false },
   email:   { iconSize: 48, fontSize: 22, weight: 800, letterSpacing: "-0.5px", gap: 12, showText: true  },
   pdf:     { iconSize: 32, fontSize: 17, weight: 800, letterSpacing: "-0.3px", gap: 10, showText: true  },
 }
