@@ -128,20 +128,49 @@ export function createLogger(initial: LogContext = {}): Logger {
  *   - Si throw : émet log.error + done(500)
  *   - Sinon : émet log.done(response.status) à la fin
  */
-type HandlerFn<TReq, TParams> = (
+// V75.1 — overload pour faire matcher la signature retournée à ce que
+// Next.js 15 attend selon le type de route :
+//   - Route NON-dynamic (/api/cron/foo)         → (req) => Response
+//   - Route dynamic    (/api/users/[id])         → (req, ctx: { params: Promise<TParams> }) => Response
+//
+// Avant V75.1 : `wrapHandler` retournait toujours `(req, ctx?: {params:unknown})`
+// → Next.js inspectait l'export GET, voyait `params: unknown`, jugeait
+// invalide pour les 2 patterns, et faisait crasher le build avec :
+//   "Type '{ params: unknown; }' is not a valid type for the function's
+//    second argument."
+// (cassé depuis V69.2b 5 mai → 25 h+ de prod figée).
+//
+// Maintenant : 2 overloads (sans params / avec params Promise) selon que
+// le handler utilise ou non le 3e arg ctx.
+
+type HandlerFnNoParams<TReq> = (req: TReq, log: Logger) => Promise<Response>
+type HandlerFnWithParams<TReq, TParams> = (
   req: TReq,
   log: Logger,
-  ctx?: { params: TParams },
+  ctx: { params: Promise<TParams> },
 ) => Promise<Response>
 
+// Overload 1 — handler sans ctx (cron, route plate). Retourne (req) → Response.
+export function wrapHandler<TReq extends Request = Request>(
+  meta: { route: string; method: string },
+  handler: HandlerFnNoParams<TReq>,
+): (req: TReq) => Promise<Response>
+
+// Overload 2 — handler avec ctx params (route dynamic Next 15 = Promise).
 export function wrapHandler<
   TReq extends Request = Request,
-  TParams = unknown,
+  TParams extends Record<string, string | string[]> = Record<string, string>,
 >(
   meta: { route: string; method: string },
-  handler: HandlerFn<TReq, TParams>,
+  handler: HandlerFnWithParams<TReq, TParams>,
+): (req: TReq, ctx: { params: Promise<TParams> }) => Promise<Response>
+
+// Implémentation unique
+export function wrapHandler(
+  meta: { route: string; method: string },
+  handler: (req: Request, log: Logger, ctx?: { params: Promise<unknown> }) => Promise<Response>,
 ) {
-  return async (req: TReq, ctx?: { params: TParams }): Promise<Response> => {
+  return async (req: Request, ctx?: { params: Promise<unknown> }): Promise<Response> => {
     const log = createLogger({ route: meta.route, method: meta.method })
     log.info("request received")
     try {
