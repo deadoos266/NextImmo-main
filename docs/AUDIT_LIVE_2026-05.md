@@ -3,6 +3,44 @@
 Audit réel du site en production via `curl` HEAD/GET, contre les claims des
 récaps V71 → V74.
 
+## ⏱️ Update post-V75.1 (push c0fbbc3a)
+
+Le commit V75.1 (fix wrapHandler TypeScript qui bloquait le build Vercel
+depuis 25h) a été push avec succès sur `origin/main` à 22h35 UTC. Build
+Next.js local validé (✅ tous les commits V71-V74 inclus).
+
+**Re-audit live à 22h45 UTC (10 min après push)** :
+
+| URL | HTTP | État |
+|-----|------|------|
+| `/og-default.png` | 404 | ❌ TOUJOURS CASSÉ |
+| `/status` | 404 | ❌ TOUJOURS CASSÉ |
+| `/api/health/full` | 404 | ❌ TOUJOURS CASSÉ |
+| `/admin/health` | 307 → /auth | ❌ TOUJOURS CASSÉ (route admin existante prend le path) |
+| `/api/admin/incidents/create` | 404 | ❌ TOUJOURS CASSÉ |
+| `/robots.txt` body | `Allow: /` | ❌ V71.0 noindex toujours absent |
+| `/` `Age` header | encore +6 min sans baisser | Build Vercel pas re-déclenché |
+
+**Conclusion : Vercel n'a PAS redéployé après le push V75.1.**
+
+Le poll Age sur `/` montre une augmentation continue (91259s → 91562s sur
+6 min de poll = juste l'âge qui avance, pas de nouveau build qui resette).
+
+→ **Action user OBLIGATOIRE** :
+1. Aller sur https://vercel.com/[ton-org]/keymatch dashboard
+2. Vérifier le statut du deployment pour le commit `c0fbbc3a`
+3. 3 cas possibles :
+   - **Building/Queued** → patienter 1-3 min, puis re-poll
+   - **Failed** → lire logs (autre erreur TS/build à fixer)
+   - **Pas listé du tout** → webhook GitHub→Vercel cassé, à reconnecter
+4. Si nécessaire, trigger un redeploy manuel : "..." menu → Redeploy →
+   décocher "Use existing Build Cache"
+
+**Sans cette action manuelle, les 24 commits V71-V74 + V75.1 restent
+inaccessibles user.**
+
+---
+
 ## 🔴 DIAGNOSTIC PRINCIPAL — DEPLOYEMENT FIGÉ
 
 **TOUS les commits V71 → V74 (24 commits sur main) ne sont PAS en prod.**
