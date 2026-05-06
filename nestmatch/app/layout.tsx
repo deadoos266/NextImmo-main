@@ -2,8 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { DM_Sans, Fraunces } from 'next/font/google'
 import './globals.css'
 import Providers from './providers'
-import AdminBar from './components/AdminBar'
-import Navbar from './components/Navbar'
+import TopChrome from './components/TopChrome'
 import Footer from './components/Footer'
 import CookieBanner from './components/CookieBanner'
 import PWAInstallBanner from './components/PWAInstallBanner'
@@ -11,7 +10,6 @@ import ToastStack from './components/ToastStack'
 import ServiceWorkerRegister from './components/ServiceWorkerRegister'
 import ZoomGuard from './components/ZoomGuard'
 import ScrollLockReset from './components/ScrollLockReset'
-import BetaBanner from './components/BetaBanner'
 import MountedOnly from './components/MountedOnly'
 import ThemeApplier from './components/ThemeApplier'
 import HeartbeatPing from './components/HeartbeatPing'
@@ -222,16 +220,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body style={{ fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif" }} suppressHydrationWarning>
         <Providers>
           <ThemeApplier />
-          <BetaBanner />
-          <AdminBar />
-          {/* Navbar/Footer wrappés dans MountedOnly pour éliminer toute
-              possibilité de hydration mismatch (React #418) causée par
-              leurs dépendances client (useSession, useRole, useResponsive).
-              Le fallback préserve la hauteur pour éviter le CLS au mount.
-              Voir investigation /annonces?ville=Paris 2026-04-21. */}
-          <MountedOnly fallback={<div style={{ height: 72, background: "white", borderBottom: "1px solid #EAE6DF" }} aria-hidden />}>
-            <Navbar />
-          </MountedOnly>
+          {/* V74.3 — TopChrome regroupe BetaBanner + AdminBar + Navbar dans
+              un wrapper sémantique <header role="banner">. Les sticky/zIndex
+              internes restent gérés par chaque enfant (Navbar sticky 10000,
+              AdminBar sticky 10001 V73.7, BetaBanner flow normal).
+              Migration parent-sticky V75. */}
+          <TopChrome />
           {children}
           <MountedOnly>
             <Footer />
