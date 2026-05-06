@@ -602,6 +602,91 @@ function Profil() {
             entrees deja accessibles via /parametres + le menu burger user.
             On ne garde que le hub tabs unifié. */}
 
+        {/* V73.2 — Récap critères mobile (point 13 user).
+            Sur mobile, l'utilisateur voyait tomber direct sur les tabs
+            "Critères / Dossier" sans aperçu visuel de ses critères actuels.
+            Cette card synthèse résume en 4-5 lignes ce qu'il a déjà saisi,
+            avec un CTA "Modifier" qui scroll vers la section critères.
+            Desktop : non affichée (les critères sont visibles dans la
+            colonne de gauche par défaut). */}
+        {!proprietaireActive && isMobile && (
+          <div style={{
+            background: "#F7F4EF",
+            border: "1px solid #EAE6DF",
+            borderRadius: 12,
+            padding: 16,
+            marginTop: 24,
+            marginBottom: 8,
+          }}>
+            <p style={{
+              fontFamily: "'Fraunces', Georgia, serif",
+              fontStyle: "italic",
+              fontSize: 14,
+              fontWeight: 500,
+              color: "#5a5247",
+              letterSpacing: "0.05em",
+              textTransform: "uppercase" as const,
+              margin: "0 0 10px",
+            }}>
+              Mes critères de recherche
+            </p>
+            <ul style={{ listStyle: "none", padding: 0, margin: "0 0 12px", display: "flex", flexDirection: "column", gap: 4, fontSize: 14, lineHeight: 1.5, color: "#111" }}>
+              {(form.budget_min || form.budget_max) && (
+                <li><strong style={{ fontWeight: 700 }}>Budget · </strong>
+                  {form.budget_min && form.budget_max
+                    ? `${form.budget_min} – ${form.budget_max} €/mois`
+                    : form.budget_max ? `≤ ${form.budget_max} €/mois` : `≥ ${form.budget_min} €/mois`}
+                </li>
+              )}
+              {(form.surface_min || form.surface_max) && (
+                <li><strong style={{ fontWeight: 700 }}>Surface · </strong>
+                  {form.surface_min && form.surface_max
+                    ? `${form.surface_min} – ${form.surface_max} m²`
+                    : form.surface_max ? `≤ ${form.surface_max} m²` : `≥ ${form.surface_min} m²`}
+                </li>
+              )}
+              {form.ville_souhaitee && (
+                <li><strong style={{ fontWeight: 700 }}>Zone · </strong>
+                  {form.ville_souhaitee}
+                  {form.mode_localisation === "souple" ? " (élargie)" : ""}
+                </li>
+              )}
+              {form.dpe_min && (
+                <li><strong style={{ fontWeight: 700 }}>DPE min · </strong>{String(form.dpe_min).toUpperCase()}</li>
+              )}
+              {form.pieces_min && (
+                <li><strong style={{ fontWeight: 700 }}>Pièces · </strong>{form.pieces_min}+</li>
+              )}
+              {!form.budget_min && !form.budget_max && !form.surface_min && !form.surface_max && !form.ville_souhaitee && (
+                <li style={{ color: "#8a8477", fontStyle: "italic" }}>Aucun critère renseigné. Configure tes critères pour personnaliser le matching.</li>
+              )}
+            </ul>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveSection("criteres")
+                if (typeof document !== "undefined") {
+                  const el = document.getElementById("criteres")
+                  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+              }}
+              style={{
+                background: "#111",
+                color: "white",
+                border: "none",
+                borderRadius: 999,
+                padding: "8px 18px",
+                fontWeight: 700,
+                fontSize: 12,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                letterSpacing: "0.3px",
+              }}>
+              Modifier mes critères →
+            </button>
+          </div>
+        )}
+
         {/* V6.3 + V8 — Hub tabs Critères / Dossier alignees dossier-style. */}
         {!proprietaireActive && (
           <div style={{
