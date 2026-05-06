@@ -5154,13 +5154,22 @@ function MessagesInner() {
 
                 {/* Zone saisie. V4.9 — padding-bottom safe-area-inset pour
                     eviter que le composer soit mange par la bottom toolbar
-                    iOS dynamique. */}
+                    iOS dynamique.
+                    V72.1e (point 5 user) — fix transparence : wrapper opaque
+                    ET isolated stacking context pour empêcher le contenu de
+                    scroll derrière de transparaître à travers le composer
+                    sur iOS Safari (où le compositor décide parfois d'éclater
+                    les couches sans isolation). */}
                 <div style={{
                   borderTop: "1px solid #EAE6DF",
                   padding: isMobile
                     ? "12px 12px calc(14px + env(safe-area-inset-bottom, 0px))"
                     : "14px 20px 16px",
                   background: "white",
+                  position: "relative",
+                  zIndex: 5,
+                  isolation: "isolate",
+                  boxShadow: isMobile ? "0 -2px 12px rgba(0,0,0,0.04)" : "none",
                 }}>
                   {/* Chips d'actions + réponses rapides — calque handoff QuickReply L432-438.
                       Actions sémantiques en pill 999, couleurs d'accent préservées mais adoucies.
