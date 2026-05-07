@@ -2,8 +2,8 @@
 import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { IDENTITE_PATTERN } from "../../../lib/profilHelpers"
-import { km, KMButton, KMCard, KMEyebrow, KMHeading } from "../../components/ui/km"
+import { IDENTITE_PATTERN } from "../../../../lib/profilHelpers"
+import { km, KMButton, KMCard, KMEyebrow, KMHeading } from "../../../components/ui/km"
 
 /**
  * Page de gate identité. Présentée à tout user authentifié dont

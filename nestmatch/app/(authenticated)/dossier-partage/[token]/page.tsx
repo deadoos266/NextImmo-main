@@ -1,11 +1,11 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { verifyDossierToken } from "../../../lib/dossierToken"
-import { supabaseAdmin } from "../../../lib/supabase-server"
-import { displayName } from "../../../lib/privacy"
-import { BRAND } from "../../../lib/brand"
-import { formatNomComplet } from "../../../lib/profilHelpers"
-import { hashToken } from "../../../lib/dossierAccessLog"
+import { verifyDossierToken } from "../../../../lib/dossierToken"
+import { supabaseAdmin } from "../../../../lib/supabase-server"
+import { displayName } from "../../../../lib/privacy"
+import { BRAND } from "../../../../lib/brand"
+import { formatNomComplet } from "../../../../lib/profilHelpers"
+import { hashToken } from "../../../../lib/dossierAccessLog"
 import AccessLogPing from "./AccessLogPing"
 
 export const metadata = {

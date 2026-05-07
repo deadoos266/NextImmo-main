@@ -2,10 +2,10 @@
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { supabase } from "../../lib/supabase"
-import CityAutocomplete from "../components/CityAutocomplete"
-import { useResponsive } from "../hooks/useResponsive"
-import { km, KMButton, KMButtonOutline, KMCard, KMChip, KMEyebrow, KMHeading } from "../components/ui/km"
+import { supabase } from "../../../lib/supabase"
+import CityAutocomplete from "../../components/CityAutocomplete"
+import { useResponsive } from "../../hooks/useResponsive"
+import { km, KMButton, KMButtonOutline, KMCard, KMChip, KMEyebrow, KMHeading } from "../../components/ui/km"
 
 /**
  * Onboarding 3 étapes pour les nouveaux locataires.

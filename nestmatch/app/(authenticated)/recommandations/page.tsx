@@ -3,10 +3,10 @@ import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { supabase } from "../../lib/supabase"
-import { calculerScore, estExclu } from "../../lib/matching"
-import { useResponsive } from "../hooks/useResponsive"
-import { km, KMEyebrow, KMHeading, KMCard, KMMatchRing } from "../components/ui/km"
+import { supabase } from "../../../lib/supabase"
+import { calculerScore, estExclu } from "../../../lib/matching"
+import { useResponsive } from "../../hooks/useResponsive"
+import { km, KMEyebrow, KMHeading, KMCard, KMMatchRing } from "../../components/ui/km"
 
 /**
  * Recommandations de villes basées sur les critères du locataire.

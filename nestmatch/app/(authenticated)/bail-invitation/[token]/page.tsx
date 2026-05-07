@@ -4,8 +4,8 @@ import { useEffect, useState, use as usePromise } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useSession, signIn } from "next-auth/react"
 import Link from "next/link"
-import { km } from "../../components/ui/km"
-import { Z_INDEX } from "../../../lib/zIndex"
+import { km } from "../../../components/ui/km"
+import { Z_INDEX } from "../../../../lib/zIndex"
 
 interface InvitationData {
   id: string
