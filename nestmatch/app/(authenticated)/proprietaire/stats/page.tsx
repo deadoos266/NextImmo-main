@@ -3,13 +3,13 @@ import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { supabase } from "../../../lib/supabase"
+import { supabase } from "../../../../lib/supabase"
 import { Suspense } from "react"
 // jsPDF lazy-loaded pour alleger le bundle initial (voir genererQuittancePDF)
-import { useResponsive } from "../../hooks/useResponsive"
-import LocataireEmailField from "../../components/LocataireEmailField"
-import { BRAND } from "../../../lib/brand"
-import { drawLogoPDF } from "../../../lib/brandPDF"
+import { useResponsive } from "../../../hooks/useResponsive"
+import LocataireEmailField from "../../../components/LocataireEmailField"
+import { BRAND } from "../../../../lib/brand"
+import { drawLogoPDF } from "../../../../lib/brandPDF"
 
 // ─── SVG Bar Chart ──────────────────────────────────────────────────────────
 

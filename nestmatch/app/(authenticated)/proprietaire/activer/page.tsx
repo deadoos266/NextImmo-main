@@ -2,9 +2,9 @@
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { supabase } from "../../../lib/supabase"
-import { useRole } from "../../providers"
-import { km, KMButton, KMButtonText, KMCard, KMEyebrow, KMHeading } from "../../components/ui/km"
+import { supabase } from "../../../../lib/supabase"
+import { useRole } from "../../../providers"
+import { km, KMButton, KMButtonText, KMCard, KMEyebrow, KMHeading } from "../../../components/ui/km"
 
 export default function ActiverProprietaire() {
   const { data: session, status } = useSession()

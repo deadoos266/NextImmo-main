@@ -1,9 +1,9 @@
 "use client"
 import { useState } from "react"
 import Link from "next/link"
-import { useResponsive } from "../../hooks/useResponsive"
-import { km, KMCard, KMEyebrow, KMHeading, KMButton } from "../../components/ui/km"
-import CityAutocomplete from "../../components/CityAutocomplete"
+import { useResponsive } from "../../../hooks/useResponsive"
+import { km, KMCard, KMEyebrow, KMHeading, KMButton } from "../../../components/ui/km"
+import CityAutocomplete from "../../../components/CityAutocomplete"
 import MarketRentHint from "../ajouter/MarketRentHint"
 
 /**

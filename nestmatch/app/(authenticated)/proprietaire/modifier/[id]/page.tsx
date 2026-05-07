@@ -3,22 +3,22 @@ import { useSession } from "next-auth/react"
 import { useState, useRef, useEffect } from "react"
 import dynamic from "next/dynamic"
 import { useRouter, useParams } from "next/navigation"
-import { supabase } from "../../../../lib/supabase"
-import { validateImage } from "../../../../lib/fileValidation"
-import { useResponsive } from "../../../hooks/useResponsive"
-import LocataireEmailField from "../../../components/LocataireEmailField"
-import CityAutocomplete from "../../../components/CityAutocomplete"
-import AddressAutocomplete from "../../../components/AddressAutocomplete"
+import { supabase } from "../../../../../lib/supabase"
+import { validateImage } from "../../../../../lib/fileValidation"
+import { useResponsive } from "../../../../hooks/useResponsive"
+import LocataireEmailField from "../../../../components/LocataireEmailField"
+import CityAutocomplete from "../../../../components/CityAutocomplete"
+import AddressAutocomplete from "../../../../components/AddressAutocomplete"
 import MarketRentHint from "../../ajouter/MarketRentHint"
-import Tooltip from "../../../components/Tooltip"
+import Tooltip from "../../../../components/Tooltip"
 
-import { Toggle, Sec, F } from "../../../components/FormHelpers"
-import Lightbox from "../../../components/ui/Lightbox"
+import { Toggle, Sec, F } from "../../../../components/FormHelpers"
+import Lightbox from "../../../../components/ui/Lightbox"
 
 // ImageCropModal lazy : embarque react-easy-crop (~50 kB minified). La modale
 // n'apparaît qu'au clic sur "recadrer" → évite de le charger d'emblée.
 // Audit perf #3.
-const ImageCropModal = dynamic(() => import("../../../components/ui/ImageCropModal"), {
+const ImageCropModal = dynamic(() => import("../../../../components/ui/ImageCropModal"), {
   ssr: false,
 })
 
@@ -32,7 +32,7 @@ const DPE_VALUES = ["A", "B", "C", "D", "E", "F", "G", "Non renseigné"] as cons
 
 // R10.6 — équipements étendus (stockés dans jsonb equipements_extras).
 // Source unique de vérité partagée — cf lib/equipements.ts
-import { EQUIP_EXTRAS_GROUPS } from "../../../../lib/equipements"
+import { EQUIP_EXTRAS_GROUPS } from "../../../../../lib/equipements"
 
 export default function ModifierBien() {
   const { data: session, status } = useSession()

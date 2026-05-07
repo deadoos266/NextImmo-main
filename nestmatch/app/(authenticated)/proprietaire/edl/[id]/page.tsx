@@ -3,12 +3,12 @@ import { useSession } from "next-auth/react"
 import { useEffect, useState, useRef } from "react"
 import { useRouter, useParams, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { supabase } from "../../../../lib/supabase"
-import { validateImage } from "../../../../lib/fileValidation"
-import { useResponsive } from "../../../hooks/useResponsive"
-import { BRAND } from "../../../../lib/brand"
-import { drawLogoPDF } from "../../../../lib/brandPDF"
-import { postNotif } from "../../../../lib/notificationsClient"
+import { supabase } from "../../../../../lib/supabase"
+import { validateImage } from "../../../../../lib/fileValidation"
+import { useResponsive } from "../../../../hooks/useResponsive"
+import { BRAND } from "../../../../../lib/brand"
+import { drawLogoPDF } from "../../../../../lib/brandPDF"
+import { postNotif } from "../../../../../lib/notificationsClient"
 // jsPDF lazy-loaded pour alleger le bundle initial (voir genererEdlPDF)
 
 // ─── Types & Config ─────────────────────────────────────────────────────────

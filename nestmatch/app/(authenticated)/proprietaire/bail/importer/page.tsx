@@ -4,8 +4,8 @@ import { useState, FormEvent, ReactNode, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
-import { km } from "../../../components/ui/km"
-import { supabase } from "../../../../lib/supabase"
+import { km } from "../../../../components/ui/km"
+import { supabase } from "../../../../../lib/supabase"
 
 interface ImporterForm {
   titre: string
@@ -220,7 +220,7 @@ function ImporterBailPageInner() {
           const proprio = (session?.user?.email || "").toLowerCase().replace(/[^a-z0-9]/g, "_")
           const path = `${proprio}/import-${Date.now()}.pdf`
           // Note : import dynamique pour ne pas bundler supabase si non utilisé.
-          const { supabase } = await import("../../../../lib/supabase")
+          const { supabase } = await import("../../../../../lib/supabase")
           const { error: upErr } = await supabase.storage.from("baux").upload(path, pdfFile, {
             contentType: "application/pdf",
             upsert: false,

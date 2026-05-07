@@ -3,30 +3,30 @@ import { useSession } from "next-auth/react"
 import { useState, useRef, useEffect, ReactNode } from "react"
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
-import { supabase } from "../../../lib/supabase"
-import { validateImage } from "../../../lib/fileValidation"
-import { computeQualiteAnnonce } from "../../../lib/qualiteAnnonce"
-import { useResponsive } from "../../hooks/useResponsive"
-import LocataireEmailField from "../../components/LocataireEmailField"
-import CityAutocomplete from "../../components/CityAutocomplete"
-import AddressAutocomplete from "../../components/AddressAutocomplete"
-import Tooltip from "../../components/Tooltip"
+import { supabase } from "../../../../lib/supabase"
+import { validateImage } from "../../../../lib/fileValidation"
+import { computeQualiteAnnonce } from "../../../../lib/qualiteAnnonce"
+import { useResponsive } from "../../../hooks/useResponsive"
+import LocataireEmailField from "../../../components/LocataireEmailField"
+import CityAutocomplete from "../../../components/CityAutocomplete"
+import AddressAutocomplete from "../../../components/AddressAutocomplete"
+import Tooltip from "../../../components/Tooltip"
 import MarketRentHint from "./MarketRentHint"
 
-import { Toggle, F } from "../../components/FormHelpers"
-import { km, KMButton, KMButtonOutline, KMEyebrow, KMHeading } from "../../components/ui/km"
-import { StepBar } from "../../components/ui/StepBar"
-import Lightbox from "../../components/ui/Lightbox"
+import { Toggle, F } from "../../../components/FormHelpers"
+import { km, KMButton, KMButtonOutline, KMEyebrow, KMHeading } from "../../../components/ui/km"
+import { StepBar } from "../../../components/ui/StepBar"
+import Lightbox from "../../../components/ui/Lightbox"
 // Source unique de vérité partagée avec la fiche locataire (popup
 // EquipementsModal). Ne PAS dupliquer cette liste — toute évolution dans
 // les groupes (ajout, retrait, renommage) doit se faire dans
 // `lib/equipements.ts` et apparaîtra automatiquement côté proprio + locataire.
-import { EQUIP_EXTRAS_GROUPS } from "../../../lib/equipements"
+import { EQUIP_EXTRAS_GROUPS } from "../../../../lib/equipements"
 
 // ImageCropModal lazy : embarque react-easy-crop (~50 kB minified). La modale
 // n'apparaît qu'au clic sur "recadrer" → on évite de le charger d'emblée
 // lors de la création d'annonce. Audit perf #3.
-const ImageCropModal = dynamic(() => import("../../components/ui/ImageCropModal"), {
+const ImageCropModal = dynamic(() => import("../../../components/ui/ImageCropModal"), {
   ssr: false,
 })
 

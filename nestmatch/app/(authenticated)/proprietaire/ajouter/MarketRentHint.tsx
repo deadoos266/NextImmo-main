@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useState } from "react"
-import { estimerLoyerMarche } from "../../../lib/marketRent"
+import { estimerLoyerMarche } from "../../../../lib/marketRent"
 
 /**
  * Affiche une estimation du loyer de marché (médiane + fourchette min-max)
