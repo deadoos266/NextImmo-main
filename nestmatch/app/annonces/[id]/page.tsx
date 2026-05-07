@@ -116,7 +116,12 @@ function deduirePointsForts(a: Record<string, unknown>): string[] {
 
 export async function generateMetadata({ params }: any): Promise<Metadata> {
   const { id } = await params
-  const { data: annonce } = await supabase.from("annonces").select("titre,description,ville,prix,surface,pieces,photos,is_test").eq("id", id).single()
+  // V78.2 — étendu pour OG immo specifics (chambres, salles_de_bain).
+  const { data: annonce } = await supabase
+    .from("annonces")
+    .select("titre,description,ville,prix,surface,pieces,chambres,salles_de_bain,photos,is_test")
+    .eq("id", id)
+    .single()
 
   // Annonce flaguée test = traitée comme introuvable côté public (pas de
   // metadata SEO, pas d'OG image). Le proprio voit toujours sa fiche via
@@ -148,6 +153,30 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
     ? [{ url: photo, width: 1200, height: 630, alt: titre }]
     : undefined
 
+  // V78.2 — OG immobilier specifics (audit V72.5 schema 21/30 → 28/30).
+  // Tags property:* facilitent l'unfurling Facebook + LinkedIn pour les
+  // listings immo. Pas standardisés W3C mais reconnus par les principaux
+  // crawlers sociaux (cf https://developers.facebook.com/docs/sharing/webmasters).
+  const ogImmoMeta: Record<string, string> = {}
+  if (typeof annonce.prix === "number" && annonce.prix > 0) {
+    ogImmoMeta["property:price:amount"] = String(annonce.prix)
+    ogImmoMeta["property:price:currency"] = "EUR"
+  }
+  if (typeof annonce.surface === "number" && annonce.surface > 0) {
+    ogImmoMeta["property:area:size"] = String(annonce.surface)
+    ogImmoMeta["property:area:unit"] = "sqm"
+  }
+  if (typeof annonce.pieces === "number" && annonce.pieces > 0) {
+    ogImmoMeta["property:rooms"] = String(annonce.pieces)
+  }
+  if (typeof annonce.chambres === "number" && annonce.chambres > 0) {
+    ogImmoMeta["property:bedrooms"] = String(annonce.chambres)
+  }
+  if (typeof annonce.salles_de_bain === "number" && annonce.salles_de_bain > 0) {
+    ogImmoMeta["property:bathrooms"] = String(annonce.salles_de_bain)
+  }
+  if (annonce.ville) ogImmoMeta["property:locality"] = String(annonce.ville)
+
   return {
     title,
     description,
@@ -167,6 +196,7 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
       description,
       ...(photo ? { images: [photo] } : {}),
     },
+    other: ogImmoMeta,
   }
 }
 
@@ -344,6 +374,33 @@ export default async function Annonce({ params }: any) {
     ...(amenities.length > 0 ? { amenityFeature: amenities } : {}),
     ...(typeof annonce.animaux === "boolean" ? { petsAllowed: annonce.animaux } : {}),
     ...(annonce.dpe ? { energyEfficiencyScaleMin: annonce.dpe, energyEfficiencyScaleMax: annonce.dpe } : {}),
+    // V78.2 — propriétés enrichies Schema.org RealEstateListing :
+    //  - floorLevel : étage (utile rich snippet Google Real Estate)
+    //  - tourBookingPage : URL de la fiche pour booking de visite
+    //  - leaseLength : durée standard bail nu 36 mois (loi 89-462) ou
+    //    meublé 12 mois (loi ALUR 2014). On déduit du flag annonce.meuble.
+    ...(annonce.etage != null && annonce.etage !== ""
+      ? { floorLevel: String(annonce.etage) }
+      : {}),
+    ...(annonce.salles_de_bain
+      ? { numberOfBathroomsTotal: annonce.salles_de_bain }
+      : {}),
+    ...(typeof annonce.meuble === "boolean"
+      ? {
+          // Schema.org n'a pas de booléen "furnished" dédié — on l'expose
+          // via amenityFeature ET via leaseLength qui dépend du meublé.
+          leaseLength: {
+            "@type": "QuantitativeValue",
+            value: annonce.meuble ? 12 : 36,
+            unitCode: "MON",
+            unitText: "Mois",
+          },
+        }
+      : {}),
+    ...(annonce.date_dispo
+      ? { availabilityStarts: annonce.date_dispo }
+      : {}),
+    tourBookingPage: `${BASE_URL}/annonces/${id}`,
   }
 
   // BreadcrumbList : aide Google à afficher le fil d'Ariane dans les SERP.
