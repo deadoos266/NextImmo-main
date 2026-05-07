@@ -91,6 +91,10 @@ function checkAuth(): ServiceCheck {
 }
 
 async function checkEmail(): Promise<ServiceCheck> {
+  // V76.2b — diagnostic email enrichi avec catégorisation des erreurs
+  // (configuration_missing / auth_failed / rate_limited / network_error /
+  // slow). Le user voit dans /admin/health la cause précise au lieu d'un
+  // simple "down" générique.
   const t0 = performance.now()
   const key = process.env.RESEND_API_KEY
   if (!key) {
@@ -98,7 +102,17 @@ async function checkEmail(): Promise<ServiceCheck> {
       service: "email",
       status: "down",
       latency_ms: Math.round(performance.now() - t0),
-      error: "RESEND_API_KEY absent",
+      error: "configuration_missing: RESEND_API_KEY absent côté Vercel env vars (Settings → Environment Variables)",
+    }
+  }
+  // Sanity check format basique avant de faire un round-trip réseau.
+  // Resend keys ressemblent à `re_xxxxx_xxxxxxxxx` (préfixe + segments).
+  if (!key.startsWith("re_") || key.length < 20) {
+    return {
+      service: "email",
+      status: "down",
+      latency_ms: Math.round(performance.now() - t0),
+      error: "configuration_missing: RESEND_API_KEY format invalide (doit commencer par 're_' et faire ≥20 chars)",
     }
   }
   try {
@@ -114,21 +128,46 @@ async function checkEmail(): Promise<ServiceCheck> {
     clearTimeout(timer)
     const latency = Math.round(performance.now() - t0)
     if (res.status === 401 || res.status === 403) {
-      return { service: "email", status: "down", latency_ms: latency, error: `Resend ${res.status}` }
+      return {
+        service: "email",
+        status: "down",
+        latency_ms: latency,
+        error: `auth_failed: Resend HTTP ${res.status} — clé invalide ou révoquée. Régénérer sur https://resend.com/api-keys et update Vercel env`,
+      }
+    }
+    if (res.status === 429) {
+      return {
+        service: "email",
+        status: "degraded",
+        latency_ms: latency,
+        error: "rate_limited: Resend HTTP 429 — quota plan dépassé. Check usage sur dashboard Resend",
+      }
+    }
+    if (res.status >= 500 && res.status < 600) {
+      return {
+        service: "email",
+        status: "down",
+        latency_ms: latency,
+        error: `resend_server_error: HTTP ${res.status} — incident côté Resend. Check https://status.resend.com`,
+      }
     }
     if (!res.ok) {
-      return { service: "email", status: "degraded", latency_ms: latency, error: `Resend HTTP ${res.status}` }
+      return { service: "email", status: "degraded", latency_ms: latency, error: `unknown_http: Resend HTTP ${res.status}` }
     }
     if (latency > 2000) {
-      return { service: "email", status: "degraded", latency_ms: latency, error: "Resend slow >2000ms" }
+      return { service: "email", status: "degraded", latency_ms: latency, error: `slow: ${latency}ms (seuil 2000ms)` }
     }
     return { service: "email", status: "up", latency_ms: latency, error: null }
   } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    const isAbort = msg.includes("abort") || msg.includes("timeout")
     return {
       service: "email",
       status: "down",
       latency_ms: Math.round(performance.now() - t0),
-      error: e instanceof Error ? e.message : String(e),
+      error: isAbort
+        ? "network_error: timeout >4s sur api.resend.com (réseau Vercel ou Resend)"
+        : `network_error: ${msg}`,
     }
   }
 }
