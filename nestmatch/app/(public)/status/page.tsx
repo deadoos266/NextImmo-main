@@ -1,4 +1,4 @@
-import { fetchIncidents, fetchServicesUptime, fetchTimeline30d, SERVICES, type ServiceName } from "../../lib/statusAggregation"
+import { fetchIncidents, fetchServicesUptime, fetchTimeline30d, SERVICES, type ServiceName } from "../../../lib/statusAggregation"
 import StatusAutoRefresh from "./StatusAutoRefresh"
 
 /**

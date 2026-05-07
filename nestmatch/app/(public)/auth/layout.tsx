@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { BRAND } from "../../lib/brand"
+import { BRAND } from "../../../lib/brand"
 
 export const metadata: Metadata = {
   title: "Connexion / Inscription",

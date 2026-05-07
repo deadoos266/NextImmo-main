@@ -1,6 +1,6 @@
-import HomeClient from "./components/home/HomeClient"
-import { fetchFeaturedListings } from "../lib/featuredListingsServer"
-import { BRAND } from "../lib/brand"
+import HomeClient from "../components/home/HomeClient"
+import { fetchFeaturedListings } from "../../lib/featuredListingsServer"
+import { BRAND } from "../../lib/brand"
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || BRAND.url
 

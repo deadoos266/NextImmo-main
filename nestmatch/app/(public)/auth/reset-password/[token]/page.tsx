@@ -2,7 +2,7 @@
 import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { km, KMButton, KMCard, KMEyebrow, KMHeading } from "../../../components/ui/km"
+import { km, KMButton, KMCard, KMEyebrow, KMHeading } from "../../../../components/ui/km"
 
 export default function ResetPasswordPage() {
   const params = useParams<{ token: string }>()

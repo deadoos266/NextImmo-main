@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { LegalMain, LegalSec, LegalNotice, legalStyles as S } from "../components/legal"
+import { LegalMain, LegalSec, LegalNotice, legalStyles as S } from "../../components/legal"
 
 export const metadata = {
   title: "Mentions légales",

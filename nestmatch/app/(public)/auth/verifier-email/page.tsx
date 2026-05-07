@@ -1,7 +1,7 @@
 "use client"
 import { Suspense, useState, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { km, KMButton, KMCard, KMEyebrow, KMHeading } from "../../components/ui/km"
+import { km, KMButton, KMCard, KMEyebrow, KMHeading } from "../../../components/ui/km"
 
 /**
  * Page de confirmation d'email avec code OTP 6 chiffres.
