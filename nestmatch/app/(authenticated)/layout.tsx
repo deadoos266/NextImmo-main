@@ -1,40 +1,40 @@
+import TopChrome from "../components/TopChrome"
+import Footer from "../components/Footer"
+import MountedOnly from "../components/MountedOnly"
+import BottomNavMobile from "../components/BottomNavMobile"
+
 /**
- * V77.1 — layout segment des pages authentifiées (route group `(authenticated)`).
+ * V80.2 — chrome scoping pour les pages authentifiées.
  *
- * Status d'adoption :
- *  - V77.1 (ici) : layout créé en passthrough. AUCUNE page déplacée
- *    encore. Layout root `app/layout.tsx` reste seul actif pour ne pas
- *    casser la prod (toutes les pages auth sont sous app/profil, app/messages,
- *    app/admin, etc. directement à la racine du dossier app).
- *  - V78 prévu : déplacer profil/, dossier/, messages/, mon-logement/,
- *    proprietaire/, admin/, recherches-sauvegardees/ ici. Et activer
- *    TopChrome + BottomNavMobile de manière scopée à ce segment au lieu
- *    du layout root (élimine le besoin de conditionner ces composants
- *    selon le pathname).
+ * Apporte le chrome complet (TopChrome au top + BottomNavMobile en bas
+ * sur mobile + Footer) aux pages sous app/(authenticated)/. Les pages
+ * publiques (sous app/(public)/) ont leur propre layout avec un chrome
+ * marketing simplifié — pas de TopChrome admin, pas de BottomNav.
  *
- * À ce moment-là, ce fichier deviendra :
+ * TopChrome regroupe BetaBanner + AdminBar + Navbar (V74.3). Chaque enfant
+ * garde son sticky/zIndex propre (Navbar 10000, AdminBar 10001, Beta flow).
  *
- *   import TopChrome from "../components/TopChrome"
- *   import BottomNavMobile from "../components/BottomNavMobile"
- *   import MountedOnly from "../components/MountedOnly"
+ * BottomNavMobile :
+ *  - Auto-hide quand thread messages mobile actif (event km:thread-mobile-open)
+ *  - Auto-hide quand drawer burger ouvert
+ *  - Auto-hide sur viewport desktop (CSS media query)
+ *  - 5 tabs role-aware (locataire/proprio) — V73.9
+ *  - Wrappé dans MountedOnly pour éviter hydration mismatch (dépend de
+ *    useSession + useResponsive + useRole client-only)
  *
- *   export default function AuthenticatedLayout({ children }) {
- *     return (
- *       <>
- *         <TopChrome />
- *         {children}
- *         <MountedOnly>
- *           <BottomNavMobile />
- *         </MountedOnly>
- *       </>
- *     )
- *   }
- *
- * Et `app/layout.tsx` racine retire TopChrome + BottomNavMobile (qui ne
- * sont plus utiles sur les pages publiques).
- *
- * Pour cette V77, passthrough strict pour ne RIEN changer en prod.
+ * Footer : wrappé MountedOnly pour la même raison (dépendances client).
  */
 export default function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+  return (
+    <>
+      <TopChrome />
+      {children}
+      <MountedOnly>
+        <Footer />
+      </MountedOnly>
+      <MountedOnly>
+        <BottomNavMobile />
+      </MountedOnly>
+    </>
+  )
 }

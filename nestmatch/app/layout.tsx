@@ -2,20 +2,25 @@ import type { Metadata, Viewport } from 'next'
 import { DM_Sans, Fraunces } from 'next/font/google'
 import './globals.css'
 import Providers from './providers'
-import TopChrome from './components/TopChrome'
-import Footer from './components/Footer'
 import CookieBanner from './components/CookieBanner'
 import PWAInstallBanner from './components/PWAInstallBanner'
 import ToastStack from './components/ToastStack'
 import ServiceWorkerRegister from './components/ServiceWorkerRegister'
 import ZoomGuard from './components/ZoomGuard'
 import ScrollLockReset from './components/ScrollLockReset'
-import MountedOnly from './components/MountedOnly'
 import ThemeApplier from './components/ThemeApplier'
 import HeartbeatPing from './components/HeartbeatPing'
-import BottomNavMobile from './components/BottomNavMobile'
 import { BRAND } from '../lib/brand'
 import { NO_INDEX } from '../lib/featureFlags'
+
+// V80.2 — chrome scoping :
+//  - TopChrome (BetaBanner + AdminBar + Navbar) déplacé dans
+//    app/(authenticated)/layout.tsx (pages auth uniquement)
+//  - BottomNavMobile déplacé dans (authenticated)/layout.tsx aussi
+//  - Footer déplacé dans (public)/layout.tsx (page marketing uniquement)
+//  - Layout root garde uniquement les éléments GLOBAUX qui DOIVENT
+//    apparaître sur toutes les pages (cookies banner RGPD, theme,
+//    toasts, service worker, scroll lock, heartbeat, etc.)
 
 const BASE_URL = process.env.NEXT_PUBLIC_URL || BRAND.url
 
@@ -220,16 +225,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body style={{ fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif" }} suppressHydrationWarning>
         <Providers>
           <ThemeApplier />
-          {/* V74.3 — TopChrome regroupe BetaBanner + AdminBar + Navbar dans
-              un wrapper sémantique <header role="banner">. Les sticky/zIndex
-              internes restent gérés par chaque enfant (Navbar sticky 10000,
-              AdminBar sticky 10001 V73.7, BetaBanner flow normal).
-              Migration parent-sticky V75. */}
-          <TopChrome />
+          {/* V80.2 — children inclut le route group layout choisi par
+              segment : (public)/layout.tsx pour pages marketing/légal/auth,
+              (authenticated)/layout.tsx pour pages avec session. Chaque
+              segment monte son propre chrome (TopChrome+BottomNav pour auth,
+              header simplifié+footer marketing pour public). */}
           {children}
-          <MountedOnly>
-            <Footer />
-          </MountedOnly>
+          {/* Globaux RGPD + UX qui DOIVENT s'afficher sur toutes les pages
+              (cookies banner, toasts, theme, service worker, scroll lock,
+              heartbeat, zoom guard) — peu importe public ou auth. */}
           <CookieBanner />
           <PWAInstallBanner />
           <ToastStack />
@@ -238,11 +242,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ScrollLockReset />
           {/* V59.1 — heartbeat 60s pour détecter "online" status (anti-spam emails messages) */}
           <HeartbeatPing />
-          {/* V73.9 — bottom navigation mobile (auto-hide desktop + threads
-              mobile + drawer ouvert + /admin/auth pages). */}
-          <MountedOnly>
-            <BottomNavMobile />
-          </MountedOnly>
         </Providers>
       </body>
     </html>

@@ -149,13 +149,20 @@ export default function BottomNavMobile() {
     }
   }, [session?.user?.email])
 
-  // Hide conditions
+  // V80.2 — hide conditions simplifiées : BottomNavMobile est maintenant
+  // scopé à app/(authenticated)/layout.tsx (route group). Les pages
+  // publiques (/auth, /connexion, /login, /cgu, etc.) sont dans (public)/
+  // et n'ont jamais BottomNav rendu — plus besoin de les filtrer ici.
+  // Garde uniquement les conditions UX intra-auth :
+  //  - desktop : pas de bottom nav (CSS-only via useResponsive)
+  //  - thread mobile actif : laisser place au composer messages
+  //  - drawer ouvert : éviter overlap visuel
+  //  - admin : décision UX (admin n'a pas besoin de tabs locataire/proprio)
   if (!isMobile) return null
   if (!session?.user) return null
   if (threadOpen) return null
   if (drawerOpen) return null
   if (pathname.startsWith("/admin")) return null
-  if (pathname.startsWith("/auth") || pathname.startsWith("/connexion") || pathname.startsWith("/login")) return null
 
   const tabs = proprietaireActive ? TABS_PROPRIO : TABS_LOCATAIRE
 

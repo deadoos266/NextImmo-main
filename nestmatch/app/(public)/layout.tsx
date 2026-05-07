@@ -1,25 +1,33 @@
+import TopChrome from "../components/TopChrome"
+import Footer from "../components/Footer"
+import MountedOnly from "../components/MountedOnly"
+
 /**
- * V77.1 — layout segment des pages publiques (route group `(public)`).
+ * V80.2 — chrome scoping pour les pages publiques.
  *
- * Le route group `(public)` est invisible dans les URLs (parens). Toute
- * page placée dans `app/(public)/foo/page.tsx` est servie à `/foo`.
+ * Décision pragmatique : on conserve TopChrome (qui inclut Navbar) sur les
+ * pages publiques aussi. La Navbar est déjà auth-aware (affiche
+ * "Connexion / S'inscrire" si pas de session, menu user si connecté). Pas
+ * besoin d'un header simplifié séparé qui dupliquerait la logique brand
+ * KeyMatch + locale + responsive + theme switch.
  *
- * Status d'adoption :
- *  - V77.1 (ici) : layout créé, mais AUCUNE page n'est encore déplacée
- *    dans ce route group. Layout root `app/layout.tsx` reste seul actif
- *    pour ne pas casser la prod.
- *  - V78 prévu : déplacer page.tsx (home), connexion/, auth/, cgu/,
- *    mentions-legales/, confidentialite/, status/, annonces/ ici.
+ * Différences avec (authenticated)/layout.tsx :
+ *  - PAS de BottomNavMobile (pas de tabs auth sur les pages publiques)
+ *  - Footer présent (déjà optimisé public/marketing)
+ *  - AdminBar dans TopChrome auto-hide si pas admin (self-conditioned)
  *
- * Strategy "passthrough" pour le moment : ce layout ne fait QUE rendre
- * les children. Le vrai chrome (TopChrome, Footer, banners cookies)
- * reste dans `app/layout.tsx` racine — il s'applique à tous les segments.
- *
- * Lors de la migration V78 effective, ce fichier devra prendre en charge
- * un header simplifié (logo + CTA "Connexion / S'inscrire") + footer
- * marketing avec liens légaux. La sidebar et bottom nav restent dans
- * `(authenticated)/layout.tsx` qui aura un chrome plus chargé.
+ * Évolution future possible (V81+) : si besoin d'un vrai header marketing
+ * dédié (full-bleed hero, pas de search bar, etc.), créer un
+ * <PublicTopChrome /> distinct ici. Pour l'instant TopChrome polyvalent suffit.
  */
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+  return (
+    <>
+      <TopChrome />
+      {children}
+      <MountedOnly>
+        <Footer />
+      </MountedOnly>
+    </>
+  )
 }
