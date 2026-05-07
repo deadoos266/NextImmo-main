@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useState, useCallback } from "react"
-import GatedAction from "../components/ui/GatedAction"
+import GatedAction from "../../components/ui/GatedAction"
 
 /**
  * Panneau de partage : génère et gère des liens sécurisés (7 jours par défaut)

@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
-import { EQUIP_EXTRAS_GROUPS, type EquipementKey } from "../../lib/equipements"
+import { EQUIP_EXTRAS_GROUPS, type EquipementKey } from "../../../lib/equipements"
 import { T } from "./dossierTheme"
 
 interface Props {

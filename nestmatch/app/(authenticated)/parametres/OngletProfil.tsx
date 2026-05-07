@@ -1,9 +1,9 @@
 "use client"
 import { useEffect, useRef, useState } from "react"
 import { useSession } from "next-auth/react"
-import { supabase } from "../../lib/supabase"
-import PhoneInput from "../components/PhoneInput"
-import HelpIcon, { PhoneHelpContent } from "../components/ui/HelpIcon"
+import { supabase } from "../../../lib/supabase"
+import PhoneInput from "../../components/PhoneInput"
+import HelpIcon, { PhoneHelpContent } from "../../components/ui/HelpIcon"
 
 /**
  * Onglet Profil : photo avatar + bio publique + telephone (Paul 2026-04-27).

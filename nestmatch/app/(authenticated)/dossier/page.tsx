@@ -3,11 +3,11 @@ import { useSession } from "next-auth/react"
 import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
-import { supabase } from "../../lib/supabase"
-import { validateDocument } from "../../lib/fileValidation"
-import Tooltip from "../components/Tooltip"
-import PhoneInput from "../components/PhoneInput"
-import HelpIcon, { PhoneHelpContent } from "../components/ui/HelpIcon"
+import { supabase } from "../../../lib/supabase"
+import { validateDocument } from "../../../lib/fileValidation"
+import Tooltip from "../../components/Tooltip"
+import PhoneInput from "../../components/PhoneInput"
+import HelpIcon, { PhoneHelpContent } from "../../components/ui/HelpIcon"
 
 // Lazy : SharePanel + AccessLogPanel sont en bas de la page (after upload form),
 // 99 % des users ne scrollent pas jusqu'en bas avant plusieurs jours.
@@ -20,11 +20,11 @@ const AccessLogPanel = dynamic(() => import("./AccessLogPanel"), {
   ssr: false,
   loading: () => <div style={{ height: 120 }} aria-hidden="true" />,
 })
-import UndoToast from "../components/ui/UndoToast"
-import { useUndo } from "../components/ui/useUndo"
-import DocRowSkeleton from "../components/ui/DocRowSkeleton"
-import { useRole } from "../providers"
-import { formatNomComplet, buildMailtoModifIdentite } from "../../lib/profilHelpers"
+import UndoToast from "../../components/ui/UndoToast"
+import { useUndo } from "../../components/ui/useUndo"
+import DocRowSkeleton from "../../components/ui/DocRowSkeleton"
+import { useRole } from "../../providers"
+import { formatNomComplet, buildMailtoModifIdentite } from "../../../lib/profilHelpers"
 // `filterNationalites` est lazy-loadé à la première ouverture du combobox
 // nationalités (cf. NationaliteAutocomplete). Économie ~4-6 kB sur le bundle
 // initial /dossier.
@@ -783,7 +783,7 @@ function NationaliteAutocomplete({
   // pour ne pas la mettre dans le bundle initial. Ne charge qu'une fois.
   useEffect(() => {
     if (open && !filterFn) {
-      import("../../lib/nationalites").then(m => setFilterFn(() => m.filterNationalites))
+      import("../../../lib/nationalites").then(m => setFilterFn(() => m.filterNationalites))
     }
   }, [open, filterFn])
 
@@ -1665,7 +1665,7 @@ export default function Dossier() {
   async function genererDossierPDFClick() {
     setGeneratingPDF(true)
     try {
-      const { genererDossierPDF } = await import("../../lib/dossierPDF")
+      const { genererDossierPDF } = await import("../../../lib/dossierPDF")
       await genererDossierPDF(buildDossierData())
     } catch (e) {
       alert("Erreur génération PDF : " + (e instanceof Error ? e.message : "inconnue"))
@@ -1679,7 +1679,7 @@ export default function Dossier() {
     setGeneratingPDF(true)
     try {
       const [{ genererDossierPDFBlob }, { default: JSZip }] = await Promise.all([
-        import("../../lib/dossierPDF"),
+        import("../../../lib/dossierPDF"),
         import("jszip"),
       ])
       const zip = new JSZip()

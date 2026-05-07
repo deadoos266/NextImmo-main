@@ -2,16 +2,16 @@
 import { useSession, signOut } from "next-auth/react"
 import { Suspense, useEffect, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { supabase } from "../../lib/supabase"
-import { useResponsive } from "../hooks/useResponsive"
-import { useRole } from "../providers"
+import { supabase } from "../../../lib/supabase"
+import { useResponsive } from "../../hooks/useResponsive"
+import { useRole } from "../../providers"
 import Link from "next/link"
-import CityAutocomplete from "../components/CityAutocomplete"
-import QuartierPicker from "../components/QuartierPicker"
-import Tooltip from "../components/Tooltip"
+import CityAutocomplete from "../../components/CityAutocomplete"
+import QuartierPicker from "../../components/QuartierPicker"
+import Tooltip from "../../components/Tooltip"
 
 // Composants HORS du composant principal pour éviter le bug de focus
-import { Toggle, Sec, F } from "../components/FormHelpers"
+import { Toggle, Sec, F } from "../../components/FormHelpers"
 // V8 (Paul 2026-04-28) — design system local mirror de /dossier pour
 // homogeneiser visuellement les 2 onglets du hub Critères/Dossier.
 import {
@@ -26,11 +26,11 @@ import {
   DossierSaveBtn,
   dossierInputStyle,
 } from "./dossierTheme"
-import { calculerCompletudeProfil } from "../../lib/profilCompleteness"
-import { km, KMButton } from "../components/ui/km"
+import { calculerCompletudeProfil } from "../../../lib/profilCompleteness"
+import { km, KMButton } from "../../components/ui/km"
 // V13 — équipements secondaires (popup checkbox + storage helper)
-import { readEquipementsSecondaires, writeEquipementsSecondaires } from "../../lib/equipementsSecondaires"
-import { type EquipementKey } from "../../lib/equipements"
+import { readEquipementsSecondaires, writeEquipementsSecondaires } from "../../../lib/equipementsSecondaires"
+import { type EquipementKey } from "../../../lib/equipements"
 import EquipementsSecondairesModal from "./EquipementsSecondairesModal"
 
 // ─── Sections du profil (source de vérité pour sommaire + saves sectionnels) ─

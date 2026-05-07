@@ -1,17 +1,17 @@
 "use client"
 import { useEffect, useState } from "react"
 import dynamic from "next/dynamic"
-import { supabase } from "../../lib/supabase"
-import { getFavoris, toggleFavori } from "../../lib/favoris"
-import { getCityCoords } from "../../lib/cityCoords"
-import { useResponsive } from "../hooks/useResponsive"
+import { supabase } from "../../../lib/supabase"
+import { getFavoris, toggleFavori } from "../../../lib/favoris"
+import { getCityCoords } from "../../../lib/cityCoords"
+import { useResponsive } from "../../hooks/useResponsive"
 import Link from "next/link"
 import Image from "next/image"
-import EmptyState from "../components/ui/EmptyState"
-import { km, KMPageHeader, KMToggle, KMBadge } from "../components/ui/km"
-import { CARD_GRADIENTS as GRADIENTS } from "../../lib/cardGradients"
+import EmptyState from "../../components/ui/EmptyState"
+import { km, KMPageHeader, KMToggle, KMBadge } from "../../components/ui/km"
+import { CARD_GRADIENTS as GRADIENTS } from "../../../lib/cardGradients"
 
-const MapAnnonces = dynamic(() => import("../components/MapAnnonces"), { ssr: false })
+const MapAnnonces = dynamic(() => import("../../components/MapAnnonces"), { ssr: false })
 
 /**
  * /favoris — historique des annonces sauvegardées par le locataire.

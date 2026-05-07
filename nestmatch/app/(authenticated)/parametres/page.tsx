@@ -2,7 +2,7 @@
 import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { useResponsive } from "../hooks/useResponsive"
+import { useResponsive } from "../../hooks/useResponsive"
 import OngletProfil from "./OngletProfil"
 import OngletApparence from "./OngletApparence"
 import OngletSecurite from "./OngletSecurite"

@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useMemo, useState } from "react"
 import { useSession } from "next-auth/react"
-import { useRole } from "../providers"
+import { useRole } from "../../providers"
 import DeleteAccountForm from "./DeleteAccountForm"
 import {
   NOTIF_EVENTS,
@@ -9,7 +9,7 @@ import {
   defaultNotifPreferences,
   eventsForRole,
   type NotifEventKey,
-} from "../../lib/notifPreferences"
+} from "../../../lib/notifPreferences"
 
 const VACANCES_MAX_LENGTH = 400
 

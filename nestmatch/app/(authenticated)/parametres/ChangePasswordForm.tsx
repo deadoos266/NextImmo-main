@@ -1,6 +1,6 @@
 "use client"
 import { useState } from "react"
-import PasswordInput from "../components/PasswordInput"
+import PasswordInput from "../../components/PasswordInput"
 
 /**
  * Formulaire de changement de mot de passe.

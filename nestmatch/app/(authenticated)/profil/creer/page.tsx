@@ -2,13 +2,13 @@
 import { useSession } from "next-auth/react"
 import { useEffect, useState, ReactNode } from "react"
 import { useRouter } from "next/navigation"
-import { supabase } from "../../../lib/supabase"
-import { useResponsive } from "../../hooks/useResponsive"
-import CityAutocomplete from "../../components/CityAutocomplete"
-import Tooltip from "../../components/Tooltip"
-import { Toggle, F } from "../../components/FormHelpers"
-import { KMButton, KMButtonOutline, KMEyebrow, KMHeading } from "../../components/ui/km"
-import { StepBar } from "../../components/ui/StepBar"
+import { supabase } from "../../../../lib/supabase"
+import { useResponsive } from "../../../hooks/useResponsive"
+import CityAutocomplete from "../../../components/CityAutocomplete"
+import Tooltip from "../../../components/Tooltip"
+import { Toggle, F } from "../../../components/FormHelpers"
+import { KMButton, KMButtonOutline, KMEyebrow, KMHeading } from "../../../components/ui/km"
+import { StepBar } from "../../../components/ui/StepBar"
 
 /**
  * Wizard step-by-step de création du profil locataire — inspiré du principe

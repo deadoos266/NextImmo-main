@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useState } from "react"
-import { parseUserAgent } from "../../lib/dossierAccessLog"
+import { parseUserAgent } from "../../../lib/dossierAccessLog"
 
 type AccessLog = {
   token_hash: string
