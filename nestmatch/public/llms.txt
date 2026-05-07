@@ -1,0 +1,82 @@
+# KeyMatch
+
+> Plateforme française de location immobilière entre particuliers, sans
+> agence. Matching personnalisé locataire/propriétaire, signature de
+> bail eIDAS, gestion EDL et loyers. 100 % gratuit en phase beta.
+
+KeyMatch (anciennement NestMatch) connecte directement les locataires
+et propriétaires français pour la location longue durée d'appartements
+et maisons. Le service génère un score de matching sur 1000 points basé
+sur les critères du locataire (budget, surface, ville, équipements
+indispensables, DPE) et les caractéristiques de l'annonce. Tout le flow
+légal (signature bail eIDAS niveau 1, EDL contradictoire, quittances
+PDF, suivi loyers, indexation IRL) est intégré.
+
+Stack technique : Next.js 15 App Router, Supabase Postgres + RLS,
+NextAuth Google OAuth, Resend transactional emails, hébergement Vercel.
+
+## Pages publiques principales
+
+- [Accueil](https://keymatch-immo.fr/) — Landing avec hero éditorial et
+  recherche par ville
+- [Annonces](https://keymatch-immo.fr/annonces) — Recherche multi-critères
+  d'appartements à louer en France (filtres : budget, surface, pièces,
+  équipements, DPE). Vue liste + carte Leaflet.
+- [Location par ville](https://keymatch-immo.fr/location/paris) — Pages
+  géographiques (paris, lyon, marseille, etc.). Replace `paris` par toute
+  ville française.
+- [Status](https://keymatch-immo.fr/status) — État en temps réel des
+  services (DB, auth, emails, storage, crons) avec uptime % 7j/30j et
+  timeline 30 jours.
+
+## Documentation légale
+
+- [CGU](https://keymatch-immo.fr/cgu) — Conditions générales d'utilisation
+- [CGV](https://keymatch-immo.fr/cgv) — Conditions générales de vente
+- [Mentions légales](https://keymatch-immo.fr/mentions-legales) — Éditeur,
+  hébergeur, propriété intellectuelle, médiation conso (LCEN art. 6-III)
+- [Politique de confidentialité](https://keymatch-immo.fr/confidentialite)
+  — Conformité RGPD UE 2016/679 (finalités, bases légales, droits user)
+- [Politique cookies](https://keymatch-immo.fr/cookies) — Conformité CNIL
+  délibération 2020 (consentement, retrait, durée 6 mois)
+
+## Fonctionnalités clés
+
+- **Matching algorithmique** : score 1000 points sur 6 critères pondérés
+  (budget 300, surface 270, pièces 150, meublé 100, équipements 100, DPE 50)
+- **Dossier numérique locataire** : CNI + fiches paie + revenus + garant,
+  partagé via lien tokenisé (HMAC, TTL 7j) avec audit-trail
+- **Signature bail eIDAS niveau 1** : mention légale "Lu et approuvé,
+  bon pour accord" + signature image PNG, audit-trail conforme art. 1366
+  Code civil
+- **EDL contradictoire** : décret 2016-382 (10 items obligatoires : murs,
+  sols, plafonds, électricité, plomberie, équipements, etc.), photos,
+  signature 2 parties
+- **Indexation IRL automatique** : tableau historique IRL INSEE, calcul
+  loyer indexé annuel
+- **Quittances PDF** : génération + envoi Resend, archivage perpétuel
+
+## Conformité légale française
+
+- Loi 89-462 (ALUR) — durée bail, dépôt garantie, préavis, droit
+  préemption art. 15-II
+- Décret 2016-382 — état des lieux contradictoire 10 items
+- Loi ELAN 2018 — bail mobilité
+- Loi Climat & Résilience 2021 — DPE bloquant pour location G/F/E
+- RGPD UE 2016/679 — privacy by design, registre traitements,
+  privacy@keymatch-immo.fr pour l'exercice des droits
+
+## Contact
+
+- Support : `contact@keymatch-immo.fr`
+- DPO RGPD : `privacy@keymatch-immo.fr`
+- Signalement contenu illicite : `contact@keymatch-immo.fr` (LCEN art. 6)
+
+## Statut V77
+
+KeyMatch est en phase **beta gratuite** (mai 2026). Le site n'est
+PAS encore indexé publiquement par Google/Bing/AI bots — flag
+`SITE_INDEXABLE` en `lib/featureFlags.ts` bloque temporairement les
+crawlers via `robots.txt Disallow: /` + meta `noindex` + header
+`X-Robots-Tag: noindex`. Cette page `llms.txt` deviendra effective
+au lancement officiel.
