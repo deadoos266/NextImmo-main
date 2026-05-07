@@ -5,29 +5,29 @@ import { createPortal } from "react-dom"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import dynamic from "next/dynamic"
-import { supabase } from "../../lib/supabase"
-import { useRole } from "../providers"
+import { supabase } from "../../../lib/supabase"
+import { useRole } from "../../providers"
 import { Suspense } from "react"
-import { useResponsive } from "../hooks/useResponsive"
-import { displayName } from "../../lib/privacy"
-import { formatNomComplet } from "../../lib/profilHelpers"
-import { annulerVisite, STATUT_VISITE_STYLE as STATUT_VISITE } from "../../lib/visitesHelpers"
-import { postNotif } from "../../lib/notificationsClient"
-import GatedAction from "../components/ui/GatedAction"
-import AddToCalendarButton from "../components/AddToCalendarButton"
-import MessageSkeleton from "../components/ui/MessageSkeleton"
-import Modal from "../components/ui/Modal"
+import { useResponsive } from "../../hooks/useResponsive"
+import { displayName } from "../../../lib/privacy"
+import { formatNomComplet } from "../../../lib/profilHelpers"
+import { annulerVisite, STATUT_VISITE_STYLE as STATUT_VISITE } from "../../../lib/visitesHelpers"
+import { postNotif } from "../../../lib/notificationsClient"
+import GatedAction from "../../components/ui/GatedAction"
+import AddToCalendarButton from "../../components/AddToCalendarButton"
+import MessageSkeleton from "../../components/ui/MessageSkeleton"
+import Modal from "../../components/ui/Modal"
 import ValidationStatusCard from "./ValidationStatusCard"
-import ConversationSwipeRow from "../components/messages/ConversationSwipeRow"
+import ConversationSwipeRow from "../../components/messages/ConversationSwipeRow"
 
 // Lazy : modals/dialogs ouverts à la demande (1-2× / session). Économie
 // estimée ~10-15 kB sur First Load JS de /messages (cible 270 kB,
 // baseline 288 kB).
-const AnnulerVisiteDialog = dynamic(() => import("../components/AnnulerVisiteDialog"), { ssr: false })
-const ProposerVisiteDialog = dynamic(() => import("../components/ProposerVisiteDialog"), { ssr: false })
-const BailSignatureModal = dynamic(() => import("../components/BailSignatureModal"), { ssr: false })
-import type { BailData } from "../../lib/bailPDF"
-import { calculerScore, type Profil as MatchingProfil, type Annonce as MatchingAnnonce } from "../../lib/matching"
+const AnnulerVisiteDialog = dynamic(() => import("../../components/AnnulerVisiteDialog"), { ssr: false })
+const ProposerVisiteDialog = dynamic(() => import("../../components/ProposerVisiteDialog"), { ssr: false })
+const BailSignatureModal = dynamic(() => import("../../components/BailSignatureModal"), { ssr: false })
+import type { BailData } from "../../../lib/bailPDF"
+import { calculerScore, type Profil as MatchingProfil, type Annonce as MatchingAnnonce } from "../../../lib/matching"
 
 const DOSSIER_PREFIX = "[DOSSIER_CARD]"
 const BAIL_PREFIX = "[BAIL_CARD]"
@@ -411,7 +411,7 @@ function BailCard({
         return
       }
       if (!canDownload) return
-      const { genererBailPDF } = await import("../../lib/bailPDF")
+      const { genererBailPDF } = await import("../../../lib/bailPDF")
       // V55.1b — Fetch les signatures via /api/bail/signatures (RLS Phase 5)
       let sigs: Array<{ role: "bailleur" | "locataire" | "garant"; nom: string; png: string; signeAt: string; mention?: string; ipAddress?: string }> = []
       if (annonceId) {

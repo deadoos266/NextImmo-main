@@ -3,23 +3,23 @@ import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { supabase } from "../../lib/supabase"
-import { getDateDebutBailFr } from "../../lib/bailDates"
-import { useResponsive } from "../hooks/useResponsive"
-import { joursRetardLoyer } from "../../lib/loyerHelpers"
-import { BRAND } from "../../lib/brand"
-import { drawLogoPDF } from "../../lib/brandPDF"
-import { computeBailTimeline } from "../../lib/bailTimeline"
-import { projeterEcheancierBail, prochaineEcheance } from "../../lib/loyersProjection"
-import BailTimeline from "../components/ui/BailTimeline"
-import BailSignatureModal from "../components/BailSignatureModal"
-import IntegrityBadge from "../components/bail/IntegrityBadge"
-import PreavisModal from "../components/bail/PreavisModal"
-import AvenantCard, { type Avenant } from "../components/bail/AvenantCard"
-import { joursAvantFinPreavis, formatJoursRestants, LOCATAIRE_MOTIFS, PROPRIETAIRE_MOTIFS } from "../../lib/preavis"
+import { supabase } from "../../../lib/supabase"
+import { getDateDebutBailFr } from "../../../lib/bailDates"
+import { useResponsive } from "../../hooks/useResponsive"
+import { joursRetardLoyer } from "../../../lib/loyerHelpers"
+import { BRAND } from "../../../lib/brand"
+import { drawLogoPDF } from "../../../lib/brandPDF"
+import { computeBailTimeline } from "../../../lib/bailTimeline"
+import { projeterEcheancierBail, prochaineEcheance } from "../../../lib/loyersProjection"
+import BailTimeline from "../../components/ui/BailTimeline"
+import BailSignatureModal from "../../components/BailSignatureModal"
+import IntegrityBadge from "../../components/bail/IntegrityBadge"
+import PreavisModal from "../../components/bail/PreavisModal"
+import AvenantCard, { type Avenant } from "../../components/bail/AvenantCard"
+import { joursAvantFinPreavis, formatJoursRestants, LOCATAIRE_MOTIFS, PROPRIETAIRE_MOTIFS } from "../../../lib/preavis"
 // V61.5 perf — preavisPDF charge jsPDF (~150kB gzip), lazy au clic "Lettre de congé".
-import { estZoneTendue } from "../../lib/bailDefaults"
-import type { BailData, BailSignatureEntry } from "../../lib/bailPDF"
+import { estZoneTendue } from "../../../lib/bailDefaults"
+import type { BailData, BailSignatureEntry } from "../../../lib/bailPDF"
 
 /**
  * Mon logement actuel — vue dédiée locataire après bail signé.
@@ -197,7 +197,7 @@ export default function MonLogement() {
         window.open(bailFichierUrl, "_blank")
         return
       }
-      const { genererBailPDF } = await import("../../lib/bailPDF")
+      const { genererBailPDF } = await import("../../../lib/bailPDF")
       await genererBailPDF({ ...bailPayload, signatures } as BailData)
     } finally {
       setDownloadingBail(false)
@@ -701,7 +701,7 @@ export default function MonLogement() {
                   const auteurEstLoc = bien.preavis_donne_par === "locataire"
                   const myEmail = (session?.user?.email || "").toLowerCase()
                   try {
-                    const { genererPreavisPDF } = await import("../../lib/preavisPDF")
+                    const { genererPreavisPDF } = await import("../../../lib/preavisPDF")
                     await genererPreavisPDF({
                       qui: bien.preavis_donne_par as "locataire" | "proprietaire",
                       nomAuteur: auteurEstLoc ? (session?.user?.name || myEmail || "Locataire") : (bien.proprietaire_email || "Bailleur"),

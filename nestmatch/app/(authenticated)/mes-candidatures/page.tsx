@@ -3,12 +3,12 @@ import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { supabase } from "../../lib/supabase"
-import { useResponsive } from "../hooks/useResponsive"
-import { displayName } from "../../lib/privacy"
-import EmptyState from "../components/ui/EmptyState"
+import { supabase } from "../../../lib/supabase"
+import { useResponsive } from "../../hooks/useResponsive"
+import { displayName } from "../../../lib/privacy"
+import EmptyState from "../../components/ui/EmptyState"
 import Image from "next/image"
-import { km, KMPageHeader } from "../components/ui/km"
+import { km, KMPageHeader } from "../../components/ui/km"
 
 /**
  * /mes-candidatures — historique des candidatures locataire (annonces
