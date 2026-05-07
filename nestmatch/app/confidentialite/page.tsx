@@ -194,6 +194,70 @@ export default function Confidentialite() {
           affichage sur la Plateforme. La date de mise à jour est indiquée en haut du document.
         </p>
       </LegalSec>
+
+      <LegalSec title="13. Documentation RGPD interne (DPIA + Registre Article 30)">
+        <p style={S.p}>
+          Conformément aux articles 30 et 35 du RGPD, KeyMatch tient à jour deux documents internes consultables sur
+          simple demande à <strong style={S.strong}>privacy@keymatch-immo.fr</strong> :
+        </p>
+        <ul style={S.ul}>
+          <li style={S.li}>
+            <strong style={S.strong}>Analyse d&apos;Impact RGPD (DPIA)</strong> — couvre les traitements à risque élevé
+            de KeyMatch (dossier locataire KYC + signature bail eIDAS). Identifie 5 risques résiduels avec leur plan de
+            mitigation. Mise à jour à chaque évolution majeure du traitement.
+          </li>
+          <li style={S.li}>
+            <strong style={S.strong}>Registre des activités de traitement (Article 30)</strong> — liste les 7 traitements
+            distincts (compte utilisateur, matching algorithmique, dossier KYC, bail eIDAS, EDL contradictoire,
+            communication, loyers/quittances/IRL) avec finalité, base légale, durée de conservation, destinataires et
+            mesures de sécurité pour chacun.
+          </li>
+        </ul>
+        <p style={S.p}>
+          Ces documents sont rédigés selon les guidelines CNIL et conservés pendant 5 ans minimum. Sur demande motivée
+          (ex : audit, contrôle, exercice de droits) nous vous en transmettons une version synthétique sous 30 jours.
+        </p>
+      </LegalSec>
+
+      <LegalSec title="14. Délégué à la Protection des Données (DPO)">
+        <p style={S.p}>
+          Pour toute question relative au traitement de vos données personnelles ou à l&apos;exercice de vos droits RGPD,
+          vous pouvez contacter notre référent données :
+        </p>
+        <p style={S.p}>
+          <strong style={S.strong}>Email DPO</strong> : <strong style={S.strong}>privacy@keymatch-immo.fr</strong><br />
+          <strong style={S.strong}>Délai de réponse</strong> : 30 jours maximum (RGPD art. 12.3)<br />
+          <strong style={S.strong}>Justificatif requis</strong> : copie d&apos;une pièce d&apos;identité pour l&apos;exercice
+          des droits d&apos;accès, rectification, effacement, portabilité, opposition, limitation
+        </p>
+        <p style={S.p}>
+          <span style={S.todo}>
+            En phase beta gratuite, le rôle de DPO est assuré par le responsable de traitement. Un DPO externe certifié
+            sera désigné formellement avant le passage commercial. Cette section sera mise à jour avec ses coordonnées
+            officielles.
+          </span>
+        </p>
+      </LegalSec>
+
+      <LegalSec title="15. Procédure d'incident de sécurité">
+        <p style={S.p}>
+          En cas de violation de données personnelles susceptible d&apos;engendrer un risque pour vos droits et libertés,
+          KeyMatch s&apos;engage à :
+        </p>
+        <ul style={S.ul}>
+          <li style={S.li}>Notifier la CNIL dans les <strong style={S.strong}>72 heures</strong> suivant la
+            connaissance de l&apos;incident (RGPD art. 33).</li>
+          <li style={S.li}>Communiquer aux personnes concernées dans les meilleurs délais lorsque le risque est élevé
+            (RGPD art. 34), via email enregistré dans la plateforme.</li>
+          <li style={S.li}>Maintenir un registre interne des incidents avec descriptif, conséquences et mesures
+            correctives.</li>
+        </ul>
+        <p style={S.p}>
+          Pour signaler un incident de sécurité que vous suspectez (ex : compte compromis, email de phishing usurpant
+          KeyMatch) : <strong style={S.strong}>privacy@keymatch-immo.fr</strong> avec mention &quot;[INCIDENT SÉCURITÉ]&quot;
+          en objet.
+        </p>
+      </LegalSec>
     </LegalMain>
   )
 }
