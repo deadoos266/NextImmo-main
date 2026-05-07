@@ -1,0 +1,327 @@
+"use client"
+import { useSession } from "next-auth/react"
+import { useState, useEffect } from "react"
+import { supabase } from "../../../../lib/supabase"
+import { postNotif } from "../../../../lib/notificationsClient"
+import { getCandidatureStatut, peutProposerVisite, type CandidatureStatut } from "../../../../lib/candidatureStatus"
+
+const HEURES = [
+  "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+  "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00",
+]
+
+const STATUT_STYLE: Record<string, { bg: string; color: string; label: string }> = {
+  "proposée":  { bg: "#FBF6EA", color: "#a16207", label: "En attente de confirmation" },
+  "confirmée": { bg: "#F0FAEE", color: "#15803d", label: "Confirmée" },
+  "annulée":   { bg: "#FEECEC", color: "#b91c1c", label: "Annulée" },
+  "effectuée": { bg: "#F7F4EF", color: "#111", label: "Effectuée" },
+}
+
+export default function BookingVisite({
+  annonceId,
+  proprietaireEmail,
+}: {
+  annonceId: number
+  proprietaireEmail: string
+}) {
+  const { data: session } = useSession()
+  const [open, setOpen] = useState(false)
+  const [format, setFormat] = useState<"physique" | "visio">("physique")
+  const [date, setDate] = useState("")
+  const [heure, setHeure] = useState("")
+  const [message, setMessage] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [erreur, setErreur] = useState("")
+  const [existante, setExistante] = useState<any | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [candStatut, setCandStatut] = useState<CandidatureStatut>(null)
+  const [showLockedPopup, setShowLockedPopup] = useState(false)
+
+  // V62 — normalise email pour comparaisons + queries (legacy users avec
+  // mixed case dans annonces.proprietaire_email peuvent faire échouer le
+  // strict-equal et un .eq sur locataire_email).
+  const myEmail = session?.user?.email?.toLowerCase() || ""
+  const proprioEmailNorm = (proprietaireEmail || "").toLowerCase()
+  const isOwner = !!myEmail && myEmail === proprioEmailNorm
+
+  useEffect(() => {
+    if (!myEmail || isOwner) { setLoading(false); return }
+    Promise.all([
+      supabase.from("visites")
+        .select("*")
+        .eq("annonce_id", annonceId)
+        .eq("locataire_email", myEmail)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      // Statut candidature pour gating "Proposer une visite" (Paul 2026-04-25)
+      getCandidatureStatut(annonceId, myEmail, proprietaireEmail),
+    ]).then(([{ data }, statut]) => {
+      if (data) setExistante(data)
+      setCandStatut(statut)
+      setLoading(false)
+    })
+  }, [myEmail, annonceId, isOwner, proprietaireEmail])
+
+  async function proposer() {
+    if (!date) { setErreur("Choisissez une date"); return }
+    if (!heure) { setErreur("Choisissez un créneau horaire"); return }
+    setSaving(true)
+    setErreur("")
+
+    // V63 — passage par /api/visites/proposer qui orchestre l'insert visite +
+    // message thread + notif cloche en une seule transaction logique
+    // server-side. Préreq migration 058 (REVOKE SELECT/INSERT anon messages).
+    try {
+      const res = await fetch("/api/visites/proposer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ annonceId, date, heure, format, message }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.ok) {
+        setErreur(json.error || "L'envoi de la demande de visite a échoué. Veuillez réessayer.")
+        setSaving(false)
+        return
+      }
+      // Re-load la visite fraîchement créée pour re-render la card "Votre visite"
+      const me = myEmail
+      const { data: nouvelle } = await supabase
+        .from("visites")
+        .select("*")
+        .eq("id", json.visiteId)
+        .eq("locataire_email", me)
+        .maybeSingle()
+      setExistante(nouvelle ?? { id: json.visiteId, statut: "proposée", date_visite: date, heure, format, message })
+      setOpen(false)
+    } catch {
+      setErreur("Erreur réseau — réessayez plus tard.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function annuler() {
+    if (!existante) return
+    await supabase.from("visites").update({ statut: "annulée" }).eq("id", existante.id)
+    setExistante((prev: any) => ({ ...prev, statut: "annulée" }))
+    // Notif proprio : le locataire a annulé sa propre demande
+    const proprio = (proprietaireEmail || "").toLowerCase()
+    if (proprio) {
+      void postNotif({
+        userEmail: proprio,
+        type: "visite_annulee",
+        title: "Visite annulée",
+        body: "Le locataire a annulé sa demande de visite.",
+        href: "/visites",
+        relatedId: String(existante.id),
+      })
+    }
+  }
+
+  if (!session || isOwner || loading || !proprietaireEmail) return null
+
+  const inp: any = {
+    width: "100%", padding: "10px 14px", border: "1px solid #EAE6DF",
+    borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box",
+    fontFamily: "inherit", background: "white",
+  }
+
+  // Visite déjà proposée
+  if (existante && existante.statut !== "annulée") {
+    const style = STATUT_STYLE[existante.statut] ?? STATUT_STYLE["proposée"]
+    return (
+      <div style={{ background: "white", borderRadius: 20, padding: "20px 24px", border: "1px solid #EAE6DF", marginTop: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+          <p style={{ fontWeight: 700, fontSize: 15 }}>Votre visite</p>
+          <span style={{ marginLeft: "auto", background: style.bg, color: style.color, fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 999 }}>
+            {style.label}
+          </span>
+        </div>
+        <p style={{ fontSize: 14, color: "#111" }}>
+          <strong>{new Date(existante.date_visite).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</strong> à <strong>{existante.heure}</strong>
+          {existante.format === "visio" && (
+            <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: "#1d4ed8", background: "#EAF2FF", padding: "2px 8px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              Visio
+            </span>
+          )}
+        </p>
+        {existante.message && (
+          <p style={{ fontSize: 13, color: "#8a8477", marginTop: 6, fontStyle: "italic" }}>"{existante.message}"</p>
+        )}
+        {existante.statut === "proposée" && (
+          <button onClick={annuler}
+            style={{ marginTop: 12, fontSize: 13, fontWeight: 600, color: "#b91c1c", background: "none", border: "1px solid #F4C9C9", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontFamily: "inherit" }}>
+            Annuler la visite
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  const peutProposer = peutProposerVisite(candStatut)
+  return (
+    <div style={{ marginTop: 16 }}>
+      {!open ? (
+        peutProposer ? (
+          <button onClick={() => setOpen(true)}
+            style={{ width: "100%", padding: "13px 0", background: "#F0FAEE", border: "1px solid #C6E9C0", color: "#15803d", borderRadius: 14, fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            Proposer une visite
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowLockedPopup(true)}
+            aria-label="Proposer une visite — verrouillé tant que la candidature n'est pas validée"
+            title="La candidature doit être validée par le propriétaire"
+            style={{ width: "100%", padding: "13px 0", background: "#F7F4EF", border: "1px solid #EAE6DF", color: "#8a8477", borderRadius: 14, fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            Proposer une visite
+          </button>
+        )
+      ) : (
+        <div style={{ background: "white", borderRadius: 20, padding: "20px 24px", border: "2px solid #111" }}>
+          <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 18 }}>Proposer une visite</h3>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 14 }}>
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "#8a8477", display: "block", marginBottom: 6 }}>Format *</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                {([
+                  { v: "physique" as const, label: "Sur place", desc: "Visite physique du bien" },
+                  { v: "visio" as const, label: "En visio", desc: "Appel vidéo à distance" },
+                ]).map(opt => {
+                  const active = format === opt.v
+                  return (
+                    <button
+                      key={opt.v}
+                      type="button"
+                      onClick={() => setFormat(opt.v)}
+                      aria-pressed={active}
+                      style={{
+                        padding: "12px 14px", minHeight: 56,
+                        borderRadius: 12,
+                        border: active ? "2px solid #111" : "1px solid #EAE6DF",
+                        background: active ? "#111" : "white",
+                        color: active ? "white" : "#111",
+                        cursor: "pointer", fontFamily: "inherit",
+                        textAlign: "left",
+                        display: "flex", flexDirection: "column", gap: 2,
+                      }}
+                    >
+                      <span style={{ fontSize: 14, fontWeight: 700 }}>{opt.label}</span>
+                      <span style={{ fontSize: 11, opacity: active ? 0.85 : 0.6 }}>{opt.desc}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "#8a8477", display: "block", marginBottom: 6 }}>Date *</label>
+              <input type="date" style={inp} value={date} onChange={e => setDate(e.target.value)}
+                min={new Date().toISOString().split("T")[0]} />
+            </div>
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "#8a8477", display: "block", marginBottom: 6 }}>Créneau *</label>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+                {HEURES.map(h => (
+                  <button
+                    key={h}
+                    type="button"
+                    onClick={() => setHeure(h)}
+                    style={{
+                      padding: "12px 0",
+                      minHeight: 44,
+                      borderRadius: 8,
+                      border: heure === h ? "2px solid #111" : "1px solid #EAE6DF",
+                      background: heure === h ? "#111" : "white",
+                      color: heure === h ? "white" : "#111",
+                      fontSize: 14,
+                      fontWeight: heure === h ? 800 : 600,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    {h}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: "#8a8477", display: "block", marginBottom: 6 }}>Message (optionnel)</label>
+            <textarea style={{ ...inp, resize: "vertical", minHeight: 70 }} value={message}
+              onChange={e => setMessage(e.target.value)} placeholder="Présentez-vous brièvement..." />
+          </div>
+
+          {erreur && (
+            <div style={{ background: "#FEECEC", color: "#b91c1c", padding: "8px 14px", borderRadius: 8, fontSize: 13, fontWeight: 600, marginBottom: 14 }}>
+              {erreur}
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={() => { setOpen(false); setErreur("") }}
+              style={{ flex: 1, padding: "10px 0", background: "none", border: "1px solid #EAE6DF", borderRadius: 999, cursor: "pointer", fontWeight: 600, fontSize: 14, fontFamily: "inherit" }}>
+              Annuler
+            </button>
+            <button onClick={proposer} disabled={saving}
+              style={{ flex: 2, padding: "10px 0", background: "#111", color: "white", border: "none", borderRadius: 999, cursor: saving ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 14, fontFamily: "inherit", opacity: saving ? 0.6 : 1 }}>
+              {saving ? "Envoi..." : "Envoyer la demande"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Popup verrouillage : la candidature doit être validée par le proprio
+          avant que le locataire puisse proposer une visite (Paul 2026-04-25). */}
+      {showLockedPopup && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setShowLockedPopup(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(17,17,17,0.55)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5000, padding: 16, fontFamily: "'DM Sans',sans-serif" }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: "#fff", borderRadius: 24, maxWidth: 460, width: "100%", padding: "32px 28px 24px", boxShadow: "0 24px 48px rgba(0,0,0,0.25)" }}
+          >
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#FBF6EA", color: "#a16207", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            </div>
+            <p style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 6px" }}>
+              Candidature en attente
+            </p>
+            <h3 style={{ fontSize: 20, fontWeight: 400, fontStyle: "italic", fontFamily: "'Fraunces','DM Sans',serif", letterSpacing: "-0.3px", margin: "0 0 12px", color: "#111", lineHeight: 1.25 }}>
+              Le propriétaire doit d&apos;abord valider votre candidature
+            </h3>
+            <p style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.55, margin: "0 0 20px" }}>
+              {candStatut === null
+                ? "Postulez à cette annonce avant de proposer une visite. Une fois votre candidature reçue, le propriétaire pourra la valider et vous pourrez alors organiser un créneau."
+                : candStatut === "refusee"
+                  ? "Votre candidature a été refusée par le propriétaire pour ce bien. Continuez votre recherche sur les annonces qui vous correspondent."
+                  : "Votre candidature a bien été envoyée. Le propriétaire la consulte avec son dossier — vous serez notifié dès qu'il la valide, et vous pourrez alors proposer un créneau de visite."}
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setShowLockedPopup(false)}
+                style={{ padding: "10px 20px", background: "#111", color: "#fff", border: "none", borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                Compris
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
