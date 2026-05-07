@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation"
 // V12 (Paul 2026-04-28) — supabase anon retiré : toutes les ops du dashboard
 // admin passent désormais par les routes /api/admin/* (server-side avec
 // supabaseAdmin + is_admin gating). Aucun appel direct DB depuis le client.
-import { displayName } from "../../lib/privacy"
-import { RAISONS, getRaisonLabel } from "../../lib/signalements"
-import { STATUT_STYLE as CONTACT_STATUTS, getSujetLabel, type ContactStatut } from "../../lib/contacts"
-import { useResponsive } from "../hooks/useResponsive"
+import { displayName } from "../../../lib/privacy"
+import { RAISONS, getRaisonLabel } from "../../../lib/signalements"
+import { STATUT_STYLE as CONTACT_STATUTS, getSujetLabel, type ContactStatut } from "../../../lib/contacts"
+import { useResponsive } from "../../hooks/useResponsive"
 
 /**
  * Dashboard admin refondu.

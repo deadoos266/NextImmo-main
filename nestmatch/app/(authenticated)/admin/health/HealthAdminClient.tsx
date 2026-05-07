@@ -1,7 +1,7 @@
 "use client"
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import type { DayCell, IncidentRow, ServiceName, ServiceUptime } from "../../../lib/statusAggregation"
+import type { DayCell, IncidentRow, ServiceName, ServiceUptime } from "../../../../lib/statusAggregation"
 
 interface PingRow {
   id: number

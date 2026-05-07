@@ -2,7 +2,7 @@
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
-import { LogoFenetreRond, LogoFenetreArche } from "../../components/LogosFenetrePreview"
+import { LogoFenetreRond, LogoFenetreArche } from "../../../components/LogosFenetrePreview"
 
 /**
  * Preview de 2 variantes de logo en forme de "fenêtre".

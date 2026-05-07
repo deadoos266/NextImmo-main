@@ -4,11 +4,11 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
-import { supabase } from "../../lib/supabase"
-import { calculerScore, estExclu } from "../../lib/matching"
-import { toggleFavori, getFavoris } from "../../lib/favoris"
-import { CARD_GRADIENTS } from "../../lib/cardGradients"
-import { km, KMBadge, KMEyebrow, KMHeading, KMDPE } from "../components/ui/km"
+import { supabase } from "../../../lib/supabase"
+import { calculerScore, estExclu } from "../../../lib/matching"
+import { toggleFavori, getFavoris } from "../../../lib/favoris"
+import { CARD_GRADIENTS } from "../../../lib/cardGradients"
+import { km, KMBadge, KMEyebrow, KMHeading, KMDPE } from "../../components/ui/km"
 
 /**
  * Prototype mode swipe façon Tinder.

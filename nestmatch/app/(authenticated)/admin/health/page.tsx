@@ -1,5 +1,5 @@
-import { fetchIncidents, fetchServicesUptime, fetchTimeline30d, SERVICES, type ServiceName } from "../../../lib/statusAggregation"
-import { supabaseAdmin } from "../../../lib/supabase-server"
+import { fetchIncidents, fetchServicesUptime, fetchTimeline30d, SERVICES, type ServiceName } from "../../../../lib/statusAggregation"
+import { supabaseAdmin } from "../../../../lib/supabase-server"
 import HealthAdminClient from "./HealthAdminClient"
 
 /**
