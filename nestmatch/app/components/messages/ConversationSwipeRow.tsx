@@ -33,13 +33,22 @@ interface Props {
   peerEmail: string
   /** Callback après suppression réussie pour rafraîchir la sidebar. */
   onDeleted?: () => void
+  /**
+   * V76.1 — callback custom à utiliser à la place du fetch interne vers
+   * /api/conversations/[peer]/delete. Utile quand le parent a déjà sa
+   * propre fonction de suppression (ex: messages/page.tsx supprimerConversation
+   * qui prend le conv.key au lieu du peer email). Si fourni, prime sur le
+   * fetch interne. Doit retourner un Promise qui throw si la suppression
+   * a échoué (alors le composant reste ouvert + alert).
+   */
+  onConfirmDelete?: () => Promise<void>
   /** Le markup existant de la conversation (titre, dernier message, etc.). */
   children: React.ReactNode
   /** Désactive le swipe (ex: pendant un loading). */
   disabled?: boolean
 }
 
-export default function ConversationSwipeRow({ peerEmail, onDeleted, children, disabled }: Props) {
+export default function ConversationSwipeRow({ peerEmail, onDeleted, onConfirmDelete, children, disabled }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const { wrapperProps, contentStyle, isOpen, close, translateX } = useSwipeReveal({
@@ -51,13 +60,25 @@ export default function ConversationSwipeRow({ peerEmail, onDeleted, children, d
   async function handleConfirmDelete() {
     setDeleting(true)
     try {
-      const res = await fetch(`/api/conversations/${encodeURIComponent(peerEmail)}/delete`, {
-        method: "POST",
-      })
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}))
-        alert(`Suppression impossible : ${j.error || res.status}`)
-        return
+      // V76.1 — si callback custom fourni (ex. messages/page.tsx avec sa
+      // propre fonction supprimerConversation), on l'utilise. Sinon fetch
+      // par défaut vers /api/conversations/[peer]/delete (V74.1).
+      if (onConfirmDelete) {
+        try {
+          await onConfirmDelete()
+        } catch (e) {
+          alert(`Suppression impossible : ${e instanceof Error ? e.message : String(e)}`)
+          return
+        }
+      } else {
+        const res = await fetch(`/api/conversations/${encodeURIComponent(peerEmail)}/delete`, {
+          method: "POST",
+        })
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}))
+          alert(`Suppression impossible : ${j.error || res.status}`)
+          return
+        }
       }
       onDeleted?.()
       setConfirmOpen(false)

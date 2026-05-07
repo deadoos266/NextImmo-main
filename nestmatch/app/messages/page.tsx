@@ -18,6 +18,7 @@ import AddToCalendarButton from "../components/AddToCalendarButton"
 import MessageSkeleton from "../components/ui/MessageSkeleton"
 import Modal from "../components/ui/Modal"
 import ValidationStatusCard from "./ValidationStatusCard"
+import ConversationSwipeRow from "../components/messages/ConversationSwipeRow"
 
 // Lazy : modals/dialogs ouverts à la demande (1-2× / session). Économie
 // estimée ~10-15 kB sur First Load JS de /messages (cible 270 kB,
@@ -3986,7 +3987,13 @@ function MessagesInner() {
 
                 const pinnedHere = convPrefs[conv.key]?.pinned || false
                 const mutedHere = convPrefs[conv.key]?.muted || false
-                return (
+                // V76.1 — wrapper swipe-to-delete (mobile only). Le tap simple
+                // sur le contenu déclenche le onClick du <div> interne (pattern
+                // useSwipeReveal autorise les events tactiles tant que pas de
+                // mouvement horizontal >10 px, donc le tap pour ouvrir la conv
+                // continue de fonctionner). Sur desktop : pas de wrapper, pour
+                // ne pas changer le comportement existant (kebab menu déjà OK).
+                const rowInner = (
                   <div key={conv.key}
                     onClick={() => { setConvActive(conv.key); setMenuConv(null); setVisitesConv([]); loadMessages(myEmail!, conv.other, conv.annonceId); loadVisitesConv(conv.other, conv.annonceId) }}
                     style={{ padding: "14px 16px", cursor: "pointer", background: isActive ? "#F7F4EF" : "white", borderBottom: "1px solid #F2EEE6", borderLeft: isActive ? "3px solid #111" : conv.unread > 0 && !mutedHere ? "3px solid #b91c1c" : "3px solid transparent", position: "relative", transition: "background 160ms ease", opacity: mutedHere && !isActive ? 0.6 : 1, WebkitTapHighlightColor: "rgba(17,17,17,0.04)" }}
@@ -4182,6 +4189,21 @@ function MessagesInner() {
                     )}
                   </div>
                 )
+                // V76.1 — sur mobile uniquement, wrap dans ConversationSwipeRow
+                // pour révéler un bouton "Supprimer" rouge au swipe-left
+                // (pattern iOS Mail). onConfirmDelete branche directement la
+                // fonction supprimerConversation existante (V72) au lieu du
+                // fetch interne du composant — cohérent avec le menu kebab
+                // desktop ligne 4180 qui appelle déjà supprimerConversation.
+                return isMobile ? (
+                  <ConversationSwipeRow
+                    key={conv.key}
+                    peerEmail={conv.other}
+                    onConfirmDelete={async () => { await supprimerConversation(conv.key) }}
+                  >
+                    {rowInner}
+                  </ConversationSwipeRow>
+                ) : rowInner
               })}
             </div>
           </div>
