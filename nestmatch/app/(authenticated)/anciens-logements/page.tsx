@@ -3,8 +3,8 @@ import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { supabase } from "../../lib/supabase"
-import { useResponsive } from "../hooks/useResponsive"
+import { supabase } from "../../../lib/supabase"
+import { useResponsive } from "../../hooks/useResponsive"
 
 /**
  * /anciens-logements — historique des biens loués par le locataire dans le passé.
