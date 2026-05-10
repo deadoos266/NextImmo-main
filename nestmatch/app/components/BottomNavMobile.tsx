@@ -180,12 +180,18 @@ export default function BottomNavMobile() {
   // et n'ont jamais BottomNav rendu — plus besoin de les filtrer ici.
   // Garde uniquement les conditions UX intra-auth :
   //  - desktop : pas de bottom nav (CSS-only via useResponsive)
-  //  - thread mobile actif : laisser place au composer messages
   //  - drawer ouvert : éviter overlap visuel
   //  - admin : décision UX (admin n'a pas besoin de tabs locataire/proprio)
+  //
+  // V81.19 — RETIRÉ la condition threadOpen : l'user veut pouvoir naviguer
+  // vers d'autres tabs (Annonces, Logement, Notifs) directement depuis le
+  // thread. Avant : threadOpen=true → BottomNav caché → seul moyen de
+  // sortir = back-arrow ← qui ramène à la liste des conversations puis
+  // re-tap sur un autre tab. Maintenant : BottomNav reste visible, l'user
+  // peut switch tab d'un seul tap. Le composer reste accessible (body
+  // padding-bottom 56px + safe-area sur mobile réserve déjà l'espace).
   if (!isMobile) return null
   if (!session?.user) return null
-  if (threadOpen) return null
   if (drawerOpen) return null
   if (pathname.startsWith("/admin")) return null
 

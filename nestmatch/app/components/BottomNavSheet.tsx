@@ -137,24 +137,27 @@ export default function BottomNavSheet({ open, onClose }: Props) {
     { href: "/parametres", label: "Paramètres", desc: "Compte, notifications, RGPD", Icon: Icons.Settings },
   ]
 
+  // V81.19 — liens corrigés pour pointer vers routes existantes uniquement
+  // (audit screenshots Paul : /comparer et /aide 404, retirés).
+  // Routes vérifiées dans app/(authenticated)/ et app/(public)/.
   const sectionLocataire: LinkItem[] = [
     { href: "/favoris", label: "Mes favoris", desc: "Annonces sauvegardées", Icon: Icons.Favoris },
     { href: "/recherches-sauvegardees", label: "Mes recherches", desc: "Filtres mémorisés", Icon: Icons.Recherches },
     { href: "/mes-candidatures", label: "Mes candidatures", desc: "Suivi des dossiers envoyés", Icon: Icons.Candidatures },
     { href: "/visites", label: "Mes visites", desc: "Demandes et confirmations", Icon: Icons.Visites },
-    { href: "/comparer", label: "Comparer", desc: "Analyse côte à côte", Icon: Icons.Comparer },
+    { href: "/mon-logement", label: "Mon logement", desc: "Bail en cours, locations passées", Icon: Icons.Bail },
   ]
 
   const sectionProprio: LinkItem[] = [
     { href: "/proprietaire", label: "Mes biens", desc: "Tous mes logements", Icon: Icons.Biens },
     { href: "/proprietaire/ajouter", label: "Publier une annonce", desc: "Nouveau bien à louer", Icon: Icons.Ajouter },
-    { href: "/proprietaire/visites", label: "Visites planifiées", desc: "Mon agenda candidats", Icon: Icons.Visites },
-    { href: "/proprietaire/bail", label: "Baux", desc: "Contrats en cours / archivés", Icon: Icons.Bail },
-    { href: "/proprietaire/loyers", label: "Loyers & quittances", desc: "Encaissements et PDFs", Icon: Icons.Quittances },
+    { href: "/visites", label: "Visites planifiées", desc: "Mon agenda candidats", Icon: Icons.Visites },
+    { href: "/proprietaire/baux", label: "Baux", desc: "Contrats en cours / archivés", Icon: Icons.Bail },
+    { href: "/mes-quittances", label: "Quittances", desc: "Loyers encaissés & PDFs", Icon: Icons.Quittances },
   ]
 
   const sectionAide: LinkItem[] = [
-    { href: "/aide", label: "Aide & FAQ", desc: "Guides et tutoriels", Icon: Icons.Aide },
+    { href: "/contact", label: "Contact & support", desc: "Une question, un bug ?", Icon: Icons.Aide },
   ]
 
   function Item({ item }: { item: LinkItem }) {

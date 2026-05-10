@@ -4304,10 +4304,16 @@ function MessagesInner() {
                     rowGap: isMobile ? 8 : 10,
                     backgroundColor: "#FFFFFF",
                     flexWrap: "wrap",
-                    // V81.11 — sticky top:0 sur mobile/tablette pour back btn toujours visible
+                    // V81.19 — sticky → fixed (sticky cassé par body.overflow-x:clip
+                    // cf root cause FiltersBar V81.12). Le thread header reste
+                    // collé au top du viewport quel que soit le scroll → back
+                    // button ← toujours accessible.
+                    // top:72 pour passer sous la Navbar fixed V81.16.
                     ...(isSmall ? {
-                      position: "sticky" as const,
-                      top: 0,
+                      position: "fixed" as const,
+                      top: 72,
+                      left: 0,
+                      right: 0,
                       zIndex: 100,
                       transform: "translate3d(0, 0, 0)",
                       WebkitTransform: "translate3d(0, 0, 0)",
@@ -4827,8 +4833,12 @@ function MessagesInner() {
                   </div>
                 )}
 
-                {/* Messages — fond crème très léger pour contraster avec les bulles blanches */}
-                <div ref={messagesContainerRef} style={{ flex: 1, overflowY: "auto", padding: isMobile ? "14px 14px" : "22px 24px", display: "flex", flexDirection: "column", gap: 8, background: "#FBF8F3" }}>
+                {/* Messages — fond crème très léger pour contraster avec les bulles blanches.
+                    V81.19 — paddingTop ajusté sur mobile/tablette pour compenser
+                    le thread header passé en position:fixed top:72 (sinon les
+                    premiers messages passaient sous le header). +72 pour header
+                    estimé (variable selon contenu, on prend une marge sécurité). */}
+                <div ref={messagesContainerRef} style={{ flex: 1, overflowY: "auto", padding: isMobile ? `${72 + 14}px 14px 14px` : isSmall ? `${72 + 14}px 14px 14px` : "22px 24px", display: "flex", flexDirection: "column", gap: 8, background: "#FBF8F3" }}>
                   {messages.length === 0 && (
                     <div style={{ textAlign: "center", color: "#8a8477", marginTop: 48, padding: "0 24px" }}>
                       <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontSize: 18, fontWeight: 500, color: "#111", letterSpacing: "-0.3px", margin: 0 }}>Démarrez la conversation</p>
