@@ -1387,23 +1387,27 @@ function ProfilTOC({ active, isMobile }: { active: string; isMobile: boolean }) 
     //    décalé selon la largeur réelle).
     //  - backgroundColor:#FFFFFF en longhand + règle CSS !important pour
     //    blinder face à un éventuel override hérité.
+    //
+    // V81.15 — Migration de `position: sticky` vers `position: fixed` :
+    // même cause racine que V81.12 sur FiltersBar (body `overflow-x: clip`
+    // crée un scroll container qui casse sticky). Fixed garantit la barre
+    // au top:72 du viewport en permanence. Spacer ajouté en sibling pour
+    // préserver l'espace dans le flux document.
     return (
+      <>
+      <div aria-hidden style={{ height: 62, flexShrink: 0 }} />
       <nav
         aria-label="Sommaire du profil"
         className="km-profil-toc-fallback"
         style={{
-          position: "sticky", top: 72, zIndex: 10,
+          position: "fixed", top: 72, left: 0, right: 0,
+          zIndex: 10,
           backgroundColor: "#FFFFFF",
           padding: "12px 16px 14px",
-          width: "100vw",
-          marginLeft: "calc(-50vw + 50%)",
-          marginRight: "calc(-50vw + 50%)",
-          marginBottom: 16,
           boxSizing: "border-box",
           overflowX: "auto", whiteSpace: "nowrap",
           borderBottom: `1px solid ${T.hairline}`,
           boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-          // V73.6+ : GPU compositing pour éviter le jitter sticky sur iOS Safari
           transform: "translate3d(0, 0, 0)",
           WebkitTransform: "translate3d(0, 0, 0)",
           willChange: "transform",
@@ -1434,6 +1438,7 @@ function ProfilTOC({ active, isMobile }: { active: string; isMobile: boolean }) 
           })}
         </div>
       </nav>
+      </>
     )
   }
   // V11.16 — TOC desktop : sticky DANS la cellule grid column 1 (au lieu
