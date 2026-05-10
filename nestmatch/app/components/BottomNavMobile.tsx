@@ -78,18 +78,22 @@ interface Tab {
   matchPaths: (pathname: string) => boolean
 }
 
+// V81.4 — Annonces déplacé en position 3 (milieu) pour donner du poids
+// visuel à la recherche d'annonces (core feature). Pattern UX iOS/Android :
+// le tab central est souvent l'action principale ou la page la plus visitée.
+// User feedback : "annonces au milieu à la place de messages".
 const TABS_LOCATAIRE: Tab[] = [
-  { href: "/annonces",     label: "Annonces",  Icon: ListingsIcon, matchPaths: (p) => p === "/annonces" || p.startsWith("/annonces/") || p.startsWith("/location/") },
   { href: "/mon-logement", label: "Logement",  Icon: HomeIcon,     matchPaths: (p) => p.startsWith("/mon-logement") },
   { href: "/messages",     label: "Messages",  Icon: MessageIcon,  matchPaths: (p) => p.startsWith("/messages") },
+  { href: "/annonces",     label: "Annonces",  Icon: ListingsIcon, matchPaths: (p) => p === "/annonces" || p.startsWith("/annonces/") || p.startsWith("/location/") },
   { href: "/notifications",label: "Notifs",    Icon: BellIcon,     matchPaths: (p) => p.startsWith("/notifications") },
   { href: "/profil",       label: "Moi",       Icon: UserIcon,     matchPaths: (p) => p.startsWith("/profil") || p.startsWith("/dossier") },
 ]
 
 const TABS_PROPRIO: Tab[] = [
-  { href: "/annonces",      label: "Annonces", Icon: ListingsIcon, matchPaths: (p) => p === "/annonces" || p.startsWith("/annonces/") || p.startsWith("/location/") },
   { href: "/proprietaire",  label: "Mes biens",Icon: HomeIcon,     matchPaths: (p) => p.startsWith("/proprietaire") },
   { href: "/messages",      label: "Messages", Icon: MessageIcon,  matchPaths: (p) => p.startsWith("/messages") },
+  { href: "/annonces",      label: "Annonces", Icon: ListingsIcon, matchPaths: (p) => p === "/annonces" || p.startsWith("/annonces/") || p.startsWith("/location/") },
   { href: "/notifications", label: "Notifs",   Icon: BellIcon,     matchPaths: (p) => p.startsWith("/notifications") },
   { href: "/profil",        label: "Moi",      Icon: UserIcon,     matchPaths: (p) => p.startsWith("/profil") },
 ]
