@@ -2304,7 +2304,12 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
             // bottom 20px), le FAB centre rentrait en collision sur viewports < 400px.
             // Solution : decaler le FAB en haut de 70px quand compareIds.length > 0
             // → la pill Comparer reste bottom-right libre, FAB juste au-dessus.
-            bottom: compareIds.length > 0 ? "calc(20px + env(safe-area-inset-bottom, 0px) + 70px)" : "calc(20px + env(safe-area-inset-bottom, 0px))",
+            // V81.5 — fix bug user "vue carte a disparu" : BottomNavMobile
+            // (V73.9 + V81.2) occupe ~56px en bottom pour les users loggés sur
+            // /annonces (mobile). Le FAB à bottom:20px était littéralement caché
+            // derrière la BottomNav. On remonte à 84px (56 BottomNav + 20 spacing
+            // + ~8 visuel). +70 supplémentaires si Comparer tray actif.
+            bottom: compareIds.length > 0 ? "calc(84px + env(safe-area-inset-bottom, 0px) + 70px)" : "calc(84px + env(safe-area-inset-bottom, 0px))",
             left: "50%",
             transform: "translateX(-50%)",
             zIndex: 7200,

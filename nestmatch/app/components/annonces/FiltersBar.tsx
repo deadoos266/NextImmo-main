@@ -149,22 +149,36 @@ export default function FiltersBar(props: FiltersBarProps) {
         position: "sticky",
         top: stickyTop,
         zIndex: 6000,
-        // Fond semi-translucide + fallback opaque si backdrop-filter non supporté
-        background: "rgba(247,244,239,0.92)",
-        WebkitBackdropFilter: "blur(10px)",
-        backdropFilter: "blur(10px)",
+        // V81.5 — pattern V81.3 appliqué : fond white opaque + boxShadow + GPU
+        // compositing, pour fix l'effet "perdu / contenu transparait derrière"
+        // signalé user sur /profil ET /annonces grille mobile.
+        // Avant : rgba(247,244,239,0.92) + backdrop-filter blur(10px) →
+        // sur iOS Safari le blur ne marche pas toujours bien (compositor
+        // décide), résultat = transparence laisse voir les annonces derrière.
+        // Maintenant : white solid + ombre subtile, edge-to-edge mobile via
+        // marginLeft/Right négatifs pour matcher le padding du container.
+        background: "#FFFFFF",
         borderBottom: "1px solid #EAE6DF",
-        padding: isMobile ? "10px 0" : "12px 0",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+        padding: isMobile ? "12px 16px" : "12px 0",
+        marginLeft: isMobile ? -16 : 0,
+        marginRight: isMobile ? -16 : 0,
         display: "flex",
         alignItems: "center",
         gap: 10,
         flexShrink: 0,
-        overflowX: isTablet ? "auto" : "visible",
+        overflowX: isTablet || isMobile ? "auto" : "visible",
+        // GPU compositing — anti-jitter sticky iOS Safari
+        transform: "translate3d(0, 0, 0)",
+        WebkitTransform: "translate3d(0, 0, 0)",
+        willChange: "transform",
+        backfaceVisibility: "hidden",
+        WebkitBackfaceVisibility: "hidden",
       }}
     >
       <style>{`
         @supports not ((-webkit-backdrop-filter: blur(10px)) or (backdrop-filter: blur(10px))) {
-          .km-filters-bar-fallback { background: rgba(247,244,239,0.98) !important; }
+          .km-filters-bar-fallback { background: #FFFFFF !important; }
         }
       `}</style>
 
