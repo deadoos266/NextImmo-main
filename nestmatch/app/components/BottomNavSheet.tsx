@@ -152,7 +152,7 @@ export default function BottomNavSheet({ open, onClose }: Props) {
     { href: "/proprietaire", label: "Mes biens", desc: "Tous mes logements", Icon: Icons.Biens },
     { href: "/proprietaire/ajouter", label: "Publier une annonce", desc: "Nouveau bien à louer", Icon: Icons.Ajouter },
     { href: "/visites", label: "Visites planifiées", desc: "Mon agenda candidats", Icon: Icons.Visites },
-    { href: "/proprietaire/baux", label: "Baux", desc: "Contrats en cours / archivés", Icon: Icons.Bail },
+    { href: "/proprietaire/baux/historique", label: "Baux", desc: "Contrats en cours / archivés", Icon: Icons.Bail },
     { href: "/mes-quittances", label: "Quittances", desc: "Loyers encaissés & PDFs", Icon: Icons.Quittances },
   ]
 

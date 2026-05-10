@@ -108,25 +108,32 @@ export default function MesCandidatures() {
   async function load() {
     if (!session?.user?.email) return
     const email = session.user.email
+    const emailLower = email.toLowerCase()
     setLoadError(null)
-    // 1. Tous les messages envoyés par le locataire vers un proprio
-    // Inclut statut_candidature pour afficher le badge "Validée" si le proprio
-    // a explicitement validé la candidature (migration 022, Paul 2026-04-25).
-    const { data: msgs, error: msgsErr } = await supabase
-      .from("messages")
-      .select("id, to_email, annonce_id, contenu, created_at, type, statut_candidature")
-      .eq("from_email", email)
-      .not("annonce_id", "is", null)
-      .order("created_at", { ascending: false })
-
-    // Fail loud — sinon liste vide silencieuse interprétée comme
-    // « aucune candidature » alors que la DB est down.
-    if (msgsErr) {
-      console.error("[mes-candidatures] load messages failed", msgsErr)
+    // V81.25 — Migration depuis supabase.from("messages") direct vers
+    // /api/messages/all-mine. RLS Phase 5 a verrouillé l'accès anon à
+    // la table messages → la query directe retournait 401 "permission
+    // denied for table messages". L'endpoint API utilise supabaseAdmin
+    // côté serveur + check session NextAuth.
+    // Un seul fetch : on récupère TOUS les messages me concernant, puis
+    // on filtre 2 fois (msgs envoyés par moi + msgsRecus reçus).
+    let allMineCache: Array<{ id: number; from_email: string; to_email: string; annonce_id: number | null; contenu: string | null; created_at: string; type?: string; statut_candidature?: string }> = []
+    try {
+      const res = await fetch("/api/messages/all-mine", { cache: "no-store" })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json = await res.json()
+      if (!json.ok || !Array.isArray(json.messages)) throw new Error("payload invalide")
+      allMineCache = json.messages
+    } catch (err) {
+      console.error("[mes-candidatures] load messages failed", err)
       setLoadError("Impossible de charger vos candidatures. Vérifiez votre connexion et réessayez.")
       setLoading(false)
       return
     }
+    // Messages envoyés par MOI vers un proprio (from_email = moi, annonce_id non null)
+    const msgs = allMineCache
+      .filter(m => m.from_email?.toLowerCase() === emailLower && m.annonce_id != null)
+      .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
 
     const candidatsMap = new Map<number, any>()
     for (const m of msgs || []) {
@@ -155,13 +162,14 @@ export default function MesCandidatures() {
       .eq("locataire_email", email)
       .in("annonce_id", ids)
 
-    // 3bis. Messages reçus des proprios (détection de réponse)
-    const { data: msgsRecus } = await supabase
-      .from("messages")
-      .select("from_email, annonce_id, created_at, contenu")
-      .eq("to_email", email)
-      .in("annonce_id", ids)
-      .order("created_at", { ascending: false })
+    // 3bis. Messages reçus des proprios (détection de réponse).
+    // V81.25 — Utilise le cache allMineCache déjà récupéré via
+    // /api/messages/all-mine au lieu de supabase.from("messages") direct
+    // (RLS bloquait avec 401).
+    const idsSet = new Set(ids)
+    const msgsRecus = allMineCache
+      .filter(m => m.to_email?.toLowerCase() === emailLower && m.annonce_id != null && idsSet.has(m.annonce_id))
+      .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
 
     // 4. Détection dossier envoyé + retraits + refus explicite proprio
     const dossierEnvoyeIds = new Set<number>()
@@ -180,7 +188,7 @@ export default function MesCandidatures() {
     }
 
     // 5. Consolidation
-    const emailLower = email.toLowerCase()
+    // V81.25 — emailLower déjà déclaré plus haut (au début de load()).
     const now = Date.now()
     const result = ids
       .map(id => {
