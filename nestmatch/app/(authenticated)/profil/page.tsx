@@ -1293,12 +1293,23 @@ function ProfilTOC({ active, isMobile }: { active: string; isMobile: boolean }) 
 
   if (isMobile || !wide) {
     // V8 — Barre horizontale scrollable (mobile + tablette) restyle dossier.
+    // V81.3 — fix bug user "ca fait perdu" : background T.bg (beige) laissait
+    // transparaître le contenu sous le sticky bar. Maintenant white opaque +
+    // boxShadow subtil pour décollage visuel net.
     return (
       <nav aria-label="Sommaire du profil" style={{
-        position: "sticky", top: 72, zIndex: 10, background: T.bg,
-        padding: "10px 0 14px", marginBottom: 16,
+        position: "sticky", top: 72, zIndex: 10,
+        background: T.white,
+        padding: "12px 16px 14px",
+        marginLeft: -16, marginRight: -16, // déborde sur le padding container pour edge-to-edge
+        marginBottom: 16,
         overflowX: "auto", whiteSpace: "nowrap",
         borderBottom: `1px solid ${T.hairline}`,
+        boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+        // V73.6+ : GPU compositing pour éviter le jitter sticky sur iOS Safari
+        transform: "translate3d(0, 0, 0)",
+        WebkitTransform: "translate3d(0, 0, 0)",
+        willChange: "transform",
       }}>
         <div style={{ display: "inline-flex", gap: 8, padding: "0 2px" }}>
           {SECTIONS.map((s, idx) => {
