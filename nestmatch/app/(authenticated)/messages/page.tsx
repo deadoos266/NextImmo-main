@@ -2980,6 +2980,10 @@ function MessagesInner() {
   // pour le layout 3 colonnes — auparavant `isTablet` etait calcule mais jamais
   // utilise, ce qui ecrasait les 3 panneaux 340 + 1fr + ~320 dans <1024px.
   const { isMobile, isTablet, isDesktop } = useResponsive()
+  // V81.11 — isSmall = mobile OU tablette : pour le thread header sticky +
+  // back button, on veut le comportement "single column with back" sur
+  // tout viewport < 1024 (mobile + tablette), pas seulement mobile strict.
+  const isSmall = isMobile || isTablet
   const convActiveData = conversations.find(c => c.key === convActive)
   const annonceActive = convActiveData?.annonceId ? annonces[convActiveData.annonceId] : null
 
@@ -4279,8 +4283,44 @@ function MessagesInner() {
                     debordait en tablette/desktop etroit. flexWrap: wrap +
                     rowGap fait passer en multi-lignes proprement quand
                     necessaire au lieu de pousser hors de l'ecran. */}
-                <div style={{ padding: isMobile ? "12px 14px" : "16px 22px", borderBottom: "1px solid #EAE6DF", display: "flex", alignItems: "center", gap: isMobile ? 8 : 12, rowGap: isMobile ? 8 : 10, background: "#fff", flexWrap: "wrap" }}>
-                  {isMobile && (
+                {/* V81.11 — Thread header STICKY sur mobile + tablette : sans
+                    ça, quand l'user scroll dans les messages, le header
+                    (avec le back button) sortait du viewport et l'user était
+                    bloqué dans le thread sans navigation possible (Navbar +
+                    BottomNav sont masqués en mode thread mobile).
+                    Feedback Paul : "sur pc en visionnage tel on peut pas
+                    quitter l'onglet message". Fix : sticky top:0 + bg white
+                    opaque + zIndex au-dessus du contenu thread.
+                    backgroundColor longhand + !important pour bulletproof
+                    cohérent avec audit V81.10. */}
+                <div
+                  className={isSmall ? "km-thread-header-fallback" : undefined}
+                  style={{
+                    padding: isMobile ? "12px 14px" : "16px 22px",
+                    borderBottom: "1px solid #EAE6DF",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: isMobile ? 8 : 12,
+                    rowGap: isMobile ? 8 : 10,
+                    backgroundColor: "#FFFFFF",
+                    flexWrap: "wrap",
+                    // V81.11 — sticky top:0 sur mobile/tablette pour back btn toujours visible
+                    ...(isSmall ? {
+                      position: "sticky" as const,
+                      top: 0,
+                      zIndex: 100,
+                      transform: "translate3d(0, 0, 0)",
+                      WebkitTransform: "translate3d(0, 0, 0)",
+                      backfaceVisibility: "hidden" as const,
+                      WebkitBackfaceVisibility: "hidden" as const,
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                    } : {}),
+                  }}
+                >
+                  {isSmall && (
+                    <style>{`.km-thread-header-fallback { background-color: #FFFFFF !important; }`}</style>
+                  )}
+                  {isSmall && (
                     <button onClick={() => setConvActive(null)}
                       aria-label="Retour aux conversations"
                       style={{ background: "#F7F4EF", border: "1px solid #EAE6DF", borderRadius: 999, width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 18, color: "#111", flexShrink: 0, fontFamily: "inherit", WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}>
