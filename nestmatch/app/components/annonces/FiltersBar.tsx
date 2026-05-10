@@ -142,48 +142,78 @@ export default function FiltersBar(props: FiltersBarProps) {
 
   const showInlinePopovers = !isMobile // desktop + tablette
 
+  // V81.12 — DIAGNOSTIC FINAL du bug "barre fix toujours en plein milieu" :
+  //
+  // CAUSE RACINE identifiée : `globals.css` applique
+  //   html, body { overflow-x: clip; max-width: 100vw }
+  // pour bloquer le scroll horizontal iPhone (V11.12 NUCLEAR overflow guard).
+  // Or `overflow-x: clip` sur body force IMPLICITEMENT `overflow-y: auto`
+  // (CSS spec : si une dimension est non-visible, l'autre passe en auto).
+  // → body devient un scroll container pour ses descendants.
+  // → `position: sticky` à l'intérieur stick relativement au body, pas au
+  //   viewport, ce qui dans certaines configs (notamment desktop grid mode
+  //   à scroll long) fait que sticky NE S'ENGAGE PAS et la barre reste à
+  //   sa position naturelle (= "en plein milieu").
+  //
+  // Fix V81.12 : REMPLACER position:sticky par position:fixed + un spacer
+  // div qui prend la place dans le flux document. position:fixed sort du
+  // flux et n'est PAS affecté par overflow:clip d'ancêtre.
+  //
+  // Spacer height = approximative bar height (60px desktop, ~62px mobile).
+  // Si la bar wrap (2 lignes), le spacer underestime — acceptable, légère
+  // overlap d'1 carte mais la bar reste visible.
+  const barHeight = isMobile ? 62 : 60
+
   return (
-    <div
-      className="km-filters-bar-fallback"
-      style={{
-        position: "sticky",
-        top: stickyTop,
-        zIndex: 6000,
-        // V81.8 — refonte radicale pour fix bug user récurrent "barres fix
-        // mal collées / transparentes". Approche brute :
-        //   1. width: 100vw + leftPosition pour vraie couverture edge-to-edge
-        //      (les marginLeft/Right négatifs V81.5 ne suffisaient pas sur
-        //      tous les viewports car le parent container peut avoir un
-        //      padding > 16px sur tablette).
-        //   2. backgroundColor #FFFFFF SOLID — utilisé en propriété CSS explicite
-        //      (pas `background` shorthand qui peut être override par browser
-        //      dev tools / extension).
-        //   3. CSS variable !important via className pour bulletproof override.
-        backgroundColor: "#FFFFFF",
-        borderBottom: "1px solid #EAE6DF",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-        padding: isMobile ? "12px 16px" : "12px 0",
-        // Edge-to-edge garanti via 100vw + leftPosition centré
-        width: isMobile ? "100vw" : "100%",
-        marginLeft: isMobile ? "calc(-50vw + 50%)" : 0,
-        marginRight: 0,
-        boxSizing: "border-box",
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        flexShrink: 0,
-        overflowX: isTablet || isMobile ? "auto" : "visible",
-        // GPU compositing — anti-jitter sticky iOS Safari
-        transform: "translate3d(0, 0, 0)",
-        WebkitTransform: "translate3d(0, 0, 0)",
-        willChange: "transform",
-        backfaceVisibility: "hidden",
-        WebkitBackfaceVisibility: "hidden",
-      }}
-    >
-      <style>{`
-        .km-filters-bar-fallback { background-color: #FFFFFF !important; }
-      `}</style>
+    <>
+      {/* Spacer qui prend la place du FiltersBar dans le flux document
+          puisqu'on passe en position:fixed (qui sort du flux). */}
+      <div aria-hidden style={{ height: barHeight, flexShrink: 0 }} />
+      <div
+        className="km-filters-bar-fallback"
+        style={{
+          position: "fixed",
+          top: stickyTop,
+          left: 0,
+          right: 0,
+          zIndex: 6000,
+          backgroundColor: "#FFFFFF",
+          borderBottom: "1px solid #EAE6DF",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+          padding: isMobile ? "12px 16px" : "12px 24px",
+          width: "100%",
+          boxSizing: "border-box",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          flexShrink: 0,
+          overflowX: isTablet || isMobile ? "auto" : "visible",
+          transform: "translate3d(0, 0, 0)",
+          WebkitTransform: "translate3d(0, 0, 0)",
+          willChange: "transform",
+          backfaceVisibility: "hidden",
+          WebkitBackfaceVisibility: "hidden",
+          // V81.12 — JustifyContent center pour desktop (gardera les
+          // popovers centrés dans 1700px max). Sur mobile/tablette, le
+          // scroll horizontal interne gère le débordement.
+          justifyContent: isMobile || isTablet ? "flex-start" : "center",
+        }}
+      >
+        <style>{`
+          .km-filters-bar-fallback { background-color: #FFFFFF !important; }
+        `}</style>
+        {/* Inner wrapper pour limiter le contenu à 1700px (cohérent
+            avec GRID_MAX_WIDTH du AnnoncesClient) tout en gardant le
+            background pleine largeur. */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          flexShrink: 0,
+          width: "100%",
+          maxWidth: isMobile || isTablet ? "100%" : 1700,
+        }}>
+
 
       {showInlinePopovers && (
         <>
@@ -513,7 +543,9 @@ export default function FiltersBar(props: FiltersBarProps) {
               ? `${resultCount} rés.`
               : `${resultCount} résultat${resultCount > 1 ? "s" : ""}`}
         </span>
-      </div>
-    </div>
+        </div>{/* close GROUPE DROIT */}
+        </div>{/* close maxWidth inner wrapper */}
+      </div>{/* close fixed bar */}
+    </>
   )
 }
