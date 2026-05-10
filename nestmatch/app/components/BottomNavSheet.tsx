@@ -1,31 +1,81 @@
 "use client"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
 import { useRole } from "../providers"
 import { km } from "./ui/km"
 
+// V81.14 — Tokens design system locaux pour ce composant. Toutes les
+// valeurs spacing/radius/font sont centralisées ici, pas hardcodées dans
+// les styles plus bas. Si on veut changer un radius ou un padding, on
+// touche UN endroit. Cohérent avec la philosophie km.* du projet.
+const tokens = {
+  // Spacing
+  gapXs: 4,
+  gapSm: 8,
+  gapMd: 14,
+  gapLg: 20,
+  // Padding
+  itemPaddingY: 14,
+  itemPaddingX: 16,
+  // Radius
+  radiusXl: 24,   // sheet top corners
+  radiusLg: 16,   // modal desktop
+  radiusMd: 14,   // items, buttons
+  radiusSm: 12,   // icon containers
+  // Sizes
+  itemMinHeight: 56,
+  iconBox: 40,
+  closeBtn: 36,
+  // Fonts (chained avec CSS variables next/font + fallback)
+  fontBody: "var(--font-dm-sans), 'DM Sans', sans-serif",
+  fontDisplay: "var(--font-fraunces), 'Fraunces', Georgia, serif",
+  // Typography scale
+  itemLabelSize: 14,
+  itemDescSize: 11.5,
+  sectionLabelSize: 10,
+  titleSize: 22,
+} as const
+
+// V81.14 — Breakpoint sync avec useResponsive (lib/hooks/useResponsive.ts)
+// pour cohérence mobile/tablet/desktop dans tout le projet.
+function useViewport() {
+  const [v, setV] = useState<{ w: number; isMobile: boolean; isTabletOrAbove: boolean }>({
+    w: 1200, isMobile: false, isTabletOrAbove: true,
+  })
+  useEffect(() => {
+    function update() {
+      const w = window.innerWidth
+      setV({ w, isMobile: w < 640, isTabletOrAbove: w >= 640 })
+    }
+    update()
+    window.addEventListener("resize", update)
+    return () => window.removeEventListener("resize", update)
+  }, [])
+  return v
+}
+
 /**
  * V81.13 — Slide-up sheet déclenché depuis BottomNavMobile pour donner
- * accès à TOUS les onglets/sections du site sur mobile (pas juste les
- * 5 tabs visibles en permanence).
+ * accès à TOUS les onglets/sections du site (pas juste les 5 tabs).
  *
- * Feedback Paul (2026-05-11) : "sur la partie navigation en bas je
- * t'avais demandé de faire un genre de menu dépliant vers le haut prc
- * que la on accède que a une partie des onglets c'est vraiment dommage".
+ * V81.14 — RESPONSIVE adaptation + tokens design system centralisés.
  *
- * UX :
- *  - Backdrop semi-opaque tap-to-close
- *  - Sheet slide-up depuis le bas, max-height 80vh, scroll interne si déborde
- *  - Sections groupées : Mon compte / Recherche / Outils / Aide
- *  - Iconographie cohérente avec BottomNavMobile (SVG outlines)
- *  - Liens adaptés au rôle (proprietaireActive)
- *  - Bouton Déconnexion en bas (action destructive)
+ * Comportement adaptatif (feedback Paul "que ça s'adapte les composants") :
+ *  - MOBILE (<640) : bottom sheet slide-up (pattern iOS Control Center)
+ *      → coins arrondis top, full-width, handle gris, safe-area inset
+ *  - TABLET/DESKTOP (≥640) : modal centré avec fade-in
+ *      → max-width 520px, radius 16, animation scale+fade
+ *      → backdrop click ou ESC ferme, X en haut à droite
  *
- * Pattern visuel : Apple iOS Control Center / Android Quick Settings —
- * sheet à coins arrondis 24px top, handle gris en haut, padding safe-area
- * inset bottom pour iPhone notch.
+ * Tokens design (objet `tokens` ci-dessus) :
+ *  - Toutes les valeurs spacing/radius/font sont centralisées en haut
+ *  - Modifier un radius/padding = 1 seul endroit à changer
+ *  - Cohérent avec km.* (palette couleurs) du projet
+ *
+ * Iconographie cohérente avec BottomNavMobile (SVG outlines stroke=2).
+ * Liens adaptés au rôle (proprietaireActive de useRole()).
  */
 
 interface Props {
@@ -59,9 +109,9 @@ const Icons = {
 }
 
 export default function BottomNavSheet({ open, onClose }: Props) {
-  const router = useRouter()
   const pathname = usePathname() || "/"
   const { proprietaireActive } = useRole()
+  const { isMobile } = useViewport()
 
   // ESC closes + body scroll lock when open
   useEffect(() => {
@@ -116,25 +166,29 @@ export default function BottomNavSheet({ open, onClose }: Props) {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 14,
-          padding: "14px 16px",
-          borderRadius: 14,
+          gap: tokens.gapMd,
+          padding: `${tokens.itemPaddingY}px ${tokens.itemPaddingX}px`,
+          borderRadius: tokens.radiusMd,
           background: active ? km.beige : "transparent",
           textDecoration: "none",
           color: km.ink,
+          fontFamily: tokens.fontBody,
           WebkitTapHighlightColor: "transparent",
           touchAction: "manipulation",
-          minHeight: 56,
+          minHeight: tokens.itemMinHeight,
+          transition: "background 160ms ease",
         }}
+        onMouseEnter={e => { if (!active) e.currentTarget.style.background = km.beige }}
+        onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent" }}
       >
         <span
           style={{
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            width: 40,
-            height: 40,
-            borderRadius: 12,
+            width: tokens.iconBox,
+            height: tokens.iconBox,
+            borderRadius: tokens.radiusSm,
             background: km.beige,
             color: km.ink,
             flexShrink: 0,
@@ -143,9 +197,9 @@ export default function BottomNavSheet({ open, onClose }: Props) {
           <item.Icon />
         </span>
         <span style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: km.ink, lineHeight: 1.25 }}>{item.label}</span>
+          <span style={{ fontSize: tokens.itemLabelSize, fontWeight: 700, color: km.ink, lineHeight: 1.25 }}>{item.label}</span>
           {item.desc && (
-            <span style={{ fontSize: 11.5, color: km.muted, lineHeight: 1.4, marginTop: 2 }}>{item.desc}</span>
+            <span style={{ fontSize: tokens.itemDescSize, color: km.muted, lineHeight: 1.4, marginTop: 2 }}>{item.desc}</span>
           )}
         </span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={km.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -158,12 +212,50 @@ export default function BottomNavSheet({ open, onClose }: Props) {
   function SectionLabel({ children }: { children: React.ReactNode }) {
     return (
       <p style={{
-        fontSize: 10, fontWeight: 700, color: km.muted,
+        fontSize: tokens.sectionLabelSize, fontWeight: 700, color: km.muted,
         textTransform: "uppercase", letterSpacing: "1.4px",
-        margin: "18px 16px 6px",
+        margin: `18px ${tokens.itemPaddingX}px 6px`,
+        fontFamily: tokens.fontBody,
       }}>{children}</p>
     )
   }
+
+  // V81.14 — Style adaptatif :
+  //   - Mobile : bottom sheet slide-up (radius top only, full width, handle)
+  //   - Tablet/desktop : modal centré (radius all sides, maxWidth, no handle)
+  const containerStyle: React.CSSProperties = isMobile
+    ? {
+        position: "fixed",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 9001,
+        backgroundColor: "#FFFFFF",
+        borderTopLeftRadius: tokens.radiusXl,
+        borderTopRightRadius: tokens.radiusXl,
+        maxHeight: "85vh",
+        overflowY: "auto",
+        paddingBottom: "calc(20px + env(safe-area-inset-bottom, 0px))",
+        boxShadow: "0 -12px 40px rgba(0,0,0,0.18)",
+        fontFamily: tokens.fontBody,
+        animation: "km-bnsheet-slide 280ms cubic-bezier(0.32, 0.72, 0, 1)",
+      }
+    : {
+        position: "fixed",
+        left: "50%",
+        top: "50%",
+        transform: "translate(-50%, -50%)",
+        zIndex: 9001,
+        width: "min(520px, calc(100vw - 48px))",
+        maxHeight: "80vh",
+        overflowY: "auto",
+        backgroundColor: "#FFFFFF",
+        borderRadius: tokens.radiusLg,
+        paddingBottom: 16,
+        boxShadow: "0 24px 64px rgba(0,0,0,0.24)",
+        fontFamily: tokens.fontBody,
+        animation: "km-bnsheet-pop 240ms cubic-bezier(0.32, 0.72, 0, 1)",
+      }
 
   return (
     <>
@@ -181,48 +273,43 @@ export default function BottomNavSheet({ open, onClose }: Props) {
           animation: "km-bnsheet-fade 200ms ease-out",
         }}
       />
-      {/* Sheet */}
+      {/* Sheet (mobile) / Modal (desktop) — même DOM, style switch */}
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Menu complet"
-        style={{
-          position: "fixed",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 9001,
-          backgroundColor: "#FFFFFF",
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
-          maxHeight: "85vh",
-          overflowY: "auto",
-          paddingBottom: "calc(20px + env(safe-area-inset-bottom, 0px))",
-          boxShadow: "0 -12px 40px rgba(0,0,0,0.18)",
-          fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif",
-          animation: "km-bnsheet-slide 280ms cubic-bezier(0.32, 0.72, 0, 1)",
-        }}
+        style={containerStyle}
       >
         <style>{`
           @keyframes km-bnsheet-slide {
             from { transform: translateY(100%); }
             to { transform: translateY(0); }
           }
+          @keyframes km-bnsheet-pop {
+            from { transform: translate(-50%, -50%) scale(0.96); opacity: 0; }
+            to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+          }
           @keyframes km-bnsheet-fade {
             from { opacity: 0; }
             to { opacity: 1; }
           }
         `}</style>
-        {/* Handle */}
-        <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 4px" }}>
-          <div style={{ width: 40, height: 4, borderRadius: 999, background: km.line }} aria-hidden />
-        </div>
+        {/* Handle (mobile only) */}
+        {isMobile && (
+          <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 4px" }}>
+            <div style={{ width: 40, height: 4, borderRadius: 999, background: km.line }} aria-hidden />
+          </div>
+        )}
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 20px 4px" }}>
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: isMobile ? "8px 20px 4px" : "20px 24px 8px",
+          borderBottom: isMobile ? "none" : `1px solid ${km.line}`,
+        }}>
           <p style={{
-            fontFamily: "var(--font-fraunces), 'Fraunces', Georgia, serif",
-            fontStyle: "italic", fontWeight: 500, fontSize: 22,
+            fontFamily: tokens.fontDisplay,
+            fontStyle: "italic", fontWeight: 500, fontSize: tokens.titleSize,
             color: km.ink, letterSpacing: "-0.3px", margin: 0,
           }}>
             Menu
@@ -232,11 +319,11 @@ export default function BottomNavSheet({ open, onClose }: Props) {
             onClick={onClose}
             aria-label="Fermer le menu"
             style={{
-              width: 36, height: 36, borderRadius: 999,
+              width: tokens.closeBtn, height: tokens.closeBtn, borderRadius: 999,
               background: km.beige, border: `1px solid ${km.line}`,
               cursor: "pointer", color: km.ink, fontSize: 16,
               display: "inline-flex", alignItems: "center", justifyContent: "center",
-              fontFamily: "inherit",
+              fontFamily: tokens.fontBody,
               WebkitTapHighlightColor: "transparent",
             }}
           >
@@ -245,7 +332,7 @@ export default function BottomNavSheet({ open, onClose }: Props) {
         </div>
 
         {/* Content */}
-        <div style={{ padding: "8px 8px 16px" }}>
+        <div style={{ padding: isMobile ? "8px 8px 16px" : "8px 16px 16px" }}>
           <SectionLabel>Mon compte</SectionLabel>
           {sectionMonCompte.map(item => <Item key={item.href} item={item} />)}
 
@@ -270,13 +357,13 @@ export default function BottomNavSheet({ open, onClose }: Props) {
               type="button"
               onClick={() => { onClose(); signOut({ callbackUrl: "/" }) }}
               style={{
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                width: "100%", padding: "14px 18px",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: tokens.gapSm + 2,
+                width: "100%", padding: `${tokens.itemPaddingY}px 18px`,
                 background: km.errBg, color: km.errText,
                 border: `1px solid ${km.errLine}`,
-                borderRadius: 14,
+                borderRadius: tokens.radiusMd,
                 fontSize: 13, fontWeight: 700,
-                fontFamily: "inherit",
+                fontFamily: tokens.fontBody,
                 cursor: "pointer",
                 textTransform: "uppercase", letterSpacing: "0.6px",
                 WebkitTapHighlightColor: "transparent",
