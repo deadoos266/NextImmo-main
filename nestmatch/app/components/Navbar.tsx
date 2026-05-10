@@ -667,8 +667,11 @@ export default function Navbar() {
           </svg>
         </Link>
       )}
-      {/* Mobile : cloche notifications à droite, avant le burger */}
-      {isSmall && session && <NotificationBell />}
+      {/* V81.9 — cloche notifs mobile RETIRÉE pour users loggés : doublon avec
+          le tab "Notifs" de BottomNavMobile (qui a aussi son badge unread).
+          Feedback Paul : "le truc notifs en haut nécessaire sachant que c'est
+          déjà en bas ?". Mobile → 1 seul point d'entrée notifs (bottom nav).
+          Desktop garde la cloche dans la Navbar (pas de BottomNav desktop). */}
 
       {/* V81.6 — Mobile burger MASQUÉ pour les users loggés. BottomNavMobile
           (V73.9 + V81.2) couvre la navigation principale (5 tabs) et les
