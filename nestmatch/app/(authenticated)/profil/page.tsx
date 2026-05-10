@@ -9,6 +9,7 @@ import Link from "next/link"
 import CityAutocomplete from "../../components/CityAutocomplete"
 import QuartierPicker from "../../components/QuartierPicker"
 import Tooltip from "../../components/Tooltip"
+import RoleSwitchToggle from "../../components/RoleSwitchToggle"
 
 // Composants HORS du composant principal pour éviter le bug de focus
 import { Toggle, Sec, F } from "../../components/FormHelpers"
@@ -601,6 +602,88 @@ function Profil() {
             navigation du V6.3 hub Critères/Dossier ci-dessous + repetait des
             entrees deja accessibles via /parametres + le menu burger user.
             On ne garde que le hub tabs unifié. */}
+
+        {/* V81.6 — Hub Actions mobile (suite retrait burger sur users logged).
+            Le burger mobile était redondant avec BottomNav et masquait certaines
+            actions (switch role, paramètres, déconnexion). Maintenant ces
+            actions vivent dans /profil page tab "Moi". */}
+        {isMobile && (
+          <div style={{ marginTop: 24, marginBottom: 8, display: "flex", flexDirection: "column", gap: 12 }}>
+            {/* Switch role pill (auto-hide si pas les 2 rôles) */}
+            <RoleSwitchToggle variant="mobile" showLabel={true} />
+
+            {/* Liens secondaires en grille 2x2 */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <Link href="/parametres" style={{
+                background: "white", border: `1px solid ${km.line}`, borderRadius: 14,
+                padding: "12px 14px", textDecoration: "none", color: km.ink,
+                display: "flex", alignItems: "center", gap: 10, fontFamily: "inherit",
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>Paramètres</span>
+              </Link>
+              <Link href="/favoris" style={{
+                background: "white", border: `1px solid ${km.line}`, borderRadius: 14,
+                padding: "12px 14px", textDecoration: "none", color: km.ink,
+                display: "flex", alignItems: "center", gap: 10, fontFamily: "inherit",
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>Favoris</span>
+              </Link>
+              <Link href="/recherches-sauvegardees" style={{
+                background: "white", border: `1px solid ${km.line}`, borderRadius: 14,
+                padding: "12px 14px", textDecoration: "none", color: km.ink,
+                display: "flex", alignItems: "center", gap: 10, fontFamily: "inherit",
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                </svg>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>Recherches</span>
+              </Link>
+              {!proprietaireActive && (
+                <Link href="/mes-candidatures" style={{
+                  background: "white", border: `1px solid ${km.line}`, borderRadius: 14,
+                  padding: "12px 14px", textDecoration: "none", color: km.ink,
+                  display: "flex", alignItems: "center", gap: 10, fontFamily: "inherit",
+                }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>Candidatures</span>
+                </Link>
+              )}
+              {proprietaireActive && (
+                <Link href="/visites" style={{
+                  background: "white", border: `1px solid ${km.line}`, borderRadius: 14,
+                  padding: "12px 14px", textDecoration: "none", color: km.ink,
+                  display: "flex", alignItems: "center", gap: 10, fontFamily: "inherit",
+                }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>Visites</span>
+                </Link>
+              )}
+            </div>
+
+            {/* Déconnexion en bouton plein-width rouge */}
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: "/" })}
+              style={{
+                background: km.errBg, border: "none", borderRadius: 14,
+                padding: "12px", color: km.errText, fontWeight: 700, fontSize: 13,
+                cursor: "pointer", fontFamily: "inherit", letterSpacing: "0.3px",
+                marginTop: 4,
+              }}>
+              Déconnexion
+            </button>
+          </div>
+        )}
 
         {/* V73.2 — Récap critères mobile (point 13 user).
             Sur mobile, l'utilisateur voyait tomber direct sur les tabs

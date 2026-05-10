@@ -664,8 +664,13 @@ export default function Navbar() {
       {/* Mobile : cloche notifications à droite, avant le burger */}
       {isSmall && session && <NotificationBell />}
 
-      {/* Mobile : burger gauche, circulaire, animation smooth (option A) */}
-      {isSmall && (
+      {/* V81.6 — Mobile burger MASQUÉ pour les users loggés. BottomNavMobile
+          (V73.9 + V81.2) couvre la navigation principale (5 tabs) et les
+          actions secondaires (paramètres, switch role, déconnexion, favoris,
+          etc.) sont accessibles via le tab "Moi" → /profil.
+          Burger gardé pour les VISITEURS ANONYMES qui n'ont pas de BottomNav
+          (besoin d'accéder à Connexion/Inscription/CGU/Mentions). */}
+      {isSmall && !session && (
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label={mobileOpen ? "Fermer le menu" : "Ouvrir le menu"}
