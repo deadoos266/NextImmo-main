@@ -1379,21 +1379,41 @@ function ProfilTOC({ active, isMobile }: { active: string; isMobile: boolean }) 
     // V81.3 — fix bug user "ca fait perdu" : background T.bg (beige) laissait
     // transparaître le contenu sous le sticky bar. Maintenant white opaque +
     // boxShadow subtil pour décollage visuel net.
+    // V81.8 — bug récurrent "y a toujours le meme bug pour les barres fix" :
+    // background:#fff seul laissait apparaître du contenu derrière sur certains
+    // navigateurs mobiles (cushion entre boutons). Solution radicale :
+    //  - width: 100vw + marginLeft calc(-50vw + 50%) pour edge-to-edge sans
+    //    dépendre du padding container (qui était parfois trop étroit ou
+    //    décalé selon la largeur réelle).
+    //  - backgroundColor:#FFFFFF en longhand + règle CSS !important pour
+    //    blinder face à un éventuel override hérité.
     return (
-      <nav aria-label="Sommaire du profil" style={{
-        position: "sticky", top: 72, zIndex: 10,
-        background: T.white,
-        padding: "12px 16px 14px",
-        marginLeft: -16, marginRight: -16, // déborde sur le padding container pour edge-to-edge
-        marginBottom: 16,
-        overflowX: "auto", whiteSpace: "nowrap",
-        borderBottom: `1px solid ${T.hairline}`,
-        boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-        // V73.6+ : GPU compositing pour éviter le jitter sticky sur iOS Safari
-        transform: "translate3d(0, 0, 0)",
-        WebkitTransform: "translate3d(0, 0, 0)",
-        willChange: "transform",
-      }}>
+      <nav
+        aria-label="Sommaire du profil"
+        className="km-profil-toc-fallback"
+        style={{
+          position: "sticky", top: 72, zIndex: 10,
+          backgroundColor: "#FFFFFF",
+          padding: "12px 16px 14px",
+          width: "100vw",
+          marginLeft: "calc(-50vw + 50%)",
+          marginRight: "calc(-50vw + 50%)",
+          marginBottom: 16,
+          boxSizing: "border-box",
+          overflowX: "auto", whiteSpace: "nowrap",
+          borderBottom: `1px solid ${T.hairline}`,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+          // V73.6+ : GPU compositing pour éviter le jitter sticky sur iOS Safari
+          transform: "translate3d(0, 0, 0)",
+          WebkitTransform: "translate3d(0, 0, 0)",
+          willChange: "transform",
+          backfaceVisibility: "hidden",
+          WebkitBackfaceVisibility: "hidden",
+        }}
+      >
+        <style>{`
+          .km-profil-toc-fallback { background-color: #FFFFFF !important; }
+        `}</style>
         <div style={{ display: "inline-flex", gap: 8, padding: "0 2px" }}>
           {SECTIONS.map((s, idx) => {
             const on = s.id === active

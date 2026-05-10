@@ -149,20 +149,25 @@ export default function FiltersBar(props: FiltersBarProps) {
         position: "sticky",
         top: stickyTop,
         zIndex: 6000,
-        // V81.5 — pattern V81.3 appliqué : fond white opaque + boxShadow + GPU
-        // compositing, pour fix l'effet "perdu / contenu transparait derrière"
-        // signalé user sur /profil ET /annonces grille mobile.
-        // Avant : rgba(247,244,239,0.92) + backdrop-filter blur(10px) →
-        // sur iOS Safari le blur ne marche pas toujours bien (compositor
-        // décide), résultat = transparence laisse voir les annonces derrière.
-        // Maintenant : white solid + ombre subtile, edge-to-edge mobile via
-        // marginLeft/Right négatifs pour matcher le padding du container.
-        background: "#FFFFFF",
+        // V81.8 — refonte radicale pour fix bug user récurrent "barres fix
+        // mal collées / transparentes". Approche brute :
+        //   1. width: 100vw + leftPosition pour vraie couverture edge-to-edge
+        //      (les marginLeft/Right négatifs V81.5 ne suffisaient pas sur
+        //      tous les viewports car le parent container peut avoir un
+        //      padding > 16px sur tablette).
+        //   2. backgroundColor #FFFFFF SOLID — utilisé en propriété CSS explicite
+        //      (pas `background` shorthand qui peut être override par browser
+        //      dev tools / extension).
+        //   3. CSS variable !important via className pour bulletproof override.
+        backgroundColor: "#FFFFFF",
         borderBottom: "1px solid #EAE6DF",
         boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
         padding: isMobile ? "12px 16px" : "12px 0",
-        marginLeft: isMobile ? -16 : 0,
-        marginRight: isMobile ? -16 : 0,
+        // Edge-to-edge garanti via 100vw + leftPosition centré
+        width: isMobile ? "100vw" : "100%",
+        marginLeft: isMobile ? "calc(-50vw + 50%)" : 0,
+        marginRight: 0,
+        boxSizing: "border-box",
         display: "flex",
         alignItems: "center",
         gap: 10,
@@ -177,9 +182,7 @@ export default function FiltersBar(props: FiltersBarProps) {
       }}
     >
       <style>{`
-        @supports not ((-webkit-backdrop-filter: blur(10px)) or (backdrop-filter: blur(10px))) {
-          .km-filters-bar-fallback { background: #FFFFFF !important; }
-        }
+        .km-filters-bar-fallback { background-color: #FFFFFF !important; }
       `}</style>
 
       {showInlinePopovers && (
