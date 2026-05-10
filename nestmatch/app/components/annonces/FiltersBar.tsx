@@ -423,7 +423,9 @@ export default function FiltersBar(props: FiltersBarProps) {
         </Link>
       )}
 
-      {/* Bouton Filtres (centre gauche) */}
+      {/* Bouton Filtres (centre gauche).
+          V81.24 — Sur mobile, affichage compact : icone seule + badge count.
+          Évite le overflow horizontal de la barre sur viewport étroit. */}
       <button
         type="button"
         onClick={onOpenModal}
@@ -431,12 +433,12 @@ export default function FiltersBar(props: FiltersBarProps) {
         style={{
           display: "inline-flex",
           alignItems: "center",
-          gap: 8,
+          gap: isMobile ? 4 : 8,
           background: "white",
           color: "#111",
           border: `1px solid ${activeFilterCount > 0 ? "#111" : "#EAE6DF"}`,
           borderRadius: 999,
-          padding: "8px 18px",
+          padding: isMobile ? "8px 12px" : "8px 18px",
           fontSize: 13,
           fontWeight: 600,
           cursor: "pointer",
@@ -446,7 +448,7 @@ export default function FiltersBar(props: FiltersBarProps) {
         }}
       >
         <IconFilters />
-        <span>Filtres</span>
+        {!isMobile && <span>Filtres</span>}
         {activeFilterCount > 0 && (
           <span
             aria-hidden="true"
@@ -473,15 +475,18 @@ export default function FiltersBar(props: FiltersBarProps) {
       {/* Espace flex — pousse le groupe droit */}
       <div style={{ flex: 1 }} />
 
-      {/* GROUPE DROIT : Tri + ViewToggle + compteur collés (gap:8) */}
+      {/* GROUPE DROIT : Tri + ViewToggle + compteur collés (gap:8).
+          V81.24 — Sur mobile, label "Trier:" caché + compteur caché
+          (redondant avec le h2 "N logements à Paris" juste en dessous). */}
       <div style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
         <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#666" }}>
-          <span style={{ fontWeight: 500, whiteSpace: "nowrap" }}>Trier&nbsp;:</span>
+          {!isMobile && <span style={{ fontWeight: 500, whiteSpace: "nowrap" }}>Trier&nbsp;:</span>}
           <select
             value={tri}
             onChange={e => setTri(e.target.value as TriKey)}
+            aria-label={isMobile ? "Trier les annonces" : undefined}
             style={{
-              padding: "7px 28px 7px 12px",
+              padding: isMobile ? "7px 26px 7px 10px" : "7px 28px 7px 12px",
               border: "1px solid #EAE6DF",
               borderRadius: 999,
               background: "white",
@@ -495,6 +500,7 @@ export default function FiltersBar(props: FiltersBarProps) {
                 "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>\")",
               backgroundRepeat: "no-repeat",
               backgroundPosition: "right 10px center",
+              maxWidth: isMobile ? 110 : undefined,
             }}
           >
             {showMatchOption && <option value="match">Matching</option>}
@@ -566,13 +572,16 @@ export default function FiltersBar(props: FiltersBarProps) {
           </div>
         )}
 
-        <span style={{ fontSize: 12, color: "#666", whiteSpace: "nowrap", fontWeight: 500 }}>
-          {loading
-            ? (isMobile ? "…" : "Chargement…")
-            : isMobile
-              ? `${resultCount} rés.`
+        {/* V81.24 — Compteur masqué sur mobile : redondant avec le h2
+            "{N} logements à {ville}" juste en dessous. Évite le overflow
+            de la barre sur viewport étroit. */}
+        {!isMobile && (
+          <span style={{ fontSize: 12, color: "#666", whiteSpace: "nowrap", fontWeight: 500 }}>
+            {loading
+              ? "Chargement…"
               : `${resultCount} résultat${resultCount > 1 ? "s" : ""}`}
-        </span>
+          </span>
+        )}
         </div>{/* close GROUPE DROIT */}
         </div>{/* close maxWidth inner wrapper */}
       </div>{/* close fixed bar */}
