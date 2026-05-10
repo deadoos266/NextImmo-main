@@ -1308,11 +1308,18 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
       </h1>
 
       {/* Container principal : full-width en Liste+Carte, max-1440 en Grille */}
+      {/* V81.18 — paddingTop pour réserver l'espace de la FiltersBar fixed
+          (sinon le dossier banner + h2 passaient SOUS la FiltersBar au
+          scrollY=0). Cohérent avec body.padding-top:72 de globals.css qui
+          réserve l'espace de la Navbar fixed. Total empty top = 72+62=134.
+          Conditionnel : seulement quand FiltersBar visible (ie pas en
+          mobile map mode ni desktop list+carte). */}
       <div style={{
         maxWidth: containerMaxWidth,
         margin: containerMargin,
         paddingLeft: containerPadH,
         paddingRight: containerPadH,
+        paddingTop: (!isDesktopListCarte && !(isMobileV5 && showMap)) ? 62 : 0,
         // Mode Liste+Carte desktop : flex column pour propager flex:1 à la zone LC
         flex: isDesktopListCarte ? 1 : undefined,
         minHeight: isDesktopListCarte ? 0 : undefined,
@@ -2290,10 +2297,14 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
         )}
       </div>
 
-      {/* ── Mobile FAB "Voir sur la carte" (<768, mode Liste, modale fermée).
+      {/* ── Mobile FAB "Voir sur la carte" (<768, modale carte fermée).
           Hide quand le drawer mobile est ouvert pour eviter tout chevauchement
-          visuel (z-index war). Cf custom event "km:drawer-state". */}
-      {isMobileV5 && !gridMode && !showMap && !navDrawerOpen && (
+          visuel (z-index war). Cf custom event "km:drawer-state".
+          V81.18 — RETIRÉ `!gridMode` : le FAB doit aussi être accessible
+          en mode grille (sinon les users qui ont activé grille une fois
+          sur desktop voyaient le FAB disparaître sur mobile devtools car
+          la pref view est persistée localStorage). */}
+      {isMobileV5 && !showMap && !navDrawerOpen && (
         <button
           type="button"
           onClick={() => setShowMap(true)}

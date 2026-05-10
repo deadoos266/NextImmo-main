@@ -151,24 +151,21 @@ export default function FiltersBar(props: FiltersBarProps) {
   // (CSS spec : si une dimension est non-visible, l'autre passe en auto).
   // → body devient un scroll container pour ses descendants.
   // → `position: sticky` à l'intérieur stick relativement au body, pas au
-  //   viewport, ce qui dans certaines configs (notamment desktop grid mode
-  //   à scroll long) fait que sticky NE S'ENGAGE PAS et la barre reste à
-  //   sa position naturelle (= "en plein milieu").
+  //   viewport, ce qui dans certaines configs fait que sticky NE S'ENGAGE
+  //   PAS et la barre reste à sa position naturelle (= "en plein milieu").
   //
-  // Fix V81.12 : REMPLACER position:sticky par position:fixed + un spacer
-  // div qui prend la place dans le flux document. position:fixed sort du
-  // flux et n'est PAS affecté par overflow:clip d'ancêtre.
+  // Fix V81.12 : REMPLACER position:sticky par position:fixed. La barre
+  // sort du flux et reste collée au top:72 du viewport quel que soit le
+  // scroll. Insensible à overflow:clip d'un ancêtre.
   //
-  // Spacer height = approximative bar height (60px desktop, ~62px mobile).
-  // Si la bar wrap (2 lignes), le spacer underestime — acceptable, légère
-  // overlap d'1 carte mais la bar reste visible.
-  const barHeight = isMobile ? 62 : 60
+  // V81.18 — Le SPACER est désormais géré par AnnoncesClient (padding-top
+  // sur le container principal) car le spacer interne n'était pas placé
+  // au bon endroit (sous le dossier banner au lieu d'au-dessus), ce qui
+  // causait le FiltersBar fixed à recouvrir le dossier banner au scrollY=0.
+  // Cf feedback Paul : "des choses passent par dessus certaines".
 
   return (
     <>
-      {/* Spacer qui prend la place du FiltersBar dans le flux document
-          puisqu'on passe en position:fixed (qui sort du flux). */}
-      <div aria-hidden style={{ height: barHeight, flexShrink: 0 }} />
       <div
         className="km-filters-bar-fallback"
         style={{
@@ -391,6 +388,39 @@ export default function FiltersBar(props: FiltersBarProps) {
             {isMobile ? "Profil" : "Mes critères"}
           </Link>
         )
+      )}
+
+      {/* V81.18 — Quick-access "Favoris" mobile uniquement (icône cœur).
+          Feedback Paul : "il faudrait sur tel avoir un moyen d'aller au
+          favoris depuis /annonces car la ca va etre lent pour y aller et
+          pas intuitif" (via tab Plus → sheet → tap Favoris = 2-3 taps).
+          1 tap depuis la FiltersBar = direct. Desktop a déjà l'accès via
+          la Navbar (lien Favoris), pas besoin de doubler. */}
+      {isMobile && monProfilHref && (
+        <Link
+          href="/favoris"
+          aria-label="Mes favoris"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "#fff",
+            color: "#111",
+            border: "1px solid #EAE6DF",
+            borderRadius: 999,
+            width: 38,
+            height: 38,
+            textDecoration: "none",
+            fontFamily: "inherit",
+            flexShrink: 0,
+            WebkitTapHighlightColor: "transparent",
+            touchAction: "manipulation",
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+        </Link>
       )}
 
       {/* Bouton Filtres (centre gauche) */}
