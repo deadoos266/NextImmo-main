@@ -358,7 +358,13 @@ export default function Navbar() {
       willChange: "transform",
       backfaceVisibility: "hidden",
       WebkitBackfaceVisibility: "hidden",
-      contain: "layout style paint",
+      // V81.7 — retiré `contain: "layout style paint"` (V72.1f) qui clippait
+      // les enfants débordant (dropdowns "Mon espace" / menu user avatar /
+      // popup cloche notifs) sous la Navbar 72px → invisibles pour l'user.
+      // Le GPU compositing translate3d + willChange ci-dessus suffit pour
+      // l'anti-jitter scroll iOS Safari. `contain: paint` créait un clip
+      // path strict qui empêchait les popups absolu de dépasser.
+      // contain: removed
     }}>
 
       {/* Logo */}

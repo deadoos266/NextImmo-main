@@ -353,9 +353,19 @@ export default function ProposerVisiteDialog({
                   }}>
                     Heure
                   </label>
-                  <select
+                  {/* V81.7 — input type="time" remplace le select. User
+                      feedback : "pouvoir mettre une heure précise" (pas
+                      restreint aux 12 horaires prédéfinis). Datalist HEURES
+                      reste comme suggestions rapides (mêmes valeurs).
+                      Step 300 = 5 min de granularité. */}
+                  <input
+                    type="time"
                     value={slot.heure}
                     onChange={e => updateSlot(i, { heure: e.target.value })}
+                    list={`heures-suggestions-${i}`}
+                    step={300}
+                    min="07:00"
+                    max="22:00"
                     style={{
                       width: "100%", padding: "10px 12px",
                       border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 13.5,
@@ -363,11 +373,10 @@ export default function ProposerVisiteDialog({
                       background: "#fff", color: "#111",
                       cursor: "pointer", boxSizing: "border-box",
                     }}
-                  >
-                    {HEURES.map(h => (
-                      <option key={h} value={h}>{h}</option>
-                    ))}
-                  </select>
+                  />
+                  <datalist id={`heures-suggestions-${i}`}>
+                    {HEURES.map(h => <option key={h} value={h} />)}
+                  </datalist>
                 </div>
                 {slots.length > 1 && (
                   <button

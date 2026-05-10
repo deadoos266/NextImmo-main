@@ -768,8 +768,39 @@ function VisiteDemandeCard({
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 12.5, fontWeight: 600, color: "#111", letterSpacing: "-0.1px" }}>{title}</div>
-          <div style={{ fontSize: 9.5, color: "#8a8477", textTransform: "uppercase" as const, letterSpacing: "0.8px", fontWeight: 600 }}>
-            {rawSlots.length} créneau{rawSlots.length > 1 ? "x" : ""} · 30 min
+          <div style={{ fontSize: 9.5, color: "#8a8477", textTransform: "uppercase" as const, letterSpacing: "0.8px", fontWeight: 600, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <span>{rawSlots.length} créneau{rawSlots.length > 1 ? "x" : ""} · 30 min</span>
+            {/* V81.7 — affichage du format de visite (physique vs visio).
+                User feedback : "il faut que ca précise si c'est une visite
+                en réel ou visio". data.format est posé par proposerVisite() */}
+            {data.format && (
+              <>
+                <span style={{ color: "#EAE6DF" }}>·</span>
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  background: data.format === "visio" ? "#EEF3FB" : "#F0FAEE",
+                  color: data.format === "visio" ? "#1d4ed8" : "#15803d",
+                  padding: "2px 7px", borderRadius: 999,
+                  fontSize: 9, fontWeight: 700, letterSpacing: "0.4px",
+                }}>
+                  {data.format === "visio" ? (
+                    <>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                      </svg>
+                      Visio
+                    </>
+                  ) : (
+                    <>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                      </svg>
+                      Sur place
+                    </>
+                  )}
+                </span>
+              </>
+            )}
           </div>
         </div>
         <span style={{ background: "#fff", color: accent, fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 999, border: `1px solid ${accent}33`, textTransform: "uppercase" as const, letterSpacing: "0.3px", flexShrink: 0 }}>

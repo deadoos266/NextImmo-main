@@ -223,7 +223,14 @@ function SearchBox({
   // passe "" il revient au fallback gris qui se superpose au typewriter.
   // On passe un espace insécable pour neutraliser son placeholder natif
   // et garder notre overlay typewriter propre.
-  const showTypewriter = ville === ""
+  // V81.7 — fix bug user "double écriture" :
+  // ville est le state externe, mis à jour uniquement au select() de
+  // CityAutocomplete (click suggestion). Tant que l'user tape, ville reste
+  // "" → le typewriter overlay restait visible PAR-DESSUS le texte tapé.
+  // Ajout d'un state focused local : dès que l'user clique/focus l'input,
+  // on hide le typewriter (même si ville === "").
+  const [focused, setFocused] = useState(false)
+  const showTypewriter = ville === "" && !focused
   return (
     <form onSubmit={onSubmit} style={{
       display: "flex",
@@ -242,7 +249,11 @@ function SearchBox({
         <path d="m20 20-3.5-3.5" />
       </svg>
 
-      <div style={{ flex: 1, position: "relative", minHeight: 24 }}>
+      <div
+        style={{ flex: 1, position: "relative", minHeight: 24 }}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+      >
         {showTypewriter && (
           <div aria-hidden style={{
             position: "absolute",
