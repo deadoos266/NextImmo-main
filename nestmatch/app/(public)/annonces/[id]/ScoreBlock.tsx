@@ -182,7 +182,12 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
         }}>
           Match avec ton profil
         </p>
-        {/* Rang scoped si liste >= 10 */}
+        {/* Rang scoped si liste >= 10.
+            V81.22 — Wording rendu clairement perso : "meilleure annonce
+            sur 29 à Paris" sonnait objectif (=meilleure en absolu) alors
+            que c'est le meilleur match POUR TOI (basé sur ton profil).
+            Reformulation : "Ton meilleur match sur 29 à Paris" / "Ton
+            n°5 sur 29 — adapté à ton profil". */}
         {showRang && (
           <p style={{
             fontFamily: "'Fraunces', Georgia, serif",
@@ -191,9 +196,12 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
             fontSize: 14,
             color: info.color,
             margin: "4px 0 0",
-            opacity: 0.75,
+            opacity: 0.85,
           }}>
-            #{myRang} {myRang === 1 ? "meilleure annonce" : "sur"} {myRang === 1 ? `sur ${totalRangs}` : `${totalRangs}`}{rangScopeLabel}
+            {myRang === 1
+              ? <>Ton meilleur match sur {totalRangs}{rangScopeLabel}</>
+              : <>Ton n°{myRang} sur {totalRangs}{rangScopeLabel} — selon ton profil</>
+            }
           </p>
         )}
       </div>
