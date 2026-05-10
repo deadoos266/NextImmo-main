@@ -2371,7 +2371,10 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
             useEffect scroll la card matching dans le carrousel.
           - Swipe carrousel → IntersectionObserver détecte la card centrée
             → setSelectedId → flyTo automatique. */}
-      {isMobileV5 && !gridMode && showMap && mounted && MapComp && (
+      {/* V81.23 — Retiré `!gridMode` (cohérent avec V81.18 sur le FAB).
+          Avant : FAB visible en grid mode mais MobileMapCarousel ne montait
+          pas → click sans effet. Maintenant : carousel monte en list ET grid. */}
+      {isMobileV5 && showMap && mounted && MapComp && (
         <MobileMapCarousel
           annonces={annoncesTraitees}
           selectedId={selectedId}
