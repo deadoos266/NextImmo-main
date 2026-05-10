@@ -88,7 +88,7 @@ function CategoryRow({ label, description, checked, disabled, onChange }: {
 }
 
 /* ── Floating cookie button ── */
-function FloatingCookieButton({ onClick }: { onClick: () => void }) {
+function FloatingCookieButton({ onClick, isMobile }: { onClick: () => void; isMobile: boolean }) {
   return (
     <button
       onClick={onClick}
@@ -99,8 +99,12 @@ function FloatingCookieButton({ onClick }: { onClick: () => void }) {
         // chevaucher les boutons primaires "+" composer messages mobile et
         // les CTA principaux qui sont systématiquement à gauche dans le
         // design system KeyMatch (drawer mobile slide-in left).
-        // Safe-area-inset bottom pour iPhone notch.
-        bottom: "calc(20px + env(safe-area-inset-bottom, 0px))",
+        // V81.2 — sur mobile, remonter de 64px pour ne pas chevaucher la
+        // BottomNavMobile (V73.9) qui occupe ~56px en bas. Sur desktop, OK
+        // à 20px (pas de BottomNav).
+        bottom: isMobile
+          ? "calc(80px + env(safe-area-inset-bottom, 0px))"
+          : "calc(20px + env(safe-area-inset-bottom, 0px))",
         right: 20,
         zIndex: 400,
         width: 40,
@@ -202,7 +206,7 @@ export default function CookieBanner() {
 
   if (!visible && dismissed) {
     if (hideFloatingOnThisPage) return null
-    return <FloatingCookieButton onClick={handleReopen} />
+    return <FloatingCookieButton onClick={handleReopen} isMobile={isMobile} />
   }
 
   if (!visible) return null
