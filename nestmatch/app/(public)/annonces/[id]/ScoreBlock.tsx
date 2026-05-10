@@ -198,21 +198,21 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
         )}
       </div>
 
-      {/* Breakdown par categorie — visible par defaut */}
+      {/* Breakdown par categorie — visible par defaut.
+          V81.21 — Chaque ligne affiche maintenant un DÉTAIL EXPLICATIF
+          contextualisant le score avec les valeurs réelles profil vs annonce
+          ("Ton budget 2500€ · ce bien 2140€ — tu économises 360€/mois").
+          Beaucoup plus parlant que juste "Budget 330/330". */}
       {breakdown.length > 0 && (
         <div style={{ marginTop: 14, padding: "14px 16px", background: "#F7F4EF", border: "1px solid #EAE6DF", borderRadius: 14 }}>
           <p style={{ fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.2px", margin: "0 0 6px" }}>
-            Détail du score
+            Détail du score · pourquoi ça matche
           </p>
-          {/* V36.5 — Contexte pédagogique (audit V35 R35.7).
-              Avant : breakdown affiché en barres sans explication des poids,
-              user voyait "Surface 140/270" et ne comprenait pas pourquoi
-              certaines lignes pèsent plus que d'autres. */}
-          <p style={{ fontSize: 11, color: "#8a8477", margin: "0 0 12px", lineHeight: 1.5 }}>
-            Le score pondère selon ton profil — Budget compte 30 %, Surface 27 %,
-            Pièces 15 %, Meublé 10 %, Équipements 10 %, DPE 5 %, Critères perso 3 %.
+          <p style={{ fontSize: 11, color: "#8a8477", margin: "0 0 14px", lineHeight: 1.5 }}>
+            Comparaison entre ton profil et ce bien.
+            Pondération : Budget 30 %, Surface 27 %, Pièces 15 %, Meublé 10 %, Équipements 10 %, DPE 5 %.
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {breakdown.map(item => {
               const ratio = item.max > 0 ? item.pts / item.max : 0
               const widthPct = Math.max(0, Math.min(100, Math.round(ratio * 100)))
@@ -221,17 +221,30 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
                 item.status === "partiel" ? "#ea580c" :
                 item.status === "miss"    ? "#dc2626" :
                                             "#9ca3af"
+              const statusIcon =
+                item.status === "match"   ? "✓" :
+                item.status === "partiel" ? "•" :
+                item.status === "miss"    ? "✗" :
+                                            "—"
               return (
-                <div key={item.key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "#111", minWidth: 90 }}>
-                    {item.label}
-                  </span>
-                  <div style={{ flex: 1, height: 6, background: "#EAE6DF", borderRadius: 999, overflow: "hidden" }}>
-                    <div style={{ width: `${widthPct}%`, height: "100%", background: barColor, transition: "width .3s ease" }} />
+                <div key={item.key} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#111", minWidth: 90 }}>
+                      <span style={{ color: barColor, marginRight: 6 }}>{statusIcon}</span>
+                      {item.label}
+                    </span>
+                    <div style={{ flex: 1, height: 6, background: "#EAE6DF", borderRadius: 999, overflow: "hidden" }}>
+                      <div style={{ width: `${widthPct}%`, height: "100%", background: barColor, transition: "width .3s ease" }} />
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", minWidth: 50, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                      {Math.round(ratio * 100)}%
+                    </span>
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#8a8477", minWidth: 60, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-                    {item.pts}/{item.max}
-                  </span>
+                  {item.detail && (
+                    <p style={{ fontSize: 11.5, color: "#6b6358", margin: "0 0 0 100px", lineHeight: 1.5 }}>
+                      {item.detail}
+                    </p>
+                  )}
                 </div>
               )
             })}

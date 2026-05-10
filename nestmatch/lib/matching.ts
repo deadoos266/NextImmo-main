@@ -705,11 +705,19 @@ export type BreakdownItem = {
   pts: number
   max: number
   status: "match" | "partiel" | "miss" | "neutre"
+  // V81.21 — Détail explicatif comparant profil vs annonce, pour
+  // contextualiser le score (ex: "Ton budget 2500€ · ce bien 2140€").
+  // Optionnel, généré quand profil ET data annonce sont disponibles.
+  detail?: string
 }
 
 export function breakdownScore(annonce: Annonce, profil: Profil): BreakdownItem[] {
   if (!profil) return []
   const items: BreakdownItem[] = []
+
+  // V81.21 — Helpers de formatage pour les details explicatifs
+  const fmtEur = (n: number) => `${n.toLocaleString("fr-FR")} €`
+  const fmtM2 = (n: number) => `${n} m²`
 
   // Budget — max 330 (cap), neutre 150.
   if (profil.budget_max && annonce.prix) {
@@ -718,10 +726,24 @@ export function breakdownScore(annonce: Annonce, profil: Profil): BreakdownItem[
     if (ecart < -0.30) pts = 330
     else if (ecart <= 0) pts = Math.round(280 + 50 * (1 - (ecart + 0.30) / 0.30))
     else if (ecart <= 0.20) pts = Math.round(280 * Math.pow(1 - ecart / 0.20, 1.5))
+    // V81.21 — detail explicatif
+    let detail: string
+    if (ecart < 0) {
+      const eco = profil.budget_max - annonce.prix
+      detail = `Ton budget : ${fmtEur(profil.budget_max)} · ce bien : ${fmtEur(annonce.prix)} — tu économises ${fmtEur(eco)}/mois`
+    } else if (ecart === 0) {
+      detail = `Exactement dans ton budget de ${fmtEur(profil.budget_max)}`
+    } else {
+      const depass = annonce.prix - profil.budget_max
+      detail = `Ton budget : ${fmtEur(profil.budget_max)} · ce bien : ${fmtEur(annonce.prix)} — dépasse de ${fmtEur(depass)}/mois`
+    }
     items.push({
       key: "budget", label: "Budget", pts, max: 330,
       status: pts >= 280 ? "match" : pts >= 100 ? "partiel" : "miss",
+      detail,
     })
+  } else if (annonce.prix) {
+    items.push({ key: "budget", label: "Budget", pts: 150, max: 330, status: "neutre", detail: `Ton budget n'est pas défini · ce bien : ${fmtEur(annonce.prix)}` })
   } else {
     items.push({ key: "budget", label: "Budget", pts: 150, max: 330, status: "neutre" })
   }
@@ -733,10 +755,21 @@ export function breakdownScore(annonce: Annonce, profil: Profil): BreakdownItem[
     if (ratio >= 1.40) pts = 270
     else if (ratio >= 1.00) pts = Math.round(200 + 70 * (ratio - 1.00) / 0.40)
     else pts = Math.round(200 * Math.pow(ratio, 2.5))
+    let detail: string
+    if (ratio >= 1.40) {
+      detail = `Tu cherches min ${fmtM2(profil.surface_min)} · ce bien : ${fmtM2(annonce.surface)} — large marge`
+    } else if (ratio >= 1.00) {
+      detail = `Tu cherches min ${fmtM2(profil.surface_min)} · ce bien : ${fmtM2(annonce.surface)} — dans tes critères`
+    } else {
+      detail = `Tu cherches min ${fmtM2(profil.surface_min)} · ce bien : ${fmtM2(annonce.surface)} — sous ton minimum`
+    }
     items.push({
       key: "surface", label: "Surface", pts, max: 270,
       status: pts >= 200 ? "match" : pts >= 100 ? "partiel" : "miss",
+      detail,
     })
+  } else if (annonce.surface) {
+    items.push({ key: "surface", label: "Surface", pts: 135, max: 270, status: "neutre", detail: `Pas de surface min définie · ce bien : ${fmtM2(annonce.surface)}` })
   } else {
     items.push({ key: "surface", label: "Surface", pts: 135, max: 270, status: "neutre" })
   }
@@ -750,10 +783,21 @@ export function breakdownScore(annonce: Annonce, profil: Profil): BreakdownItem[
     else if (diff === -1) pts = 91
     else if (diff === -2) pts = 42
     else pts = 28
+    let detail: string
+    if (diff >= 1) {
+      detail = `Tu veux min ${profil.pieces_min}p · ce bien : ${annonce.pieces}p — confortable`
+    } else if (diff === 0) {
+      detail = `Tu veux min ${profil.pieces_min}p · ce bien : ${annonce.pieces}p — pile poil`
+    } else {
+      detail = `Tu veux min ${profil.pieces_min}p · ce bien : ${annonce.pieces}p — sous ton minimum`
+    }
     items.push({
       key: "pieces", label: "Pièces", pts, max: 150,
       status: pts >= 140 ? "match" : pts >= 80 ? "partiel" : "miss",
+      detail,
     })
+  } else if (annonce.pieces) {
+    items.push({ key: "pieces", label: "Pièces", pts: 75, max: 150, status: "neutre", detail: `Pas de min défini · ce bien : ${annonce.pieces}p` })
   } else {
     items.push({ key: "pieces", label: "Pièces", pts: 75, max: 150, status: "neutre" })
   }
@@ -763,12 +807,18 @@ export function breakdownScore(annonce: Annonce, profil: Profil): BreakdownItem[
   const aMeuble = toBool(annonce.meuble)
   if (pMeuble !== undefined && aMeuble !== undefined) {
     const pts = pMeuble === aMeuble ? 100 : 40
+    const wantLabel = pMeuble ? "meublé" : "vide"
+    const hasLabel = aMeuble ? "meublé" : "vide"
+    const detail = pMeuble === aMeuble
+      ? `Tu veux ${wantLabel} · ce bien : ${hasLabel} — parfait`
+      : `Tu veux ${wantLabel} · ce bien : ${hasLabel} — pas idéal`
     items.push({
       key: "meuble", label: "Meublé", pts, max: 100,
       status: pts === 100 ? "match" : "partiel",
+      detail,
     })
   } else {
-    items.push({ key: "meuble", label: "Meublé", pts: 70, max: 100, status: "neutre" })
+    items.push({ key: "meuble", label: "Meublé", pts: 70, max: 100, status: "neutre", detail: "Préférence non définie" })
   }
 
   // Equipements — max 100. V3.5 reutilise collectEquipObservations
@@ -799,18 +849,36 @@ export function breakdownScore(annonce: Annonce, profil: Profil): BreakdownItem[
     equipPts = Math.max(0, Math.min(100, 50 + raw))
     equipStatus = equipPts >= 80 ? "match" : equipPts >= 40 ? "partiel" : "miss"
   }
-  items.push({ key: "equipements", label: "Équipements", pts: equipPts, max: 100, status: equipStatus })
+  // V81.21 — detail équipements : liste des indispensables présents/absents
+  let equipDetail: string | undefined
+  if (equipsObsBd.actionnable.length > 0) {
+    const indispensableOk = equipsObsBd.actionnable.filter(o => o.pref === "indispensable" && o.has === true).length
+    const indispensableKo = equipsObsBd.actionnable.filter(o => o.pref === "indispensable" && o.has === false).length
+    const souhaitesOk = equipsObsBd.actionnable.filter(o => o.pref === "souhaite" && o.has === true).length
+    const parts: string[] = []
+    if (indispensableOk > 0) parts.push(`${indispensableOk} indispensable${indispensableOk > 1 ? "s" : ""} ✓`)
+    if (indispensableKo > 0) parts.push(`${indispensableKo} indispensable${indispensableKo > 1 ? "s" : ""} absent${indispensableKo > 1 ? "s" : ""}`)
+    if (souhaitesOk > 0) parts.push(`${souhaitesOk} souhaité${souhaitesOk > 1 ? "s" : ""} ✓`)
+    if (parts.length > 0) equipDetail = parts.join(" · ")
+  }
+  items.push({ key: "equipements", label: "Équipements", pts: equipPts, max: 100, status: equipStatus, detail: equipDetail })
 
   // DPE — max 50.
   const dpePoints: Record<string, number> = { A: 50, B: 42, C: 34, D: 22, E: 12, F: 4, G: 0 }
   if (annonce.dpe && dpePoints[annonce.dpe] !== undefined) {
     const pts = dpePoints[annonce.dpe]
+    const dpeLabel = annonce.dpe
+    let detail: string
+    if (dpeLabel <= "B") detail = `Note ${dpeLabel} — performance énergétique excellente`
+    else if (dpeLabel <= "D") detail = `Note ${dpeLabel} — performance énergétique correcte`
+    else detail = `Note ${dpeLabel} — performance énergétique faible (facture chauffage élevée)`
     items.push({
       key: "dpe", label: "DPE", pts, max: 50,
       status: pts >= 34 ? "match" : pts >= 12 ? "partiel" : "miss",
+      detail,
     })
   } else {
-    items.push({ key: "dpe", label: "DPE", pts: 25, max: 50, status: "neutre" })
+    items.push({ key: "dpe", label: "DPE", pts: 25, max: 50, status: "neutre", detail: "DPE non renseigné par le propriétaire" })
   }
 
   return items
