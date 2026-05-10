@@ -1988,20 +1988,16 @@ export default function Dossier() {
             const tierBorder = tier === "excellent" ? "#C6E9C0" : tier === "bon" ? "#EADFC6" : "#F4C9C9"
             const tierColor = tier === "excellent" ? "#15803d" : tier === "bon" ? "#a16207" : "#b91c1c"
             return (
-              <>
-              {/* V81.15 — Spacer (cf migration sticky→fixed pour les barres
-                  cassées par body overflow-x:clip, cf FiltersBar V81.12). */}
-              <div aria-hidden style={{ height: 60, marginBottom: 18 }} />
               <div
                 className="km-dossier-tier-fallback"
                 style={{
-                  position: "fixed",
-                  top: isMobile ? 80 : 88,
-                  left: "50%",
-                  width: "min(1100px, calc(100% - 32px))",
-                  transform: "translate3d(-50%, 0, 0)",
-                  WebkitTransform: "translate3d(-50%, 0, 0)",
-                  zIndex: 50,
+                  // V81.17 — REVERT V81.15 position:fixed qui chevauchait la
+                  // section "Situation professionnelle" (feedback Paul).
+                  // Le tier bar reste maintenant en flux normal : visible
+                  // en haut du dossier au load, scroll avec le contenu
+                  // quand l'user descend dans le formulaire. UX standard
+                  // form-with-summary.
+                  marginBottom: 18,
                   backgroundColor: tierBg,
                   border: `1px solid ${tierBorder}`,
                   borderRadius: 14,
@@ -2011,9 +2007,6 @@ export default function Dossier() {
                   gap: 12,
                   flexWrap: "wrap",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                  backfaceVisibility: "hidden",
-                  WebkitBackfaceVisibility: "hidden",
-                  boxSizing: "border-box",
                 }}
                 aria-label="Progression du dossier"
               >
@@ -2061,7 +2054,6 @@ export default function Dossier() {
                   </a>
                 )}
               </div>
-              </>
             )
           })()}
 
