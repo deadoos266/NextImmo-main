@@ -42,7 +42,7 @@ export default function AdminBar() {
   if (threadActive || messagesRouteActive) return null
 
   return (
-    <div style={{
+    <div className="km-adminbar-fallback" style={{
       position: "sticky",
       top: 0,
       // V73.7 — fix audit V72.5 : AdminBar à 1100 passait sous la Navbar
@@ -51,9 +51,12 @@ export default function AdminBar() {
       // adopté dans app/layout.tsx (1 seul container sticky pour les
       // 3 éléments BetaBanner + AdminBar + Navbar).
       zIndex: 10001,
-      background: "#111",
+      // V81.10 — backgroundColor longhand + !important pour bulletproof opacity
+      backgroundColor: "#111111",
       color: "white",
       padding: "6px 16px",
+      width: "100%",
+      boxSizing: "border-box",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -62,7 +65,12 @@ export default function AdminBar() {
       fontWeight: 600,
       fontFamily: "'DM Sans', sans-serif",
       flexWrap: "wrap",
+      transform: "translate3d(0, 0, 0)",
+      WebkitTransform: "translate3d(0, 0, 0)",
+      backfaceVisibility: "hidden",
+      WebkitBackfaceVisibility: "hidden",
     }}>
+      <style>{`.km-adminbar-fallback { background-color: #111111 !important; }`}</style>
       <span style={{ background: "#b91c1c", color: "white", padding: "2px 10px", borderRadius: 999, fontWeight: 700, letterSpacing: "0.5px" }}>ADMIN</span>
 
       <span style={{ opacity: 0.8 }}>Voir le site en tant que :</span>

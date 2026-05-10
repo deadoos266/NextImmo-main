@@ -337,17 +337,22 @@ export default function Navbar() {
   }
 
   return (
-    <nav style={{
+    <nav className="km-navbar-fallback" style={{
       display: hideNavMobile && isSmall ? "none" : "flex",
       justifyContent: "space-between",
       alignItems: "center",
       padding: isSmall ? "0 16px" : "0 48px",
-      background: km.white,
+      // V81.10 — backgroundColor longhand + className !important pour bullet-
+      // proof contre tout override (theme/extension/iOS Safari rendering quirk).
+      // Le shorthand `background` était dans l'audit user "barre fix bug".
+      backgroundColor: "#FFFFFF",
       borderBottom: `1px solid ${km.line}`,
       position: "sticky",
       top: 0,
       zIndex: 10000,
       height: 72,
+      width: "100%",
+      boxSizing: "border-box",
       boxShadow: "0 1px 8px rgba(0,0,0,0.05)",
       // V72.1f — anti-jitter mobile : force GPU compositing pour éviter
       // le re-layout repeint pendant le scroll iOS Safari (effet de "vibration"
@@ -366,6 +371,7 @@ export default function Navbar() {
       // path strict qui empêchait les popups absolu de dépasser.
       // contain: removed
     }}>
+      <style>{`.km-navbar-fallback { background-color: #FFFFFF !important; }`}</style>
 
       {/* Logo */}
       <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>

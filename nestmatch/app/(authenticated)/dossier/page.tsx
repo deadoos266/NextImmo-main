@@ -1989,12 +1989,15 @@ export default function Dossier() {
             const tierColor = tier === "excellent" ? "#15803d" : tier === "bon" ? "#a16207" : "#b91c1c"
             return (
               <div
+                className="km-dossier-tier-fallback"
                 style={{
                   position: "sticky",
-                  top: isMobile ? 56 : 64, // sous la navbar
+                  top: isMobile ? 72 : 80, // sous la navbar (72px desktop+mobile, +8 buffer)
                   zIndex: 50,
                   marginBottom: 18,
-                  background: tierBg,
+                  // V81.10 — backgroundColor longhand + !important pour bulletproof
+                  // opacity (cf bug user récurrent "barres fix" V81.8).
+                  backgroundColor: tierBg,
                   border: `1px solid ${tierBorder}`,
                   borderRadius: 14,
                   padding: "10px 16px",
@@ -2003,9 +2006,14 @@ export default function Dossier() {
                   gap: 12,
                   flexWrap: "wrap",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                  transform: "translate3d(0, 0, 0)",
+                  WebkitTransform: "translate3d(0, 0, 0)",
+                  backfaceVisibility: "hidden",
+                  WebkitBackfaceVisibility: "hidden",
                 }}
                 aria-label="Progression du dossier"
               >
+                <style>{`.km-dossier-tier-fallback { background-color: ${tierBg} !important; }`}</style>
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0, flex: "1 1 200px" }}>
                   <div style={{ position: "relative", width: 36, height: 36, flexShrink: 0 }} aria-hidden>
                     <svg width="36" height="36" viewBox="0 0 36 36">

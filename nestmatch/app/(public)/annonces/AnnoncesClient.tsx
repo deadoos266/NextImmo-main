@@ -2309,7 +2309,17 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
             // /annonces (mobile). Le FAB à bottom:20px était littéralement caché
             // derrière la BottomNav. On remonte à 84px (56 BottomNav + 20 spacing
             // + ~8 visuel). +70 supplémentaires si Comparer tray actif.
-            bottom: compareIds.length > 0 ? "calc(84px + env(safe-area-inset-bottom, 0px) + 70px)" : "calc(84px + env(safe-area-inset-bottom, 0px))",
+            // V81.10 — fix bug user "quand pas connecté il est bien haut" :
+            // BottomNavMobile n'apparaît QUE pour users loggés. Sans session,
+            // pas de BottomNav → bottom:84px laissait un trou de 60px sous
+            // le FAB. Solution : bottom dynamique selon session.
+            //   - session : 84px (au-dessus BottomNav)
+            //   - !session : 20px (collé bas viewport)
+            bottom: (() => {
+              const base = session?.user?.email ? 84 : 20
+              const extra = compareIds.length > 0 ? 70 : 0
+              return `calc(${base + extra}px + env(safe-area-inset-bottom, 0px))`
+            })(),
             left: "50%",
             transform: "translateX(-50%)",
             zIndex: 7200,
