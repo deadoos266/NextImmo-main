@@ -1323,10 +1323,14 @@ function ProfilSectionsLayout({
 }) {
   const wide = useProfilTocWide()
   if (isMobile || !wide) {
+    // V81.20 — paddingTop pour réserver l'espace de la ProfilTOC fixed
+    // (V81.15). ProfilTOC mobile/tablette height ~62px → padding 80 pour
+    // buffer + aération visuelle (cohérent V81.20 sur /annonces FiltersBar).
+    // Sans ça, les sections passaient SOUS la TOC barre au scrollY=0.
     return (
       <>
         <ProfilTOC active={active} isMobile={isMobile} />
-        {children}
+        <div style={{ paddingTop: 80 }}>{children}</div>
       </>
     )
   }
