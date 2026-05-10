@@ -7,6 +7,7 @@ import { useRole } from "../providers"
 import { useResponsive } from "../hooks/useResponsive"
 import { Z_INDEX } from "../../lib/zIndex"
 import { supabase } from "../../lib/supabase"
+import BottomNavSheet from "./BottomNavSheet"
 
 /**
  * V73.9 — bottom navigation mobile pour les pages authentifiées.
@@ -70,9 +71,22 @@ function UserIcon({ active, size = 22 }: IconProps) {
     </svg>
   )
 }
+// V81.13 — Icône "Plus" (3 lignes hamburger) pour le tab qui ouvre le sheet
+// avec TOUS les onglets/sections (favoris, dossier, candidatures, etc.).
+// Feedback Paul : "on accède que à une partie des onglets c'est vraiment
+// dommage" → menu déroulant vers le haut comme un Control Center.
+function MenuIcon({ active, size = 22 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <line x1="3" y1="12" x2="21" y2="12"/>
+      <line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  )
+}
 
 interface Tab {
-  href: string
+  href: string | null  // null = bouton qui ouvre le sheet
   label: string
   Icon: (p: IconProps) => React.JSX.Element
   matchPaths: (pathname: string) => boolean
@@ -82,12 +96,16 @@ interface Tab {
 // visuel à la recherche d'annonces (core feature). Pattern UX iOS/Android :
 // le tab central est souvent l'action principale ou la page la plus visitée.
 // User feedback : "annonces au milieu à la place de messages".
+// V81.13 — Le 5e tab passe de "Moi"→/profil (Link) à "Plus"→Sheet (button).
+// Donne accès à TOUS les onglets/sections (favoris, dossier, candidatures,
+// recherches sauvegardées, etc.) via un slide-up sheet plein écran.
+// Mon profil reste accessible DANS le sheet (section "Mon compte").
 const TABS_LOCATAIRE: Tab[] = [
   { href: "/mon-logement", label: "Logement",  Icon: HomeIcon,     matchPaths: (p) => p.startsWith("/mon-logement") },
   { href: "/messages",     label: "Messages",  Icon: MessageIcon,  matchPaths: (p) => p.startsWith("/messages") },
   { href: "/annonces",     label: "Annonces",  Icon: ListingsIcon, matchPaths: (p) => p === "/annonces" || p.startsWith("/annonces/") || p.startsWith("/location/") },
   { href: "/notifications",label: "Notifs",    Icon: BellIcon,     matchPaths: (p) => p.startsWith("/notifications") },
-  { href: "/profil",       label: "Moi",       Icon: UserIcon,     matchPaths: (p) => p.startsWith("/profil") || p.startsWith("/dossier") },
+  { href: null,            label: "Plus",      Icon: MenuIcon,     matchPaths: () => false },
 ]
 
 const TABS_PROPRIO: Tab[] = [
@@ -95,7 +113,7 @@ const TABS_PROPRIO: Tab[] = [
   { href: "/messages",      label: "Messages", Icon: MessageIcon,  matchPaths: (p) => p.startsWith("/messages") },
   { href: "/annonces",      label: "Annonces", Icon: ListingsIcon, matchPaths: (p) => p === "/annonces" || p.startsWith("/annonces/") || p.startsWith("/location/") },
   { href: "/notifications", label: "Notifs",   Icon: BellIcon,     matchPaths: (p) => p.startsWith("/notifications") },
-  { href: "/profil",        label: "Moi",      Icon: UserIcon,     matchPaths: (p) => p.startsWith("/profil") },
+  { href: null,             label: "Plus",     Icon: MenuIcon,     matchPaths: () => false },
 ]
 
 export default function BottomNavMobile() {
@@ -106,6 +124,9 @@ export default function BottomNavMobile() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [threadOpen, setThreadOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  // V81.13 — Sheet "Plus" : slide-up depuis le bas pour accéder à tous les
+  // onglets/sections (favoris, dossier, candidatures, ...).
+  const [sheetOpen, setSheetOpen] = useState(false)
 
   // Hide quand thread mobile actif (composer occupe le bottom)
   useEffect(() => {
@@ -171,6 +192,7 @@ export default function BottomNavMobile() {
   const tabs = proprietaireActive ? TABS_PROPRIO : TABS_LOCATAIRE
 
   return (
+    <>
     <nav
       role="navigation"
       aria-label="Navigation principale mobile"
@@ -193,27 +215,30 @@ export default function BottomNavMobile() {
       }}
     >
       <div style={{ display: "grid", gridTemplateColumns: `repeat(${tabs.length}, 1fr)`, height: 56 }}>
-        {tabs.map(tab => {
-          const active = tab.matchPaths(pathname)
+        {tabs.map((tab, idx) => {
+          const active = tab.matchPaths(pathname) || (tab.href === null && sheetOpen)
           const showBadge = tab.href === "/notifications" && unreadCount > 0
-          return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 2,
-                color: active ? "#111" : "#8a8477",
-                fontSize: 11,
-                fontWeight: active ? 700 : 500,
-                textDecoration: "none",
-                position: "relative",
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
+          const itemStyle: React.CSSProperties = {
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 2,
+            color: active ? "#111" : "#8a8477",
+            fontSize: 11,
+            fontWeight: active ? 700 : 500,
+            textDecoration: "none",
+            position: "relative",
+            WebkitTapHighlightColor: "transparent",
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            padding: 0,
+            touchAction: "manipulation",
+          }
+          const inner = (
+            <>
               <span style={{ position: "relative", display: "inline-flex" }}>
                 <tab.Icon active={active} />
                 {showBadge && (
@@ -242,10 +267,33 @@ export default function BottomNavMobile() {
                 )}
               </span>
               <span>{tab.label}</span>
+            </>
+          )
+          // V81.13 — Le tab "Plus" (href:null) est un bouton qui ouvre le
+          // BottomNavSheet. Les autres restent des Link de navigation.
+          if (tab.href === null) {
+            return (
+              <button
+                key={`sheet-trigger-${idx}`}
+                type="button"
+                onClick={() => setSheetOpen(true)}
+                aria-label="Ouvrir le menu complet"
+                aria-expanded={sheetOpen}
+                style={itemStyle}
+              >
+                {inner}
+              </button>
+            )
+          }
+          return (
+            <Link key={tab.href} href={tab.href} style={itemStyle}>
+              {inner}
             </Link>
           )
         })}
       </div>
     </nav>
+    <BottomNavSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
+    </>
   )
 }
