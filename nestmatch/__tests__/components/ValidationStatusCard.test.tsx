@@ -3,7 +3,7 @@
 
 import { describe, it, expect, afterEach } from "vitest"
 import { render, screen, cleanup } from "@testing-library/react"
-import ValidationStatusCard, { type ValidationStatusKind } from "../../app/messages/ValidationStatusCard"
+import ValidationStatusCard, { type ValidationStatusKind } from "../../app/(authenticated)/messages/ValidationStatusCard"
 
 afterEach(() => cleanup())
 

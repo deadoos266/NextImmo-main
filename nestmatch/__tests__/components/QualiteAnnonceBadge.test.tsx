@@ -3,7 +3,7 @@
 
 import { describe, it, expect, afterEach } from "vitest"
 import { render, screen, cleanup } from "@testing-library/react"
-import QualiteAnnonceBadge from "../../app/annonces/[id]/QualiteAnnonceBadge"
+import QualiteAnnonceBadge from "../../app/(public)/annonces/[id]/QualiteAnnonceBadge"
 
 afterEach(() => cleanup())
 

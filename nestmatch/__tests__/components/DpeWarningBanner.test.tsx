@@ -3,7 +3,7 @@
 
 import { describe, it, expect, afterEach } from "vitest"
 import { render, screen, cleanup } from "@testing-library/react"
-import DpeWarningBanner from "../../app/annonces/[id]/DpeWarningBanner"
+import DpeWarningBanner from "../../app/(public)/annonces/[id]/DpeWarningBanner"
 
 afterEach(() => cleanup())
 
