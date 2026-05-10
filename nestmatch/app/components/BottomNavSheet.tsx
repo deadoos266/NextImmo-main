@@ -130,12 +130,23 @@ export default function BottomNavSheet({ open, onClose }: Props) {
 
   if (!open) return null
 
-  // Liens organisés par section selon le rôle
-  const sectionMonCompte: LinkItem[] = [
-    { href: "/profil", label: "Mon profil", desc: "Préférences, infos perso", Icon: Icons.Profil },
-    { href: "/dossier", label: "Mon dossier", desc: "Pièces justificatives", Icon: Icons.Dossier },
-    { href: "/parametres", label: "Paramètres", desc: "Compte, notifications, RGPD", Icon: Icons.Settings },
-  ]
+  // Liens organisés par section selon le rôle.
+  // V81.26 — /profil et /dossier redirigent vers /proprietaire quand
+  // proprietaireActive (V51.1 — la page profil locataire fait doublon
+  // pour les proprios qui n'ont pas de critères de matching à régler).
+  // Conséquence : on cache ces 2 items du sheet en mode proprio pour
+  // éviter le redirect non-attendu vers Mes biens.
+  // Feedback Paul : "quand je clique sur mon profil ça m'envoie vers
+  // mes biens en tant que proprio et pareil pour le truc mon dossier".
+  const sectionMonCompte: LinkItem[] = proprietaireActive
+    ? [
+        { href: "/parametres", label: "Paramètres", desc: "Compte, notifications, RGPD", Icon: Icons.Settings },
+      ]
+    : [
+        { href: "/profil", label: "Mon profil", desc: "Préférences, infos perso", Icon: Icons.Profil },
+        { href: "/dossier", label: "Mon dossier", desc: "Pièces justificatives", Icon: Icons.Dossier },
+        { href: "/parametres", label: "Paramètres", desc: "Compte, notifications, RGPD", Icon: Icons.Settings },
+      ]
 
   // V81.19 — liens corrigés pour pointer vers routes existantes uniquement
   // (audit screenshots Paul : /comparer et /aide 404, retirés).
