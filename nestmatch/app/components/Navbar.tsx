@@ -344,14 +344,21 @@ export default function Navbar() {
       padding: isSmall ? "0 16px" : "0 48px",
       // V81.10 — backgroundColor longhand + className !important pour bullet-
       // proof contre tout override (theme/extension/iOS Safari rendering quirk).
-      // Le shorthand `background` était dans l'audit user "barre fix bug".
+      // V81.16 — position: fixed (au lieu de sticky) car body.overflow-x:clip
+      // dans globals.css force overflow-y:auto implicite → body devient scroll
+      // container → sticky NE STICK PAS au viewport. Fix par position:fixed
+      // qui est immune à ce problème. Cohérent avec FiltersBar V81.12 et
+      // profil TOC / dossier tier V81.15.
+      // Spacer compensant pris en charge globalement par body.padding-top
+      // déclaré dans globals.css (V81.16).
       backgroundColor: "#FFFFFF",
       borderBottom: `1px solid ${km.line}`,
-      position: "sticky",
+      position: "fixed",
       top: 0,
+      left: 0,
+      right: 0,
       zIndex: 10000,
       height: 72,
-      width: "100%",
       boxSizing: "border-box",
       boxShadow: "0 1px 8px rgba(0,0,0,0.05)",
       // V72.1f — anti-jitter mobile : force GPU compositing pour éviter

@@ -15,6 +15,18 @@
   }
 }
 
+/* V81.16 — body.padding-top:72px compense la Navbar passée en position:fixed
+   (au lieu de sticky cassé par overflow-x:clip plus bas). Sans ça, le
+   premier contenu de page serait recouvert par la Navbar fixed 72px.
+   Cohérent avec body.padding-bottom déjà appliqué pour BottomNavMobile.
+
+   Note : sur les pages où la Navbar est masquée (mobile thread /messages
+   via hideNavMobile), ces 72px laissent un petit espace en haut.
+   Acceptable vs solution complexe par page. */
+body {
+  padding-top: 72px;
+}
+
 /* ───────── Mobile pinch-zoom guard (Paul 2026-04-27) ─────────
    En complement du viewport meta `maximumScale: 1, userScalable: false`,
    on force `touch-action: pan-y` sur html + body : meme si iOS ignore
