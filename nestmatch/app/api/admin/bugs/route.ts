@@ -42,6 +42,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
   }
 
+  // V97.10 — Resolve signed URLs pour les screenshots stockés en bucket privé.
+  // Format stocké : "storage://bug-screenshots/<filename>". Signed URL valide 1h.
+  const STORAGE_PREFIX = "storage://bug-screenshots/"
+  const bugsWithSignedUrls = await Promise.all((data || []).map(async b => {
+    if (!b.screenshot_url || !b.screenshot_url.startsWith(STORAGE_PREFIX)) return b
+    const path = b.screenshot_url.slice(STORAGE_PREFIX.length)
+    const { data: signed } = await supabaseAdmin.storage.from("bug-screenshots").createSignedUrl(path, 3600)
+    return { ...b, screenshot_url: signed?.signedUrl || null }
+  }))
+
   // Stats agrégées
   const { data: stats } = await supabaseAdmin
     .from("user_bug_reports")
@@ -56,7 +66,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    bugs: data || [],
+    bugs: bugsWithSignedUrls,
     stats: { by_severity: bySeverity, by_status: byStatus, total: stats?.length || 0 },
   })
 }

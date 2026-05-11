@@ -16,13 +16,34 @@ export const metadata = {
 
 export const dynamic = "force-dynamic"
 
+/**
+ * V97.10 — Génère une signed URL pour les screenshots stockés en bucket privé.
+ * Format stocké : `storage://bug-screenshots/<filename>` (V97.10 BugReportButton).
+ * Fallback : si le format n'est pas reconnu (anciens reports avec URL directe),
+ * on retourne tel quel.
+ */
+async function resolveScreenshotUrl(stored: string | null): Promise<string | null> {
+  if (!stored) return null
+  const STORAGE_PREFIX = "storage://bug-screenshots/"
+  if (!stored.startsWith(STORAGE_PREFIX)) return stored
+  const path = stored.slice(STORAGE_PREFIX.length)
+  // Signed URL valide 1h — admin peut re-rafraîchir en rechargeant la page
+  const { data } = await supabaseAdmin.storage.from("bug-screenshots").createSignedUrl(path, 3600)
+  return data?.signedUrl || null
+}
+
 async function fetchInitialBugs() {
   const { data } = await supabaseAdmin
     .from("user_bug_reports")
-    .select("id, user_email, user_role, page_url, description, severity, status, screenshot_url, notes, fixed_at, created_at")
+    .select("id, user_email, user_role, page_url, description, severity, status, screenshot_url, console_log, network_log, notes, fixed_at, created_at")
     .order("created_at", { ascending: false })
     .limit(100)
-  return data || []
+  if (!data) return []
+  // V97.10 — Resolve signed URLs en parallèle pour les bugs avec screenshot
+  return Promise.all(data.map(async b => ({
+    ...b,
+    screenshot_url: await resolveScreenshotUrl(b.screenshot_url),
+  })))
 }
 
 async function fetchStats() {

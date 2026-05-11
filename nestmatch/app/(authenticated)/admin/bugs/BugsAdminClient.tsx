@@ -2,6 +2,9 @@
 import { useEffect, useState } from "react"
 import { km } from "../../../components/ui/km"
 
+type ConsoleEntry = { level: string; text: string; ts: number }
+type NetworkEntry = { url: string; status: number; method: string }
+
 type Bug = {
   id: string
   user_email: string | null
@@ -11,6 +14,8 @@ type Bug = {
   severity: string
   status: string
   screenshot_url: string | null
+  console_log: ConsoleEntry[] | null
+  network_log: NetworkEntry[] | null
   notes: string | null
   fixed_at: string | null
   created_at: string
@@ -266,9 +271,42 @@ function DetailModal({ bug, saving, onUpdate, onClose }: { bug: Bug; saving: boo
           <div style={{ marginBottom: 16 }}>
             <div style={{ color: km.muted, fontSize: 12, marginBottom: 6 }}>Screenshot</div>
             <a href={bug.screenshot_url} target="_blank" rel="noopener noreferrer">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={bug.screenshot_url} alt="Bug screenshot" style={{ maxWidth: "100%", borderRadius: 8, border: `1px solid ${km.line}` }} />
             </a>
           </div>
+        )}
+
+        {/* V97.10 — Console log (50 dernières erreurs/warnings) */}
+        {bug.console_log && bug.console_log.length > 0 && (
+          <details style={{ marginBottom: 12, border: `1px solid ${km.line}`, borderRadius: 10, padding: 12, background: km.beige }}>
+            <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 600, color: km.ink }}>
+              Console ({bug.console_log.length} entrée{bug.console_log.length > 1 ? "s" : ""})
+            </summary>
+            <pre style={{ marginTop: 10, fontSize: 11, lineHeight: 1.5, color: km.ink, whiteSpace: "pre-wrap", wordBreak: "break-word", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", background: "white", padding: 10, borderRadius: 6, maxHeight: 280, overflowY: "auto" }}>
+              {bug.console_log.map((c, i) => (
+                <div key={i} style={{ color: c.level === "error" ? "#b91c1c" : "#a16207", marginBottom: 4 }}>
+                  [{c.level.toUpperCase()}] {c.text}
+                </div>
+              ))}
+            </pre>
+          </details>
+        )}
+
+        {/* V97.10 — Network log (20 derniers 4xx/5xx) */}
+        {bug.network_log && bug.network_log.length > 0 && (
+          <details style={{ marginBottom: 12, border: `1px solid ${km.line}`, borderRadius: 10, padding: 12, background: km.beige }}>
+            <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 600, color: km.ink }}>
+              Network errors ({bug.network_log.length})
+            </summary>
+            <pre style={{ marginTop: 10, fontSize: 11, lineHeight: 1.5, color: km.ink, whiteSpace: "pre-wrap", wordBreak: "break-word", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", background: "white", padding: 10, borderRadius: 6, maxHeight: 200, overflowY: "auto" }}>
+              {bug.network_log.map((n, i) => (
+                <div key={i} style={{ color: n.status >= 500 ? "#b91c1c" : "#a16207", marginBottom: 4 }}>
+                  [{n.status}] {n.method} {n.url}
+                </div>
+              ))}
+            </pre>
+          </details>
         )}
 
         <div style={{ marginBottom: 12 }}>
