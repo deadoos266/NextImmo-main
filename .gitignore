@@ -22,5 +22,16 @@ desktop.ini
 # ─── Next.js build artifacts à la racine du worktree ─────────────────────────
 .next/
 
+# ─── Node deps racine (script tooling : @anthropic-ai/sdk, langgraph, etc.) ──
+# Le code réel a son propre node_modules dans nestmatch/. Le node_modules
+# racine est généré par les outils CLI Claude Code et autres scripts.
+# V97.21 — Avant ce commit, 7683 fichiers node_modules étaient tracked par
+# erreur, polluant le repo. Untrack via `git rm -r --cached node_modules/`.
+node_modules/
+package-lock.json
+
+# ─── tsconfig incremental cache (race conditions tooling) ───────────────────
+tsconfig.tsbuildinfo
+
 # ─── Dossier de test/reference (clone outil externe, pas code du projet) ────
 everything-claude-code-main/
