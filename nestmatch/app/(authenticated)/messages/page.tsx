@@ -1966,7 +1966,10 @@ function MessagesInner() {
     if (peerEmails.length > 0) {
       // Colonnes matching : permet calcul score cote proprio (peer = candidat)
       // + avatar/tel deja en piggyback depuis 2026-04-23.
-      const MATCH_COLS = "email, photo_url_custom, telephone, ville_souhaitee, mode_localisation, budget_max, surface_min, pieces_min, chambres_min, rez_de_chaussee_ok, animaux, meuble, parking, balcon, terrasse, jardin, cave, fibre, ascenseur, dpe_min"
+      // V96.10 — Ajout prenom/nom pour V96.6+7 (displayName "NOM Prénom" +
+      // displayPrenom selon statut conv). Sans ces 2 cols, peerProfiles[email]
+      // était toujours vide pour le format → fallback sur email capitalisé.
+      const MATCH_COLS = "email, photo_url_custom, telephone, prenom, nom, ville_souhaitee, mode_localisation, budget_max, surface_min, pieces_min, chambres_min, rez_de_chaussee_ok, animaux, meuble, parking, balcon, terrasse, jardin, cave, fibre, ascenseur, dpe_min"
       const MATCH_COLS_ARR = MATCH_COLS.split(",").map(s => s.trim())
       // V29.B + V55.1 — profils via /api/profil/by-emails + /api/profil/me + avatars OAuth
       // via /api/users/avatars (RLS Phase 5 final)
