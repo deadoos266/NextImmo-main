@@ -137,10 +137,11 @@ function ImporterBailPageInner() {
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState<{ annonceId: number; emailSent: boolean } | null>(null)
   const [error, setError] = useState<string | null>(null)
-  // V34.4 — Mode "Bail existant" simplifié (5 champs + upload PDF).
-  // Audit V31 R3.6 : avant ce toggle, le form était trop riche pour un proprio
-  // qui veut juste "uploader un PDF de bail déjà signé hors plateforme".
-  const [simpleImport, setSimpleImport] = useState(true)
+  // V96.16 — Form unifié (plus de toggle simple/détaillé).
+  // Avant : 2 modes (simple = 5 champs / détaillé = tout). Après audit V96,
+  // les différences sont devenues minimes (adresse + annexes ALUR + dépôt +
+  // message sont visibles dans les 2 modes). Un form unifié + champs
+  // optionnels labelés est plus clair qu'un toggle ambigu.
   const [pdfFile, setPdfFile] = useState<File | null>(null)
   const [pdfUploading, setPdfUploading] = useState(false)
   // V96.1 — PDF EDL séparé (si EDL d'entrée déjà fait hors plateforme)
@@ -251,9 +252,9 @@ function ImporterBailPageInner() {
       }
     }
 
-    // V34.4 — Validation simplifiée en mode simple : titre est dérivé si vide.
+    // V96.16 — Titre toujours auto-dérivé si vide (form unifié, plus de mode simple)
     let titre = form.titre.trim()
-    if (!titre && simpleImport) {
+    if (!titre) {
       titre = `Bail ${form.locataireEmail.split("@")[0] || "importé"}`
     }
     if (titre.length < 3) return failOn("Donnez un titre clair au bien (ex : 2 pièces Bastille 42m²)", "import-titre")
@@ -464,39 +465,8 @@ function ImporterBailPageInner() {
           <p style={{ fontSize: 12, color: T.muted, margin: "0 0 18px", fontStyle: "italic" }}>Pré-remplissage en cours…</p>
         )}
 
-        {/* V34.4 — Toggle Mode simple "Bail PDF déjà signé" / Mode complet */}
-        {!refusContexte && (
-          <div style={{ display: "inline-flex", background: "#fff", border: `1px solid ${T.line}`, borderRadius: 999, padding: 3, marginBottom: 20 }} role="tablist" aria-label="Mode d'import">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={simpleImport}
-              onClick={() => setSimpleImport(true)}
-              style={{
-                padding: "7px 16px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: "inherit",
-                fontSize: 11.5, fontWeight: 700, letterSpacing: "0.3px",
-                background: simpleImport ? T.ink : "transparent",
-                color: simpleImport ? "#fff" : T.ink,
-              }}
-            >
-              J&apos;ai déjà un PDF
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={!simpleImport}
-              onClick={() => setSimpleImport(false)}
-              style={{
-                padding: "7px 16px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: "inherit",
-                fontSize: 11.5, fontWeight: 700, letterSpacing: "0.3px",
-                background: !simpleImport ? T.ink : "transparent",
-                color: !simpleImport ? "#fff" : T.ink,
-              }}
-            >
-              Form détaillé
-            </button>
-          </div>
-        )}
+        {/* V96.16 — Toggle simple/détaillé retiré. Form unifié, champs
+            optionnels clairement labelés en bas (Caractéristiques du bien). */}
 
         {/* V96.14 — Banner "Wizard bail KeyMatch" remis avec un LIEN
             FONCTIONNEL vers /proprietaire/ajouter (point d'entrée du wizard).
@@ -538,31 +508,13 @@ function ImporterBailPageInner() {
           </div>
         )}
 
-        {simpleImport && !refusContexte && (
-          <div style={{ background: "#EEF3FB", border: "1px solid #D7E3F4", borderRadius: 14, padding: "14px 18px", marginBottom: 20 }}>
-            <p style={{ fontWeight: 700, color: "#1d4ed8", margin: 0, fontSize: 13 }}>
-              📎 Mode rapide — 5 champs essentiels
-            </p>
-            <p style={{ fontSize: 12, color: "#1d4ed8", margin: "4px 0 0", lineHeight: 1.55, opacity: 0.85 }}>
-              Tu uploades ton PDF de bail déjà signé hors plateforme. Le locataire le reçoit + accède à son espace. Surface, pièces, clauses : optionnels (à compléter plus tard si besoin).
-            </p>
-          </div>
-        )}
+        {/* V96.16 — Banner "Mode rapide" retiré (toggle simple/détaillé supprimé) */}
 
         <form onSubmit={onSubmit} style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 20, padding: 28, display: "flex", flexDirection: "column", gap: 18 }}>
 
-          {/* V95.A.2 — Adresse complète TOUJOURS requise (loi 89-462 art. 21
-              mentions légales quittances). On laisse les champs surface/pièces/
-              meublé conditionnels au mode simple, mais l'adresse postale est
-              obligatoire dans les 2 modes. */}
+          {/* V96.16 — Form unifié. Sections : Logement (requis) → Bien (optionnel)
+              → Loyer → Date → Locataire → Situation → PDF → Annexes ALUR → Message */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
-            {!simpleImport && (
-              <Field label="Titre du bien" hint="Ex : 2 pièces Bastille 42 m²">
-                <input id="import-titre" style={inputStyle} value={form.titre} onChange={e => update("titre", e.target.value)} placeholder="2 pièces Bastille 42 m²" maxLength={200} />
-              </Field>
-            )}
-
-            {/* V96.2 — Section "Logement" labellisée pour que l'user repère où sont les champs adresse */}
             <p style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: 0 }}>
               Logement
             </p>
@@ -580,68 +532,63 @@ function ImporterBailPageInner() {
               </Field>
             </div>
 
-            {!simpleImport && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-                <Field label="Surface (m²)">
-                  <input style={inputStyle} type="number" min={0} max={2000} value={form.surface} onChange={e => update("surface", e.target.value)} placeholder="42" />
-                </Field>
-                <Field label="Pièces">
-                  <input style={inputStyle} type="number" min={0} max={20} value={form.pieces} onChange={e => update("pieces", e.target.value)} placeholder="2" />
-                </Field>
-                <Field label="Meublé">
-                  <select style={inputStyle} value={form.meuble ? "oui" : "non"} onChange={e => update("meuble", e.target.value === "oui")}>
-                    <option value="non">Non</option>
-                    <option value="oui">Oui</option>
-                  </select>
-                </Field>
-              </div>
-            )}
+            <Field label="Titre du bien" hint="Ex : 2 pièces Bastille 42 m². Auto-rempli avec l'email du locataire si vide.">
+              <input id="import-titre" style={inputStyle} value={form.titre} onChange={e => update("titre", e.target.value)} placeholder="2 pièces Bastille 42 m²" maxLength={200} />
+            </Field>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+              <Field label="Surface (m²)" hint="Optionnel">
+                <input style={inputStyle} type="number" min={0} max={2000} value={form.surface} onChange={e => update("surface", e.target.value)} placeholder="42" />
+              </Field>
+              <Field label="Pièces" hint="Optionnel">
+                <input style={inputStyle} type="number" min={0} max={20} value={form.pieces} onChange={e => update("pieces", e.target.value)} placeholder="2" />
+              </Field>
+              <Field label="Meublé">
+                <select style={inputStyle} value={form.meuble ? "oui" : "non"} onChange={e => update("meuble", e.target.value === "oui")}>
+                  <option value="non">Non</option>
+                  <option value="oui">Oui</option>
+                </select>
+              </Field>
+            </div>
           </div>
 
-          {!simpleImport && <div style={{ height: 1, background: T.line, margin: "4px 0" }} />}
+          <div style={{ height: 1, background: T.line, margin: "4px 0" }} />
 
           <p style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: 0 }}>Loyer</p>
 
-          {/* V96.15 — Dépôt de garantie visible aussi en mode simple (facultatif).
-              Utile pour automatiser la restitution de dépôt en fin de bail. */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
             <Field label="Loyer HC (€) *">
               <input id="import-loyerHC" style={inputStyle} type="number" min={1} max={50000} value={form.loyerHC} onChange={e => update("loyerHC", e.target.value)} placeholder="1100" required />
             </Field>
-            <Field label="Charges (€)" hint={simpleImport ? "0 si charges incluses" : undefined}>
+            <Field label="Charges (€)" hint="0 si incluses dans le loyer">
               <input style={inputStyle} type="number" min={0} max={5000} value={form.charges} onChange={e => update("charges", e.target.value)} placeholder="80" />
             </Field>
-            <Field label="Dépôt de garantie (€)" hint={simpleImport ? "Optionnel — utile pour la restitution" : undefined}>
+            <Field label="Dépôt de garantie (€)" hint="Utile pour la restitution">
               <input style={inputStyle} type="number" min={0} max={50000} value={form.depotGarantie} onChange={e => update("depotGarantie", e.target.value)} placeholder="1100" />
             </Field>
           </div>
 
-          {!simpleImport && <div style={{ height: 1, background: T.line, margin: "4px 0" }} />}
+          <div style={{ height: 1, background: T.line, margin: "4px 0" }} />
 
-          <p style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: 0 }}>Date de début</p>
+          <p style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: 0 }}>Dates du bail</p>
 
-          {/* V34.4 — Mode simple : seule date début essentielle. Signature + durée masqués. */}
-          <div style={{ display: "grid", gridTemplateColumns: simpleImport ? "1fr" : "1fr 1fr 1fr", gap: 12 }}>
-            {!simpleImport && (
-              <Field label="Signature">
-                <input style={inputStyle} type="date" value={form.dateSignature} onChange={e => update("dateSignature", e.target.value)} />
-              </Field>
-            )}
-            <Field label="Date de début du bail" hint={simpleImport ? "Date à laquelle le bail prend effet" : undefined}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+            <Field label="Date de signature" hint="Quand le bail a été signé">
+              <input style={inputStyle} type="date" value={form.dateSignature} onChange={e => update("dateSignature", e.target.value)} />
+            </Field>
+            <Field label="Date de début *" hint="Date d'effet du bail">
               <input id="import-date-debut" style={inputStyle} type="date" value={form.dateDebut} onChange={e => update("dateDebut", e.target.value)} required />
             </Field>
-            {!simpleImport && (
-              <Field label="Durée (mois)">
-                <select style={inputStyle} value={form.dureeMois} onChange={e => update("dureeMois", e.target.value)}>
-                  <option value="12">12 (meublé)</option>
-                  <option value="36">36 (vide)</option>
-                  <option value="9">9 (étudiant)</option>
-                </select>
-              </Field>
-            )}
+            <Field label="Durée (mois)">
+              <select style={inputStyle} value={form.dureeMois} onChange={e => update("dureeMois", e.target.value)}>
+                <option value="12">12 (meublé)</option>
+                <option value="36">36 (vide)</option>
+                <option value="9">9 (étudiant)</option>
+              </select>
+            </Field>
           </div>
 
-          {!simpleImport && <div style={{ height: 1, background: T.line, margin: "4px 0" }} />}
+          <div style={{ height: 1, background: T.line, margin: "4px 0" }} />
 
           <p style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: 0 }}>Locataire</p>
 
