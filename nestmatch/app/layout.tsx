@@ -2,8 +2,9 @@ import type { Metadata, Viewport } from 'next'
 import { DM_Sans, Fraunces } from 'next/font/google'
 import './globals.css'
 import Providers from './providers'
-import CookieBanner from './components/CookieBanner'
-import BugReportButton from './components/BugReportButton'
+// V93 — CookieBanner + BugReportButton retirés (Paul : "pas pro").
+// La conformité RGPD reste assurée par /cookies (page dédiée) et le lien
+// Mentions légales dans le footer. Bug reports : passage par /contact.
 import PWAInstallBanner from './components/PWAInstallBanner'
 import ToastStack from './components/ToastStack'
 import ServiceWorkerRegister from './components/ServiceWorkerRegister'
@@ -239,12 +240,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               segment monte son propre chrome (TopChrome+BottomNav pour auth,
               header simplifié+footer marketing pour public). */}
           {children}
-          {/* Globaux RGPD + UX qui DOIVENT s'afficher sur toutes les pages
-              (cookies banner, toasts, theme, service worker, scroll lock,
-              heartbeat, zoom guard) — peu importe public ou auth. */}
-          <CookieBanner />
-          {/* V84.8 — widget bug report flottant (auth uniquement, masqué /admin/*) */}
-          <BugReportButton />
+          {/* Globaux UX qui s'affichent sur toutes les pages
+              (toasts, theme, service worker, scroll lock, heartbeat). */}
           <PWAInstallBanner />
           <ToastStack />
           <ServiceWorkerRegister />
