@@ -1046,6 +1046,100 @@ export default function BailPage() {
             </p>
           </div>
 
+          {/* V95.C.2 — Checklist post-import : 5 items conformité ALUR */}
+          {(() => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const annexes = (bien as any)?.annexes_alur || {}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const isCrepRequired = !!(bien as any)?.import_metadata?.construction_avant_1949
+            const annexeOk = (k: string, required: boolean) => {
+              if (!required) return true
+              const a = annexes[k]
+              return !!(a && (a.url || a.included_in_bail || a.not_required))
+            }
+            const items: Array<{ done: boolean; label: string; hint: string }> = [
+              {
+                done: !!bien.bail_pdf_url,
+                label: "Bail PDF uploadé",
+                hint: "Preuve juridique du contrat (loi 89-462 art. 4)",
+              },
+              {
+                done: !!(bien.adresse && bien.ville && (bien as { import_metadata?: { code_postal?: string } })?.import_metadata?.code_postal),
+                label: "Adresse complète (rue + CP + ville)",
+                hint: "Requise pour mentions légales quittances (art. 21)",
+              },
+              {
+                done: annexeOk("dpe", true) && annexeOk("erp", true) && annexeOk("crep", isCrepRequired) && annexeOk("notice_info", true),
+                label: "Annexes ALUR (DPE, ERP, CREP, notice info)",
+                hint: "Loi 89-462 art. 3 + décret 2015-587",
+              },
+              {
+                done: bien.bail_source === "imported",
+                label: "Locataire a accepté l'invitation",
+                hint: bien.bail_source === "imported_pending" ? "En attente de l'acceptation par le locataire" : "Acceptation reçue",
+              },
+              {
+                done: !!bien.locataire_email,
+                label: "Locataire identifié",
+                hint: bien.locataire_email || "—",
+              },
+            ]
+            const doneCount = items.filter(i => i.done).length
+            const allDone = doneCount === items.length
+            return (
+              <div style={{
+                background: allDone ? "#F0FAEE" : "#FBF6EA",
+                border: `1px solid ${allDone ? "#C6E9C0" : "#EADFC6"}`,
+                borderRadius: 18,
+                padding: isMobile ? 18 : 22,
+                marginBottom: 16,
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 10, flexWrap: "wrap" }}>
+                  <div>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: allDone ? "#15803d" : "#9a3412", textTransform: "uppercase", letterSpacing: "1.4px", margin: 0 }}>
+                      {allDone ? "Bail conforme ALUR ✓" : "Checklist post-import"}
+                    </p>
+                    <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 20, color: "#111", margin: "4px 0 0" }}>
+                      {allDone ? "Tout est en ordre." : `${doneCount}/${items.length} actions complétées`}
+                    </h2>
+                  </div>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: allDone ? "#15803d" : "#9a3412", background: allDone ? "#DCF5E4" : "#fff", border: `1px solid ${allDone ? "#C6E9C0" : "#EADFC6"}`, padding: "5px 12px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "1.2px" }}>
+                    {doneCount}/{items.length}
+                  </span>
+                </div>
+                <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+                  {items.map(item => (
+                    <li key={item.label} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "6px 0" }}>
+                      <span
+                        aria-hidden
+                        style={{
+                          width: 20, height: 20, borderRadius: "50%",
+                          background: item.done ? "#DCF5E4" : "#fff",
+                          border: `1px solid ${item.done ? "#C6E9C0" : "#EADFC6"}`,
+                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                          flexShrink: 0, color: item.done ? "#15803d" : "#9a3412",
+                          marginTop: 1,
+                        }}
+                      >
+                        {item.done ? (
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        ) : (
+                          <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#EADFC6" }} />
+                        )}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 13.5, fontWeight: 600, color: "#111", margin: 0, textDecoration: item.done ? "line-through" : "none", opacity: item.done ? 0.6 : 1 }}>{item.label}</p>
+                        <p style={{ fontSize: 11.5, color: "#6b6358", margin: "1px 0 0", lineHeight: 1.45 }}>{item.hint}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          })()}
+
           {/* Card 1 — PDF + infos */}
           <div style={cardSx}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 14, flexWrap: "wrap", marginBottom: 14 }}>

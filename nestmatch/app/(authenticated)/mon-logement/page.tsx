@@ -11,6 +11,7 @@ import { BRAND } from "../../../lib/brand"
 import { drawLogoPDF } from "../../../lib/brandPDF"
 import { computeBailTimeline } from "../../../lib/bailTimeline"
 import ImportedBailWidget from "../../components/ui/ImportedBailWidget"
+import TutoMonLogement from "../../components/onboarding/TutoMonLogement"
 import { projeterEcheancierBail, prochaineEcheance } from "../../../lib/loyersProjection"
 import BailTimeline from "../../components/ui/BailTimeline"
 import BailSignatureModal from "../../components/BailSignatureModal"
@@ -87,6 +88,29 @@ export default function MonLogement() {
   const [preavisOpen, setPreavisOpen] = useState(false)
   // V36.3 — Avenants liés au bail courant
   const [avenants, setAvenants] = useState<Avenant[]>([])
+  // V95.C.1 — Tuto mon-logement (1er load post-acceptance)
+  const [tutoOpen, setTutoOpen] = useState(false)
+
+  // V95.C.1 — Check si tuto déjà vu (localStorage cache + server-side
+  // fallback). Affichage uniquement après chargement du bien pour éviter
+  // de spawner le tuto si user n'a pas encore de logement.
+  useEffect(() => {
+    if (!bien || tutoOpen) return
+    try {
+      const local = typeof window !== "undefined" ? localStorage.getItem("km_tuto_mon_logement_done_v1") : null
+      if (local) return
+    } catch { /* ignore */ }
+    // Check server-side (peut être différent si user a vu le tuto sur autre appareil)
+    fetch("/api/locataire/tuto-mon-logement", { cache: "no-store" })
+      .then(r => r.ok ? r.json() : null)
+      .then(j => {
+        if (j?.ok && !j.completed) {
+          setTutoOpen(true)
+        }
+      })
+      .catch(() => { /* silent — tuto pas affiché en cas d'erreur réseau */ })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bien])
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -1352,6 +1376,8 @@ export default function MonLogement() {
           zoneTendue={estZoneTendue(bien.ville || "")}
         />
       )}
+      {/* V95.C.1 — Tuto post-acceptance */}
+      <TutoMonLogement open={tutoOpen} onClose={() => setTutoOpen(false)} />
     </main>
   )
 }
