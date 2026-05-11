@@ -397,9 +397,11 @@ function ImporterBailPageInner() {
 
   if (success) {
     return (
-      <main style={{ minHeight: "calc(100vh - 64px)", background: T.bg, padding: "32px 16px" }}>
-        <div style={{ maxWidth: 520, margin: "0 auto" }}>
-          <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 20, padding: 32, textAlign: "center" }}>
+      // V96.18 — page success centrée verticalement (flex grid-place) au lieu
+      // de minHeight 100vh avec card en haut (espace vide en dessous).
+      <main style={{ minHeight: "calc(100vh - 64px)", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 16px" }}>
+        <div style={{ maxWidth: 520, width: "100%", margin: "0 auto" }}>
+          <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 20, padding: 32, textAlign: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.04)" }}>
             <div style={{ fontSize: 44, marginBottom: 14, lineHeight: 1 }} aria-hidden>✉️</div>
             <p style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 8px" }}>Invitation envoyée</p>
             <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 28, color: T.ink, margin: "0 0 12px" }}>
@@ -411,13 +413,16 @@ function ImporterBailPageInner() {
                 : "L'invitation est créée. L'envoi de l'email est en cours — il peut prendre quelques minutes."}
             </p>
             <p style={{ color: T.muted, fontSize: 13, lineHeight: 1.6, margin: "0 0 24px" }}>
-              Tant que le locataire n'a pas accepté, le bien n'apparaît pas dans les annonces publiques.
+              Tant que le locataire n&apos;a pas accepté, le bien n&apos;apparaît pas dans les annonces publiques.
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <Link href="/proprietaire" style={{ display: "block", background: T.ink, color: "#fff", padding: "12px 24px", borderRadius: 999, textDecoration: "none", fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.3px" }}>
+              <Link href={`/proprietaire/bail/${success.annonceId}`} style={{ display: "block", background: T.ink, color: "#fff", padding: "12px 24px", borderRadius: 999, textDecoration: "none", fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.3px" }}>
+                Voir le bail
+              </Link>
+              <Link href="/proprietaire" style={{ display: "block", background: "transparent", border: `1px solid ${T.line}`, color: T.ink, padding: "12px 24px", borderRadius: 999, textDecoration: "none", fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.3px" }}>
                 Retour au tableau de bord
               </Link>
-              <button onClick={() => setSuccess(null)} style={{ background: "transparent", border: `1px solid ${T.line}`, color: T.ink, padding: "12px 24px", borderRadius: 999, fontSize: 13, fontWeight: 600, fontFamily: "inherit", cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+              <button onClick={() => setSuccess(null)} style={{ background: "transparent", border: "none", color: T.muted, padding: "8px 12px", fontSize: 12, fontWeight: 500, fontFamily: "inherit", cursor: "pointer", textDecoration: "underline" }}>
                 Importer un autre bail
               </button>
             </div>
