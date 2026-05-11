@@ -29,6 +29,24 @@ interface RouteParams {
   params: Promise<{ token: string }>
 }
 
+/**
+ * V89.9 — Liste tous les mois YYYY-MM entre 2 dates (inclus).
+ * Ex: monthsBetween("2025-10-15", "2026-05-11") = ["2025-10","2025-11",...,"2026-05"]
+ */
+function monthsBetween(startIso: string, endIso: string): string[] {
+  const start = new Date(startIso)
+  const end = new Date(endIso)
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return []
+  const months: string[] = []
+  const cursor = new Date(start.getFullYear(), start.getMonth(), 1)
+  const stop = new Date(end.getFullYear(), end.getMonth(), 1)
+  while (cursor.getTime() <= stop.getTime()) {
+    months.push(`${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`)
+    cursor.setMonth(cursor.getMonth() + 1)
+  }
+  return months
+}
+
 async function loadInvitation(token: string) {
   const { data, error } = await supabaseAdmin
     .from("bail_invitations")
@@ -187,6 +205,97 @@ export async function POST(_req: Request, { params }: RouteParams) {
     }, { status: 500 })
   }
 
+  // V89.9 — Génération rétroactive : loyers passés + EDL d'entrée si le
+  // locataire était déjà installé avant l'import (cas "migration en cours
+  // de bail").
+  let generatedLoyers = 0
+  let generatedEdl = false
+  if (meta.deja_installe === true) {
+    // 1. Loyers passés
+    if (meta.loyers_passes_payes === true) {
+      const dateEntree = (meta.date_entree_reelle as string | null) || dateDebut
+      const months = monthsBetween(dateEntree, now.slice(0, 10))
+      if (months.length > 0) {
+        // Récupère les infos de l'annonce pour titre/montant
+        const { data: annDetails } = await supabaseAdmin
+          .from("annonces")
+          .select("titre, prix, charges")
+          .eq("id", invit.annonce_id)
+          .maybeSingle()
+        const montant = Math.round((Number(annDetails?.prix) || 0) + (Number(annDetails?.charges) || 0))
+        if (montant > 0) {
+          // Évite doublons : vérifier les mois déjà présents pour cette annonce
+          const { data: existingLoyers } = await supabaseAdmin
+            .from("loyers")
+            .select("mois")
+            .eq("annonce_id", invit.annonce_id)
+          const existingSet = new Set((existingLoyers || []).map(l => l.mois))
+          const toInsert = months
+            .filter(m => !existingSet.has(m))
+            .map(mois => ({
+              annonce_id: invit.annonce_id,
+              proprietaire_email: invit.proprietaire_email,
+              locataire_email: userEmail,
+              titre_bien: annDetails?.titre || null,
+              mois,
+              montant,
+              statut: "confirmé",
+              date_confirmation: now,
+              created_at: now,
+            }))
+          if (toInsert.length > 0) {
+            const { error: loyersErr } = await supabaseAdmin.from("loyers").insert(toInsert)
+            if (loyersErr) {
+              console.error("[bail/accepter] loyers backfill failed", loyersErr)
+            } else {
+              generatedLoyers = toInsert.length
+            }
+          }
+        }
+      }
+    }
+
+    // 2. EDL d'entrée pré-rempli "valide" si flag edl_entree_deja_fait
+    if (meta.edl_entree_deja_fait === true) {
+      const { count } = await supabaseAdmin
+        .from("etats_des_lieux")
+        .select("id", { count: "exact", head: true })
+        .eq("annonce_id", invit.annonce_id)
+        .eq("type", "entree")
+      if ((count || 0) === 0) {
+        // Récupère profils proprio + locataire pour pré-remplir l'EDL
+        const [{ data: propProfil }, { data: locProfil }] = await Promise.all([
+          supabaseAdmin.from("profils").select("nom, prenom").eq("email", invit.proprietaire_email).maybeSingle(),
+          supabaseAdmin.from("profils").select("nom, prenom").eq("email", userEmail).maybeSingle(),
+        ])
+        const dateEdl = (meta.date_entree_reelle as string | null) || dateDebut
+        const { error: edlErr } = await supabaseAdmin.from("etats_des_lieux").insert({
+          annonce_id: invit.annonce_id,
+          proprietaire_email: invit.proprietaire_email,
+          locataire_email: userEmail,
+          type: "entree",
+          statut: "valide",
+          date_edl: dateEdl,
+          prenom_bailleur: propProfil?.prenom || null,
+          nom_bailleur: propProfil?.nom || null,
+          email_bailleur: invit.proprietaire_email,
+          prenom_locataire: locProfil?.prenom || null,
+          nom_locataire: locProfil?.nom || null,
+          email_locataire: userEmail,
+          observations: "État des lieux d'entrée réalisé hors plateforme et déclaré valide à l'import KeyMatch. Aucun document scanné n'a été uploadé — référence : votre exemplaire papier original.",
+          signe_locataire_at: now,
+          signe_bailleur_at: now,
+          date_validation: now,
+        })
+        if (edlErr) {
+          console.error("[bail/accepter] EDL backfill failed", edlErr)
+        } else {
+          generatedEdl = true
+        }
+      }
+    }
+  }
+
   // V89.1 — Notif cloche proprio (href pointe sur la fiche bail, pas dashboard générique)
   const proprioHref = `/proprietaire/bail/${invit.annonce_id}`
   try {
@@ -241,5 +350,8 @@ export async function POST(_req: Request, { params }: RouteParams) {
     annonceId: invit.annonce_id,
     // V88.fix — redirect côté locataire vers son espace logement, pas /proprietaire
     redirect: "/mon-logement",
+    // V89.9 — Stats backfill
+    generatedLoyers,
+    generatedEdl,
   })
 }

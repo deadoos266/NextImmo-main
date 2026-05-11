@@ -48,6 +48,11 @@ interface ImporterBody {
   // (bucket `baux/{proprio}/import-*.pdf`). Persisté dans
   // import_metadata.pdf_url + annonces.bail_pdf_url pour affichage ultérieur.
   pdfFichierUrl?: string
+  // V89.8 — Situation actuelle du locataire au moment de l'import
+  dejaInstalle?: boolean
+  dateEntreeReelle?: string  // YYYY-MM-DD
+  loyersPassesPayes?: boolean
+  edlEntreeDejaFait?: boolean
 }
 
 function isValidEmail(s: string): boolean {
@@ -153,6 +158,13 @@ export async function POST(req: NextRequest) {
     ? pdfUrl
     : null
 
+  // V89.8 — Situation actuelle (locataire déjà installé)
+  const dejaInstalle = body.dejaInstalle === true
+  const dateEntreeReelleStr = typeof body.dateEntreeReelle === "string" ? body.dateEntreeReelle.trim() : ""
+  const dateEntreeReelle = dejaInstalle && /^\d{4}-\d{2}-\d{2}$/.test(dateEntreeReelleStr) ? dateEntreeReelleStr : null
+  const loyersPassesPayes = dejaInstalle && body.loyersPassesPayes === true
+  const edlEntreeDejaFait = dejaInstalle && body.edlEntreeDejaFait === true
+
   // Crée l'annonce (masquée tant que pas acceptée)
   const importMetadata: Record<string, unknown> = {
     date_signature: body.dateSignature || null,
@@ -165,6 +177,11 @@ export async function POST(req: NextRequest) {
     imported_at: new Date().toISOString(),
     imported_by: proprioEmail,
     pdf_url: pdfUrlSafe,  // V88.1
+    // V89.8 — Pour reconstituer l'historique à l'acceptance
+    deja_installe: dejaInstalle,
+    date_entree_reelle: dateEntreeReelle,
+    loyers_passes_payes: loyersPassesPayes,
+    edl_entree_deja_fait: edlEntreeDejaFait,
   }
 
   const { data: annonce, error: annonceErr } = await supabaseAdmin

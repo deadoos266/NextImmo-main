@@ -22,6 +22,11 @@ interface ImporterForm {
   dureeMois: string
   locataireEmail: string
   messageProprio: string
+  // V89.8 — Locataire déjà installé ?
+  dejaInstalle: boolean        // true = il est déjà dans les murs
+  dateEntreeReelle: string     // YYYY-MM-DD, si dejaInstalle=true
+  edlEntreeDejaFait: boolean   // EDL d'entrée déjà fait hors plateforme
+  loyersPassesPayes: boolean   // les loyers passés ont déjà été payés
 }
 
 const EMPTY_FORM: ImporterForm = {
@@ -39,6 +44,10 @@ const EMPTY_FORM: ImporterForm = {
   dureeMois: "36",
   locataireEmail: "",
   messageProprio: "",
+  dejaInstalle: false,
+  dateEntreeReelle: "",
+  edlEntreeDejaFait: false,
+  loyersPassesPayes: true,  // défaut : si déjà installé, les loyers ont été payés
 }
 
 const T = {
@@ -259,6 +268,11 @@ function ImporterBailPageInner() {
           // V34.4 — URL du PDF uploadé (transparent pour le caller — ignoré
           // si /api/bail/importer ne le supporte pas encore).
           pdfFichierUrl: pdfFichierUrl || undefined,
+          // V89.8 — Situation actuelle du locataire (déjà installé ou non)
+          dejaInstalle: form.dejaInstalle,
+          dateEntreeReelle: form.dejaInstalle ? form.dateEntreeReelle || undefined : undefined,
+          loyersPassesPayes: form.dejaInstalle ? form.loyersPassesPayes : false,
+          edlEntreeDejaFait: form.dejaInstalle ? form.edlEntreeDejaFait : false,
         }),
       })
       const data = await res.json()
@@ -488,6 +502,64 @@ function ImporterBailPageInner() {
           <Field label="Email du locataire" hint="Il recevra un email l'invitant à valider le bail. Vous pouvez le notifier oralement à l'avance.">
             <input style={inputStyle} type="email" value={form.locataireEmail} onChange={e => update("locataireEmail", e.target.value)} placeholder="locataire@email.com" required />
           </Field>
+
+          {/* V89.8 — Locataire déjà installé ? */}
+          <div style={{ height: 1, background: T.line, margin: "4px 0" }} />
+          <p style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: 0 }}>Situation actuelle</p>
+          <div style={{ background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 14, padding: "14px 18px" }}>
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={form.dejaInstalle}
+                onChange={e => update("dejaInstalle", e.target.checked)}
+                style={{ marginTop: 3, accentColor: T.ink }}
+              />
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, fontWeight: 600, fontSize: 13.5, color: "#9a3412" }}>
+                  Le locataire est déjà installé dans le logement
+                </p>
+                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#a16207", lineHeight: 1.55 }}>
+                  Cochez si le locataire vit déjà dans les murs depuis quelques mois (cas typique d&apos;une migration vers KeyMatch en cours de bail). On générera l&apos;historique des loyers déjà payés.
+                </p>
+              </div>
+            </label>
+          </div>
+
+          {form.dejaInstalle && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14, paddingLeft: 4, borderLeft: `2px solid ${T.line}`, marginLeft: 4 }}>
+              <Field label="Date d'entrée effective dans le logement" hint="Date à laquelle le locataire a réellement emménagé. Sert à générer rétroactivement les quittances mensuelles.">
+                <input
+                  style={inputStyle}
+                  type="date"
+                  value={form.dateEntreeReelle}
+                  onChange={e => update("dateEntreeReelle", e.target.value)}
+                  max={new Date().toISOString().slice(0, 10)}
+                />
+              </Field>
+              <Field label="Quittances des loyers passés">
+                <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 13, color: T.ink }}>
+                  <input
+                    type="checkbox"
+                    checked={form.loyersPassesPayes}
+                    onChange={e => update("loyersPassesPayes", e.target.checked)}
+                    style={{ accentColor: T.ink }}
+                  />
+                  Les loyers passés ont déjà été réglés hors KeyMatch — créer l&apos;historique automatiquement
+                </label>
+              </Field>
+              <Field label="État des lieux d'entrée déjà fait ?">
+                <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 13, color: T.ink }}>
+                  <input
+                    type="checkbox"
+                    checked={form.edlEntreeDejaFait}
+                    onChange={e => update("edlEntreeDejaFait", e.target.checked)}
+                    style={{ accentColor: T.ink }}
+                  />
+                  Oui, l&apos;EDL d&apos;entrée a été signé entre les 2 parties (hors plateforme)
+                </label>
+              </Field>
+            </div>
+          )}
 
           {/* V34.4 — Upload PDF visible dans les 2 modes (essentiel en mode simple). */}
           <Field
