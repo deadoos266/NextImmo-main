@@ -1309,6 +1309,11 @@ export default function Proprietaire() {
                 const loyersBien = loyers.filter((l: any) => l.annonce_id === b.id)
                 const moisLoyers = loyersBien.filter((l: any) => l.statut === "confirmé").length
                 const loyerDuMois = loyersBien.find((l: any) => l.mois === moisCourant)
+                // V92.3 — Bail importé : on adapte le wording pour ne pas afficher
+                // "Loyer du mois à déclarer" en ROUGE alors que le bail vient d'arriver.
+                // Pour un bail importé qui démarre maintenant ou au mois courant,
+                // pas de loyer à déclarer côté KeyMatch — c'est normal.
+                const isImported = b.bail_source === "imported" || b.bail_source === "imported_pending"
                 const loyerMoisStatut: "paye" | "declare" | "absent" =
                   loyerDuMois?.statut === "confirmé" ? "paye"
                   : loyerDuMois?.statut === "déclaré" ? "declare"
@@ -1321,7 +1326,9 @@ export default function Proprietaire() {
                 const loyerMoisStyle =
                   loyerMoisStatut === "paye"    ? { bg: km.successBg, color: km.successText, border: km.successLine, label: "Loyer du mois reçu" }
                   : loyerMoisStatut === "declare" ? { bg: km.warnBg, color: km.warnText, border: km.warnLine, label: "Loyer du mois en attente" }
-                  : { bg: km.errBg, color: km.errText, border: km.errLine, label: "Loyer du mois à déclarer" }
+                  : isImported
+                    ? { bg: km.beige, color: km.muted, border: km.line, label: "Bail importé · 1re quittance à initier" }
+                    : { bg: km.errBg, color: km.errText, border: km.errLine, label: "Loyer du mois à déclarer" }
                 const edlsBien = edls.filter((e: any) => e.annonce_id === b.id)
                 const timelineSteps = computeBailTimeline({
                   annonce: {

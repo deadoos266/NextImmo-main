@@ -44,10 +44,15 @@ const EMPTY_FORM: ImporterForm = {
   dureeMois: "36",
   locataireEmail: "",
   messageProprio: "",
-  dejaInstalle: false,
+  // V92.2 — Défaut "déjà installé" car c'est le CAS LE PLUS FRÉQUENT
+  // (un proprio qui IMPORTE un bail le fait quasi-toujours parce que son
+  // locataire est déjà dans les murs et qu'il veut migrer vers KeyMatch).
+  // Le proprio qui démarre un bail à zéro utilise plutôt le générateur de
+  // bail, pas l'import.
+  dejaInstalle: true,
   dateEntreeReelle: "",
-  edlEntreeDejaFait: false,
-  loyersPassesPayes: true,  // défaut : si déjà installé, les loyers ont été payés
+  edlEntreeDejaFait: true,
+  loyersPassesPayes: true,
 }
 
 const T = {

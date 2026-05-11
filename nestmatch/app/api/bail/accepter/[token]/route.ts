@@ -296,6 +296,57 @@ export async function POST(_req: Request, { params }: RouteParams) {
     }
   }
 
+  // V92.1 — Création de la conversation proprio ↔ locataire avec :
+  //  - 1 message [BAIL_CARD] (= card du bail + lien PDF) qui apparaît dans /messages
+  //    ET active la section "Mon bail" sur /mon-logement (cf api/bail/card-payload)
+  //  - 1 message texte d'introduction ("Bienvenue sur KeyMatch...") pour expliquer
+  //    le but de la conv et inviter à discuter
+  try {
+    const { data: annDataForCard } = await supabaseAdmin
+      .from("annonces")
+      .select("titre, ville, adresse, prix, charges, surface, pieces, meuble, bail_pdf_url")
+      .eq("id", invit.annonce_id)
+      .maybeSingle()
+    const loyerHC = Number(annDataForCard?.prix) || 0
+    const charges = Number(annDataForCard?.charges) || 0
+    const bailCardPayload = {
+      _imported: true,
+      fichierUrl: annDataForCard?.bail_pdf_url || null,
+      titreBien: annDataForCard?.titre || "Logement",
+      villeBien: annDataForCard?.ville || "",
+      adresseBien: annDataForCard?.adresse || "",
+      surface: annDataForCard?.surface || null,
+      pieces: annDataForCard?.pieces || null,
+      meuble: annDataForCard?.meuble ?? false,
+      loyerHC,
+      charges,
+      dateDebut: dateDebut,
+      duree: meta.duree_mois || 36,
+      depotGarantie: meta.depot_garantie || 0,
+    }
+    const introText = `Bonjour, votre bail pour ${annDataForCard?.titre || "le logement"}${annDataForCard?.ville ? " à " + annDataForCard.ville : ""} est désormais lié à KeyMatch. Vous trouverez ici l'historique de vos quittances, l'EDL et toutes les notifications liées à votre location. N'hésitez pas à utiliser cette conversation pour échanger.`
+    await supabaseAdmin.from("messages").insert([
+      {
+        from_email: invit.proprietaire_email,
+        to_email: userEmail,
+        contenu: `[BAIL_CARD]${JSON.stringify(bailCardPayload)}`,
+        lu: false,
+        annonce_id: invit.annonce_id,
+        created_at: now,
+      },
+      {
+        from_email: invit.proprietaire_email,
+        to_email: userEmail,
+        contenu: introText,
+        lu: false,
+        annonce_id: invit.annonce_id,
+        created_at: new Date(Date.now() + 1).toISOString(),  // +1ms pour ordering stable
+      },
+    ])
+  } catch (e) {
+    console.error("[bail/accepter] conv create failed (non-blocking)", e)
+  }
+
   // V89.1 — Notif cloche proprio (href pointe sur la fiche bail, pas dashboard générique)
   const proprioHref = `/proprietaire/bail/${invit.annonce_id}`
   try {
