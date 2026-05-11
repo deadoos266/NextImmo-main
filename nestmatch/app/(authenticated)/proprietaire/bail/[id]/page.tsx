@@ -403,6 +403,9 @@ export default function BailPage() {
   const searchParams = useSearchParams()
   const bienId = params.id as string
   const locatairePreselectionne = searchParams?.get("locataire") || ""
+  // V96.19 — Banner "Invitation envoyée" après redirect depuis l'import
+  const justImported = searchParams?.get("just_imported") === "1"
+  const [showJustImportedBanner, setShowJustImportedBanner] = useState(justImported)
   const { isMobile } = useResponsive()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1031,6 +1034,31 @@ export default function BailPage() {
     return (
       <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
         <div style={{ maxWidth: 820, margin: "0 auto", padding: isMobile ? "24px 16px 120px" : "40px 48px 120px" }}>
+          {/* V96.19 — Banner success post-import bail (depuis ?just_imported=1) */}
+          {showJustImportedBanner && (
+            <div style={{
+              display: "flex", alignItems: "flex-start", gap: 12,
+              background: "#F0FAEE", border: "1px solid #C6E9C0",
+              borderRadius: 14, padding: "14px 18px", marginBottom: 18,
+            }}>
+              <span aria-hidden style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>✉️</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontWeight: 700, fontSize: 13, color: "#15803d", margin: 0 }}>
+                  Invitation envoyée au locataire
+                </p>
+                <p style={{ fontSize: 12, color: "#166534", margin: "3px 0 0", lineHeight: 1.55 }}>
+                  Un email vient de partir avec un lien d&apos;acceptation (valide 14 jours). Tant qu&apos;il n&apos;a pas accepté, le bien n&apos;apparaît pas dans les annonces publiques.
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Fermer"
+                onClick={() => setShowJustImportedBanner(false)}
+                style={{ background: "transparent", border: "none", color: "#15803d", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: 4, flexShrink: 0, fontFamily: "inherit" }}
+              >×</button>
+            </div>
+          )}
+
           <button onClick={() => router.push("/proprietaire")}
             style={{ fontSize: 13, color: "#8a8477", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}>
             ← Retour à l&apos;espace propriétaire
