@@ -225,6 +225,34 @@ function checkCrons(): ServiceCheck {
   }
 }
 
+/**
+ * V97.9 — Check trivial du service "app" : si on arrive jusqu'ici, l'app
+ * Next.js répond. La latence mesurée est celle du process Node sur 1 tick
+ * (vide la queue setImmediate) — sert d'indicateur de event loop sain.
+ *
+ * Avant V97.9 : la liste SERVICES (lib/statusAggregation.ts) incluait "app"
+ * mais aucun ping n'était jamais inséré → timeline "Application" toujours
+ * vide sur /admin/health et /status, ce qui faisait croire à un service down.
+ */
+async function checkApp(): Promise<ServiceCheck> {
+  const t0 = performance.now()
+  // setImmediate flush — mesure approximative du event loop lag.
+  await new Promise<void>(resolve => setImmediate(resolve))
+  const latency = Math.round(performance.now() - t0)
+  // V97.9 — Seuil large à 800ms : cold starts Vercel serverless peuvent
+  // prendre 500-700ms avant que setImmediate se résolve. Sous ce seuil,
+  // c'est "up" même si la latence semble haute, pour éviter de créer
+  // des incidents spurious à chaque cold start (qui auraient fait passer
+  // /status public en "degraded" toutes les heures).
+  const status: HealthStatus = latency > 800 ? "degraded" : "up"
+  return {
+    service: "app",
+    status,
+    latency_ms: latency,
+    error: status === "degraded" ? `event_loop_lag: ${latency}ms (seuil 800ms)` : null,
+  }
+}
+
 function aggregate(services: ServiceCheck[]): "ok" | "degraded" | "down" {
   if (services.some(s => s.status === "down")) return "down"
   if (services.some(s => s.status === "degraded")) return "degraded"
@@ -292,14 +320,15 @@ export async function GET(req: NextRequest) {
   // surprendre les callers.
   void req
 
-  const [database, auth, email, storage] = await Promise.all([
+  const [database, auth, email, storage, app] = await Promise.all([
     checkDatabase(),
     Promise.resolve(checkAuth()),
     checkEmail(),
     checkStorage(),
+    checkApp(),  // V97.9 — remplit la timeline "Application"
   ])
   const crons = checkCrons()
-  const services: ServiceCheck[] = [database, auth, email, storage, crons]
+  const services: ServiceCheck[] = [database, auth, email, storage, crons, app]
 
   // Persiste en best-effort en arrière-plan pour ne pas ralentir la réponse.
   // Vercel coupe les promises après le response → on attend pour cette MVP.

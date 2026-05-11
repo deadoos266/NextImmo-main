@@ -13,6 +13,14 @@ import { useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import { getCityCoords } from "../../lib/cityCoords"
 
+// V97.8 — Import leafletSetup pour appliquer le fix marker icons au top-level.
+// Sans ça, ce composant chargeait react-leaflet via dynamic import SANS
+// jamais déclencher leafletSetup.ts → markers 404 sur /profil (quartier favori).
+// L'import est dynamique pour rester compatible SSR (leafletSetup utilise "use client").
+if (typeof window !== "undefined") {
+  void import("./leafletSetup")
+}
+
 const MapContainer = dynamic(() => import("react-leaflet").then(m => m.MapContainer), { ssr: false })
 const TileLayer = dynamic(() => import("react-leaflet").then(m => m.TileLayer), { ssr: false })
 const Marker = dynamic(() => import("react-leaflet").then(m => m.Marker), { ssr: false })

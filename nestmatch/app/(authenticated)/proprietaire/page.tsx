@@ -581,10 +581,16 @@ export default function Proprietaire() {
       // Charger les clics uniques par bien
       const ids = b.map((a: any) => a.id)
       if (ids.length > 0) {
-        // V65.2 — EDLs batch via /api/edl/by-annonces (préreq migration 059)
+        // V65.2 — EDLs batch via /api/edl/by-annonces (préreq migration 059).
+        // V97.7 — POST avec body JSON (200+ annonces → URL >2KB → HTTP 400).
         const [{ data: clics }, edlsRes] = await Promise.all([
           supabase.from("clics_annonces").select("annonce_id").in("annonce_id", ids),
-          fetch(`/api/edl/by-annonces?ids=${ids.join(",")}`, { cache: "no-store" })
+          fetch(`/api/edl/by-annonces`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ids }),
+            cache: "no-store",
+          })
             .then(r => r.ok ? r.json() : { ok: false, edls: [] })
             .catch(() => ({ ok: false, edls: [] })),
         ])
