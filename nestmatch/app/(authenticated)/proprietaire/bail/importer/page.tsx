@@ -619,48 +619,49 @@ function ImporterBailPageInner() {
           </div>
 
           {form.dejaInstalle && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14, paddingLeft: 4, borderLeft: `2px solid ${T.line}`, marginLeft: 4 }}>
-              <Field label="Date d'entrée effective dans le logement" hint="Date à laquelle le locataire a réellement emménagé. Sert à générer rétroactivement les quittances mensuelles.">
+            <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingLeft: 14, borderLeft: `2px solid ${T.line}`, marginLeft: 4 }}>
+              {/* V96.17 — Date d'entrée : label inline simple, plus de Field uppercase */}
+              <div>
+                <label htmlFor="import-date-entree" style={{ display: "block", fontSize: 13, fontWeight: 600, color: T.ink, marginBottom: 6 }}>
+                  Date d&apos;entrée effective dans le logement
+                </label>
                 <input
+                  id="import-date-entree"
                   style={inputStyle}
                   type="date"
                   value={form.dateEntreeReelle}
                   onChange={e => update("dateEntreeReelle", e.target.value)}
                   max={new Date().toISOString().slice(0, 10)}
                 />
-              </Field>
-              <Field label="Quittances des loyers passés">
-                <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 13, color: T.ink }}>
-                  <input
-                    type="checkbox"
-                    checked={form.loyersPassesPayes}
-                    onChange={e => update("loyersPassesPayes", e.target.checked)}
-                    style={{ accentColor: T.ink }}
-                  />
-                  Les loyers passés ont déjà été réglés hors KeyMatch — créer l&apos;historique automatiquement
-                </label>
-              </Field>
-              <Field label="État des lieux d'entrée déjà fait ?">
-                <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 13, color: T.ink }}>
-                  <input
-                    type="checkbox"
-                    checked={form.edlEntreeDejaFait}
-                    onChange={e => update("edlEntreeDejaFait", e.target.checked)}
-                    style={{ accentColor: T.ink }}
-                  />
-                  Oui, l&apos;EDL d&apos;entrée a été signé entre les 2 parties (hors plateforme)
-                </label>
-              </Field>
+                <p style={{ fontSize: 11, color: T.muted, margin: "4px 0 0", lineHeight: 1.45 }}>
+                  Sert à générer rétroactivement les quittances mensuelles.
+                </p>
+              </div>
 
-              {/* V96.1 — Upload PDF EDL si "EDL déjà fait" coché. Preuve juridique
-                  de l'état initial du logement (loi 89-462 art. 3-1). Optionnel
-                  techniquement (l'EDL peut rester papier), mais fortement
-                  recommandé pour pouvoir le partager avec le locataire en ligne. */}
+              {/* V96.17 — Toggles compactes en checkboxes inline, plus de gros labels */}
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", fontSize: 13, color: T.ink, lineHeight: 1.5 }}>
+                <input
+                  type="checkbox"
+                  checked={form.loyersPassesPayes}
+                  onChange={e => update("loyersPassesPayes", e.target.checked)}
+                  style={{ accentColor: T.ink, marginTop: 3, flexShrink: 0 }}
+                />
+                <span>Les loyers passés ont déjà été réglés hors KeyMatch <span style={{ color: T.muted, fontWeight: 400 }}>— on créera l&apos;historique automatiquement</span></span>
+              </label>
+
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", fontSize: 13, color: T.ink, lineHeight: 1.5 }}>
+                <input
+                  type="checkbox"
+                  checked={form.edlEntreeDejaFait}
+                  onChange={e => update("edlEntreeDejaFait", e.target.checked)}
+                  style={{ accentColor: T.ink, marginTop: 3, flexShrink: 0 }}
+                />
+                <span>L&apos;EDL d&apos;entrée a été signé entre les 2 parties hors plateforme</span>
+              </label>
+
+              {/* V96.1 — Upload PDF EDL si "EDL déjà fait" coché */}
               {form.edlEntreeDejaFait && (
-                <Field
-                  label="PDF de l'EDL d'entrée (recommandé)"
-                  hint="Uploadez le PDF de l'EDL signé hors plateforme. Il sera accessible au locataire dans son espace logement et servira de preuve en cas de litige (état initial du logement)."
-                >
+                <div style={{ paddingLeft: 24 }}>
                   <input
                     type="file"
                     accept="application/pdf"
@@ -669,15 +670,18 @@ function ImporterBailPageInner() {
                       width: "100%", boxSizing: "border-box", padding: 10,
                       border: `1.5px dashed ${edlPdfFile ? "#15803d" : T.line}`,
                       borderRadius: 12, background: edlPdfFile ? "#F0FAEE" : T.card,
-                      color: T.ink, fontFamily: "inherit", fontSize: 13,
+                      color: T.ink, fontFamily: "inherit", fontSize: 12,
                     }}
                   />
+                  <p style={{ fontSize: 11, color: T.muted, margin: "6px 0 0", lineHeight: 1.45 }}>
+                    Joindre le PDF de l&apos;EDL pour qu&apos;il soit accessible au locataire (recommandé, sert de preuve)
+                  </p>
                   {edlPdfFile && (
-                    <p style={{ fontSize: 11.5, color: "#15803d", margin: "6px 0 0", fontWeight: 600 }}>
+                    <p style={{ fontSize: 11.5, color: "#15803d", margin: "4px 0 0", fontWeight: 600 }}>
                       ✓ {edlPdfFile.name} ({Math.round(edlPdfFile.size / 1024)} KB)
                     </p>
                   )}
-                </Field>
+                </div>
               )}
             </div>
           )}
