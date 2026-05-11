@@ -48,6 +48,10 @@ const VISITE_CONFIRMEE_PREFIX = "[VISITE_CONFIRMEE]"
 const VISITE_DEMANDE_PREFIX = "[VISITE_DEMANDE]"
 const AUTO_PAIEMENT_DEMANDE_PREFIX = "[AUTO_PAIEMENT_DEMANDE]"
 const LOYER_PAYE_PREFIX = "[LOYER_PAYE]"
+// V97.20 P3-4.D — Préfixe message image. Format "[IMG]<storage_path>"
+// où path est un fichier dans le bucket privé messages-images. Le contenu
+// signed URL est récupéré côté client via /api/messages/image-url.
+const IMG_PREFIX = "[IMG]"
 // Prefix encodé dans contenu pour un message en réponse à un autre.
 // Format : "[REPLY:<id>]\n<texte>". Permet d'implémenter le reply-to sans migration DB.
 const REPLY_REGEX = /^\[REPLY:(\d+)\]\n([\s\S]*)$/
@@ -264,6 +268,61 @@ function BailFinalPdfCard({ contenu }: { contenu: string }) {
         Conservé 3 ans · conforme eIDAS Niveau 1
       </p>
     </div>
+  )
+}
+
+// ─── V97.20 P3-4.D — Image Bubble ───────────────────────────────────────────
+// Affiche une image stockée dans le bucket privé messages-images. Fetch la
+// signed URL via /api/messages/image-url (auth + check participation conv).
+// Tap → ouvre l'image en plein écran dans un nouvel onglet.
+
+function ImageBubble({ path, isMine }: { path: string; isMine: boolean }) {
+  const [url, setUrl] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetch(`/api/messages/image-url?path=${encodeURIComponent(path)}`, { cache: "no-store" })
+        const json = await res.json().catch(() => ({}))
+        if (cancelled) return
+        if (json?.ok && json.url) setUrl(json.url)
+        else setError(json?.error || "Image indisponible")
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Erreur réseau")
+      }
+    })()
+    return () => { cancelled = true }
+  }, [path])
+
+  const borderColor = isMine ? "rgba(255,255,255,0.2)" : "#EAE6DF"
+
+  if (error) {
+    return (
+      <div style={{ padding: "10px 14px", background: isMine ? "rgba(255,255,255,0.05)" : "#F7F4EF", borderRadius: 12, border: `1px solid ${borderColor}`, color: isMine ? "white" : "#8a8477", fontSize: 12, fontStyle: "italic", maxWidth: 260 }}>
+        Image indisponible
+      </div>
+    )
+  }
+
+  if (!url) {
+    return (
+      <div style={{ width: 240, height: 180, background: isMine ? "rgba(255,255,255,0.06)" : "#F7F4EF", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", color: "#8a8477", fontSize: 12 }}>
+        Chargement…
+      </div>
+    )
+  }
+
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" style={{ display: "block", maxWidth: 280, borderRadius: 12, overflow: "hidden", border: `1px solid ${borderColor}` }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={url}
+        alt="Image envoyée dans la conversation"
+        style={{ display: "block", width: "100%", height: "auto", maxHeight: 360, objectFit: "cover" }}
+      />
+    </a>
   )
 }
 
@@ -1484,6 +1543,9 @@ function MessagesInner() {
   // afficher "En attente de confirmation" tant que le locataire n'a pas signé.
   const [edlSignatures, setEdlSignatures] = useState<Record<number, { locataire: boolean; bailleur: boolean }>>({})
   const [nouveau, setNouveau] = useState("")
+  // V97.20 P3-4.D — Upload image dans message (file picker + compression)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const imageInputRef = useRef<HTMLInputElement | null>(null)
   const [loading, setLoading] = useState(true)
   const [envoi, setEnvoi] = useState(false)
   // Indicateur "en train d'écrire" — broadcast Supabase Realtime (pas de DB).
@@ -2398,6 +2460,121 @@ function MessagesInner() {
     setReplyTo(null)
     setEnvoi(false)
     inputRef.current?.focus()
+  }
+
+  /**
+   * V97.20 P3-4.D — Compresse une image client-side si > 2MB.
+   * Utilise canvas.toBlob JPEG q=0.85. Conserve les dimensions originales
+   * (sauf si > 2400px largeur, on resize). Retourne le Blob compressé.
+   */
+  async function compressImage(file: File): Promise<Blob> {
+    if (file.size <= 2 * 1024 * 1024 && !/\.(png|webp)$/i.test(file.name)) {
+      return file  // OK sous 2MB JPEG, pas la peine
+    }
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => {
+        const MAX_W = 2400
+        const ratio = img.width > MAX_W ? MAX_W / img.width : 1
+        const w = Math.round(img.width * ratio)
+        const h = Math.round(img.height * ratio)
+        const canvas = document.createElement("canvas")
+        canvas.width = w
+        canvas.height = h
+        const ctx = canvas.getContext("2d")
+        if (!ctx) { reject(new Error("Canvas 2d non dispo")); return }
+        ctx.drawImage(img, 0, 0, w, h)
+        canvas.toBlob(b => {
+          if (b) resolve(b)
+          else reject(new Error("Compression échouée"))
+        }, "image/jpeg", 0.85)
+      }
+      img.onerror = () => reject(new Error("Lecture image échouée"))
+      img.src = URL.createObjectURL(file)
+    })
+  }
+
+  /**
+   * V97.20 P3-4.D — Envoie une image dans la conv active.
+   *  1. Compress si > 2MB
+   *  2. Upload Supabase Storage bucket messages-images avec path UUID
+   *  3. INSERT message avec contenu "[IMG]<path>" via /api/messages
+   *  4. Le destinataire reçoit via Realtime, le rendering ImageBubble fetch
+   *     une signed URL via /api/messages/image-url.
+   */
+  async function envoyerImage(file: File) {
+    if (!convActive || !myEmail) return
+    const conv = conversations.find(c => c.key === convActive)
+    if (!conv) return
+    setUploadingImage(true)
+    try {
+      // 1. Compress
+      const blob = await compressImage(file).catch(e => {
+        console.warn("[envoyerImage] compress failed, fallback original:", e)
+        return file
+      })
+
+      // 2. Upload : path = "<email_safe>/<uuid>.jpg"
+      const safeEmail = myEmail.toLowerCase().replace(/[^a-z0-9]/g, "_")
+      const uuid = crypto.randomUUID()
+      const ext = file.name.toLowerCase().match(/\.(jpe?g|png|webp|gif)$/i)?.[0] || ".jpg"
+      const path = `${safeEmail}/${uuid}${ext}`
+      const { error: upErr } = await supabase.storage.from("messages-images").upload(path, blob, {
+        contentType: blob.type || "image/jpeg",
+        upsert: false,
+      })
+      if (upErr) {
+        console.error("[envoyerImage] upload failed:", upErr)
+        alert("L'envoi de l'image a échoué. Réessayez.")
+        return
+      }
+
+      // 3. INSERT message
+      const contenu = `${IMG_PREFIX}${path}`
+      const insertRes = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toEmail: conv.other,
+          annonceId: conv.annonceId ?? null,
+          contenu,
+        }),
+      })
+      const insertJson = insertRes.ok ? await insertRes.json().catch(() => ({})) : null
+      if (!insertJson?.ok) {
+        console.error("[envoyerImage] insert msg failed:", insertJson)
+        alert("Image uploadée mais le message n'a pas été envoyé. Réessayez.")
+        return
+      }
+      const data = {
+        id: insertJson.message.id,
+        from_email: myEmail,
+        to_email: conv.other,
+        contenu,
+        lu: false,
+        annonce_id: conv.annonceId ?? null,
+        created_at: insertJson.message.created_at,
+      }
+      setMessages(prev => [...prev, data])
+      setConversations(prev => prev.map(c => c.key === convActive ? { ...c, lastMsg: data } : c))
+      // Notif cloche + email destinataire (fire-and-forget)
+      void postNotif({
+        userEmail: conv.other,
+        type: "message",
+        title: "Nouvelle image",
+        body: "Une image vous a été envoyée.",
+        href: "/messages",
+        relatedId: String(data.id),
+      })
+      void fetch("/api/notifications/new-message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toEmail: conv.other, annonceId: conv.annonceId ?? null, preview: "[Image]" }),
+      }).catch(() => { /* silent */ })
+    } finally {
+      setUploadingImage(false)
+      if (imageInputRef.current) imageInputRef.current.value = ""  // reset pour ré-upload
+    }
   }
 
   async function supprimerMessage(id: number) {
@@ -5165,6 +5342,8 @@ function MessagesInner() {
                     const isRefus = typeof m.contenu === "string" && m.contenu.startsWith(REFUS_PREFIX)
                     const isBailRefuse = typeof m.contenu === "string" && m.contenu.startsWith(BAIL_REFUSE_PREFIX)
                     const isLocation = typeof m.contenu === "string" && m.contenu.startsWith(LOCATION_PREFIX)
+                    // V97.20 P3-4.D — Bubble image (contenu = "[IMG]<path>")
+                    const isImage = typeof m.contenu === "string" && m.contenu.startsWith(IMG_PREFIX)
                     return (
                       <div key={m.id} style={{ display: "flex", justifyContent: isMine ? "flex-end" : "flex-start" }}>
                         {isDossier ? (() => {
@@ -5295,6 +5474,16 @@ function MessagesInner() {
                             <LoyerPayeCard contenu={m.contenu} isMine={isMine} />
                             <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
                               {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        ) : isImage ? (
+                          /* V97.20 P3-4.D — Image envoyée dans la conv.
+                             Bubble compact + tap pour fullscreen via signed URL. */
+                          <div>
+                            <ImageBubble path={m.contenu.slice(IMG_PREFIX.length)} isMine={isMine} />
+                            <p style={{ fontSize: 10, color: "#8a8477", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
+                              {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                              {isMine && <span style={{ marginLeft: 6 }}>{m.lu ? "✓✓" : "✓"}</span>}
                             </p>
                           </div>
                         ) : isAutoPaiement ? (
@@ -5761,10 +5950,49 @@ function MessagesInner() {
                         </svg>
                       </button>
                     )}
+                    {/* V97.20 P3-4.D — Input file caché + bouton 📎 attach image.
+                        Tap target 36/40 (desktop/mobile). Désactivé pendant upload. */}
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      style={{ display: "none" }}
+                      onChange={e => {
+                        const f = e.target.files?.[0]
+                        if (f) void envoyerImage(f)
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      disabled={uploadingImage}
+                      aria-label="Joindre une image"
+                      title="Joindre une image"
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        cursor: uploadingImage ? "wait" : "pointer",
+                        width: isMobile ? 40 : 36,
+                        height: isMobile ? 40 : 36,
+                        flexShrink: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#8a8477",
+                        opacity: uploadingImage ? 0.5 : 1,
+                        fontFamily: "inherit",
+                        padding: 0,
+                      }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                      </svg>
+                    </button>
                     <input ref={inputRef} value={nouveau} onChange={e => { setNouveau(e.target.value); signalTyping() }}
                       onKeyDown={e => e.key === "Enter" && !e.shiftKey && envoyer()}
                       aria-label={replyTo ? "Saisir votre réponse" : "Saisir un message"}
-                      placeholder={replyTo ? "Votre réponse…" : "Votre message… (↵ pour envoyer)"}
+                      placeholder={uploadingImage ? "Envoi image en cours…" : (replyTo ? "Votre réponse…" : "Votre message… (↵ pour envoyer)")}
+                      disabled={uploadingImage}
                       style={{ flex: 1, minWidth: 0, padding: isMobile ? "12px 0" : "10px 0", border: "none", background: "transparent", fontSize: isMobile ? 16 : 14, outline: "none", fontFamily: "inherit", color: "#111", letterSpacing: "-0.1px" }} />
                     <button onClick={envoyer} disabled={envoi || !nouveau.trim()}
                       aria-label="Envoyer le message"
