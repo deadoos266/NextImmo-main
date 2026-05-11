@@ -34,6 +34,16 @@ const CSP_HEADER = [
 const nextConfig = {
   reactStrictMode: true,
 
+  // V86.1 — Inclut les fichiers YAML scenarios QA Bot dans le bundle des
+  // routes API qui les lit (qa/scenarios/*.yaml). Sans ça, en serverless
+  // Vercel, process.cwd() ne contient pas qa/scenarios → API retourne
+  // 0 scenarios (test bug détecté au run global V86).
+  outputFileTracingIncludes: {
+    "/api/qa/scenarios": ["./qa/scenarios/**"],
+    "/api/cron/qa-daily-run": ["./qa/scenarios/**"],
+    "/admin/qa": ["./qa/scenarios/**"],
+  },
+
   images: {
     remotePatterns: [
       // Supabase Storage — wildcard couvre prod + staging

@@ -1,8 +1,17 @@
 import { redirect } from "next/navigation"
 import { getServerSession } from "next-auth"
+import type { Metadata } from "next"
 import { authOptions } from "../../../lib/auth"
 import AdminSidebar from "../../components/admin/AdminSidebar"
 import AdminBreadcrumb from "../../components/admin/AdminBreadcrumb"
+
+// V86.1 — title metadata pour /admin (dashboard racine). Les sous-pages
+// /admin/users /annonces etc. ont leur propre metadata qui override.
+// robots:noindex sur tout l'admin (interne, jamais Google).
+export const metadata: Metadata = {
+  title: { default: "Admin", template: "%s — Admin · KeyMatch" },
+  robots: { index: false, follow: false },
+}
 
 /**
  * Layout admin V84.4 — sidebar + breadcrumb + main content area.
