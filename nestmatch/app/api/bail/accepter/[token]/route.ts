@@ -273,8 +273,14 @@ export async function POST(_req: Request, { params }: RouteParams) {
         const edlPdfUrlExterne = typeof meta.edl_pdf_url === "string" && /^https?:\/\//.test(meta.edl_pdf_url)
           ? meta.edl_pdf_url
           : null
-        const observationsText = edlPdfUrlExterne
-          ? "État des lieux d'entrée réalisé hors plateforme. Le PDF original signé entre les 2 parties est joint à cet EDL et fait foi juridiquement."
+        // V97.2 — Photos EDL externes (tableau d'URLs Supabase Storage)
+        const photosExternesRaw = Array.isArray(meta.edl_photos_urls) ? meta.edl_photos_urls : []
+        const photosExternes: string[] = photosExternesRaw
+          .filter((u): u is string => typeof u === "string" && /^https?:\/\/[^\s]+$/.test(u) && u.length < 1000)
+          .slice(0, 20)
+        const hasPhotos = photosExternes.length > 0
+        const observationsText = edlPdfUrlExterne || hasPhotos
+          ? `État des lieux d'entrée réalisé hors plateforme. ${edlPdfUrlExterne ? "Le PDF original signé entre les 2 parties est joint à cet EDL et fait foi juridiquement." : ""}${hasPhotos ? ` ${photosExternes.length} photo${photosExternes.length > 1 ? "s" : ""} prise${photosExternes.length > 1 ? "s" : ""} à l'entrée sont également jointes comme preuves visuelles.` : ""}`.trim()
           : "État des lieux d'entrée réalisé hors plateforme et déclaré valide à l'import KeyMatch. Aucun document scanné n'a été uploadé — référence : votre exemplaire papier original."
         const { data: edlInserted, error: edlErr } = await supabaseAdmin.from("etats_des_lieux").insert({
           annonce_id: invit.annonce_id,
@@ -291,6 +297,7 @@ export async function POST(_req: Request, { params }: RouteParams) {
           email_locataire: userEmail,
           observations: observationsText,
           pdf_url_externe: edlPdfUrlExterne,  // V96.1
+          photos_externes: photosExternes,    // V97.2
           signe_locataire_at: now,
           signe_bailleur_at: now,
           date_validation: now,
@@ -311,6 +318,7 @@ export async function POST(_req: Request, { params }: RouteParams) {
                 bienTitre: annTitre,
                 dateEdl: dateEdl,
                 pdfUrlExterne: edlPdfUrlExterne,  // utilisé par EdlCard si présent
+                photosExternes: photosExternes,   // V97.2 — galerie pour EdlCard
                 _imported: true,
               }
               await supabaseAdmin.from("messages").insert([{

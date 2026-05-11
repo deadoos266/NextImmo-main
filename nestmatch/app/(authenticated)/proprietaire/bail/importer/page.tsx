@@ -146,6 +146,9 @@ function ImporterBailPageInner() {
   const [pdfUploading, setPdfUploading] = useState(false)
   // V96.1 — PDF EDL séparé (si EDL d'entrée déjà fait hors plateforme)
   const [edlPdfFile, setEdlPdfFile] = useState<File | null>(null)
+  // V97.2 — Photos EDL multiples (preuves visuelles complémentaires).
+  // Tableau de File. L'upload sera fait à la soumission du form.
+  const [edlPhotoFiles, setEdlPhotoFiles] = useState<File[]>([])
   // V33.6 — Pré-remplissage depuis annonce déclinée (relance après refus)
   const [refusContexte, setRefusContexte] = useState<{ annonceId: number; raisonLabel: string; motif: string } | null>(null)
   const [prefillLoading, setPrefillLoading] = useState(false)
@@ -303,6 +306,8 @@ function ImporterBailPageInner() {
 
       // V96.1 — Upload PDF EDL si présent (uniquement si edlEntreeDejaFait coché)
       let edlPdfUrl: string | null = null
+      // V97.2 — Photos EDL multiples uploadées en parallèle
+      let edlPhotosUrls: string[] = []
       if (form.dejaInstalle && form.edlEntreeDejaFait && edlPdfFile) {
         try {
           if (!edlPdfFile.name.toLowerCase().endsWith(".pdf")) {
@@ -320,6 +325,30 @@ function ImporterBailPageInner() {
           edlPdfUrl = pub?.publicUrl || null
         } catch (uerr) {
           setError(`Erreur upload PDF EDL : ${uerr instanceof Error ? uerr.message : String(uerr)}`)
+          setSubmitting(false)
+          return
+        }
+      }
+
+      // V97.2 — Upload photos EDL (peuvent exister sans le PDF EDL, ou avec)
+      if (form.dejaInstalle && form.edlEntreeDejaFait && edlPhotoFiles.length > 0) {
+        try {
+          const proprio = (session?.user?.email || "").toLowerCase().replace(/[^a-z0-9]/g, "_")
+          const { supabase } = await import("../../../../../lib/supabase")
+          const uploads = await Promise.all(edlPhotoFiles.map(async (f, idx) => {
+            const safeName = f.name.replace(/[^a-zA-Z0-9._-]/g, "_")
+            const path = `${proprio}/edl-import-${Date.now()}-${idx}-${safeName}`
+            const { error: upErr } = await supabase.storage.from("baux").upload(path, f, {
+              contentType: f.type || "image/jpeg",
+              upsert: false,
+            })
+            if (upErr) throw upErr
+            const { data: pub } = supabase.storage.from("baux").getPublicUrl(path)
+            return pub?.publicUrl || null
+          }))
+          edlPhotosUrls = uploads.filter((u): u is string => !!u)
+        } catch (uerr) {
+          setError(`Erreur upload photos EDL : ${uerr instanceof Error ? uerr.message : String(uerr)}`)
           setSubmitting(false)
           return
         }
@@ -367,6 +396,8 @@ function ImporterBailPageInner() {
           edlEntreeDejaFait: form.dejaInstalle ? form.edlEntreeDejaFait : false,
           // V96.1 — URL du PDF EDL si fourni
           edlPdfUrl: edlPdfUrl || undefined,
+          // V97.2 — URLs des photos EDL (tableau, peut être vide)
+          edlPhotosUrls: edlPhotosUrls.length > 0 ? edlPhotosUrls : undefined,
         }),
       })
       const data = await res.json()
@@ -656,6 +687,51 @@ function ImporterBailPageInner() {
                       ✓ {edlPdfFile.name} ({Math.round(edlPdfFile.size / 1024)} KB)
                     </p>
                   )}
+
+                  {/* V97.2 — Photos EDL multiples (preuves visuelles complémentaires).
+                      Le locataire les verra dans /mon-logement + dans la conv /messages. */}
+                  <div style={{ marginTop: 14 }}>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: T.ink, margin: "0 0 6px" }}>
+                      Photos de l&apos;EDL (optionnel)
+                    </p>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={e => {
+                        const files = e.target.files ? Array.from(e.target.files) : []
+                        setEdlPhotoFiles(prev => [...prev, ...files])
+                      }}
+                      style={{
+                        width: "100%", boxSizing: "border-box", padding: 10,
+                        border: `1.5px dashed ${edlPhotoFiles.length > 0 ? "#15803d" : T.line}`,
+                        borderRadius: 12, background: edlPhotoFiles.length > 0 ? "#F0FAEE" : T.card,
+                        color: T.ink, fontFamily: "inherit", fontSize: 12,
+                      }}
+                    />
+                    <p style={{ fontSize: 11, color: T.muted, margin: "6px 0 0", lineHeight: 1.45 }}>
+                      Salon, chambres, cuisine, salle de bain… Les photos seront partagées avec votre locataire comme preuves du logement à l&apos;entrée.
+                    </p>
+                    {edlPhotoFiles.length > 0 && (
+                      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                        {edlPhotoFiles.map((f, i) => (
+                          <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, fontSize: 11.5, color: "#15803d", fontWeight: 600 }}>
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              ✓ {f.name} ({Math.round(f.size / 1024)} KB)
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setEdlPhotoFiles(prev => prev.filter((_, j) => j !== i))}
+                              style={{ background: "none", border: "none", color: "#9a3412", fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0 }}
+                              aria-label={`Retirer ${f.name}`}
+                            >
+                              Retirer
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

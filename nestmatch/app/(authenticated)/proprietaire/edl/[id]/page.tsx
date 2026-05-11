@@ -9,6 +9,7 @@ import { useResponsive } from "../../../../hooks/useResponsive"
 import { BRAND } from "../../../../../lib/brand"
 import { drawLogoPDF } from "../../../../../lib/brandPDF"
 import { postNotif } from "../../../../../lib/notificationsClient"
+import { pdfStr } from "../../../../../lib/pdfText"  // V97.6 — désaccentuation pour jsPDF
 // jsPDF lazy-loaded pour alleger le bundle initial (voir genererEdlPDF)
 
 // ─── Types & Config ─────────────────────────────────────────────────────────
@@ -99,12 +100,13 @@ async function genererEdlPDF(data: {
   let y = 20
 
   function check() { if (y > 260) { doc.addPage(); y = 20 } }
-  function title(t: string) { doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.text(t, 105, y, { align: "center" }); y += 8 }
-  function section(t: string) { check(); doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.text(t, 20, y); y += 7 }
-  function text(t: string) { check(); doc.setFontSize(9); doc.setFont("helvetica", "normal"); const l = doc.splitTextToSize(t, W); doc.text(l, 20, y); y += l.length * 4.5 }
+  // V97.6 — pdfStr() désaccentue avant doc.text() (fonts Latin-1 only).
+  function title(t: string) { doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.text(pdfStr(t), 105, y, { align: "center" }); y += 8 }
+  function section(t: string) { check(); doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.text(pdfStr(t), 20, y); y += 7 }
+  function text(t: string) { check(); doc.setFontSize(9); doc.setFont("helvetica", "normal"); const l = doc.splitTextToSize(pdfStr(t), W); doc.text(l, 20, y); y += l.length * 4.5 }
   function field(l: string, v: string, required?: boolean) {
-    check(); doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text(`${l} :`, 20, y)
-    if (v) { doc.setFont("helvetica", "normal"); doc.text(v, 75, y) }
+    check(); doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text(`${pdfStr(l)} :`, 20, y)
+    if (v) { doc.setFont("helvetica", "normal"); doc.text(pdfStr(v), 75, y) }
     else if (required) { doc.setDrawColor(180, 180, 180); doc.setLineDashPattern([1, 1], 0); doc.line(75, y, 180, y); doc.setLineDashPattern([], 0) }
     y += 5.5
   }
@@ -117,7 +119,7 @@ async function genererEdlPDF(data: {
   y = 30
   title(`ETAT DES LIEUX D'${typeLabel}`)
   doc.setFontSize(9); doc.setFont("helvetica", "normal")
-  doc.text(`Etabli contradictoirement le ${dateLabel}`, 105, y, { align: "center" }); y += 10
+  doc.text(pdfStr(`Etabli contradictoirement le ${dateLabel}`), 105, y, { align: "center" }); y += 10
   line()
 
   section("PARTIES")
@@ -161,14 +163,14 @@ async function genererEdlPDF(data: {
     Object.entries(piece.elements).forEach(([elem, val]) => {
       if (y > 270) { doc.addPage(); y = 20 }
       doc.setFontSize(8)
-      doc.text(elem, 20, y)
+      doc.text(pdfStr(elem), 20, y)
       // Color code the state
       const isGood = val.etat === "Neuf" || val.etat === "Tres bon" || val.etat === "Bon"
       doc.setTextColor(isGood ? 22 : 220, isGood ? 163 : 38, isGood ? 74 : 38)
-      doc.text(val.etat, 95, y)
+      doc.text(pdfStr(val.etat), 95, y)
       doc.setTextColor(0, 0, 0)
       if (val.observation) {
-        const obs = doc.splitTextToSize(val.observation, 50)
+        const obs = doc.splitTextToSize(pdfStr(val.observation), 50)
         doc.text(obs, 135, y)
         y += Math.max(4.5, obs.length * 4)
       } else {
@@ -179,7 +181,7 @@ async function genererEdlPDF(data: {
     if (piece.photos.length > 0) {
       y += 2
       doc.setFontSize(7); doc.setTextColor(150, 150, 150)
-      doc.text(`${piece.photos.length} photo(s) jointe(s) — voir annexe photographique`, 20, y)
+      doc.text(pdfStr(`${piece.photos.length} photo(s) jointe(s) - voir annexe photographique`), 20, y)
       doc.setTextColor(0, 0, 0)
       y += 4
     }
@@ -212,8 +214,8 @@ async function genererEdlPDF(data: {
   doc.setFontSize(9); doc.setFont("helvetica", "normal")
   const fullBailleur = `${data.prenomBailleur} ${data.nomBailleur}`.trim() || "Le Bailleur"
   const fullLocataire = `${data.prenomLocataire} ${data.nomLocataire}`.trim() || "Le Locataire"
-  doc.text(fullBailleur, 50, y, { align: "center" })
-  doc.text(fullLocataire, 155, y, { align: "center" })
+  doc.text(pdfStr(fullBailleur), 50, y, { align: "center" })
+  doc.text(pdfStr(fullLocataire), 155, y, { align: "center" })
   y += 3
   doc.setFontSize(7); doc.text("(Lu et approuve)", 50, y, { align: "center" })
   doc.text("(Lu et approuve)", 155, y, { align: "center" })
@@ -221,7 +223,7 @@ async function genererEdlPDF(data: {
   doc.line(120, y + 15, 185, y + 15)
 
   doc.setFontSize(7); doc.setTextColor(150, 150, 150)
-  doc.text(`Document genere par ${BRAND.name} — ${BRAND.url.replace(/^https?:\/\//, "")}`, 105, 285, { align: "center" })
+  doc.text(pdfStr(`Document genere par ${BRAND.name} - ${BRAND.url.replace(/^https?:\/\//, "")}`), 105, 285, { align: "center" })
 
   doc.save(`edl-${data.type}-${data.villeBien.toLowerCase().replace(/\s/g, "-")}-${data.dateEdl}.pdf`)
 }

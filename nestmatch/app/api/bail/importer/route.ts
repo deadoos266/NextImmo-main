@@ -67,6 +67,8 @@ interface ImporterBody {
   edlEntreeDejaFait?: boolean
   // V96.1 — PDF EDL signé hors plateforme (preuve juridique état initial)
   edlPdfUrl?: string
+  // V97.2 — Photos EDL (preuves visuelles complémentaires, tableau d'URLs)
+  edlPhotosUrls?: string[]
   // V95.A.1 — Annexes ALUR
   annexesAlur?: AnnexesAlur
   constructionAvant1949?: boolean
@@ -199,6 +201,14 @@ export async function POST(req: NextRequest) {
     ? edlPdfUrlRaw
     : null
 
+  // V97.2 — Sanitize photos EDL (tableau d'URLs Supabase Storage, max 20 photos)
+  const edlPhotosUrlsRaw = Array.isArray(body.edlPhotosUrls) ? body.edlPhotosUrls : []
+  const edlPhotosUrls: string[] = edlEntreeDejaFait
+    ? edlPhotosUrlsRaw
+        .filter((u): u is string => typeof u === "string" && /^https?:\/\/[^\s]+$/.test(u) && u.length < 1000)
+        .slice(0, 20)
+    : []
+
   // V95.A.1 — Sanitize annexes ALUR (chaque annexe = {url, included_in_bail, not_required})
   const ANNEXE_KEYS = ["dpe", "erp", "crep", "notice_info"] as const
   const annexesAlurSafe: AnnexesAlur = {}
@@ -235,6 +245,8 @@ export async function POST(req: NextRequest) {
     edl_entree_deja_fait: edlEntreeDejaFait,
     // V96.1 — PDF EDL externe (signé hors plateforme)
     edl_pdf_url: edlPdfUrl,
+    // V97.2 — Photos EDL externes (tableau d'URLs)
+    edl_photos_urls: edlPhotosUrls,
   }
 
   const { data: annonce, error: annonceErr } = await supabaseAdmin

@@ -10,6 +10,7 @@ import { drawLogoPDF } from "../../../../../lib/brandPDF"
 import { postNotif } from "../../../../../lib/notificationsClient"
 import EdlSignatureModal from "../../../../components/EdlSignatureModal"
 import Image from "next/image"
+import { pdfStr } from "../../../../../lib/pdfText"  // V97.6 — désaccentuation pour jsPDF
 // jsPDF lazy-loaded pour alleger le bundle initial (voir genererEdlPDF)
 
 // ─── Types & Config ─────────────────────────────────────────────────────────
@@ -116,12 +117,13 @@ async function genererEdlPDF(edl: any, bien: any) {
   let y = 20
 
   function check() { if (y > 260) { doc.addPage(); y = 20 } }
-  function title(t: string) { doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.text(t, 105, y, { align: "center" }); y += 8 }
-  function section(t: string) { check(); doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.text(t, 20, y); y += 7 }
-  function text(t: string) { check(); doc.setFontSize(9); doc.setFont("helvetica", "normal"); const l = doc.splitTextToSize(t, W); doc.text(l, 20, y); y += l.length * 4.5 }
+  // V97.6 — pdfStr() désaccentue avant doc.text() (fonts Latin-1 only).
+  function title(t: string) { doc.setFontSize(16); doc.setFont("helvetica", "bold"); doc.text(pdfStr(t), 105, y, { align: "center" }); y += 8 }
+  function section(t: string) { check(); doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.text(pdfStr(t), 20, y); y += 7 }
+  function text(t: string) { check(); doc.setFontSize(9); doc.setFont("helvetica", "normal"); const l = doc.splitTextToSize(pdfStr(t), W); doc.text(l, 20, y); y += l.length * 4.5 }
   function field(l: string, v: string) {
-    check(); doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text(`${l} :`, 20, y)
-    if (v) { doc.setFont("helvetica", "normal"); doc.text(v, 75, y) }
+    check(); doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.text(`${pdfStr(l)} :`, 20, y)
+    if (v) { doc.setFont("helvetica", "normal"); doc.text(pdfStr(v), 75, y) }
     y += 5.5
   }
   function line() { doc.setDrawColor(200, 200, 200); doc.line(20, y, 190, y); y += 6 }
@@ -133,7 +135,7 @@ async function genererEdlPDF(edl: any, bien: any) {
   y = 30
   title(`ETAT DES LIEUX D'${typeLabel}`)
   doc.setFontSize(9); doc.setFont("helvetica", "normal")
-  doc.text(`Etabli contradictoirement le ${dateLabel}`, 105, y, { align: "center" }); y += 10
+  doc.text(pdfStr(`Etabli contradictoirement le ${dateLabel}`), 105, y, { align: "center" }); y += 10
   line()
 
   section("PARTIES")
@@ -175,13 +177,13 @@ async function genererEdlPDF(edl: any, bien: any) {
     Object.entries(piece.elements).forEach(([elem, val]) => {
       if (y > 270) { doc.addPage(); y = 20 }
       doc.setFontSize(8)
-      doc.text(elem, 20, y)
+      doc.text(pdfStr(elem), 20, y)
       const isGood = val.etat === "Neuf" || val.etat === "Tres bon" || val.etat === "Bon"
       doc.setTextColor(isGood ? 22 : 220, isGood ? 163 : 38, isGood ? 74 : 38)
-      doc.text(val.etat, 95, y)
+      doc.text(pdfStr(val.etat), 95, y)
       doc.setTextColor(0, 0, 0)
       if (val.observation) {
-        const obs = doc.splitTextToSize(val.observation, 50)
+        const obs = doc.splitTextToSize(pdfStr(val.observation), 50)
         doc.text(obs, 135, y)
         y += Math.max(4.5, obs.length * 4)
       } else { y += 4.5 }
@@ -208,8 +210,8 @@ async function genererEdlPDF(edl: any, bien: any) {
   doc.text("Le Locataire", 155, y, { align: "center" })
   y += 6
   doc.setFontSize(9); doc.setFont("helvetica", "normal")
-  doc.text(`${edl.prenom_bailleur || ""} ${edl.nom_bailleur || ""}`.trim(), 50, y, { align: "center" })
-  doc.text(`${edl.prenom_locataire || ""} ${edl.nom_locataire || ""}`.trim(), 155, y, { align: "center" })
+  doc.text(pdfStr(`${edl.prenom_bailleur || ""} ${edl.nom_bailleur || ""}`.trim()), 50, y, { align: "center" })
+  doc.text(pdfStr(`${edl.prenom_locataire || ""} ${edl.nom_locataire || ""}`.trim()), 155, y, { align: "center" })
   y += 8
 
   const sigW = 60; const sigH = 24
@@ -217,15 +219,15 @@ async function genererEdlPDF(edl: any, bien: any) {
     const xImg = xCenter - sigW / 2
     if (sig) {
       doc.setFontSize(8); doc.setFont("helvetica", "italic"); doc.setTextColor(60, 60, 60)
-      doc.text(sig.mention || 'Lu et approuvé, bon pour accord', xCenter, y, { align: "center" })
+      doc.text(pdfStr(sig.mention || 'Lu et approuve, bon pour accord'), xCenter, y, { align: "center" })
       try { doc.addImage(sig.png, "PNG", xImg, y + 5, sigW, sigH) }
       catch { doc.line(xImg, y + sigH + 5, xImg + sigW, y + sigH + 5) }
       doc.setFontSize(7); doc.setFont("helvetica", "normal"); doc.setTextColor(21, 128, 61)
-      doc.text(`✓ Signé le ${new Date(sig.signeAt).toLocaleDateString("fr-FR")}`, xCenter, y + sigH + 9, { align: "center" })
+      doc.text(pdfStr(`Signe le ${new Date(sig.signeAt).toLocaleDateString("fr-FR")}`), xCenter, y + sigH + 9, { align: "center" })
       doc.setTextColor(0, 0, 0)
     } else {
       doc.setFontSize(7); doc.setFont("helvetica", "italic"); doc.setTextColor(120, 120, 120)
-      doc.text('(Mention "Lu et approuvé" + signature)', xCenter, y, { align: "center" })
+      doc.text(pdfStr('(Mention "Lu et approuve" + signature)'), xCenter, y, { align: "center" })
       doc.setTextColor(0, 0, 0)
       doc.setDrawColor(180, 180, 180)
       doc.line(xImg, y + sigH + 5, xImg + sigW, y + sigH + 5)
@@ -236,7 +238,7 @@ async function genererEdlPDF(edl: any, bien: any) {
   y += sigH + 16
 
   doc.setFontSize(7); doc.setTextColor(150, 150, 150)
-  doc.text(`Document genere par ${BRAND.name} — ${BRAND.url.replace(/^https?:\/\//, "")}`, 105, 285, { align: "center" })
+  doc.text(pdfStr(`Document genere par ${BRAND.name} - ${BRAND.url.replace(/^https?:\/\//, "")}`), 105, 285, { align: "center" })
 
   doc.save(`edl-${edl.type}-${(bien?.ville || "bien").toLowerCase().replace(/\s/g, "-")}-${edl.date_edl}.pdf`)
 }
@@ -451,6 +453,68 @@ export default function ConsulterEdlPage() {
               <p style={{ fontSize: 13, color: "#a16207", margin: "4px 0 0", fontStyle: "italic" }}>
                 "{edl.commentaire_locataire}"
               </p>
+            )}
+          </div>
+        )}
+
+        {/* V97.4 — EDL importé hors plateforme : PDF original + photos externes.
+            Affiché en haut pour que le locataire trouve immédiatement les
+            preuves uploadées par le proprio à l'import du bail. */}
+        {(edl.pdf_url_externe || (Array.isArray(edl.photos_externes) && edl.photos_externes.length > 0)) && (
+          <div style={{ ...cardS, background: "#FBF6EA", border: "1px solid #EADFC6" }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: "#9a3412", textTransform: "uppercase", letterSpacing: "1.4px", margin: "0 0 6px" }}>
+              EDL signé hors plateforme
+            </p>
+            <h2 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 4px", color: "#111" }}>
+              Documents originaux fournis par le bailleur
+            </h2>
+            <p style={{ fontSize: 13, color: "#8a8477", margin: "0 0 14px", lineHeight: 1.55 }}>
+              L&apos;état des lieux d&apos;entrée a été réalisé entre les 2 parties avant votre arrivée sur KeyMatch. Les documents ci-dessous font foi.
+            </p>
+
+            {edl.pdf_url_externe && (
+              <a
+                href={edl.pdf_url_externe}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  background: "#111",
+                  color: "white",
+                  padding: "10px 18px",
+                  borderRadius: 999,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  textDecoration: "none",
+                  marginBottom: Array.isArray(edl.photos_externes) && edl.photos_externes.length > 0 ? 14 : 0,
+                }}
+              >
+                Télécharger le PDF EDL original
+              </a>
+            )}
+
+            {Array.isArray(edl.photos_externes) && edl.photos_externes.length > 0 && (
+              <div style={{ marginTop: edl.pdf_url_externe ? 0 : 4 }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "#8a8477", marginBottom: 8 }}>
+                  Photos de l&apos;EDL ({edl.photos_externes.length})
+                </p>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {edl.photos_externes.map((url: string, idx: number) => (
+                    <a
+                      key={idx}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ position: "relative", width: 100, height: 100, borderRadius: 10, overflow: "hidden", border: "1px solid #EAE6DF", display: "block", flexShrink: 0, background: "#fff" }}
+                      aria-label={`Photo EDL ${idx + 1}`}
+                    >
+                      <Image src={url} alt={`Photo EDL ${idx + 1}`} fill sizes="100px" style={{ objectFit: "cover" }} />
+                    </a>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         )}

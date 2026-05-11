@@ -281,6 +281,57 @@ function EdlCard({ contenu, isMine, signatures }: { contenu: string; isMine: boo
   const statutSig = sigLoc && sigBail ? "signe_complet" : sigLoc ? "signe_locataire" : "en_attente"
 
   if (isMine) {
+    // V97.5 — Cas IMPORTÉ : pas de cycle de signature. On affiche PDF + photos
+    // pour que le proprio retrouve les preuves uploadées à l'import.
+    if (data._imported) {
+      const photos: string[] = Array.isArray(data.photosExternes) ? data.photosExternes : []
+      return (
+        <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 320 }}>
+          <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0 }}>EDL transmis au locataire</p>
+          <p style={{ fontSize: 11, color: "#8a8477", margin: "2px 0 10px" }}>
+            {data.bienTitre || "Bien"} — {dateLabel}
+          </p>
+          {data.pdfUrlExterne && (
+            <a
+              href={data.pdfUrlExterne}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: "block", background: "white", color: "#111", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, textAlign: "center", textDecoration: "none", fontFamily: "inherit", marginBottom: 8 }}>
+              Voir le PDF EDL signé ↗
+            </a>
+          )}
+          {photos.length > 0 && (
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                {photos.slice(0, 3).map((url, idx) => (
+                  <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
+                    style={{ width: 50, height: 50, borderRadius: 6, overflow: "hidden", border: "1px solid #333", display: "block", flexShrink: 0, background: "#0f0f0f" }}
+                    aria-label={`Photo EDL ${idx + 1}`}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt={`Photo EDL ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </a>
+                ))}
+                {photos.length > 3 && (
+                  <a href={`/edl/consulter/${data.edlId}`}
+                    style={{ width: 50, height: 50, borderRadius: 6, border: "1px dashed #333", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 10, fontWeight: 700, color: "#8a8477", textDecoration: "none", background: "#0f0f0f" }}>
+                    +{photos.length - 3}
+                  </a>
+                )}
+              </div>
+              <p style={{ fontSize: 10, color: "#8a8477", margin: "4px 0 0", textAlign: "center" }}>
+                {photos.length} photo{photos.length > 1 ? "s" : ""} jointe{photos.length > 1 ? "s" : ""}
+              </p>
+            </div>
+          )}
+          {data.edlId && (
+            <a href={`/edl/consulter/${data.edlId}`}
+              style={{ display: "block", background: "transparent", color: "#fff", border: "1px solid #333", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 600, textAlign: "center", textDecoration: "none", fontFamily: "inherit" }}>
+              Détails sur KeyMatch →
+            </a>
+          )}
+        </div>
+      )
+    }
     // Cote proprio : afficher statut "En attente de confirmation" tant que
     // locataire n'a pas signe. Paul : "afficher un etat En attente de
     // confirmation de l'EDL dans la messagerie tant que le locataire n'a
@@ -360,6 +411,40 @@ function EdlCard({ contenu, isMine, signatures }: { contenu: string; isMine: boo
           }}>
           Voir le PDF EDL signé ↗
         </a>
+      )}
+      {/* V97.5 — Galerie photos EDL externe (3 vignettes max + compteur).
+          Toutes accessibles individuellement, et la page consulter affiche
+          la galerie complète. */}
+      {data._imported && Array.isArray(data.photosExternes) && data.photosExternes.length > 0 && (
+        <div style={{ marginBottom: 8 }}>
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+            {(data.photosExternes as string[]).slice(0, 3).map((url, idx) => (
+              <a
+                key={idx}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ position: "relative", width: 56, height: 56, borderRadius: 8, overflow: "hidden", border: "1px solid #EAE6DF", display: "block", flexShrink: 0, background: "#F7F4EF" }}
+                aria-label={`Photo EDL ${idx + 1}`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt={`Photo EDL ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              </a>
+            ))}
+            {data.photosExternes.length > 3 && (
+              <a
+                href={`/edl/consulter/${data.edlId}`}
+                style={{ width: 56, height: 56, borderRadius: 8, border: "1px dashed #EAE6DF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 11, fontWeight: 700, color: "#8a8477", textDecoration: "none", background: "#F7F4EF" }}
+                aria-label={`Voir les ${data.photosExternes.length - 3} autres photos`}
+              >
+                +{data.photosExternes.length - 3}
+              </a>
+            )}
+          </div>
+          <p style={{ fontSize: 10.5, color: "#8a8477", margin: "6px 0 0", textAlign: "center" }}>
+            {data.photosExternes.length} photo{data.photosExternes.length > 1 ? "s" : ""} de l&apos;EDL
+          </p>
+        </div>
       )}
       {data.edlId && (
         <a href={`/edl/consulter/${data.edlId}`}
