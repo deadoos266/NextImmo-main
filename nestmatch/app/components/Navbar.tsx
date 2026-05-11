@@ -476,6 +476,34 @@ export default function Navbar() {
               + visibilité gated par proprietaireActive pour ne pas polluer
               côté locataire. Bug Paul 2026-04-26 « il devait être en gros à
               côté de la cloche ». */}
+          {/* V96.8 — Bouton "Importer un bail" en ghost à côté de "+ Publier"
+              (demandé par Paul : "à côté ça serait bien"). Accès rapide
+              depuis n'importe quelle page pour les proprios. */}
+          {session && proprietaireActive && (
+            <Link
+              href="/proprietaire/bail/importer"
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "10px 16px",
+                background: km.white, color: km.ink,
+                border: `1px solid ${km.line}`,
+                borderRadius: 999, textDecoration: "none",
+                fontWeight: 600, fontSize: 12,
+                textTransform: "uppercase", letterSpacing: "0.4px",
+                fontFamily: "inherit", whiteSpace: "nowrap",
+                transition: "background 160ms ease",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = km.beige }}
+              onMouseLeave={e => { e.currentTarget.style.background = km.white }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              Importer un bail
+            </Link>
+          )}
           {session && proprietaireActive && (
             <Link
               href="/proprietaire/ajouter"

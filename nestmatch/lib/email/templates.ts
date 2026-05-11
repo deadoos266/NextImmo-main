@@ -180,14 +180,22 @@ function button(href: string, label: string): string {
 export function verifyEmailTemplate(params: { userName: string | null; verifyUrl: string; code?: string }): { subject: string; html: string; text: string } {
   const greeting = params.userName ? `Bienvenue ${escapeHtml(params.userName)}` : "Bienvenue"
   // Code OTP 6 chiffres : si fourni, on l'affiche en gros + lien fallback.
+  // V96.9 — Fix mobile : avant le code passait sur 2 lignes (5+1) sur iPhone
+  // à cause de font-size 38px + letter-spacing 8px qui dépassait la largeur
+  // du container card. Fix :
+  //  - font-size 32px (au lieu de 38) → plus compact
+  //  - letter-spacing 5px (au lieu de 8) → -3px par espace × 5 = -15px gagné
+  //  - padding 18px 20px (au lieu de 22px 28px) → -16px gagné horizontal
+  //  - white-space: nowrap → garantit 1 seule ligne
+  //  - tabular-nums → chiffres alignés
   const codeBlock = params.code
     ? `
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0 8px;">
       <tr>
         <td align="center">
-          <div style="display:inline-block;background:${PALETTE.bg};border:1.5px solid ${PALETTE.border};border-radius:14px;padding:22px 28px;">
+          <div style="display:inline-block;background:${PALETTE.bg};border:1.5px solid ${PALETTE.border};border-radius:14px;padding:18px 20px;">
             <p style="margin:0 0 6px;font-size:11px;font-weight:700;color:${PALETTE.textSubtle};text-transform:uppercase;letter-spacing:2px;">Code de vérification</p>
-            <p style="margin:0;font-size:38px;font-weight:800;letter-spacing:8px;color:${PALETTE.text};font-family:'DM Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">${escapeHtml(params.code)}</p>
+            <p style="margin:0;font-size:32px;font-weight:800;letter-spacing:5px;color:${PALETTE.text};font-family:'DM Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:nowrap;font-variant-numeric:tabular-nums;">${escapeHtml(params.code)}</p>
             <p style="margin:10px 0 0;font-size:11px;color:${PALETTE.textSubtle};">Valide 15 minutes</p>
           </div>
         </td>
