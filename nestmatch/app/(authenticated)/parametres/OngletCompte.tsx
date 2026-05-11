@@ -31,6 +31,11 @@ export default function OngletCompte() {
   const [prefs, setPrefs] = useState<NotifPrefsMap>(() => defaultNotifPreferences())
   // V59.4 — mode messages (smart par défaut, anti-spam)
   const [messageMode, setMessageMode] = useState<MessageMode>("smart")
+  // V97.15 P3-2.C — seuil custom pour alertes matching (default 60%)
+  const [seuilMatchPct, setSeuilMatchPct] = useState(60)
+  // V97.16 — Accordion par catégorie : seule "messages" ouverte par défaut.
+  // Réduit la longueur de la page de ~80% à l'arrivée.
+  const [expandedCats, setExpandedCats] = useState<Set<string>>(() => new Set(["messages"]))
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
@@ -52,7 +57,7 @@ export default function OngletCompte() {
     if (!email) return
     void (async () => {
       try {
-        const res = await fetch("/api/profil/me?cols=notif_preferences,notif_messages_email,notif_visites_email,notif_candidatures_email,notif_loyer_retard_email", { cache: "no-store" })
+        const res = await fetch("/api/profil/me?cols=notif_preferences,notif_messages_email,notif_visites_email,notif_candidatures_email,notif_loyer_retard_email,seuil_match_pct", { cache: "no-store" })
         const json = await res.json().catch(() => ({}))
         if (json?.ok && json.profil) {
           const data = json.profil as {
@@ -61,6 +66,7 @@ export default function OngletCompte() {
             notif_visites_email?: boolean | null
             notif_candidatures_email?: boolean | null
             notif_loyer_retard_email?: boolean | null
+            seuil_match_pct?: number | null
           }
           // Build state : merge defaults + DB notif_preferences + legacy fallback
           const next = defaultNotifPreferences()
@@ -79,6 +85,10 @@ export default function OngletCompte() {
           const storedMode = stored.message_recu_mode
           if (storedMode === "smart" || storedMode === "digest" || storedMode === "all" || storedMode === "none") {
             setMessageMode(storedMode)
+          }
+          // V97.15 P3-2.C — load seuil_match_pct (default 60 si NULL DB)
+          if (typeof data.seuil_match_pct === "number" && data.seuil_match_pct >= 30 && data.seuil_match_pct <= 95) {
+            setSeuilMatchPct(data.seuil_match_pct)
           }
         }
       } catch (e) {
@@ -164,6 +174,33 @@ export default function OngletCompte() {
       })
     } catch { /* noop */ }
     setSaving(false)
+  }
+
+  // V97.15 P3-2.C — change le seuil match (% min pour déclencher l'email)
+  async function updateSeuilMatch(pct: number) {
+    const email = session?.user?.email
+    if (!email) return
+    const clamped = Math.max(30, Math.min(95, pct))
+    setSeuilMatchPct(clamped)
+    setSaving(true)
+    try {
+      await fetch("/api/profil/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seuil_match_pct: clamped }),
+      })
+    } catch { /* noop */ }
+    setSaving(false)
+  }
+
+  // V97.16 — Toggle expansion d'une catégorie d'accordion
+  function toggleCat(key: string) {
+    setExpandedCats(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
   }
 
   // V54.3 — bouton "Tout activer" / "Tout désactiver" sur la portée visible.
@@ -342,42 +379,94 @@ export default function OngletCompte() {
         {loading ? (
           <p style={{ fontSize: 13, color: "#8a8477" }}>Chargement…</p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+          /* V97.16 — Accordion par catégorie. Réduit la page d'~80% à l'arrivée.
+             Seule "Messages" est ouverte par défaut. Clic sur en-tête → toggle.
+             Compteur "X/Y actifs" pour info quand fermée. */
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {NOTIF_CATEGORIES.map(cat => {
               const eventsInCat = visibleEvents.filter(e => e.category === cat.key)
               if (eventsInCat.length === 0) return null
+              const isExpanded = expandedCats.has(cat.key)
+              const nActive = eventsInCat.filter(e => prefs[e.key]).length
               return (
-                <div key={cat.key}>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 4, flexWrap: "wrap" }}>
-                    <h3 style={{ fontSize: 11, fontWeight: 700, color: "#111", letterSpacing: "1.6px", textTransform: "uppercase", margin: 0 }}>{cat.label}</h3>
-                    <span style={{ fontSize: 11, color: "#8a8477", fontWeight: 400 }}>· {cat.description}</span>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingLeft: 0, marginTop: 10, borderTop: "1px solid #F7F4EF", paddingTop: 12 }}>
-                    {eventsInCat.map(ev => {
-                      const isOn = prefs[ev.key]
-                      const isRequired = ev.required === true
-                      return (
-                        <label key={ev.key} style={{ display: "flex", alignItems: "flex-start", gap: 12, cursor: isRequired ? "not-allowed" : "pointer", opacity: isRequired ? 0.7 : 1 }}>
-                          <input
-                            type="checkbox"
-                            checked={isOn}
-                            onChange={() => { if (!isRequired) togglePref(ev.key) }}
-                            disabled={isRequired}
-                            style={{ marginTop: 3, width: 18, height: 18, accentColor: "#111", cursor: isRequired ? "not-allowed" : "pointer" }}
-                          />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                              <p style={{ fontSize: 14, fontWeight: 600, color: "#111", margin: 0 }}>{ev.label}</p>
-                              {isRequired && (
-                                <span style={{ fontSize: 9, fontWeight: 700, color: "#a16207", background: "#FBF6EA", border: "1px solid #EADFC6", padding: "2px 8px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "1px" }}>Légal · obligatoire</span>
-                              )}
-                            </div>
-                            <p style={{ fontSize: 12, color: "#8a8477", margin: "2px 0 0", lineHeight: 1.5 }}>{ev.description}</p>
+                <div key={cat.key} style={{ border: "1px solid #EAE6DF", borderRadius: 12, overflow: "hidden", background: "white" }}>
+                  <button
+                    type="button"
+                    onClick={() => toggleCat(cat.key)}
+                    aria-expanded={isExpanded}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      padding: "14px 16px",
+                      background: isExpanded ? "#F7F4EF" : "white",
+                      border: "none",
+                      borderBottom: isExpanded ? "1px solid #EAE6DF" : "none",
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      textAlign: "left",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", minWidth: 0, flex: 1 }}>
+                      <h3 style={{ fontSize: 11, fontWeight: 700, color: "#111", letterSpacing: "1.4px", textTransform: "uppercase", margin: 0 }}>{cat.label}</h3>
+                      <span style={{ fontSize: 11, color: "#8a8477", fontWeight: 400 }}>{nActive}/{eventsInCat.length} actif{nActive > 1 ? "s" : ""}</span>
+                    </div>
+                    <span style={{ fontSize: 14, color: "#8a8477", flexShrink: 0, transition: "transform 0.15s", transform: isExpanded ? "rotate(180deg)" : "none" }}>▾</span>
+                  </button>
+
+                  {isExpanded && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "14px 16px" }}>
+                      {eventsInCat.map(ev => {
+                        const isOn = prefs[ev.key]
+                        const isRequired = ev.required === true
+                        return (
+                          <div key={ev.key}>
+                            <label style={{ display: "flex", alignItems: "flex-start", gap: 12, cursor: isRequired ? "not-allowed" : "pointer", opacity: isRequired ? 0.7 : 1 }}>
+                              <input
+                                type="checkbox"
+                                checked={isOn}
+                                onChange={() => { if (!isRequired) togglePref(ev.key) }}
+                                disabled={isRequired}
+                                style={{ marginTop: 3, width: 18, height: 18, accentColor: "#111", cursor: isRequired ? "not-allowed" : "pointer" }}
+                              />
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                  <p style={{ fontSize: 14, fontWeight: 600, color: "#111", margin: 0 }}>{ev.label}</p>
+                                  {isRequired && (
+                                    <span style={{ fontSize: 9, fontWeight: 700, color: "#a16207", background: "#FBF6EA", border: "1px solid #EADFC6", padding: "2px 8px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "1px" }}>Légal · obligatoire</span>
+                                  )}
+                                </div>
+                                <p style={{ fontSize: 12, color: "#8a8477", margin: "2px 0 0", lineHeight: 1.5 }}>{ev.description}</p>
+                              </div>
+                            </label>
+                            {/* V97.15 P3-2.C — Sélecteur seuil sous le toggle alertes matching */}
+                            {ev.key === "nouvelle_annonce_match" && isOn && (
+                              <div style={{ marginTop: 10, marginLeft: 30, padding: "10px 14px", background: "#F7F4EF", borderRadius: 10, border: "1px solid #EAE6DF", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                                <label htmlFor="seuil-match-pct" style={{ fontSize: 12, color: "#111", fontWeight: 600 }}>
+                                  Seuil minimum de correspondance
+                                </label>
+                                <select
+                                  id="seuil-match-pct"
+                                  value={seuilMatchPct}
+                                  onChange={e => updateSeuilMatch(Number(e.target.value))}
+                                  style={{ padding: "6px 10px", border: "1px solid #EAE6DF", borderRadius: 8, fontSize: 13, fontFamily: "inherit", background: "white", color: "#111", outline: "none", cursor: "pointer" }}
+                                >
+                                  <option value={40}>40% (plus d&apos;annonces, moins précises)</option>
+                                  <option value={50}>50%</option>
+                                  <option value={60}>60% (recommandé)</option>
+                                  <option value={70}>70%</option>
+                                  <option value={80}>80% (peu d&apos;emails, très ciblés)</option>
+                                  <option value={90}>90% (rare)</option>
+                                </select>
+                              </div>
+                            )}
                           </div>
-                        </label>
-                      )
-                    })}
-                  </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               )
             })}

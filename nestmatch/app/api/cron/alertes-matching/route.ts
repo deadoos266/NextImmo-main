@@ -44,6 +44,8 @@ interface ProfilRow {
   nom: string | null
   notif_preferences: Record<string, unknown> | null
   derniere_alerte_envoyee_at: string | null
+  is_proprietaire: boolean | null
+  seuil_match_pct: number | null  // V97.15 P3-2.C — défaut 60 si NULL
   // Critères matching (sous-ensemble de MatchProfil)
   ville_souhaitee: string | null
   budget_min: number | null
@@ -70,8 +72,8 @@ interface AnnonceRow {
   [key: string]: any
 }
 
-const MIN_SCORE = 600       // 60% match minimum (sinon trop générique)
-const MAX_PER_EMAIL = 5     // garde l'email court
+const DEFAULT_SEUIL_PCT = 60     // V97.15 — fallback si profil.seuil_match_pct NULL
+const MAX_PER_EMAIL = 5          // garde l'email court
 const ANNONCES_WINDOW_DAYS = 7
 const MIN_HOURS_BETWEEN_EMAILS = 22
 
@@ -84,21 +86,73 @@ export const GET = withCronLogging("alertes-matching", "30 9 * * *", async funct
 
   // 1. Profils opt-in qui n'ont pas reçu d'alerte dans les 22 dernières heures.
   // V97.13 fix B2 — filtre côté SQL via path jsonb pour ne pas transférer
-  // tous les profils (sinon 10k+ profils = 10MB+ payload pour 1% d'opt-in).
+  // tous les profils. V97.15 — default true sur la pref, donc on récupère
+  // ceux qui n'ont PAS désactivé (clé absente OU true).
   const cutoff = new Date(Date.now() - MIN_HOURS_BETWEEN_EMAILS * 3600 * 1000).toISOString()
   const { data: allProfils, error: profilsErr } = await supabaseAdmin
     .from("profils")
     .select("*")
-    .eq("notif_preferences->>nouvelle_annonce_match", "true")
   if (profilsErr) {
     console.error("[cron/alertes-matching] profils fetch error:", profilsErr)
     return NextResponse.json({ ok: false, error: "DB error profils" }, { status: 500 })
   }
   const profils = (allProfils || []) as ProfilRow[]
-  // Filtre 22h appliqué côté JS car comparaison timestamp + IS NULL pas trivial à exprimer côté PostgREST sans une RPC.
+
+  // V97.15 P3-2.C — Précharge la liste des emails qui sont locataires actifs
+  // (au moins un bail en cours signé). Ces users ont déjà trouvé un logement
+  // et n'ont pas besoin d'alertes de recherche.
+  const { data: locatairesActifs, error: errLoc } = await supabaseAdmin
+    .from("annonces")
+    .select("locataire_email")
+    .not("locataire_email", "is", null)
+    .not("bail_signe_locataire_at", "is", null)
+  if (errLoc) {
+    // V97.15 fix B5 verifier — pas de silent failure. Si on n'a pas la liste
+    // des locataires actifs, on RISQUE de leur envoyer des emails (promesse
+    // violée). Mieux vaut bail-out tout le cron qu'envoyer de mauvais emails.
+    console.error("[cron/alertes-matching] locatairesActifs fetch error:", errLoc)
+    return NextResponse.json({ ok: false, error: "DB error locataires" }, { status: 500 })
+  }
+  const locatairesActifsSet = new Set(
+    (locatairesActifs || [])
+      .map(a => (a.locataire_email || "").toLowerCase())
+      .filter(Boolean),
+  )
+
+  // V97.15 P3-2.C — Précharge la liste des emails proprios (ont publié ≥1 annonce).
+  // Évite d'envoyer des alertes locataire à un proprio.
+  const { data: proprios, error: errProp } = await supabaseAdmin
+    .from("annonces")
+    .select("proprietaire_email")
+    .not("proprietaire_email", "is", null)
+  if (errProp) {
+    console.error("[cron/alertes-matching] proprios fetch error:", errProp)
+    return NextResponse.json({ ok: false, error: "DB error proprios" }, { status: 500 })
+  }
+  const propriosSet = new Set(
+    (proprios || [])
+      .map(a => (a.proprietaire_email || "").toLowerCase())
+      .filter(Boolean),
+  )
+
+  // Filtre 22h + opt-in + pas proprio + pas locataire actif
   const eligibles = profils.filter(p => {
-    if (!p.derniere_alerte_envoyee_at) return true
-    return p.derniere_alerte_envoyee_at < cutoff
+    const prefs = p.notif_preferences || {}
+    // V97.15 — default true : on respecte une désactivation explicite
+    // (clé === false). Toute autre valeur (true, undefined, null) = ON.
+    if (prefs.nouvelle_annonce_match === false) return false
+
+    // Skip proprios (flag is_proprietaire ET/OU présence dans annonces.proprietaire_email)
+    if (p.is_proprietaire === true) return false
+    if (propriosSet.has(p.email.toLowerCase())) return false
+
+    // Skip locataires déjà casés (bail actif signé)
+    if (locatairesActifsSet.has(p.email.toLowerCase())) return false
+
+    // Skip si alerte récente
+    if (p.derniere_alerte_envoyee_at && p.derniere_alerte_envoyee_at >= cutoff) return false
+
+    return true
   })
 
   if (eligibles.length === 0) {
@@ -139,6 +193,11 @@ export const GET = withCronLogging("alertes-matching", "30 9 * * *", async funct
     const annoncesNouvelles = annoncesArr.filter(a => a.created_at >= profilSince)
     if (annoncesNouvelles.length === 0) continue
 
+    // V97.15 P3-2.C — Seuil custom par profil (default 60% si NULL/missing).
+    // Range DB-checked 30-95 mais on clamp côté code par sécurité.
+    const seuilPct = Math.max(30, Math.min(95, p.seuil_match_pct ?? DEFAULT_SEUIL_PCT))
+    const seuilScore = seuilPct * 10  // score est /1000
+
     // Score chaque annonce. V97.13 fix B1 — try/catch par annonce pour éviter
     // qu'une annonce malformée (NaN, données invalides) ne crash tout le batch
     // et empêche TOUS les profils restants de recevoir leur email du jour.
@@ -151,7 +210,7 @@ export const GET = withCronLogging("alertes-matching", "30 9 * * *", async funct
           return { a, score: 0 }
         }
       })
-      .filter(x => x.score >= MIN_SCORE)
+      .filter(x => x.score >= seuilScore)  // V97.15 — seuil custom
       .sort((x, y) => y.score - x.score)
 
     if (scored.length === 0) continue

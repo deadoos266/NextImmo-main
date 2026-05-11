@@ -148,8 +148,11 @@ export const NOTIF_EVENTS: NotifEventDef[] = [
   // Annonce (V69.2b)
   { key: "annonce_stagnant",     category: "loyer",       audience: "proprio",   default: true,  label: "Annonce stagnante (boost)",       description: "Conseils pour booster votre annonce après 30 jours sans candidature. Max 1 email/3 mois." },
 
-  // V97.12 P3-2 — Matching alerts (opt-in : OFF par défaut, l'user choisit)
-  { key: "nouvelle_annonce_match", category: "matching",  audience: "locataire", default: false, label: "Nouvelles annonces qui matchent mes critères", description: "Email récap quotidien (max 1/jour) avec les nouvelles annonces qui correspondent à votre budget, ville, surface et nombre de pièces. Désactivable à tout moment." },
+  // V97.15 P3-2.C — Matching alerts ON par défaut (Paul : "ça devrait être
+  // activé de base"). Cohérent : l'user a déjà accepté son inscription, et
+  // ces alertes sont gated par 3 conditions strictes (être locataire,
+  // pas de bail actif, score >= seuil custom).
+  { key: "nouvelle_annonce_match", category: "matching",  audience: "locataire", default: true, label: "Nouvelles annonces qui matchent mes critères", description: "Email récap quotidien (max 1/jour) avec les nouvelles annonces qui correspondent à votre budget, ville, surface et nombre de pièces. Désactivable à tout moment." },
 ]
 
 export const NOTIF_CATEGORIES: { key: NotifCategory; label: string; description: string }[] = [
