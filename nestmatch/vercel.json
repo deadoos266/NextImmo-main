@@ -18,6 +18,10 @@
       "schedule": "30 4 * * *"
     },
     {
+      "path": "/api/cron/loyers-mensuels-create",
+      "schedule": "0 6 1 * *"
+    },
+    {
       "path": "/api/cron/loyers-retard",
       "schedule": "0 8 * * *"
     },
