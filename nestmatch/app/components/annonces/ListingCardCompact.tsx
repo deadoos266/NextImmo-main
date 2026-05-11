@@ -48,6 +48,13 @@ interface Props {
   /** Owner-view (Paul 2026-04-27) : si true, masque favori + Aperçu +
    *  Comparer car no-op sur sa propre annonce. */
   isOwn?: boolean
+  /** V91 — Mode "two-click to open" (mode liste+carte).
+   *  Si fourni :
+   *   - 1er click sur card non-active → preventDefault + onSelectCard(id)
+   *     (sélectionne la card + centre la carte sur l'annonce)
+   *   - 2e click sur card déjà active → laisse naviguer vers /annonces/[id]
+   *  Si absent : comportement par défaut (click direct = navigation). */
+  onSelectCard?: (annonceId: number) => void
 }
 
 function isNewAnnonce(createdAt: string | null | undefined): boolean {
@@ -84,6 +91,7 @@ export default function ListingCardCompact({
   onToggleCompare,
   compareDisabled = false,
   isOwn = false,
+  onSelectCard,
 }: Props) {
   const [idx, setIdx] = useState(0)
   const realPhotos: string[] = Array.isArray(annonce.photos) && annonce.photos.length > 0 ? annonce.photos : []
@@ -139,11 +147,27 @@ export default function ListingCardCompact({
     if (onToggleCompare && (compared || !compareDisabled)) onToggleCompare(annonce.id)
   }
 
+  // V91 — Handler "two-click to open" pour mode liste+carte :
+  //  - Si onSelectCard fourni ET card non-active → preventDefault + sélection
+  //    (centre la carte sur l'annonce, n'ouvre PAS encore la fiche)
+  //  - Si onSelectCard fourni ET card active → laisse naviguer (2e click = ouvre)
+  //  - Si onSelectCard absent → comportement par défaut (1 click = navigation)
+  // On laisse passer Ctrl/Cmd+click (nouvel onglet) et middle-click sans intercepter.
+  function handleCardClick(e: React.MouseEvent<HTMLAnchorElement>) {
+    if (!onSelectCard) return
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return  // nouvelle fenêtre / onglet
+    if (active) return  // 2e click → laisse naviguer
+    e.preventDefault()
+    onSelectCard(annonce.id)
+  }
+
   return (
     <a
       href={`/annonces/${annonce.id}`}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
+      onClick={handleCardClick}
+      aria-label={onSelectCard && !active ? `${annonce.titre} — cliquez pour localiser sur la carte, recliquez pour ouvrir l'annonce` : undefined}
       style={{
         display: "grid",
         gridTemplateColumns: "180px 1fr",

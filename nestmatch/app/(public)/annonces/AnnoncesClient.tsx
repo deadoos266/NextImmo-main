@@ -2193,8 +2193,13 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
                           match={matchPct}
                           rang={showRanks ? rangs.get(a.id) ?? null : null}
                           rangTotal={showRanks ? totalRangs : null}
-                          onMouseEnter={() => setSelectedId(a.id)}
-                          onMouseLeave={() => setSelectedId(null)}
+                          // V91 — mode "two-click to open" :
+                          //   hover → ne change plus rien (annonce pas déplacée par accident)
+                          //   1er click sur card → centre la carte (setSelectedId via onSelectCard)
+                          //   2e click sur card sélectionnée → ouvre la fiche
+                          onMouseEnter={() => {}}
+                          onMouseLeave={() => {}}
+                          onSelectCard={(id) => setSelectedId(id)}
                           onToggleFavori={e => handleToggleFavori(e, a.id)}
                           onPreview={() => setQuickViewId(a.id)}
                           compared={compareIds.includes(a.id)}
