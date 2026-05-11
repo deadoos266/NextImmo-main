@@ -400,6 +400,11 @@ function BailCard({
     : false
 
   const isExterne = !!data?.fichierUrl
+  // V92.5 — Bail importé (signé hors plateforme) : pas de boutons "Signer"
+  // ou "Contresigner", uniquement download du PDF original. La signature
+  // électronique KeyMatch n'a pas de sens — le PDF est déjà juridiquement
+  // signé entre les 2 parties.
+  const isImported = data?._imported === true
 
   async function telecharger() {
     if (downloading) return
@@ -454,16 +459,21 @@ function BailCard({
 
   // === Variante PROPRIO (isMine = true) ===
   if (isMine) {
-    const statutLabel = sigLocataire && sigBailleur
-      ? "Bail signé par les 2 parties ✓"
-      : sigLocataire
-        ? "Signé par le locataire — à contresigner"
-        : sigBailleur
-          ? "Signé par vous — en attente du locataire"
-          : isExterne
-            ? "Bail importé — en attente de signature du locataire"
-            : "Bail envoyé — en attente de signature du locataire"
-    const statutColor = sigLocataire && sigBailleur ? "#a7f3d0" : sigLocataire ? "#fcd34d" : "#EADFC6"
+    // V92.5 — Bail importé : statut explicite "PDF fourni", pas de contresignature
+    const statutLabel = isImported
+      ? "Bail importé · PDF fourni"
+      : sigLocataire && sigBailleur
+        ? "Bail signé par les 2 parties ✓"
+        : sigLocataire
+          ? "Signé par le locataire — à contresigner"
+          : sigBailleur
+            ? "Signé par vous — en attente du locataire"
+            : isExterne
+              ? "Bail importé — en attente de signature du locataire"
+              : "Bail envoyé — en attente de signature du locataire"
+    const statutColor = isImported
+      ? "#93c5fd"  // bleu clair pour importé
+      : sigLocataire && sigBailleur ? "#a7f3d0" : sigLocataire ? "#fcd34d" : "#EADFC6"
     return (
       <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 14, padding: "14px 18px", minWidth: 240, maxWidth: 320 }}>
         <p style={{ fontSize: 11, fontWeight: 700, color: statutColor, textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 6px" }}>
@@ -472,11 +482,16 @@ function BailCard({
         <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0 }}>{data.titreBien || "Bien"} — {data.villeBien}</p>
         <p style={{ fontSize: 11, color: "#8a8477", margin: "4px 0 8px" }}>Début {dateStr}{loyer > 0 ? ` · ${loyer} €/mois` : ""}</p>
 
-        {sigLocataire && (
+        {!isImported && sigLocataire && (
           <p style={{ fontSize: 11, color: "#a7f3d0", margin: "4px 0 0", fontWeight: 600 }}>{signatureBadge(sigLocataire)}</p>
         )}
-        {sigBailleur && (
+        {!isImported && sigBailleur && (
           <p style={{ fontSize: 11, color: "#a7f3d0", margin: "4px 0 0", fontWeight: 600 }}>{signatureBadge(sigBailleur)}</p>
+        )}
+        {isImported && (
+          <p style={{ fontSize: 11, color: "#93c5fd", margin: "4px 0 0", fontWeight: 500, lineHeight: 1.5 }}>
+            Le bail a été signé hors plateforme. Le PDF original reste votre référence juridique.
+          </p>
         )}
 
         {canDownload && (
@@ -486,8 +501,8 @@ function BailCard({
           </button>
         )}
 
-        {/* Proprio peut contresigner après le locataire */}
-        {canSignAsRole === "bailleur" && !dejaSigneParMoi && sigLocataire && (
+        {/* V92.5 — Proprio peut contresigner uniquement si bail KeyMatch (pas importé) */}
+        {!isImported && canSignAsRole === "bailleur" && !dejaSigneParMoi && sigLocataire && (
           <button onClick={signer}
             style={{ marginTop: 8, width: "100%", background: "#15803d", color: "white", border: "none", borderRadius: 8, padding: "9px 12px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
             ✍ Contresigner le bail
@@ -498,18 +513,27 @@ function BailCard({
   }
 
   // === Variante LOCATAIRE (isMine = false) ===
+  // V92.5 — Bail importé : palette bleue (importé) au lieu de vert (signature
+  // KeyMatch) + label différent + pas de bouton "Signer le bail".
+  const cardBg = isImported ? "#EEF3FB" : "#F0FAEE"
+  const cardBorder = isImported ? "#D7E3F4" : "#C6E9C0"
+  const iconBg = isImported ? "#DBEAFE" : "#DCF5E4"
+  const accentColor = isImported ? "#1d4ed8" : "#15803d"
+  const label = isImported
+    ? "Bail importé · PDF fourni"
+    : dejaSigneParMoi ? "Bail signé" : "Bail à signer"
   return (
-    <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 16, padding: "16px 20px", minWidth: 240, maxWidth: 320, fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 16, padding: "16px 20px", minWidth: 240, maxWidth: 320, fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-        <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#DCF5E4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <div style={{ width: 28, height: 28, borderRadius: "50%", background: iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
             <line x1="9" y1="15" x2="15" y2="15"/>
           </svg>
         </div>
-        <p style={{ fontSize: 10, fontWeight: 700, color: "#15803d", textTransform: "uppercase", letterSpacing: "1.2px", margin: 0 }}>
-          {dejaSigneParMoi ? "Bail signé" : "Bail à signer"}
+        <p style={{ fontSize: 10, fontWeight: 700, color: accentColor, textTransform: "uppercase", letterSpacing: "1.2px", margin: 0 }}>
+          {label}
         </p>
       </div>
       <p style={{ fontWeight: 600, fontSize: 14, color: "#111", margin: 0, letterSpacing: "-0.1px" }}>{data.titreBien || "Bien"}</p>
@@ -520,19 +544,24 @@ function BailCard({
         {data.duree && <div>Durée : <strong style={{ fontWeight: 600 }}>{data.duree} mois</strong></div>}
       </div>
 
-      {sigLocataire && (
+      {!isImported && sigLocataire && (
         <div style={{ marginTop: 12, padding: "7px 12px", background: "#DCF5E4", borderRadius: 10, fontSize: 11, color: "#15803d", fontWeight: 600 }}>
           {signatureBadge(sigLocataire)}
         </div>
       )}
-      {sigBailleur && (
+      {!isImported && sigBailleur && (
         <div style={{ marginTop: 6, padding: "7px 12px", background: "#DCF5E4", borderRadius: 10, fontSize: 11, color: "#15803d", fontWeight: 600 }}>
           {signatureBadge(sigBailleur)}
         </div>
       )}
+      {isImported && (
+        <p style={{ marginTop: 12, fontSize: 11.5, color: "#1d4ed8", lineHeight: 1.5, fontStyle: "italic" }}>
+          Le bail a été signé hors plateforme. Le PDF reste votre référence juridique.
+        </p>
+      )}
 
-      {/* CTA signature — priorité sur tout */}
-      {canSignAsRole === "locataire" && !dejaSigneParMoi && (
+      {/* CTA signature — UNIQUEMENT pour bails KeyMatch (pas importés) */}
+      {!isImported && canSignAsRole === "locataire" && !dejaSigneParMoi && (
         <button onClick={signer}
           style={{ display: "block", width: "100%", marginTop: 14, background: "#111", color: "#fff", border: "none", borderRadius: 999, padding: "12px 18px", fontSize: 13, fontWeight: 600, textAlign: "center", cursor: "pointer", letterSpacing: "0.3px", fontFamily: "inherit" }}>
           Signer le bail
@@ -541,7 +570,7 @@ function BailCard({
 
       {canDownload && (
         <button onClick={telecharger} disabled={downloading}
-          style={{ display: "block", width: "100%", marginTop: 8, background: "#fff", color: "#111", border: "1px solid #EAE6DF", borderRadius: 999, padding: "9px 18px", fontSize: 12, fontWeight: 600, textAlign: "center", cursor: downloading ? "wait" : "pointer", letterSpacing: "0.3px", fontFamily: "inherit" }}>
+          style={{ display: "block", width: "100%", marginTop: isImported ? 14 : 8, background: isImported ? "#111" : "#fff", color: isImported ? "#fff" : "#111", border: isImported ? "none" : "1px solid #EAE6DF", borderRadius: 999, padding: isImported ? "12px 18px" : "9px 18px", fontSize: isImported ? 13 : 12, fontWeight: 600, textAlign: "center", cursor: downloading ? "wait" : "pointer", letterSpacing: "0.3px", fontFamily: "inherit" }}>
           {downloading ? "Génération…" : "Télécharger le PDF"}
         </button>
       )}
