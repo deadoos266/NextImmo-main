@@ -1,6 +1,6 @@
 "use client"
 import { useSession } from "next-auth/react"
-import { useEffect, useState, useRef, useCallback } from "react"
+import { useEffect, useState, useRef, useCallback, useMemo } from "react"
 import { createPortal } from "react-dom"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
@@ -1473,6 +1473,9 @@ function MessagesInner() {
   const [myPhone, setMyPhone] = useState<string>("")
   const [convActive, setConvActive] = useState<string | null>(null)
   const [messages, setMessages] = useState<any[]>([])
+  // V97.17 P3-4.C — Recherche dans la conversation active (client-side full-text)
+  const [searchQuery, setSearchQuery] = useState<string>("")
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
   // Signatures EDL : { [edlId]: { locataire: bool, bailleur: bool } }.
   // Fetch après chaque loadMessages pour que EdlCard cote proprio puisse
   // afficher "En attente de confirmation" tant que le locataire n'a pas signé.
@@ -1885,6 +1888,38 @@ function MessagesInner() {
 
     return () => { supabase.removeChannel(channel) }
   }, [convActive, myEmail, conversations])
+
+  // V97.17 P3-4.C — Reset le filtre de recherche quand l'user change de conv
+  useEffect(() => {
+    setSearchQuery("")
+  }, [convActive])
+
+  // V97.17 P3-4.C — Raccourci Ctrl+F / Cmd+F pour focus la search bar quand
+  // une conv est active. Évite que le find natif du navigateur prenne la main
+  // (qui chercherait dans toute la page incluant le menu, peu utile ici).
+  // Fix B1 verifier : on NE préventDefault PAS si l'user tape déjà dans un
+  // input/textarea (ex: il rédige un message dans la zone de composition,
+  // veut chercher un mot dans la page, ou édite une note privée). Le find
+  // natif reste dispo dans ces cas.
+  useEffect(() => {
+    if (!convActive) return
+    function onKeyDown(e: KeyboardEvent) {
+      const isCtrlF = (e.ctrlKey || e.metaKey) && (e.key === "f" || e.key === "F")
+      if (!isCtrlF) return
+      const t = e.target
+      if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement) {
+        // Ne pas voler le focus si l'user tape déjà dans un input/textarea.
+        // EXCEPT s'il est dans la search bar elle-même (case déjà focus).
+        if (t === searchInputRef.current) return
+        return
+      }
+      e.preventDefault()
+      searchInputRef.current?.focus()
+      searchInputRef.current?.select()
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [convActive])
 
   // Temps réel — écoute les nouvelles visites + changements de statut
   // pour la conv active (affiche direct les contre-propositions reçues)
@@ -3527,10 +3562,28 @@ function MessagesInner() {
     })
   }
 
+  // V97.17 P3-4.C — Filter messages selon searchQuery (case-insensitive).
+  // On filtre AVANT le grouping par date pour que les séparateurs n'apparaissent
+  // que pour les jours qui contiennent un match.
+  // On évite les message system (cards [BAIL_CARD], [DOSSIER_CARD], etc.) qui
+  // sont JSON encodé : pertinents seulement si le user cherche dedans avec
+  // intention. Pour l'instant on les inclut, l'user peut quand même trouver
+  // un bien par titre puisque le contenu JSON contient le titre du bien.
+  // Fix B5 verifier : useMemo pour ne pas recompute à chaque render (utile
+  // sur grosses conv ou re-renders fréquents du composant parent).
+  const messagesFiltered = useMemo(() => {
+    const searchNorm = searchQuery.trim().toLowerCase().normalize("NFC")
+    if (searchNorm.length === 0) return messages
+    return messages.filter(m => {
+      const c = typeof m.contenu === "string" ? m.contenu.toLowerCase().normalize("NFC") : ""
+      return c.includes(searchNorm)
+    })
+  }, [messages, searchQuery])
+
   // Grouper les messages par date
   const messagesAvecSep: Array<{ type: "sep"; label: string } | { type: "msg"; msg: any }> = []
   let lastDate = ""
-  messages.forEach(m => {
+  messagesFiltered.forEach(m => {
     const d = new Date(m.created_at).toDateString()
     if (d !== lastDate) { messagesAvecSep.push({ type: "sep", label: dateSep(m.created_at) }); lastDate = d }
     messagesAvecSep.push({ type: "msg", msg: m })
@@ -4999,6 +5052,63 @@ function MessagesInner() {
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         Ajouter une note privée sur ce candidat
                       </button>
+                    )}
+                  </div>
+                )}
+
+                {/* V97.17 P3-4.C — Search bar dans la conv. Sticky en haut.
+                    Affichée seulement si messages.length > 5 (sinon inutile).
+                    Compteur "X résultat(s)" + bouton X reset. Ctrl+F focus. */}
+                {messages.length > 5 && (
+                  <div style={{
+                    position: "sticky",
+                    top: isMobile || isSmall ? 72 : 0,
+                    zIndex: 5,
+                    background: "rgba(247, 244, 239, 0.95)",
+                    backdropFilter: "blur(6px)",
+                    padding: "10px 16px",
+                    borderBottom: searchQuery ? "1px solid #EAE6DF" : "1px solid transparent",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a8477" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <circle cx="11" cy="11" r="8"/>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input
+                      ref={searchInputRef}
+                      type="search"
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Escape") setSearchQuery("") }}
+                      placeholder="Rechercher dans la conversation…"
+                      aria-label="Rechercher dans la conversation"
+                      style={{
+                        flex: 1,
+                        background: "transparent",
+                        border: "none",
+                        outline: "none",
+                        fontSize: 13,
+                        color: "#111",
+                        fontFamily: "inherit",
+                        padding: "4px 0",
+                      }}
+                    />
+                    {searchQuery && (
+                      <>
+                        <span style={{ fontSize: 11, color: "#8a8477", fontWeight: 600, flexShrink: 0 }}>
+                          {messagesFiltered.length} résultat{messagesFiltered.length > 1 ? "s" : ""}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => { setSearchQuery(""); searchInputRef.current?.focus() }}
+                          aria-label="Effacer la recherche"
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "#8a8477", fontSize: 18, lineHeight: 1, padding: 0, width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontFamily: "inherit" }}
+                        >
+                          ×
+                        </button>
+                      </>
                     )}
                   </div>
                 )}
