@@ -1009,23 +1009,47 @@ export default function Proprietaire() {
           )
         })()}
 
-        {/* Onglets */}
-        <div style={{ display: "flex", gap: 6, marginBottom: 24, background: km.white, borderRadius: 14, padding: 6, width: isMobile ? "100%" : "fit-content", overflowX: isMobile ? "auto" : undefined }}>
-          {ONGLETS.map(o => {
-            const nbVisitesAttente = visites.filter(v => v.statut === "proposée" && (v.propose_par || "").toLowerCase() !== (myEmail || "").toLowerCase()).length
-            return (
-              <button key={o} onClick={() => { setOnglet(o); if (o === "Visites") reloadVisites() }}
-                style={{ padding: "8px 18px", borderRadius: 10, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13, fontFamily: "inherit", background: onglet === o ? km.ink : "transparent", color: onglet === o ? km.white : km.muted, transition: "all 0.15s", whiteSpace: "nowrap", flexShrink: 0 }}>
-                {o}
-                {o === "Locataires" && loyersAttendus > 0 && (
-                  <span style={{ marginLeft: 6, background: km.errText, color: km.white, borderRadius: 999, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{loyersAttendus}</span>
-                )}
-                {o === "Visites" && nbVisitesAttente > 0 && (
-                  <span style={{ marginLeft: 6, background: "#f97316", color: km.white, borderRadius: 999, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{nbVisitesAttente}</span>
-                )}
-              </button>
-            )
-          })}
+        {/* Onglets + CTA "Suivi loyers" V95.B.1 */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, gap: 12, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 6, background: km.white, borderRadius: 14, padding: 6, width: isMobile ? "100%" : "fit-content", overflowX: isMobile ? "auto" : undefined }}>
+            {ONGLETS.map(o => {
+              const nbVisitesAttente = visites.filter(v => v.statut === "proposée" && (v.propose_par || "").toLowerCase() !== (myEmail || "").toLowerCase()).length
+              return (
+                <button key={o} onClick={() => { setOnglet(o); if (o === "Visites") reloadVisites() }}
+                  style={{ padding: "8px 18px", borderRadius: 10, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13, fontFamily: "inherit", background: onglet === o ? km.ink : "transparent", color: onglet === o ? km.white : km.muted, transition: "all 0.15s", whiteSpace: "nowrap", flexShrink: 0 }}>
+                  {o}
+                  {o === "Locataires" && loyersAttendus > 0 && (
+                    <span style={{ marginLeft: 6, background: km.errText, color: km.white, borderRadius: 999, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{loyersAttendus}</span>
+                  )}
+                  {o === "Visites" && nbVisitesAttente > 0 && (
+                    <span style={{ marginLeft: 6, background: "#f97316", color: km.white, borderRadius: 999, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{nbVisitesAttente}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+          {/* V95.B.1 — Lien vers la page Suivi loyers multi-baux */}
+          <a
+            href="/proprietaire/loyers"
+            style={{
+              background: km.white,
+              border: `1px solid ${km.line}`,
+              color: km.ink,
+              padding: "9px 18px",
+              borderRadius: 999,
+              fontSize: 11.5,
+              fontWeight: 700,
+              textDecoration: "none",
+              textTransform: "uppercase",
+              letterSpacing: "0.4px",
+              fontFamily: "inherit",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            Suivi des loyers →
+          </a>
         </div>
 
         {/* TABLEAU DE BORD — KPIs opérationnels (cliquables pour naviguer) */}
