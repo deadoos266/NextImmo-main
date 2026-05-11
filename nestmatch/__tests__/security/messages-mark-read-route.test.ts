@@ -55,9 +55,11 @@ describe("/api/messages/mark-read", () => {
 
   it("happy path mode ids", async () => {
     mockSession.mockResolvedValue({ user: { email: "me@test.fr" } })
-    // Chain: from.update.in.eq() resolves
-    const eqCall = vi.fn().mockResolvedValue({ error: null })
-    const inCall = vi.fn(() => ({ eq: eqCall }))
+    // V97.14 — Chain : from.update.in.eq(to_email).eq(lu=false) resolves
+    // (le 2e .eq(lu, false) a été ajouté pour ne pas overwrite read_at existant).
+    const eqLu = vi.fn().mockResolvedValue({ error: null })
+    const eqTo = vi.fn(() => ({ eq: eqLu }))
+    const inCall = vi.fn(() => ({ eq: eqTo }))
     const update = vi.fn(() => ({ in: inCall }))
     ;(mockSupaAdmin.from as ReturnType<typeof vi.fn>).mockImplementation(() => ({ update }))
 

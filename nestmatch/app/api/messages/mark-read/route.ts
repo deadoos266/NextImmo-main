@@ -41,6 +41,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "JSON invalide" }, { status: 400 })
   }
 
+  // V97.14 P3-4.A — On stamp aussi read_at pour pouvoir afficher
+  // "✓✓ Lu à HH:MM" côté expéditeur. Set seulement si lu=false avant
+  // (sinon on overwrite à chaque réouverture de la conv).
+  const nowIso = new Date().toISOString()
+
   // Mode "ids" : bulk
   if (Array.isArray(body.ids) && body.ids.length > 0) {
     const ids = body.ids.filter(n => typeof n === "number" && Number.isFinite(n))
@@ -52,9 +57,10 @@ export async function POST(req: NextRequest) {
     }
     const { error } = await supabaseAdmin
       .from("messages")
-      .update({ lu: true })
+      .update({ lu: true, read_at: nowIso })
       .in("id", ids)
       .eq("to_email", me)
+      .eq("lu", false)  // V97.14 — évite d'écraser un read_at existant
     if (error) {
       console.error("[messages/mark-read ids]", error)
       return NextResponse.json({ ok: false, error: "Update échoué" }, { status: 500 })
@@ -69,7 +75,7 @@ export async function POST(req: NextRequest) {
   }
   let q = supabaseAdmin
     .from("messages")
-    .update({ lu: true })
+    .update({ lu: true, read_at: nowIso })  // V97.14
     .eq("to_email", me)
     .eq("from_email", withEmail)
     .eq("lu", false)

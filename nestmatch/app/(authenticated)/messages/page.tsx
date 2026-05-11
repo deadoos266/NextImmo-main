@@ -1872,6 +1872,15 @@ function MessagesInner() {
         // DELETE payload ne contient que la PK par défaut — on retire par id
         setMessages(prev => prev.filter(x => x.id !== m.id))
       })
+      // V97.14 P3-4.A — UPDATE realtime pour read receipts live (✓ → ✓✓).
+      // Quand le destinataire mark-as-read, la row passe lu=false→true + stamp
+      // read_at. L'expéditeur (qui regarde la conv en live) voit le ✓✓
+      // apparaître instantanément sans avoir à F5.
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages" }, (payload) => {
+        const m = payload.new as any
+        if (!isRelevant(m)) return
+        setMessages(prev => prev.map(x => x.id === m.id ? { ...x, lu: m.lu, read_at: m.read_at } : x))
+      })
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
@@ -5299,7 +5308,19 @@ function MessagesInner() {
                                 <p id={`msg-${m.id}`} style={{ fontSize: 14, lineHeight: 1.5, margin: 0 }}>{text}</p>
                                 <p style={{ fontSize: 10, opacity: 0.5, marginTop: 4, textAlign: "right", margin: "4px 0 0" }}>
                                   {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-                                  {isMine && <span style={{ marginLeft: 4 }}>{m.lu ? "✓✓" : "✓"}</span>}
+                                  {/* V97.14 P3-4.A — Read receipt avec tooltip "Lu à HH:MM" si read_at présent */}
+                                  {isMine && (
+                                    <span
+                                      style={{ marginLeft: 4 }}
+                                      title={m.lu
+                                        ? (m.read_at
+                                            ? `Lu à ${new Date(m.read_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`
+                                            : "Lu")
+                                        : "Envoyé"}
+                                    >
+                                      {m.lu ? "✓✓" : "✓"}
+                                    </span>
+                                  )}
                                 </p>
                               </div>
 
