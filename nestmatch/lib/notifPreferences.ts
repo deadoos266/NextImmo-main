@@ -66,8 +66,10 @@ export type NotifEventKey =
   | "annonce_stagnant"      // V69.2b — annonce sans candidature 30+ jours
   // Messages
   | "message_recu"
+  // V97.12 P3-2 — Alertes matching locataire (push proactif sur ses critères)
+  | "nouvelle_annonce_match"
 
-export type NotifCategory = "bail" | "edl" | "visite" | "dossier" | "candidature" | "loyer" | "irl_preavis" | "messages"
+export type NotifCategory = "bail" | "edl" | "visite" | "dossier" | "candidature" | "loyer" | "irl_preavis" | "messages" | "matching"
 
 export type NotifEventDef = {
   key: NotifEventKey
@@ -145,6 +147,9 @@ export const NOTIF_EVENTS: NotifEventDef[] = [
 
   // Annonce (V69.2b)
   { key: "annonce_stagnant",     category: "loyer",       audience: "proprio",   default: true,  label: "Annonce stagnante (boost)",       description: "Conseils pour booster votre annonce après 30 jours sans candidature. Max 1 email/3 mois." },
+
+  // V97.12 P3-2 — Matching alerts (opt-in : OFF par défaut, l'user choisit)
+  { key: "nouvelle_annonce_match", category: "matching",  audience: "locataire", default: false, label: "Nouvelles annonces qui matchent mes critères", description: "Email récap quotidien (max 1/jour) avec les nouvelles annonces qui correspondent à votre budget, ville, surface et nombre de pièces. Désactivable à tout moment." },
 ]
 
 export const NOTIF_CATEGORIES: { key: NotifCategory; label: string; description: string }[] = [
@@ -156,6 +161,7 @@ export const NOTIF_CATEGORIES: { key: NotifCategory; label: string; description:
   { key: "edl",         label: "État des lieux", description: "EDL d'entrée et de sortie." },
   { key: "loyer",       label: "Loyer & quittances", description: "Paiements, quittances, rappels de retard." },
   { key: "irl_preavis", label: "IRL & préavis", description: "Indexation IRL et fin de bail." },
+  { key: "matching",    label: "Alertes recherche", description: "Nouvelles annonces qui matchent vos critères de recherche." },
 ]
 
 /**
