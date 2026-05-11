@@ -197,9 +197,10 @@ export default function ProprietaireLoyersPage() {
           </p>
         </header>
 
-        {/* Range selector + actions */}
+        {/* Range selector + actions — V96.11 mobile : overflowX auto pour
+            permettre scroll horizontal si 5 boutons débordent sur petit écran */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14, flexWrap: "wrap", marginBottom: 20 }}>
-          <div style={{ display: "inline-flex", gap: 4, background: T.card, border: `1px solid ${T.line}`, borderRadius: 999, padding: 4 }}>
+          <div style={{ display: "inline-flex", gap: 4, background: T.card, border: `1px solid ${T.line}`, borderRadius: 999, padding: 4, maxWidth: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
             {RANGES.map(r => (
               <button
                 key={r.key}
