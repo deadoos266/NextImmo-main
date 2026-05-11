@@ -4046,9 +4046,13 @@ function MessagesInner() {
                 </svg>
                 <input
                   type="search"
-                  aria-label="Rechercher une conversation"
+                  aria-label="Rechercher une conversation (nom, bien ou contenu)"
                   value={recherche} onChange={e => setRecherche(e.target.value)}
-                  placeholder="Rechercher une conversation"
+                  // V97.19 — Placeholder clarifié : la search ici filtre TOUTES
+                  // les convs sur (nom interlocuteur + titre annonce + historique
+                  // complet des messages). Pour chercher DANS une conv ouverte,
+                  // utiliser la search bar en haut de la conv (Ctrl+F).
+                  placeholder="Filtrer les conversations (nom, bien, mot-clé)…"
                   onFocus={e => { e.currentTarget.style.borderColor = "#111"; e.currentTarget.style.background = "#fff" }}
                   onBlur={e => { e.currentTarget.style.borderColor = "#EAE6DF"; e.currentTarget.style.background = "#F7F4EF" }}
                   style={{ width: "100%", padding: isMobile ? "11px 12px 11px 34px" : "9px 12px 9px 34px", border: "1px solid #EAE6DF", background: "#F7F4EF", color: "#111", borderRadius: 999, fontSize: isMobile ? 16 : 13, outline: "none", fontFamily: "inherit", boxSizing: "border-box", transition: "border-color 160ms ease, background 160ms ease" }}
@@ -5060,9 +5064,10 @@ function MessagesInner() {
                 )}
 
                 {/* V97.17 P3-4.C — Search bar dans la conv. Sticky en haut.
-                    Affichée seulement si messages.length > 5 (sinon inutile).
-                    Compteur "X résultat(s)" + bouton X reset. Ctrl+F focus. */}
-                {messages.length > 5 && (
+                    V97.19 fix : affichée dès qu'une conv est ouverte (avant
+                    elle était gated sur messages.length > 5, mais l'user
+                    s'attend à toujours pouvoir chercher → on garde simple). */}
+                {messages.length > 0 && (
                   <div style={{
                     position: "sticky",
                     top: isMobile || isSmall ? 72 : 0,
