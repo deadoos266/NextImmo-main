@@ -422,8 +422,10 @@ export default function Navbar() {
 
                 {espaceOpen && (
                   <>
-                    <div aria-hidden="true" onClick={() => setEspaceOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 150 }} />
-                    <div id="navbar-espace-menu" role="menu" aria-label="Mon espace" style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, background: km.white, borderRadius: 16, border: `1px solid ${km.line}`, boxShadow: "0 8px 32px rgba(0,0,0,0.12)", minWidth: 240, zIndex: 200, overflow: "hidden" }}>
+                    {/* V96.12 — Cf user-menu : zIndex 10500 pour passer
+                        au-dessus de l'AdminBar (10001) sans chevauchement. */}
+                    <div aria-hidden="true" onClick={() => setEspaceOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 10100 }} />
+                    <div id="navbar-espace-menu" role="menu" aria-label="Mon espace" style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, background: km.white, borderRadius: 16, border: `1px solid ${km.line}`, boxShadow: "0 8px 32px rgba(0,0,0,0.12)", minWidth: 240, zIndex: 10500, overflow: "hidden" }}>
                       {espaceLinksAvecBadge.map(item => {
                         const linkContent = (
                           <Link key={item.href} href={item.href} onClick={() => setEspaceOpen(false)}
@@ -558,8 +560,15 @@ export default function Navbar() {
 
               {menuOpen && (
                 <>
-                  <div aria-hidden="true" onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 150 }} />
-                  <div id="navbar-user-menu" role="menu" aria-label="Menu utilisateur" style={{ position: "absolute", top: "calc(100% + 12px)", right: 0, background: km.white, borderRadius: 14, border: `1px solid ${km.line}`, boxShadow: "0 12px 32px -8px rgba(0,0,0,0.18)", minWidth: 260, zIndex: 200, overflow: "visible", fontFamily: "inherit" }}>
+                  {/* V96.12 — Overlay clic-extérieur. zIndex 10100 pour rester
+                      sous AdminBar (10001) mais au-dessus du contenu. */}
+                  <div aria-hidden="true" onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 10100 }} />
+                  {/* V96.12 — Dropdown user menu : zIndex 10500 pour passer
+                      proprement AU-DESSUS de l'AdminBar (10001), Navbar et
+                      tout le reste. Avant: 200 → l'AdminBar n'était pas
+                      stackée correctement, ça créait un chevauchement visuel
+                      bizarre où le dropdown semblait "déchirer" le bandeau. */}
+                  <div id="navbar-user-menu" role="menu" aria-label="Menu utilisateur" style={{ position: "absolute", top: "calc(100% + 12px)", right: 0, background: km.white, borderRadius: 14, border: `1px solid ${km.line}`, boxShadow: "0 12px 32px -8px rgba(0,0,0,0.18)", minWidth: 260, zIndex: 10500, overflow: "visible", fontFamily: "inherit" }}>
                     {/* Flèche pointeur vers le trigger */}
                     <div style={{ position: "absolute", top: -6, right: 24, width: 10, height: 10, background: km.white, borderLeft: `1px solid ${km.line}`, borderTop: `1px solid ${km.line}`, transform: "rotate(45deg)" }} />
 
