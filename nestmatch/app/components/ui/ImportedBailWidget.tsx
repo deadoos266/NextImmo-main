@@ -18,6 +18,8 @@ export type ImportedBailWidgetProps = {
   bailPdfUrl: string | null
   hasEdlEntree: boolean          // au moins un EDL d'entrée existant
   hasLoyerConfirme: boolean      // au moins un loyer confirmé
+  // V96.1 — PDF EDL externe (uploadé à l'import si EDL fait hors plateforme)
+  edlPdfUrlExterne?: string | null
   // Role de l'utilisateur — on adapte les CTAs (proprio voit "Faire l'EDL",
   // locataire voit "Voir l'EDL").
   role: "locataire" | "proprietaire"
@@ -33,7 +35,7 @@ function formatDateFr(iso: string | null | undefined): string | null {
 }
 
 export default function ImportedBailWidget(props: ImportedBailWidgetProps) {
-  const { bienId, dateDebut, bailPdfUrl, hasEdlEntree, hasLoyerConfirme, role } = props
+  const { bienId, dateDebut, bailPdfUrl, hasEdlEntree, hasLoyerConfirme, edlPdfUrlExterne, role } = props
   const dateDebutFr = formatDateFr(dateDebut)
 
   return (
@@ -89,7 +91,18 @@ export default function ImportedBailWidget(props: ImportedBailWidgetProps) {
             Voir le bail (PDF)
           </a>
         )}
-        {!hasEdlEntree && (
+        {/* V96.1 — Si PDF EDL externe dispo : bouton dédié */}
+        {edlPdfUrlExterne && (
+          <a
+            href={edlPdfUrlExterne}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={ctaGhost}
+          >
+            Voir le PDF EDL signé ↗
+          </a>
+        )}
+        {!hasEdlEntree && !edlPdfUrlExterne && (
           <Link href={role === "proprietaire" ? `/proprietaire/edl/${bienId}` : `/edl/${bienId}`} style={ctaGhost}>
             {role === "proprietaire" ? "Faire l'EDL d'entrée →" : "Voir l'EDL d'entrée →"}
           </Link>

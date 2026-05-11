@@ -143,6 +143,8 @@ function ImporterBailPageInner() {
   const [simpleImport, setSimpleImport] = useState(true)
   const [pdfFile, setPdfFile] = useState<File | null>(null)
   const [pdfUploading, setPdfUploading] = useState(false)
+  // V96.1 — PDF EDL séparé (si EDL d'entrée déjà fait hors plateforme)
+  const [edlPdfFile, setEdlPdfFile] = useState<File | null>(null)
   // V33.6 — Pré-remplissage depuis annonce déclinée (relance après refus)
   const [refusContexte, setRefusContexte] = useState<{ annonceId: number; raisonLabel: string; motif: string } | null>(null)
   const [prefillLoading, setPrefillLoading] = useState(false)
@@ -283,6 +285,30 @@ function ImporterBailPageInner() {
         }
       }
 
+      // V96.1 — Upload PDF EDL si présent (uniquement si edlEntreeDejaFait coché)
+      let edlPdfUrl: string | null = null
+      if (form.dejaInstalle && form.edlEntreeDejaFait && edlPdfFile) {
+        try {
+          if (!edlPdfFile.name.toLowerCase().endsWith(".pdf")) {
+            throw new Error("Le fichier EDL doit être un PDF")
+          }
+          const proprio = (session?.user?.email || "").toLowerCase().replace(/[^a-z0-9]/g, "_")
+          const path = `${proprio}/edl-import-${Date.now()}.pdf`
+          const { supabase } = await import("../../../../../lib/supabase")
+          const { error: upErr } = await supabase.storage.from("baux").upload(path, edlPdfFile, {
+            contentType: "application/pdf",
+            upsert: false,
+          })
+          if (upErr) throw upErr
+          const { data: pub } = supabase.storage.from("baux").getPublicUrl(path)
+          edlPdfUrl = pub?.publicUrl || null
+        } catch (uerr) {
+          setError(`Erreur upload PDF EDL : ${uerr instanceof Error ? uerr.message : String(uerr)}`)
+          setSubmitting(false)
+          return
+        }
+      }
+
       // V95.A.1 — Si CREP marqué not_required mais le user a coché
       // constructionAvant1949, on force not_required=false
       const annexesAlurNormalized: AnnexesAlur = {
@@ -323,6 +349,8 @@ function ImporterBailPageInner() {
           dateEntreeReelle: form.dejaInstalle ? form.dateEntreeReelle || undefined : undefined,
           loyersPassesPayes: form.dejaInstalle ? form.loyersPassesPayes : false,
           edlEntreeDejaFait: form.dejaInstalle ? form.edlEntreeDejaFait : false,
+          // V96.1 — URL du PDF EDL si fourni
+          edlPdfUrl: edlPdfUrl || undefined,
         }),
       })
       const data = await res.json()
@@ -617,6 +645,34 @@ function ImporterBailPageInner() {
                   Oui, l&apos;EDL d&apos;entrée a été signé entre les 2 parties (hors plateforme)
                 </label>
               </Field>
+
+              {/* V96.1 — Upload PDF EDL si "EDL déjà fait" coché. Preuve juridique
+                  de l'état initial du logement (loi 89-462 art. 3-1). Optionnel
+                  techniquement (l'EDL peut rester papier), mais fortement
+                  recommandé pour pouvoir le partager avec le locataire en ligne. */}
+              {form.edlEntreeDejaFait && (
+                <Field
+                  label="PDF de l'EDL d'entrée (recommandé)"
+                  hint="Uploadez le PDF de l'EDL signé hors plateforme. Il sera accessible au locataire dans son espace logement et servira de preuve en cas de litige (état initial du logement)."
+                >
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={e => setEdlPdfFile(e.target.files?.[0] || null)}
+                    style={{
+                      width: "100%", boxSizing: "border-box", padding: 10,
+                      border: `1.5px dashed ${edlPdfFile ? "#15803d" : T.line}`,
+                      borderRadius: 12, background: edlPdfFile ? "#F0FAEE" : T.card,
+                      color: T.ink, fontFamily: "inherit", fontSize: 13,
+                    }}
+                  />
+                  {edlPdfFile && (
+                    <p style={{ fontSize: 11.5, color: "#15803d", margin: "6px 0 0", fontWeight: 600 }}>
+                      ✓ {edlPdfFile.name} ({Math.round(edlPdfFile.size / 1024)} KB)
+                    </p>
+                  )}
+                </Field>
+              )}
             </div>
           )}
 

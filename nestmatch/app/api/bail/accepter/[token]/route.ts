@@ -269,6 +269,13 @@ export async function POST(_req: Request, { params }: RouteParams) {
           supabaseAdmin.from("profils").select("nom, prenom").eq("email", userEmail).maybeSingle(),
         ])
         const dateEdl = (meta.date_entree_reelle as string | null) || dateDebut
+        // V96.1 — PDF EDL externe (uploadé par le proprio à l'import)
+        const edlPdfUrlExterne = typeof meta.edl_pdf_url === "string" && /^https?:\/\//.test(meta.edl_pdf_url)
+          ? meta.edl_pdf_url
+          : null
+        const observationsText = edlPdfUrlExterne
+          ? "État des lieux d'entrée réalisé hors plateforme. Le PDF original signé entre les 2 parties est joint à cet EDL et fait foi juridiquement."
+          : "État des lieux d'entrée réalisé hors plateforme et déclaré valide à l'import KeyMatch. Aucun document scanné n'a été uploadé — référence : votre exemplaire papier original."
         const { error: edlErr } = await supabaseAdmin.from("etats_des_lieux").insert({
           annonce_id: invit.annonce_id,
           proprietaire_email: invit.proprietaire_email,
@@ -282,7 +289,8 @@ export async function POST(_req: Request, { params }: RouteParams) {
           prenom_locataire: locProfil?.prenom || null,
           nom_locataire: locProfil?.nom || null,
           email_locataire: userEmail,
-          observations: "État des lieux d'entrée réalisé hors plateforme et déclaré valide à l'import KeyMatch. Aucun document scanné n'a été uploadé — référence : votre exemplaire papier original.",
+          observations: observationsText,
+          pdf_url_externe: edlPdfUrlExterne,  // V96.1
           signe_locataire_at: now,
           signe_bailleur_at: now,
           date_validation: now,

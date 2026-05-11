@@ -1427,14 +1427,24 @@ export default function Proprietaire() {
                     </div>
                     {/* V89.7 — Bail importé : widget dédié */}
                     {(b.bail_source === "imported" || b.bail_source === "imported_pending") ? (
-                      <ImportedBailWidget
-                        bienId={b.id}
-                        dateDebut={b.date_debut_bail}
-                        bailPdfUrl={b.bail_pdf_url || null}
-                        hasEdlEntree={edlsBien.some((e: { type?: string; statut?: string }) => e.type === "entree" && e.statut === "valide")}
-                        hasLoyerConfirme={(loyersBien || []).some((l: { statut?: string }) => l.statut === "confirmé")}
-                        role="proprietaire"
-                      />
+                      (() => {
+                        // V96.1 — PDF EDL externe (uploadé à l'import)
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const edlEntreeBien = edlsBien.find((e: any) => e.type === "entree" && e.statut === "valide")
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const edlPdfUrlExterne = (edlEntreeBien as any)?.pdf_url_externe || null
+                        return (
+                          <ImportedBailWidget
+                            bienId={b.id}
+                            dateDebut={b.date_debut_bail}
+                            bailPdfUrl={b.bail_pdf_url || null}
+                            hasEdlEntree={edlsBien.some((e: { type?: string; statut?: string }) => e.type === "entree" && e.statut === "valide")}
+                            hasLoyerConfirme={(loyersBien || []).some((l: { statut?: string }) => l.statut === "confirmé")}
+                            edlPdfUrlExterne={edlPdfUrlExterne}
+                            role="proprietaire"
+                          />
+                        )
+                      })()
                     ) : (
                       <BailTimeline steps={timelineSteps} />
                     )}

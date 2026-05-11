@@ -673,6 +673,10 @@ export default function MonLogement() {
           if (isImportedBail) {
             const hasEdlEntree = edls.some((e: { type?: string; statut?: string }) => e.type === "entree" && e.statut === "valide")
             const hasLoyerConfirme = loyers.some((l: { statut?: string }) => l.statut === "confirmé")
+            // V96.1 — PDF EDL externe (uploadé à l'import)
+            const edlEntree = edls.find((e: { type?: string; statut?: string; pdf_url_externe?: string | null }) => e.type === "entree" && e.statut === "valide")
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const edlPdfUrlExterne = (edlEntree as any)?.pdf_url_externe || null
             return (
               <ImportedBailWidget
                 bienId={bien.id}
@@ -680,6 +684,7 @@ export default function MonLogement() {
                 bailPdfUrl={bien.bail_pdf_url || null}
                 hasEdlEntree={hasEdlEntree}
                 hasLoyerConfirme={hasLoyerConfirme}
+                edlPdfUrlExterne={edlPdfUrlExterne}
                 role="locataire"
               />
             )

@@ -1199,6 +1199,17 @@ export default function BailPage() {
                   Voir / modifier l&apos;EDL existant
                 </a>
               )}
+              {/* V96.1 — PDF EDL importé (signé hors plateforme) */}
+              {typeof importMeta.edl_pdf_url === "string" && importMeta.edl_pdf_url && (
+                <a
+                  href={importMeta.edl_pdf_url as string}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={btnGhostSx}
+                >
+                  Voir le PDF EDL original ↗
+                </a>
+              )}
             </div>
           </div>
 

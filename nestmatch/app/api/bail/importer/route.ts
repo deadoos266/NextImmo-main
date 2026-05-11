@@ -65,6 +65,8 @@ interface ImporterBody {
   dateEntreeReelle?: string  // YYYY-MM-DD
   loyersPassesPayes?: boolean
   edlEntreeDejaFait?: boolean
+  // V96.1 — PDF EDL signé hors plateforme (preuve juridique état initial)
+  edlPdfUrl?: string
   // V95.A.1 — Annexes ALUR
   annexesAlur?: AnnexesAlur
   constructionAvant1949?: boolean
@@ -191,6 +193,11 @@ export async function POST(req: NextRequest) {
   const dateEntreeReelle = dejaInstalle && /^\d{4}-\d{2}-\d{2}$/.test(dateEntreeReelleStr) ? dateEntreeReelleStr : null
   const loyersPassesPayes = dejaInstalle && body.loyersPassesPayes === true
   const edlEntreeDejaFait = dejaInstalle && body.edlEntreeDejaFait === true
+  // V96.1 — URL PDF EDL externe (uploadée côté client dans bucket `baux`)
+  const edlPdfUrlRaw = typeof body.edlPdfUrl === "string" ? body.edlPdfUrl.trim() : ""
+  const edlPdfUrl = edlEntreeDejaFait && /^https?:\/\/[^\s]+$/.test(edlPdfUrlRaw) && edlPdfUrlRaw.length < 1000
+    ? edlPdfUrlRaw
+    : null
 
   // V95.A.1 — Sanitize annexes ALUR (chaque annexe = {url, included_in_bail, not_required})
   const ANNEXE_KEYS = ["dpe", "erp", "crep", "notice_info"] as const
@@ -226,6 +233,8 @@ export async function POST(req: NextRequest) {
     date_entree_reelle: dateEntreeReelle,
     loyers_passes_payes: loyersPassesPayes,
     edl_entree_deja_fait: edlEntreeDejaFait,
+    // V96.1 — PDF EDL externe (signé hors plateforme)
+    edl_pdf_url: edlPdfUrl,
   }
 
   const { data: annonce, error: annonceErr } = await supabaseAdmin
