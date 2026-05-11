@@ -5,8 +5,9 @@
  *  1. Valide les données saisies (titre du bien, ville, loyer, adresse,
  *     email locataire, etc.)
  *  2. Crée une `annonce` masquée (`bail_source = 'imported_pending'`,
- *     `loue = true`, `is_test = false`) — n'apparaît PAS dans /annonces
- *     publiques tant que le locataire n'a pas accepté.
+ *     `statut = 'loué'`, `is_test = false`) — n'apparaît PAS dans /annonces
+ *     publiques tant que le locataire n'a pas accepté (filtre public =
+ *     `statut = 'disponible'`).
  *  3. Crée une `bail_invitations` avec un token aléatoire valide 14 jours.
  *  4. Envoie l'email Resend au locataire avec lien accept / decline.
  *
@@ -180,10 +181,12 @@ export async function POST(req: NextRequest) {
       proprietaire_email: proprioEmail,
       bail_source: "imported_pending",
       import_metadata: importMetadata,
-      // V88.1 — bail_pdf_url existe déjà (utilisé par /proprietaire/baux/historique)
-      // On le pré-remplit avec le PDF importé pour qu'il s'affiche dans le wizard.
+      // V88.1 — bail_pdf_url (column ajoutée par migration 069) — pré-rempli
+      // avec le PDF importé pour qu'il s'affiche dans le wizard /proprietaire/bail/[id].
       bail_pdf_url: pdfUrlSafe,
-      loue: true,
+      // V88.fix — `loue` n'existe pas comme colonne ; on utilise `statut = 'loué'`
+      // qui exclut l'annonce du listing public (`.eq("statut", "disponible")`).
+      statut: "loué",
       is_test: false,
       created_at: new Date().toISOString(),
     })
