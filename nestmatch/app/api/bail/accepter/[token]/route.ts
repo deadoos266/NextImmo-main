@@ -8,7 +8,7 @@
  *     (sinon retourne `requireLogin` avec l'email à utiliser).
  *  3. Marque l'invitation `accepted` + responded_at.
  *  4. Met à jour l'annonce : bail_source = 'imported',
- *     locataire_email = email du user, loue = true.
+ *     locataire_email = email du user (statut déjà 'loué' depuis l'import).
  *  5. Crée une notif cloche pour le proprio + envoie email confirmation.
  *
  * GET /api/bail/accepter/[token] : retourne les détails de l'invitation
@@ -142,21 +142,28 @@ export async function POST(_req: Request, { params }: RouteParams) {
     return NextResponse.json({ ok: false, error: "Mise à jour invitation a échoué" }, { status: 500 })
   }
 
-  // Met à jour l'annonce : bail_source = imported, locataire_email = userEmail
+  // Met à jour l'annonce : bail_source = imported, locataire_email = userEmail.
+  // V88.fix — `loue` n'est pas une colonne ; statut='loué' est déjà setté par
+  // /api/bail/importer au moment de la création. Pas besoin de le re-toucher.
   const { error: annonceErr } = await supabaseAdmin
     .from("annonces")
     .update({
       bail_source: "imported",
       locataire_email: userEmail,
-      loue: true,
     })
     .eq("id", invit.annonce_id)
     .eq("proprietaire_email", invit.proprietaire_email)  // sécurité
 
   if (annonceErr) {
     console.error("[bail/accepter] update annonce failed", annonceErr)
-    // On ne rollback pas l'invitation : le statut accepted est plus important
-    // que la cohérence de l'annonce (l'admin peut corriger après).
+    // Erreur critique pour le locataire : sans cette mise à jour, /mon-logement
+    // ne trouvera pas l'annonce. On renvoie 500 pour qu'il puisse réessayer
+    // plutôt que de le laisser avec un compte non lié.
+    return NextResponse.json({
+      ok: false,
+      error: "Liaison de l'annonce au compte a échoué. Réessayez ou contactez le support.",
+      detail: annonceErr.message,
+    }, { status: 500 })
   }
 
   // Notif cloche proprio
@@ -178,6 +185,7 @@ export async function POST(_req: Request, { params }: RouteParams) {
   return NextResponse.json({
     ok: true,
     annonceId: invit.annonce_id,
-    redirect: "/proprietaire" + (invit.locataire_email ? "" : ""),  // locataire space coming soon
+    // V88.fix — redirect côté locataire vers son espace logement, pas /proprietaire
+    redirect: "/mon-logement",
   })
 }
