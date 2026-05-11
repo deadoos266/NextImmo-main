@@ -233,26 +233,41 @@ function ImporterBailPageInner() {
     if (submitting) return
     setError(null)
 
+    // V96.2 — Helper : set error + scroll/focus sur le champ invalide (par id)
+    // pour que l'user voit directement où ça coince.
+    const failOn = (msg: string, fieldId?: string) => {
+      setError(msg)
+      if (fieldId && typeof window !== "undefined") {
+        // Defer pour laisser React re-rendre l'error banner avant scroll
+        setTimeout(() => {
+          const el = document.getElementById(fieldId)
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" })
+            if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+              el.focus()
+            }
+          }
+        }, 50)
+      }
+    }
+
     // V34.4 — Validation simplifiée en mode simple : titre est dérivé si vide.
     let titre = form.titre.trim()
     if (!titre && simpleImport) {
       titre = `Bail ${form.locataireEmail.split("@")[0] || "importé"}`
     }
-    if (titre.length < 3) { setError("Donnez un titre clair au bien (ex : 2 pièces Bastille 42m²)"); return }
-    if (!simpleImport && form.ville.trim().length < 2) { setError("Renseignez la ville"); return }
-    if (!Number(form.loyerHC) || Number(form.loyerHC) < 1) { setError("Loyer hors charges requis"); return }
+    if (titre.length < 3) return failOn("Donnez un titre clair au bien (ex : 2 pièces Bastille 42m²)", "import-titre")
+    // V95.A.2 — Adresse + CP + ville requis EN PREMIER (ordre form : ils sont en haut)
+    if (form.adresse.trim().length < 4) return failOn("Adresse du logement requise (mentions légales quittances)", "import-adresse")
+    if (!/^\d{5}$/.test(form.codePostal.trim())) return failOn("Code postal à 5 chiffres requis", "import-code-postal")
+    if (form.ville.trim().length < 2) return failOn("Ville requise (mentions légales)", "import-ville")
+    if (!Number(form.loyerHC) || Number(form.loyerHC) < 1) return failOn("Loyer hors charges requis", "import-loyerHC")
     if (!form.locataireEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.locataireEmail.trim())) {
-      setError("Email du locataire invalide"); return
+      return failOn("Email du locataire invalide", "import-locataire-email")
     }
-    if (!form.dateDebut) { setError("Date de début du bail requise"); return }
-    // V95.A.2 — Adresse + code postal requis pour mentions légales art. 21 loi 89-462
-    if (form.adresse.trim().length < 4) { setError("Adresse du logement requise (mentions légales quittances)"); return }
-    if (!/^\d{5}$/.test(form.codePostal.trim())) { setError("Code postal à 5 chiffres requis"); return }
-    if (form.ville.trim().length < 2) { setError("Ville requise (mentions légales)"); return }
-    // V95.A.4 — Le PDF du bail est obligatoire pour un import (le bail doit
-    // exister juridiquement avant d'être importé). Sans PDF, on ne peut pas
-    // prouver l'existence du contrat.
-    if (!pdfFile) { setError("Le fichier PDF du bail est requis pour un import"); return }
+    if (!form.dateDebut) return failOn("Date de début du bail requise", "import-date-debut")
+    // V95.A.4 — Le PDF du bail est obligatoire pour un import
+    if (!pdfFile) return failOn("Le fichier PDF du bail est requis pour un import", "import-pdf")
 
     setSubmitting(true)
     try {
@@ -503,20 +518,25 @@ function ImporterBailPageInner() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
             {!simpleImport && (
               <Field label="Titre du bien" hint="Ex : 2 pièces Bastille 42 m²">
-                <input style={inputStyle} value={form.titre} onChange={e => update("titre", e.target.value)} placeholder="2 pièces Bastille 42 m²" maxLength={200} />
+                <input id="import-titre" style={inputStyle} value={form.titre} onChange={e => update("titre", e.target.value)} placeholder="2 pièces Bastille 42 m²" maxLength={200} />
               </Field>
             )}
 
+            {/* V96.2 — Section "Logement" labellisée pour que l'user repère où sont les champs adresse */}
+            <p style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: 0 }}>
+              Logement
+            </p>
+
             <Field label="Adresse complète du logement *" hint="Numéro + rue. Sert aux mentions légales des quittances (loi 89-462 art. 21).">
-              <input style={inputStyle} value={form.adresse} onChange={e => update("adresse", e.target.value)} placeholder="12 rue Saint-Antoine" maxLength={300} required />
+              <input id="import-adresse" style={inputStyle} value={form.adresse} onChange={e => update("adresse", e.target.value)} placeholder="12 rue Saint-Antoine" maxLength={300} required />
             </Field>
 
             <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: 12 }}>
               <Field label="Code postal *">
-                <input style={inputStyle} value={form.codePostal} onChange={e => update("codePostal", e.target.value.replace(/\D/g, "").slice(0, 5))} placeholder="75011" maxLength={5} required />
+                <input id="import-code-postal" style={inputStyle} value={form.codePostal} onChange={e => update("codePostal", e.target.value.replace(/\D/g, "").slice(0, 5))} placeholder="75011" maxLength={5} required />
               </Field>
               <Field label="Ville *">
-                <input style={inputStyle} value={form.ville} onChange={e => update("ville", e.target.value)} placeholder="Paris" maxLength={100} required />
+                <input id="import-ville" style={inputStyle} value={form.ville} onChange={e => update("ville", e.target.value)} placeholder="Paris" maxLength={100} required />
               </Field>
             </div>
 
@@ -545,7 +565,7 @@ function ImporterBailPageInner() {
           {/* V34.4 — En mode simple : Loyer HC + Charges seulement (dépôt optionnel masqué) */}
           <div style={{ display: "grid", gridTemplateColumns: simpleImport ? "1fr 1fr" : "1fr 1fr 1fr", gap: 12 }}>
             <Field label="Loyer HC (€)">
-              <input style={inputStyle} type="number" min={1} max={50000} value={form.loyerHC} onChange={e => update("loyerHC", e.target.value)} placeholder="1100" required />
+              <input id="import-loyerHC" style={inputStyle} type="number" min={1} max={50000} value={form.loyerHC} onChange={e => update("loyerHC", e.target.value)} placeholder="1100" required />
             </Field>
             <Field label="Charges (€)" hint={simpleImport ? "0 si charges incluses dans le loyer" : undefined}>
               <input style={inputStyle} type="number" min={0} max={5000} value={form.charges} onChange={e => update("charges", e.target.value)} placeholder="80" />
@@ -569,7 +589,7 @@ function ImporterBailPageInner() {
               </Field>
             )}
             <Field label="Date de début du bail" hint={simpleImport ? "Date à laquelle le bail prend effet" : undefined}>
-              <input style={inputStyle} type="date" value={form.dateDebut} onChange={e => update("dateDebut", e.target.value)} required />
+              <input id="import-date-debut" style={inputStyle} type="date" value={form.dateDebut} onChange={e => update("dateDebut", e.target.value)} required />
             </Field>
             {!simpleImport && (
               <Field label="Durée (mois)">
@@ -587,7 +607,7 @@ function ImporterBailPageInner() {
           <p style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: 0 }}>Locataire</p>
 
           <Field label="Email du locataire" hint="Il recevra un email l'invitant à valider le bail. Vous pouvez le notifier oralement à l'avance.">
-            <input style={inputStyle} type="email" value={form.locataireEmail} onChange={e => update("locataireEmail", e.target.value)} placeholder="locataire@email.com" required />
+            <input id="import-locataire-email" style={inputStyle} type="email" value={form.locataireEmail} onChange={e => update("locataireEmail", e.target.value)} placeholder="locataire@email.com" required />
           </Field>
 
           {/* V89.8 — Locataire déjà installé ? */}
@@ -683,6 +703,7 @@ function ImporterBailPageInner() {
             hint="Glisse ton fichier ou clique pour sélectionner. Le PDF est uploadé sur Supabase Storage et accessible au locataire. Le bail PDF est OBLIGATOIRE pour un import (preuve juridique)."
           >
             <input
+              id="import-pdf"
               type="file"
               accept="application/pdf"
               onChange={e => setPdfFile(e.target.files?.[0] || null)}
