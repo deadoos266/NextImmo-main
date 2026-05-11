@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import { usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
+import { useResponsive } from "../hooks/useResponsive"
 import { km } from "./ui/km"
 
 /**
@@ -45,6 +46,8 @@ type NetworkEntry = { url: string; status: number; method: string }
 export default function BugReportButton() {
   const pathname = usePathname() || "/"
   const { status } = useSession()
+  // V97.18 — Mobile flag pour fontSize 16 (anti-zoom iOS) + padding réduit
+  const { isMobile } = useResponsive()
   const [open, setOpen] = useState(false)
   const [description, setDescription] = useState("")
   const [severity, setSeverity] = useState("minor")
@@ -294,9 +297,12 @@ export default function BugReportButton() {
         <div
           data-bug-modal="true"
           onClick={() => setOpen(false)}
-          style={{ position: "fixed", inset: 0, background: "rgba(17,17,17,0.55)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif" }}
+          style={{ position: "fixed", inset: 0, background: "rgba(17,17,17,0.55)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: isMobile ? 8 : 16, fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif" }}
         >
-          <div onClick={e => e.stopPropagation()} style={{ background: km.white, borderRadius: 18, width: "min(480px, 100%)", padding: 24, maxHeight: "90vh", overflowY: "auto" }}>
+          {/* V97.18 fix B8 : maxHeight 90dvh (dynamic viewport) pour iOS avec
+              clavier ouvert. Le fallback "90vh" reste pour Android < 12 / vieux
+              navigateurs. Padding réduit sur mobile. */}
+          <div onClick={e => e.stopPropagation()} style={{ background: km.white, borderRadius: 18, width: "min(480px, 100%)", padding: isMobile ? 16 : 24, maxHeight: "min(90vh, 90dvh)", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <h3 style={{ fontFamily: "var(--font-fraunces), 'Fraunces', serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, margin: 0 }}>
                 {autoTriggered ? "Erreur détectée" : "Signaler un bug"}
@@ -327,7 +333,8 @@ export default function BugReportButton() {
                   padding: "10px 12px",
                   border: `1px solid ${km.line}`,
                   borderRadius: 10,
-                  fontSize: 13,
+                  // V97.18 fix B6 : fontSize 16 mobile (anti-zoom iOS)
+                  fontSize: isMobile ? 16 : 13,
                   fontFamily: "inherit",
                   resize: "vertical",
                   outline: "none",
@@ -344,12 +351,14 @@ export default function BugReportButton() {
                 padding: "10px 12px",
                 border: `1px solid ${km.line}`,
                 borderRadius: 10,
-                fontSize: 13,
+                // V97.18 fix B6 : fontSize 16 mobile (anti-zoom iOS)
+                fontSize: isMobile ? 16 : 13,
                 fontFamily: "inherit",
                 background: km.white,
                 color: km.ink,
                 outline: "none",
                 boxSizing: "border-box",
+                minHeight: 44,
               }}>
                 <option value="cosmetic">Cosmétique (mineur visuel)</option>
                 <option value="minor">Mineur (gêne mais contournable)</option>
@@ -365,7 +374,8 @@ export default function BugReportButton() {
                 checked={includeScreenshot}
                 onChange={e => setIncludeScreenshot(e.target.checked)}
                 disabled={submitting}
-                style={{ accentColor: km.ink, marginTop: 2, flexShrink: 0 }}
+                // V97.18 fix B7 : width/height explicite pour rendu lisible Safari iOS
+                style={{ accentColor: km.ink, marginTop: 2, flexShrink: 0, width: 18, height: 18 }}
               />
               <span>
                 <strong style={{ display: "block", marginBottom: 2 }}>Inclure une capture d&apos;écran</strong>

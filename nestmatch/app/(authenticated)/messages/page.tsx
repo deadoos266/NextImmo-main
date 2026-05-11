@@ -1476,6 +1476,9 @@ function MessagesInner() {
   // V97.17 P3-4.C — Recherche dans la conversation active (client-side full-text)
   const [searchQuery, setSearchQuery] = useState<string>("")
   const searchInputRef = useRef<HTMLInputElement | null>(null)
+  // V97.18 — Popover read receipt tap (mobile, title HTML invisible au tap)
+  // Stocke l'id du message dont le popover est ouvert. Null = aucun.
+  const [showReceiptId, setShowReceiptId] = useState<number | string | null>(null)
   // Signatures EDL : { [edlId]: { locataire: bool, bailleur: bool } }.
   // Fetch après chaque loadMessages pour que EdlCard cote proprio puisse
   // afficher "En attente de confirmation" tant que le locataire n'a pas signé.
@@ -5089,22 +5092,25 @@ function MessagesInner() {
                         background: "transparent",
                         border: "none",
                         outline: "none",
-                        fontSize: 13,
+                        // V97.18 fix B4 : 16px sur mobile pour éviter le zoom auto iOS Safari
+                        fontSize: isMobile ? 16 : 13,
                         color: "#111",
                         fontFamily: "inherit",
                         padding: "4px 0",
+                        minWidth: 0,  // permet de shrink sur petit écran
                       }}
                     />
                     {searchQuery && (
                       <>
-                        <span style={{ fontSize: 11, color: "#8a8477", fontWeight: 600, flexShrink: 0 }}>
+                        <span style={{ fontSize: 11, color: "#8a8477", fontWeight: 600, flexShrink: 0, whiteSpace: "nowrap" }}>
                           {messagesFiltered.length} résultat{messagesFiltered.length > 1 ? "s" : ""}
                         </span>
                         <button
                           type="button"
                           onClick={() => { setSearchQuery(""); searchInputRef.current?.focus() }}
                           aria-label="Effacer la recherche"
-                          style={{ background: "none", border: "none", cursor: "pointer", color: "#8a8477", fontSize: 18, lineHeight: 1, padding: 0, width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontFamily: "inherit" }}
+                          // V97.18 fix B3 : 36x36 (au lieu de 22x22) pour respecter iOS HIG 44x44 — augmenté avec padding effectif
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "#8a8477", fontSize: 20, lineHeight: 1, padding: 0, width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontFamily: "inherit", borderRadius: 999 }}
                         >
                           ×
                         </button>
@@ -5416,19 +5422,69 @@ function MessagesInner() {
                                   </span>
                                 )}
                                 <p id={`msg-${m.id}`} style={{ fontSize: 14, lineHeight: 1.5, margin: 0 }}>{text}</p>
-                                <p style={{ fontSize: 10, opacity: 0.5, marginTop: 4, textAlign: "right", margin: "4px 0 0" }}>
-                                  {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-                                  {/* V97.14 P3-4.A — Read receipt avec tooltip "Lu à HH:MM" si read_at présent */}
+                                <p style={{ fontSize: 10, marginTop: 4, textAlign: "right", margin: "4px 0 0", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
+                                  <span style={{ opacity: 0.5 }}>
+                                    {new Date(m.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                                  </span>
+                                  {/* V97.14 P3-4.A — Read receipt + V97.18 popover tap mobile.
+                                      title HTML pour hover desktop, onClick pour mobile (popover éphémère). */}
                                   {isMine && (
-                                    <span
-                                      style={{ marginLeft: 4 }}
-                                      title={m.lu
-                                        ? (m.read_at
-                                            ? `Lu à ${new Date(m.read_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`
-                                            : "Lu")
-                                        : "Envoyé"}
-                                    >
-                                      {m.lu ? "✓✓" : "✓"}
+                                    <span style={{ position: "relative", display: "inline-flex" }}>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setShowReceiptId(prev => prev === m.id ? null : m.id)
+                                          // Auto-close après 3s
+                                          window.setTimeout(() => setShowReceiptId(prev => prev === m.id ? null : prev), 3000)
+                                        }}
+                                        title={m.lu
+                                          ? (m.read_at
+                                              ? `Lu à ${new Date(m.read_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`
+                                              : "Lu")
+                                          : "Envoyé"}
+                                        aria-label={m.lu ? "Détail de lecture" : "Envoyé"}
+                                        style={{
+                                          background: "none",
+                                          border: "none",
+                                          padding: "2px 4px",
+                                          margin: 0,
+                                          fontFamily: "inherit",
+                                          fontSize: "inherit",
+                                          color: "inherit",
+                                          opacity: 0.7,
+                                          cursor: "pointer",
+                                          lineHeight: 1,
+                                        }}
+                                      >
+                                        {m.lu ? "✓✓" : "✓"}
+                                      </button>
+                                      {showReceiptId === m.id && (
+                                        <span
+                                          role="tooltip"
+                                          style={{
+                                            position: "absolute",
+                                            bottom: "calc(100% + 4px)",
+                                            right: 0,
+                                            background: "#111",
+                                            color: "white",
+                                            padding: "4px 8px",
+                                            borderRadius: 6,
+                                            fontSize: 11,
+                                            fontWeight: 600,
+                                            whiteSpace: "nowrap",
+                                            opacity: 1,
+                                            pointerEvents: "none",
+                                            zIndex: 100,
+                                          }}
+                                        >
+                                          {m.lu
+                                            ? (m.read_at
+                                                ? `Lu à ${new Date(m.read_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`
+                                                : "Lu")
+                                            : "Envoyé"}
+                                        </span>
+                                      )}
                                     </span>
                                   )}
                                 </p>

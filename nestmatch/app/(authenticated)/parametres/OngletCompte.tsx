@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRole } from "../../providers"
+import { useResponsive } from "../../hooks/useResponsive"
 import DeleteAccountForm from "./DeleteAccountForm"
 import {
   NOTIF_EVENTS,
@@ -28,6 +29,8 @@ const MESSAGE_MODE_OPTIONS: { value: MessageMode; label: string; desc: string; r
 export default function OngletCompte() {
   const { data: session } = useSession()
   const { proprietaireActive } = useRole()
+  // V97.18 — Mobile flag pour fontSize 16 sur inputs/selects (anti-zoom iOS)
+  const { isMobile } = useResponsive()
   const [prefs, setPrefs] = useState<NotifPrefsMap>(() => defaultNotifPreferences())
   // V59.4 — mode messages (smart par défaut, anti-spam)
   const [messageMode, setMessageMode] = useState<MessageMode>("smart")
@@ -451,7 +454,8 @@ export default function OngletCompte() {
                                   id="seuil-match-pct"
                                   value={seuilMatchPct}
                                   onChange={e => updateSeuilMatch(Number(e.target.value))}
-                                  style={{ padding: "6px 10px", border: "1px solid #EAE6DF", borderRadius: 8, fontSize: 13, fontFamily: "inherit", background: "white", color: "#111", outline: "none", cursor: "pointer" }}
+                                  // V97.18 fix B5 : fontSize 16 mobile pour éviter zoom auto iOS Safari
+                                  style={{ padding: "8px 12px", border: "1px solid #EAE6DF", borderRadius: 8, fontSize: isMobile ? 16 : 13, fontFamily: "inherit", background: "white", color: "#111", outline: "none", cursor: "pointer", minHeight: 40 }}
                                 >
                                   <option value={40}>40% (plus d&apos;annonces, moins précises)</option>
                                   <option value={50}>50%</option>
