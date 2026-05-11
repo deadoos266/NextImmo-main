@@ -47,3 +47,24 @@ Score sur 1000 pts → affiché `Math.round(score/10) + "%"`
 - Bail + EDL auto-généré
 - Quittances PDF
 - Demande de visite depuis l'interface messages
+
+## Protocole VERIFY — quand Paul dit "vérifie" / "tu as vérifié ?"
+
+**NE JAMAIS répondre "c'est bon" après juste `tsc --noEmit`.** Le typecheck ne sait pas si le PDF s'affiche, si l'upload réseau marche, si le marker Leaflet est visible, si la card EDL s'affiche côté locataire.
+
+Le protocole obligatoire :
+
+1. **Lister les claims du commit** (3-5 bullets de ce que la modif PRÉTEND faire)
+2. **Pour chaque claim** → `grep` le code qui l'implémente + `Read` les lignes → confirmer/infirmer
+3. **Lancer `npx tsc --noEmit`** (build vert = condition nécessaire, pas suffisante)
+4. **Lancer le sous-agent `verifier`** sur le diff (`Agent` tool, `subagent_type: "verifier"`) avec un prompt qui liste les claims + les fichiers modifiés. Le verifier trouve les silent failures + bugs croisés que je vois pas.
+5. **Rapport explicite à Paul, structuré en 3 sections :**
+   - `✓ Vérifié OK` (avec chemins fichiers + lignes)
+   - `✗ Non vérifié` (UI à l'écran, env vars Vercel, réseau Supabase Storage, comportement prod) — TOUJOURS lister, même si ça paraît tautologique
+   - `⚠ Bugs trouvés` (par le verifier ou par moi)
+6. **Si bugs critiques** → fixer AVANT le commit, pas après le push
+7. **Si bugs préexistants hors scope** → les noter dans le commit message, pas les ignorer
+
+Ne pas dire "vérifié" tant que les 6 étapes ne sont pas faites. Si étape 4 est skip (verifier pas dispo), le dire explicitement.
+
+Audit qui a validé ce protocole : V97.7-V97.9 (2026-05-12) — le verifier a trouvé 2 bugs réels que j'avais loupés (`QuartierPicker.tsx` sans `leafletSetup`, seuil event-loop 200ms → cold start spurious).
