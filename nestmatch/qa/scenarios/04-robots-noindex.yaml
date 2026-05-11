@@ -1,0 +1,8 @@
+name: "Indexation toujours bloquée (V71.0 bêta)"
+role: anonymous
+priority: P0
+steps:
+  - request: "GET /robots.txt"
+  - expect_status: 200
+  - goto: /
+  - expect_meta: { name: "robots", content_pattern: "noindex|index" }

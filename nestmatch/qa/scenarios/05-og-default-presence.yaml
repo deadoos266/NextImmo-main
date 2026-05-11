@@ -1,0 +1,9 @@
+name: "OG default image présente sur home"
+role: anonymous
+priority: P1
+steps:
+  - goto: /
+  - expect_meta: { property: "og:image", content_pattern: "og-default" }
+  - request: "GET /og-default.png"
+  - expect_status: 200
+  - expect_content_type: "image/png"

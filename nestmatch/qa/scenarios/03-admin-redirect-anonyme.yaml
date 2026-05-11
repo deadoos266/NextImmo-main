@@ -1,0 +1,6 @@
+name: "Pages admin protégées redirigent si non auth"
+role: anonymous
+priority: P1
+steps:
+  - goto: /admin
+  - expect_url_pattern: "/(auth|connexion|login|api/auth)"

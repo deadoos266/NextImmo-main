@@ -1,0 +1,7 @@
+name: "Page /status publique accessible"
+role: anonymous
+priority: P0
+steps:
+  - goto: /status
+  - expect_visible: h1
+  - screenshot: status-page

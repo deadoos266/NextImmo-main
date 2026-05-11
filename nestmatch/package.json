@@ -15,7 +15,8 @@
     "test:e2e:install": "playwright install --with-deps chromium webkit",
     "typecheck": "tsc --noEmit",
     "analyze": "cross-env ANALYZE=true next build",
-    "update-irl": "tsx scripts/update-irl.ts"
+    "update-irl": "tsx scripts/update-irl.ts",
+    "qa:run": "tsx scripts/qa-run.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.89.0",

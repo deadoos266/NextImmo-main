@@ -1,0 +1,11 @@
+name: "Locataire recherche un appart à Paris"
+role: anonymous
+priority: P0
+steps:
+  - goto: /
+  - expect_visible: h1
+  - screenshot: home
+  - goto: /annonces?ville=Paris
+  - wait: 1500
+  - expect_count: { selector: "a[href^=\"/annonces/\"]", min: 1 }
+  - screenshot: paris-results
