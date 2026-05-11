@@ -62,13 +62,14 @@ export default function AdminDashboardWidgets() {
           body: JSON.stringify({
             title,
             description: "Incident créé manuellement depuis dashboard /admin",
-            severity: "warning",
+            severity: "minor",   // API: info | minor | major | critical
+            status: "investigating",
             service: "app",
-            scope: "internal",
+            is_public: false,    // visible /admin/health uniquement
           }),
         })
         const j = await res.json()
-        setActionMsg(j.ok ? "Incident créé." : `Erreur : ${j.error}`)
+        setActionMsg(j.success ? `Incident #${j.id} créé.` : `Erreur : ${j.error || "inconnue"}`)
       }
     } catch (e) {
       setActionMsg(`Erreur : ${e instanceof Error ? e.message : String(e)}`)
