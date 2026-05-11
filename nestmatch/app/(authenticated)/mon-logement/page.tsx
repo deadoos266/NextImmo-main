@@ -1341,6 +1341,19 @@ export default function MonLogement() {
                 >
                   {downloadingBail ? "Téléchargement…" : "Télécharger le bail (PDF)"}
                 </button>
+                {/* V97.21 P3-12 — Pack ZIP : bail + annexes ALUR + EDL + photos.
+                    Affiché seulement si bien a un bail PDF (= conditions du ZIP). */}
+                {bien?.bail_pdf_url && (
+                  <a
+                    href={`/api/bail/${bien.id}/zip`}
+                    target="_blank"
+                    rel="noopener"
+                    style={{ background: "#fff", border: "1px solid #EAE6DF", color: "#111", borderRadius: 999, padding: "11px 24px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px", textDecoration: "none", display: "inline-block" }}
+                    title="Bail + annexes ALUR + EDL + photos en un seul fichier"
+                  >
+                    Tout télécharger (.zip)
+                  </a>
+                )}
               </div>
 
               {doubleSigne && edls.length === 0 && (

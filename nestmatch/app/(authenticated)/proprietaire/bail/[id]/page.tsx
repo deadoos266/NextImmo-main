@@ -1179,9 +1179,23 @@ export default function BailPage() {
                 </p>
               </div>
               {bien.bail_pdf_url ? (
-                <a href={bien.bail_pdf_url as string} target="_blank" rel="noopener noreferrer" style={btnSx}>
-                  Voir le PDF
-                </a>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <a href={bien.bail_pdf_url as string} target="_blank" rel="noopener noreferrer" style={btnSx}>
+                    Voir le PDF
+                  </a>
+                  {/* V97.21 P3-12 — Pack ZIP : bail + annexes ALUR + EDL + photos.
+                      target=_blank pour ne pas perdre la page courante en cas
+                      d'erreur 429/500. */}
+                  <a
+                    href={`/api/bail/${bien.id}/zip`}
+                    target="_blank"
+                    rel="noopener"
+                    style={{ ...btnSx, background: "#F7F4EF", color: "#111", border: "1px solid #EAE6DF" }}
+                    title="Bail, annexes ALUR (DPE/ERP/CREP/notice), EDL d'entrée et photos dans un seul fichier"
+                  >
+                    Tout télécharger (.zip)
+                  </a>
+                </div>
               ) : (
                 <span style={{ fontSize: 11, color: "#a16207", padding: "8px 14px", background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 8 }}>
                   Aucun PDF uploadé
