@@ -1143,15 +1143,20 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   // isolé dans la colonne liste (overflow-y:auto) → on bind le root sur ce scroller
   // via ref ci-dessous.
   const listScrollerRef = useRef<HTMLDivElement | null>(null)
+  // V90 — Fix infinite scroll mode Carte : le vrai scroll est dans un inner
+  // div (overflowY:auto), pas dans listScrollerRef (outer = overflow:hidden).
+  // Sans cette ref, IntersectionObserver mettait root sur un container qui ne
+  // scrollait pas → sentinel jamais détecté → liste plafonnée à PAGE_INITIAL (16).
+  const listInnerScrollRef = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
     if (!sentinelRef.current) return
     if (displayCount >= filteredLen) return
     const target = sentinelRef.current
-    // root = scroller de la liste si dispo (mode liste+carte desktop scroll isolé),
+    // root = scroller INNER de la liste si dispo (mode liste+carte desktop scroll isolé),
     // sinon viewport (mode grille document scroll).
     // gridMode déclaré ci-dessous mais on inline ici pour éviter une TDZ.
     const isGrid = view === "grid"
-    const root = !isGrid && !isSmall ? listScrollerRef.current : null
+    const root = !isGrid && !isSmall ? listInnerScrollRef.current : null
     const observer = new IntersectionObserver(
       entries => {
         const entry = entries[0]
@@ -2089,13 +2094,17 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
               <style>{`@keyframes km-pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.4 } }`}</style>
 
               {/* Scrollable inner — la aside elle-même est flex column, ce inner
-                  gère le scroll des items. */}
-              <div style={{
-                flex: isSmall ? undefined : 1,
-                minHeight: 0,
-                overflowY: isSmall ? "visible" : "auto",
-                padding: isSmall ? 0 : 10,
-              }}>
+                  gère le scroll des items. V90 — ref pour IntersectionObserver
+                  infinite scroll (sinon limité à 16 résultats). */}
+              <div
+                ref={listInnerScrollRef}
+                style={{
+                  flex: isSmall ? undefined : 1,
+                  minHeight: 0,
+                  overflowY: isSmall ? "visible" : "auto",
+                  padding: isSmall ? 0 : 10,
+                }}
+              >
                 {loading ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: isSmall ? 0 : 0 }}>
                     {[1, 2, 3, 4, 5].map(i => <AnnonceSkeleton key={i} />)}
