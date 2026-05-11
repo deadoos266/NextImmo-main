@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { notFound } from "next/navigation"
 import { supabase } from "../../../../lib/supabase"
 // V63 — server component : utilise supabaseAdmin pour les reads sur tables
 // que la migration 058 va REVOKE SELECT anon (messages, etats_des_lieux,
@@ -244,16 +245,13 @@ export default async function Annonce({ params }: any) {
     similaires = sim || []
   }
 
-  // Modération : annonce inexistante OU flaguée test = 404-like public.
+  // V81.30 — vrai 404 HTTP via notFound() au lieu d'une page rendue avec
+  // status 200. Audit E2E 2026-05-11 : /annonces/1 retournait 200 avec
+  // "Annonce introuvable" → Google indexe ces pages comme soft-404, mauvais
+  // pour le SEO. notFound() délègue à Next.js qui rend not-found.tsx (si
+  // existe) ou la 404 par défaut, AVEC le bon HTTP status 404.
   // Le proprio voit sa fiche via /proprietaire/modifier/[id] ou stats.
-  if (!annonce || annonce.is_test) return (
-    <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ textAlign: "center" }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12 }}>Annonce introuvable</h1>
-        <a href="/annonces" style={{ color: "#111", fontWeight: 600, textDecoration: "none" }}>← Retour aux annonces</a>
-      </div>
-    </main>
-  )
+  if (!annonce || annonce.is_test) notFound()
 
   // Mode vacances du propriétaire + bio publique : tout en 1 requête
   // pour éviter les aller-retour. La bio rassure le candidat en humanisant
