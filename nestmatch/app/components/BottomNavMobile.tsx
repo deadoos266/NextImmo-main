@@ -250,6 +250,8 @@ export default function BottomNavMobile() {
                 {showBadge && (
                   <span
                     aria-label={`${unreadCount} non lues`}
+                    aria-live="polite"
+                    aria-atomic="true"
                     style={{
                       position: "absolute",
                       top: -3,

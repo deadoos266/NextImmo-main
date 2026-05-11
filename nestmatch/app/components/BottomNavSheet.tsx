@@ -303,10 +303,12 @@ export default function BottomNavSheet({ open, onClose }: Props) {
         }}
       />
       {/* Sheet (mobile) / Modal (desktop) — même DOM, style switch */}
+      {/* V81.29 — aria-labelledby au lieu de aria-label pour pointer vers
+          le h2 "Menu" (audit a11y, sémantique préférée par lecteurs). */}
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Menu complet"
+        aria-labelledby="bnsheet-title"
         style={containerStyle}
       >
         <style>{`
@@ -336,13 +338,18 @@ export default function BottomNavSheet({ open, onClose }: Props) {
           padding: isMobile ? "8px 20px 4px" : "20px 24px 8px",
           borderBottom: isMobile ? "none" : `1px solid ${km.line}`,
         }}>
-          <p style={{
-            fontFamily: tokens.fontDisplay,
-            fontStyle: "italic", fontWeight: 500, fontSize: tokens.titleSize,
-            color: km.ink, letterSpacing: "-0.3px", margin: 0,
-          }}>
+          {/* V81.29 — h2 sémantique (était p) pour lecteurs d'écran +
+              correspond à l'aria-labelledby du dialog parent. */}
+          <h2
+            id="bnsheet-title"
+            style={{
+              fontFamily: tokens.fontDisplay,
+              fontStyle: "italic", fontWeight: 500, fontSize: tokens.titleSize,
+              color: km.ink, letterSpacing: "-0.3px", margin: 0,
+            }}
+          >
             Menu
-          </p>
+          </h2>
           <button
             type="button"
             onClick={onClose}

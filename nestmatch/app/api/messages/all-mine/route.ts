@@ -21,11 +21,22 @@ import { supabaseAdmin } from "@/lib/supabase-server"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
+// V81.29 — Regex email RFC-like pour valider que `me` ne contient pas
+// caractères qui casseraient la string interpolée dans .or() (virgule,
+// parenthèses). Audit security review V81.x : risque très faible car
+// l'email vient de NextAuth (validé Google/Credentials), mais defense
+// in depth contre une corruption future de session ou un bypass.
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+
 export async function GET() {
   const session = await getServerSession(authOptions)
   const me = session?.user?.email?.toLowerCase()
   if (!me) {
     return NextResponse.json({ ok: false, error: "Auth requise" }, { status: 401 })
+  }
+  if (!EMAIL_REGEX.test(me)) {
+    console.error("[messages/all-mine] email format invalide:", me)
+    return NextResponse.json({ ok: false, error: "Auth invalide" }, { status: 401 })
   }
 
   const { data, error } = await supabaseAdmin

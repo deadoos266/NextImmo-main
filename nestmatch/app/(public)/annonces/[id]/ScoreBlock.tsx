@@ -234,11 +234,18 @@ export default function ScoreBlock({ annonce }: { annonce: any }) {
                 item.status === "partiel" ? "•" :
                 item.status === "miss"    ? "✗" :
                                             "—"
+              // V81.29 — aria-label sur les icônes ✓/✗ pour lecteurs d'écran
+              // (sinon "tick mark" / "ballot x" lus en anglais sur NVDA).
+              const statusAria =
+                item.status === "match"   ? "Critère validé" :
+                item.status === "partiel" ? "Critère partiellement validé" :
+                item.status === "miss"    ? "Critère non validé" :
+                                            "Critère non évalué"
               return (
                 <div key={item.key} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: "#111", minWidth: 90 }}>
-                      <span style={{ color: barColor, marginRight: 6 }}>{statusIcon}</span>
+                      <span aria-label={statusAria} role="img" style={{ color: barColor, marginRight: 6 }}>{statusIcon}</span>
                       {item.label}
                     </span>
                     <div style={{ flex: 1, height: 6, background: "#EAE6DF", borderRadius: 999, overflow: "hidden" }}>

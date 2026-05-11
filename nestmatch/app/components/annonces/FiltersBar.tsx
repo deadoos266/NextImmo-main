@@ -395,7 +395,8 @@ export default function FiltersBar(props: FiltersBarProps) {
           favoris depuis /annonces car la ca va etre lent pour y aller et
           pas intuitif" (via tab Plus → sheet → tap Favoris = 2-3 taps).
           1 tap depuis la FiltersBar = direct. Desktop a déjà l'accès via
-          la Navbar (lien Favoris), pas besoin de doubler. */}
+          la Navbar (lien Favoris), pas besoin de doubler.
+          V81.29 — tap target 38→44 (WCAG 2.5.5 AAA + iOS HIG/Material). */}
       {isMobile && monProfilHref && (
         <Link
           href="/favoris"
@@ -408,8 +409,8 @@ export default function FiltersBar(props: FiltersBarProps) {
             color: "#111",
             border: "1px solid #EAE6DF",
             borderRadius: 999,
-            width: 38,
-            height: 38,
+            width: 44,
+            height: 44,
             textDecoration: "none",
             fontFamily: "inherit",
             flexShrink: 0,
@@ -574,9 +575,15 @@ export default function FiltersBar(props: FiltersBarProps) {
 
         {/* V81.24 — Compteur masqué sur mobile : redondant avec le h2
             "{N} logements à {ville}" juste en dessous. Évite le overflow
-            de la barre sur viewport étroit. */}
+            de la barre sur viewport étroit.
+            V81.29 — aria-live="polite" pour annoncer les changements de
+            résultats aux lecteurs d'écran (audit a11y WCAG 4.1.3 Status). */}
         {!isMobile && (
-          <span style={{ fontSize: 12, color: "#666", whiteSpace: "nowrap", fontWeight: 500 }}>
+          <span
+            aria-live="polite"
+            aria-atomic="true"
+            style={{ fontSize: 12, color: "#666", whiteSpace: "nowrap", fontWeight: 500 }}
+          >
             {loading
               ? "Chargement…"
               : `${resultCount} résultat${resultCount > 1 ? "s" : ""}`}
