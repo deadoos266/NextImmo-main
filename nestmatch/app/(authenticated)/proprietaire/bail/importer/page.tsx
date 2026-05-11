@@ -498,6 +498,44 @@ function ImporterBailPageInner() {
           </div>
         )}
 
+        {/* V96.5 — CTA "Générer un bail KeyMatch propre" : pour les proprios
+            qui réalisent que leur PDF importé est moche / pas conforme et
+            préféreraient générer un bail propre via le wizard KeyMatch. */}
+        {!refusContexte && (
+          <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 14, padding: "14px 18px", marginBottom: 20, display: "flex", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <p style={{ fontWeight: 700, color: "#15803d", margin: 0, fontSize: 13 }}>
+                💡 Vous préférez un bail conforme ALUR généré par KeyMatch ?
+              </p>
+              <p style={{ fontSize: 12, color: "#166534", margin: "4px 0 0", lineHeight: 1.55 }}>
+                Si votre PDF n&apos;est pas conforme ou si vous voulez un bail clean (signature électronique
+                eIDAS, annexes auto, IRL pré-calculé), utilisez plutôt le wizard de génération.
+                Vous gardez votre locataire et son dossier.
+              </p>
+            </div>
+            <Link
+              href="/proprietaire"
+              style={{
+                background: "#15803d",
+                color: "#fff",
+                border: "none",
+                borderRadius: 999,
+                padding: "9px 16px",
+                fontSize: 11.5,
+                fontWeight: 700,
+                textDecoration: "none",
+                textTransform: "uppercase",
+                letterSpacing: "0.4px",
+                flexShrink: 0,
+                fontFamily: "inherit",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Wizard bail KeyMatch →
+            </Link>
+          </div>
+        )}
+
         {simpleImport && !refusContexte && (
           <div style={{ background: "#EEF3FB", border: "1px solid #D7E3F4", borderRadius: 14, padding: "14px 18px", marginBottom: 20 }}>
             <p style={{ fontWeight: 700, color: "#1d4ed8", margin: 0, fontSize: 13 }}>
@@ -774,18 +812,18 @@ function ImporterBailPageInner() {
             })}
           </div>
 
-          {!simpleImport && (
-            <Field label="Message d'accompagnement (optionnel)" hint="Quelques mots pour mettre votre locataire en confiance — affichés dans l'email d'invitation.">
-              <textarea
-                style={{ ...inputStyle, resize: "vertical", lineHeight: 1.55, padding: "10px 14px" }}
-                rows={4}
-                maxLength={800}
-                value={form.messageProprio}
-                onChange={e => update("messageProprio", e.target.value)}
-                placeholder="Bonjour Marie, comme convenu je viens d'importer notre bail sur KeyMatch — tu pourras y récupérer tes quittances chaque mois. À très vite !"
-              />
-            </Field>
-          )}
+          {/* V96.3 — Message optionnel TOUJOURS visible (utile pour mettre le
+              locataire en confiance, même en mode simple). */}
+          <Field label="Message d'accompagnement (optionnel)" hint="Quelques mots pour mettre votre locataire en confiance — affichés dans l'email d'invitation.">
+            <textarea
+              style={{ ...inputStyle, resize: "vertical", lineHeight: 1.55, padding: "10px 14px" }}
+              rows={3}
+              maxLength={800}
+              value={form.messageProprio}
+              onChange={e => update("messageProprio", e.target.value)}
+              placeholder="Bonjour Marie, comme convenu je viens d'importer notre bail sur KeyMatch — tu pourras y récupérer tes quittances chaque mois. À très vite !"
+            />
+          </Field>
 
           {error && (
             <div style={{ background: km.errBg, border: `1px solid ${km.errLine}`, color: km.errText, padding: "10px 14px", borderRadius: 12, fontSize: 13 }}>

@@ -276,7 +276,7 @@ export async function POST(_req: Request, { params }: RouteParams) {
         const observationsText = edlPdfUrlExterne
           ? "État des lieux d'entrée réalisé hors plateforme. Le PDF original signé entre les 2 parties est joint à cet EDL et fait foi juridiquement."
           : "État des lieux d'entrée réalisé hors plateforme et déclaré valide à l'import KeyMatch. Aucun document scanné n'a été uploadé — référence : votre exemplaire papier original."
-        const { error: edlErr } = await supabaseAdmin.from("etats_des_lieux").insert({
+        const { data: edlInserted, error: edlErr } = await supabaseAdmin.from("etats_des_lieux").insert({
           annonce_id: invit.annonce_id,
           proprietaire_email: invit.proprietaire_email,
           locataire_email: userEmail,
@@ -294,11 +294,37 @@ export async function POST(_req: Request, { params }: RouteParams) {
           signe_locataire_at: now,
           signe_bailleur_at: now,
           date_validation: now,
-        })
+        }).select("id").single()
         if (edlErr) {
           console.error("[bail/accepter] EDL backfill failed", edlErr)
         } else {
           generatedEdl = true
+          // V96.4 — Insert message [EDL_CARD] dans la conv pour que l'EDL
+          // soit visible/téléchargeable depuis /messages (sinon la card EDL
+          // ne s'affiche jamais et le locataire ne sait pas qu'il existe).
+          if (edlInserted?.id) {
+            try {
+              const annTitre = (await supabaseAdmin.from("annonces").select("titre").eq("id", invit.annonce_id).maybeSingle()).data?.titre || "Bien"
+              const edlPayload = {
+                type: "entree",
+                edlId: edlInserted.id,
+                bienTitre: annTitre,
+                dateEdl: dateEdl,
+                pdfUrlExterne: edlPdfUrlExterne,  // utilisé par EdlCard si présent
+                _imported: true,
+              }
+              await supabaseAdmin.from("messages").insert([{
+                from_email: invit.proprietaire_email,
+                to_email: userEmail,
+                contenu: `[EDL_CARD]${JSON.stringify(edlPayload)}`,
+                lu: false,
+                annonce_id: invit.annonce_id,
+                created_at: new Date(Date.now() + 2).toISOString(),  // après les 2 messages V92.1
+              }])
+            } catch (e) {
+              console.warn("[bail/accepter] insert [EDL_CARD] failed (non-blocking)", e)
+            }
+          }
         }
       }
     }

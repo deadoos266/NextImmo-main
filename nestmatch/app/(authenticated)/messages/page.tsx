@@ -345,16 +345,40 @@ function EdlCard({ contenu, isMine, signatures }: { contenu: string; isMine: boo
           </p>
         </div>
       </div>
-      {data.edlId && (
-        <a href={`/edl/consulter/${data.edlId}`}
+      {/* V96.4 — Cas bail importé : EDL "valide" avec potentiellement un PDF
+          externe (uploadé hors plateforme). Bouton PDF prioritaire si dispo. */}
+      {data._imported && data.pdfUrlExterne && (
+        <a
+          href={data.pdfUrlExterne}
+          target="_blank"
+          rel="noopener noreferrer"
           style={{
             display: "block", width: "100%", background: "#111", color: "#fff",
             border: "none", borderRadius: 999, padding: "10px 18px", fontSize: 12,
             fontWeight: 600, textAlign: "center", textDecoration: "none",
+            letterSpacing: "0.3px", fontFamily: "inherit", marginBottom: 8,
+          }}>
+          Voir le PDF EDL signé ↗
+        </a>
+      )}
+      {data.edlId && (
+        <a href={`/edl/consulter/${data.edlId}`}
+          style={{
+            display: "block", width: "100%",
+            background: (data._imported && data.pdfUrlExterne) ? "#fff" : "#111",
+            color: (data._imported && data.pdfUrlExterne) ? "#111" : "#fff",
+            border: (data._imported && data.pdfUrlExterne) ? "1px solid #EAE6DF" : "none",
+            borderRadius: 999, padding: "10px 18px", fontSize: 12,
+            fontWeight: 600, textAlign: "center", textDecoration: "none",
             letterSpacing: "0.3px", fontFamily: "inherit",
           }}>
-          Consulter l&apos;EDL →
+          {data._imported ? "Détails sur KeyMatch" : "Consulter l'EDL →"}
         </a>
+      )}
+      {data._imported && (
+        <p style={{ fontSize: 11, color: "#8a8477", margin: "10px 0 0", lineHeight: 1.5, textAlign: "center", fontStyle: "italic" }}>
+          EDL signé hors plateforme entre les 2 parties
+        </p>
       )}
     </div>
   )
