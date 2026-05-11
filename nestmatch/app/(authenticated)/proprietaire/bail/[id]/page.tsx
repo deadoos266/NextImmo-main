@@ -1014,6 +1014,101 @@ export default function BailPage() {
   // V60.6 — `prete` consolidé : date début + nom bailleur + équipements ALUR ok
   const prete = !!form.dateDebut && !!form.nomBailleur && equipementsOk
 
+  // V89.2 — Bail importé (PDF signé hors plateforme) → on cache le wizard de
+  // génération qui n'a aucun sens (le bail est déjà signé). On affiche à la
+  // place une vue d'administration légère : banner PDF + accès EDL/IRL/Quittances.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const isImportedBail = typeof bien?.bail_source === "string" && (bien.bail_source as string).startsWith("imported")
+
+  if (isImportedBail) {
+    const importMeta = (bien?.import_metadata as Record<string, unknown> | null) || {}
+    const dateDebut = (bien.date_debut_bail as string | null) || (importMeta.date_debut as string | null) || null
+    const dateDebutFr = dateDebut ? new Date(dateDebut).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : null
+    const cardSx: React.CSSProperties = { background: "#fff", border: "1px solid #EAE6DF", borderRadius: 20, padding: 22, marginBottom: 16 }
+    const labelSx: React.CSSProperties = { fontSize: 10, fontWeight: 700, color: "#8a8477", textTransform: "uppercase", letterSpacing: "1.4px", margin: 0 }
+    const btnSx: React.CSSProperties = { display: "inline-block", background: "#111", color: "#fff", border: "none", borderRadius: 999, padding: "10px 22px", fontSize: 12, fontWeight: 700, fontFamily: "inherit", textDecoration: "none", textTransform: "uppercase", letterSpacing: "0.4px", cursor: "pointer" }
+    const btnGhostSx: React.CSSProperties = { ...btnSx, background: "#fff", color: "#111", border: "1px solid #EAE6DF" }
+    return (
+      <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ maxWidth: 820, margin: "0 auto", padding: isMobile ? "24px 16px 120px" : "40px 48px 120px" }}>
+          <button onClick={() => router.push("/proprietaire")}
+            style={{ fontSize: 13, color: "#8a8477", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}>
+            ← Retour à l&apos;espace propriétaire
+          </button>
+
+          <div style={{ marginTop: 16, marginBottom: 24 }}>
+            <p style={labelSx}>Bail importé</p>
+            <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: isMobile ? 28 : 36, letterSpacing: "-0.5px", margin: "4px 0 0", lineHeight: 1.1 }}>
+              {bien.titre}
+            </h1>
+            <p style={{ color: "#8a8477", marginTop: 6, fontSize: 14 }}>
+              {bien.ville}{bien.adresse ? " · " + bien.adresse : ""}
+            </p>
+          </div>
+
+          {/* Card 1 — PDF + infos */}
+          <div style={cardSx}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 14, flexWrap: "wrap", marginBottom: 14 }}>
+              <div style={{ flex: 1, minWidth: 220 }}>
+                <p style={labelSx}>PDF du bail</p>
+                <p style={{ margin: "6px 0 0", fontSize: 14, color: "#111", lineHeight: 1.55 }}>
+                  Le bail a été signé hors plateforme. Le PDF original reste votre référence juridique.
+                  {dateDebutFr && <> Bail effectif depuis le <strong>{dateDebutFr}</strong>.</>}
+                </p>
+              </div>
+              {bien.bail_pdf_url ? (
+                <a href={bien.bail_pdf_url as string} target="_blank" rel="noopener noreferrer" style={btnSx}>
+                  Voir le PDF
+                </a>
+              ) : (
+                <span style={{ fontSize: 11, color: "#a16207", padding: "8px 14px", background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 8 }}>
+                  Aucun PDF uploadé
+                </span>
+              )}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 14, paddingTop: 14, borderTop: "1px solid #F3F0EA" }}>
+              <div>
+                <p style={labelSx}>Loyer HC</p>
+                <p style={{ margin: "4px 0 0", fontSize: 16, fontWeight: 700 }}>{loyer.toLocaleString("fr-FR")} €</p>
+              </div>
+              <div>
+                <p style={labelSx}>Charges</p>
+                <p style={{ margin: "4px 0 0", fontSize: 16, fontWeight: 700 }}>{charges.toLocaleString("fr-FR")} €</p>
+              </div>
+              <div>
+                <p style={labelSx}>Total CC</p>
+                <p style={{ margin: "4px 0 0", fontSize: 16, fontWeight: 700 }}>{totalCC.toLocaleString("fr-FR")} €</p>
+              </div>
+              <div>
+                <p style={labelSx}>Locataire</p>
+                <p style={{ margin: "4px 0 0", fontSize: 13, color: "#111", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {bien.locataire_email || "—"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2 — Actions disponibles */}
+          <div style={cardSx}>
+            <p style={labelSx}>Actions de gestion locative</p>
+            <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 20, margin: "8px 0 14px" }}>
+              Que voulez-vous faire ?
+            </h2>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <a href={`/edl/${bien.id}`} style={btnGhostSx}>État des lieux</a>
+              <a href={`/proprietaire?annonce=${bien.id}#loyers`} style={btnGhostSx}>Saisir un loyer / quittance</a>
+              <a href={`/proprietaire?annonce=${bien.id}#irl`} style={btnGhostSx}>Indexer le loyer (IRL)</a>
+              <a href={`/messages?annonce=${bien.id}`} style={btnGhostSx}>Discuter avec le locataire</a>
+            </div>
+            <p style={{ marginTop: 14, fontSize: 12, color: "#8a8477", lineHeight: 1.6 }}>
+              Pour modifier un terme du bail importé (loyer, durée, clause), créez un <strong>avenant</strong> depuis l&apos;espace locataire de votre locataire. Le wizard de génération de bail est désactivé pour les baux importés.
+            </p>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main
       style={{

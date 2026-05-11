@@ -1199,16 +1199,24 @@ export default function MonLogement() {
         {bailPayload && (() => {
           const sigLocataire = signatures.find(s => s.role === "locataire")
           const sigBailleur = signatures.find(s => s.role === "bailleur")
-          const dejaSigne = !!sigLocataire
-          const doubleSigne = !!sigLocataire && !!sigBailleur
+          // V89.3 — Bail importé (PDF signé hors plateforme) → considéré
+          // comme doublement signé même sans rows bail_signatures.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const isImportedBail = (bailPayload as any)?._imported === true
+          const dejaSigne = !!sigLocataire || isImportedBail
+          const doubleSigne = isImportedBail || (!!sigLocataire && !!sigBailleur)
           return (
             <div id="mon-bail" style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 20, padding: isMobile ? 22 : 26, marginBottom: 16, boxShadow: "0 1px 2px rgba(0,0,0,0.02)", scrollMarginTop: 24 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 10, flexWrap: "wrap" }}>
                 <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, margin: 0, letterSpacing: "-0.3px", color: "#111" }}>Mon bail</h2>
                 <div style={{ display: "inline-flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  {/* V34.2 — Badge intégrité SHA-256 (caché si no_signature ou legacy) */}
-                  {dejaSigne && <IntegrityBadge annonceId={bien.id} />}
-                  {doubleSigne ? (
+                  {/* V34.2 — Badge intégrité SHA-256 (caché si no_signature, legacy, ou bail importé) */}
+                  {dejaSigne && !isImportedBail && <IntegrityBadge annonceId={bien.id} />}
+                  {isImportedBail ? (
+                    <span style={{ background: "#EEF3FB", color: "#1d4ed8", border: "1px solid #D7E3F4", padding: "4px 12px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
+                      Bail importé · PDF fourni
+                    </span>
+                  ) : doubleSigne ? (
                     <span style={{ background: "#F0FAEE", color: "#15803d", border: "1px solid #C6E9C0", padding: "4px 12px", borderRadius: 999, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px" }}>
                       Signé par les deux parties
                     </span>
@@ -1256,7 +1264,7 @@ export default function MonLogement() {
               )}
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                {!dejaSigne && bien && (
+                {!dejaSigne && bien && !isImportedBail && (
                   <button
                     onClick={() => setSignModalOpen(true)}
                     style={{ background: "#111", color: "#fff", border: "none", borderRadius: 999, padding: "11px 24px", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}
@@ -1267,7 +1275,7 @@ export default function MonLogement() {
                 <button
                   onClick={telechargerBail}
                   disabled={downloadingBail}
-                  style={{ background: "#fff", border: "1px solid #EAE6DF", color: "#111", borderRadius: 999, padding: "11px 24px", fontWeight: 600, fontSize: 12, cursor: downloadingBail ? "wait" : "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}
+                  style={{ background: isImportedBail ? "#111" : "#fff", border: isImportedBail ? "none" : "1px solid #EAE6DF", color: isImportedBail ? "#fff" : "#111", borderRadius: 999, padding: "11px 24px", fontWeight: 600, fontSize: 12, cursor: downloadingBail ? "wait" : "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}
                 >
                   {downloadingBail ? "Téléchargement…" : "Télécharger le bail (PDF)"}
                 </button>

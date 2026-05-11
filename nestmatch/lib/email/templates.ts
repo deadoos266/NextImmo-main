@@ -410,6 +410,71 @@ Cette invitation expire ${params.expiresAt}.
   }
 }
 
+/**
+ * V89 — Email envoyé au propriétaire quand son locataire accepte
+ * l'invitation pour un bail importé. Inclut une checklist post-acceptance
+ * (EDL d'entrée, premier loyer, dépôt de garantie) et un lien direct vers
+ * la fiche bail.
+ */
+export function bailImportAcceptedTemplate(params: {
+  locataireName: string
+  bienTitre: string
+  ville: string | null
+  bailUrl: string
+}): { subject: string; html: string; text: string } {
+  const contexte = params.ville
+    ? `${escapeHtml(params.bienTitre)} à ${escapeHtml(params.ville)}`
+    : escapeHtml(params.bienTitre)
+  const body = `
+    <h1 style="font-size:24px;font-weight:800;letter-spacing:-0.5px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      ${escapeHtml(params.locataireName)} a accepté votre invitation
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Le bail pour <strong style="color:${PALETTE.text};">${contexte}</strong> est désormais lié au compte KeyMatch de votre locataire.
+      Vous pouvez maintenant gérer la relation locative en ligne — quittances mensuelles, EDL, indexation IRL, échanges.
+    </p>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 18px;">
+      <tr>
+        <td style="background:${PALETTE.bg};border-radius:12px;padding:16px 18px;">
+          <p style="margin:0 0 10px;font-size:11px;font-weight:700;color:${PALETTE.textSubtle};text-transform:uppercase;letter-spacing:1px;">Prochaines étapes recommandées</p>
+          <ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.7;color:${PALETTE.text};">
+            <li><strong>État des lieux d'entrée</strong> — créez-le (ou uploadez-le) depuis la fiche du bien.</li>
+            <li><strong>Premier loyer</strong> — déclenchez la quittance dès réception du premier paiement.</li>
+            <li><strong>Dépôt de garantie</strong> — saisissez le montant dans les infos du bail (utile à la restitution).</li>
+            <li><strong>Indexation IRL</strong> — la révision annuelle deviendra disponible à la date anniversaire.</li>
+          </ul>
+        </td>
+      </tr>
+    </table>
+
+    ${button(params.bailUrl, "Ouvrir la fiche bail")}
+
+    <p style="margin:18px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
+      Le PDF du bail signé hors plateforme reste votre référence juridique. KeyMatch ne le remplace pas — il facilite simplement la gestion locative quotidienne.
+    </p>
+  `
+  const html = wrap(`${params.locataireName} a accepté votre invitation pour ${params.bienTitre}.`, body, "bailaccept")
+  const text = `Bonjour,
+
+${params.locataireName} a accepté votre invitation pour ${params.bienTitre}${params.ville ? " à " + params.ville : ""}.
+
+Prochaines étapes :
+- État des lieux d'entrée
+- Premier loyer et quittance
+- Dépôt de garantie à saisir
+- Indexation IRL (date anniversaire)
+
+Ouvrir la fiche bail : ${params.bailUrl}
+
+— L'équipe KeyMatch`
+  return {
+    subject: `${params.locataireName} a accepté votre invitation — ${params.bienTitre}`,
+    html,
+    text,
+  }
+}
+
 export function quittanceTemplate(params: {
   bienTitre: string
   ville?: string | null

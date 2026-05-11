@@ -33,9 +33,12 @@ export async function GET(req: NextRequest) {
   }
 
   // Scope : appelant = proprio OU locataire de l'annonce
+  // V89.2 — On charge aussi les champs nécessaires au fallback "bail importé"
+  // (cf audit V88 : sans ce fallback, /mon-logement n'affiche jamais le PDF
+  // importé car aucun message [BAIL_CARD] n'est créé à l'acceptance).
   const { data: ann } = await supabaseAdmin
     .from("annonces")
-    .select("proprietaire_email, locataire_email")
+    .select("proprietaire_email, locataire_email, bail_source, bail_pdf_url, titre, ville, adresse, prix, charges, surface, pieces, meuble, date_debut_bail, import_metadata")
     .eq("id", annonceId)
     .maybeSingle()
   if (!ann) {
@@ -56,18 +59,41 @@ export async function GET(req: NextRequest) {
     .limit(1)
     .maybeSingle()
 
-  if (!msg) {
-    return NextResponse.json({ ok: true, payload: null })
+  if (msg) {
+    // Strip the prefix [BAIL_CARD] et parse JSON pour le retourner directement.
+    const raw = (msg.contenu as string).slice("[BAIL_CARD]".length)
+    let payload: unknown = null
+    try {
+      payload = JSON.parse(raw)
+    } catch {
+      payload = null
+    }
+    return NextResponse.json({ ok: true, payload, createdAt: msg.created_at })
   }
 
-  // Strip the prefix [BAIL_CARD] et parse JSON pour le retourner directement.
-  const raw = (msg.contenu as string).slice("[BAIL_CARD]".length)
-  let payload: unknown = null
-  try {
-    payload = JSON.parse(raw)
-  } catch {
-    payload = null
+  // V89.2 — Fallback bail importé : pas de [BAIL_CARD] mais on synthétise un
+  // payload minimal à partir des colonnes annonces + import_metadata pour que
+  // /mon-logement puisse afficher "Mon bail" + bouton download PDF.
+  if (ann.bail_source && String(ann.bail_source).startsWith("imported")) {
+    const meta = (ann.import_metadata as Record<string, unknown> | null) || {}
+    const importedPayload = {
+      _imported: true,  // flag UI : pas de "Signer le bail", juste download
+      fichierUrl: ann.bail_pdf_url || null,
+      titreBien: ann.titre || "",
+      villeBien: ann.ville || "",
+      adresseBien: ann.adresse || "",
+      surface: ann.surface || meta.surface || null,
+      pieces: ann.pieces || meta.pieces || null,
+      meuble: ann.meuble ?? meta.meuble ?? false,
+      loyerHC: Number(ann.prix) || 0,
+      charges: Number(ann.charges) || 0,
+      dateDebut: ann.date_debut_bail || meta.date_debut || null,
+      dateSignature: meta.date_signature || null,
+      duree: meta.duree_mois || 36,
+      depotGarantie: meta.depot_garantie || 0,
+    }
+    return NextResponse.json({ ok: true, payload: importedPayload, createdAt: null })
   }
 
-  return NextResponse.json({ ok: true, payload, createdAt: msg.created_at })
+  return NextResponse.json({ ok: true, payload: null })
 }

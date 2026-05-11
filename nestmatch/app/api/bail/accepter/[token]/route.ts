@@ -19,6 +19,9 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "../../../../../lib/auth"
 import { supabaseAdmin } from "../../../../../lib/supabase-server"
+import { sendEmail } from "../../../../../lib/email/resend"
+import { bailImportAcceptedTemplate } from "../../../../../lib/email/templates"
+import { shouldSendEmailForEvent } from "../../../../../lib/notifPreferencesServer"
 
 export const runtime = "nodejs"
 
@@ -142,23 +145,41 @@ export async function POST(_req: Request, { params }: RouteParams) {
     return NextResponse.json({ ok: false, error: "Mise à jour invitation a échoué" }, { status: 500 })
   }
 
-  // Met à jour l'annonce : bail_source = imported, locataire_email = userEmail.
-  // V88.fix — `loue` n'est pas une colonne ; statut='loué' est déjà setté par
-  // /api/bail/importer au moment de la création. Pas besoin de le re-toucher.
+  // V89.1 — Met à jour l'annonce avec TOUS les champs d'état du bail.
+  // Sans ça : préavis bloqué, IRL bloquée, avenants bloqués, /mon-logement
+  // affiche "Bail en préparation", échéancier vide, etc. (cf audit V88).
+  //
+  // Pour un bail importé, on considère l'acceptance comme l'équivalent d'une
+  // double signature plateforme (le PDF est déjà signé hors KeyMatch). Donc
+  // bail_signe_* = accepted_at pour débloquer tout l'aval.
+  //
+  // date_debut_bail : vient de import_metadata.date_debut si fourni, sinon
+  // fallback sur la date du jour (au pire le proprio corrigera après).
+  const { data: annonceForMeta } = await supabaseAdmin
+    .from("annonces")
+    .select("import_metadata")
+    .eq("id", invit.annonce_id)
+    .maybeSingle()
+  const meta = (annonceForMeta?.import_metadata as Record<string, unknown> | null) || {}
+  const dateDebut = typeof meta.date_debut === "string" && meta.date_debut
+    ? meta.date_debut
+    : now.slice(0, 10)
+
   const { error: annonceErr } = await supabaseAdmin
     .from("annonces")
     .update({
       bail_source: "imported",
       locataire_email: userEmail,
+      date_debut_bail: dateDebut,
+      bail_genere_at: now,
+      bail_signe_locataire_at: now,
+      bail_signe_bailleur_at: now,
     })
     .eq("id", invit.annonce_id)
     .eq("proprietaire_email", invit.proprietaire_email)  // sécurité
 
   if (annonceErr) {
     console.error("[bail/accepter] update annonce failed", annonceErr)
-    // Erreur critique pour le locataire : sans cette mise à jour, /mon-logement
-    // ne trouvera pas l'annonce. On renvoie 500 pour qu'il puisse réessayer
-    // plutôt que de le laisser avec un compte non lié.
     return NextResponse.json({
       ok: false,
       error: "Liaison de l'annonce au compte a échoué. Réessayez ou contactez le support.",
@@ -166,20 +187,53 @@ export async function POST(_req: Request, { params }: RouteParams) {
     }, { status: 500 })
   }
 
-  // Notif cloche proprio
+  // V89.1 — Notif cloche proprio (href pointe sur la fiche bail, pas dashboard générique)
+  const proprioHref = `/proprietaire/bail/${invit.annonce_id}`
   try {
     await supabaseAdmin.from("notifications").insert([{
       user_email: invit.proprietaire_email,
       type: "bail_invitation_accepted",
       title: "Bail accepté",
       body: `${invit.locataire_email} a accepté votre invitation et rejoint la plateforme.`,
-      href: "/proprietaire",
+      href: proprioHref,
       related_id: String(invit.annonce_id),
       lu: false,
       created_at: now,
     }])
   } catch (e) {
     console.error("[bail/accepter] notif insert failed", e)
+  }
+
+  // V89.4 — Email proprio avec checklist post-acceptance (EDL, premier loyer, etc.)
+  try {
+    // Réutilise le canal `bail_actif` (audience: both, required) qui couvre
+    // sémantiquement "le bail vient de devenir actif" — pas de clé dédiée
+    // dans NOTIF_EVENTS pour le moment.
+    const allowed = await shouldSendEmailForEvent(invit.proprietaire_email, "bail_actif")
+    if (allowed) {
+      const [{ data: locProfil }, { data: annData }] = await Promise.all([
+        supabaseAdmin.from("profils").select("nom, prenom").eq("email", userEmail).maybeSingle(),
+        supabaseAdmin.from("annonces").select("titre, ville").eq("id", invit.annonce_id).maybeSingle(),
+      ])
+      const locataireName = [locProfil?.prenom, locProfil?.nom].filter(Boolean).join(" ") || invit.locataire_email
+      const base = process.env.NEXT_PUBLIC_URL || "https://keymatch-immo.fr"
+      const { subject, html, text } = bailImportAcceptedTemplate({
+        locataireName,
+        bienTitre: annData?.titre || "Logement",
+        ville: annData?.ville || null,
+        bailUrl: `${base}${proprioHref}`,
+      })
+      await sendEmail({
+        to: invit.proprietaire_email,
+        subject,
+        html,
+        text,
+        templateName: "bail_import_accepted",
+        tags: [{ name: "type", value: "bail_import_accepted" }],
+      })
+    }
+  } catch (e) {
+    console.error("[bail/accepter] proprio email failed", e)
   }
 
   return NextResponse.json({
