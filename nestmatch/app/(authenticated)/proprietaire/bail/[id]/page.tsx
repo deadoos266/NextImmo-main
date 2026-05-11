@@ -1088,20 +1088,40 @@ export default function BailPage() {
             </div>
           </div>
 
-          {/* Card 2 — Actions disponibles */}
+          {/* Card 2 — État de l'EDL */}
           <div style={cardSx}>
-            <p style={labelSx}>Actions de gestion locative</p>
+            <p style={labelSx}>État des lieux d&apos;entrée</p>
+            <p style={{ margin: "8px 0 14px", fontSize: 14, color: "#111", lineHeight: 1.6 }}>
+              {importMeta.edl_entree_deja_fait
+                ? "À l'import, vous avez indiqué que l'EDL d'entrée a déjà été signé hors plateforme. Une référence a été créée sur KeyMatch (statut « valide »). Conservez votre exemplaire papier original — il fait foi juridiquement."
+                : "Aucun EDL n'a été déclaré lors de l'import. C'est à vous, en tant que propriétaire, de l'organiser avec votre locataire (loi 89-462 art. 3-1). Vous pouvez le faire sur KeyMatch (formulaire pièce par pièce + signature électronique des 2 parties) ou hors plateforme et uploader le PDF ensuite."}
+            </p>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <a href={`/proprietaire/edl/${bien.id}?type=entree`} style={btnSx}>
+                {importMeta.edl_entree_deja_fait ? "Formaliser l'EDL sur KeyMatch" : "Créer l'EDL d'entrée"}
+              </a>
+              {importMeta.edl_entree_deja_fait && (
+                <a href={`/proprietaire/edl/${bien.id}?type=entree`} style={btnGhostSx}>
+                  Voir / modifier l&apos;EDL existant
+                </a>
+              )}
+            </div>
+          </div>
+
+          {/* Card 3 — Autres actions de gestion */}
+          <div style={cardSx}>
+            <p style={labelSx}>Autres actions de gestion locative</p>
             <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 20, margin: "8px 0 14px" }}>
               Que voulez-vous faire ?
             </h2>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <a href={`/edl/${bien.id}`} style={btnGhostSx}>État des lieux</a>
               <a href={`/proprietaire?annonce=${bien.id}#loyers`} style={btnGhostSx}>Saisir un loyer / quittance</a>
               <a href={`/proprietaire?annonce=${bien.id}#irl`} style={btnGhostSx}>Indexer le loyer (IRL)</a>
               <a href={`/messages?annonce=${bien.id}`} style={btnGhostSx}>Discuter avec le locataire</a>
+              <a href={`/proprietaire/edl/${bien.id}?type=sortie`} style={btnGhostSx}>EDL de sortie (fin de bail)</a>
             </div>
             <p style={{ marginTop: 14, fontSize: 12, color: "#8a8477", lineHeight: 1.6 }}>
-              Pour modifier un terme du bail importé (loyer, durée, clause), créez un <strong>avenant</strong> depuis l&apos;espace locataire de votre locataire. Le wizard de génération de bail est désactivé pour les baux importés.
+              Pour modifier un terme du bail importé (loyer, durée, clause), créez un <strong>avenant</strong> via la conversation avec votre locataire. Le wizard de génération de bail est désactivé pour les baux importés.
             </p>
           </div>
         </div>

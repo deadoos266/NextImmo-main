@@ -4155,6 +4155,10 @@ function MessagesInner() {
                           </span>
                         )}
                         {(() => {
+                          // V92.6 — Match% caché si bail actif : le score de
+                          // compatibilité n'a plus de sens une fois que le mec
+                          // habite le logement (bail signé/importé).
+                          if (deriveStatut(conv) === "bail") return null
                           const c = compatBadge(computeConvScore(conv))
                           if (!c) return null
                           // Style handoff : point + texte inline, pas de pill de fond.
@@ -4386,6 +4390,8 @@ function MessagesInner() {
                         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                           <p style={{ fontWeight: 700, fontSize: 14, color: "#111", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{annonceActive.titre}</p>
                           {(() => {
+                            // V92.6 — Match% caché dans header conv si bail actif
+                            if (deriveStatut(convActiveData) === "bail") return null
                             const c = compatBadge(computeConvScore(convActiveData))
                             if (!c) return null
                             // Style handoff ThreadHeader : pill fond blanc + border 33% opacity + dot
@@ -5775,7 +5781,8 @@ function MessagesInner() {
             const ann = annonceActive
             const photo = Array.isArray(ann?.photos) && ann.photos.length > 0 ? ann.photos[0] : null
             const statut = deriveStatut(convActiveData)
-            const matchPct = compatBadge(computeConvScore(convActiveData))?.pct ?? null
+            // V92.6 — Match% caché dans panel right si bail actif (mec déjà locataire)
+            const matchPct = statut === "bail" ? null : (compatBadge(computeConvScore(convActiveData))?.pct ?? null)
             // Étapes timeline dérivées du statut (handoff L489-493)
             // EDL d'entrée ajouté entre "Bail signé" et "Emménagement" — étape
             // légale obligatoire. On détecte son état via les [EDL_CARD] de la
@@ -5807,7 +5814,12 @@ function MessagesInner() {
             //   - EDL non lancé → étape 4 (Bail signé) marquée "done", étape 5 (EDL) active
             //   - EDL lancé mais non doublement signé → étape 5 active
             //   - EDL validé par les 2 parties → étape 6 (Emménagement) active
-            const bailActiveIdx = edlFullySigned ? 5 : 4
+            // V92.6 — Bail importé : tout est déjà fait historiquement. On force
+            // tous les steps en "done" sauf "Emménagement" qui est active (le
+            // mec vit déjà dedans mais la timeline a besoin d'une étape active).
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const isImportedBail = (ann as any)?.bail_source && String((ann as any).bail_source).startsWith("imported")
+            const bailActiveIdx = isImportedBail ? 5 : (edlFullySigned ? 5 : 4)
             const activeIdxByStatut: Record<StatutConv, number> = {
               contact: 0, dossier: 1, validee: 1, visite: 2, bail: bailActiveIdx, rejete: 0,
             }
