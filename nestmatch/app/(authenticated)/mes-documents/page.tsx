@@ -28,6 +28,8 @@ type AnnonceMin = {
   titre: string | null
   ville: string | null
   statut: string | null
+  bail_pdf_url: string | null  // V95.A.3 — pour lien direct PDF
+  bail_source: string | null
 }
 
 type LoyerMin = {
@@ -61,7 +63,7 @@ export default function MesDocuments() {
         .catch(() => ({ data: null }))
       // V65.2 — loyers + edl via /api server-side (préreq migration 059)
       const [{ data: actives }, { data: profil }, loyersRes, edlRes] = await Promise.all([
-        supabase.from("annonces").select("id, titre, ville, statut").eq("locataire_email", email),
+        supabase.from("annonces").select("id, titre, ville, statut, bail_pdf_url, bail_source").eq("locataire_email", email),
         profilP,
         fetch("/api/loyers/list?mine=locataire&with_quittance=true", { cache: "no-store" })
           .then(r => r.ok ? r.json() : { ok: false, loyers: [] })
@@ -109,6 +111,7 @@ export default function MesDocuments() {
     cta: string
     href: string
     bg: string
+    external?: boolean
   }> = [
     {
       eyebrow: "Identité",
@@ -119,17 +122,28 @@ export default function MesDocuments() {
       href: "/dossier",
       bg: "#fff",
     },
-    {
-      eyebrow: "Logement",
-      title: "Mon bail",
-      desc: totalAnnonces === 0
-        ? "Aucun bail actif pour le moment. Votre bail signé apparaîtra ici."
-        : "Bail électronique à valeur légale, accessible à tout moment.",
-      count: totalAnnonces > 0 ? `${totalAnnonces} bien${totalAnnonces > 1 ? "s" : ""} concerné${totalAnnonces > 1 ? "s" : ""}` : null,
-      cta: totalAnnonces > 0 ? "Voir mon logement" : "Voir les annonces",
-      href: totalAnnonces > 0 ? "/mon-logement" : "/annonces",
-      bg: "#fff",
-    },
+    (() => {
+      // V95.A.3 — Lien direct vers le PDF si bail importé avec PDF dispo
+      const annonceActuelle = annoncesActuelles[0] || null
+      const directPdfUrl = annonceActuelle?.bail_pdf_url || null
+      return {
+        eyebrow: "Logement",
+        title: "Mon bail",
+        desc: totalAnnonces === 0
+          ? "Aucun bail actif pour le moment. Votre bail signé apparaîtra ici."
+          : directPdfUrl
+            ? "PDF du bail signé à valeur légale, téléchargeable en 1 clic."
+            : "Bail électronique à valeur légale, accessible à tout moment.",
+        count: totalAnnonces > 0 ? `${totalAnnonces} bien${totalAnnonces > 1 ? "s" : ""} concerné${totalAnnonces > 1 ? "s" : ""}` : null,
+        cta: directPdfUrl
+          ? "Télécharger le PDF"
+          : totalAnnonces > 0 ? "Voir mon logement" : "Voir les annonces",
+        // V95.A.3 — si on a un PDF direct, on l'ouvre dans un nouvel onglet
+        href: directPdfUrl || (totalAnnonces > 0 ? "/mon-logement" : "/annonces"),
+        bg: "#fff",
+        external: !!directPdfUrl,
+      }
+    })(),
     {
       eyebrow: "Sortie",
       title: "État des lieux",
@@ -189,8 +203,12 @@ export default function MesDocuments() {
                   {c.count}
                 </span>
               )}
-              <Link href={c.href} style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#111", fontSize: 12, fontWeight: 700, textDecoration: "none", textTransform: "uppercase", letterSpacing: "0.6px", marginTop: 4, alignSelf: "flex-start", borderBottom: "1px solid #111", paddingBottom: 2 }}>
-                {c.cta} →
+              <Link
+                href={c.href}
+                target={c.external ? "_blank" : undefined}
+                rel={c.external ? "noopener noreferrer" : undefined}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#111", fontSize: 12, fontWeight: 700, textDecoration: "none", textTransform: "uppercase", letterSpacing: "0.6px", marginTop: 4, alignSelf: "flex-start", borderBottom: "1px solid #111", paddingBottom: 2 }}>
+                {c.cta} {c.external ? "↗" : "→"}
               </Link>
             </div>
           ))}

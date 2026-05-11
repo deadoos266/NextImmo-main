@@ -7,10 +7,28 @@ import Link from "next/link"
 import { km } from "../../../../components/ui/km"
 import { supabase } from "../../../../../lib/supabase"
 
+// V95.A.1 — Annexes ALUR (loi 89-462 art. 3 + décret 2015-587)
+type AnnexeKey = "dpe" | "erp" | "crep" | "notice_info"
+type AnnexeState = {
+  url: string | null
+  included_in_bail: boolean
+  not_required: boolean
+}
+type AnnexesAlur = Record<AnnexeKey, AnnexeState>
+
+const EMPTY_ANNEXE: AnnexeState = { url: null, included_in_bail: false, not_required: false }
+const EMPTY_ANNEXES_ALUR: AnnexesAlur = {
+  dpe: { ...EMPTY_ANNEXE },
+  erp: { ...EMPTY_ANNEXE },
+  crep: { ...EMPTY_ANNEXE, not_required: true },  // par défaut non requis (sauf < 1949)
+  notice_info: { ...EMPTY_ANNEXE },
+}
+
 interface ImporterForm {
   titre: string
   ville: string
   adresse: string
+  codePostal: string         // V95.A.2 — Code postal requis pour mentions légales
   surface: string
   pieces: string
   meuble: boolean
@@ -27,12 +45,16 @@ interface ImporterForm {
   dateEntreeReelle: string     // YYYY-MM-DD, si dejaInstalle=true
   edlEntreeDejaFait: boolean   // EDL d'entrée déjà fait hors plateforme
   loyersPassesPayes: boolean   // les loyers passés ont déjà été payés
+  // V95.A.1 — Annexes ALUR
+  annexesAlur: AnnexesAlur
+  constructionAvant1949: boolean  // détermine si CREP requis
 }
 
 const EMPTY_FORM: ImporterForm = {
   titre: "",
   ville: "",
   adresse: "",
+  codePostal: "",
   surface: "",
   pieces: "",
   meuble: false,
@@ -45,14 +67,15 @@ const EMPTY_FORM: ImporterForm = {
   locataireEmail: "",
   messageProprio: "",
   // V92.2 — Défaut "déjà installé" car c'est le CAS LE PLUS FRÉQUENT
-  // (un proprio qui IMPORTE un bail le fait quasi-toujours parce que son
-  // locataire est déjà dans les murs et qu'il veut migrer vers KeyMatch).
-  // Le proprio qui démarre un bail à zéro utilise plutôt le générateur de
-  // bail, pas l'import.
   dejaInstalle: true,
   dateEntreeReelle: "",
   edlEntreeDejaFait: true,
   loyersPassesPayes: true,
+  // V95.A.1 — Annexes ALUR (toutes en "à compléter" par défaut, sauf CREP qui
+  // est marqué not_required par défaut — l'user coche "Construction avant 1949"
+  // pour le rendre requis)
+  annexesAlur: EMPTY_ANNEXES_ALUR,
+  constructionAvant1949: false,
 }
 
 const T = {
@@ -220,6 +243,14 @@ function ImporterBailPageInner() {
       setError("Email du locataire invalide"); return
     }
     if (!form.dateDebut) { setError("Date de début du bail requise"); return }
+    // V95.A.2 — Adresse + code postal requis pour mentions légales art. 21 loi 89-462
+    if (form.adresse.trim().length < 4) { setError("Adresse du logement requise (mentions légales quittances)"); return }
+    if (!/^\d{5}$/.test(form.codePostal.trim())) { setError("Code postal à 5 chiffres requis"); return }
+    if (form.ville.trim().length < 2) { setError("Ville requise (mentions légales)"); return }
+    // V95.A.4 — Le PDF du bail est obligatoire pour un import (le bail doit
+    // exister juridiquement avant d'être importé). Sans PDF, on ne peut pas
+    // prouver l'existence du contrat.
+    if (!pdfFile) { setError("Le fichier PDF du bail est requis pour un import"); return }
 
     setSubmitting(true)
     try {
@@ -252,13 +283,24 @@ function ImporterBailPageInner() {
         }
       }
 
+      // V95.A.1 — Si CREP marqué not_required mais le user a coché
+      // constructionAvant1949, on force not_required=false
+      const annexesAlurNormalized: AnnexesAlur = {
+        ...form.annexesAlur,
+        crep: {
+          ...form.annexesAlur.crep,
+          not_required: !form.constructionAvant1949 && form.annexesAlur.crep.not_required,
+        },
+      }
+
       const res = await fetch("/api/bail/importer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           titre,
-          ville: simpleImport ? (form.ville.trim() || "À préciser") : form.ville.trim(),
-          adresse: form.adresse.trim() || undefined,
+          ville: form.ville.trim(),
+          adresse: form.adresse.trim(),
+          codePostal: form.codePostal.trim(),
           surface: Number(form.surface) || undefined,
           pieces: Number(form.pieces) || undefined,
           meuble: form.meuble,
@@ -266,6 +308,9 @@ function ImporterBailPageInner() {
           charges: Number(form.charges) || 0,
           depotGarantie: Number(form.depotGarantie) || 0,
           dateSignature: form.dateSignature || undefined,
+          // V95.A.1 — Annexes ALUR
+          annexesAlur: annexesAlurNormalized,
+          constructionAvant1949: form.constructionAvant1949,
           dateDebut: form.dateDebut || undefined,
           dureeMois: Number(form.dureeMois) || 36,
           locataireEmail: form.locataireEmail.trim().toLowerCase(),
@@ -423,22 +468,31 @@ function ImporterBailPageInner() {
 
         <form onSubmit={onSubmit} style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 20, padding: 28, display: "flex", flexDirection: "column", gap: 18 }}>
 
-          {/* V34.4 — Section "Bien" entière cachée en mode simple (ville obligatoire mais defaut "À préciser") */}
-          {!simpleImport && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
+          {/* V95.A.2 — Adresse complète TOUJOURS requise (loi 89-462 art. 21
+              mentions légales quittances). On laisse les champs surface/pièces/
+              meublé conditionnels au mode simple, mais l'adresse postale est
+              obligatoire dans les 2 modes. */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
+            {!simpleImport && (
               <Field label="Titre du bien" hint="Ex : 2 pièces Bastille 42 m²">
-                <input style={inputStyle} value={form.titre} onChange={e => update("titre", e.target.value)} placeholder="2 pièces Bastille 42 m²" maxLength={200} required={!simpleImport} />
+                <input style={inputStyle} value={form.titre} onChange={e => update("titre", e.target.value)} placeholder="2 pièces Bastille 42 m²" maxLength={200} />
               </Field>
+            )}
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <Field label="Ville">
-                  <input style={inputStyle} value={form.ville} onChange={e => update("ville", e.target.value)} placeholder="Paris" maxLength={100} required={!simpleImport} />
-                </Field>
-                <Field label="Adresse" hint="(privée — non publiée)">
-                  <input style={inputStyle} value={form.adresse} onChange={e => update("adresse", e.target.value)} placeholder="12 rue Saint-Antoine" maxLength={300} />
-                </Field>
-              </div>
+            <Field label="Adresse complète du logement *" hint="Numéro + rue. Sert aux mentions légales des quittances (loi 89-462 art. 21).">
+              <input style={inputStyle} value={form.adresse} onChange={e => update("adresse", e.target.value)} placeholder="12 rue Saint-Antoine" maxLength={300} required />
+            </Field>
 
+            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: 12 }}>
+              <Field label="Code postal *">
+                <input style={inputStyle} value={form.codePostal} onChange={e => update("codePostal", e.target.value.replace(/\D/g, "").slice(0, 5))} placeholder="75011" maxLength={5} required />
+              </Field>
+              <Field label="Ville *">
+                <input style={inputStyle} value={form.ville} onChange={e => update("ville", e.target.value)} placeholder="Paris" maxLength={100} required />
+              </Field>
+            </div>
+
+            {!simpleImport && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
                 <Field label="Surface (m²)">
                   <input style={inputStyle} type="number" min={0} max={2000} value={form.surface} onChange={e => update("surface", e.target.value)} placeholder="42" />
@@ -453,8 +507,8 @@ function ImporterBailPageInner() {
                   </select>
                 </Field>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {!simpleImport && <div style={{ height: 1, background: T.line, margin: "4px 0" }} />}
 
@@ -566,12 +620,11 @@ function ImporterBailPageInner() {
             </div>
           )}
 
-          {/* V34.4 — Upload PDF visible dans les 2 modes (essentiel en mode simple). */}
+          {/* V95.A.4 — Upload PDF OBLIGATOIRE (le bail importé doit exister
+              juridiquement avant import — sans PDF, on ne peut pas le prouver). */}
           <Field
-            label={simpleImport ? "Bail PDF (déjà signé)" : "Bail PDF signé (optionnel)"}
-            hint={simpleImport
-              ? "Glisse ton fichier ou clique pour sélectionner. Le PDF est uploadé sur Supabase Storage et accessible au locataire."
-              : "Si vous avez déjà un PDF signé hors plateforme, vous pouvez le joindre ici. Sinon laissez vide."}
+            label="Bail PDF signé *"
+            hint="Glisse ton fichier ou clique pour sélectionner. Le PDF est uploadé sur Supabase Storage et accessible au locataire. Le bail PDF est OBLIGATOIRE pour un import (preuve juridique)."
           >
             <input
               type="file"
@@ -590,6 +643,59 @@ function ImporterBailPageInner() {
               </p>
             )}
           </Field>
+
+          {/* V95.A.1 — Annexes ALUR obligatoires (loi 89-462 art. 3) */}
+          <div style={{ height: 1, background: T.line, margin: "4px 0" }} />
+          <div>
+            <p style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: 0 }}>Annexes ALUR · Loi 89-462 art. 3</p>
+            <p style={{ fontSize: 12, color: T.muted, margin: "6px 0 14px", lineHeight: 1.55 }}>
+              Pour chaque annexe : cochez si elle est déjà intégrée dans le PDF principal, sinon uploadez-la séparément. Les annexes manquantes peuvent invalider certaines clauses du bail.
+            </p>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: T.ink, marginBottom: 12, padding: "8px 12px", background: "#FBF6EA", border: "1px solid #EADFC6", borderRadius: 10 }}>
+              <input
+                type="checkbox"
+                checked={form.constructionAvant1949}
+                onChange={e => update("constructionAvant1949", e.target.checked)}
+                style={{ accentColor: T.ink }}
+              />
+              Le logement a été construit <strong>avant 1949</strong> (rend le CREP obligatoire)
+            </label>
+
+            {(["dpe","erp","crep","notice_info"] as const).map(key => {
+              const annexe = form.annexesAlur[key]
+              const required: boolean = key === "crep" ? form.constructionAvant1949 : true
+              const labels: Record<typeof key, { title: string; sub: string }> = {
+                dpe: { title: "DPE — Diagnostic de Performance Énergétique", sub: "Obligatoire depuis 2007 (loi du 13 juillet 2005)" },
+                erp: { title: "ERP — État des Risques et Pollutions", sub: "Obligatoire si zone à risque (sismique, inondation, etc.)" },
+                crep: { title: "CREP — Constat Risque d'Exposition au Plomb", sub: form.constructionAvant1949 ? "Obligatoire (construction avant 1949)" : "Optionnel (construction après 1949)" },
+                notice_info: { title: "Notice d'information du locataire", sub: "Décret 2015-587 — résumé droits et obligations" },
+              }
+              return (
+                <div key={key} style={{ border: `1px solid ${T.line}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, background: T.card }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 8, flexWrap: "wrap" }}>
+                    <div style={{ flex: 1, minWidth: 220 }}>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: T.ink }}>
+                        {labels[key].title} {required && <span style={{ color: "#b91c1c" }}>*</span>}
+                      </p>
+                      <p style={{ margin: "2px 0 0", fontSize: 11, color: T.muted }}>{labels[key].sub}</p>
+                    </div>
+                  </div>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 12, color: T.ink }}>
+                    <input
+                      type="checkbox"
+                      checked={annexe.included_in_bail}
+                      onChange={e => update("annexesAlur", {
+                        ...form.annexesAlur,
+                        [key]: { ...annexe, included_in_bail: e.target.checked },
+                      })}
+                      style={{ accentColor: T.ink }}
+                    />
+                    Annexe déjà incluse dans le PDF principal du bail
+                  </label>
+                </div>
+              )
+            })}
+          </div>
 
           {!simpleImport && (
             <Field label="Message d'accompagnement (optionnel)" hint="Quelques mots pour mettre votre locataire en confiance — affichés dans l'email d'invitation.">

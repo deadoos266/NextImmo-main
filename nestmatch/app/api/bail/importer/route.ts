@@ -29,10 +29,24 @@ import { checkRateLimitAsync, getClientIp } from "../../../../lib/rateLimit"
 
 export const runtime = "nodejs"
 
+// V95.A.1 — Annexes ALUR
+type AnnexeState = {
+  url: string | null
+  included_in_bail: boolean
+  not_required: boolean
+}
+type AnnexesAlur = {
+  dpe?: AnnexeState
+  erp?: AnnexeState
+  crep?: AnnexeState
+  notice_info?: AnnexeState
+}
+
 interface ImporterBody {
   titre: string
   ville: string
   adresse?: string
+  codePostal?: string         // V95.A.2
   loyerHC: number
   charges?: number
   surface?: number
@@ -45,14 +59,15 @@ interface ImporterBody {
   depotGarantie?: number
   messageProprio?: string
   // V88.1 — URL Supabase Storage du PDF déjà uploadé côté client
-  // (bucket `baux/{proprio}/import-*.pdf`). Persisté dans
-  // import_metadata.pdf_url + annonces.bail_pdf_url pour affichage ultérieur.
   pdfFichierUrl?: string
   // V89.8 — Situation actuelle du locataire au moment de l'import
   dejaInstalle?: boolean
   dateEntreeReelle?: string  // YYYY-MM-DD
   loyersPassesPayes?: boolean
   edlEntreeDejaFait?: boolean
+  // V95.A.1 — Annexes ALUR
+  annexesAlur?: AnnexesAlur
+  constructionAvant1949?: boolean
 }
 
 function isValidEmail(s: string): boolean {
@@ -107,6 +122,7 @@ export async function POST(req: NextRequest) {
   const titre = sanitizeString(body.titre, 200)
   const ville = sanitizeString(body.ville, 100)
   const adresse = sanitizeString(body.adresse, 300)
+  const codePostal = sanitizeString(body.codePostal, 10)
   const locataireEmail = sanitizeString(body.locataireEmail, 200).toLowerCase()
   const messageProprio = sanitizeString(body.messageProprio, 800)
   const loyerHC = Math.max(0, Math.min(50000, Number(body.loyerHC) || 0))
@@ -122,6 +138,13 @@ export async function POST(req: NextRequest) {
   if (ville.length < 2) {
     return NextResponse.json({ ok: false, error: "Ville requise" }, { status: 400 })
   }
+  // V95.A.2 — Adresse + code postal requis pour mentions légales art. 21
+  if (adresse.length < 4) {
+    return NextResponse.json({ ok: false, error: "Adresse du logement requise (mentions légales quittances)" }, { status: 400 })
+  }
+  if (!/^\d{5}$/.test(codePostal)) {
+    return NextResponse.json({ ok: false, error: "Code postal à 5 chiffres requis" }, { status: 400 })
+  }
   if (loyerHC < 1) {
     return NextResponse.json({ ok: false, error: "Loyer hors charges requis" }, { status: 400 })
   }
@@ -130,6 +153,10 @@ export async function POST(req: NextRequest) {
   }
   if (locataireEmail === proprioEmail) {
     return NextResponse.json({ ok: false, error: "Vous ne pouvez pas vous inviter vous-même" }, { status: 400 })
+  }
+  // V95.A.4 — Le PDF du bail est OBLIGATOIRE pour un import (preuve juridique)
+  if (typeof body.pdfFichierUrl !== "string" || !body.pdfFichierUrl.trim()) {
+    return NextResponse.json({ ok: false, error: "Le fichier PDF du bail est requis pour un import" }, { status: 400 })
   }
 
   // Vérifie si une invitation pending existe déjà pour cette paire
@@ -165,18 +192,35 @@ export async function POST(req: NextRequest) {
   const loyersPassesPayes = dejaInstalle && body.loyersPassesPayes === true
   const edlEntreeDejaFait = dejaInstalle && body.edlEntreeDejaFait === true
 
+  // V95.A.1 — Sanitize annexes ALUR (chaque annexe = {url, included_in_bail, not_required})
+  const ANNEXE_KEYS = ["dpe", "erp", "crep", "notice_info"] as const
+  const annexesAlurSafe: AnnexesAlur = {}
+  for (const k of ANNEXE_KEYS) {
+    const a = body.annexesAlur?.[k]
+    if (a && typeof a === "object") {
+      annexesAlurSafe[k] = {
+        url: typeof a.url === "string" && /^https?:\/\/[^\s]+$/.test(a.url) ? a.url.slice(0, 1000) : null,
+        included_in_bail: a.included_in_bail === true,
+        not_required: a.not_required === true,
+      }
+    }
+  }
+  const constructionAvant1949 = body.constructionAvant1949 === true
+
   // Crée l'annonce (masquée tant que pas acceptée)
   const importMetadata: Record<string, unknown> = {
     date_signature: body.dateSignature || null,
     date_debut: body.dateDebut || null,
     duree_mois: dureeMois,
     depot_garantie: depotGarantie,
+    code_postal: codePostal,  // V95.A.2
     surface,
     pieces,
     meuble: !!body.meuble,
     imported_at: new Date().toISOString(),
     imported_by: proprioEmail,
     pdf_url: pdfUrlSafe,  // V88.1
+    construction_avant_1949: constructionAvant1949,  // V95.A.1
     // V89.8 — Pour reconstituer l'historique à l'acceptance
     deja_installe: dejaInstalle,
     date_entree_reelle: dateEntreeReelle,
@@ -198,6 +242,8 @@ export async function POST(req: NextRequest) {
       proprietaire_email: proprioEmail,
       bail_source: "imported_pending",
       import_metadata: importMetadata,
+      // V95.A.1 — Annexes ALUR (loi 89-462 art. 3)
+      annexes_alur: annexesAlurSafe,
       // V88.1 — bail_pdf_url (column ajoutée par migration 069) — pré-rempli
       // avec le PDF importé pour qu'il s'affiche dans le wizard /proprietaire/bail/[id].
       bail_pdf_url: pdfUrlSafe,
