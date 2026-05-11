@@ -7,6 +7,7 @@ import { useRole } from "../providers"
 import { supabase } from "../../lib/supabase"
 import { useResponsive } from "../hooks/useResponsive"
 import { useUserHousingState } from "../hooks/useUserHousingState"
+import { useFocusTrap } from "../hooks/useFocusTrap"
 import Logo from "./Logo"
 import NotificationBell from "./NotificationBell"
 import RoleSwitchToggle from "./RoleSwitchToggle"
@@ -266,6 +267,10 @@ export default function Navbar() {
   // (a11y : leur permet d'ouvrir avec espace/enter sur le burger puis de
   // refermer avec espace/enter ou Esc sans tab-search).
   const drawerCloseRef = useRef<HTMLButtonElement | null>(null)
+  // V82.1 — focus trap pour le drawer mobile (a11y audit V81.29 HIGH #5).
+  // Le hook handle : Tab/Shift+Tab cycle interne + focus return à fermeture.
+  // ESC + body scroll lock + focus initial sont déjà gérés ci-dessus (V72/V73).
+  const drawerRef = useFocusTrap<HTMLDivElement>(mobileOpen)
   useEffect(() => {
     if (!mobileOpen) return
     const t = setTimeout(() => drawerCloseRef.current?.focus(), 320) // apres l'animation slide-in
@@ -781,6 +786,7 @@ export default function Navbar() {
             }}
           />
           <div
+            ref={drawerRef}
             role="dialog"
             aria-modal={mobileOpen}
             aria-hidden={!mobileOpen}
