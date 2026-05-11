@@ -23,6 +23,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
+import { withCronLogging } from "@/lib/cron/withCronLogging"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { listScenarios, readScenarioFile } from "@/lib/qa/storage"
 import { parseScenario } from "@/lib/qa/parser"
@@ -30,7 +31,7 @@ import { parseScenario } from "@/lib/qa/parser"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-export async function GET(req: NextRequest) {
+export const GET = withCronLogging("qa-daily-run", null, async function cronGET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET
   const auth = req.headers.get("authorization")
   if (process.env.NODE_ENV === "production" && (!cronSecret || auth !== `Bearer ${cronSecret}`)) {
@@ -107,4 +108,4 @@ export async function GET(req: NextRequest) {
     duration_ms: Date.now() - t0,
     note: "Runs en status='running'. Un runner externe doit exécuter Playwright et PATCH les résultats via /api/qa/runs/[id].",
   })
-}
+})

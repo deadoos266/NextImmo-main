@@ -11,6 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
+import { withCronLogging } from "@/lib/cron/withCronLogging"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { joursAvantFinPreavis, jalonNotif } from "@/lib/preavis"
 
@@ -23,7 +24,7 @@ interface AnnonceWithPreavis {
   preavis_fin_calculee: string | null
 }
 
-export async function GET(req: NextRequest) {
+export const GET = withCronLogging("preavis-jalons", null, async function cronGET(req: NextRequest) {
   const secret = process.env.CRON_SECRET
   const auth = req.headers.get("authorization")
   if (secret && auth !== `Bearer ${secret}` && process.env.NODE_ENV === "production") {
@@ -150,4 +151,4 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true, stats, today: todayIso })
-}
+})

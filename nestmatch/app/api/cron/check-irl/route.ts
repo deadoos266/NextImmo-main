@@ -13,6 +13,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
+import { withCronLogging } from "@/lib/cron/withCronLogging"
 import { IRL_HISTORIQUE } from "@/lib/irl"
 
 function expectedTrimestre(now: Date = new Date()): { annee: number; trimNum: number; trimLabel: string } {
@@ -24,7 +25,7 @@ function expectedTrimestre(now: Date = new Date()): { annee: number; trimNum: nu
   return { annee: y - 1, trimNum: 4, trimLabel: `T4 ${y - 1}` }
 }
 
-export async function GET(req: NextRequest) {
+export const GET = withCronLogging("check-irl", null, async function cronGET(req: NextRequest) {
   const secret = process.env.CRON_SECRET
   const auth = req.headers.get("authorization")
   // Vercel cron envoie Authorization: Bearer <CRON_SECRET>
@@ -58,4 +59,4 @@ export async function GET(req: NextRequest) {
     expected: expected.trimLabel,
     message,
   })
-}
+})

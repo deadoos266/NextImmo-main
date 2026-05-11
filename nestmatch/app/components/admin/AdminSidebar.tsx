@@ -42,26 +42,26 @@ const SECTIONS: Section[] = [
   {
     title: "Données",
     items: [
-      { href: "/admin/users", label: "Utilisateurs", icon: "○", comingSoon: true },
-      { href: "/admin/annonces", label: "Annonces", icon: "▣", comingSoon: true },
-      { href: "/admin/baux", label: "Baux", icon: "≡", comingSoon: true },
-      { href: "/admin/loyers", label: "Loyers", icon: "€", comingSoon: true },
+      { href: "/admin/users", label: "Utilisateurs", icon: "○" },
+      { href: "/admin/annonces", label: "Annonces", icon: "▣" },
+      { href: "/admin/baux", label: "Baux", icon: "≡" },
+      { href: "/admin/loyers", label: "Loyers", icon: "€" },
     ],
   },
   {
     title: "Système",
     items: [
-      { href: "/admin/crons", label: "Crons", icon: "⟳", comingSoon: true },
+      { href: "/admin/crons", label: "Crons", icon: "⟳" },
       { href: "/admin/bugs", label: "Bug reports", icon: "✗" },
-      { href: "/admin/emails", label: "Emails", icon: "✉", comingSoon: true },
-      { href: "/admin/sessions", label: "Sessions", icon: "⚭", comingSoon: true },
+      { href: "/admin/emails", label: "Emails", icon: "✉" },
+      { href: "/admin/sessions", label: "Sessions", icon: "⚭" },
     ],
   },
   {
     title: "Outils",
     items: [
       { href: "/admin/logos", label: "Logos", icon: "◆" },
-      { href: "/admin/settings", label: "Settings", icon: "⚙", comingSoon: true },
+      { href: "/admin/settings", label: "Settings", icon: "⚙" },
     ],
   },
 ]

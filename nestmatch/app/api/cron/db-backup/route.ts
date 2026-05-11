@@ -24,6 +24,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
+import { withCronLogging } from "@/lib/cron/withCronLogging"
 import { supabaseAdmin } from "@/lib/supabase-server"
 
 export const runtime = "nodejs"
@@ -49,7 +50,7 @@ const TABLES_TO_BACKUP = [
 const RETENTION_DAYS = 7
 const BUCKET = "backups"
 
-export async function GET(req: NextRequest) {
+export const GET = withCronLogging("db-backup", null, async function cronGET(req: NextRequest) {
   const secret = process.env.CRON_SECRET
   const auth = req.headers.get("authorization")
   if (secret && auth !== `Bearer ${secret}`) {
@@ -125,4 +126,4 @@ export async function GET(req: NextRequest) {
     purgedFolders,
     results,
   })
-}
+})
