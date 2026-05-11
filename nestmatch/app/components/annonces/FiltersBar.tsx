@@ -2,6 +2,8 @@
 import Link from "next/link"
 import FilterPopover from "../ui/FilterPopover"
 import CityAutocomplete from "../CityAutocomplete"
+// V82.4 — design tokens migration : km.* au lieu de hex hardcoded
+import { km } from "../ui/km"
 
 /**
  * Barre horizontale sticky sous le header éditorial de /annonces.
@@ -269,9 +271,9 @@ export default function FiltersBar(props: FiltersBarProps) {
                   type="button"
                   onClick={() => setBudgetMaxFiltre(v)}
                   style={{
-                    background: budgetMaxFiltre === v ? "#111" : "white",
+                    background: budgetMaxFiltre === v ? km.ink : "white",
                     color: budgetMaxFiltre === v ? "white" : "#666",
-                    border: `1px solid ${budgetMaxFiltre === v ? "#111" : "#EAE6DF"}`,
+                    border: `1px solid ${budgetMaxFiltre === v ? km.ink : km.line}`,
                     borderRadius: 999,
                     padding: "5px 12px",
                     fontSize: 12,
@@ -308,9 +310,9 @@ export default function FiltersBar(props: FiltersBarProps) {
                   aria-valuemin={0}
                   aria-valuemax={100}
                   aria-valuenow={scoreMin}
-                  style={{ flex: 1, accentColor: "#111" }}
+                  style={{ flex: 1, accentColor: km.ink }}
                 />
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#111", minWidth: 52, textAlign: "right" }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: km.ink, minWidth: 52, textAlign: "right" }}>
                   {scoreMin > 0 ? `≥ ${scoreMin}%` : "Tous"}
                 </span>
               </div>
@@ -338,7 +340,7 @@ export default function FiltersBar(props: FiltersBarProps) {
               alignItems: "center",
               gap: 6,
               background: "#a16207",
-              color: "#fff",
+              color: km.white,
               border: "1px solid #a16207",
               borderRadius: 999,
               padding: "8px 14px",
@@ -367,8 +369,8 @@ export default function FiltersBar(props: FiltersBarProps) {
               display: "inline-flex",
               alignItems: "center",
               gap: 6,
-              background: "#111",
-              color: "#fff",
+              background: km.ink,
+              color: km.white,
               border: "1px solid #111",
               borderRadius: 999,
               padding: "8px 14px",
@@ -405,8 +407,8 @@ export default function FiltersBar(props: FiltersBarProps) {
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "#fff",
-            color: "#111",
+            background: km.white,
+            color: km.ink,
             border: "1px solid #EAE6DF",
             borderRadius: 999,
             width: 44,
@@ -436,8 +438,8 @@ export default function FiltersBar(props: FiltersBarProps) {
           alignItems: "center",
           gap: isMobile ? 4 : 8,
           background: "white",
-          color: "#111",
-          border: `1px solid ${activeFilterCount > 0 ? "#111" : "#EAE6DF"}`,
+          color: km.ink,
+          border: `1px solid ${activeFilterCount > 0 ? km.ink : km.line}`,
           borderRadius: 999,
           padding: isMobile ? "8px 12px" : "8px 18px",
           fontSize: 13,
@@ -457,7 +459,7 @@ export default function FiltersBar(props: FiltersBarProps) {
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "#111",
+              background: km.ink,
               color: "white",
               borderRadius: 999,
               minWidth: 20,
@@ -493,7 +495,7 @@ export default function FiltersBar(props: FiltersBarProps) {
               background: "white",
               fontSize: 12,
               fontWeight: 600,
-              color: "#111",
+              color: km.ink,
               cursor: "pointer",
               fontFamily: "inherit",
               appearance: "none",
@@ -537,7 +539,7 @@ export default function FiltersBar(props: FiltersBarProps) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                background: view === "list" ? "#111" : "transparent",
+                background: view === "list" ? km.ink : "transparent",
                 color: view === "list" ? "white" : "#666",
                 border: "none",
                 borderRadius: 999,
@@ -559,7 +561,7 @@ export default function FiltersBar(props: FiltersBarProps) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                background: view === "grid" ? "#111" : "transparent",
+                background: view === "grid" ? km.ink : "transparent",
                 color: view === "grid" ? "white" : "#666",
                 border: "none",
                 borderRadius: 999,

@@ -6,6 +6,8 @@ import { useRole } from "../providers"
 import { useUserHousingState } from "../hooks/useUserHousingState"
 import GatedAction, { type GatedActionReason } from "./ui/GatedAction"
 import Logo from "./Logo"
+// V82.4 — design tokens migration
+import { km } from "./ui/km"
 
 /**
  * Footer — restyle éditorial issu du design system handoff (2026-04-20).
@@ -75,20 +77,20 @@ export default function Footer() {
   const head: React.CSSProperties = {
     fontSize: 11,
     fontWeight: 700,
-    color: "#111",
+    color: km.ink,
     textTransform: "uppercase",
     letterSpacing: "1.4px",
     marginBottom: 4,
   }
   // Handlers hover partagés — évite de dupliquer 20× inline.
-  const hoverInk = (e: React.MouseEvent<HTMLAnchorElement>) => { e.currentTarget.style.color = "#111" }
+  const hoverInk = (e: React.MouseEvent<HTMLAnchorElement>) => { e.currentTarget.style.color = km.ink }
   const hoverMeta = (e: React.MouseEvent<HTMLAnchorElement>) => { e.currentTarget.style.color = "#666" }
   const hoverSoft = (e: React.MouseEvent<HTMLAnchorElement>) => { e.currentTarget.style.color = "#888" }
 
   return (
     <footer style={{
-      background: "#F7F4EF",
-      borderTop: "1px solid #EAE6DF",
+      background: km.beige,
+      borderTop: `1px solid ${km.line}`,
       fontFamily: "'DM Sans', sans-serif",
       marginTop: isMobile ? 40 : 80,
       position: "relative",
@@ -141,7 +143,7 @@ export default function Footer() {
           gap: 14,
           paddingBottom: isMobile ? 24 : 32,
           marginBottom: isMobile ? 32 : 48,
-          borderBottom: "1px solid #EAE6DF",
+          borderBottom: `1px solid ${km.line}`,
         }}>
           <Logo variant="footer" asLink={false} />
         </div>
@@ -230,7 +232,7 @@ export default function Footer() {
 
       {/* Barre basse : copyright + liens légaux (Logo retiré — il est en tête) */}
       <div style={{
-        borderTop: "1px solid #EAE6DF",
+        borderTop: `1px solid ${km.line}`,
         padding: isMobile ? "20px 20px" : "24px 48px",
         maxWidth: 1200,
         margin: "0 auto",

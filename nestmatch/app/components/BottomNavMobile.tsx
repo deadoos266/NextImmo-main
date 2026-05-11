@@ -8,6 +8,8 @@ import { useResponsive } from "../hooks/useResponsive"
 import { Z_INDEX } from "../../lib/zIndex"
 import { supabase } from "../../lib/supabase"
 import BottomNavSheet from "./BottomNavSheet"
+// V82.4 — design tokens migration
+import { km } from "./ui/km"
 
 /**
  * V73.9 — bottom navigation mobile pour les pages authentifiées.
@@ -209,7 +211,7 @@ export default function BottomNavMobile() {
         bottom: 0,
         zIndex: Z_INDEX.bottomNav,
         background: "white",
-        borderTop: "1px solid #EAE6DF",
+        borderTop: `1px solid ${km.line}`,
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
         // Compositing GPU pour éviter le re-layout pendant le scroll iOS.
         transform: "translate3d(0, 0, 0)",
@@ -230,7 +232,7 @@ export default function BottomNavMobile() {
             alignItems: "center",
             justifyContent: "center",
             gap: 2,
-            color: active ? "#111" : "#8a8477",
+            color: active ? km.ink : km.muted,
             fontSize: 11,
             fontWeight: active ? 700 : 500,
             textDecoration: "none",
