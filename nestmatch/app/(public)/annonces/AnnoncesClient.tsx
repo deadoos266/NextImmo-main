@@ -228,8 +228,12 @@ const MOBILE_BREAKPOINT = 768
 //   un viewport 1280×900 avec aspect 4/5). +12 par chunk (sentinel scroll).
 //   sessionStorage : on persiste l'offset + scrollY par querystring pour que
 //   le user qui clique sur une annonce + revient atterrisse à sa position.
-const PAGE_INITIAL = 16
-const PAGE_INCREMENT = 12
+// V91 — bump default batch sizes pour matcher SeLoger / Logic-Immo
+//  - Avant : 16 / 12 → trop petit, user a l'impression "y a que 20 annonces"
+//  - Après : 60 initiales (couvre 1 grand viewport desktop), +40 par incrément.
+//  Pour 189 annonces : 60 → 100 → 140 → 189 = 4 scrolls max au lieu de ~15.
+const PAGE_INITIAL = 60
+const PAGE_INCREMENT = 40
 
 // ═══════════════════════════════════════════════════════════════════════
 // Entry — délégation server→client sans Suspense (prop initialSearchParams)
@@ -1146,35 +1150,65 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   // V90 — Fix infinite scroll mode Carte : le vrai scroll est dans un inner
   // div (overflowY:auto), pas dans listScrollerRef (outer = overflow:hidden).
   // Sans cette ref, IntersectionObserver mettait root sur un container qui ne
-  // scrollait pas → sentinel jamais détecté → liste plafonnée à PAGE_INITIAL (16).
+  // scrollait pas → sentinel jamais détecté → liste plafonnée à PAGE_INITIAL.
   const listInnerScrollRef = useRef<HTMLDivElement | null>(null)
+
+  // Loader commun (IO ou scroll fallback) — évite la duplication.
+  const loadMore = useRef<() => void>(() => {})
+  loadMore.current = () => {
+    if (displayCount >= filteredLen) return
+    if (isAppending) return
+    setIsAppending(true)
+    setTimeout(() => {
+      setDisplayCount(c => Math.min(c + PAGE_INCREMENT, filteredLen))
+      setIsAppending(false)
+    }, 100)
+  }
+
   useEffect(() => {
     if (!sentinelRef.current) return
     if (displayCount >= filteredLen) return
     const target = sentinelRef.current
     // root = scroller INNER de la liste si dispo (mode liste+carte desktop scroll isolé),
     // sinon viewport (mode grille document scroll).
-    // gridMode déclaré ci-dessous mais on inline ici pour éviter une TDZ.
     const isGrid = view === "grid"
     const root = !isGrid && !isSmall ? listInnerScrollRef.current : null
     const observer = new IntersectionObserver(
       entries => {
-        const entry = entries[0]
-        if (entry.isIntersecting) {
-          setIsAppending(true)
-          // setTimeout 100ms pour laisser le skeleton apparaître (UX feedback).
-          // Sinon le bump est trop rapide à voir, l'user a l'impression que rien
-          // ne charge même quand de nouvelles cards arrivent.
-          setTimeout(() => {
-            setDisplayCount(c => Math.min(c + PAGE_INCREMENT, filteredLen))
-            setIsAppending(false)
-          }, 100)
+        if (entries[0]?.isIntersecting) {
+          loadMore.current()
         }
       },
-      { root, rootMargin: "200px", threshold: 0.1 }
+      { root, rootMargin: "300px", threshold: 0 }
     )
     observer.observe(target)
     return () => observer.disconnect()
+  }, [displayCount, filteredLen, view, isSmall])
+
+  // V91 — Fallback scroll listener : si IntersectionObserver foire (timing
+  // de mount du sentinel, root pas encore prêt, etc.), on déclenche aussi
+  // via le scroll natif quand on est près du bas du container.
+  // Belt-and-suspenders : avec V90 + ce fallback, la pagination ne peut
+  // plus être bloquée à 16 entrées.
+  useEffect(() => {
+    if (displayCount >= filteredLen) return
+    const isGrid = view === "grid"
+    const scroller = !isGrid && !isSmall ? listInnerScrollRef.current : null
+    if (!scroller) {
+      // Mode grille ou mobile → scroll sur window
+      const onWindowScroll = () => {
+        const nearBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 600
+        if (nearBottom) loadMore.current()
+      }
+      window.addEventListener("scroll", onWindowScroll, { passive: true })
+      return () => window.removeEventListener("scroll", onWindowScroll)
+    }
+    const onScroll = () => {
+      const nearBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 600
+      if (nearBottom) loadMore.current()
+    }
+    scroller.addEventListener("scroll", onScroll, { passive: true })
+    return () => scroller.removeEventListener("scroll", onScroll)
   }, [displayCount, filteredLen, view, isSmall])
 
   // sessionStorage : restaure scroll position quand le user revient depuis
