@@ -10,6 +10,7 @@ import { joursRetardLoyer } from "../../../lib/loyerHelpers"
 import { BRAND } from "../../../lib/brand"
 import { drawLogoPDF } from "../../../lib/brandPDF"
 import { computeBailTimeline } from "../../../lib/bailTimeline"
+import ImportedBailWidget from "../../components/ui/ImportedBailWidget"
 import { projeterEcheancierBail, prochaineEcheance } from "../../../lib/loyersProjection"
 import BailTimeline from "../../components/ui/BailTimeline"
 import BailSignatureModal from "../../components/BailSignatureModal"
@@ -47,6 +48,9 @@ type Bien = {
   bail_signe_locataire_at?: string | null
   bail_signe_bailleur_at?: string | null
   bail_relance_locataire_at?: string | null
+  // V89.7 — Bail importé (PDF signé hors plateforme)
+  bail_source?: string | null
+  bail_pdf_url?: string | null
   meuble?: boolean | null
   // V34.5 — Préavis
   preavis_donne_par?: "locataire" | "proprietaire" | null
@@ -637,9 +641,31 @@ export default function MonLogement() {
           </div>
         )}
 
-        <div style={{ marginBottom: 24 }}>
-          <BailTimeline steps={timelineSteps} />
-        </div>
+        {/* V89.7 — Bail importé : widget dédié au lieu de la timeline 4 étapes.
+            La timeline n'a pas de sens pour un bail signé hors plateforme
+            (signature/EDL/loyers peuvent tous être déjà faits historiquement). */}
+        {(() => {
+          const isImportedBail = bien.bail_source === "imported" || bien.bail_source === "imported_pending"
+          if (isImportedBail) {
+            const hasEdlEntree = edls.some((e: { type?: string; statut?: string }) => e.type === "entree" && e.statut === "valide")
+            const hasLoyerConfirme = loyers.some((l: { statut?: string }) => l.statut === "confirmé")
+            return (
+              <ImportedBailWidget
+                bienId={bien.id}
+                dateDebut={bien.date_debut_bail}
+                bailPdfUrl={bien.bail_pdf_url || null}
+                hasEdlEntree={hasEdlEntree}
+                hasLoyerConfirme={hasLoyerConfirme}
+                role="locataire"
+              />
+            )
+          }
+          return (
+            <div style={{ marginBottom: 24 }}>
+              <BailTimeline steps={timelineSteps} />
+            </div>
+          )
+        })()}
 
         {/* V36.3 — Section Avenants (audit V35 R35.1). Affiche les avenants
             actifs/proposés/signés. Filtré : on cache les "annule" (sauf si

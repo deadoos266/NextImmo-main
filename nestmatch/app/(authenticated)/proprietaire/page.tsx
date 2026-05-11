@@ -16,6 +16,7 @@ import { useUndo } from "../../components/ui/useUndo"
 import { postNotif } from "../../../lib/notificationsClient"
 import { computeBailTimeline } from "../../../lib/bailTimeline"
 import BailTimeline from "../../components/ui/BailTimeline"
+import ImportedBailWidget from "../../components/ui/ImportedBailWidget"
 import TutoProprio from "../../components/bail/TutoProprio"
 import RelouerModal from "../../components/baux/RelouerModal"
 import Image from "next/image"
@@ -1393,7 +1394,19 @@ export default function Proprietaire() {
                         })()}
                       </div>
                     </div>
-                    <BailTimeline steps={timelineSteps} />
+                    {/* V89.7 — Bail importé : widget dédié */}
+                    {(b.bail_source === "imported" || b.bail_source === "imported_pending") ? (
+                      <ImportedBailWidget
+                        bienId={b.id}
+                        dateDebut={b.date_debut_bail}
+                        bailPdfUrl={b.bail_pdf_url || null}
+                        hasEdlEntree={edlsBien.some((e: { type?: string; statut?: string }) => e.type === "entree" && e.statut === "valide")}
+                        hasLoyerConfirme={(loyersBien || []).some((l: { statut?: string }) => l.statut === "confirmé")}
+                        role="proprietaire"
+                      />
+                    ) : (
+                      <BailTimeline steps={timelineSteps} />
+                    )}
                   </div>
                 )
               })
