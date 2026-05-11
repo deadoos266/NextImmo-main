@@ -13,6 +13,7 @@ import NotificationBell from "./NotificationBell"
 import RoleSwitchToggle from "./RoleSwitchToggle"
 import { km } from "./ui/km"
 import GatedAction, { type GatedActionReason } from "./ui/GatedAction"
+import AdminPill from "./admin/AdminPill"
 
 // ─── Drawer mobile : helpers de style des items menu (Paul 2026-04-27) ──
 // Pattern "soft pill" avec hover beige clair, actif beige fonce, no
@@ -388,7 +389,7 @@ export default function Navbar() {
       {/* Logo */}
       <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
         <Logo variant={isSmall ? "compact" : "navbar"} />
-        {isAdmin && <Link href="/admin" style={{ fontSize: 11, background: km.ink, color: km.white, padding: "2px 6px", borderRadius: 999, textDecoration: "none" }}>ADMIN</Link>}
+        {isAdmin && <AdminPill />}
       </div>
 
       {/* Desktop : liens centraux */}

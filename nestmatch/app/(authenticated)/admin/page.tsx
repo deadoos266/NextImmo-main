@@ -9,6 +9,7 @@ import { displayName } from "../../../lib/privacy"
 import { RAISONS, getRaisonLabel } from "../../../lib/signalements"
 import { STATUT_STYLE as CONTACT_STATUTS, getSujetLabel, type ContactStatut } from "../../../lib/contacts"
 import { useResponsive } from "../../hooks/useResponsive"
+import AdminDashboardWidgets from "../../components/admin/AdminDashboardWidgets"
 
 /**
  * Dashboard admin refondu.
@@ -385,9 +386,9 @@ export default function Admin() {
   }, [messages, search])
 
   if (status === "loading" || (status === "authenticated" && loading)) {
-    return <main style={{ minHeight: "100vh", background: "#F7F4EF", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif" }}>
-      <p style={{ color: "#8a8477" }}>Chargement...</p>
-    </main>
+    return <div style={{ padding: 60, textAlign: "center", fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif" }}>
+      <p style={{ color: "#6b6358" }}>Chargement...</p>
+    </div>
   }
   if (!session?.user?.isAdmin) return null
 
@@ -395,13 +396,18 @@ export default function Admin() {
   const inputStyle: React.CSSProperties = { padding: "8px 14px", border: "1px solid #EAE6DF", borderRadius: 10, fontSize: 16, outline: "none", fontFamily: "inherit" }
 
   return (
-    <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ maxWidth: 1280, margin: "0 auto", padding: isMobile ? "20px 14px" : "32px 40px" }}>
+    // V84.6 — Layout admin (V84.4) fournit déjà <main> + sidebar.
+    // Cette page rend juste le contenu inside. AdminDashboardWidgets en haut,
+    // section legacy (onglets Vue d'ensemble / Signalements / etc.) en dessous.
+    <div style={{ fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif", color: "#111" }}>
+      <AdminDashboardWidgets />
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28, flexWrap: "wrap", gap: 16 }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: 0 }}>
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28, flexWrap: "wrap", gap: 16, marginTop: 24 }}>
           <div>
-            <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.5px" }}>Administration</h1>
-            <p style={{ color: "#8a8477", marginTop: 4, fontSize: 13 }}>KeyMatch · Connecté : {session.user.email}</p>
+            <h2 style={{ fontFamily: "var(--font-fraunces), 'Fraunces', serif", fontStyle: "italic", fontWeight: 500, fontSize: 26, letterSpacing: "-0.3px", margin: 0 }}>Administration · vue détaillée</h2>
+            <p style={{ color: "#6b6358", marginTop: 4, fontSize: 13 }}>KeyMatch · Connecté : {session.user.email}</p>
           </div>
           <button onClick={loadData} style={{ background: "white", border: "1px solid #EAE6DF", color: "#111", borderRadius: 999, padding: "8px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
             Rafraîchir
@@ -1105,6 +1111,6 @@ export default function Admin() {
           </div>
         </>
       )}
-    </main>
+    </div>
   )
 }
