@@ -59,3 +59,37 @@ export function maskEmail(email?: string | null): string {
   const [local] = email.split("@")
   return `${local}@***`
 }
+
+/**
+ * V96.7 — Privacy graduée : afficher SEULEMENT le prénom (sans le nom).
+ *
+ * Utilisé dans les contextes "publics" ou "pré-relation" :
+ *  - Annonces publiques /annonces (le proprio ne montre que son prénom)
+ *  - Conv en statut "contact" (premier message, pas encore de candidature
+ *    validée / dossier partagé / bail) → le peer ne voit que le prénom
+ *
+ * Une fois la relation passée à "validee" / "dossier" / "bail" → on bascule
+ * sur displayName classique (NOM Prénom).
+ *
+ * Si pas de prénom dans le profil → fallback sur partie locale email
+ * capitalisée (comme displayName mais sans le nom dérivé).
+ */
+export function displayPrenom(
+  email?: string | null,
+  profil?: { prenom?: string | null; nom?: string | null } | null,
+): string {
+  const prenom = (profil?.prenom || "").trim()
+  if (prenom) {
+    // 1ère lettre cap, reste minuscule (gère "JEAN-CLAUDE" → "Jean-Claude")
+    return prenom
+      .split(/(\s|-)/g)
+      .map(part => /\s|-/.test(part) ? part : part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join("")
+  }
+  if (!email) return "Utilisateur"
+  const local = email.split("@")[0] || ""
+  if (!local) return "Utilisateur"
+  // Pas de prénom en DB → prend le premier "token" de la partie email
+  const firstToken = local.split(/[._-]+/).filter(Boolean)[0] || local
+  return firstToken.charAt(0).toUpperCase() + firstToken.slice(1).toLowerCase()
+}

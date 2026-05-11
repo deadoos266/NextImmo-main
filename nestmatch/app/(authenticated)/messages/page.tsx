@@ -9,7 +9,7 @@ import { supabase } from "../../../lib/supabase"
 import { useRole } from "../../providers"
 import { Suspense } from "react"
 import { useResponsive } from "../../hooks/useResponsive"
-import { displayName } from "../../../lib/privacy"
+import { displayName, displayPrenom } from "../../../lib/privacy"
 import { formatNomComplet } from "../../../lib/profilHelpers"
 import { annulerVisite, STATUT_VISITE_STYLE as STATUT_VISITE } from "../../../lib/visitesHelpers"
 import { postNotif } from "../../../lib/notificationsClient"
@@ -3141,6 +3141,19 @@ function MessagesInner() {
     return "contact"
   }
 
+  // V96.7 — Privacy graduée : décide quelle version du nom afficher pour
+  // un peer selon le statut de la conv.
+  //  - bail / dossier / validee → nom complet "DUPONT Jean" (relation engagée)
+  //  - contact / visite / rejete → prénom seul "Jean" (privacy avant engagement)
+  function displayPeerName(conv: { key: string; other: string; annonceId: number | null }, annFallback?: string | null): string {
+    const profil = peerProfiles[(conv.other || "").toLowerCase()] as { prenom?: string | null; nom?: string | null } | undefined
+    const statut = deriveStatut(conv)
+    if (statut === "bail" || statut === "dossier" || statut === "validee") {
+      return displayName(conv.other, profil || annFallback || null)
+    }
+    return displayPrenom(conv.other, profil)
+  }
+
   // Statut candidat (proprio side uniquement) — qualifie la relation.
   function deriveCandidateStatus(conv: { key: string; other: string; annonceId: number | null }): StatutCandidat {
     if (!proprietaireActive) return "standard"
@@ -4151,8 +4164,8 @@ function MessagesInner() {
                               </svg>
                             )}
                             <p style={{ fontWeight: conv.unread > 0 && !mutedHere ? 800 : 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#111", margin: 0, flex: 1, minWidth: 0 }}>
-                              {/* V96.6 — Si profil dispo on l'utilise (NOM Prénom), sinon fallback */}
-                              {ann?.titre || displayName(conv.other, peerProfiles[(conv.other || "").toLowerCase()] || ann?.proprietaire)}
+                              {/* V96.7 — Privacy graduée selon statut conv */}
+                              {ann?.titre || displayPeerName(conv, ann?.proprietaire)}
                             </p>
                             {mutedHere && (
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8a8477" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-label="En sourdine" style={{ flexShrink: 0 }}>
@@ -4165,7 +4178,7 @@ function MessagesInner() {
                           <span style={{ fontSize: 10.5, color: "#8a8477", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" as const, letterSpacing: "0.2px", flexShrink: 0 }}>{time}</span>
                         </div>
                         {ann?.titre && (
-                          <p style={{ fontSize: 11, color: "#8a8477", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName(conv.other, peerProfiles[(conv.other || "").toLowerCase()] || ann?.proprietaire)}</p>
+                          <p style={{ fontSize: 11, color: "#8a8477", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayPeerName(conv, ann?.proprietaire)}</p>
                         )}
                         {relBadge && (
                           <span style={{ display: "inline-block", background: relBadge.bg, color: relBadge.color, fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 999, marginBottom: 2, marginRight: 4 }}>
@@ -4446,7 +4459,7 @@ function MessagesInner() {
                             )
                           })()}
                         </div>
-                        <p style={{ fontSize: 12, color: "#8a8477", margin: "2px 0 0", letterSpacing: "0.1px" }}>{annonceActive.ville} &middot; {displayName(convActiveData.other, peerProfiles[(convActiveData.other || "").toLowerCase()] || annonceActive.proprietaire)}</p>
+                        <p style={{ fontSize: 12, color: "#8a8477", margin: "2px 0 0", letterSpacing: "0.1px" }}>{annonceActive.ville} &middot; {displayPeerName(convActiveData, annonceActive.proprietaire)}</p>
                       </Link>
                       {/* Bouton "Valider la candidature" — proprio uniquement, étape
                          intermédiaire qui débloque la proposition de visite côté
@@ -4602,7 +4615,7 @@ function MessagesInner() {
                           body: "L'appel n'est pas disponible pour cette conversation.",
                         }
 
-                        const peerName = displayName(convActiveData.other, peerProfiles[(convActiveData.other || "").toLowerCase()] || annonceActive?.proprietaire || null)
+                        const peerName = displayPeerName(convActiveData, annonceActive?.proprietaire || null)
                         const validationReason = {
                           title: proprietaireActive ? "Dossier non validé" : "Candidature non validée",
                           body: proprietaireActive

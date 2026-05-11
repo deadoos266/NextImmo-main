@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { supabase } from "../../../lib/supabase"
 import { useResponsive } from "../../hooks/useResponsive"
-import { displayName } from "../../../lib/privacy"
+import { displayName, displayPrenom } from "../../../lib/privacy"
 import EmptyState from "../../components/ui/EmptyState"
 import Image from "next/image"
 import { km, KMPageHeader } from "../../components/ui/km"
@@ -458,7 +458,13 @@ export default function MesCandidatures() {
                     </p>
                     <p style={{ fontSize: 11, color: km.muted, margin: "6px 0 0" }}>
                       Premier contact le {new Date(c.premier_contact).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
-                      {" "}<span style={{ color: km.line }}>·</span>{" "}Propriétaire : {displayName(c.proprietaire, ann?.proprietaire)}
+                      {/* V96.7 — Privacy graduée : prénom seul tant que la
+                          candidature n'est pas validée. Sauf si statut="bail"
+                          (loué) où on peut montrer le nom complet. */}
+                      {" "}<span style={{ color: km.line }}>·</span>{" "}Propriétaire :{" "}
+                      {c.statut === "bail" || c.statut === "dossier"
+                        ? displayName(c.proprietaire, ann?.proprietaire)
+                        : displayPrenom(c.proprietaire, null)}
                     </p>
                     {/* LOUPÉ #3 fix — sous-texte explicite "qui doit faire quoi" pour
                         que le user sache s'il doit attendre, relancer ou agir. */}
