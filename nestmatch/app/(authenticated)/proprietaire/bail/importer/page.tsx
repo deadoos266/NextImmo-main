@@ -498,12 +498,45 @@ function ImporterBailPageInner() {
           </div>
         )}
 
-        {/* V96.13 — Le banner "Wizard bail KeyMatch" V96.5 a été retiré.
-            Raison : il pointait sur /proprietaire (dashboard) sans CTA direct
-            vers un wizard. Confus pour le user + non fonctionnel.
-            Le flow propre "générer un bail KeyMatch" passe par
-            "+ Publier" (Navbar) → /proprietaire/ajouter → puis générer
-            le bail sur la fiche bien. Inutile de dupliquer ici. */}
+        {/* V96.14 — Banner "Wizard bail KeyMatch" remis avec un LIEN
+            FONCTIONNEL vers /proprietaire/ajouter (point d'entrée du wizard).
+            Cas d'usage : un proprio qui hésite entre importer un PDF random
+            et générer un bail KeyMatch conforme (signature eIDAS, annexes auto,
+            IRL pré-calculé). On lui offre l'alternative en évidence. */}
+        {!refusContexte && (
+          <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 14, padding: "14px 18px", marginBottom: 20, display: "flex", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <p style={{ fontWeight: 700, color: "#15803d", margin: 0, fontSize: 13 }}>
+                💡 Pas de PDF prêt ? Générez un bail conforme ALUR
+              </p>
+              <p style={{ fontSize: 12, color: "#166534", margin: "4px 0 0", lineHeight: 1.55 }}>
+                Si vous n&apos;avez pas encore de bail PDF (nouvelle location, ancien bail non conforme),
+                utilisez le wizard KeyMatch : il génère un bail légal complet (signature électronique eIDAS,
+                annexes obligatoires DPE/ERP/CREP, IRL pré-calculé, dépôt de garantie).
+              </p>
+            </div>
+            <Link
+              href="/proprietaire/ajouter"
+              style={{
+                background: "#15803d",
+                color: "#fff",
+                border: "none",
+                borderRadius: 999,
+                padding: "9px 16px",
+                fontSize: 11.5,
+                fontWeight: 700,
+                textDecoration: "none",
+                textTransform: "uppercase",
+                letterSpacing: "0.4px",
+                flexShrink: 0,
+                fontFamily: "inherit",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Générer un bail →
+            </Link>
+          </div>
+        )}
 
         {simpleImport && !refusContexte && (
           <div style={{ background: "#EEF3FB", border: "1px solid #D7E3F4", borderRadius: 14, padding: "14px 18px", marginBottom: 20 }}>
