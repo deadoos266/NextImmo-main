@@ -602,19 +602,18 @@ function ImporterBailPageInner() {
 
           <p style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: "uppercase", letterSpacing: "1.4px", margin: 0 }}>Loyer</p>
 
-          {/* V34.4 — En mode simple : Loyer HC + Charges seulement (dépôt optionnel masqué) */}
-          <div style={{ display: "grid", gridTemplateColumns: simpleImport ? "1fr 1fr" : "1fr 1fr 1fr", gap: 12 }}>
-            <Field label="Loyer HC (€)">
+          {/* V96.15 — Dépôt de garantie visible aussi en mode simple (facultatif).
+              Utile pour automatiser la restitution de dépôt en fin de bail. */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+            <Field label="Loyer HC (€) *">
               <input id="import-loyerHC" style={inputStyle} type="number" min={1} max={50000} value={form.loyerHC} onChange={e => update("loyerHC", e.target.value)} placeholder="1100" required />
             </Field>
-            <Field label="Charges (€)" hint={simpleImport ? "0 si charges incluses dans le loyer" : undefined}>
+            <Field label="Charges (€)" hint={simpleImport ? "0 si charges incluses" : undefined}>
               <input style={inputStyle} type="number" min={0} max={5000} value={form.charges} onChange={e => update("charges", e.target.value)} placeholder="80" />
             </Field>
-            {!simpleImport && (
-              <Field label="Dépôt de garantie (€)">
-                <input style={inputStyle} type="number" min={0} max={50000} value={form.depotGarantie} onChange={e => update("depotGarantie", e.target.value)} placeholder="1100" />
-              </Field>
-            )}
+            <Field label="Dépôt de garantie (€)" hint={simpleImport ? "Optionnel — utile pour la restitution" : undefined}>
+              <input style={inputStyle} type="number" min={0} max={50000} value={form.depotGarantie} onChange={e => update("depotGarantie", e.target.value)} placeholder="1100" />
+            </Field>
           </div>
 
           {!simpleImport && <div style={{ height: 1, background: T.line, margin: "4px 0" }} />}
