@@ -158,6 +158,20 @@ function RoleProvider({ children }: { children: ReactNode }) {
     })
   }, [session, status])
 
+  // V81.31 — Sync garde : si proprietaireActive=true MAIS canBeProprio=false
+  // (incohérence détectée audit E2E 2026-05-11), forcer proprietaireActive=false.
+  // Scénarios : user a manuellement set le flag via localStorage (devtools),
+  // ou un ancien toggle est resté actif après que l'user ait supprimé ses
+  // annonces. Évite que /profil + /dossier redirigent vers /proprietaire
+  // alors que l'user n'a aucun bien.
+  useEffect(() => {
+    if (!mounted) return
+    if (proprietaireActive && !canBeProprio) {
+      setProprietaireActiveState(false)
+      localStorage.setItem("nestmatch_proprio_active", "false")
+    }
+  }, [mounted, proprietaireActive, canBeProprio])
+
   function setRole(r: Role) {
     setRoleState(r)
     localStorage.setItem("nestmatch_role", r)

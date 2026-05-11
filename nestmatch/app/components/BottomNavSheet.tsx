@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
 import { useRole } from "../providers"
 import { km } from "./ui/km"
+import { useFocusTrap } from "../hooks/useFocusTrap"
 
 // V81.14 — Tokens design system locaux pour ce composant. Toutes les
 // valeurs spacing/radius/font sont centralisées ici, pas hardcodées dans
@@ -117,6 +118,8 @@ export default function BottomNavSheet({ open, onClose }: Props) {
   const pathname = usePathname() || "/"
   const { proprietaireActive } = useRole()
   const { isMobile } = useViewport()
+  // V81.31 — focus trap pour l'a11y (audit V81.29 HIGH #5)
+  const dialogRef = useFocusTrap<HTMLDivElement>(open)
 
   // ESC closes + body scroll lock when open
   useEffect(() => {
@@ -304,8 +307,11 @@ export default function BottomNavSheet({ open, onClose }: Props) {
       />
       {/* Sheet (mobile) / Modal (desktop) — même DOM, style switch */}
       {/* V81.29 — aria-labelledby au lieu de aria-label pour pointer vers
-          le h2 "Menu" (audit a11y, sémantique préférée par lecteurs). */}
+          le h2 "Menu" (audit a11y, sémantique préférée par lecteurs).
+          V81.31 — ref={dialogRef} pour useFocusTrap : Tab cycle interne,
+          focus initial sur 1er focusable, restauration à la fermeture. */}
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="bnsheet-title"

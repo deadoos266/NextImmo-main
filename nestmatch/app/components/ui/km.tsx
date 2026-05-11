@@ -15,7 +15,12 @@ import { CSSProperties, ReactNode, MouseEventHandler } from "react"
 export const km = {
   beige: "#F7F4EF",
   ink: "#111",
-  muted: "#8a8477",
+  // V81.31 — muted assombri #8a8477 → #6b6358 pour contraste WCAG AA
+  // (3.4:1 → 5.8:1 sur fond #F7F4EF). Audit a11y V81.29 finding HIGH #3.
+  // Toutes les pages qui utilisent km.muted héritent automatiquement.
+  // Les hex hardcoded "#8a8477" (~729 occurrences) ne sont pas affectés
+  // ici — chantier V82 design tokens migration prévu.
+  muted: "#6b6358",
   line: "#EAE6DF",
   white: "#ffffff",
   // Accents sémantiques — variant « warm » shippée (voir ContactButton etc.)
