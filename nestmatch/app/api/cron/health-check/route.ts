@@ -19,6 +19,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
+import { withCronLogging } from "@/lib/cron/withCronLogging"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -33,7 +34,9 @@ function selfBaseUrl(req: NextRequest): string {
   return "https://keymatch-immo.fr"
 }
 
-export async function GET(req: NextRequest) {
+// V84.10 — wrapped avec withCronLogging pour persister chaque exécution
+// dans cron_logs (visible /admin/operations).
+export const GET = withCronLogging("health-check", "0 8 * * *", async (req: NextRequest) => {
   const secret = process.env.CRON_SECRET
   const auth = req.headers.get("authorization")
   if (secret && auth !== `Bearer ${secret}` && process.env.NODE_ENV === "production") {
@@ -62,4 +65,4 @@ export async function GET(req: NextRequest) {
       target,
     }, { status: 500 })
   }
-}
+})

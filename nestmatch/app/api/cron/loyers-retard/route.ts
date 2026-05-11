@@ -23,6 +23,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { sendEmail } from "@/lib/email/resend"
+import { withCronLogging } from "@/lib/cron/withCronLogging"
 import { loyerRetardLocataireTemplate, loyerRetardProprioTemplate } from "@/lib/email/templates"
 import { shouldSendEmailForEvent } from "@/lib/notifPreferencesServer"
 
@@ -43,7 +44,8 @@ interface AnnonceRow {
   locataire_email: string | null
 }
 
-export async function GET(req: NextRequest) {
+// V84.10 — wrapped avec withCronLogging
+export const GET = withCronLogging("loyers-retard", "0 8 * * *", async function loyersRetardGET(req: NextRequest) {
   const secret = process.env.CRON_SECRET
   const auth = req.headers.get("authorization")
   if (secret && auth !== `Bearer ${secret}` && process.env.NODE_ENV === "production") {
@@ -187,4 +189,4 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true, stats, ranAt: new Date().toISOString() })
-}
+})

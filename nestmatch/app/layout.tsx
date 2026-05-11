@@ -3,6 +3,7 @@ import { DM_Sans, Fraunces } from 'next/font/google'
 import './globals.css'
 import Providers from './providers'
 import CookieBanner from './components/CookieBanner'
+import BugReportButton from './components/BugReportButton'
 import PWAInstallBanner from './components/PWAInstallBanner'
 import ToastStack from './components/ToastStack'
 import ServiceWorkerRegister from './components/ServiceWorkerRegister'
@@ -242,6 +243,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               (cookies banner, toasts, theme, service worker, scroll lock,
               heartbeat, zoom guard) — peu importe public ou auth. */}
           <CookieBanner />
+          {/* V84.8 — widget bug report flottant (auth uniquement, masqué /admin/*) */}
+          <BugReportButton />
           <PWAInstallBanner />
           <ToastStack />
           <ServiceWorkerRegister />
