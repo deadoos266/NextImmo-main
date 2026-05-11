@@ -1337,17 +1337,30 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
              (grille + liste+carte) : en liste+carte desktop, il s'insère
              dans le flex column outer au-dessus de la zone LC qui prend
              flex:1. Avant : rendu APRÈS le header h2, et masqué en
-             liste+carte → invisible alors que c'est l'incitation principale. */}
-        {showBandeauDossier && completudeProfil !== null && (
-          <div style={{
-            padding: isMobile ? "10px 0" : "14px 0 6px",
-            paddingLeft: isDesktopListCarte ? containerPadH : 0,
-            paddingRight: isDesktopListCarte ? containerPadH : 0,
-            flexShrink: 0,
-          }}>
-            <BandeauDossier completude={completudeProfil} isMobile={isMobile} />
-          </div>
-        )}
+             liste+carte → invisible alors que c'est l'incitation principale.
+             V82.2 — Pour réduire le CLS (0.118 → <0.1) on garde le wrapper
+             rendu même quand le bandeau n'est pas affiché, avec une
+             min-height qui réserve approximativement l'espace SI l'user
+             est authenticated locataire en cours de fetch (status !==
+             "unauthenticated" && !isProprietaire). Évite le shift quand
+             le bandeau apparaît post-fetch profil. */}
+        {(() => {
+          const reserveSpace = status !== "unauthenticated" && !isProprietaire
+          const visible = showBandeauDossier && completudeProfil !== null
+          if (!reserveSpace && !visible) return null
+          return (
+            <div style={{
+              padding: isMobile ? "10px 0" : "14px 0 6px",
+              paddingLeft: isDesktopListCarte ? containerPadH : 0,
+              paddingRight: isDesktopListCarte ? containerPadH : 0,
+              flexShrink: 0,
+              minHeight: visible ? undefined : (reserveSpace ? (isMobile ? 110 : 130) : 0),
+              transition: "min-height 180ms ease",
+            }}>
+              {visible && <BandeauDossier completude={completudeProfil} isMobile={isMobile} />}
+            </div>
+          )
+        })()}
 
         {/* ── Header éditorial — scroll normal (pas sticky)
              En mode liste+carte desktop : MASQUÉ. La page est immersive

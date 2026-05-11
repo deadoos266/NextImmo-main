@@ -49,13 +49,20 @@ const dmSans = DM_Sans({
 //
 // Weight 300 ajouté (utilisé par dossier/page.tsx pour les gros titres 88px).
 // Style 'normal' conservé : dossier l'utilise pour les chiffres tabulaires.
+//
+// V82.2 — adjustFontFallback ACTIVÉ uniquement sur Fraunces (heading)
+// pour réduire le CLS (mesuré à 0.118 sur /annonces). Fraunces ne touche
+// PAS au <html>/<body> (utilisé seulement via var(--font-fraunces) sur les
+// titres) → pas de risque React #418 comme avec DM Sans. Le size-adjust
+// auto-injecté évite que le swap Times New Roman → Fraunces décale les
+// titres post-load.
 const fraunces = Fraunces({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600'],
   style: ['italic', 'normal'],
   display: 'swap',
   variable: '--font-fraunces',
-  adjustFontFallback: false,
+  adjustFontFallback: true,
 })
 
 const DEFAULT_TITLE = `${BRAND.name} — Location entre particuliers sans agence`
