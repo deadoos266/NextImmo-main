@@ -3,6 +3,7 @@ import Logo from "./components/Logo"
 import { BRAND } from "../lib/brand"
 import { km, KMCard, KMEyebrow, KMHeading } from "./components/ui/km"
 import NotFoundCTAs from "./not-found.client"
+import AutoBugReporter from "./components/AutoBugReporter"
 
 export const metadata = {
   title: "Page introuvable",
@@ -19,6 +20,8 @@ export default function NotFound() {
       justifyContent: "center",
       padding: "40px 20px",
     }}>
+      {/* V97.11 — Auto-report la 404 dans /admin/bugs avec referrer */}
+      <AutoBugReporter type="404" />
       <KMCard padding="48px 40px" style={{ maxWidth: 520, width: "100%", textAlign: "center", borderRadius: 24 }}>
         <div style={{ marginBottom: 18 }}>
           <Logo variant="compact" />

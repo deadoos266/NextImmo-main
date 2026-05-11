@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import Link from "next/link"
 import { useSession } from "next-auth/react"
 import * as Sentry from "@sentry/nextjs"
+import AutoBugReporter from "./components/AutoBugReporter"
 
 /**
  * Error boundary global pour toutes les routes sous /app.
@@ -52,6 +53,12 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
 
   return (
     <main style={{ minHeight: "80vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
+      {/* V97.11 — Auto-report la runtime error dans /admin/bugs (en plus
+          de Sentry + /api/admin/incident-auto déjà appelés au useEffect) */}
+      <AutoBugReporter
+        type="runtime-error"
+        error={{ name: error.name, message: error.message, stack: error.stack, digest: error.digest }}
+      />
       <div style={{ maxWidth: 560, background: "white", borderRadius: 20, padding: 40, textAlign: "center", border: "1px solid #EAE6DF" }}>
         <p style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 10 }}>
           Erreur inattendue
