@@ -175,8 +175,10 @@ export default function BottomNavSheet({ open, onClose }: Props) {
     { href: "/visites", label: "Visites planifiées", desc: "Mon agenda candidats", Icon: Icons.Visites },
     { href: "/proprietaire/baux/historique", label: "Baux", desc: "Contrats en cours / archivés", Icon: Icons.Bail },
     { href: "/mes-quittances", label: "Quittances", desc: "Loyers encaissés & PDFs", Icon: Icons.Quittances },
-    { href: "/edl", label: "États des lieux", desc: "Entrée / sortie locataires", Icon: Icons.EDL },
-    { href: "/carnet-entretien", label: "Carnet d'entretien", desc: "Réparations & interventions", Icon: Icons.Carnet },
+    // V81.28 — /edl retiré : la page redirige vers /proprietaire (doublon
+    // avec Mes biens). Les EDL sont accessibles via la fiche bien → onglet
+    // EDL. Pas de landing utile au niveau global.
+    { href: "/carnet", label: "Carnet d'entretien", desc: "Réparations & interventions", Icon: Icons.Carnet },
     { href: "/mes-documents", label: "Mes documents", desc: "Diagnostics, annexes, archives", Icon: Icons.Documents },
   ]
 
