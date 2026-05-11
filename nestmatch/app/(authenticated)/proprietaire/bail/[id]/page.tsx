@@ -1109,6 +1109,52 @@ export default function BailPage() {
           </div>
         )}
 
+        {/* V88.5 — Banner Bail importé (PDF signé hors plateforme déjà uploadé) */}
+        {bien?.bail_source && String(bien.bail_source).startsWith("imported") && bien?.bail_pdf_url && (
+          <div
+            style={{
+              background: "#EEF3FB",
+              border: "1px solid #D7E3F4",
+              borderRadius: 14,
+              padding: "14px 18px",
+              marginBottom: 20,
+              display: "flex",
+              gap: 14,
+              alignItems: "flex-start",
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <p style={{ fontWeight: 700, fontSize: 13, margin: 0, color: "#1d4ed8" }}>
+                Bail importé — PDF déjà signé hors plateforme
+              </p>
+              <p style={{ fontSize: 12, color: "#1d4ed8", margin: "4px 0 0", lineHeight: 1.55, opacity: 0.85 }}>
+                Vous avez uploadé un PDF de bail existant à l&apos;import. Vous pouvez continuer à utiliser KeyMatch
+                pour les quittances, l&apos;EDL et l&apos;indexation IRL — le bail PDF original reste votre référence juridique.
+              </p>
+            </div>
+            <a
+              href={bien.bail_pdf_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                background: "#1d4ed8",
+                color: "#fff",
+                borderRadius: 999,
+                padding: "8px 18px",
+                fontSize: 11.5,
+                fontWeight: 700,
+                textDecoration: "none",
+                textTransform: "uppercase",
+                letterSpacing: "0.4px",
+                flexShrink: 0,
+              }}
+            >
+              Voir le PDF
+            </a>
+          </div>
+        )}
+
         {/* Bail déjà envoyé — garde-fou + bouton téléchargement */}
         {existingBailAt && (
           <div

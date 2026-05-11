@@ -43,6 +43,10 @@ interface ImporterBody {
   dureeMois?: number
   depotGarantie?: number
   messageProprio?: string
+  // V88.1 — URL Supabase Storage du PDF déjà uploadé côté client
+  // (bucket `baux/{proprio}/import-*.pdf`). Persisté dans
+  // import_metadata.pdf_url + annonces.bail_pdf_url pour affichage ultérieur.
+  pdfFichierUrl?: string
 }
 
 function isValidEmail(s: string): boolean {
@@ -142,6 +146,12 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  // V88.1 — Vérification basique du PDF (doit pointer sur notre bucket Storage)
+  const pdfUrl = typeof body.pdfFichierUrl === "string" ? body.pdfFichierUrl.trim() : ""
+  const pdfUrlSafe = pdfUrl && /^https?:\/\/[^\s]+$/.test(pdfUrl) && pdfUrl.length < 1000
+    ? pdfUrl
+    : null
+
   // Crée l'annonce (masquée tant que pas acceptée)
   const importMetadata: Record<string, unknown> = {
     date_signature: body.dateSignature || null,
@@ -153,6 +163,7 @@ export async function POST(req: NextRequest) {
     meuble: !!body.meuble,
     imported_at: new Date().toISOString(),
     imported_by: proprioEmail,
+    pdf_url: pdfUrlSafe,  // V88.1
   }
 
   const { data: annonce, error: annonceErr } = await supabaseAdmin
@@ -169,6 +180,9 @@ export async function POST(req: NextRequest) {
       proprietaire_email: proprioEmail,
       bail_source: "imported_pending",
       import_metadata: importMetadata,
+      // V88.1 — bail_pdf_url existe déjà (utilisé par /proprietaire/baux/historique)
+      // On le pré-remplit avec le PDF importé pour qu'il s'affiche dans le wizard.
+      bail_pdf_url: pdfUrlSafe,
       loue: true,
       is_test: false,
       created_at: new Date().toISOString(),

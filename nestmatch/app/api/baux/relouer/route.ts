@@ -158,22 +158,26 @@ export async function POST(req: NextRequest) {
   const edlEntreeId = edls?.find(e => e.type === "entree")?.id ?? null
   const edlSortieId = edls?.find(e => e.type === "sortie")?.id ?? null
 
-  // Récupère le bail PDF URL depuis le dernier message [BAIL_FINAL_PDF]
-  let bailPdfUrl: string | null = null
-  try {
-    const { data: bailMsg } = await supabaseAdmin
-      .from("messages")
-      .select("contenu")
-      .eq("annonce_id", annonceId)
-      .ilike("contenu", "[BAIL_FINAL_PDF]%")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    if (bailMsg?.contenu) {
-      const payload = JSON.parse(bailMsg.contenu.slice("[BAIL_FINAL_PDF]".length))
-      bailPdfUrl = payload?.url || null
-    }
-  } catch { /* ignore */ }
+  // Récupère le bail PDF URL.
+  // V88.1 — Source prioritaire : annonces.bail_pdf_url (renseigné si bail importé).
+  // Fallback : dernier message [BAIL_FINAL_PDF] (bail signé sur KeyMatch).
+  let bailPdfUrl: string | null = (ann as { bail_pdf_url?: string | null })?.bail_pdf_url || null
+  if (!bailPdfUrl) {
+    try {
+      const { data: bailMsg } = await supabaseAdmin
+        .from("messages")
+        .select("contenu")
+        .eq("annonce_id", annonceId)
+        .ilike("contenu", "[BAIL_FINAL_PDF]%")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (bailMsg?.contenu) {
+        const payload = JSON.parse(bailMsg.contenu.slice("[BAIL_FINAL_PDF]".length))
+        bailPdfUrl = payload?.url || null
+      }
+    } catch { /* ignore */ }
+  }
 
   const nowIso = new Date().toISOString()
   const depotMontantRestitue = Number(ann.caution || 0) - Number(ann.depot_montant_retenu || 0)
