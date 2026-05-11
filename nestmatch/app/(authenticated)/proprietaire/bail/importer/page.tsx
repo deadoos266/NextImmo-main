@@ -498,43 +498,12 @@ function ImporterBailPageInner() {
           </div>
         )}
 
-        {/* V96.5 — CTA "Générer un bail KeyMatch propre" : pour les proprios
-            qui réalisent que leur PDF importé est moche / pas conforme et
-            préféreraient générer un bail propre via le wizard KeyMatch. */}
-        {!refusContexte && (
-          <div style={{ background: "#F0FAEE", border: "1px solid #C6E9C0", borderRadius: 14, padding: "14px 18px", marginBottom: 20, display: "flex", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
-            <div style={{ flex: 1, minWidth: 220 }}>
-              <p style={{ fontWeight: 700, color: "#15803d", margin: 0, fontSize: 13 }}>
-                💡 Vous préférez un bail conforme ALUR généré par KeyMatch ?
-              </p>
-              <p style={{ fontSize: 12, color: "#166534", margin: "4px 0 0", lineHeight: 1.55 }}>
-                Si votre PDF n&apos;est pas conforme ou si vous voulez un bail clean (signature électronique
-                eIDAS, annexes auto, IRL pré-calculé), utilisez plutôt le wizard de génération.
-                Vous gardez votre locataire et son dossier.
-              </p>
-            </div>
-            <Link
-              href="/proprietaire"
-              style={{
-                background: "#15803d",
-                color: "#fff",
-                border: "none",
-                borderRadius: 999,
-                padding: "9px 16px",
-                fontSize: 11.5,
-                fontWeight: 700,
-                textDecoration: "none",
-                textTransform: "uppercase",
-                letterSpacing: "0.4px",
-                flexShrink: 0,
-                fontFamily: "inherit",
-                whiteSpace: "nowrap",
-              }}
-            >
-              Wizard bail KeyMatch →
-            </Link>
-          </div>
-        )}
+        {/* V96.13 — Le banner "Wizard bail KeyMatch" V96.5 a été retiré.
+            Raison : il pointait sur /proprietaire (dashboard) sans CTA direct
+            vers un wizard. Confus pour le user + non fonctionnel.
+            Le flow propre "générer un bail KeyMatch" passe par
+            "+ Publier" (Navbar) → /proprietaire/ajouter → puis générer
+            le bail sur la fiche bien. Inutile de dupliquer ici. */}
 
         {simpleImport && !refusContexte && (
           <div style={{ background: "#EEF3FB", border: "1px solid #D7E3F4", borderRadius: 14, padding: "14px 18px", marginBottom: 20 }}>
