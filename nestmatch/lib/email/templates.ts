@@ -1798,3 +1798,94 @@ ${params.conversations.slice(0, 30).map(c => `- ${c.senderName}${c.bienTitre ? `
 — L'équipe KeyMatch`
   return { subject, html, text }
 }
+
+/**
+ * V97.13 P3-2.B — Récap quotidien des nouvelles annonces qui matchent les
+ * critères de recherche d'un locataire (opt-in via notif_preferences).
+ *
+ * Affiché : top 5 annonces par score, avec titre, ville, prix, surface,
+ * pièces, lien direct. Footer avec lien désabonnement vers /parametres.
+ */
+export function nouvellesAnnoncesMatchTemplate(params: {
+  locataireName: string
+  annonces: Array<{
+    id: number
+    titre: string
+    ville: string | null
+    prix: number | null
+    charges: number | null
+    surface: number | null
+    pieces: number | null
+    score: number  // 0-1000
+    href: string
+  }>
+  rechercheUrl: string
+  parametresUrl: string
+}): { subject: string; html: string; text: string } {
+  const n = params.annonces.length
+  const subject = n === 1
+    ? `1 nouvelle annonce correspond à votre recherche`
+    : `${n} nouvelles annonces correspondent à votre recherche`
+
+  const items = params.annonces.slice(0, 5).map(a => {
+    const prixCC = (a.prix || 0) + (a.charges || 0)
+    const matchPct = Math.round(a.score / 10)
+    const detailsLine = [
+      a.surface ? `${a.surface} m²` : null,
+      a.pieces ? `${a.pieces} pièce${a.pieces > 1 ? "s" : ""}` : null,
+      prixCC > 0 ? `${prixCC.toLocaleString("fr-FR")} € CC` : null,
+    ].filter(Boolean).join(" · ")
+    return `
+      <tr><td style="padding:10px 0;border-top:1px solid ${PALETTE.borderSoft};">
+        <a href="${a.href}" target="_blank" style="text-decoration:none;color:${PALETTE.text};">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td valign="middle" style="font-size:14px;font-weight:600;color:${PALETTE.text};">${escapeHtml(a.titre)}</td>
+              <td valign="middle" align="right" style="font-size:11px;color:${PALETTE.textSubtle};font-weight:700;letter-spacing:1px;text-transform:uppercase;padding-left:12px;">${matchPct}% match</td>
+            </tr>
+            <tr><td colspan="2" style="font-size:12px;color:${PALETTE.textMuted};padding-top:2px;">${a.ville ? escapeHtml(a.ville) + (detailsLine ? " · " : "") : ""}${escapeHtml(detailsLine)}</td></tr>
+          </table>
+        </a>
+      </td></tr>
+    `
+  }).join("")
+
+  const body = `
+    <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.4px;color:${PALETTE.text};margin:0 0 12px;line-height:1.3;">
+      ${n === 1 ? "Une nouvelle annonce vous correspond" : `${n} nouvelles annonces vous correspondent`}
+    </h1>
+    <p style="margin:0 0 14px;color:${PALETTE.textMuted};line-height:1.65;">
+      Voici une sélection basée sur vos critères (budget, surface, pièces, ville).${n > 5 ? ` ${n - 5} autres sont aussi disponibles sur le site.` : ""}
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 14px;">
+      ${items}
+    </table>
+    ${button(params.rechercheUrl, "Voir toutes les annonces →")}
+    <p style="margin:18px 0 0;font-size:12px;color:${PALETTE.textSubtle};line-height:1.5;">
+      Récap envoyé une fois par jour quand de nouvelles annonces matchent vos critères. <a href="${params.parametresUrl}" style="color:${PALETTE.textSubtle};text-decoration:underline;">Désactiver cette alerte</a>.
+    </p>
+  `
+  const html = wrap(subject, body, "alertematch")
+  const text = `${subject}
+
+Bonjour${params.locataireName ? " " + params.locataireName : ""},
+
+${params.annonces.slice(0, 5).map(a => {
+  const prixCC = (a.prix || 0) + (a.charges || 0)
+  const matchPct = Math.round(a.score / 10)
+  const details = [
+    a.surface ? `${a.surface} m²` : null,
+    a.pieces ? `${a.pieces} pièce${a.pieces > 1 ? "s" : ""}` : null,
+    prixCC > 0 ? `${prixCC.toLocaleString("fr-FR")} € CC` : null,
+  ].filter(Boolean).join(" · ")
+  return `- ${a.titre}${a.ville ? ` · ${a.ville}` : ""} (${matchPct}% match)\n  ${details}\n  ${a.href}`
+}).join("\n\n")}
+
+Voir toutes les annonces : ${params.rechercheUrl}
+
+Désactiver cette alerte : ${params.parametresUrl}
+
+— L'équipe KeyMatch`
+
+  return { subject, html, text }
+}

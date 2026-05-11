@@ -46,6 +46,10 @@
       "schedule": "15 9 * * *"
     },
     {
+      "path": "/api/cron/alertes-matching",
+      "schedule": "30 9 * * *"
+    },
+    {
       "path": "/api/cron/visites-rappel",
       "schedule": "0 10,18 * * *"
     },
