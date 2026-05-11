@@ -910,6 +910,11 @@ export default function MonLogement() {
 
           // 1. Bail
           if (bailPayload || bailFichierUrl) {
+            // V96.20 — Bail importé : pas de signatures KeyMatch (le PDF est
+            // signé hors plateforme). On détecte via le flag _imported du
+            // payload (synthétisé par /api/bail/card-payload V89.2 fallback).
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const isImportedBail = (bailPayload as any)?._imported === true
             const sigCount = signatures.length
             const hasLoc = signatures.some(s => s.role === "locataire")
             const hasBail = signatures.some(s => s.role === "bailleur")
@@ -917,13 +922,15 @@ export default function MonLogement() {
             docs.push({
               categorie: "bail",
               label: `Bail · ${bien.titre || "Logement"}`,
-              sub: isFullySigned
-                ? `Signé · ${sigCount} signature${sigCount > 1 ? "s" : ""}`
-                : sigCount > 0
-                  ? `En attente · ${sigCount} signature${sigCount > 1 ? "s" : ""} sur 2`
-                  : "Non signé",
+              sub: isImportedBail
+                ? "Signé hors plateforme · PDF fourni"
+                : isFullySigned
+                  ? `Signé · ${sigCount} signature${sigCount > 1 ? "s" : ""}`
+                  : sigCount > 0
+                    ? `En attente · ${sigCount} signature${sigCount > 1 ? "s" : ""} sur 2`
+                    : "Non signé",
               href: "#mon-bail",
-              badge: isFullySigned
+              badge: isImportedBail || isFullySigned
                 ? { text: "Actif", tone: "ok" }
                 : sigCount > 0
                   ? { text: "En cours", tone: "warn" }

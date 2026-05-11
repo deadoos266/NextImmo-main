@@ -90,10 +90,12 @@ export function projeterEcheancierBail(args: ProjeterArgs): LoyerProjete[] {
     const montantExistant = existant?.montant != null ? Number(existant.montant) : NaN
     const montant = Number.isFinite(montantExistant) && montantExistant > 0 ? montantExistant : loyerCC
 
+    // V96.20 — Normalize NFC pour éviter mismatch NFD ('e+accent combinant')
+    const statutExist = typeof existant?.statut === "string" ? existant.statut.normalize("NFC") : existant?.statut
     let statut: LoyerProjete["statut"]
-    if (existant?.statut === "confirmé" || existant?.statut === "paye" || existant?.statut === "payé") {
+    if (statutExist === "confirmé" || statutExist === "paye" || statutExist === "payé") {
       statut = "paye"
-    } else if (existant?.statut === "déclaré" || existant?.statut === "declare") {
+    } else if (statutExist === "déclaré" || statutExist === "declare") {
       statut = "declare"
     } else if (joursAvant >= 0 && joursAvant <= 5) {
       statut = "imminent"

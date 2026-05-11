@@ -14,7 +14,10 @@
  * @param statut statut DB : "confirmé" | "déclaré" | null
  */
 export function joursRetardLoyer(mois: string | null | undefined, statut: string | null | undefined): number {
-  if (!mois || statut === "confirmé") return 0
+  // V96.20 — Normalize NFC pour éviter les mismatch avec statuts stockés en
+  // NFD ('e' + accent combinant) au lieu de NFC ('é' un seul char).
+  const statutN = typeof statut === "string" ? statut.normalize("NFC") : statut
+  if (!mois || statutN === "confirmé") return 0
   const [yStr, mStr] = String(mois).split("-")
   const y = Number(yStr), m = Number(mStr)
   if (!Number.isFinite(y) || !Number.isFinite(m)) return 0
