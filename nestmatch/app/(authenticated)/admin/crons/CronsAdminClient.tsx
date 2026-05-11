@@ -33,13 +33,24 @@ export default function CronsAdminClient({ knownCrons, logs }: { knownCrons: Kno
   }
 
   const triggerCron = async (path: string, name: string) => {
-    if (!window.confirm(`Lancer maintenant le cron "${name}" ?\n\nNote : nécessite que CRON_SECRET soit exposé côté client (Bearer header). Si protégé, ce sera 401.`)) return
+    if (!window.confirm(`Lancer maintenant le cron "${name}" ?`)) return
     setRunning(name)
     setMsg(null)
     try {
-      const res = await fetch(path, { method: "GET", cache: "no-store" })
-      const text = await res.text().catch(() => "")
-      setMsg(`${name} : HTTP ${res.status} · ${text.slice(0, 200)}`)
+      // Proxy admin server-side qui ajoute le header Bearer CRON_SECRET.
+      const res = await fetch("/api/admin/cron/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({ path }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (j?.ok) {
+        const summary = typeof j.result === "object" ? JSON.stringify(j.result).slice(0, 200) : String(j.result).slice(0, 200)
+        setMsg(`${name} : OK (${j.duration_ms}ms) · ${summary}`)
+      } else {
+        setMsg(`${name} : ÉCHEC (HTTP ${j.status || res.status}) · ${j.error || JSON.stringify(j.result || "").slice(0, 200)}`)
+      }
     } catch (e) {
       setMsg(`${name} : erreur ${e instanceof Error ? e.message : String(e)}`)
     } finally {
