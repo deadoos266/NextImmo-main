@@ -178,6 +178,9 @@ export default function AdminDashboardWidgets() {
 
       {/* V97.29 P3-5.B.2 — Inscriptions par jour 30 jours */}
       <SignupsChart />
+
+      {/* V97.30 P3-5.B.3 — Top 10 annonces (vues + candidatures) */}
+      <TopAnnonces />
     </section>
   )
 }
@@ -398,6 +401,108 @@ function SignupsChart() {
           <p style={{ fontSize: 11, color: km.muted, marginTop: 14, marginBottom: 0, lineHeight: 1.5 }}>
             Barres plus claires = week-end. Hover pour voir la valeur exacte par jour.
           </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── V97.30 P3-5.B.3 — Top annonces ─────────────────────────────────────────
+
+interface TopAnnonceRow {
+  annonce_id: number
+  count: number
+  titre: string
+  ville: string | null
+  prix: number | null
+  href: string
+}
+
+function TopAnnonces() {
+  const [topViews, setTopViews] = useState<TopAnnonceRow[] | null>(null)
+  const [topCand, setTopCand] = useState<TopAnnonceRow[] | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let alive = true
+    fetch("/api/admin/top-annonces", { cache: "no-store" })
+      .then(r => r.json())
+      .then(j => {
+        if (!alive) return
+        if (j.ok) {
+          setTopViews(j.top_views)
+          setTopCand(j.top_candidatures)
+        }
+        setLoading(false)
+      })
+      .catch(() => { if (alive) setLoading(false) })
+    return () => { alive = false }
+  }, [])
+
+  return (
+    <div style={{ marginTop: 28 }}>
+      <header style={{ marginBottom: 14 }}>
+        <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: 1.4, margin: 0 }}>
+          Top annonces · 30 derniers jours
+        </p>
+        <h2 style={{ fontFamily: "var(--font-fraunces), 'Fraunces', serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, margin: "4px 0 0", color: km.ink }}>
+          Annonces les plus performantes
+        </h2>
+      </header>
+
+      {loading ? (
+        <div style={{ padding: 24, textAlign: "center", color: km.muted, fontSize: 13 }}>Chargement…</div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16 }}>
+          <TopList label="Top vues uniques" rows={topViews || []} unitLabel="vues" />
+          <TopList label="Top candidatures reçues" rows={topCand || []} unitLabel="cand." />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TopList({ label, rows, unitLabel }: { label: string; rows: TopAnnonceRow[]; unitLabel: string }) {
+  const maxCount = rows.length > 0 ? Math.max(...rows.map(r => r.count), 1) : 1
+  return (
+    <div style={{ background: "white", border: `1px solid ${km.line}`, borderRadius: 16, padding: 16 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 12 }}>
+        {label}
+      </div>
+      {rows.length === 0 ? (
+        <p style={{ fontSize: 12, color: km.muted, fontStyle: "italic", margin: 0 }}>
+          Aucune donnée sur 30j
+        </p>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {rows.map((r, i) => {
+            const widthPct = (r.count / maxCount) * 100
+            return (
+              <a
+                key={r.annonce_id}
+                href={r.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: "block", padding: "6px 8px", borderRadius: 6, textDecoration: "none", color: "inherit", transition: "background 120ms" }}
+                onMouseEnter={e => { e.currentTarget.style.background = km.beige }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent" }}
+              >
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontSize: 13, color: km.ink, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
+                    <span style={{ color: km.muted, fontWeight: 500, fontVariantNumeric: "tabular-nums", marginRight: 8 }}>{i + 1}.</span>
+                    {r.titre}
+                    {r.ville && <span style={{ color: km.muted, fontWeight: 400 }}> · {r.ville}</span>}
+                  </span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: km.ink, fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>
+                    {r.count} {unitLabel}
+                  </span>
+                </div>
+                <div style={{ height: 4, background: km.beige, borderRadius: 2, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${widthPct}%`, background: km.ink, opacity: 0.7 }} />
+                </div>
+              </a>
+            )
+          })}
         </div>
       )}
     </div>
