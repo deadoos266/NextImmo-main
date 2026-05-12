@@ -175,6 +175,9 @@ export default function AdminDashboardWidgets() {
 
       {/* V97.27 P3-5.B.1 — Funnel de conversion locataires */}
       <FunnelChart />
+
+      {/* V97.29 P3-5.B.2 — Inscriptions par jour 30 jours */}
+      <SignupsChart />
     </section>
   )
 }
@@ -259,6 +262,141 @@ function FunnelChart() {
           })}
           <p style={{ fontSize: 11, color: km.muted, marginTop: 8, marginBottom: 0, lineHeight: 1.5 }}>
             Funnel calculé en temps réel. Les visiteurs anonymes (non inscrits) ne sont pas trackés — pour les inclure, brancher Plausible ou Umami.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── V97.29 P3-5.B.2 — Inscriptions par jour 30 jours ───────────────────────
+
+interface SignupDay {
+  date: string
+  count: number
+  dow: number
+}
+
+function SignupsChart() {
+  const [days, setDays] = useState<SignupDay[] | null>(null)
+  const [total, setTotal] = useState(0)
+  const [peak, setPeak] = useState(0)
+  const [avg, setAvg] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    fetch("/api/admin/signups-trend", { cache: "no-store" })
+      .then(r => r.json())
+      .then(j => {
+        if (!alive || !j.ok) { if (alive) setLoading(false); return }
+        setDays(j.days)
+        setTotal(j.total)
+        setPeak(j.peak)
+        setAvg(j.avg_per_day)
+        setLoading(false)
+      })
+      .catch(() => { if (alive) setLoading(false) })
+    return () => { alive = false }
+  }, [])
+
+  return (
+    <div style={{ marginTop: 28 }}>
+      <header style={{ marginBottom: 14 }}>
+        <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: 1.4, margin: 0 }}>
+          Inscriptions · 30 derniers jours
+        </p>
+        <h2 style={{ fontFamily: "var(--font-fraunces), 'Fraunces', serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, margin: "4px 0 0", color: km.ink }}>
+          Croissance utilisateurs
+        </h2>
+      </header>
+
+      {loading ? (
+        <div style={{ padding: 24, textAlign: "center", color: km.muted, fontSize: 13 }}>Chargement…</div>
+      ) : !days ? (
+        <div style={{ padding: 24, textAlign: "center", color: "#b91c1c", fontSize: 13 }}>Échec chargement</div>
+      ) : (
+        <div style={{ background: "white", border: `1px solid ${km.line}`, borderRadius: 16, padding: 18 }}>
+          {/* Stats top */}
+          <div style={{ display: "flex", gap: 24, marginBottom: 16, flexWrap: "wrap", fontVariantNumeric: "tabular-nums" }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: 1.2 }}>Total 30j</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: km.ink, fontFamily: "var(--font-fraunces), 'Fraunces', serif", fontStyle: "italic", lineHeight: 1, marginTop: 4 }}>{total}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: 1.2 }}>Moy/jour</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: km.ink, fontFamily: "var(--font-fraunces), 'Fraunces', serif", fontStyle: "italic", lineHeight: 1, marginTop: 4 }}>{avg}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: 1.2 }}>Pic / jour</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: km.ink, fontFamily: "var(--font-fraunces), 'Fraunces', serif", fontStyle: "italic", lineHeight: 1, marginTop: 4 }}>{peak}</div>
+            </div>
+          </div>
+
+          {/* Bar chart */}
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 120, position: "relative" }}>
+            {days.map((d, i) => {
+              const isWeekend = d.dow === 0 || d.dow === 6
+              const h = peak > 0 ? (d.count / peak) * 100 : 0
+              const isHovered = hoverIdx === i
+              return (
+                <div
+                  key={d.date}
+                  onMouseEnter={() => setHoverIdx(i)}
+                  onMouseLeave={() => setHoverIdx(null)}
+                  style={{
+                    flex: 1,
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "flex-end",
+                    cursor: "pointer",
+                    position: "relative",
+                  }}
+                >
+                  <div style={{
+                    height: `${Math.max(h, d.count > 0 ? 2 : 0)}%`,
+                    background: isHovered ? km.ink : (isWeekend ? "#8a8477" : "#111"),
+                    opacity: isHovered ? 1 : (d.count === 0 ? 0.15 : (isWeekend ? 0.5 : 0.85)),
+                    borderRadius: "3px 3px 0 0",
+                    transition: "background 140ms, opacity 140ms",
+                    minHeight: d.count > 0 ? 2 : 0,
+                  }} />
+                  {/* Tooltip */}
+                  {isHovered && (
+                    <div style={{
+                      position: "absolute",
+                      bottom: "calc(100% + 6px)",
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      background: km.ink,
+                      color: "white",
+                      padding: "5px 10px",
+                      borderRadius: 6,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                      zIndex: 10,
+                      pointerEvents: "none",
+                    }}>
+                      {new Date(d.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })} · {d.count}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Axis dates : J-30, J-15, today */}
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 10, color: km.muted, fontVariantNumeric: "tabular-nums" }}>
+            <span>{new Date(days[0].date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}</span>
+            <span>{new Date(days[Math.floor(days.length / 2)].date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}</span>
+            <span>{new Date(days[days.length - 1].date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}</span>
+          </div>
+
+          <p style={{ fontSize: 11, color: km.muted, marginTop: 14, marginBottom: 0, lineHeight: 1.5 }}>
+            Barres plus claires = week-end. Hover pour voir la valeur exacte par jour.
           </p>
         </div>
       )}
