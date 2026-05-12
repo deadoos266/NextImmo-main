@@ -10,6 +10,7 @@ import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import ReviewModal from "../../../components/reviews/ReviewModal"
 
 interface HistoriqueBail {
   id: number
@@ -59,6 +60,9 @@ export default function HistoriqueLocataire() {
   const [baux, setBaux] = useState<HistoriqueBail[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // V97.35 P3-3 — modale Laisser un avis sur le proprio
+  const [reviewCtx, setReviewCtx] = useState<{ annonceId: number; proprietaireEmail: string; titre: string | null; ville: string | null } | null>(null)
+  const [reviewStates, setReviewStates] = useState<Record<number, { eligible: boolean; already_submitted: boolean }>>({})
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -73,7 +77,22 @@ export default function HistoriqueLocataire() {
         if (!res.ok || !json.ok) {
           setError(json?.error || "Erreur de chargement")
         } else {
-          setBaux(json.baux || [])
+          const list: HistoriqueBail[] = json.baux || []
+          setBaux(list)
+          const results = await Promise.all(
+            list.map(async b => {
+              try {
+                const r = await fetch(`/api/reviews/eligibility?annonce_id=${b.annonce_id}`)
+                const j = await r.json()
+                return [b.annonce_id, { eligible: !!j.eligible, already_submitted: !!j.already_submitted }] as const
+              } catch {
+                return [b.annonce_id, { eligible: false, already_submitted: false }] as const
+              }
+            }),
+          )
+          const map: Record<number, { eligible: boolean; already_submitted: boolean }> = {}
+          for (const [id, state] of results) map[id] = state
+          setReviewStates(map)
         }
       } catch {
         setError("Erreur réseau")
@@ -235,6 +254,26 @@ export default function HistoriqueLocataire() {
                         EDL Sortie
                       </Link>
                     )}
+                    {/* V97.35 P3-3 — bouton Laisser un avis sur le bailleur */}
+                    {reviewStates[b.annonce_id]?.eligible && (
+                      <button
+                        type="button"
+                        onClick={() => setReviewCtx({
+                          annonceId: b.annonce_id,
+                          proprietaireEmail: b.proprietaire_email,
+                          titre: b.bien_titre,
+                          ville: b.bien_ville,
+                        })}
+                        style={{ background: "#1d4ed8", color: "#fff", border: "none", borderRadius: 999, padding: "6px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}
+                      >
+                        ★ Noter le bailleur
+                      </button>
+                    )}
+                    {reviewStates[b.annonce_id]?.already_submitted && (
+                      <span style={{ fontSize: 11, fontWeight: 600, color: "#15803d", background: "#dcfce7", border: "1px solid #86efac", padding: "6px 12px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "0.3px" }}>
+                        Avis envoyé
+                      </span>
+                    )}
                   </div>
                 </article>
               )
@@ -243,6 +282,26 @@ export default function HistoriqueLocataire() {
         )}
 
       </div>
+
+      {/* V97.35 P3-3 — modale Laisser un avis sur le bailleur */}
+      {reviewCtx && (
+        <ReviewModal
+          open={!!reviewCtx}
+          onClose={() => setReviewCtx(null)}
+          onSuccess={() => {
+            setReviewStates(s => ({
+              ...s,
+              [reviewCtx.annonceId]: { eligible: false, already_submitted: true },
+            }))
+            setReviewCtx(null)
+          }}
+          annonce_id={reviewCtx.annonceId}
+          role="locataire"
+          target_email={reviewCtx.proprietaireEmail}
+          bien_titre={reviewCtx.titre}
+          bien_ville={reviewCtx.ville}
+        />
+      )}
     </main>
   )
 }

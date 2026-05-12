@@ -19,6 +19,7 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import RestituerDepotModal from "../../../../components/baux/RestituerDepotModal"
+import ReviewModal from "../../../../components/reviews/ReviewModal"
 
 interface HistoriqueBail {
   id: number
@@ -71,6 +72,11 @@ export default function HistoriqueBauxPage() {
   const [error, setError] = useState<string | null>(null)
   // V58.2 — modale Restituer le dépôt
   const [restituerCtx, setRestituerCtx] = useState<{ annonceId: number; titre: string | null; ville: string | null; caution: number | null; locataireEmail: string; edlSortieId: string | null } | null>(null)
+  // V97.35 P3-3 — modale Laisser un avis sur le locataire
+  const [reviewCtx, setReviewCtx] = useState<{ annonceId: number; locataireEmail: string; titre: string | null; ville: string | null } | null>(null)
+  // map { annonce_id: { eligible: boolean, already_submitted: boolean } } — pour
+  // afficher ou masquer le bouton review sur chaque card.
+  const [reviewStates, setReviewStates] = useState<Record<number, { eligible: boolean; already_submitted: boolean }>>({})
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -85,7 +91,27 @@ export default function HistoriqueBauxPage() {
         if (!res.ok || !json.ok) {
           setError(json?.error || "Erreur de chargement")
         } else {
-          setBaux(json.baux || [])
+          const list: HistoriqueBail[] = json.baux || []
+          setBaux(list)
+          // V97.35 — précharge le statut "puis-je reviewer" pour chaque bail
+          // (parallèle, best-effort, si erreur le bouton n'apparaît juste pas)
+          const results = await Promise.all(
+            list.map(async b => {
+              try {
+                const r = await fetch(`/api/reviews/eligibility?annonce_id=${b.annonce_id}`)
+                const j = await r.json()
+                return [b.annonce_id, {
+                  eligible: !!j.eligible,
+                  already_submitted: !!j.already_submitted,
+                }] as const
+              } catch {
+                return [b.annonce_id, { eligible: false, already_submitted: false }] as const
+              }
+            }),
+          )
+          const map: Record<number, { eligible: boolean; already_submitted: boolean }> = {}
+          for (const [id, state] of results) map[id] = state
+          setReviewStates(map)
         }
       } catch {
         setError("Erreur réseau")
@@ -241,6 +267,28 @@ export default function HistoriqueBauxPage() {
                         EDL Sortie
                       </Link>
                     )}
+                    {/* V97.35 P3-3 — bouton Laisser un avis. Disparaît si déjà
+                        soumis OU si pas éligible (sécurité double : si l'API
+                        accepte pas, on n'affiche pas non plus). */}
+                    {reviewStates[b.annonce_id]?.eligible && (
+                      <button
+                        type="button"
+                        onClick={() => setReviewCtx({
+                          annonceId: b.annonce_id,
+                          locataireEmail: b.locataire_email,
+                          titre: b.bien_titre,
+                          ville: b.bien_ville,
+                        })}
+                        style={{ background: "#1d4ed8", color: "#fff", border: "none", borderRadius: 999, padding: "6px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}
+                      >
+                        ★ Noter le locataire
+                      </button>
+                    )}
+                    {reviewStates[b.annonce_id]?.already_submitted && (
+                      <span style={{ fontSize: 11, fontWeight: 600, color: "#15803d", background: "#dcfce7", border: "1px solid #86efac", padding: "6px 12px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "0.3px" }}>
+                        Avis envoyé
+                      </span>
+                    )}
                   </div>
                 </article>
               )
@@ -268,6 +316,28 @@ export default function HistoriqueBauxPage() {
             locataire_email: restituerCtx.locataireEmail,
           }}
           edlSortieId={restituerCtx.edlSortieId}
+        />
+      )}
+
+      {/* V97.35 P3-3 — modale Laisser un avis sur le locataire */}
+      {reviewCtx && (
+        <ReviewModal
+          open={!!reviewCtx}
+          onClose={() => setReviewCtx(null)}
+          onSuccess={() => {
+            // Marque la review comme soumise pour cette annonce → masque
+            // le bouton et affiche le badge "Avis envoyé"
+            setReviewStates(s => ({
+              ...s,
+              [reviewCtx.annonceId]: { eligible: false, already_submitted: true },
+            }))
+            setReviewCtx(null)
+          }}
+          annonce_id={reviewCtx.annonceId}
+          role="proprietaire"
+          target_email={reviewCtx.locataireEmail}
+          bien_titre={reviewCtx.titre}
+          bien_ville={reviewCtx.ville}
         />
       )}
     </main>
