@@ -108,6 +108,28 @@ CHECKS_FILE=/tmp/checks.txt bash nestmatch/scripts/release-from-commit.sh
 
 Sans fichier, un seul check par défaut "Tester ce commit en prod" est créé. Paul peut alors enrichir manuellement via l'UI ou la DB.
 
+### Ingestion des blocages signalés par Paul (V97.28)
+
+Quand Paul a coché ✗ sur des checks dans `/admin/releases` (avec notes et photos), il peut me donner deux choses :
+
+**Option A — Markdown collé** : Paul clique "📋 Copier markdown blocages" sur `/admin/releases`, le markdown formaté arrive dans son presse-papier. Il colle dans une nouvelle session Claude. Format :
+- Liste des releases avec ≥ 1 check blocked
+- Pour chaque check : label + note + signed URL screenshot (1h)
+
+**Option B — Lien WebFetch persistant** : Paul clique "🔗 Copier lien Claude" et me donne l'URL avec token. Je fais directement :
+```
+WebFetch(url=<lien>, prompt="Récupère les blocages KeyMatch")
+```
+
+Le token `CLAUDE_BRIEF_TOKEN` est configuré dans Vercel env vars (chaîne aléatoire longue). Si pas configuré, seule l'option A marche.
+
+Workflow standard :
+1. Paul reçoit le markdown/lien
+2. Je lis chaque blocage : titre release, note, screenshot (si fourni)
+3. Je grep le code pour identifier la zone
+4. Je fix avec un commit ciblé
+5. Après push, je PATCH le check via `/api/admin/releases/<id>/check/<checkId>` avec `{ status: "ok" }` pour le marquer résolu
+
 ### Historique des bugs catchés par ce protocole
 
 - V97.7-V97.9 (2026-05-12) : QuartierPicker.tsx sans `leafletSetup`, seuil event-loop 200ms cold-start spurious

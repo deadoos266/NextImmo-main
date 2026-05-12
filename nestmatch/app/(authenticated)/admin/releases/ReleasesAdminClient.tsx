@@ -63,6 +63,9 @@ export default function ReleasesAdminClient({
         </p>
       </header>
 
+      {/* V97.28 — Actions d'export pour Claude */}
+      <BlockersExportActions />
+
       <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
         {Object.entries(stats).map(([s, count]) => (
           <button
@@ -496,6 +499,105 @@ function ScreenshotPreview({ path, releaseId }: { path: string; releaseId: strin
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={url} alt="Capture du problème" style={{ maxWidth: 220, maxHeight: 160, borderRadius: 6, border: `1px solid ${km.line}`, display: "block" }} />
       </a>
+    </div>
+  )
+}
+
+// ─── V97.28 — Actions d'export blocages pour Claude ─────────────────────────
+
+function BlockersExportActions() {
+  const [copying, setCopying] = useState(false)
+  const [feedback, setFeedback] = useState<string | null>(null)
+
+  async function copyMarkdown() {
+    setCopying(true)
+    setFeedback(null)
+    try {
+      const res = await fetch("/api/admin/releases/blockers-export?format=markdown", { cache: "no-store" })
+      if (!res.ok) {
+        setFeedback("Échec récupération")
+        return
+      }
+      const md = await res.text()
+      await navigator.clipboard.writeText(md)
+      setFeedback("Markdown copié — colle-le dans une session Claude")
+      window.setTimeout(() => setFeedback(null), 4000)
+    } catch (e) {
+      setFeedback("Erreur : " + (e instanceof Error ? e.message : String(e)))
+    } finally {
+      setCopying(false)
+    }
+  }
+
+  async function copyClaudeLink() {
+    const token = window.prompt(
+      "Colle le CLAUDE_BRIEF_TOKEN configuré côté Vercel env vars.\n\n" +
+      "Si non configuré : crée-le dans Vercel Settings → Environment Variables " +
+      "avec une chaîne aléatoire longue, puis redeploy.",
+    )
+    if (!token || token.trim().length < 16) {
+      setFeedback("Token absent ou trop court (min 16 chars)")
+      window.setTimeout(() => setFeedback(null), 4000)
+      return
+    }
+    const base = window.location.origin
+    const url = `${base}/api/admin/releases/blockers-export?format=markdown&token=${encodeURIComponent(token.trim())}`
+    try {
+      await navigator.clipboard.writeText(url)
+      setFeedback("Lien Claude copié — donne-le à Claude qui fera WebFetch")
+      window.setTimeout(() => setFeedback(null), 5000)
+    } catch {
+      setFeedback("Impossible de copier dans le presse-papier (manuel : " + url + ")")
+    }
+  }
+
+  return (
+    <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+      <button
+        type="button"
+        onClick={copyMarkdown}
+        disabled={copying}
+        style={{
+          background: "#111",
+          color: "white",
+          border: "none",
+          borderRadius: 999,
+          padding: "8px 18px",
+          fontSize: 12,
+          fontWeight: 700,
+          cursor: copying ? "wait" : "pointer",
+          fontFamily: "inherit",
+          textTransform: "uppercase",
+          letterSpacing: 0.5,
+        }}
+      >
+        {copying ? "Génération…" : "📋 Copier markdown blocages"}
+      </button>
+      <button
+        type="button"
+        onClick={copyClaudeLink}
+        style={{
+          background: "white",
+          color: km.ink,
+          border: `1px solid ${km.line}`,
+          borderRadius: 999,
+          padding: "8px 18px",
+          fontSize: 12,
+          fontWeight: 600,
+          cursor: "pointer",
+          fontFamily: "inherit",
+          textTransform: "uppercase",
+          letterSpacing: 0.5,
+        }}
+        title="URL persistante que Claude peut WebFetch directement dans n'importe quelle session"
+      >
+        🔗 Copier lien Claude WebFetch
+      </button>
+      {feedback && (
+        <span style={{ fontSize: 12, color: km.muted, fontStyle: "italic" }}>
+          {feedback}
+        </span>
+      )}
     </div>
   )
 }
