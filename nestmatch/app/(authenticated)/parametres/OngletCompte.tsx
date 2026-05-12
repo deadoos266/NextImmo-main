@@ -482,14 +482,29 @@ export default function OngletCompte() {
       <section style={{ background: "white", border: "1px solid #EAE6DF", borderRadius: 20, padding: 28, boxShadow: "0 1px 2px rgba(0,0,0,0.02)" }}>
         <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, letterSpacing: "-0.3px", color: "#111", margin: "0 0 6px" }}>Mes données</h2>
         <p style={{ fontSize: 13, color: "#8a8477", margin: "0 0 16px", lineHeight: 1.5 }}>
-          Téléchargez une copie JSON de votre profil. Pour une extraction complète (messages, candidatures, dossier), contactez-nous depuis la page Contact.
+          Conformément au RGPD (Article 20), vous pouvez télécharger l&apos;intégralité de vos données à tout moment. Limite de 5 exports par jour.
         </p>
-        <button
-          type="button"
-          onClick={telechargerMesDonnees}
-          style={{ background: "#F7F4EF", color: "#111", border: "1px solid #EAE6DF", borderRadius: 999, padding: "10px 22px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-          Télécharger mes données (JSON)
-        </button>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {/* V97.22 P3-11 — Export complet ZIP (profil + messages + candidatures
+              + dossier + visites + loyers + EDLs + annonces + notifications). */}
+          <a
+            href="/api/account/export-complete"
+            target="_blank"
+            rel="noopener"
+            style={{ background: "#111", color: "white", border: "1px solid #111", borderRadius: 999, padding: "10px 22px", fontWeight: 700, fontSize: 11, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px", textDecoration: "none", display: "inline-block" }}
+            title="Export RGPD complet — toutes vos données en JSON dans un ZIP"
+          >
+            Export complet (.zip)
+          </a>
+          <button
+            type="button"
+            onClick={telechargerMesDonnees}
+            style={{ background: "#F7F4EF", color: "#111", border: "1px solid #EAE6DF", borderRadius: 999, padding: "10px 22px", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.3px" }}
+            title="Profil uniquement, format JSON"
+          >
+            Profil seul (.json)
+          </button>
+        </div>
       </section>
 
       <section style={{ background: "#FEECEC", border: "1px solid #F4C9C9", borderRadius: 20, padding: 26 }}>
