@@ -43,6 +43,7 @@ export async function GET() {
     .from("messages")
     .select("*")
     .or(`from_email.eq.${me},to_email.eq.${me}`)
+    .is("deleted_at", null)  // V97.26 T1 — exclut soft-deleted
     .order("created_at", { ascending: false })
 
   if (error) {

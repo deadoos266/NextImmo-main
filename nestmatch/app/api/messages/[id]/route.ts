@@ -48,16 +48,25 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ ok: false, error: "Vous ne pouvez supprimer que vos propres messages" }, { status: 403 })
   }
 
+  // V97.26 T1 — Soft delete : UPDATE deleted_at au lieu de DELETE.
+  // Permet undo dans les 5s côté UI + audit trail. Le cron de purge physique
+  // (à implémenter) supprimera les rows deleted_at < now() - 30 days.
   const { error } = await supabaseAdmin
     .from("messages")
-    .delete()
+    .update({ deleted_at: new Date().toISOString() })
     .eq("id", messageId)
+    .is("deleted_at", null)  // idempotence : ne re-stamp pas si déjà supprimé
   if (error) {
     console.error("[messages DELETE]", error)
     return NextResponse.json({ ok: false, error: "Suppression échouée" }, { status: 500 })
   }
   return NextResponse.json({ ok: true })
 }
+
+/**
+ * V97.26 T1 — POST /api/messages/[id]/restore (via PATCH ?action=restore)
+ * → déplacé en route séparée /restore/route.ts pour clarté.
+ */
 
 interface PatchBody {
   contenu?: string

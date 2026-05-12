@@ -46,18 +46,20 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Load both directions
+  // Load both directions. V97.26 T1 — filter soft-deleted (deleted_at NOT NULL).
   const [{ data: sent }, { data: received }] = await Promise.all([
     supabaseAdmin
       .from("messages")
       .select("*")
       .eq("from_email", me)
-      .eq("to_email", withEmail),
+      .eq("to_email", withEmail)
+      .is("deleted_at", null),
     supabaseAdmin
       .from("messages")
       .select("*")
       .eq("from_email", withEmail)
-      .eq("to_email", me),
+      .eq("to_email", me)
+      .is("deleted_at", null),
   ])
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

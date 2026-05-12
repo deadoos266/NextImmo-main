@@ -33,6 +33,7 @@ export async function GET() {
     .select("id", { count: "exact", head: true })
     .eq("to_email", email)
     .eq("lu", false)
+    .is("deleted_at", null)  // V97.26 T1 — pas de compteur sur soft-deleted
 
   if (error) {
     console.error("[messages/unread-count]", error)

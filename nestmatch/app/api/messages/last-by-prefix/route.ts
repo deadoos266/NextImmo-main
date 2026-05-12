@@ -74,6 +74,7 @@ export async function GET(req: NextRequest) {
     .select("contenu, created_at")
     .eq("annonce_id", annonceId)
     .ilike("contenu", `${prefix}%`)
+    .is("deleted_at", null)  // V97.26 T1 — exclut soft-deleted
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle()

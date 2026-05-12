@@ -1545,6 +1545,9 @@ function MessagesInner() {
   const [nouveau, setNouveau] = useState("")
   // V97.20 P3-4.D — Upload image dans message (file picker + compression)
   const [uploadingImage, setUploadingImage] = useState(false)
+  // V97.26 T1 — Toast undo après suppression (5s window pour restaurer)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [deletedToast, setDeletedToast] = useState<{ msg: any; expiresAt: number } | null>(null)
   const imageInputRef = useRef<HTMLInputElement | null>(null)
   const [loading, setLoading] = useState(true)
   const [envoi, setEnvoi] = useState(false)
@@ -2578,18 +2581,44 @@ function MessagesInner() {
   }
 
   async function supprimerMessage(id: number) {
-    if (!confirm("Supprimer ce message ?")) return
-    // Optimistic : retirer direct, DB sync en arrière-plan
+    // V97.26 T1 — Plus de confirm() bloquant : suppression directe (optimistic)
+    // + toast undo 5s. Si pas d'undo, le soft-delete est confirmé.
     const backup = messages.find(m => m.id === id)
+    if (!backup) return
     setMessages(prev => prev.filter(m => m.id !== id))
     setMenuMsgId(null)
     // V65.1 — via DELETE /api/messages/:id (préreq REVOKE DELETE anon migration 058)
     const res = await fetch(`/api/messages/${id}`, { method: "DELETE" })
-    if (!res.ok && backup) {
+    if (!res.ok) {
       // Rollback si échec
       setMessages(prev => [...prev, backup].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()))
       alert("Impossible de supprimer le message")
+      return
     }
+    // V97.26 T1 — Toast undo : 5s pour cliquer "Annuler" → restore
+    setDeletedToast({ msg: backup, expiresAt: Date.now() + 5000 })
+  }
+
+  // V97.26 T1 — Auto-clear toast après 5s
+  useEffect(() => {
+    if (!deletedToast) return
+    const remaining = Math.max(0, deletedToast.expiresAt - Date.now())
+    const t = setTimeout(() => setDeletedToast(null), remaining)
+    return () => clearTimeout(t)
+  }, [deletedToast])
+
+  // V97.26 T1 — Restaure un message soft-deleted (fenêtre 5s)
+  async function restaurerMessage() {
+    if (!deletedToast) return
+    const msg = deletedToast.msg
+    setDeletedToast(null)
+    const res = await fetch(`/api/messages/${msg.id}/restore`, { method: "POST" })
+    if (!res.ok) {
+      alert("Restauration échouée — message déjà perdu.")
+      return
+    }
+    // Restore local : ré-insère le message à sa place (tri par created_at)
+    setMessages(prev => [...prev, msg].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()))
   }
 
   async function copierMessage(contenu: string) {
@@ -5727,6 +5756,52 @@ function MessagesInner() {
                   })}
                   <div ref={bottomRef} />
                 </div>
+
+                {/* V97.26 T1 — Toast undo après suppression (5s window) */}
+                {deletedToast && (
+                  <div style={{
+                    position: "fixed",
+                    bottom: isMobile ? 160 : 100,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    background: "#111",
+                    color: "white",
+                    padding: "12px 18px",
+                    borderRadius: 999,
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.25)",
+                    fontSize: 13,
+                    fontFamily: "inherit",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 14,
+                    zIndex: 9500,
+                    maxWidth: "calc(100vw - 32px)",
+                  }}
+                  role="status"
+                  aria-live="polite"
+                  >
+                    <span>Message supprimé</span>
+                    <button
+                      type="button"
+                      onClick={restaurerMessage}
+                      style={{
+                        background: "transparent",
+                        color: "white",
+                        border: "1px solid rgba(255,255,255,0.35)",
+                        borderRadius: 999,
+                        padding: "5px 14px",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                )}
 
                 {/* Visites : barre résumé compacte + modale de gestion.
                     V11.13 (Paul 2026-04-28) — compactee : padding 10x20 -> 6x14,
