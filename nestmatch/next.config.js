@@ -65,9 +65,11 @@ const nextConfig = {
       {
         source: "/(.*)",
         headers: [
-          // CSP en report-only d'abord pour éviter de casser la prod. Passer en
-          // enforcing (Content-Security-Policy) après 48h sans violation en Sentry.
-          { key: "Content-Security-Policy-Report-Only", value: CSP_HEADER },
+          // V97.33 T6 — CSP passé en enforcing (était Report-Only depuis V71.x).
+          // Header `Content-Security-Policy` bloque pour de vrai les ressources
+          // non whitelistées. Si une feature casse (ex: chargement script tiers
+          // oublié), il faudra ajouter le domaine au CSP_HEADER ci-dessus.
+          { key: "Content-Security-Policy", value: CSP_HEADER },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
