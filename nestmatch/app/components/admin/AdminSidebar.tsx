@@ -71,6 +71,8 @@ export default function AdminSidebar() {
   const pathname = usePathname() || "/"
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  // V97.25 — Compteur releases pending pour badge sidebar "Validations"
+  const [releasesPending, setReleasesPending] = useState(0)
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -80,6 +82,23 @@ export default function AdminSidebar() {
     mq.addEventListener("change", update)
     return () => mq.removeEventListener("change", update)
   }, [])
+
+  // V97.25 — Fetch stats releases au mount + à chaque navigation interne
+  // (l'admin a probablement validé un check → on rafraîchit le badge).
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetch("/api/admin/releases?status=pending", { cache: "no-store" })
+        const json = await res.json().catch(() => ({}))
+        if (!cancelled && json?.ok && json.stats) {
+          const pending = (json.stats.pending || 0) + (json.stats.in_progress || 0)
+          setReleasesPending(pending)
+        }
+      } catch { /* silent — badge cosmétique */ }
+    })()
+    return () => { cancelled = true }
+  }, [pathname])
 
   // Auto-close drawer mobile sur navigation
   useEffect(() => { setMobileOpen(false) }, [pathname])
@@ -120,6 +139,18 @@ export default function AdminSidebar() {
         <span style={{ flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {item.label}
         </span>
+        {/* V97.25 — Badge pending pour /admin/releases */}
+        {item.href === "/admin/releases" && releasesPending > 0 && (
+          <span style={{
+            fontSize: 10, fontWeight: 700,
+            background: "#b91c1c", color: "white",
+            minWidth: 20, height: 18,
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            borderRadius: 999, padding: "0 6px",
+            fontVariantNumeric: "tabular-nums",
+            flexShrink: 0,
+          }}>{releasesPending}</span>
+        )}
         {item.comingSoon && (
           <span style={{
             fontSize: 9, fontWeight: 700, textTransform: "uppercase",

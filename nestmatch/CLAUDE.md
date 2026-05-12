@@ -86,6 +86,28 @@ Quand Paul demande "vérifie que t'as pas de la merde" après plusieurs commits 
 - Sous-agent `verifier` en mode global avec la liste des commits de la session
 - Cross-feature check : les features qui touchent les mêmes fichiers (ex : `app/(authenticated)/messages/page.tsx`) ne s'interfèrent pas
 
+### Après chaque push important : créer une release_validation
+
+V97.25 — à chaque `git push origin main` qui livre une feature, lance :
+```
+bash nestmatch/scripts/release-from-commit.sh
+```
+
+Le script :
+- Lit `git log HEAD` (sha + title + body)
+- INSERT une row dans `release_validations` via Supabase REST API (service_role)
+- INSERT une notification cloche pour Paul (`tic3467@gmail.com`)
+- Paul voit la nouvelle release dans `/admin/releases` avec le badge rouge dans la sidebar
+
+Optionnel : fournir une liste de checks via fichier :
+```
+echo "Tester X" > /tmp/checks.txt
+echo "Vérifier Y" >> /tmp/checks.txt
+CHECKS_FILE=/tmp/checks.txt bash nestmatch/scripts/release-from-commit.sh
+```
+
+Sans fichier, un seul check par défaut "Tester ce commit en prod" est créé. Paul peut alors enrichir manuellement via l'UI ou la DB.
+
 ### Historique des bugs catchés par ce protocole
 
 - V97.7-V97.9 (2026-05-12) : QuartierPicker.tsx sans `leafletSetup`, seuil event-loop 200ms cold-start spurious
