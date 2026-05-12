@@ -24,13 +24,15 @@ export const dynamic = "force-dynamic"
 interface CheckItem {
   id: string
   label: string
-  status?: "pending" | "ok" | "blocked"
+  // V97.32 — `coded` = fait par Claude, en attente test Paul.
+  // `ok` = testé et validé par Paul. `blocked` = bug trouvé par Paul.
+  status?: "pending" | "coded" | "ok" | "blocked"
   note?: string | null
   screenshot_path?: string | null
 }
 
 interface PatchBody {
-  status?: "ok" | "blocked" | "pending"
+  status?: "ok" | "blocked" | "pending" | "coded"
   note?: string | null
   screenshot_path?: string | null
 }
@@ -41,8 +43,11 @@ function computeReleaseStatus(checks: CheckItem[]): "pending" | "in_progress" | 
   if (hasBlocked) return "blocked"
   const allOk = checks.every(c => c.status === "ok")
   if (allOk) return "validated"
-  const anyOk = checks.some(c => c.status === "ok")
-  if (anyOk) return "in_progress"
+  // V97.32 — Au moins un check `ok` OU `coded` (= avancement, pas validation
+  // complète) déclenche `in_progress`. Le release reste pending tant qu'aucun
+  // check n'a bougé.
+  const anyAdvancement = checks.some(c => c.status === "ok" || c.status === "coded")
+  if (anyAdvancement) return "in_progress"
   return "pending"
 }
 
@@ -69,7 +74,7 @@ export async function PATCH(
   }
 
   const newStatus = body.status
-  if (newStatus && !["ok", "blocked", "pending"].includes(newStatus)) {
+  if (newStatus && !["ok", "blocked", "pending", "coded"].includes(newStatus)) {
     return NextResponse.json({ ok: false, error: "status invalide" }, { status: 400 })
   }
   const note = typeof body.note === "string" ? body.note.trim().slice(0, 500) : null

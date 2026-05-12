@@ -118,6 +118,7 @@ export default function ReleasesAdminClient({
             <tbody>
               {visible.map(r => {
                 const checksOk = r.checks.filter(c => c.status === "ok").length
+                const checksCoded = r.checks.filter(c => c.status === "coded").length
                 const checksBlocked = r.checks.filter(c => c.status === "blocked").length
                 const checksTotal = r.checks.length
                 return (
@@ -139,7 +140,10 @@ export default function ReleasesAdminClient({
                     </td>
                     <td style={tdStyle}>
                       <span style={{ fontSize: 11, color: km.muted, fontVariantNumeric: "tabular-nums" }}>
-                        {checksOk}/{checksTotal}
+                        <span style={{ color: "#15803d", fontWeight: 700 }}>{checksOk}</span>/{checksTotal}
+                        {checksCoded > 0 && (
+                          <span style={{ color: "#1d4ed8", marginLeft: 6 }} title="Faits par Claude, à tester">· {checksCoded} ✦</span>
+                        )}
                         {checksBlocked > 0 && (
                           <span style={{ color: "#b91c1c", marginLeft: 6 }}>· {checksBlocked} bloqué{checksBlocked > 1 ? "s" : ""}</span>
                         )}
@@ -186,7 +190,7 @@ function DetailModal({
   const [blockingCheckId, setBlockingCheckId] = useState<string | null>(null)
   const [blockNote, setBlockNote] = useState("")
 
-  async function updateCheck(checkId: string, payload: { status?: "ok" | "blocked" | "pending"; note?: string | null; screenshot_path?: string | null }) {
+  async function updateCheck(checkId: string, payload: { status?: "ok" | "blocked" | "pending" | "coded"; note?: string | null; screenshot_path?: string | null }) {
     setBusyCheckId(checkId)
     try {
       const res = await fetch(`/api/admin/releases/${release.id}/check/${checkId}`, {
@@ -359,13 +363,16 @@ function DetailModal({
                   padding: "10px 12px",
                   border: `1px solid ${km.line}`,
                   borderRadius: 10,
-                  background: c.status === "ok" ? "#F0FAEE" : c.status === "blocked" ? "#FEECEC" : "white",
+                  background: c.status === "ok" ? "#F0FAEE" : c.status === "blocked" ? "#FEECEC" : c.status === "coded" ? "#EEF3FB" : "white",
                   opacity: isBusy ? 0.6 : 1,
                 }}
               >
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                  <span style={{ fontSize: 14, color: c.status === "ok" ? "#15803d" : c.status === "blocked" ? "#b91c1c" : km.muted, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>
-                    {c.status === "ok" ? "✓" : c.status === "blocked" ? "✗" : "○"}
+                  <span
+                    style={{ fontSize: 14, color: c.status === "ok" ? "#15803d" : c.status === "blocked" ? "#b91c1c" : c.status === "coded" ? "#1d4ed8" : km.muted, fontWeight: 700, flexShrink: 0, marginTop: 1 }}
+                    title={c.status === "coded" ? "Fait par Claude — à tester" : c.status === "ok" ? "Validé par Paul" : c.status === "blocked" ? "Bloqué — bug trouvé" : "Pas démarré"}
+                  >
+                    {c.status === "ok" ? "✓" : c.status === "blocked" ? "✗" : c.status === "coded" ? "✦" : "○"}
                   </span>
                   <span style={{ fontSize: 13, color: km.ink, flex: 1, lineHeight: 1.5 }}>
                     {c.label}

@@ -24,7 +24,8 @@ export const dynamic = "force-dynamic"
 interface CheckItem {
   id: string
   label: string
-  status?: "pending" | "ok" | "blocked"
+  // V97.32 — `coded` = fait par Claude, à tester. `ok` = validé Paul.
+  status?: "pending" | "coded" | "ok" | "blocked"
   note?: string | null
   screenshot_path?: string | null
 }
@@ -103,9 +104,10 @@ export async function POST(req: NextRequest) {
   const rawChecks = Array.isArray(body.checks) ? body.checks : []
   const checks: CheckItem[] = rawChecks.slice(0, 50).map((c, idx): CheckItem => {
     if (typeof c === "string") {
-      return { id: `check-${idx + 1}`, label: c.slice(0, 300), status: "pending" as const }
+      // V97.32 — Default `coded` (fait par Claude) au lieu de `pending`
+      return { id: `check-${idx + 1}`, label: c.slice(0, 300), status: "coded" as const }
     }
-    const status: CheckItem["status"] = (c.status === "ok" || c.status === "blocked") ? c.status : "pending"
+    const status: CheckItem["status"] = (c.status === "ok" || c.status === "blocked" || c.status === "coded" || c.status === "pending") ? c.status : "coded"
     return {
       id: typeof c.id === "string" ? c.id.slice(0, 50) : `check-${idx + 1}`,
       label: typeof c.label === "string" ? c.label.slice(0, 300) : "",

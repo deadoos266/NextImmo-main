@@ -20,7 +20,8 @@ export const dynamic = "force-dynamic"
 interface CheckItem {
   id: string
   label: string
-  status?: "pending" | "ok" | "blocked"
+  // V97.32 — `coded` = fait par Claude, à tester. `ok` = validé Paul.
+  status?: "pending" | "coded" | "ok" | "blocked"
   note?: string | null
   screenshot_path?: string | null
 }
