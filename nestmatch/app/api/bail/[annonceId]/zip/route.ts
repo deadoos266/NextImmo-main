@@ -1,5 +1,7 @@
 /**
- * V97.21 P3-12.A — GET /api/bail/[id]/zip
+ * V97.21 P3-12.A — GET /api/bail/[annonceId]/zip
+ * (V97.23 — renommé [id] → [annonceId] pour aligner sur slug Next.js
+ * existant sur ce niveau de route dynamique).
  *
  * Télécharge en un ZIP tous les documents légaux du bail :
  *   - bail.pdf (annonces.bail_pdf_url)
@@ -108,15 +110,15 @@ async function fetchAsBuffer(url: string, globalSignal: AbortSignal): Promise<Bu
   }
 }
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ annonceId: string }> }) {
   const session = await getServerSession(authOptions)
   const email = session?.user?.email?.toLowerCase()
   if (!email) {
     return NextResponse.json({ error: "Auth requise" }, { status: 401 })
   }
 
-  const { id } = await params
-  const annonceId = Number(id)
+  const { annonceId: annonceIdStr } = await params
+  const annonceId = Number(annonceIdStr)
   if (!Number.isFinite(annonceId) || annonceId <= 0) {
     return NextResponse.json({ error: "ID invalide" }, { status: 400 })
   }
