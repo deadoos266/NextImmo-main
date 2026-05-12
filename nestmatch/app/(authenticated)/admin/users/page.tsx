@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "../../../../lib/supabase-server"
 import AdminPageHeader from "../../../components/admin/AdminPageHeader"
 import { km } from "../../../components/ui/km"
+import UsersAdminClient from "./UsersAdminClient"
 
 export const metadata = {
   title: "Utilisateurs admin — KeyMatch",
@@ -34,45 +35,11 @@ export default async function AdminUsersPage() {
     <div>
       <AdminPageHeader title="Utilisateurs" subtitle={`${stats.total} comptes · ${stats.new24h} nouveaux 24h · ${stats.admins} admins · ${stats.banned} bannis`} />
 
-      <div style={{ background: km.white, border: `1px solid ${km.line}`, borderRadius: 14, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, fontFamily: "var(--font-dm-sans), 'DM Sans', sans-serif" }}>
-          <thead>
-            <tr style={{ background: km.beige, color: km.muted, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.8 }}>
-              <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 700 }}>Email</th>
-              <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 700 }}>Nom</th>
-              <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 700 }}>Rôle</th>
-              <th style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700 }}>Status</th>
-              <th style={{ padding: "10px 14px", textAlign: "right", fontWeight: 700 }}>Créé</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.length === 0 ? (
-              <tr><td colSpan={5} style={{ padding: 32, textAlign: "center", color: km.muted }}>Aucun user.</td></tr>
-            ) : users.map(u => (
-              <tr key={u.id} style={{ borderTop: `1px solid ${km.line}` }}>
-                <td style={{ padding: "10px 14px", color: km.ink, fontWeight: 600 }}>{u.email}</td>
-                <td style={{ padding: "10px 14px", color: km.muted }}>{u.name || "—"}</td>
-                <td style={{ padding: "10px 14px", color: km.muted, fontSize: 11 }}>
-                  {u.role}{u.is_admin && <span style={{ marginLeft: 6, padding: "2px 6px", borderRadius: 4, background: km.ink, color: km.white, fontSize: 9, fontWeight: 700 }}>ADMIN</span>}
-                </td>
-                <td style={{ padding: "10px 14px", textAlign: "center" }}>
-                  {u.is_banned ? (
-                    <span style={{ fontSize: 10, color: "#b91c1c", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }} title={u.ban_reason || ""}>Banni</span>
-                  ) : (
-                    <span style={{ fontSize: 10, color: "#15803d", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6 }}>Actif</span>
-                  )}
-                </td>
-                <td style={{ padding: "10px 14px", textAlign: "right", color: km.muted, fontSize: 11 }}>
-                  {new Date(u.created_at).toLocaleDateString("fr-FR")}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* V97.31 — Liste interactive avec actions ban/unban/reset/promote */}
+      <UsersAdminClient initialUsers={users} />
 
       <p style={{ fontSize: 11, color: km.muted, marginTop: 14 }}>
-        Pour ban / promote / delete : utilise le dashboard <a href="/admin#users" style={{ color: km.ink }}>/admin · onglet Utilisateurs</a>.
+        Actions admin : Bannir / Débannir / Reset password / Promote ou Demote. Tous les events sont auth-gated (NextAuth + is_admin) et passent par <code>/api/admin/users</code> ou <code>/api/admin/users/force-reset</code>.
       </p>
     </div>
   )
