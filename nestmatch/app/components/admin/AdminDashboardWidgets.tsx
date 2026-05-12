@@ -172,7 +172,97 @@ export default function AdminDashboardWidgets() {
       ) : (
         <div style={{ padding: 32, textAlign: "center", color: "#b91c1c", fontSize: 14 }}>Échec chargement stats.</div>
       )}
+
+      {/* V97.27 P3-5.B.1 — Funnel de conversion locataires */}
+      <FunnelChart />
     </section>
+  )
+}
+
+// ─── V97.27 P3-5.B.1 — Funnel de conversion ─────────────────────────────────
+
+interface FunnelStep {
+  key: string
+  label: string
+  count: number
+  pct_of_total: number
+  pct_of_prev: number | null
+}
+
+function FunnelChart() {
+  const [steps, setSteps] = useState<FunnelStep[] | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let alive = true
+    fetch("/api/admin/funnel", { cache: "no-store" })
+      .then(r => r.json())
+      .then(j => {
+        if (alive && j.ok) {
+          setSteps(j.steps as FunnelStep[])
+          setLoading(false)
+        }
+      })
+      .catch(() => { if (alive) setLoading(false) })
+    return () => { alive = false }
+  }, [])
+
+  const maxCount = steps ? Math.max(...steps.map(s => s.count), 1) : 1
+
+  return (
+    <div style={{ marginTop: 28 }}>
+      <header style={{ marginBottom: 14 }}>
+        <p style={{ fontSize: 10, fontWeight: 700, color: km.muted, textTransform: "uppercase", letterSpacing: 1.4, margin: 0 }}>
+          Funnel de conversion · Locataires
+        </p>
+        <h2 style={{ fontFamily: "var(--font-fraunces), 'Fraunces', serif", fontStyle: "italic", fontWeight: 500, fontSize: 22, margin: "4px 0 0", color: km.ink }}>
+          De l&apos;inscription au bail signé
+        </h2>
+      </header>
+
+      {loading ? (
+        <div style={{ padding: 24, textAlign: "center", color: km.muted, fontSize: 13 }}>Calcul du funnel…</div>
+      ) : !steps ? (
+        <div style={{ padding: 24, textAlign: "center", color: "#b91c1c", fontSize: 13 }}>Échec chargement funnel.</div>
+      ) : (
+        <div style={{ background: "white", border: `1px solid ${km.line}`, borderRadius: 16, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+          {steps.map((step, idx) => {
+            const widthPct = (step.count / maxCount) * 100
+            const isFirst = idx === 0
+            return (
+              <div key={step.key} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: km.ink, fontFamily: "inherit" }}>
+                    {idx + 1}. {step.label}
+                  </span>
+                  <span style={{ fontSize: 11, color: km.muted, fontVariantNumeric: "tabular-nums" }}>
+                    <strong style={{ color: km.ink, fontWeight: 700, fontSize: 14 }}>{step.count.toLocaleString("fr-FR")}</strong>
+                    <span style={{ marginLeft: 8 }}>· {step.pct_of_total}% du total</span>
+                    {!isFirst && step.pct_of_prev !== null && (
+                      <span style={{ marginLeft: 8, color: step.pct_of_prev >= 50 ? "#15803d" : step.pct_of_prev >= 25 ? "#a16207" : "#b91c1c" }}>
+                        · {step.pct_of_prev}% de l&apos;étape précédente
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <div style={{ width: "100%", height: 28, background: km.beige, borderRadius: 6, overflow: "hidden", position: "relative" }}>
+                  <div style={{
+                    height: "100%",
+                    width: `${widthPct}%`,
+                    background: km.ink,
+                    transition: "width 320ms ease-out",
+                    minWidth: step.count > 0 ? 2 : 0,
+                  }} />
+                </div>
+              </div>
+            )
+          })}
+          <p style={{ fontSize: 11, color: km.muted, marginTop: 8, marginBottom: 0, lineHeight: 1.5 }}>
+            Funnel calculé en temps réel. Les visiteurs anonymes (non inscrits) ne sont pas trackés — pour les inclure, brancher Plausible ou Umami.
+          </p>
+        </div>
+      )}
+    </div>
   )
 }
 
