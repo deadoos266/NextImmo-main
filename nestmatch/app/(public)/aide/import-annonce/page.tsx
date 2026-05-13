@@ -13,13 +13,19 @@ export const metadata = {
   robots: { index: false, follow: false },
 }
 
-const SOURCES = [
-  { name: "Leboncoin", host: "leboncoin.fr", desc: "Annonces locations particuliers & agences. Extraction très complète (prix, surface, pièces, photos, DPE, équipements)." },
-  { name: "SeLoger", host: "seloger.com", desc: "Locations professionnelles principalement. Extraction depuis Schema.org + état initial." },
-  { name: "PAP", host: "pap.fr", desc: "Particulier à Particulier. Extraction best-effort, vérifie les champs après import." },
-  { name: "Bien'ici", host: "bienici.com", desc: "Schema.org + données initiales pour titre, prix, surface, localisation." },
-  { name: "Logic-immo", host: "logic-immo.com", desc: "Extraction limitée, surtout titre/description/prix." },
-  { name: "Autres sites", host: "(générique)", desc: "On tente Open Graph + Schema.org. Quelques champs basiques — complète manuellement le reste." },
+type SourceStatus = "good" | "partial" | "blocked"
+interface SourceItem { name: string; host: string; desc: string; status: SourceStatus }
+const SOURCES: SourceItem[] = [
+  // Sites avec anti-bot — bloqués côté serveur, l'import échoue presque toujours
+  { name: "Leboncoin", host: "leboncoin.fr", desc: "Protégé par DataDome — bloque les imports automatisés depuis serveur. Copie-colle les infos manuellement.", status: "blocked" },
+  { name: "PAP", host: "pap.fr", desc: "Protégé par Cloudflare — même limite que Leboncoin. Saisie manuelle recommandée.", status: "blocked" },
+  // Sites partiels
+  { name: "SeLoger", host: "seloger.com", desc: "Fonctionne sur certaines URLs de fiche valides. JSON-LD complet quand accessible.", status: "partial" },
+  { name: "Bien'ici", host: "bienici.com", desc: "Application 100 % JS (SPA) — seul le titre + image principale sont extraits sans navigation client.", status: "partial" },
+  { name: "Logic-immo", host: "logic-immo.com", desc: "Extraction limitée, dépend des metadata du site (souvent OG title + prix).", status: "partial" },
+  // Sites accessibles
+  { name: "Sites d'agences locales", host: "(divers)", desc: "Beaucoup d'agences immobilières utilisent Schema.org RealEstateListing. Quand c'est le cas, extraction très propre (titre, prix, surface, photos).", status: "good" },
+  { name: "Autres sites publics", host: "(générique)", desc: "On tente Open Graph + Schema.org. Au minimum : titre + 1 photo. Le reste se complète manuellement.", status: "good" },
 ]
 
 export default function AideImportAnnoncePage() {
@@ -67,22 +73,51 @@ export default function AideImportAnnoncePage() {
 
         {/* Sources supportées */}
         <section style={{ background: "#fff", border: "1px solid #EAE6DF", borderRadius: 20, padding: "28px", marginBottom: 20 }}>
-          <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 24, color: "#111", margin: "0 0 18px", lineHeight: 1.2 }}>
-            Sites supportés
+          <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 500, fontSize: 24, color: "#111", margin: "0 0 12px", lineHeight: 1.2 }}>
+            Sites supportés et limitations
           </h2>
+          <p style={{ fontSize: 13, color: "#666", margin: "0 0 18px", lineHeight: 1.55 }}>
+            Tous les sites ne se laissent pas lire de la même façon. Voici l&apos;état actuel des sources testées :
+          </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {SOURCES.map(s => (
-              <div key={s.name} style={{ paddingBottom: 12, borderBottom: "1px solid #F0EAE0" }}>
-                <p style={{ fontSize: 14, fontWeight: 700, color: "#111", margin: 0 }}>
-                  {s.name}
-                  <span style={{ fontWeight: 400, color: "#8a8477", marginLeft: 8, fontSize: 12 }}>{s.host}</span>
-                </p>
-                <p style={{ fontSize: 13, color: "#3f3c37", margin: "4px 0 0", lineHeight: 1.55 }}>
-                  {s.desc}
-                </p>
-              </div>
-            ))}
+            {SOURCES.map(s => {
+              const badge = s.status === "good"
+                ? { bg: "#dcfce7", color: "#166534", label: "Fiable" }
+                : s.status === "partial"
+                  ? { bg: "#fef3c7", color: "#92400e", label: "Partiel" }
+                  : { bg: "#fee2e2", color: "#991b1b", label: "Bloqué côté serveur" }
+              return (
+                <div key={s.name} style={{ paddingBottom: 12, borderBottom: "1px solid #F0EAE0" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: "#111", margin: 0 }}>
+                      {s.name}
+                      <span style={{ fontWeight: 400, color: "#8a8477", marginLeft: 8, fontSize: 12 }}>{s.host}</span>
+                    </p>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, color: badge.color, background: badge.bg,
+                      padding: "2px 10px", borderRadius: 999,
+                      textTransform: "uppercase", letterSpacing: "0.5px",
+                    }}>{badge.label}</span>
+                  </div>
+                  <p style={{ fontSize: 13, color: "#3f3c37", margin: "4px 0 0", lineHeight: 1.55 }}>
+                    {s.desc}
+                  </p>
+                </div>
+              )
+            })}
           </div>
+        </section>
+
+        {/* Encadré honnêteté sur le scraping */}
+        <section style={{ background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 20, padding: "20px 24px", marginBottom: 20 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: "#92400e", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            Pourquoi Leboncoin et PAP ne marchent pas ?
+          </p>
+          <p style={{ fontSize: 13, color: "#78350f", margin: 0, lineHeight: 1.6 }}>
+            Ces sites utilisent des protections anti-bot (DataDome, Cloudflare) qui refusent toute requête venant d&apos;un serveur (Vercel, AWS, etc.) — ils répondent <code style={{ background: "#fed7aa", padding: "1px 6px", borderRadius: 4 }}>403 Forbidden</code> avant même que nos parsers puissent lire la page.
+            Contourner ces protections coûte ~30 €/mois par site (services type ScrapingBee / Bright Data) — c&apos;est un trade-off qu&apos;on n&apos;a pas voulu imposer pour cette V1.
+            En attendant : ouvre ta page Leboncoin/PAP côté navigateur, copie le titre + la description + les chiffres clés, et colle-les dans le wizard de KeyMatch. Les photos restent à uploader de toute façon.
+          </p>
         </section>
 
         {/* FAQ */}

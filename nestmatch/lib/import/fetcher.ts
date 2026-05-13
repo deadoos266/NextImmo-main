@@ -166,6 +166,26 @@ export async function fetchUrl(url: string): Promise<FetchResult> {
   }
 
   if (!res.ok) {
+    // V97.36 amélioration message : DataDome/Cloudflare répondent souvent
+    // 403 systématique aux requêtes serveur. Message explicite vers user.
+    if (res.status === 403) {
+      throw new ImportFetchError(
+        "BOT_PROTECTION",
+        "Le site bloque les imports automatisés (DataDome / Cloudflare). C'est le cas de Leboncoin et PAP. Copie-colle manuellement les infos, ou essaie depuis Bien'ici / Logic-immo / un site d'agence locale.",
+      )
+    }
+    if (res.status === 404) {
+      throw new ImportFetchError(
+        "NOT_FOUND",
+        "Annonce introuvable (404). Le lien a peut-être expiré, ou tu as collé une URL de recherche au lieu d'une fiche.",
+      )
+    }
+    if (res.status === 410) {
+      throw new ImportFetchError(
+        "GONE",
+        "Annonce supprimée (410). Le proprio a retiré son annonce de cette plateforme.",
+      )
+    }
     throw new ImportFetchError(
       "HTTP_ERROR",
       `Le site cible a retourné HTTP ${res.status}. Vérifie l'URL.`,
@@ -208,6 +228,21 @@ export async function fetchUrl(url: string): Promise<FetchResult> {
     offset += chunk.byteLength
   }
   const html = new TextDecoder("utf-8", { fatal: false }).decode(buffer)
+
+  // V97.36 — détection des challenges anti-bot servis avec 200 OK (cas
+  // rare mais possible pour DataDome/Cloudflare en soft challenge).
+  // Si on reconnaît le pattern, on lève BOT_PROTECTION plutôt que de
+  // laisser le parser extraire du contenu vide.
+  if (html.length < 20_000 && (
+    /captcha-delivery\.com/i.test(html) ||
+    /Just a moment\.\.\./i.test(html) ||
+    /cf-challenge|cf-browser-verification/i.test(html)
+  )) {
+    throw new ImportFetchError(
+      "BOT_PROTECTION",
+      "Le site sert un challenge anti-bot (DataDome / Cloudflare). Impossible d'importer automatiquement. Copie-colle manuellement les infos.",
+    )
+  }
 
   return {
     html,

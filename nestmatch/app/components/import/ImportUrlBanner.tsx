@@ -47,7 +47,18 @@ export default function ImportUrlBanner({ onImported, onDismiss, initiallyDismis
       })
       const j = await res.json()
       if (!res.ok || !j.ok) {
-        setError(j.error || "Import échoué. Vérifie l'URL et réessaie.")
+        // V97.36 — message contextuel selon le code d'erreur
+        let msg = j.error || "Import échoué. Vérifie l'URL et réessaie."
+        if (j.code === "BOT_PROTECTION") {
+          msg = "Ce site bloque les imports automatisés (Leboncoin, PAP, etc.). Saisis les infos manuellement, ou essaie depuis un autre site (Bien'ici, agence locale)."
+        } else if (j.code === "NOT_FOUND") {
+          msg = "Annonce introuvable. Vérifie que tu as collé l'URL de la fiche (pas une recherche) et que l'annonce est encore en ligne."
+        } else if (j.code === "TIMEOUT") {
+          msg = "Le site met trop de temps à répondre. Réessaie dans quelques secondes."
+        } else if (j.code === "RATE_LIMITED") {
+          msg = "Trop d'imports — réessaye dans 1 h."
+        }
+        setError(msg)
         setLoading(false)
         return
       }
