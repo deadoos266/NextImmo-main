@@ -16,16 +16,22 @@ export const metadata = {
 type SourceStatus = "good" | "partial" | "blocked"
 interface SourceItem { name: string; host: string; desc: string; status: SourceStatus }
 const SOURCES: SourceItem[] = [
-  // Sites avec DataDome — JS challenge, impossible sans browser headless
-  { name: "Leboncoin", host: "leboncoin.fr", desc: "Protégé par DataDome (challenge JavaScript côté client). Aucun outil OSS ne contourne actuellement. Saisie manuelle.", status: "blocked" },
-  // V97.37 — PAP devient accessible via wreq-js (TLS fingerprint Firefox)
-  { name: "PAP", host: "pap.fr", desc: "Cloudflare — désormais accessible via TLS fingerprint impersonation. Quand l'annonce est encore en ligne, extraction OG + parser dédié.", status: "good" },
+  // V97.37 — PAP fonctionne désormais via wreq-js (TLS fingerprint Firefox)
+  // Test live confirmé : 7 fields extraits (titre, prix, surface, ville, code postal, 6-10 photos) sur URLs réelles
+  { name: "PAP", host: "pap.fr", desc: "Cloudflare bypassé par TLS fingerprint Firefox (wreq-js). Test live : titre, loyer, surface, ville, code postal et photos extraits proprement.", status: "good" },
+
+  // Sites avec DataDome — JS challenge, non bypassable sans browser réel
+  { name: "Leboncoin", host: "leboncoin.fr", desc: "DataDome (challenge JavaScript côté client). Aucun outil OSS ne contourne actuellement. Saisie manuelle.", status: "blocked" },
+  // V97.37 re-test 13 mai 2026 : SeLoger et Logic-immo ont ajouté DataDome
+  // depuis le test initial. Plus partial → blocked.
+  { name: "SeLoger", host: "seloger.com", desc: "Désormais protégé par DataDome (ajouté récemment). Même limite que Leboncoin — saisie manuelle.", status: "blocked" },
+  { name: "Logic-immo", host: "logic-immo.com", desc: "Désormais protégé par DataDome (ajouté récemment). Saisie manuelle recommandée.", status: "blocked" },
+
   // Sites partiels
-  { name: "SeLoger", host: "seloger.com", desc: "Fonctionne sur certaines URLs de fiche encore en ligne. JSON-LD complet quand accessible. Le site a ajouté DataDome sur certaines routes.", status: "partial" },
   { name: "Bien'ici", host: "bienici.com", desc: "Application 100 % JS (SPA) — seul le titre + image principale sont extraits sans navigation client.", status: "partial" },
-  { name: "Logic-immo", host: "logic-immo.com", desc: "Extraction limitée, partiellement protégé par DataDome.", status: "partial" },
+
   // Sites accessibles
-  { name: "Sites d'agences locales", host: "(divers)", desc: "Beaucoup d'agences immobilières utilisent Schema.org RealEstateListing. Extraction très propre (titre, prix, surface, photos) quand c'est le cas.", status: "good" },
+  { name: "Sites d'agences locales", host: "(divers)", desc: "Beaucoup d'agences immobilières utilisent Schema.org RealEstateListing. Extraction très propre (titre, prix, surface, photos) quand c'est le cas. Idem pour les sites personnels de proprios.", status: "good" },
   { name: "Autres sites publics", host: "(générique)", desc: "On tente Open Graph + Schema.org. Au minimum : titre + 1 photo. Le reste se complète manuellement.", status: "good" },
 ]
 
@@ -112,14 +118,14 @@ export default function AideImportAnnoncePage() {
         {/* Encadré honnêteté sur le scraping */}
         <section style={{ background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 20, padding: "20px 24px", marginBottom: 20 }}>
           <p style={{ fontSize: 12, fontWeight: 700, color: "#92400e", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-            Pourquoi Leboncoin ne marche pas ?
+            Pourquoi Leboncoin, SeLoger et Logic-immo ne marchent pas ?
           </p>
           <p style={{ fontSize: 13, color: "#78350f", margin: 0, lineHeight: 1.6 }}>
-            Leboncoin utilise DataDome — une protection qui exécute un challenge JavaScript côté navigateur avant de servir la page. Aucun outil open-source ne contourne ce challenge sans lancer un vrai Chrome
-            {" "}(qui coûte ~10 fois plus en compute serveur). Pour PAP, on a intégré <strong>wreq-js</strong> (TLS fingerprint impersonation) qui simule Firefox 142 et passe Cloudflare —
-            l&apos;import marche désormais sur PAP quand l&apos;annonce est encore en ligne.
+            Ces trois sites utilisent DataDome — une protection qui exécute un challenge JavaScript côté navigateur avant de servir la page. Aucun outil open-source ne contourne ce challenge sans lancer un vrai Chrome
+            {" "}(qui coûte ~10 fois plus en compute serveur). Pour PAP en revanche, on a intégré <strong>wreq-js</strong> (TLS fingerprint impersonation) qui simule Firefox 142 et passe Cloudflare —
+            l&apos;import marche désormais sur PAP (testé en live : titre, loyer, surface, ville et 6-10 photos extraits sur des fiches Paris).
             <br /><br />
-            En attendant pour Leboncoin : ouvre la page côté navigateur, copie le titre + la description + les chiffres clés, et colle-les dans le wizard. Les photos restent à uploader de toute façon (elles sont hébergées chez la source, KeyMatch ne peut pas y accéder en différé).
+            En attendant pour Leboncoin / SeLoger / Logic-immo : ouvre la page côté navigateur, copie le titre + la description + les chiffres clés, et colle-les dans le wizard. Les photos restent à uploader de toute façon (elles sont hébergées chez la source, KeyMatch ne peut pas y accéder en différé).
           </p>
         </section>
 

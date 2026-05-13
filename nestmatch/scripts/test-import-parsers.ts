@@ -46,17 +46,21 @@ async function importFromUrl(url: string) {
 }
 
 const TEST_URLS: Array<{ url: string; expected_source: ImportSource; note: string }> = [
-  // Sites avec anti-bot connus (probable 403)
-  { url: "https://www.leboncoin.fr/ad/locations/2900000000", expected_source: "leboncoin", note: "Leboncoin → DataDome" },
-  { url: "https://www.pap.fr/annonces/locations-paris-75-r1", expected_source: "pap", note: "PAP → Cloudflare" },
+  // PAP — vraies URLs en ligne récupérées via wreq depuis la page liste Paris
+  // (re-test V97.37 : wreq-js Firefox 142 doit bypasser le Cloudflare PAP)
+  { url: "https://www.pap.fr/annonces/appartement-paris-13e-r421901054", expected_source: "pap", note: "PAP appart Paris 13e (URL réelle)" },
+  { url: "https://www.pap.fr/annonces/appartement-paris-14e-75014-r454700471", expected_source: "pap", note: "PAP appart Paris 14e (URL réelle)" },
 
-  // Sites accessibles
-  { url: "https://www.seloger.com/annonces/locations/appartement/paris-9eme-75/", expected_source: "seloger", note: "SeLoger (route 404 attendue mais HTML retourné)" },
-  { url: "https://www.bienici.com/annonce/location/paris-15/appartement/3-pieces", expected_source: "bienici", note: "Bien'ici SPA" },
-  { url: "https://www.logic-immo.com/locations-appartement-paris-75/", expected_source: "logic-immo", note: "Logic-immo (DataDome dans réponse 404)" },
+  // Leboncoin — toujours bloqué attendu (DataDome JS challenge)
+  { url: "https://www.leboncoin.fr/ad/locations/2900000000", expected_source: "leboncoin", note: "Leboncoin → DataDome (attendu BOT_PROTECTION)" },
+
+  // SeLoger + Logic-immo + Bien'ici — sanity check
+  { url: "https://www.seloger.com/", expected_source: "seloger", note: "SeLoger home" },
+  { url: "https://www.logic-immo.com/", expected_source: "logic-immo", note: "Logic-immo home" },
+  { url: "https://www.bienici.com/", expected_source: "bienici", note: "Bien'ici home (SPA)" },
 
   // Sites publics OG (fallback générique)
-  { url: "https://fr.wikipedia.org/wiki/Immobilier", expected_source: "generic", note: "Wikipedia : test fallback OG basique" },
+  { url: "https://fr.wikipedia.org/wiki/Immobilier", expected_source: "generic", note: "Wikipedia : test fallback OG" },
 ]
 
 function trunc(s: string | undefined, n: number): string {
