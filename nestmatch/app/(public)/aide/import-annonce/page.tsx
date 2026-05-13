@@ -16,15 +16,16 @@ export const metadata = {
 type SourceStatus = "good" | "partial" | "blocked"
 interface SourceItem { name: string; host: string; desc: string; status: SourceStatus }
 const SOURCES: SourceItem[] = [
-  // Sites avec anti-bot — bloqués côté serveur, l'import échoue presque toujours
-  { name: "Leboncoin", host: "leboncoin.fr", desc: "Protégé par DataDome — bloque les imports automatisés depuis serveur. Copie-colle les infos manuellement.", status: "blocked" },
-  { name: "PAP", host: "pap.fr", desc: "Protégé par Cloudflare — même limite que Leboncoin. Saisie manuelle recommandée.", status: "blocked" },
+  // Sites avec DataDome — JS challenge, impossible sans browser headless
+  { name: "Leboncoin", host: "leboncoin.fr", desc: "Protégé par DataDome (challenge JavaScript côté client). Aucun outil OSS ne contourne actuellement. Saisie manuelle.", status: "blocked" },
+  // V97.37 — PAP devient accessible via wreq-js (TLS fingerprint Firefox)
+  { name: "PAP", host: "pap.fr", desc: "Cloudflare — désormais accessible via TLS fingerprint impersonation. Quand l'annonce est encore en ligne, extraction OG + parser dédié.", status: "good" },
   // Sites partiels
-  { name: "SeLoger", host: "seloger.com", desc: "Fonctionne sur certaines URLs de fiche valides. JSON-LD complet quand accessible.", status: "partial" },
+  { name: "SeLoger", host: "seloger.com", desc: "Fonctionne sur certaines URLs de fiche encore en ligne. JSON-LD complet quand accessible. Le site a ajouté DataDome sur certaines routes.", status: "partial" },
   { name: "Bien'ici", host: "bienici.com", desc: "Application 100 % JS (SPA) — seul le titre + image principale sont extraits sans navigation client.", status: "partial" },
-  { name: "Logic-immo", host: "logic-immo.com", desc: "Extraction limitée, dépend des metadata du site (souvent OG title + prix).", status: "partial" },
+  { name: "Logic-immo", host: "logic-immo.com", desc: "Extraction limitée, partiellement protégé par DataDome.", status: "partial" },
   // Sites accessibles
-  { name: "Sites d'agences locales", host: "(divers)", desc: "Beaucoup d'agences immobilières utilisent Schema.org RealEstateListing. Quand c'est le cas, extraction très propre (titre, prix, surface, photos).", status: "good" },
+  { name: "Sites d'agences locales", host: "(divers)", desc: "Beaucoup d'agences immobilières utilisent Schema.org RealEstateListing. Extraction très propre (titre, prix, surface, photos) quand c'est le cas.", status: "good" },
   { name: "Autres sites publics", host: "(générique)", desc: "On tente Open Graph + Schema.org. Au minimum : titre + 1 photo. Le reste se complète manuellement.", status: "good" },
 ]
 
@@ -111,12 +112,14 @@ export default function AideImportAnnoncePage() {
         {/* Encadré honnêteté sur le scraping */}
         <section style={{ background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 20, padding: "20px 24px", marginBottom: 20 }}>
           <p style={{ fontSize: 12, fontWeight: 700, color: "#92400e", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-            Pourquoi Leboncoin et PAP ne marchent pas ?
+            Pourquoi Leboncoin ne marche pas ?
           </p>
           <p style={{ fontSize: 13, color: "#78350f", margin: 0, lineHeight: 1.6 }}>
-            Ces sites utilisent des protections anti-bot (DataDome, Cloudflare) qui refusent toute requête venant d&apos;un serveur (Vercel, AWS, etc.) — ils répondent <code style={{ background: "#fed7aa", padding: "1px 6px", borderRadius: 4 }}>403 Forbidden</code> avant même que nos parsers puissent lire la page.
-            Contourner ces protections coûte ~30 €/mois par site (services type ScrapingBee / Bright Data) — c&apos;est un trade-off qu&apos;on n&apos;a pas voulu imposer pour cette V1.
-            En attendant : ouvre ta page Leboncoin/PAP côté navigateur, copie le titre + la description + les chiffres clés, et colle-les dans le wizard de KeyMatch. Les photos restent à uploader de toute façon.
+            Leboncoin utilise DataDome — une protection qui exécute un challenge JavaScript côté navigateur avant de servir la page. Aucun outil open-source ne contourne ce challenge sans lancer un vrai Chrome
+            {" "}(qui coûte ~10 fois plus en compute serveur). Pour PAP, on a intégré <strong>wreq-js</strong> (TLS fingerprint impersonation) qui simule Firefox 142 et passe Cloudflare —
+            l&apos;import marche désormais sur PAP quand l&apos;annonce est encore en ligne.
+            <br /><br />
+            En attendant pour Leboncoin : ouvre la page côté navigateur, copie le titre + la description + les chiffres clés, et colle-les dans le wizard. Les photos restent à uploader de toute façon (elles sont hébergées chez la source, KeyMatch ne peut pas y accéder en différé).
           </p>
         </section>
 

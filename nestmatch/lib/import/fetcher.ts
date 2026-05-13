@@ -1,12 +1,23 @@
 /**
  * V97.36 P3-7 — Fetcher HTML avec protections SSRF + timeout + UA réaliste.
  *
+ * V97.37 (bonus) — Intégration de wreq-js (TLS fingerprint impersonation
+ * Rust via napi) pour passer les protections anti-bot type Cloudflare qui
+ * bloquent les requêtes Node.js par signature TLS. Confirmé en local :
+ * PAP (Cloudflare) passe avec firefox_142, Leboncoin reste bloqué
+ * (DataDome = JS challenge en plus du TLS).
+ *
+ * Stratégie : on tente d'abord wreq-js (qui imite Firefox 142 sur
+ * Windows). Si wreq-js n'est pas chargeable (binary natif manquant en
+ * dev / test runner / etc.), on retombe sur fetch natif Node.
+ *
  * Pourquoi pas un simple fetch() :
  *  - SSRF : on doit refuser localhost / IP privées / metadata cloud
  *  - Timeout : éviter de bloquer la route serverless 10s+ si le site est lent
  *  - Body limit : refuser les HTML >5MB (DoS / memory bomb)
  *  - UA : certains sites bloquent les UA "node" / "Vercel"
  *  - HTTPS only en prod (downgrade attack)
+ *  - TLS fingerprint : Cloudflare reconnaît la signature Node + 403
  */
 
 const MAX_HTML_BYTES = 5 * 1024 * 1024  // 5MB
@@ -69,6 +80,37 @@ function assertSafeHost(hostname: string): void {
   }
 }
 
+// V97.37 — wreq-js loader résilient. On wraps le require() dans un try/catch
+// + cache du résultat (positive OU négative) pour éviter de re-tenter chaque
+// requête si le binary natif n'est pas dispo (ex: test runner Node sans .node).
+//
+// On utilise dynamic import async + un cast lâche : la lib n'a pas de
+// typings stricts sur certaines options et on ne veut pas la coupler trop.
+let wreqLoaded:
+  | { ok: true; client: { fetch: (url: string, opts?: unknown) => Promise<Response> } }
+  | { ok: false }
+  | null = null
+
+async function loadWreq(): Promise<{ fetch: (url: string, opts?: unknown) => Promise<Response> } | null> {
+  if (wreqLoaded) return wreqLoaded.ok ? wreqLoaded.client : null
+  // Désactivable explicitement via env (ex: tests vitest)
+  if (process.env.KEYMATCH_DISABLE_WREQ === "1") {
+    wreqLoaded = { ok: false }
+    return null
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mod: any = await import("wreq-js")
+    if (typeof mod.fetch !== "function") throw new Error("wreq-js.fetch missing")
+    wreqLoaded = { ok: true, client: { fetch: mod.fetch } }
+    return wreqLoaded.client
+  } catch (e) {
+    console.warn("[wreq-js] unavailable, falling back to native fetch:", (e as Error).message?.slice(0, 120))
+    wreqLoaded = { ok: false }
+    return null
+  }
+}
+
 export interface FetchResult {
   html: string
   final_url: string
@@ -115,20 +157,52 @@ export async function fetchUrl(url: string): Promise<FetchResult> {
   // 302 vers http://169.254.169.254/ (AWS metadata) ou IP interne et notre
   // fetcher accepte le bypass. Max 3 hops pour éviter les loops.
   const MAX_REDIRECTS = 3
+
+  // V97.37 bonus : on tente d'abord wreq-js (TLS fingerprint Firefox).
+  // Si wreq pas dispo (test runner sans binary natif), fallback fetch natif.
+  // Les 2 backends respectent le même protocole : redirect manual + SSRF.
+  const wreqClient = await loadWreq()
+
+  async function doFetch(currentUrl: string): Promise<Response> {
+    if (wreqClient) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const r = await wreqClient.fetch(currentUrl, {
+          browser: "firefox_142",
+          os: "windows",
+          redirect: "manual",  // V97.37 — IMPÉRATIF pour SSRF re-check à chaque hop
+          headers: {
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.6",
+          },
+          signal: controller.signal,
+        } as any)
+        // wreq-js Response a la même shape que Response native
+        return r as unknown as Response
+      } catch (e: unknown) {
+        // Si wreq plante (binary corrompu, OOM…), fallback transparent
+        console.warn("[wreq-js] fallback to native fetch:", (e as Error).message?.slice(0, 100))
+        // tombe sur le path native ci-dessous
+      }
+    }
+    // Fallback fetch natif Node
+    return fetch(currentUrl, {
+      method: "GET",
+      headers: {
+        "User-Agent": USER_AGENT,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.6",
+      },
+      redirect: "manual",
+      signal: controller.signal,
+    })
+  }
+
   let res: Response | null = null
   let currentUrl = url
   try {
     for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-      const r: Response = await fetch(currentUrl, {
-        method: "GET",
-        headers: {
-          "User-Agent": USER_AGENT,
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.6",
-        },
-        redirect: "manual",
-        signal: controller.signal,
-      })
+      const r = await doFetch(currentUrl)
 
       if (r.status >= 300 && r.status < 400) {
         const loc = r.headers.get("location")
@@ -145,7 +219,6 @@ export async function fetchUrl(url: string): Promise<FetchResult> {
         }
         assertSafeHost(nextUrl.hostname.toLowerCase())  // re-validation host à chaque hop
         currentUrl = nextUrl.toString()
-        // Body de la redirection à drainer pour libérer la connexion
         try { await r.body?.cancel() } catch { /* noop */ }
         continue
       }

@@ -42,7 +42,24 @@ const nextConfig = {
     "/api/qa/scenarios": ["./qa/scenarios/**"],
     "/api/cron/qa-daily-run": ["./qa/scenarios/**"],
     "/admin/qa": ["./qa/scenarios/**"],
+    // V97.37 — wreq-js (TLS fingerprint impersonation pour bypasser
+    // Cloudflare type PAP) embarque un binary natif Rust .node. Sans
+    // outputFileTracingIncludes, Vercel ne le bundle pas et l'import
+    // échoue runtime. On force l'inclusion uniquement sur la route qui
+    // l'utilise pour ne pas alourdir les autres fonctions serverless.
+    // ATTENTION : le fichier réel s'appelle `wreq-js.linux-x64-gnu.node`
+    // (point après wreq-js, pas tiret). Le glob précédent `*-linux-x64-gnu.node`
+    // ne matchait pas → binary absent du bundle → fallback silencieux sur
+    // fetch natif → bypass PAP cassé en prod. Maintenant on liste les
+    // 2 variantes Linux x64 (glibc + musl) pour couvrir tous les runtimes.
+    "/api/proprio/annonce/import": [
+      "./node_modules/wreq-js/rust/wreq-js.linux-x64-gnu.node",
+      "./node_modules/wreq-js/rust/wreq-js.linux-x64-musl.node",
+    ],
   },
+  // V97.37 — wreq-js doit être marqué comme external sinon webpack tente
+  // de le bundler et casse le require() du binary natif.
+  serverExternalPackages: ["wreq-js"],
 
   images: {
     remotePatterns: [

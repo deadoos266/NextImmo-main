@@ -23,6 +23,9 @@ export default defineConfig({
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
       SUPABASE_SERVICE_ROLE_KEY: "test-service-role-key",
       NEXTAUTH_SECRET: "test-secret-32-chars-at-least-xxx",
+      // V97.37 — désactive wreq-js dans les tests pour que les mocks
+      // de globalThis.fetch soient effectifs sur le fallback natif.
+      KEYMATCH_DISABLE_WREQ: "1",
     },
     coverage: {
       provider: "v8",
