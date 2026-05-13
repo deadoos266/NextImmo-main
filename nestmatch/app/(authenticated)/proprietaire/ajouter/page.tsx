@@ -12,6 +12,9 @@ import CityAutocomplete from "../../../components/CityAutocomplete"
 import AddressAutocomplete from "../../../components/AddressAutocomplete"
 import Tooltip from "../../../components/Tooltip"
 import MarketRentHint from "./MarketRentHint"
+import ImportUrlBanner from "../../../components/import/ImportUrlBanner"
+import { applyImported } from "../../../components/import/applyImported"
+import type { ImportedAnnonce } from "../../../../lib/import/types"
 
 import { Toggle, F } from "../../../components/FormHelpers"
 import { km, KMButton, KMButtonOutline, KMEyebrow, KMHeading } from "../../../components/ui/km"
@@ -34,6 +37,16 @@ const ImageCropModal = dynamic(() => import("../../../components/ui/ImageCropMod
 const DRAFT_VERSION = 1
 function draftStorageKey(email: string) {
   return `nestmatch:draftAnnonce:v${DRAFT_VERSION}:${email.toLowerCase()}`
+}
+
+// V97.36 P3-7 — Labels lisibles pour le banner de succès post-import.
+const FIELD_LABEL: Record<string, string> = {
+  titre: "titre", ville: "ville", adresse: "adresse", prix: "loyer",
+  charges: "charges", caution: "dépôt", surface: "surface", pieces: "pièces",
+  chambres: "chambres", etage: "étage", dpe: "DPE", type_bien: "type de bien",
+  description: "description", dispo: "disponibilité", lat: "GPS", lng: "GPS",
+  meuble: "meublé", parking: "parking", balcon: "balcon", terrasse: "terrasse",
+  cave: "cave", ascenseur: "ascenseur", jardin: "jardin", fibre: "fibre",
 }
 
 // ─── Types partagés ────────────────────────────────────────────────────────
@@ -150,6 +163,15 @@ export default function AjouterBien() {
   const [draftLoadedAt, setDraftLoadedAt] = useState<string | null>(null)
   const [savedHint, setSavedHint] = useState(false)
 
+  // V97.36 P3-7 — Import URL banner. Le bandeau apparaît tant que le form
+  // est vide. Si l'user clique × ou si un draft est restauré, on cache.
+  // Les badges "Importé" sont attachés aux champs renseignés par l'import,
+  // ils disparaissent dès que l'user édite le champ.
+  const [importBannerDismissed, setImportBannerDismissed] = useState(false)
+  const [importedFields, setImportedFields] = useState<Set<string>>(new Set())
+  const [importedFromSource, setImportedFromSource] = useState<string | null>(null)
+  const [importWarnings, setImportWarnings] = useState<string[]>([])
+
   useEffect(() => {
     if (!session?.user?.email) return
     try {
@@ -209,9 +231,34 @@ export default function AjouterBien() {
     setDraftPromptOpen(false)
   }
 
-  const set = (key: keyof AnnonceForm) => (e: { target: { value: string } }) =>
+  const set = (key: keyof AnnonceForm) => (e: { target: { value: string } }) => {
+    // V97.36 — invalide le badge "Importé" sur le champ édité par l'user
+    if (importedFields.has(key as string)) {
+      setImportedFields(s => {
+        const next = new Set(s); next.delete(key as string); return next
+      })
+    }
     setForm(f => ({ ...f, [key]: e.target.value }))
+  }
   const toInt = (v: string) => v ? parseInt(v) : null
+
+  // V97.36 P3-7 — Callback du bandeau d'import URL : applique le patch au
+  // form/toggles + active les badges "Importé" sur les champs renseignés.
+  function handleImportedAnnonce(data: ImportedAnnonce) {
+    const result = applyImported(data)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setForm(f => ({ ...f, ...(result.formPatch as any) }))
+    setToggles(t => ({ ...t, ...result.togglesPatch }))
+    if (Object.keys(result.equipExtrasPatch).length > 0) {
+      setEquipExtras(e => ({ ...e, ...result.equipExtrasPatch }))
+    }
+    setImportedFields(result.importedFields)
+    setImportedFromSource(data.source || "source externe")
+    setImportWarnings(result.warnings)
+    setImportBannerDismissed(true)
+    // Scroll en haut pour que l'user voie le banner de succès
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" })
+  }
 
   const dejaLoue = form.statut === "loué"
 
@@ -496,6 +543,48 @@ export default function AjouterBien() {
             )}
           </div>
         </div>
+
+        {/* V97.36 P3-7 — Bandeau import URL. Visible uniquement sur step 1
+            tant que le form est vide ET que l'user ne l'a pas dismiss.
+            Disparaît dès qu'un draft est en cours OU l'user a tapé du texte. */}
+        {step === 1 && !importBannerDismissed && !draftPromptOpen && !form.titre && !form.ville && (
+          <ImportUrlBanner onImported={handleImportedAnnonce} onDismiss={() => setImportBannerDismissed(true)} />
+        )}
+
+        {/* V97.36 P3-7 — Banner de succès post-import + warnings. */}
+        {importedFromSource && (
+          <div style={{
+            background: "#dcfce7", border: "1px solid #86efac",
+            borderRadius: 14, padding: "12px 16px", marginBottom: 16,
+            display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap",
+          }}>
+            <div style={{ flex: 1, minWidth: 240 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#166534", margin: 0 }}>
+                Annonce importée depuis {importedFromSource}
+              </p>
+              <p style={{ fontSize: 12, color: "#15803d", margin: "4px 0 0", lineHeight: 1.5 }}>
+                {importedFields.size} champ{importedFields.size > 1 ? "s" : ""} pré-rempli{importedFields.size > 1 ? "s" : ""}{importedFields.size > 0 ? ` : ${Array.from(importedFields).slice(0, 8).map(f => FIELD_LABEL[f] || f).join(", ")}${importedFields.size > 8 ? "…" : ""}` : ""}. Relis chaque étape et complète avant de publier.
+              </p>
+              {importWarnings.length > 0 && (
+                <ul style={{ fontSize: 11, color: "#15803d", margin: "8px 0 0", paddingLeft: 16, lineHeight: 1.5 }}>
+                  {importWarnings.slice(0, 4).map((w, i) => <li key={i}>{w}</li>)}
+                </ul>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => { setImportedFromSource(null); setImportWarnings([]); setImportedFields(new Set()) }}
+              aria-label="Fermer la confirmation d'import"
+              style={{
+                background: "transparent", border: "none",
+                color: "#15803d", fontSize: 18, cursor: "pointer",
+                padding: 4, lineHeight: 1, fontFamily: "inherit", flexShrink: 0,
+              }}
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         {draftPromptOpen && (
           <div style={{

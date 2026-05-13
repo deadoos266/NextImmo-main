@@ -75,17 +75,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, code: "UNAUTHENTICATED", error: "Connexion requise" }, { status: 401 })
   }
 
-  // Rate-limit : 10 imports / heure / user, fallback IP si pas d'user
-  const key = `import:${me}`
-  const rl = await checkRateLimitAsync(key, { max: 10, windowMs: 60 * 60 * 1000 })
-  if (!rl.allowed) {
-    // Rate-limit secondaire par IP pour éviter qu'un user crée 50 comptes
-    const ip = getClientIp(req.headers)
-    const rlIp = await checkRateLimitAsync(`import:ip:${ip}`, { max: 30, windowMs: 60 * 60 * 1000 })
-    if (!rlIp.allowed) {
-      return NextResponse.json({ ok: false, code: "RATE_LIMITED", error: "Trop d'imports — réessayez dans 1h." }, { status: 429 })
-    }
-    return NextResponse.json({ ok: false, code: "RATE_LIMITED", error: "Trop d'imports — réessayez dans 1h." }, { status: 429 })
+  // Rate-limit : 10 imports / heure / user. Anti-burst secondaire par IP
+  // pour limiter qu'un attaquant crée plusieurs comptes et amplifie.
+  // Les 2 limites sont ET-liées : il faut être en-dessous des deux.
+  const rlUser = await checkRateLimitAsync(`import:${me}`, { max: 10, windowMs: 60 * 60 * 1000 })
+  if (!rlUser.allowed) {
+    return NextResponse.json(
+      { ok: false, code: "RATE_LIMITED", error: "Trop d'imports — réessayez dans 1h." },
+      { status: 429 },
+    )
+  }
+  const ip = getClientIp(req.headers)
+  const rlIp = await checkRateLimitAsync(`import:ip:${ip}`, { max: 30, windowMs: 60 * 60 * 1000 })
+  if (!rlIp.allowed) {
+    return NextResponse.json(
+      { ok: false, code: "RATE_LIMITED", error: "Trop d'imports depuis cette IP." },
+      { status: 429 },
+    )
   }
 
   let body: Body
@@ -106,7 +112,7 @@ export async function POST(req: NextRequest) {
   try {
     const result = await importFromUrl(url)
 
-    void logImport({
+    await logImport({
       user_email: me,
       source: result.data.source,
       source_url: result.data.source_url,
@@ -128,7 +134,7 @@ export async function POST(req: NextRequest) {
     const code = e instanceof ImportError ? e.code : "UNKNOWN_ERROR"
     const message = e instanceof Error ? e.message : "Erreur inconnue"
 
-    void logImport({
+    await logImport({
       user_email: me,
       source: null,
       source_url: url,

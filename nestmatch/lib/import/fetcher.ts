@@ -24,16 +24,49 @@ const BLOCKED_HOSTS = new Set([
 ])
 
 function isPrivateIp(hostname: string): boolean {
-  // IPv4 privées : 10.x, 172.16-31.x, 192.168.x
-  const m = hostname.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/)
-  if (!m) return false
-  const [a, b] = [Number(m[1]), Number(m[2])]
-  if (a === 10) return true
-  if (a === 172 && b >= 16 && b <= 31) return true
-  if (a === 192 && b === 168) return true
-  if (a === 127) return true
-  if (a === 169 && b === 254) return true
+  // Node.URL.hostname garde les crochets sur IPv6 ("[::1]", "[fe80::1]")
+  // On normalise en stripant les crochets pour la détection.
+  const h = hostname.replace(/^\[|\]$/g, "")
+
+  // IPv4 privées : 10.x, 172.16-31.x, 192.168.x, 127.x, 169.254.x, 0.x
+  const m = h.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/)
+  if (m) {
+    const [a, b] = [Number(m[1]), Number(m[2])]
+    if (a === 0) return true
+    if (a === 10) return true
+    if (a === 172 && b >= 16 && b <= 31) return true
+    if (a === 192 && b === 168) return true
+    if (a === 127) return true
+    if (a === 169 && b === 254) return true
+    return false
+  }
+  // IPv6 localhost / unspecified
+  if (h === "::1" || h === "::" || h === "0:0:0:0:0:0:0:1") return true
+  // IPv6 unique-local fc00::/7 (fc00-fdff) et link-local fe80::/10 (fe80-febf)
+  if (/^(fc|fd|fe8|fe9|fea|feb)[0-9a-f]*:/i.test(h)) return true
+  // IPv4-mapped IPv6 (::ffff:10.0.0.1)
+  const mapped = h.match(/^::ffff:(\d+)\.(\d+)\.(\d+)\.(\d+)$/i)
+  if (mapped) return isPrivateIp(`${mapped[1]}.${mapped[2]}.${mapped[3]}.${mapped[4]}`)
+  // "0" tout court (Node.URL peut résoudre `http://0` → 0.0.0.0)
+  if (h === "0") return true
   return false
+}
+
+/**
+ * Garde-fou centralisé : à appeler sur chaque URL avant fetch, y compris
+ * après une redirection 3xx. Throws ImportFetchError si l'host est interdit.
+ */
+function assertSafeHost(hostname: string): void {
+  const h = hostname.toLowerCase()
+  if (BLOCKED_HOSTS.has(h)) {
+    throw new ImportFetchError("BLOCKED_HOST", "Domaine interne refusé")
+  }
+  if (isPrivateIp(h)) {
+    throw new ImportFetchError("PRIVATE_IP", "IP privée refusée")
+  }
+  if (h.endsWith(".local") || h.endsWith(".internal")) {
+    throw new ImportFetchError("BLOCKED_TLD", "TLD interne refusé")
+  }
 }
 
 export interface FetchResult {
@@ -72,36 +105,61 @@ export async function fetchUrl(url: string): Promise<FetchResult> {
   }
 
   const hostname = parsed.hostname.toLowerCase()
-  if (BLOCKED_HOSTS.has(hostname)) {
-    throw new ImportFetchError("BLOCKED_HOST", "Domaine interne refusé")
-  }
-  if (isPrivateIp(hostname)) {
-    throw new ImportFetchError("PRIVATE_IP", "IP privée refusée")
-  }
-  // Refuser les .local et .internal
-  if (hostname.endsWith(".local") || hostname.endsWith(".internal")) {
-    throw new ImportFetchError("BLOCKED_TLD", "TLD interne refusé")
-  }
+  assertSafeHost(hostname)
 
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
-  let res: Response
+  // V97.36 P3-7 fix SSRF redirect : on suit les redirections MANUELLEMENT
+  // pour re-valider l'hostname à chaque hop. Sans ça un site externe peut
+  // 302 vers http://169.254.169.254/ (AWS metadata) ou IP interne et notre
+  // fetcher accepte le bypass. Max 3 hops pour éviter les loops.
+  const MAX_REDIRECTS = 3
+  let res: Response | null = null
+  let currentUrl = url
   try {
-    res = await fetch(url, {
-      method: "GET",
-      headers: {
-        "User-Agent": USER_AGENT,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.6",
-      },
-      redirect: "follow",
-      signal: controller.signal,
-    })
+    for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+      const r: Response = await fetch(currentUrl, {
+        method: "GET",
+        headers: {
+          "User-Agent": USER_AGENT,
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.6",
+        },
+        redirect: "manual",
+        signal: controller.signal,
+      })
+
+      if (r.status >= 300 && r.status < 400) {
+        const loc = r.headers.get("location")
+        if (!loc) { res = r; break }
+        if (hop === MAX_REDIRECTS) {
+          throw new ImportFetchError("TOO_MANY_REDIRECTS", "Trop de redirections")
+        }
+        const nextUrl = new URL(loc, currentUrl)
+        if (nextUrl.protocol !== "https:" && nextUrl.protocol !== "http:") {
+          throw new ImportFetchError("UNSUPPORTED_PROTOCOL", "Redirection vers un protocole non supporté")
+        }
+        if (nextUrl.protocol === "http:" && process.env.NODE_ENV === "production") {
+          throw new ImportFetchError("HTTP_BLOCKED_IN_PROD", "Redirection HTTP refusée en production")
+        }
+        assertSafeHost(nextUrl.hostname.toLowerCase())  // re-validation host à chaque hop
+        currentUrl = nextUrl.toString()
+        // Body de la redirection à drainer pour libérer la connexion
+        try { await r.body?.cancel() } catch { /* noop */ }
+        continue
+      }
+      res = r
+      break
+    }
+    if (!res) {
+      throw new ImportFetchError("FETCH_ERROR", "Aucune réponse")
+    }
   } catch (e: unknown) {
     if (e instanceof Error && e.name === "AbortError") {
       throw new ImportFetchError("TIMEOUT", "La page met trop de temps à répondre")
     }
+    if (e instanceof ImportFetchError) throw e
     throw new ImportFetchError("FETCH_ERROR", e instanceof Error ? e.message : "Erreur réseau")
   } finally {
     clearTimeout(timer)

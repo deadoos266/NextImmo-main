@@ -61,6 +61,7 @@ const SECTIONS: Section[] = [
   {
     title: "Outils",
     items: [
+      { href: "/admin/imports", label: "Imports URL", icon: "↓" },
       { href: "/admin/logos", label: "Logos", icon: "◆" },
       { href: "/admin/settings", label: "Settings", icon: "⚙" },
     ],
