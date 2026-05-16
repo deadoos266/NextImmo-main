@@ -51,7 +51,21 @@ const TEST_URLS: Array<{ url: string; expected_source: ImportSource; note: strin
   { url: "https://www.pap.fr/annonces/appartement-paris-13e-r421901054", expected_source: "pap", note: "PAP appart Paris 13e (URL réelle)" },
   { url: "https://www.pap.fr/annonces/appartement-paris-14e-75014-r454700471", expected_source: "pap", note: "PAP appart Paris 14e (URL réelle)" },
 
-  // Leboncoin — toujours bloqué attendu (DataDome JS challenge)
+  // V97.38 — 12 nouveaux parsers d'agences FR (sanity check homepage, à remplacer par URLs annonces réelles via find-real-urls.ts)
+  { url: "https://fr.foncia.com/", expected_source: "foncia", note: "Foncia home (sanity)" },
+  { url: "https://www.orpi.com/", expected_source: "orpi", note: "Orpi home (sanity)" },
+  { url: "https://www.iadfrance.fr/", expected_source: "iad", note: "iAD France home (sanity)" },
+  { url: "https://www.century21.fr/", expected_source: "century21", note: "Century 21 home (sanity)" },
+  { url: "https://www.guy-hoquet.com/", expected_source: "guy-hoquet", note: "Guy Hoquet home (sanity)" },
+  { url: "https://www.eraimmobilier.com/", expected_source: "era", note: "ERA Immobilier home (sanity)" },
+  { url: "https://www.laforet.com/", expected_source: "laforet", note: "Laforêt home (sanity)" },
+  { url: "https://www.nestenn.com/", expected_source: "nestenn", note: "Nestenn home (sanity)" },
+  { url: "https://www.stephaneplazaimmobilier.com/", expected_source: "stephane-plaza", note: "Stéphane Plaza home (sanity)" },
+  { url: "https://www.locservice.fr/", expected_source: "locservice", note: "LocService home (sanity)" },
+  { url: "https://www.studapart.com/fr", expected_source: "studapart", note: "Studapart home (sanity)" },
+  { url: "https://www.immojeune.com/", expected_source: "immojeune", note: "ImmoJeune home (sanity)" },
+
+  // Leboncoin — toujours bloqué attendu (DataDome JS challenge) — bypass V97.39 via worker Zendriver
   { url: "https://www.leboncoin.fr/ad/locations/2900000000", expected_source: "leboncoin", note: "Leboncoin → DataDome (attendu BOT_PROTECTION)" },
 
   // SeLoger + Logic-immo + Bien'ici — sanity check

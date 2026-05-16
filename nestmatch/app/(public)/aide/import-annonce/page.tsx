@@ -9,7 +9,7 @@ import Link from "next/link"
 
 export const metadata = {
   title: "Importer ton annonce — Aide KeyMatch",
-  description: "Comment importer une annonce depuis Leboncoin, SeLoger, PAP, Bien'ici ou Logic-immo en un clic.",
+  description: "Comment importer une annonce depuis PAP, Foncia, Orpi, Century 21, Laforêt, iAD France, Leboncoin, SeLoger, Bien'ici, etc.",
   robots: { index: false, follow: false },
 }
 
@@ -20,18 +20,30 @@ const SOURCES: SourceItem[] = [
   // Test live confirmé : 7 fields extraits (titre, prix, surface, ville, code postal, 6-10 photos) sur URLs réelles
   { name: "PAP", host: "pap.fr", desc: "Cloudflare bypassé par TLS fingerprint Firefox (wreq-js). Test live : titre, loyer, surface, ville, code postal et photos extraits proprement.", status: "good" },
 
-  // Sites avec DataDome — JS challenge, non bypassable sans browser réel
-  { name: "Leboncoin", host: "leboncoin.fr", desc: "DataDome (challenge JavaScript côté client). Aucun outil OSS ne contourne actuellement. Saisie manuelle.", status: "blocked" },
-  // V97.37 re-test 13 mai 2026 : SeLoger et Logic-immo ont ajouté DataDome
-  // depuis le test initial. Plus partial → blocked.
-  { name: "SeLoger", host: "seloger.com", desc: "Désormais protégé par DataDome (ajouté récemment). Même limite que Leboncoin — saisie manuelle.", status: "blocked" },
-  { name: "Logic-immo", host: "logic-immo.com", desc: "Désormais protégé par DataDome (ajouté récemment). Saisie manuelle recommandée.", status: "blocked" },
+  // V97.38 — Agences immobilières FR sans protection anti-bot
+  { name: "Foncia", host: "foncia.com", desc: "JSON-LD RealEstateListing + OpenGraph. Extraction propre des champs principaux.", status: "good" },
+  { name: "Orpi", host: "orpi.com", desc: "Réseau d'agences Orpi — HTML server-rendered + OG. Extraction fiable.", status: "good" },
+  { name: "iAD France", host: "iadfrance.fr", desc: "Réseau d'agents indépendants — JSON-LD + OG.", status: "good" },
+  { name: "Century 21", host: "century21.fr", desc: "Réseau d'agences Century 21 — HTML + métadonnées.", status: "good" },
+  { name: "Guy Hoquet", host: "guy-hoquet.com", desc: "HTML structuré + OpenGraph.", status: "good" },
+  { name: "ERA Immobilier", host: "eraimmobilier.com", desc: "Réseau d'agences ERA — extraction OG + heuristiques.", status: "good" },
+  { name: "Laforêt", host: "laforet.com", desc: "Réseau d'agences Laforêt — HTML sémantique + OG.", status: "good" },
+  { name: "Nestenn", host: "nestenn.com", desc: "Réseau d'agences Nestenn — HTML + JSON-LD.", status: "good" },
+  { name: "Stéphane Plaza Immobilier", host: "stephaneplazaimmobilier.com", desc: "OpenGraph natif confirmé — extraction propre.", status: "good" },
+  { name: "LocService", host: "locservice.fr", desc: "Location entre particuliers, spécialisé colocation/meublé.", status: "good" },
+  { name: "Studapart", host: "studapart.com", desc: "Plateforme location étudiante — HTML + OG.", status: "good" },
+  { name: "ImmoJeune", host: "immojeune.com", desc: "Plateforme location étudiante — HTML + OG.", status: "good" },
+
+  // Sites avec DataDome — JS challenge, non bypassable sans browser réel (worker Zendriver à venir en V97.39)
+  { name: "Leboncoin", host: "leboncoin.fr", desc: "DataDome (challenge JavaScript côté client). Un worker stealth est en cours d'intégration (V97.39).", status: "blocked" },
+  { name: "SeLoger", host: "seloger.com", desc: "DataDome ajouté récemment. Bypass via worker stealth prévu en V97.39.", status: "blocked" },
+  { name: "Logic-immo", host: "logic-immo.com", desc: "DataDome ajouté récemment. Bypass via worker stealth prévu en V97.39.", status: "blocked" },
 
   // Sites partiels
   { name: "Bien'ici", host: "bienici.com", desc: "Application 100 % JS (SPA) — seul le titre + image principale sont extraits sans navigation client.", status: "partial" },
 
   // Sites accessibles
-  { name: "Sites d'agences locales", host: "(divers)", desc: "Beaucoup d'agences immobilières utilisent Schema.org RealEstateListing. Extraction très propre (titre, prix, surface, photos) quand c'est le cas. Idem pour les sites personnels de proprios.", status: "good" },
+  { name: "Autres agences locales", host: "(divers)", desc: "Beaucoup d'agences immobilières indépendantes utilisent Schema.org RealEstateListing. Extraction très propre (titre, prix, surface, photos) quand c'est le cas.", status: "good" },
   { name: "Autres sites publics", host: "(générique)", desc: "On tente Open Graph + Schema.org. Au minimum : titre + 1 photo. Le reste se complète manuellement.", status: "good" },
 ]
 

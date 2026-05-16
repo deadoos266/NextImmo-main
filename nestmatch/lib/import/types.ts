@@ -15,6 +15,18 @@ export type ImportSource =
   | "pap"
   | "bienici"
   | "logic-immo"
+  | "foncia"
+  | "orpi"
+  | "iad"
+  | "century21"
+  | "guy-hoquet"
+  | "era"
+  | "laforet"
+  | "nestenn"
+  | "stephane-plaza"
+  | "locservice"
+  | "studapart"
+  | "immojeune"
   | "generic"
 
 export interface ImportedAnnonce {
