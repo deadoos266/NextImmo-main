@@ -48,13 +48,16 @@ export default function ImportUrlBanner({ onImported, onDismiss, initiallyDismis
       const j = await res.json()
       if (!res.ok || !j.ok) {
         // V97.36 — message contextuel selon le code d'erreur
+        // V97.39 — ajout des codes WORKER_* pour le bypass DataDome via worker self-host
         let msg = j.error || "Import échoué. Vérifie l'URL et réessaie."
         if (j.code === "BOT_PROTECTION") {
-          msg = "Ce site bloque les imports automatisés (Leboncoin, PAP, etc.). Saisis les infos manuellement, ou essaie depuis un autre site (Bien'ici, agence locale)."
+          msg = "Ce site bloque l'extraction même avec notre service stealth. Saisis les infos manuellement, ou essaie depuis un site d'agence (Foncia, Orpi, Century 21, etc.)."
         } else if (j.code === "NOT_FOUND") {
           msg = "Annonce introuvable. Vérifie que tu as collé l'URL de la fiche (pas une recherche) et que l'annonce est encore en ligne."
-        } else if (j.code === "TIMEOUT") {
-          msg = "Le site met trop de temps à répondre. Réessaie dans quelques secondes."
+        } else if (j.code === "TIMEOUT" || j.code === "WORKER_TIMEOUT") {
+          msg = "Le site (ou notre service d'extraction) prend trop de temps. Réessaie dans quelques minutes."
+        } else if (j.code === "WORKER_UNAVAILABLE" || j.code === "WORKER_NOT_CONFIGURED") {
+          msg = "Notre service d'extraction pour ce site est temporairement indisponible. Réessaie dans 5 minutes, ou saisis manuellement."
         } else if (j.code === "RATE_LIMITED") {
           msg = "Trop d'imports — réessaye dans 1 h."
         }

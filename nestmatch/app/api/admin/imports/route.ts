@@ -29,6 +29,7 @@ interface ImportLog {
   duration_ms: number | null
   error_code: string | null
   error_message: string | null
+  fetcher_used: string | null
   created_at: string
 }
 
@@ -44,12 +45,13 @@ export async function GET() {
   const day7 = new Date(now - 7 * 24 * 3600 * 1000).toISOString()
   const day30 = new Date(now - 30 * 24 * 3600 * 1000).toISOString()
 
-  const [total24, total7, total30, last50, by7d] = await Promise.all([
+  const [total24, total7, total30, last50, by7d, fetcher7d] = await Promise.all([
     supabaseAdmin.from("import_logs").select("status", { count: "exact" }).gte("created_at", day24),
     supabaseAdmin.from("import_logs").select("status", { count: "exact" }).gte("created_at", day7),
     supabaseAdmin.from("import_logs").select("status", { count: "exact" }).gte("created_at", day30),
     supabaseAdmin.from("import_logs").select("*").order("created_at", { ascending: false }).limit(50),
     supabaseAdmin.from("import_logs").select("source, status").gte("created_at", day7),
+    supabaseAdmin.from("import_logs").select("fetcher_used, status").gte("created_at", day7),
   ])
 
   // Stats par source (7j)
@@ -67,12 +69,33 @@ export async function GET() {
     s.rate_success = s.total > 0 ? Math.round(((s.success + s.partial) / s.total) * 100) : 0
   }
 
+  // V97.39 — Stats par fetcher_used (wreq-js / zendriver-worker / native-fetch)
+  const fetcherStats: Record<string, { success: number; partial: number; fail: number; total: number; rate_success: number }> = {}
+  for (const row of (fetcher7d.data || []) as Array<{ fetcher_used: string | null; status: string }>) {
+    const fetcher = row.fetcher_used || "unknown"
+    if (!fetcherStats[fetcher]) fetcherStats[fetcher] = { success: 0, partial: 0, fail: 0, total: 0, rate_success: 0 }
+    fetcherStats[fetcher].total++
+    if (row.status === "success") fetcherStats[fetcher].success++
+    else if (row.status === "partial") fetcherStats[fetcher].partial++
+    else if (row.status === "fail") fetcherStats[fetcher].fail++
+  }
+  for (const f of Object.keys(fetcherStats)) {
+    const s = fetcherStats[f]
+    s.rate_success = s.total > 0 ? Math.round(((s.success + s.partial) / s.total) * 100) : 0
+  }
+
   // Alertes : parsers avec >50% fail sur 7j ET >=10 imports
   const alerts: string[] = []
   for (const [src, s] of Object.entries(sourceStats)) {
     if (s.total >= 10 && s.fail / s.total > 0.5) {
       alerts.push(`Parser "${src}" : ${s.fail}/${s.total} échecs (${Math.round((s.fail / s.total) * 100)}%) — site source a peut-être changé son markup.`)
     }
+  }
+  // V97.39 — alerte worker dégradé
+  if (fetcherStats["zendriver-worker"] && fetcherStats["zendriver-worker"].total >= 10
+      && fetcherStats["zendriver-worker"].fail / fetcherStats["zendriver-worker"].total > 0.5) {
+    const s = fetcherStats["zendriver-worker"]
+    alerts.push(`Worker Zendriver : ${s.fail}/${s.total} échecs (${Math.round((s.fail / s.total) * 100)}%) — DataDome a peut-être patché, vérifier Camoufox/Zendriver version sur le VPS.`)
   }
 
   return NextResponse.json({
@@ -83,6 +106,7 @@ export async function GET() {
       day_30d: total30.count || 0,
     },
     source_stats_7d: sourceStats,
+    fetcher_stats_7d: fetcherStats,
     alerts,
     recent_imports: (last50.data || []) as ImportLog[],
   })

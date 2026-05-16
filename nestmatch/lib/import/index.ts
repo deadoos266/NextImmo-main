@@ -1,6 +1,10 @@
 /**
  * V97.36 P3-7 — Entry point de l'import multi-source.
  *
+ * V97.39 (Phase 1) — Routing fetcher local vs worker distant Zendriver pour
+ * bypass DataDome (LBC/SeLoger/Logic-immo). Propage `fetcher_used` pour
+ * traçabilité dans `import_logs.fetcher_used`.
+ *
  * Usage côté route API :
  *   import { importFromUrl } from "@/lib/import"
  *   const result = await importFromUrl(url)
@@ -8,7 +12,8 @@
 
 import type { ImportedAnnonce } from "./types"
 import { findParser } from "./parsers"
-import { fetchUrl, ImportFetchError } from "./fetcher"
+import { ImportFetchError } from "./fetcher"
+import { fetchUrlRouted, type FetcherUsed } from "./fetcher-router"
 import { countFields, FIELDS_TOTAL } from "./helpers"
 
 export class ImportError extends Error {
@@ -23,6 +28,7 @@ export interface ImportResult {
   fields_extracted: number
   fields_total: number
   duration_ms: number
+  fetcher_used: FetcherUsed
 }
 
 /**
@@ -47,10 +53,12 @@ export async function importFromUrl(url: string): Promise<ImportResult> {
 
   let html: string
   let finalUrl: string
+  let fetcherUsed: FetcherUsed
   try {
-    const fetched = await fetchUrl(url)
+    const fetched = await fetchUrlRouted(url)
     html = fetched.html
     finalUrl = fetched.final_url
+    fetcherUsed = fetched.fetcher_used
   } catch (e) {
     if (e instanceof ImportFetchError) {
       throw new ImportError(e.code, e.message)
@@ -76,6 +84,7 @@ export async function importFromUrl(url: string): Promise<ImportResult> {
     fields_extracted: countFields(data),
     fields_total: FIELDS_TOTAL,
     duration_ms: Date.now() - t0,
+    fetcher_used: fetcherUsed,
   }
 }
 

@@ -1,0 +1,44 @@
+# Docker Compose pour dev local et déploiement VPS du worker.
+#
+# Usage dev local :
+#   cp .env.example .env  # remplir FETCHER_TOKEN
+#   docker compose up --build
+#
+# Usage VPS prod : voir README.md
+
+services:
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: keymatch-fetcher
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Override HOST pour exposer hors du container vers Caddy
+      HOST: "0.0.0.0"
+      PORT: "8080"
+    ports:
+      # Bind localhost only — Caddy reverse-proxy fait le bridge externe
+      - "127.0.0.1:8080:8080"
+    mem_limit: 4g
+    cpus: 2.0
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SYS_ADMIN  # nécessaire pour Chromium sandbox
+    shm_size: 2gb  # Chromium a besoin de shared memory
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-H", "Authorization: Bearer ${FETCHER_TOKEN}", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

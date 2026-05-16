@@ -43,8 +43,11 @@ import { importFromUrl, ImportError } from "@/lib/import"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
-// Vercel default 10s — on monte à 15s car fetch externe lent possible
-export const maxDuration = 15
+// V97.39 — Vercel Pro autorise maxDuration jusqu'à 60s. Le worker Zendriver
+// prend 5-15s pour résoudre DataDome, donc on monte à 30s pour sécurité.
+// Pour les hosts non-DataDome (PAP, agences, generic), le fetcher local
+// répond toujours en <8s, le 30s ne coûte rien.
+export const maxDuration = 30
 
 interface Body {
   url?: string
@@ -60,6 +63,7 @@ async function logImport(params: {
   duration_ms?: number
   error_code?: string
   error_message?: string
+  fetcher_used?: string | null
 }) {
   try {
     await supabaseAdmin.from("import_logs").insert(params)
@@ -120,6 +124,7 @@ export async function POST(req: NextRequest) {
       fields_extracted: result.fields_extracted,
       fields_total: result.fields_total,
       duration_ms: result.duration_ms,
+      fetcher_used: result.fetcher_used,
     })
 
     return NextResponse.json({
@@ -129,6 +134,7 @@ export async function POST(req: NextRequest) {
       fields_total: result.fields_total,
       duration_ms: result.duration_ms,
       source: result.data.source,
+      fetcher_used: result.fetcher_used,
     })
   } catch (e) {
     const code = e instanceof ImportError ? e.code : "UNKNOWN_ERROR"
@@ -143,12 +149,14 @@ export async function POST(req: NextRequest) {
       error_message: message.slice(0, 500),
     })
 
-    // Statut HTTP selon le code
-    const status = code === "TIMEOUT" ? 504
+    // Statut HTTP selon le code (V97.39 ajoute les codes worker)
+    const status = code === "TIMEOUT" || code === "WORKER_TIMEOUT" ? 504
       : code === "RATE_LIMITED" ? 429
       : code === "INVALID_URL" || code === "UNSUPPORTED_PROTOCOL" || code === "BLOCKED_HOST" || code === "PRIVATE_IP" ? 400
       : code === "TOO_LARGE" ? 413
       : code === "HTTP_ERROR" ? 502
+      : code === "WORKER_UNAVAILABLE" || code === "WORKER_NOT_CONFIGURED" ? 503
+      : code === "BOT_PROTECTION" ? 502
       : 400
 
     return NextResponse.json({ ok: false, code, error: message }, { status })
