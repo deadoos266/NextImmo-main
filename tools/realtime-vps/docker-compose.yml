@@ -21,7 +21,9 @@ services:
     container_name: keymatch-realtime
     restart: unless-stopped
     env_file:
-      - /etc/keymatch.env
+      # V97.39.22 — préfère le .env local du service (mode shadow Phase 4 sans
+      # encore Phase 6 cutover). Fallback /etc/keymatch.env quand Phase 6 active.
+      - .env
     environment:
       PORT: "3001"
       HOST: "0.0.0.0"
