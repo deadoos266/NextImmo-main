@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
+import { storage } from "@/lib/storage"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -86,8 +87,9 @@ export async function GET(req: NextRequest) {
   }
 
   // Génère la signed URL (admin bypass RLS pour signing)
-  const { data: signed, error: signErr } = await supabaseAdmin
-    .storage.from("messages-images")
+  // V97.39.27 — migré vers @/lib/storage dispatcher (Phase 3 cutover live)
+  const { data: signed, error: signErr } = await storage
+    .from("messages-images")
     .createSignedUrl(path, SIGNED_URL_TTL_SEC)
   if (signErr || !signed?.signedUrl) {
     console.error("[messages/image-url] sign error:", signErr)
