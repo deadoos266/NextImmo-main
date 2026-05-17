@@ -32,6 +32,7 @@ export const GET = withCronLogging(
 
     let deletedZombies = 0
     let deletedOld = 0
+    const errors: string[] = []
 
     // Zombies : pending/processing > 1h
     try {
@@ -41,12 +42,16 @@ export const GET = withCronLogging(
         .in("status", ["pending", "processing"])
         .lt("created_at", oneHourAgo)
       if (error) {
-        console.warn("[cron cleanup zombies]", error.message)
+        const msg = `zombies delete failed: ${error.message}`
+        console.warn("[cron cleanup]", msg)
+        errors.push(msg)
       } else {
         deletedZombies = count || 0
       }
     } catch (e) {
-      console.warn("[cron cleanup zombies] threw:", (e as Error).message)
+      const msg = `zombies delete threw: ${(e as Error).message}`
+      console.warn("[cron cleanup]", msg)
+      errors.push(msg)
     }
 
     // Anciens : done/failed > 7j
@@ -57,18 +62,29 @@ export const GET = withCronLogging(
         .in("status", ["done", "failed"])
         .lt("created_at", sevenDaysAgo)
       if (error) {
-        console.warn("[cron cleanup old]", error.message)
+        const msg = `old delete failed: ${error.message}`
+        console.warn("[cron cleanup]", msg)
+        errors.push(msg)
       } else {
         deletedOld = count || 0
       }
     } catch (e) {
-      console.warn("[cron cleanup old] threw:", (e as Error).message)
+      const msg = `old delete threw: ${(e as Error).message}`
+      console.warn("[cron cleanup]", msg)
+      errors.push(msg)
     }
 
-    return NextResponse.json({
-      ok: true,
-      deleted_zombies_1h: deletedZombies,
-      deleted_old_7d: deletedOld,
-    })
+    // V97.39.8 — si les 2 DELETE ont foiré, retourne 500 pour visibilité dans cron_logs
+    // (sinon withCronLogging logue 200 et on perd l'info que rien n'a marché)
+    const allFailed = errors.length >= 2
+    return NextResponse.json(
+      {
+        ok: !allFailed,
+        deleted_zombies_1h: deletedZombies,
+        deleted_old_7d: deletedOld,
+        errors: errors.length > 0 ? errors : undefined,
+      },
+      { status: allFailed ? 500 : 200 },
+    )
   },
 )

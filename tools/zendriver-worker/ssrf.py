@@ -120,9 +120,10 @@ def assert_url_allowed(url: str, allow_hosts: set[str]) -> str:
         raise SSRFError("INVALID_URL", "Hostname manquant")
 
     host = parsed.hostname.lower()
-    bare = host.lstrip("www.").lstrip(".")
-    if bare.startswith("www."):
-        bare = bare[4:]
+    # V97.39.8 fix : `str.lstrip("www.")` strip des CARACTÈRES, pas un préfixe.
+    # `ww.foo.com`.lstrip("www.") donne "foo.com" (faux). On utilise un vrai
+    # check de préfixe.
+    bare = host[4:] if host.startswith("www.") else host
 
     # Check allowlist
     if not any(bare == a or bare.endswith("." + a) for a in allow_hosts):

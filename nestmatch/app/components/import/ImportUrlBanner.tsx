@@ -21,7 +21,10 @@ interface Props {
   initiallyDismissed?: boolean
 }
 
-const SUPPORTED_LABELS = ["Leboncoin", "SeLoger", "PAP", "Bien'ici", "Logic-immo"]
+// V97.39.8 — Sites prioritairement supportés (les plus fiables côté extraction)
+// La liste complète est sur /aide/import-annonce (PAP + 12 réseaux d'agences
+// fiables + 3 sites DataDome en best-effort).
+const SUPPORTED_LABELS = ["PAP", "Foncia", "Orpi", "Century 21", "Laforêt"]
 
 export default function ImportUrlBanner({ onImported, onDismiss, initiallyDismissed = false }: Props) {
   const [url, setUrl] = useState("")
@@ -110,8 +113,8 @@ export default function ImportUrlBanner({ onImported, onDismiss, initiallyDismis
         Tu as déjà publié cette annonce ailleurs ?
       </h2>
       <p style={{ fontSize: 13, color: "#3f3c37", margin: "0 0 14px", lineHeight: 1.55 }}>
-        Colle ton lien {SUPPORTED_LABELS.join(", ")} (ou un autre site) — on remplit le formulaire pour toi.
-        Tu pourras tout modifier ensuite.
+        Colle ton lien {SUPPORTED_LABELS.join(", ")} et 13 autres sites — on remplit le formulaire pour toi.
+        Tu pourras tout modifier ensuite. <a href="/aide/import-annonce" style={{ color: "#1d4ed8", textDecoration: "underline" }}>Liste complète</a>.
       </p>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

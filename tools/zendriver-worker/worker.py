@@ -292,6 +292,10 @@ async def _wait_html_growth(page: Any, threshold: int = 50000) -> None:
 
     V97.39.3 : ajout d'un délai initial pour laisser DataDome démarrer son
     challenge JS + simulation de scroll pour activité humaine.
+
+    V97.39.8 : bail-out après N=20 erreurs consécutives evaluate() (~10s)
+    pour ne pas masquer un CDP disconnect / Chrome OOM silencieux. Le caller
+    a `asyncio.wait_for(..., timeout=max_wait_ms)` outer pour la limite dure.
     """
     # Laisse le temps au challenge de démarrer
     await asyncio.sleep(2.0)
@@ -301,9 +305,11 @@ async def _wait_html_growth(page: Any, threshold: int = 50000) -> None:
         await page.evaluate("window.scrollTo({top: 200, behavior: 'smooth'})")
         await asyncio.sleep(0.5)
         await page.evaluate("window.scrollTo({top: 0, behavior: 'smooth'})")
-    except Exception:
-        pass
+    except Exception as e:
+        LOG.debug("Scroll simulation failed (non-blocking): %s", e)
 
+    consecutive_errors = 0
+    MAX_CONSECUTIVE = 20  # ~10s à 0.5s/iter
     while True:
         try:
             length = await page.evaluate(
@@ -311,8 +317,18 @@ async def _wait_html_growth(page: Any, threshold: int = 50000) -> None:
             )
             if isinstance(length, int) and length > threshold:
                 return
-        except Exception:
-            pass
+            consecutive_errors = 0  # reset compteur sur succès (même si pas assez grand)
+        except Exception as e:
+            consecutive_errors += 1
+            if consecutive_errors >= MAX_CONSECUTIVE:
+                LOG.warning(
+                    "evaluate() failed %d times consecutively (last: %s), bailing out",
+                    consecutive_errors, e,
+                )
+                return
+            # Log first error pour signal initial
+            if consecutive_errors == 1:
+                LOG.debug("evaluate() failed (will retry): %s", e)
         await asyncio.sleep(0.5)
 
 
