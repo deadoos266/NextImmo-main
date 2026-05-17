@@ -86,13 +86,72 @@ Recommandation : **dual-write progressive sur 1 semaine** (Next.js écrit
 dans les 2 DBs) avant le switch READ. Plan détaillé dans
 `docs/MIGRATION_OVH_COMPLETE_PLAN.md` section Phase 2.
 
-### Étape 5 — Backups B2 (1h, Phase 8)
+### Étape 5 — Backups B2 ou OVH Object Storage (Phase 8 — DÉJÀ CODÉ V97.39.19)
 
+Scripts + systemd timers livrés dans `scripts/backup-daily.sh` +
+`scripts/restore-test.sh` + `systemd/keymatch-backup.{service,timer}`.
+
+**Setup en 1 commande sur le VPS** :
 ```bash
-# Sur le VPS, cron quotidien 3h :
-0 3 * * * cd /srv/keymatch/postgres-vps && \
-  docker compose exec -T postgres pg_dump -U keymatch keymatch | \
-  gzip | rclone rcat b2:keymatch-backups/postgres-$(date +\%Y-\%m-\%d).sql.gz
+ssh -i $HOME\.ssh\keymatch_vps ubuntu@149.202.60.152
+cd /opt/keymatch/NextImmo-main && git pull
+cd tools/postgres-vps
+sudo ./scripts/install-backup.sh
+```
+
+Installe :
+- rclone (si pas présent)
+- systemd unit `keymatch-backup.service` + timer daily 3h UTC
+- systemd unit `keymatch-backup-test.service` + timer mensuel 1er du mois
+- Logs `/var/log/keymatch-backup.log` + `/var/log/keymatch-backup-test.log`
+
+**Active offsite upload** (1 commande de plus) :
+
+Option **A — Backblaze B2** (10 GB gratuits) :
+1. Compte sur https://www.backblaze.com/sign-up/cloud-storage (CB requise pour vérification, mais 0$ tant qu'on reste < 10 GB)
+2. Application Key (Account Settings → App Keys → Add Application Key, scope read+write)
+3. Sur le VPS :
+   ```bash
+   sudo -u ubuntu rclone config
+   # n) New remote → name=b2-keymatch → storage=b2 → account=<ID> → key=<KEY>
+   ```
+4. Édite `.env` : `RCLONE_REMOTE=b2-keymatch:keymatch-backups`
+5. Test : `sudo systemctl start keymatch-backup.service && tail -f /var/log/keymatch-backup.log`
+
+Option **B — OVH Object Storage** (déjà compte OVH, ~0,01€/Go) :
+1. Manager OVH → Storage → Object Storage → Crée un container "keymatch-backups"
+2. Récupère credentials Keystone (auth URL + tenant + user + password)
+3. Sur le VPS :
+   ```bash
+   sudo -u ubuntu rclone config
+   # n) New remote → name=ovh-keymatch → storage=swift → renseigne creds OVH
+   ```
+4. Édite `.env` : `RCLONE_REMOTE=ovh-keymatch:keymatch-backups`
+
+Si `RCLONE_REMOTE` vide → backup local seulement (rotation 7 daily + 4
+weekly + 12 monthly). Acceptable pour démarrer mais risqué si VPS meurt.
+
+**Vérifier l'état des timers** :
+```bash
+systemctl list-timers keymatch-*
+# Doit afficher next run pour keymatch-backup.timer et keymatch-backup-test.timer
+```
+
+**Lancer un backup manuel** :
+```bash
+sudo systemctl start keymatch-backup.service
+```
+
+**Restore depuis un backup** (cas catastrophe) :
+```bash
+# Liste les backups disponibles
+ls -lh /opt/keymatch/NextImmo-main/tools/postgres-vps/backups/
+
+# Ou depuis offsite
+rclone ls b2-keymatch:keymatch-backups/postgres/
+
+# Restore
+./scripts/restore-vps.sh ./backups/keymatch-postgres-YYYY-MM-DD-HHmm.sql.gz
 ```
 
 ## Audit Supabase 2026-05-17

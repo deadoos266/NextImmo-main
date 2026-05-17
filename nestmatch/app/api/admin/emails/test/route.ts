@@ -2,7 +2,12 @@
  * V87.5 — POST /api/admin/emails/test
  *
  * Envoie un email test à l'admin connecté (ou à un destinataire override).
- * Permet de valider que Resend marche, le from est correct, etc.
+ * Permet de valider que le provider actif marche, le from est correct, etc.
+ *
+ * V97.39.19 — passe par le dispatcher `@/lib/email` donc teste le provider
+ * actuellement configuré (Resend par défaut, Brevo si EMAIL_PROVIDER=brevo).
+ * C'est le comportement voulu : on veut savoir si la prod peut envoyer, pas
+ * forcer Resend si Paul est en train de migrer vers Brevo.
  *
  * Auth admin strict.
  */
@@ -10,7 +15,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { sendEmail } from "@/lib/email/resend"
+import { sendEmail } from "@/lib/email"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"

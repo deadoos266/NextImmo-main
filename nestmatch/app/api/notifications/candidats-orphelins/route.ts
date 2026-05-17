@@ -22,7 +22,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
-import { sendEmail } from "@/lib/email/resend"
+import { sendEmail } from "@/lib/email"
 import { candidatOrphelinTemplate } from "@/lib/email/templates"
 
 export async function POST(req: NextRequest) {

@@ -20,7 +20,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { withCronLogging } from "@/lib/cron/withCronLogging"
 import { supabaseAdmin } from "@/lib/supabase-server"
-import { sendEmail } from "@/lib/email/resend"
+import { sendEmail } from "@/lib/email"
 import { candidaturesDigestTemplate } from "@/lib/email/templates"
 // V67 fix — calculerScore retiré : invariant produit, pas de score côté proprio.
 import { shouldSendEmailForEvent } from "@/lib/notifPreferencesServer"

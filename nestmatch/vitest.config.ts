@@ -12,6 +12,10 @@ export default defineConfig({
     alias: {
       react: path.resolve(__dirname, "node_modules/react"),
       "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
+      // V97.39.19 — alias `@/` cohérent avec tsconfig.json `paths` pour
+      // que les import dynamiques style `await import("@/lib/email")` dans
+      // les tests (qui ne sont pas pris par vi.mock côté résolution) marchent.
+      "@": path.resolve(__dirname),
     },
     dedupe: ["react", "react-dom"],
   },

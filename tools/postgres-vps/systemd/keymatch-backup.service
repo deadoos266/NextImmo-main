@@ -1,0 +1,13 @@
+[Unit]
+Description=KeyMatch Postgres Daily Backup
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/opt/keymatch/NextImmo-main/tools/postgres-vps
+ExecStart=/opt/keymatch/NextImmo-main/tools/postgres-vps/scripts/backup-daily.sh
+StandardOutput=append:/var/log/keymatch-backup.log
+StandardError=append:/var/log/keymatch-backup.log
+# Pas de Restart= : si le backup foire, on attend le prochain trigger plutôt que de spammer

@@ -16,7 +16,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { withCronLogging } from "@/lib/cron/withCronLogging"
 import { supabaseAdmin } from "@/lib/supabase-server"
-import { sendEmail } from "@/lib/email/resend"
+import { sendEmail } from "@/lib/email"
 import { visiteRappelTemplate } from "@/lib/email/templates"
 import { generateIcs } from "@/lib/icsGenerator"
 import { shouldSendEmailForEvent } from "@/lib/notifPreferencesServer"

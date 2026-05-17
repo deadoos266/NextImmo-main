@@ -22,7 +22,7 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase-server"
-import { sendEmail } from "@/lib/email/resend"
+import { sendEmail } from "@/lib/email"
 import { withCronLogging } from "@/lib/cron/withCronLogging"
 import { loyerRetardLocataireTemplate, loyerRetardProprioTemplate } from "@/lib/email/templates"
 import { shouldSendEmailForEvent } from "@/lib/notifPreferencesServer"

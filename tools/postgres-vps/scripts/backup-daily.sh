@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+# Backup quotidien Postgres VPS → cloud offsite + rotation.
+#
+# Lancé par systemd timer keymatch-backup.timer à 03:00 UTC tous les jours
+# (= 04:00 Paris hiver / 05:00 Paris été).
+#
+# Étapes :
+#   1. pg_dump du Postgres VPS (container keymatch-postgres)
+#   2. gzip + checksum SHA256
+#   3. Upload vers cloud (B2 ou OVH Object Storage selon config)
+#   4. Rotation locale + remote : 7 daily + 4 weekly (lundis dans 30j)
+#      + 12 monthly (1er du mois dans 365j)
+#   5. Si fail à n'importe quelle étape → email Paul via Resend (non bloquant)
+#
+# Pré-requis sur le VPS :
+#   - rclone installé (apt install rclone) — config dans /home/ubuntu/.config/rclone/rclone.conf
+#   - container keymatch-postgres up
+#   - .env contient POSTGRES_USER, POSTGRES_DB, POSTGRES_PASSWORD, BACKUP_NOTIFY_EMAIL, RESEND_API_KEY
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+LOG_FILE="/var/log/keymatch-backup.log"
+
+# ─── Helpers ───────────────────────────────────────────────────────────────
+log() { echo "[$(date +%Y-%m-%dT%H:%M:%S)] $*" | tee -a "${LOG_FILE}"; }
+die() { log "❌ FATAL: $*"; notify_fail "$*"; exit 1; }
+
+notify_fail() {
+  local error="$1"
+  if [[ -z "${RESEND_API_KEY:-}" || -z "${BACKUP_NOTIFY_EMAIL:-}" ]]; then
+    log "⚠ Pas de notification (RESEND_API_KEY ou BACKUP_NOTIFY_EMAIL manquant)"
+    return
+  fi
+  curl -sS -X POST https://api.resend.com/emails \
+    -H "Authorization: Bearer ${RESEND_API_KEY}" \
+    -H "Content-Type: application/json" \
+    -d "$(node -e "console.log(JSON.stringify({
+      from: 'KeyMatch Ops <noreply@keymatch-immo.fr>',
+      to: process.env.BACKUP_NOTIFY_EMAIL,
+      subject: '⚠ Backup KeyMatch FAILED (' + new Date().toISOString().slice(0, 10) + ')',
+      text: process.env.ERR_MSG + '\\n\\nLog: ' + process.env.LOG_FILE,
+    }))" ERR_MSG="${error}" LOG_FILE="${LOG_FILE}")" \
+    > /dev/null 2>&1 || true
+}
+
+# ─── Source .env ──────────────────────────────────────────────────────────
+if [[ ! -f "${ROOT_DIR}/.env" ]]; then
+  die ".env manquant à ${ROOT_DIR}/.env"
+fi
+set -a; source "${ROOT_DIR}/.env"; set +a
+
+# ─── Setup ────────────────────────────────────────────────────────────────
+TIMESTAMP="$(date +%Y-%m-%d-%H%M)"
+TODAY="$(date +%Y-%m-%d)"
+BACKUPS_DIR="${ROOT_DIR}/backups"
+mkdir -p "${BACKUPS_DIR}"
+DUMP_FILE="${BACKUPS_DIR}/keymatch-postgres-${TIMESTAMP}.sql.gz"
+SHA_FILE="${DUMP_FILE}.sha256"
+
+log "→ Backup démarré : ${DUMP_FILE}"
+
+# ─── 1. pg_dump ───────────────────────────────────────────────────────────
+log "→ pg_dump du container keymatch-postgres"
+docker compose -f "${ROOT_DIR}/docker-compose.yml" exec -T postgres \
+  pg_dump -U "${POSTGRES_USER}" "${POSTGRES_DB}" \
+  --no-owner --no-privileges --no-comments \
+  2>>"${LOG_FILE}" | gzip -9 > "${DUMP_FILE}" \
+  || die "pg_dump échoué"
+
+SIZE=$(du -h "${DUMP_FILE}" | cut -f1)
+LINES=$(zcat "${DUMP_FILE}" | wc -l)
+log "  ✓ ${DUMP_FILE} (${SIZE}, ${LINES} lignes SQL)"
+
+# Sanity check : taille minimale > 1 KB
+SIZE_BYTES=$(stat -c%s "${DUMP_FILE}" 2>/dev/null || stat -f%z "${DUMP_FILE}")
+if [[ "${SIZE_BYTES}" -lt 1024 ]]; then
+  die "Dump trop petit (<1KB), probablement vide"
+fi
+
+# ─── 2. Checksum ──────────────────────────────────────────────────────────
+sha256sum "${DUMP_FILE}" > "${SHA_FILE}"
+log "  ✓ SHA256 : $(cat "${SHA_FILE}" | cut -d' ' -f1)"
+
+# ─── 3. Upload offsite ────────────────────────────────────────────────────
+if command -v rclone >/dev/null 2>&1 && [[ -n "${RCLONE_REMOTE:-}" ]]; then
+  log "→ Upload vers ${RCLONE_REMOTE}/postgres/"
+  rclone copy "${DUMP_FILE}" "${RCLONE_REMOTE}/postgres/" --progress 2>>"${LOG_FILE}" \
+    || die "rclone upload échoué"
+  rclone copy "${SHA_FILE}" "${RCLONE_REMOTE}/postgres/" 2>>"${LOG_FILE}" || true
+  log "  ✓ Upload offsite OK"
+else
+  log "⚠ Pas de RCLONE_REMOTE configuré ou rclone absent — backup local seulement"
+fi
+
+# ─── 4. Rotation locale ────────────────────────────────────────────────────
+# Garde : 7 derniers daily + 4 weekly (lundi) + 12 monthly (1er du mois)
+log "→ Rotation backups locaux (7d / 4w / 12m)"
+cd "${BACKUPS_DIR}"
+
+# Daily : supprime > 7 jours, sauf weekly/monthly
+find . -name "keymatch-postgres-*.sql.gz" -mtime +7 -print0 | while IFS= read -r -d '' f; do
+  date_str=$(echo "$f" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}')
+  if [[ -n "${date_str}" ]]; then
+    day_of_week=$(date -d "${date_str}" +%u 2>/dev/null || date -j -f "%Y-%m-%d" "${date_str}" +%u 2>/dev/null || echo "0")
+    day_of_month=$(echo "${date_str}" | cut -d- -f3)
+    age_days=$(( ($(date +%s) - $(date -d "${date_str}" +%s 2>/dev/null || date -j -f "%Y-%m-%d" "${date_str}" +%s 2>/dev/null || echo "0")) / 86400 ))
+
+    # Garde si lundi (weekly) ET <30j, OU 1er du mois (monthly) ET <365j
+    if [[ "${day_of_week}" == "1" && "${age_days}" -lt 30 ]]; then continue; fi
+    if [[ "${day_of_month}" == "01" && "${age_days}" -lt 365 ]]; then continue; fi
+    rm -f "$f" "${f}.sha256"
+    log "  - Purgé ${f} (age ${age_days}j)"
+  fi
+done
+
+# ─── 5. Rotation distante (rclone) ─────────────────────────────────────────
+if command -v rclone >/dev/null 2>&1 && [[ -n "${RCLONE_REMOTE:-}" ]]; then
+  log "→ Rotation distante (>30 daily, >365 monthly)"
+  rclone delete "${RCLONE_REMOTE}/postgres/" --min-age 30d \
+    --include "keymatch-postgres-*-*-*-*.sql.gz" 2>>"${LOG_FILE}" || true
+fi
+
+log "✓ Backup ${TIMESTAMP} terminé OK"
+echo ""

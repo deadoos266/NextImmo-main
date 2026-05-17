@@ -1,0 +1,11 @@
+[Unit]
+Description=KeyMatch Postgres Backup Restore Test (mensuel)
+
+[Timer]
+# Le 1er de chaque mois à 04:30 UTC
+OnCalendar=*-*-01 04:30:00
+Persistent=true
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target

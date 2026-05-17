@@ -18,7 +18,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { hashBailData } from "@/lib/bailHash"
-import { sendEmail } from "@/lib/email/resend"
+import { sendEmail } from "@/lib/email"
 import { wrapHandler } from "@/lib/logger"
 import type { BailData } from "@/lib/bailPDF"
 

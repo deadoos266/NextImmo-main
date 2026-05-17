@@ -1,0 +1,12 @@
+[Unit]
+Description=KeyMatch Postgres Daily Backup (3am Paris)
+
+[Timer]
+# Tous les jours à 03:00 heure système (UTC sur VPS OVH = 04:00/05:00 Paris)
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+# Variance pour éviter d'avoir tous les VPS OVH dump à la même seconde
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target

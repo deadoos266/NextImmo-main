@@ -33,7 +33,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { withCronLogging } from "@/lib/cron/withCronLogging"
 import { supabaseAdmin } from "@/lib/supabase-server"
-import { sendEmail } from "@/lib/email/resend"
+import { sendEmail } from "@/lib/email"
 import { nouvellesAnnoncesMatchTemplate } from "@/lib/email/templates"
 import { shouldSendEmailForEvent } from "@/lib/notifPreferencesServer"
 import { calculerScore, type Annonce as MatchAnnonce, type Profil as MatchProfil } from "@/lib/matching"

@@ -14,7 +14,7 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase-server"
-import { sendEmail } from "@/lib/email/resend"
+import { sendEmail } from "@/lib/email"
 import { shouldSendEmailForEvent } from "@/lib/notifPreferencesServer"
 import { wrapHandler } from "@/lib/logger"
 

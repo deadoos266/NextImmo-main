@@ -15,7 +15,7 @@ import crypto from "node:crypto"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
-import { sendEmail } from "@/lib/email/resend"
+import { sendEmail } from "@/lib/email"
 import { resetPasswordTemplate } from "@/lib/email/templates"
 
 export const runtime = "nodejs"
