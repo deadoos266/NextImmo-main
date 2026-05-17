@@ -6,7 +6,7 @@
 
 import { supabaseAdmin } from "./supabase-server"
 
-export const SERVICES = ["database", "auth", "email", "storage", "crons", "app"] as const
+export const SERVICES = ["database", "auth", "email", "storage", "crons", "app", "fetcher"] as const
 export type ServiceName = (typeof SERVICES)[number]
 export type PingStatus = "up" | "degraded" | "down"
 

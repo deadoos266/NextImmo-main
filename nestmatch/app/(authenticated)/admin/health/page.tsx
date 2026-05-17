@@ -33,6 +33,7 @@ const SERVICE_LABEL: Record<ServiceName, string> = {
   storage: "Stockage fichiers",
   crons: "Tâches automatiques",
   app: "Application",
+  fetcher: "Service d'extraction (worker OVH)",
 }
 
 interface PingRow {

@@ -31,6 +31,7 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/lib/supabase-server"
+import { pingFetcherWorker } from "@/lib/import/fetcher-remote"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -38,7 +39,7 @@ export const dynamic = "force-dynamic"
 type HealthStatus = "up" | "degraded" | "down"
 
 interface ServiceCheck {
-  service: "database" | "auth" | "email" | "storage" | "crons" | "app"
+  service: "database" | "auth" | "email" | "storage" | "crons" | "app" | "fetcher"
   status: HealthStatus
   latency_ms: number | null
   error: string | null
@@ -234,6 +235,54 @@ function checkCrons(): ServiceCheck {
  * mais aucun ping n'était jamais inséré → timeline "Application" toujours
  * vide sur /admin/health et /status, ce qui faisait croire à un service down.
  */
+/**
+ * V97.39.9 — Check worker Zendriver self-host (VPS OVH).
+ *
+ * Ping le worker via pingFetcherWorker() (Bearer auth + /health endpoint).
+ * Status :
+ *   - "up" : HTTP 200 + JSON body parsable, latence < 1500ms
+ *   - "degraded" : 200 mais latence > 1500ms (worker lent)
+ *   - "down" : non-200, timeout, ou env vars manquantes
+ *
+ * Si worker pas configuré (EXTERNAL_FETCHER_URL/TOKEN absents en dev local
+ * ou si Paul désactive le worker), retourne "up" avec error explicite
+ * "not_configured" — c'est attendu, pas un incident.
+ */
+async function checkFetcher(): Promise<ServiceCheck> {
+  const configured = Boolean(process.env.EXTERNAL_FETCHER_URL && process.env.EXTERNAL_FETCHER_TOKEN)
+  if (!configured) {
+    return {
+      service: "fetcher",
+      status: "up", // pas configuré = pas un incident (worker optionnel)
+      latency_ms: 0,
+      error: "not_configured: EXTERNAL_FETCHER_URL/TOKEN absents (worker désactivé)",
+    }
+  }
+  const result = await pingFetcherWorker()
+  if (!result.ok) {
+    return {
+      service: "fetcher",
+      status: "down",
+      latency_ms: result.latency_ms,
+      error: result.error || `HTTP ${result.status}`,
+    }
+  }
+  if (result.latency_ms > 1500) {
+    return {
+      service: "fetcher",
+      status: "degraded",
+      latency_ms: result.latency_ms,
+      error: `slow: ${result.latency_ms}ms (seuil 1500ms)`,
+    }
+  }
+  return {
+    service: "fetcher",
+    status: "up",
+    latency_ms: result.latency_ms,
+    error: null,
+  }
+}
+
 async function checkApp(): Promise<ServiceCheck> {
   const t0 = performance.now()
   // setImmediate flush — mesure approximative du event loop lag.
@@ -320,15 +369,16 @@ export async function GET(req: NextRequest) {
   // surprendre les callers.
   void req
 
-  const [database, auth, email, storage, app] = await Promise.all([
+  const [database, auth, email, storage, app, fetcher] = await Promise.all([
     checkDatabase(),
     Promise.resolve(checkAuth()),
     checkEmail(),
     checkStorage(),
     checkApp(),  // V97.9 — remplit la timeline "Application"
+    checkFetcher(),  // V97.39.9 — worker Zendriver self-host VPS OVH
   ])
   const crons = checkCrons()
-  const services: ServiceCheck[] = [database, auth, email, storage, crons, app]
+  const services: ServiceCheck[] = [database, auth, email, storage, crons, app, fetcher]
 
   // Persiste en best-effort en arrière-plan pour ne pas ralentir la réponse.
   // Vercel coupe les promises après le response → on attend pour cette MVP.
