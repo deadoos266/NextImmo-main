@@ -15,6 +15,12 @@
 #   ./scripts/restore-vps.sh
 #   ./scripts/compare-rows.sh
 
+networks:
+  # V97.39.22 — nom de réseau fixe pour que les autres services VPS
+  # (minio, realtime, next) puissent s'y connecter via external: true.
+  default:
+    name: keymatch-postgres-net
+
 services:
   postgres:
     # V97.39.22 — Postgres 17 LTS pour match Supabase (v17.6). Migration
