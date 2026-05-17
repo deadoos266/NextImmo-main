@@ -890,8 +890,8 @@ curl -fI https://keymatch-immo.fr/aide/import-annonce | grep -i "200 OK"
 
 | Phase | Statut | Date | Notes |
 |---|---|---|---|
-| Phase 0 — VPS bootstrap | ⏳ En attente | — | Paul commande VPS-2 OVH |
-| Phase 1 — Worker Zendriver | 🚧 En cours | 2026-05-17 | Code en préparation (V97.39) |
+| Phase 0 — VPS bootstrap | ✅ Done | 2026-05-17 | VPS-2 OVH Gravelines, Ubuntu 24.04 LTS, IP 149.202.60.152, hardened (UFW, fail2ban, unattended-upgrades) |
+| Phase 1 — Worker Zendriver | ✅ Done (avec limite) | 2026-05-17 | Worker live `https://fetcher.keymatch-immo.fr`, Caddy TLS Let's Encrypt, pool 3 contextes warm, env vars Vercel set, redeploy OK. **Bypass DataDome 0% sur ASN OVH** (limite physique) — voir section 1.bilan |
 | Phase 2 — Postgres | ⏳ Planifié | — | |
 | Phase 3 — MinIO Storage | ⏳ Planifié | — | |
 | Phase 4 — Realtime socket.io | ⏳ Planifié | — | |
@@ -901,6 +901,42 @@ curl -fI https://keymatch-immo.fr/aide/import-annonce | grep -i "200 OK"
 | Phase 8 — Backups B2 | ⏳ Planifié | — | |
 | Phase 9 — Cron Linux | ⏳ Planifié | — | |
 | Phase 10 — Cutover final | ⏳ Planifié | — | |
+
+---
+
+## Bilan Phase 1 (2026-05-17)
+
+### ✅ Ce qui marche
+- VPS-2 OVH Gravelines hardé (Ubuntu 24.04 LTS, UFW 22/80/443, fail2ban, unattended-upgrades, Docker + Caddy)
+- Worker Zendriver containerisé, pool 3 contextes warm, healthcheck OK
+- HTTPS `fetcher.keymatch-immo.fr` via Caddy + Let's Encrypt auto
+- Caddy lockdown : seules les routes `/health` et `/fetch` exposées, reste 404
+- Bearer auth constant-time, SSRF guard, rate-limit 60/h/IP
+- Vercel env vars `EXTERNAL_FETCHER_*` configurées (Production + Preview)
+- Routing côté KeyMatch : LBC/SeLoger/Logic-immo passent par worker
+- Admin dashboard `/admin/imports` : card santé worker + stats par voie
+- Migrations Supabase 083 (import_jobs) + 084 (fetcher_used) appliquées prod
+
+### ❌ Limite réelle : bypass DataDome 0% sur 3 sites
+Test live 2026-05-17 sur LBC/SeLoger/Logic-immo :
+- 3/3 = `BOT_PROTECTION` après 25s
+- Cause : DataDome flag l'ASN OVHcloud comme "datacenter high risk" automatiquement
+- Tweaks Zendriver (browser_args anti-detection, humanize scroll, user_data_dir rotation) marginaux
+
+**Le worker reste utile pour** :
+- Le jour où DataDome assouplit
+- Si Paul ajoute un proxy résidentiel Webshare (~1-2€/mois) : code prêt pour `proxy={"server": ...}` dans `zendriver.start()`
+- Bypass de Cloudflare générique (sites moins protégés)
+
+### ✅ Vrai gain business V97.38 + V97.39
+- 13 sites supportés (PAP + 12 réseaux d'agences) = ~80% du marché location FR
+- UI honnête : message "site bloque, copie manuellement" sur DataDome
+- Infrastructure prête pour Phases 2-10 du plan migration
+
+### Options post-Phase 1
+1. **Accepter en l'état** : Phase 1 done, ne plus toucher au worker, accepter que LBC/SeLoger/Logic-immo nécessitent copie manuelle (par ailleurs leur conditions d'utilisation l'imposent légalement)
+2. **Webshare proxy résidentiel** (~1-2€/mois, 1-3h de code) : bypass attendu 70-90%. Pas dans la règle "0€ payant" mais raisonnable
+3. **Attendre 3-6 mois** : monitorer `/admin/imports` taux succès worker. Si DataDome assouplit ou si pression réglementaire change, le worker reprend du sens
 
 ---
 

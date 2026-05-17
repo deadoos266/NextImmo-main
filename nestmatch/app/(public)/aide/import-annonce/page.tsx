@@ -34,10 +34,10 @@ const SOURCES: SourceItem[] = [
   { name: "Studapart", host: "studapart.com", desc: "Plateforme location étudiante — HTML + OG.", status: "good" },
   { name: "ImmoJeune", host: "immojeune.com", desc: "Plateforme location étudiante — HTML + OG.", status: "good" },
 
-  // Sites avec DataDome — JS challenge, non bypassable sans browser réel (worker Zendriver à venir en V97.39)
-  { name: "Leboncoin", host: "leboncoin.fr", desc: "DataDome (challenge JavaScript côté client). Un worker stealth est en cours d'intégration (V97.39).", status: "blocked" },
-  { name: "SeLoger", host: "seloger.com", desc: "DataDome ajouté récemment. Bypass via worker stealth prévu en V97.39.", status: "blocked" },
-  { name: "Logic-immo", host: "logic-immo.com", desc: "DataDome ajouté récemment. Bypass via worker stealth prévu en V97.39.", status: "blocked" },
+  // Sites avec DataDome — worker stealth déployé V97.39 mais ASN datacenter (OVH) bloque encore
+  { name: "Leboncoin", host: "leboncoin.fr", desc: "DataDome (challenge JavaScript côté client). On tente via notre service d'extraction stealth, mais le succès dépend de la politique DataDome du moment — souvent en échec. Copie-colle manuellement reste fiable.", status: "blocked" },
+  { name: "SeLoger", host: "seloger.com", desc: "Même protection DataDome que Leboncoin. Tentative via service stealth, succès rare en pratique. Copie-colle manuel recommandé.", status: "blocked" },
+  { name: "Logic-immo", host: "logic-immo.com", desc: "Même protection DataDome. Tentative via service stealth, succès rare. Copie-colle manuel recommandé.", status: "blocked" },
 
   // Sites partiels
   { name: "Bien'ici", host: "bienici.com", desc: "Application 100 % JS (SPA) — seul le titre + image principale sont extraits sans navigation client.", status: "partial" },
@@ -130,14 +130,14 @@ export default function AideImportAnnoncePage() {
         {/* Encadré honnêteté sur le scraping */}
         <section style={{ background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 20, padding: "20px 24px", marginBottom: 20 }}>
           <p style={{ fontSize: 12, fontWeight: 700, color: "#92400e", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-            Pourquoi Leboncoin, SeLoger et Logic-immo ne marchent pas ?
+            Pourquoi Leboncoin, SeLoger et Logic-immo restent compliqués ?
           </p>
           <p style={{ fontSize: 13, color: "#78350f", margin: 0, lineHeight: 1.6 }}>
-            Ces trois sites utilisent DataDome — une protection qui exécute un challenge JavaScript côté navigateur avant de servir la page. Aucun outil open-source ne contourne ce challenge sans lancer un vrai Chrome
-            {" "}(qui coûte ~10 fois plus en compute serveur). Pour PAP en revanche, on a intégré <strong>wreq-js</strong> (TLS fingerprint impersonation) qui simule Firefox 142 et passe Cloudflare —
-            l&apos;import marche désormais sur PAP (testé en live : titre, loyer, surface, ville et 6-10 photos extraits sur des fiches Paris).
+            Ces trois sites utilisent DataDome — une protection qui combine challenge JavaScript + analyse réseau (ASN, fingerprint TLS, comportement). On a déployé un <strong>service d&apos;extraction stealth</strong> dédié sur un serveur OVH avec un navigateur Chrome headless, mais DataDome classe les IPs des datacenters cloud (OVH, AWS, GCP) comme &quot;à risque&quot; et bloque malgré tout dans la majorité des cas.
             <br /><br />
-            En attendant pour Leboncoin / SeLoger / Logic-immo : ouvre la page côté navigateur, copie le titre + la description + les chiffres clés, et colle-les dans le wizard. Les photos restent à uploader de toute façon (elles sont hébergées chez la source, KeyMatch ne peut pas y accéder en différé).
+            Pour PAP en revanche, on a intégré <strong>wreq-js</strong> (TLS fingerprint impersonation) qui simule Firefox et passe Cloudflare — l&apos;import marche très bien (titre, loyer, surface, ville et 6-10 photos extraits sur des fiches réelles). Les 12 réseaux d&apos;agences (Foncia, Orpi, Century 21, Laforêt, etc.) marchent aussi nativement via JSON-LD.
+            <br /><br />
+            Pour Leboncoin / SeLoger / Logic-immo : ouvre la page côté navigateur, copie le titre + la description + les chiffres clés, et colle-les dans le wizard. Les photos restent à uploader de toute façon (elles sont hébergées chez la source, KeyMatch ne peut pas y accéder en différé).
           </p>
         </section>
 
