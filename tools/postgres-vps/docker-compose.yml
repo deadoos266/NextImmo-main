@@ -17,7 +17,9 @@
 
 services:
   postgres:
-    image: postgres:16-alpine
+    # V97.39.22 — Postgres 17 LTS pour match Supabase (v17.6). Migration
+    # down-version v17→v16 pas supportée, on s'aligne.
+    image: postgres:17-alpine
     container_name: keymatch-postgres
     restart: unless-stopped
     env_file:
