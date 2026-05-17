@@ -58,9 +58,16 @@ export default function ReleasesAdminClient({
         }}>
           Validations release
         </h1>
-        <p style={{ fontSize: 14, color: km.muted, marginTop: 8 }}>
-          À chaque commit important, une checklist apparaît ici. Coche les checks au fur et à mesure, signale les blocages avec photo si besoin.
+        <p style={{ fontSize: 14, color: km.muted, marginTop: 8, maxWidth: 720 }}>
+          À chaque commit important, une checklist apparaît ici. <strong style={{ color: km.ink }}>Clique sur une ligne</strong> pour voir le détail des checks à valider en prod (avec actions ✓ valider / ✗ signaler un bug + photo).
         </p>
+        <div style={{
+          marginTop: 12, padding: "10px 14px", background: "#EEF3FB",
+          border: "1px solid #BFD8F7", borderRadius: 10,
+          fontSize: 12, color: "#1d4ed8", lineHeight: 1.5,
+        }}>
+          <strong>Mode d&apos;emploi :</strong> 1) Clique une ligne <strong>À VALIDER</strong>. 2) Lis chaque check (étape de test concrète). 3) Vas tester en prod sur keymatch-immo.fr. 4) Coche ✓ ou ✗ avec note. 5) Si tout ✓ → la release passe en <strong>Validé</strong>.
+        </div>
       </header>
 
       {/* V97.28 — Actions d'export pour Claude */}
@@ -105,58 +112,104 @@ export default function ReleasesAdminClient({
               : "Aucune release avec ce filtre."}
           </div>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead>
-              <tr style={{ background: km.beige, color: km.muted, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.8 }}>
-                <th style={thStyle}>Status</th>
-                <th style={thStyle}>Commit</th>
-                <th style={thStyle}>Titre</th>
-                <th style={thStyle}>Checks</th>
-                <th style={thStyle}>Créé</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map(r => {
-                const checksOk = r.checks.filter(c => c.status === "ok").length
-                const checksCoded = r.checks.filter(c => c.status === "coded").length
-                const checksBlocked = r.checks.filter(c => c.status === "blocked").length
-                const checksTotal = r.checks.length
-                return (
-                  <tr
-                    key={r.id}
-                    onClick={() => setSelected(r)}
-                    style={{ cursor: "pointer", borderTop: `1px solid ${km.line}` }}
-                  >
-                    <td style={tdStyle}>
-                      <span style={{ color: STATUS_COLOR[r.status] || km.muted, fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.6 }}>
-                        {STATUS_LABEL[r.status] || r.status}
-                      </span>
-                    </td>
-                    <td style={{ ...tdStyle, fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", fontSize: 11, color: km.muted }}>
+          <div>
+            {/* V97.39.11 — Cards verticales au lieu de table, avec preview des checks visible */}
+            {visible.map((r, idx) => {
+              const checksOk = r.checks.filter(c => c.status === "ok").length
+              const checksBlocked = r.checks.filter(c => c.status === "blocked").length
+              const checksPending = r.checks.filter(c => c.status !== "ok" && c.status !== "blocked").length
+              const checksTotal = r.checks.length
+              const isFirst = idx === 0
+              return (
+                <div
+                  key={r.id}
+                  onClick={() => setSelected(r)}
+                  style={{
+                    cursor: "pointer",
+                    borderTop: isFirst ? "none" : `1px solid ${km.line}`,
+                    padding: "16px 20px",
+                    transition: "background 0.15s",
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = km.beige)}
+                  onMouseLeave={e => (e.currentTarget.style.background = "white")}
+                >
+                  {/* Header line : status + commit + date */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
+                    <span style={{
+                      color: STATUS_COLOR[r.status] || km.muted,
+                      fontWeight: 700, fontSize: 10,
+                      textTransform: "uppercase", letterSpacing: 0.6,
+                      padding: "3px 8px", borderRadius: 4,
+                      background: r.status === "pending" ? "#FEF3C7" : r.status === "blocked" ? "#FEECEC" : r.status === "validated" ? "#F0FAEE" : "#EEF3FB",
+                    }}>
+                      {STATUS_LABEL[r.status] || r.status}
+                    </span>
+                    <span style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", fontSize: 11, color: km.muted }}>
                       {r.commit_short || r.commit_sha.slice(0, 8)}
-                    </td>
-                    <td style={{ ...tdStyle, maxWidth: 380, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {r.commit_title}
-                    </td>
-                    <td style={tdStyle}>
-                      <span style={{ fontSize: 11, color: km.muted, fontVariantNumeric: "tabular-nums" }}>
-                        <span style={{ color: "#15803d", fontWeight: 700 }}>{checksOk}</span>/{checksTotal}
-                        {checksCoded > 0 && (
-                          <span style={{ color: "#1d4ed8", marginLeft: 6 }} title="Faits par Claude, à tester">· {checksCoded} ✦</span>
-                        )}
-                        {checksBlocked > 0 && (
-                          <span style={{ color: "#b91c1c", marginLeft: 6 }}>· {checksBlocked} bloqué{checksBlocked > 1 ? "s" : ""}</span>
-                        )}
-                      </span>
-                    </td>
-                    <td style={{ ...tdStyle, fontSize: 11, color: km.muted, textAlign: "right" }}>
+                    </span>
+                    <span style={{ flex: 1 }} />
+                    <span style={{ fontSize: 11, color: km.muted }}>
                       {new Date(r.created_at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                    </span>
+                    <span style={{ fontSize: 11, color: "#1d4ed8", fontWeight: 600 }}>
+                      Voir détail →
+                    </span>
+                  </div>
+
+                  {/* Titre commit */}
+                  <p style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 600, color: km.ink, lineHeight: 1.3 }}>
+                    {r.commit_title}
+                  </p>
+
+                  {/* Compteur de checks visible */}
+                  <p style={{ margin: "0 0 10px", fontSize: 12, color: km.muted, fontVariantNumeric: "tabular-nums" }}>
+                    <span style={{ color: "#15803d", fontWeight: 700 }}>{checksOk}</span>
+                    <span> validés · </span>
+                    <span style={{ color: "#a16207", fontWeight: 700 }}>{checksPending}</span>
+                    <span> à tester</span>
+                    {checksBlocked > 0 && (
+                      <span style={{ color: "#b91c1c", marginLeft: 6, fontWeight: 700 }}>
+                        · {checksBlocked} bloqué{checksBlocked > 1 ? "s" : ""}
+                      </span>
+                    )}
+                    <span style={{ marginLeft: 6 }}>(total {checksTotal})</span>
+                  </p>
+
+                  {/* V97.39.11 — Preview des checks (3 premiers non-ok pour aider à choisir vite) */}
+                  {checksTotal > 0 && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginLeft: 4 }}>
+                      {r.checks
+                        .filter(c => c.status !== "ok") // affiche d'abord les non validés
+                        .slice(0, 3)
+                        .map(c => (
+                          <div key={c.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12, color: km.ink, lineHeight: 1.45 }}>
+                            <span style={{
+                              fontSize: 11, fontWeight: 700, flexShrink: 0, marginTop: 1,
+                              color: c.status === "blocked" ? "#b91c1c" : c.status === "coded" ? "#1d4ed8" : km.muted,
+                            }}>
+                              {c.status === "blocked" ? "✗" : c.status === "coded" ? "✦" : "○"}
+                            </span>
+                            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {c.label}
+                            </span>
+                          </div>
+                        ))}
+                      {r.checks.filter(c => c.status !== "ok").length > 3 && (
+                        <p style={{ margin: "2px 0 0 18px", fontSize: 11, color: km.muted, fontStyle: "italic" }}>
+                          + {r.checks.filter(c => c.status !== "ok").length - 3} autres checks…
+                        </p>
+                      )}
+                      {r.checks.filter(c => c.status !== "ok").length === 0 && (
+                        <p style={{ margin: 0, fontSize: 11, color: "#15803d", fontStyle: "italic" }}>
+                          ✓ Tous les checks validés
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         )}
       </div>
 
@@ -171,8 +224,7 @@ export default function ReleasesAdminClient({
   )
 }
 
-const thStyle: React.CSSProperties = { padding: "10px 14px", textAlign: "left", fontWeight: 700 }
-const tdStyle: React.CSSProperties = { padding: "10px 14px" }
+// V97.39.11 — thStyle/tdStyle retirés (table remplacée par cards verticales)
 
 // ─── Detail Modal avec workflow check + upload screenshot ───────────────────
 
