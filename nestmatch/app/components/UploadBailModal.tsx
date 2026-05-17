@@ -2,6 +2,7 @@
 import { useState } from "react"
 import Modal from "./ui/Modal"
 import { supabase } from "../../lib/supabase"
+import { storage } from "@/lib/storage"
 
 interface Props {
   open: boolean
@@ -101,7 +102,7 @@ export default function UploadBailModal({
         setUploading(false)
         return
       }
-      const { data: pub } = supabase.storage.from("baux").getPublicUrl(path)
+      const { data: pub } = storage.from("baux").getPublicUrl(path)
       await onUploaded({
         fichierUrl: pub.publicUrl,
         dateDebut,

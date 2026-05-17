@@ -17,6 +17,7 @@ type AnnexeState = {
 type AnnexesAlur = Record<AnnexeKey, AnnexeState>
 
 const EMPTY_ANNEXE: AnnexeState = { url: null, included_in_bail: false, not_required: false }
+import { storage } from "@/lib/storage"
 const EMPTY_ANNEXES_ALUR: AnnexesAlur = {
   dpe: { ...EMPTY_ANNEXE },
   erp: { ...EMPTY_ANNEXE },
@@ -287,12 +288,12 @@ function ImporterBailPageInner() {
           const path = `${proprio}/import-${Date.now()}.pdf`
           // Note : import dynamique pour ne pas bundler supabase si non utilisé.
           const { supabase } = await import("../../../../../lib/supabase")
-          const { error: upErr } = await supabase.storage.from("baux").upload(path, pdfFile, {
+          const { error: upErr } = await storage.from("baux").upload(path, pdfFile, {
             contentType: "application/pdf",
             upsert: false,
           })
           if (upErr) throw upErr
-          const { data: pub } = supabase.storage.from("baux").getPublicUrl(path)
+          const { data: pub } = storage.from("baux").getPublicUrl(path)
           pdfFichierUrl = pub?.publicUrl || null
         } catch (uerr) {
           setError(`Erreur upload PDF : ${uerr instanceof Error ? uerr.message : String(uerr)}`)
@@ -316,12 +317,12 @@ function ImporterBailPageInner() {
           const proprio = (session?.user?.email || "").toLowerCase().replace(/[^a-z0-9]/g, "_")
           const path = `${proprio}/edl-import-${Date.now()}.pdf`
           const { supabase } = await import("../../../../../lib/supabase")
-          const { error: upErr } = await supabase.storage.from("baux").upload(path, edlPdfFile, {
+          const { error: upErr } = await storage.from("baux").upload(path, edlPdfFile, {
             contentType: "application/pdf",
             upsert: false,
           })
           if (upErr) throw upErr
-          const { data: pub } = supabase.storage.from("baux").getPublicUrl(path)
+          const { data: pub } = storage.from("baux").getPublicUrl(path)
           edlPdfUrl = pub?.publicUrl || null
         } catch (uerr) {
           setError(`Erreur upload PDF EDL : ${uerr instanceof Error ? uerr.message : String(uerr)}`)
@@ -338,12 +339,12 @@ function ImporterBailPageInner() {
           const uploads = await Promise.all(edlPhotoFiles.map(async (f, idx) => {
             const safeName = f.name.replace(/[^a-zA-Z0-9._-]/g, "_")
             const path = `${proprio}/edl-import-${Date.now()}-${idx}-${safeName}`
-            const { error: upErr } = await supabase.storage.from("baux").upload(path, f, {
+            const { error: upErr } = await storage.from("baux").upload(path, f, {
               contentType: f.type || "image/jpeg",
               upsert: false,
             })
             if (upErr) throw upErr
-            const { data: pub } = supabase.storage.from("baux").getPublicUrl(path)
+            const { data: pub } = storage.from("baux").getPublicUrl(path)
             return pub?.publicUrl || null
           }))
           edlPhotosUrls = uploads.filter((u): u is string => !!u)

@@ -24,6 +24,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { checkRateLimitAsync } from "@/lib/rateLimit"
+import { storage } from "@/lib/storage"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -206,7 +207,7 @@ export async function DELETE(req: NextRequest) {
     // https://<project>.supabase.co/storage/v1/object/public/quittances/<path>
     const match = /\/storage\/v1\/object\/public\/quittances\/(.+)$/.exec(row.fichier_url || "")
     if (match?.[1]) {
-      await supabaseAdmin.storage.from("quittances").remove([decodeURIComponent(match[1])])
+      await storage.from("quittances").remove([decodeURIComponent(match[1])])
     }
   } catch (err) {
     console.warn("[quittances/perso] storage cleanup failed", err)

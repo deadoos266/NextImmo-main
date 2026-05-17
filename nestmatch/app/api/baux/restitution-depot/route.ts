@@ -34,6 +34,7 @@ import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { generateSoldePDFBuffer, type MotifRetenue as PdfMotifRetenue } from "@/lib/quittanceSoldeToutCompte"
 import { checkRateLimitAsync } from "@/lib/rateLimit"
+import { storage } from "@/lib/storage"
 
 export const runtime = "nodejs"
 
@@ -240,7 +241,7 @@ export async function POST(req: NextRequest) {
       .from("baux")
       .upload(path, pdfBuffer, { contentType: "application/pdf", upsert: false })
     if (!uploadErr) {
-      const { data: urlData } = supabaseAdmin.storage.from("baux").getPublicUrl(path)
+      const { data: urlData } = storage.from("baux").getPublicUrl(path)
       soldePdfUrl = urlData.publicUrl
       // Insert message [SOLDE_TOUT_COMPTE] pour qu'il apparaisse dans la conv + Documents partagés
       const soldePayload = JSON.stringify({

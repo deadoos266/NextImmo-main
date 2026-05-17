@@ -6,6 +6,7 @@ import Link from "next/link"
 import { supabase } from "../../../lib/supabase"
 import { useResponsive } from "../../hooks/useResponsive"
 import { km, KMPageHeader } from "../../components/ui/km"
+import { storage } from "@/lib/storage"
 
 // V88.4 — Quittance importée par le locataire (historique perso)
 type QuittancePerso = {
@@ -505,7 +506,7 @@ function PersoUploadForm({ email, isMobile, onDone }: { email: string; isMobile:
         setError(`Upload échoué : ${upErr.message}`)
         return
       }
-      const { data: pub } = supabase.storage.from("quittances").getPublicUrl(path)
+      const { data: pub } = storage.from("quittances").getPublicUrl(path)
       const fichierUrl = pub?.publicUrl
       if (!fichierUrl) { setError("URL fichier introuvable."); return }
 

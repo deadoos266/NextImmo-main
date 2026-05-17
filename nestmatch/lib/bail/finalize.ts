@@ -23,6 +23,7 @@ import { bailFinalActifTemplate } from "../email/templates"
 import { genererBailPDFBuffer } from "../bailPDF"
 import type { BailData, BailSignatureEntry } from "../bailPDF"
 import { shouldSendEmailForEvent } from "../notifPreferencesServer"
+import { storage } from "@/lib/storage"
 
 const BAIL_PREFIX = "[BAIL_CARD]"
 
@@ -133,7 +134,7 @@ export async function finalizeBail(args: FinalizeBailArgs): Promise<{ ok: boolea
             upsert: false,
           })
         if (!uploadErr) {
-          const { data: urlData } = supabaseAdmin.storage.from("baux").getPublicUrl(path)
+          const { data: urlData } = storage.from("baux").getPublicUrl(path)
           pdfPublicUrl = urlData.publicUrl
         } else {
           console.warn("[finalizeBail] PDF upload failed:", uploadErr.message)

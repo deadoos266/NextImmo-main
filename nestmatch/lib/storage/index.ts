@@ -57,6 +57,9 @@ export type StorageBucket =
   | "quittances"
   | "messages-images"
   | "bug-screenshots"
+  // V97.39.23 — legacy bucket utilisé par /api/cron/db-backup (Phase 8
+  // Vercel pre-VPS). À supprimer quand Phase 8 backups VPS prend le relai.
+  | "backups"
 
 export type StorageProvider = "supabase" | "minio"
 
@@ -66,9 +69,11 @@ export interface UploadOpts {
   cacheControl?: string
 }
 
+// V97.39.23 — Inclut error sur les 2 branches (null si ok) pour faciliter
+// le narrowing TS sous tsconfig strict:false.
 export type StorageResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: string }
+  | { ok: true; data: T; error: null }
+  | { ok: false; data: null; error: string }
 
 function resolveProvider(): StorageProvider {
   const raw = (process.env.STORAGE_PROVIDER || "supabase").toLowerCase().trim()
@@ -110,10 +115,10 @@ export async function upload(
       upsert: opts.upsert ?? false,
       cacheControl: opts.cacheControl,
     })
-    if (error) return { ok: false, error: error.message }
-    return { ok: true, data: { path } }
+    if (error) return { ok: false, data: null, error: error.message }
+    return { ok: true, data: { path }, error: null }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Unknown upload error" }
+    return { ok: false, data: null, error: e instanceof Error ? e.message : "Unknown upload error" }
   }
 }
 
@@ -151,10 +156,10 @@ export async function createSignedUrl(
   }
   try {
     const { data, error } = await supabaseAdmin.storage.from(bucket).createSignedUrl(path, ttlSeconds)
-    if (error || !data?.signedUrl) return { ok: false, error: error?.message || "No signed URL returned" }
-    return { ok: true, data: { url: data.signedUrl } }
+    if (error || !data?.signedUrl) return { ok: false, data: null, error: error?.message || "No signed URL returned" }
+    return { ok: true, data: { url: data.signedUrl }, error: null }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Unknown sign error" }
+    return { ok: false, data: null, error: e instanceof Error ? e.message : "Unknown sign error" }
   }
 }
 
@@ -172,11 +177,11 @@ export async function download(
   }
   try {
     const { data, error } = await supabaseAdmin.storage.from(bucket).download(path)
-    if (error || !data) return { ok: false, error: error?.message || "Download empty" }
+    if (error || !data) return { ok: false, data: null, error: error?.message || "Download empty" }
     const buf = Buffer.from(await data.arrayBuffer())
-    return { ok: true, data: { data: buf, contentType: data.type || "application/octet-stream" } }
+    return { ok: true, data: { data: buf, contentType: data.type || "application/octet-stream" }, error: null }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Unknown download error" }
+    return { ok: false, data: null, error: e instanceof Error ? e.message : "Unknown download error" }
   }
 }
 
@@ -187,7 +192,7 @@ export async function remove(
   bucket: StorageBucket,
   paths: string[],
 ): Promise<StorageResult<{ count: number }>> {
-  if (paths.length === 0) return { ok: true, data: { count: 0 } }
+  if (paths.length === 0) return { ok: true, data: { count: 0 }, error: null }
   const provider = resolveProvider()
   if (provider === "minio") {
     const { removeMinio } = await import("./minio")
@@ -195,10 +200,10 @@ export async function remove(
   }
   try {
     const { data, error } = await supabaseAdmin.storage.from(bucket).remove(paths)
-    if (error) return { ok: false, error: error.message }
-    return { ok: true, data: { count: data?.length ?? 0 } }
+    if (error) return { ok: false, data: null, error: error.message }
+    return { ok: true, data: { count: data?.length ?? 0 }, error: null }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Unknown remove error" }
+    return { ok: false, data: null, error: e instanceof Error ? e.message : "Unknown remove error" }
   }
 }
 
@@ -212,6 +217,116 @@ function encodeStoragePath(path: string): string {
     .split("/")
     .map(segment => encodeURIComponent(segment))
     .join("/")
+}
+
+/**
+ * V97.39.23 — Wrapper compat API Supabase Storage pour migrer les call sites
+ * existants en 1 ligne (changement d'import seulement, pas de réécriture).
+ *
+ * Usage :
+ *   AVANT : import { supabaseAdmin } from "@/lib/supabase-server"
+ *           supabaseAdmin.storage.from("avatars").upload(path, file, opts)
+ *   APRÈS : import { storage } from "@/lib/storage"
+ *           storage.from("avatars").upload(path, file, opts)
+ *
+ * Retourne le même format `{ data, error }` que Supabase Storage SDK pour
+ * minimiser la friction de migration. Le dispatcher Supabase ↔ MinIO opère
+ * en dessous via STORAGE_PROVIDER env var.
+ *
+ * ⚠ NOTE : les méthodes `list()` ne sont PAS implémentées (utilisées seulement
+ * par /api/cron/db-backup qui est legacy Vercel — sera remplacé par Phase 8
+ * backups VPS de toute façon).
+ */
+export const storage = {
+  from: (bucket: StorageBucket) => ({
+    /**
+     * Upload — mimic Supabase signature.
+     * Retourne `{ data: { path }, error: { message } | null }`.
+     */
+    async upload(
+      path: string,
+      file: Blob | Buffer | Uint8Array | ArrayBuffer,
+      opts: UploadOpts = {},
+    ): Promise<{ data: { path: string } | null; error: { message: string } | null }> {
+      // Normalize ArrayBuffer → Uint8Array
+      let body: Blob | Buffer | Uint8Array
+      if (file instanceof ArrayBuffer) body = new Uint8Array(file)
+      else body = file
+      const res = await upload(bucket, path, body, opts)
+      // V97.39.23 — narrowing explicite (tsconfig strict:false ne narrow pas
+      // bien les discriminated unions sur la branche `!ok`)
+      if (res.ok) return { data: { path: res.data.path }, error: null }
+      return { data: null, error: { message: res.error } }
+    },
+
+    /**
+     * Get public URL — sync, mimic Supabase signature.
+     * Retourne `{ data: { publicUrl } }`.
+     */
+    getPublicUrl(path: string): { data: { publicUrl: string } } {
+      return { data: { publicUrl: getPublicUrl(bucket, path) } }
+    },
+
+    /**
+     * Create signed URL — async.
+     * Retourne `{ data: { signedUrl }, error: { message } | null }`.
+     */
+    async createSignedUrl(
+      path: string,
+      ttlSeconds: number,
+    ): Promise<{ data: { signedUrl: string } | null; error: { message: string } | null }> {
+      const res = await createSignedUrl(bucket, path, ttlSeconds)
+      if (res.ok) return { data: { signedUrl: res.data.url }, error: null }
+      return { data: null, error: { message: res.error } }
+    },
+
+    /**
+     * Download — async.
+     * Retourne `{ data: Blob, error: { message } | null }`.
+     * Note : Supabase retourne un Blob, on convertit Buffer → Blob.
+     */
+    async download(
+      path: string,
+    ): Promise<{ data: Blob | null; error: { message: string } | null }> {
+      const res = await download(bucket, path)
+      if (res.ok) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const blob = new Blob([res.data.data as any], { type: res.data.contentType })
+        return { data: blob, error: null }
+      }
+      return { data: null, error: { message: res.error } }
+    },
+
+    /**
+     * Remove — async.
+     * Retourne `{ data: { name: string }[] | null, error: { message } | null }`.
+     */
+    async remove(
+      paths: string[],
+    ): Promise<{ data: { name: string }[] | null; error: { message: string } | null }> {
+      const res = await remove(bucket, paths)
+      if (res.ok) return { data: paths.map(name => ({ name })), error: null }
+      return { data: null, error: { message: res.error } }
+    },
+
+    /**
+     * List — délègue à Supabase. NOT IMPLEMENTÉ pour MinIO (pas utilisé en
+     * dehors de /api/cron/db-backup qui est legacy Vercel et remplacé par
+     * tools/postgres-vps/scripts/backup-daily.sh).
+     */
+    async list(
+      prefix: string,
+      opts?: { limit?: number; offset?: number; sortBy?: { column: string; order: string } },
+    ): Promise<{ data: Array<{ name: string; id?: string; created_at?: string; updated_at?: string }> | null; error: { message: string } | null }> {
+      const provider = resolveProvider()
+      if (provider === "minio") {
+        return { data: null, error: { message: "list() pas implémenté en MinIO (legacy /api/cron/db-backup à supprimer)" } }
+      }
+      const { data, error } = await supabaseAdmin.storage.from(bucket).list(prefix, opts)
+      if (error) return { data: null, error: { message: error.message } }
+      return { data: data || [], error: null }
+    },
+  }),
 }
 
 /**

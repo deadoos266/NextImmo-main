@@ -22,6 +22,7 @@ import { generateQuittancePDFBuffer, buildQuittancePath } from "../../../../lib/
 import { sendEmail } from "../../../../lib/email/resend"
 import { quittanceTemplate } from "../../../../lib/email/templates"
 import { shouldSendEmailForEvent } from "../../../../lib/notifPreferencesServer"
+import { storage } from "@/lib/storage"
 
 export const runtime = "nodejs"
 
@@ -144,7 +145,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Upload PDF a échoué" }, { status: 500 })
   }
 
-  const { data: urlData } = supabaseAdmin.storage.from("quittances").getPublicUrl(path)
+  const { data: urlData } = storage.from("quittances").getPublicUrl(path)
   const publicUrl = urlData.publicUrl
 
   // Persist URL sur loyers

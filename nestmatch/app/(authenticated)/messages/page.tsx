@@ -28,6 +28,7 @@ const ProposerVisiteDialog = dynamic(() => import("../../components/ProposerVisi
 const BailSignatureModal = dynamic(() => import("../../components/BailSignatureModal"), { ssr: false })
 import type { BailData } from "../../../lib/bailPDF"
 import { calculerScore, type Profil as MatchingProfil, type Annonce as MatchingAnnonce } from "../../../lib/matching"
+import { storage } from "@/lib/storage"
 
 const DOSSIER_PREFIX = "[DOSSIER_CARD]"
 const BAIL_PREFIX = "[BAIL_CARD]"
@@ -2522,7 +2523,7 @@ function MessagesInner() {
       const uuid = crypto.randomUUID()
       const ext = file.name.toLowerCase().match(/\.(jpe?g|png|webp|gif)$/i)?.[0] || ".jpg"
       const path = `${safeEmail}/${uuid}${ext}`
-      const { error: upErr } = await supabase.storage.from("messages-images").upload(path, blob, {
+      const { error: upErr } = await storage.from("messages-images").upload(path, blob, {
         contentType: blob.type || "image/jpeg",
         upsert: false,
       })

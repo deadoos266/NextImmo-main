@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
+import { storage } from "@/lib/storage"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest) {
   const bugsWithSignedUrls = await Promise.all((data || []).map(async b => {
     if (!b.screenshot_url || !b.screenshot_url.startsWith(STORAGE_PREFIX)) return b
     const path = b.screenshot_url.slice(STORAGE_PREFIX.length)
-    const { data: signed } = await supabaseAdmin.storage.from("bug-screenshots").createSignedUrl(path, 3600)
+    const { data: signed } = await storage.from("bug-screenshots").createSignedUrl(path, 3600)
     return { ...b, screenshot_url: signed?.signedUrl || null }
   }))
 

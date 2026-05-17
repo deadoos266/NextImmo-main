@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { useResponsive } from "../hooks/useResponsive"
 import { km } from "./ui/km"
+import { storage } from "@/lib/storage"
 
 /**
  * V84.8 / V97.10 — BugReportButton : widget flottant + auto-capture sur erreur JS.
@@ -196,7 +197,7 @@ export default function BugReportButton() {
       const { supabase } = await import("../../lib/supabase")
       const safeTs = Date.now()
       const safePath = `${safeTs}-${Math.random().toString(36).slice(2, 8)}.jpg`
-      const { error } = await supabase.storage.from("bug-screenshots").upload(safePath, blob, {
+      const { error } = await storage.from("bug-screenshots").upload(safePath, blob, {
         contentType: "image/jpeg",
         upsert: false,
       })

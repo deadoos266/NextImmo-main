@@ -19,6 +19,7 @@ import { hashToken, hashIP } from "@/lib/dossierAccessLog"
 import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
 import { genererDossierPDFBlob, type DossierData, type DossierDocEntry } from "@/lib/dossierPDF"
 import { formatNomComplet } from "@/lib/profilHelpers"
+import { storage } from "@/lib/storage"
 
 export const runtime = "nodejs"
 // Opération lourde (lecture N fichiers) — on laisse 60s à Vercel
@@ -204,7 +205,7 @@ export async function GET(
           return { ok: false, folder: folderName, filename: safeFilename, reason: "URL inconnue" }
         }
         const path = decodeURIComponent(match[1])
-        const { data, error } = await supabaseAdmin.storage.from("dossiers").download(path)
+        const { data, error } = await storage.from("dossiers").download(path)
         if (error || !data) {
           return { ok: false, folder: folderName, filename: safeFilename, reason: error?.message || "Introuvable" }
         }
@@ -226,7 +227,7 @@ export async function GET(
         return { ok: false, folder: "autres", filename: safeFilename, reason: "URL inconnue" }
       }
       const path = decodeURIComponent(match[1])
-      const { data, error } = await supabaseAdmin.storage.from("dossiers").download(path)
+      const { data, error } = await storage.from("dossiers").download(path)
       if (error || !data) {
         return { ok: false, folder: "autres", filename: safeFilename, reason: error?.message || "Introuvable" }
       }

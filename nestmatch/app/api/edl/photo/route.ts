@@ -16,6 +16,7 @@ import { supabaseAdmin } from "@/lib/supabase-server"
 import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
 import { sanitizeImage } from "@/lib/imageSanitize"
 import { verifyImageMagicBytes } from "@/lib/fileValidation"
+import { storage } from "@/lib/storage"
 
 const MAX_SIZE = 10 * 1024 * 1024
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"])
@@ -101,6 +102,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Upload échoué : ${upErr.message}` }, { status: 500 })
   }
 
-  const { data: urlData } = supabaseAdmin.storage.from("annonces-photos").getPublicUrl(path)
+  const { data: urlData } = storage.from("annonces-photos").getPublicUrl(path)
   return NextResponse.json({ ok: true, url: urlData.publicUrl })
 }

@@ -99,7 +99,7 @@ export async function uploadMinio(
   opts: UploadOpts,
 ): Promise<StorageResult<{ path: string }>> {
   const sdk = await loadSdk()
-  if (!sdk) return { ok: false, error: "MinIO SDK not installed (cf lib/storage/minio.ts docstring)" }
+  if (!sdk) return { ok: false, data: null, error: "MinIO SDK not installed (cf lib/storage/minio.ts docstring)" }
   try {
     const client = createClient(sdk)
     // Convertit en Buffer (S3 SDK accepte Buffer/Uint8Array/Stream)
@@ -119,9 +119,9 @@ export async function uploadMinio(
     })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (client as any).send(cmd)
-    return { ok: true, data: { path } }
+    return { ok: true, data: { path }, error: null }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Unknown MinIO upload error" }
+    return { ok: false, data: null, error: e instanceof Error ? e.message : "Unknown MinIO upload error" }
   }
 }
 
@@ -131,14 +131,14 @@ export async function createSignedUrlMinio(
   ttlSeconds: number,
 ): Promise<StorageResult<{ url: string }>> {
   const sdk = await loadSdk()
-  if (!sdk) return { ok: false, error: "MinIO SDK not installed" }
+  if (!sdk) return { ok: false, data: null, error: "MinIO SDK not installed" }
   try {
     const client = createClient(sdk)
     const cmd = new sdk.GetObjectCommand({ Bucket: bucket, Key: path })
     const url = await sdk.getSignedUrl(client, cmd, { expiresIn: ttlSeconds })
-    return { ok: true, data: { url } }
+    return { ok: true, data: { url }, error: null }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Unknown MinIO sign error" }
+    return { ok: false, data: null, error: e instanceof Error ? e.message : "Unknown MinIO sign error" }
   }
 }
 
@@ -147,7 +147,7 @@ export async function downloadMinio(
   path: string,
 ): Promise<StorageResult<{ data: Buffer; contentType: string }>> {
   const sdk = await loadSdk()
-  if (!sdk) return { ok: false, error: "MinIO SDK not installed" }
+  if (!sdk) return { ok: false, data: null, error: "MinIO SDK not installed" }
   try {
     const client = createClient(sdk)
     const cmd = new sdk.GetObjectCommand({ Bucket: bucket, Key: path })
@@ -164,9 +164,10 @@ export async function downloadMinio(
         data: Buffer.concat(chunks),
         contentType: (res.ContentType as string | undefined) || "application/octet-stream",
       },
+      error: null,
     }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Unknown MinIO download error" }
+    return { ok: false, data: null, error: e instanceof Error ? e.message : "Unknown MinIO download error" }
   }
 }
 
@@ -175,7 +176,7 @@ export async function removeMinio(
   paths: string[],
 ): Promise<StorageResult<{ count: number }>> {
   const sdk = await loadSdk()
-  if (!sdk) return { ok: false, error: "MinIO SDK not installed" }
+  if (!sdk) return { ok: false, data: null, error: "MinIO SDK not installed" }
   try {
     const client = createClient(sdk)
     const cmd = new sdk.DeleteObjectsCommand({
@@ -187,8 +188,8 @@ export async function removeMinio(
     })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (client as any).send(cmd)
-    return { ok: true, data: { count: paths.length } }
+    return { ok: true, data: { count: paths.length }, error: null }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Unknown MinIO remove error" }
+    return { ok: false, data: null, error: e instanceof Error ? e.message : "Unknown MinIO remove error" }
   }
 }

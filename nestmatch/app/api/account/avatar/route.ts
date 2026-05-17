@@ -16,6 +16,7 @@ import { supabaseAdmin } from "@/lib/supabase-server"
 import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
 import { sanitizeImage } from "@/lib/imageSanitize"
 import { verifyImageMagicBytes } from "@/lib/fileValidation"
+import { storage } from "@/lib/storage"
 
 const MAX_SIZE = 2 * 1024 * 1024 // 2 Mo
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"])
@@ -105,7 +106,7 @@ export async function POST(req: NextRequest) {
     .from("avatars")
     .remove([`${email}/avatar.jpg`, `${email}/avatar.png`])
 
-  const { data: urlData } = supabaseAdmin.storage.from("avatars").getPublicUrl(path)
+  const { data: urlData } = storage.from("avatars").getPublicUrl(path)
   // Ajout d'un bust de cache — sinon le browser sert l'ancienne image.
   const url = `${urlData.publicUrl}?v=${Date.now()}`
 
@@ -169,9 +170,9 @@ export async function DELETE() {
 
   // Supprime les extensions possibles (best effort) — pas critique si 404 storage
   await Promise.allSettled([
-    supabaseAdmin.storage.from("avatars").remove([`${email}/avatar.jpg`]),
-    supabaseAdmin.storage.from("avatars").remove([`${email}/avatar.png`]),
-    supabaseAdmin.storage.from("avatars").remove([`${email}/avatar.webp`]),
+    storage.from("avatars").remove([`${email}/avatar.jpg`]),
+    storage.from("avatars").remove([`${email}/avatar.png`]),
+    storage.from("avatars").remove([`${email}/avatar.webp`]),
   ])
 
   const { error } = await supabaseAdmin

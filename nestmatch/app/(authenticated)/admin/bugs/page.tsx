@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "../../../../lib/supabase-server"
 import BugsAdminClient from "./BugsAdminClient"
+import { storage } from "@/lib/storage"
 
 /**
  * V84.8 — /admin/bugs — Gestion bug reports.
@@ -28,7 +29,7 @@ async function resolveScreenshotUrl(stored: string | null): Promise<string | nul
   if (!stored.startsWith(STORAGE_PREFIX)) return stored
   const path = stored.slice(STORAGE_PREFIX.length)
   // Signed URL valide 1h — admin peut re-rafraîchir en rechargeant la page
-  const { data } = await supabaseAdmin.storage.from("bug-screenshots").createSignedUrl(path, 3600)
+  const { data } = await storage.from("bug-screenshots").createSignedUrl(path, 3600)
   return data?.signedUrl || null
 }
 

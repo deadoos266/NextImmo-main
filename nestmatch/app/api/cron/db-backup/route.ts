@@ -26,6 +26,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { withCronLogging } from "@/lib/cron/withCronLogging"
 import { supabaseAdmin } from "@/lib/supabase-server"
+import { storage } from "@/lib/storage"
 
 export const runtime = "nodejs"
 
@@ -91,7 +92,7 @@ export const GET = withCronLogging("db-backup", null, async function cronGET(req
   // Rétention : delete folders > 7 jours
   let purgedFolders = 0
   try {
-    const { data: folders } = await supabaseAdmin.storage.from(BUCKET).list("", {
+    const { data: folders } = await storage.from(BUCKET).list("", {
       limit: 100,
       offset: 0,
     })
@@ -102,11 +103,11 @@ export const GET = withCronLogging("db-backup", null, async function cronGET(req
         const folderDate = new Date(folder.name)
         if (Number.isFinite(folderDate.getTime()) && folderDate < cutoff) {
           // List les fichiers dans le folder
-          const { data: files } = await supabaseAdmin.storage.from(BUCKET).list(folder.name)
+          const { data: files } = await storage.from(BUCKET).list(folder.name)
           if (files) {
             const paths = files.map(f => `${folder.name}/${f.name}`)
             if (paths.length > 0) {
-              await supabaseAdmin.storage.from(BUCKET).remove(paths)
+              await storage.from(BUCKET).remove(paths)
               purgedFolders++
             }
           }

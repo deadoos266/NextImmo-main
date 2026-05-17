@@ -25,6 +25,7 @@ import { useUndo } from "../../components/ui/useUndo"
 import DocRowSkeleton from "../../components/ui/DocRowSkeleton"
 import { useRole } from "../../providers"
 import { formatNomComplet, buildMailtoModifIdentite } from "../../../lib/profilHelpers"
+import { storage } from "@/lib/storage"
 // `filterNationalites` est lazy-loadé à la première ouverture du combobox
 // nationalités (cf. NationaliteAutocomplete). Économie ~4-6 kB sur le bundle
 // initial /dossier.
@@ -1454,12 +1455,12 @@ export default function Dossier() {
       }
       const ext = file.name.split(".").pop()
       const path = `${session.user.email}/${key}_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
-      const { error } = await supabase.storage.from("dossiers").upload(path, file, { upsert: false })
+      const { error } = await storage.from("dossiers").upload(path, file, { upsert: false })
       if (error) {
         setUploadError("L'envoi du fichier a échoué, veuillez réessayer.")
         break
       }
-      const { data: urlData } = supabase.storage.from("dossiers").getPublicUrl(path)
+      const { data: urlData } = storage.from("dossiers").getPublicUrl(path)
       newUrls.push(urlData.publicUrl)
     }
 
@@ -1514,13 +1515,13 @@ export default function Dossier() {
     setUploadError(null)
     const ext = file.name.split(".").pop()
     const path = `${session.user.email}/libres_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
-    const { error } = await supabase.storage.from("dossiers").upload(path, file, { upsert: false })
+    const { error } = await storage.from("dossiers").upload(path, file, { upsert: false })
     if (error) {
       setUploadError("L'envoi du fichier a échoué, veuillez réessayer.")
       setUploadingLibre(false)
       return
     }
-    const { data: urlData } = supabase.storage.from("dossiers").getPublicUrl(path)
+    const { data: urlData } = storage.from("dossiers").getPublicUrl(path)
     const entry: DocLibre = {
       url: urlData.publicUrl,
       label: trimmed,

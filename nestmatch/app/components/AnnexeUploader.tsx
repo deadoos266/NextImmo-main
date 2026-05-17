@@ -1,6 +1,7 @@
 "use client"
 import { useRef, useState } from "react"
 import { supabase } from "../../lib/supabase"
+import { storage } from "@/lib/storage"
 
 interface Props {
   label: string
@@ -55,7 +56,7 @@ export default function AnnexeUploader({
         setError(`Upload échoué : ${upErr.message}`)
         return
       }
-      const { data: pub } = supabase.storage.from("baux").getPublicUrl(path)
+      const { data: pub } = storage.from("baux").getPublicUrl(path)
       onChange({ url: pub.publicUrl, name: f.name })
     } finally {
       setUploading(false)
