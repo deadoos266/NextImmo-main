@@ -185,6 +185,8 @@ async def health(req: Request):
         "allow_hosts": sorted(ALLOW_HOSTS),
         "rate_limit_per_hour": RATE_LIMIT_PER_HOUR,
         "callback_configured": bool(CALLBACK_URL),
+        # V97.39.10 — visible côté admin pour savoir si on tourne avec ou sans proxy
+        "proxy_configured": bool(os.environ.get("WORKER_PROXY_URL", "").strip()),
     }
 
 

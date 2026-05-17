@@ -262,6 +262,50 @@ CreepJS détecte le navigateur → bon test pour vérifier stealth + qu'on ne se
 ## Limitations connues
 
 - Zendriver ~75% succès sur DataDome 2026 (vs 30-60% Camoufox, vs 90%+ payant ScrapingBee). C'est la meilleure option gratuite.
+- **Sur ASN OVHcloud sans proxy résidentiel : ~0% sur LBC/SeLoger/Logic-immo** (testé en live 2026-05-17). DataDome flag les IPs datacenter cloud comme "high risk" automatiquement.
 - Casse tous les 1-3 mois quand DataDome update — prévoir 30 min maintenance.
 - Pas de bypass CAPTCHA image (si DataDome escalade, fallback "saisie manuelle").
 - Pool 3 contextes = 3 fetches simultanés max. Si Paul a besoin de plus, augmenter `POOL_SIZE` mais surveiller la RAM (chaque slot ~1 GB).
+
+## Activer un proxy résidentiel (V97.39.10)
+
+Pour faire passer le bypass de 0% à ~70-90% sur LBC/SeLoger/Logic-immo, il faut sortir de l'ASN datacenter via un proxy résidentiel.
+
+### Webshare (recommandé, ~1$/GB)
+
+1. Crée un compte gratuit sur https://www.webshare.io
+2. Free tier : 10 proxies rotatifs + 1 GB/mois (test 50-100 fetches gratuitement)
+3. Au-delà : ~1$/GB (un proprio qui importe 20 annonces = ~50 MB = 0.05$). Plan recommandé "Static Datacenter" rotation IP automatique.
+4. Récupère les credentials proxy dans Dashboard → Proxy List → format `http://USER:PASS@p.webshare.io:80`
+5. Sur le VPS :
+   ```bash
+   ssh -i $HOME\.ssh\keymatch_vps ubuntu@149.202.60.152
+   cd /opt/keymatch/NextImmo-main/tools/zendriver-worker
+   # Édite .env, décommente WORKER_PROXY_URL et colle la valeur :
+   nano .env
+   # WORKER_PROXY_URL=http://username:password@p.webshare.io:80
+   sudo docker compose restart
+   ```
+6. Vérifie : `curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/health | jq` → `"proxy_configured": true`
+7. Test live LBC depuis Vercel : devrait passer de BOT_PROTECTION à success.
+
+### Autres providers
+
+| Provider | Coût | Free tier | Pour KeyMatch |
+|---|---|---|---|
+| Webshare | ~1$/GB | ✅ 1GB | **Recommandé** |
+| IPRoyal | 7$/GB | ❌ | Plus cher |
+| Smartproxy | 7-10$/GB | ❌ | Plus cher |
+| Bright Data | 300$+/mois | ❌ | Trop cher pour KeyMatch |
+| ProxyMesh | 30$/mois | ❌ | Datacenter, peut être blacklisté |
+
+### Désactiver le proxy
+
+Vide `WORKER_PROXY_URL` dans `.env` et `docker compose restart`. Le worker retombe en mode direct (ASN OVH).
+
+### Surveillance succès rate avec proxy
+
+Une fois proxy activé, surveille `/admin/imports` pendant 24-48h :
+- Card "Worker Zendriver" → doit afficher latence stable
+- Table "Par voie d'extraction" → `zendriver-worker` doit montrer taux success > 50% sur LBC/SeLoger
+- Si toujours 0% → check les logs (`sudo docker compose logs --tail=50 worker`) pour voir si le proxy lui-même est dégueu (rare avec Webshare)

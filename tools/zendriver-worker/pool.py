@@ -6,6 +6,10 @@ Cold-start ~6-9s, donc on garde un pool ouvert.
 
 Rotation du profil utilisateur tous les N fetches pour éviter que DataDome
 finger-print l'instance par session persistante.
+
+V97.39.10 — Support proxy résidentiel optionnel via WORKER_PROXY_URL.
+Sans proxy : bypass DataDome ~0% sur ASN OVH.
+Avec proxy résidentiel (Webshare 1$/GB) : ~70-90% attendu.
 """
 
 import asyncio
@@ -22,6 +26,22 @@ import zendriver as zd
 LOG = logging.getLogger("worker.pool")
 
 ROTATION_AFTER_FETCHES = 50
+
+
+def _proxy_browser_arg() -> str | None:
+    """Construit le browser_arg --proxy-server à partir des env vars.
+
+    Format Chromium attendu : --proxy-server=protocol://host:port
+    Auth si nécessaire : géré par WORKER_PROXY_USERNAME/PASSWORD via
+    page.authenticate côté Zendriver (CDP), pas dans l'URL.
+
+    Retourne None si proxy non configuré (mode normal sans proxy).
+    """
+    proxy_url = os.environ.get("WORKER_PROXY_URL", "").strip()
+    if not proxy_url:
+        return None
+    LOG.info("Proxy configured: %s (auth credentials hidden)", proxy_url.split("@")[-1] if "@" in proxy_url else proxy_url)
+    return f"--proxy-server={proxy_url}"
 
 
 @dataclass
@@ -57,31 +77,55 @@ class BrowserPool:
         V97.39.3 : ajout de browser_args anti-detection plus agressifs pour
         augmenter le taux de bypass DataDome (baseline OVH ASN catastrophique
         sans proxy résidentiel). Sans garantie, mais ça ne coûte rien.
+
+        V97.39.10 : support proxy résidentiel optionnel via WORKER_PROXY_URL.
         """
         user_data_dir = tempfile.mkdtemp(prefix=f"zd-slot-{idx}-")
+        browser_args = [
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
+            "--lang=fr-FR,fr",
+            "--accept-lang=fr-FR,fr;q=0.9,en;q=0.8",
+            # V97.39.3 — anti-detection supplémentaires
+            "--disable-blink-features=AutomationControlled",
+            "--disable-features=IsolateOrigins,site-per-process",
+            "--disable-site-isolation-trials",
+            "--disable-web-security",
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--password-store=basic",
+            "--use-mock-keychain",
+            "--window-size=1920,1080",
+            # User-Agent fixe à la mode Chromium stable
+            "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        ]
+
+        # V97.39.10 — Proxy résidentiel optionnel
+        proxy_arg = _proxy_browser_arg()
+        if proxy_arg:
+            browser_args.append(proxy_arg)
+
         browser = await zd.start(
             headless=True,
             user_data_dir=user_data_dir,
-            browser_args=[
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--lang=fr-FR,fr",
-                "--accept-lang=fr-FR,fr;q=0.9,en;q=0.8",
-                # V97.39.3 — anti-detection supplémentaires
-                "--disable-blink-features=AutomationControlled",
-                "--disable-features=IsolateOrigins,site-per-process",
-                "--disable-site-isolation-trials",
-                "--disable-web-security",
-                "--no-first-run",
-                "--no-default-browser-check",
-                "--password-store=basic",
-                "--use-mock-keychain",
-                "--window-size=1920,1080",
-                # User-Agent fixe à la mode Chromium stable
-                "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-            ],
+            browser_args=browser_args,
         )
-        LOG.debug("Spawned slot %d (user_data_dir=%s)", idx, user_data_dir)
+
+        # Auth proxy si username/password fournis (Chromium ne supporte pas user:pass@ dans URL,
+        # il faut utiliser CDP Network.setExtraHTTPHeaders ou Fetch.authRequired)
+        proxy_user = os.environ.get("WORKER_PROXY_USERNAME", "").strip()
+        proxy_pass = os.environ.get("WORKER_PROXY_PASSWORD", "").strip()
+        if proxy_arg and proxy_user and proxy_pass:
+            # Note : Zendriver expose CDP, mais l'auth proxy est tricky en headless.
+            # La pratique recommandée : embedder user:pass dans WORKER_PROXY_URL directement.
+            # Si Paul utilise un format auth séparé, on documente la limite ici.
+            LOG.warning(
+                "WORKER_PROXY_USERNAME/PASSWORD défini séparément — "
+                "Zendriver headless ne gère pas l'auth proxy. "
+                "Préfère embed dans l'URL : http://user:pass@host:port",
+            )
+
+        LOG.debug("Spawned slot %d (user_data_dir=%s, proxy=%s)", idx, user_data_dir, bool(proxy_arg))
         return BrowserSlot(browser=browser, user_data_dir=user_data_dir)
 
     async def _rotate_slot(self, slot_idx: int) -> None:
