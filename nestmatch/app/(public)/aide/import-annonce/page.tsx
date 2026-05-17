@@ -26,7 +26,7 @@ const SOURCES: SourceItem[] = [
   { name: "Orpi", host: "orpi.com", desc: "OpenGraph riche (titre + prix + surface dans og:title). Extraction via heuristiques.", status: "good" },
   { name: "iAD France", host: "iadfrance.fr", desc: "Nuxt.js + OpenGraph. Titre, prix, surface, pièces extraits.", status: "good" },
   { name: "Century 21", host: "century21.fr", desc: "OpenGraph (entités HTML décodées). Titre, prix, surface, ville extraits.", status: "good" },
-  { name: "Guy Hoquet", host: "guy-hoquet.com", desc: "JSON-LD Apartment complet (avec décodage entités HTML). Extrait nom, description, prix, pièces, ville, code postal, photo.", status: "good" },
+  { name: "Guy Hoquet", host: "guy-hoquet.com", desc: "Le site est devenu full SPA JS (constaté 2026-05-17) : le HTML servi est une coquille vide de 22 KB sans og:tags ni JSON-LD. Extraction limitée. Bypass via service stealth possible.", status: "partial" },
   { name: "Laforêt", host: "laforet.com", desc: "OpenGraph riche avec 12 photos (pattern og:image_0..11 supporté V97.39.12).", status: "good" },
   // V97.39.12 — Sites partiels constatés en test live : ils retournent du HTML mais le contenu détail nécessite du JS ou auth, donc parseur tombe en fallback générique.
   { name: "ERA Immobilier", host: "eraimmobilier.com", desc: "Site en SPA Angular pure : le contenu annonce n'est pas dans le HTML statique. Extraction limitée au titre du site.", status: "partial" },

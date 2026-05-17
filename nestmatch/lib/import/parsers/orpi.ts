@@ -39,6 +39,25 @@ async function parse(html: string, _url: string): Promise<Partial<ImportedAnnonc
           if (Number.isFinite(n) && n > 0 && n < 20) out.rooms = n
         }
       }
+
+      // V97.39.15 — Orpi expose un riche `window.dataLayer` côté HTML
+      // (Google Tag Manager) avec codePostal, surface format "44-29", etc.
+      // Extrait les fields qui ne sont pas dans og:title.
+      // Pattern : `dataLayer.push({"codePostal":"67000",...})` ou variantes JSON inline.
+      if (!out.postal_code) {
+        const cpMatch = /["']codePostal["']\s*:\s*["'](\d{5})["']/i.exec(htmlBody)
+        if (cpMatch) {
+          const cp = cpMatch[1]
+          if (!/^(19|20)\d{2}$/.test(cp)) out.postal_code = cp
+        }
+      }
+      if (!out.bedrooms) {
+        const nbChambresMatch = /["']nbChambres["']\s*:\s*["']?(\d{1,2})["']?/i.exec(htmlBody)
+        if (nbChambresMatch) {
+          const n = parseInt(nbChambresMatch[1], 10)
+          if (Number.isFinite(n) && n > 0 && n < 20) out.bedrooms = n
+        }
+      }
     },
   })
 }

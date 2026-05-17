@@ -242,3 +242,114 @@ describe("Custom hooks parsers V97.39.14", () => {
     expect(out.dpe).toBe("A")
   })
 })
+
+// V97.39.15 — Tests des fixes post second test live
+describe("Custom hooks V97.39.15", () => {
+  it("Century 21 : extrait pièces depuis format français 'F2'", async () => {
+    const { century21Parser } = await import("../parsers/century21")
+    const html = `
+      <html><head>
+        <meta property="og:title" content="Appartement F2 à louer - 42 m2 - Paris - 75013">
+      </head><body>42 m²</body></html>
+    `
+    const out = await century21Parser.parse(html, "https://www.century21.fr/x/")
+    expect(out.rooms).toBe(2)
+  })
+
+  it("Century 21 : F3 sans espace marche aussi", async () => {
+    const { century21Parser } = await import("../parsers/century21")
+    const html = `
+      <html><head>
+        <meta property="og:title" content="F3 à louer Bordeaux 33000">
+      </head><body></body></html>
+    `
+    const out = await century21Parser.parse(html, "https://www.century21.fr/x/")
+    expect(out.rooms).toBe(3)
+  })
+
+  it("Orpi : extrait codePostal depuis window.dataLayer", async () => {
+    const { orpiParser } = await import("../parsers/orpi")
+    const html = `
+      <html><head>
+        <meta property="og:title" content="Location T-3 71.8 m² Strasbourg">
+      </head><body>
+        <script>window.dataLayer = [{"event":"pageview","codePostal":"67000","nbChambres":"2"}];</script>
+      </body></html>
+    `
+    const out = await orpiParser.parse(html, "https://www.orpi.com/annonce/x")
+    expect(out.postal_code).toBe("67000")
+    expect(out.bedrooms).toBe(2)
+  })
+
+  it("Orpi : rejette CP qui ressemble à une année", async () => {
+    const { orpiParser } = await import("../parsers/orpi")
+    const html = `
+      <html><body>
+        <script>window.dataLayer = [{"codePostal":"2024"}];</script>
+      </body></html>
+    `
+    const out = await orpiParser.parse(html, "https://www.orpi.com/annonce/x")
+    expect(out.postal_code).toBeUndefined()
+  })
+
+  it("Laforêt : extrait CP depuis URL slug paris-20", async () => {
+    const { laforetParser } = await import("../parsers/laforet")
+    const html = `<html><head><meta property="og:title" content="Loc 1P Paris"></head><body></body></html>`
+    const out = await laforetParser.parse(
+      html,
+      "https://www.laforet.com/agence-immobiliere/herblay/louer/paris-20/appartement-1-piece-52690323",
+    )
+    expect(out.postal_code).toBe("75020")
+    expect(out.city).toBe("Paris")
+  })
+
+  it("Laforêt : CP arrondissement Paris 1er", async () => {
+    const { laforetParser } = await import("../parsers/laforet")
+    const html = `<html><body></body></html>`
+    const out = await laforetParser.parse(
+      html,
+      "https://www.laforet.com/agence-immobiliere/x/louer/paris-1/appartement-...",
+    )
+    expect(out.postal_code).toBe("75001")
+    expect(out.city).toBe("Paris")
+  })
+
+  it("Laforêt : CP Lyon 7e", async () => {
+    const { laforetParser } = await import("../parsers/laforet")
+    const html = `<html><body></body></html>`
+    const out = await laforetParser.parse(
+      html,
+      "https://www.laforet.com/agence-immobiliere/x/louer/lyon-7/appartement-...",
+    )
+    expect(out.postal_code).toBe("69007")
+    expect(out.city).toBe("Lyon")
+  })
+
+  it("Laforêt : CP Marseille 13e", async () => {
+    const { laforetParser } = await import("../parsers/laforet")
+    const html = `<html><body></body></html>`
+    const out = await laforetParser.parse(
+      html,
+      "https://www.laforet.com/agence-immobiliere/x/louer/marseille-13/appartement-...",
+    )
+    expect(out.postal_code).toBe("13013")
+    expect(out.city).toBe("Marseille")
+  })
+
+  it("Laforêt : ne touche pas postal_code si déjà set par helper", async () => {
+    const { laforetParser } = await import("../parsers/laforet")
+    const html = `
+      <html><head>
+        <script type="application/ld+json">
+        {"@type":"Apartment","address":{"postalCode":"75001"}}
+        </script>
+      </head><body></body></html>
+    `
+    const out = await laforetParser.parse(
+      html,
+      "https://www.laforet.com/agence-immobiliere/x/louer/paris-20/x",
+    )
+    // Helper a déjà mis 75001 via JSON-LD → custom hook ne touche pas
+    expect(out.postal_code).toBe("75001")
+  })
+})

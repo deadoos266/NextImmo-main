@@ -48,6 +48,16 @@ async function parse(html: string, _url: string): Promise<Partial<ImportedAnnonc
           out.city = cityMatch[1].trim()
         }
       }
+
+      // V97.39.15 — Century 21 utilise le format français "F2", "F3" (pas T-N comme Orpi)
+      // og:title : "Appartement F2 à louer - 2 pièces - 42 m2..."
+      if (!out.rooms) {
+        const piecesMatch = /\bF[\s-]?(\d{1,2})\b/i.exec(ogTitle)
+        if (piecesMatch) {
+          const n = parseInt(piecesMatch[1], 10)
+          if (Number.isFinite(n) && n > 0 && n < 20) out.rooms = n
+        }
+      }
     },
   })
 }
