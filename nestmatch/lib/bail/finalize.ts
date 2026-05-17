@@ -127,8 +127,7 @@ export async function finalizeBail(args: FinalizeBailArgs): Promise<{ ok: boolea
       // il est pas dans la conv le bail seulement reçu par mail".
       try {
         const path = `${proprioEmail}/${annonceId}/bail_signe_${Date.now()}.pdf`
-        const { error: uploadErr } = await supabaseAdmin.storage
-          .from("baux")
+        const { error: uploadErr } = await storage.from("baux")
           .upload(path, Buffer.from(buffer), {
             contentType: "application/pdf",
             upsert: false,

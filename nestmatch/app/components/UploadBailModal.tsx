@@ -94,8 +94,7 @@ export default function UploadBailModal({
     try {
       const folder = proprioEmail.toLowerCase()
       const path = `${folder}/bail-${annonceId}-${Date.now()}.pdf`
-      const { error: upErr } = await supabase.storage
-        .from("baux")
+      const { error: upErr } = await storage.from("baux")
         .upload(path, file, { contentType: "application/pdf", upsert: false })
       if (upErr) {
         setError(`Erreur d'upload : ${upErr.message}`)

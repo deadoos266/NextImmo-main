@@ -73,8 +73,7 @@ export const GET = withCronLogging("db-backup", null, async function cronGET(req
       const path = `${dateKey}/${table}.json`
       const json = JSON.stringify(data ?? [])
       const buffer = Buffer.from(json, "utf-8")
-      const { error: uploadErr } = await supabaseAdmin.storage
-        .from(BUCKET)
+      const { error: uploadErr } = await storage.from(BUCKET)
         .upload(path, buffer, {
           contentType: "application/json",
           upsert: true,

@@ -499,8 +499,7 @@ function PersoUploadForm({ email, isMobile, onDone }: { email: string; isMobile:
       const folder = email.replace(/[^a-z0-9]/gi, "_").toLowerCase()
       const ext = type === "pdf" ? "pdf" : (file.name.match(/\.(jpe?g|png)$/i)?.[1].toLowerCase() || "jpg")
       const path = `${folder}/perso-${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage
-        .from("quittances")
+      const { error: upErr } = await storage.from("quittances")
         .upload(path, file, { contentType: file.type, upsert: false })
       if (upErr) {
         setError(`Upload échoué : ${upErr.message}`)

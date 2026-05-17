@@ -21,6 +21,7 @@ import { verifyDossierToken } from "@/lib/dossierToken"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { hashToken, hashIP } from "@/lib/dossierAccessLog"
 import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
+import { storage } from "@/lib/storage"
 
 export async function GET(
   req: NextRequest,
@@ -113,8 +114,7 @@ export async function GET(
   }
   const ttlSec = Math.min(Math.floor(remainingMs / 1000), 604_800)
 
-  const { data: signed, error: signErr } = await supabaseAdmin.storage
-    .from("dossiers")
+  const { data: signed, error: signErr } = await storage.from("dossiers")
     .createSignedUrl(path, ttlSec)
 
   if (signErr || !signed?.signedUrl) {

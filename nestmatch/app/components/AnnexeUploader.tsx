@@ -49,8 +49,7 @@ export default function AnnexeUploader({
     try {
       const folder = proprioEmail.toLowerCase()
       const path = `${folder}/bail-${annonceId}-annexe-${slotKey}-${Date.now()}.pdf`
-      const { error: upErr } = await supabase.storage
-        .from("baux")
+      const { error: upErr } = await storage.from("baux")
         .upload(path, f, { contentType: "application/pdf", upsert: false })
       if (upErr) {
         setError(`Upload échoué : ${upErr.message}`)

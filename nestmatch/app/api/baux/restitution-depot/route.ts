@@ -237,8 +237,7 @@ export async function POST(req: NextRequest) {
     })
     // Upload bucket `baux` (réutilisation existante, public)
     const path = `${propEmail}/${annonceId}/solde_tout_compte_${Date.now()}.pdf`
-    const { error: uploadErr } = await supabaseAdmin.storage
-      .from("baux")
+    const { error: uploadErr } = await storage.from("baux")
       .upload(path, pdfBuffer, { contentType: "application/pdf", upsert: false })
     if (!uploadErr) {
       const { data: urlData } = storage.from("baux").getPublicUrl(path)

@@ -77,8 +77,7 @@ export async function POST(req: NextRequest) {
 
   // On écrase toujours le même path → pas d'accumulation de fichiers orphelins.
   const path = `${email}/avatar.webp`
-  const { error: upErr } = await supabaseAdmin.storage
-    .from("avatars")
+  const { error: upErr } = await storage.from("avatars")
     .upload(path, sanitized.bytes, { contentType: sanitized.mime, upsert: true })
   if (upErr) {
     console.error("[avatar upload]", upErr)
@@ -102,8 +101,7 @@ export async function POST(req: NextRequest) {
 
   // Cleanup best-effort des anciennes variantes (pré-migration EXIF : .jpg/.png).
   // On ignore les erreurs — un fichier absent n'est pas un problème.
-  void supabaseAdmin.storage
-    .from("avatars")
+  void storage.from("avatars")
     .remove([`${email}/avatar.jpg`, `${email}/avatar.png`])
 
   const { data: urlData } = storage.from("avatars").getPublicUrl(path)

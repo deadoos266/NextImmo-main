@@ -29,6 +29,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
+import { storage } from "@/lib/storage"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -73,8 +74,7 @@ async function resolveScreenshotUrl(storedPath: string | null): Promise<string |
   if (!storedPath) return null
   // Path stocké au format "release-<id>/<ts>-<rand>.<ext>"
   if (!/^release-[a-z0-9_-]+\/\d+-[a-z0-9]+\.(jpg|png|webp)$/i.test(storedPath)) return null
-  const { data } = await supabaseAdmin.storage
-    .from("bug-screenshots")
+  const { data } = await storage.from("bug-screenshots")
     .createSignedUrl(storedPath, 3600)
   return data?.signedUrl || null
 }

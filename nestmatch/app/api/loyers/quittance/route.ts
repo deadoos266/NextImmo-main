@@ -137,8 +137,7 @@ export async function POST(req: Request) {
     annonceId: annonce.id,
     moisLabel,
   })
-  const { error: uploadErr } = await supabaseAdmin.storage
-    .from("quittances")
+  const { error: uploadErr } = await storage.from("quittances")
     .upload(path, pdfBuffer, { contentType: "application/pdf", upsert: false })
   if (uploadErr) {
     console.error("[quittance] upload failed", uploadErr)

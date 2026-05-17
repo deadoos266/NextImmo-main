@@ -24,6 +24,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
+import { storage } from "@/lib/storage"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -73,8 +74,7 @@ export async function POST(
 
   // Upload via supabaseAdmin (bypass RLS, sécurité applicative déjà gated par session admin)
   const arrayBuf = await file.arrayBuffer()
-  const { error: upErr } = await supabaseAdmin.storage
-    .from("bug-screenshots")
+  const { error: upErr } = await storage.from("bug-screenshots")
     .upload(path, Buffer.from(arrayBuf), {
       contentType: file.type,
       upsert: false,
@@ -109,8 +109,7 @@ export async function GET(
     return NextResponse.json({ ok: false, error: "Path invalide" }, { status: 400 })
   }
 
-  const { data, error } = await supabaseAdmin.storage
-    .from("bug-screenshots")
+  const { data, error } = await storage.from("bug-screenshots")
     .createSignedUrl(path, 3600)
   if (error || !data?.signedUrl) {
     return NextResponse.json({ ok: false, error: error?.message || "Signature URL échouée" }, { status: 500 })

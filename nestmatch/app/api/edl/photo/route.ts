@@ -94,8 +94,7 @@ export async function POST(req: NextRequest) {
   const rand = Math.random().toString(36).slice(2, 10)
   const path = `edl/${email}/${bienId}/${ts}_${rand}.jpg`
 
-  const { error: upErr } = await supabaseAdmin.storage
-    .from("annonces-photos")
+  const { error: upErr } = await storage.from("annonces-photos")
     .upload(path, sanitized.bytes, { contentType: sanitized.mime, upsert: false })
   if (upErr) {
     console.error("[photo edl upload]", upErr)

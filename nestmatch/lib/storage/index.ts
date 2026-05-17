@@ -60,6 +60,10 @@ export type StorageBucket =
   // V97.39.23 — legacy bucket utilisé par /api/cron/db-backup (Phase 8
   // Vercel pre-VPS). À supprimer quand Phase 8 backups VPS prend le relai.
   | "backups"
+  // V97.39.23 — bucket QA bot screenshots (lib/qa/storage.ts)
+  | "qa-screenshots"
+  // V97.39.23 — bucket release validation screenshots (admin/releases)
+  | "release-screenshots"
 
 export type StorageProvider = "supabase" | "minio"
 

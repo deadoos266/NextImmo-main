@@ -8,14 +8,14 @@
  */
 
 import { supabaseAdmin } from "@/lib/supabase-server"
+import { storage } from "@/lib/storage"
 
 const BUCKET = "qa-screenshots"
 
 export async function uploadScreenshot(name: string, buffer: Buffer): Promise<string> {
   const ts = Date.now()
   const path = `${ts}-${name}.png`
-  const { error } = await supabaseAdmin.storage
-    .from(BUCKET)
+  const { error } = await storage.from(BUCKET)
     .upload(path, buffer, {
       contentType: "image/png",
       upsert: false,
@@ -25,15 +25,13 @@ export async function uploadScreenshot(name: string, buffer: Buffer): Promise<st
     return ""
   }
   // Génère une URL signée 1h pour l'admin
-  const { data: signed } = await supabaseAdmin.storage
-    .from(BUCKET)
+  const { data: signed } = await storage.from(BUCKET)
     .createSignedUrl(path, 3600)
   return signed?.signedUrl || ""
 }
 
 export async function getSignedUrl(path: string, expiresInSeconds = 3600): Promise<string> {
-  const { data } = await supabaseAdmin.storage
-    .from(BUCKET)
+  const { data } = await storage.from(BUCKET)
     .createSignedUrl(path, expiresInSeconds)
   return data?.signedUrl || ""
 }
