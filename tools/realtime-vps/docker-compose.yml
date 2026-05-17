@@ -1,0 +1,51 @@
+# Service realtime socket.io — Phase 4 plan migration OVH.
+#
+# Coexiste avec keymatch-postgres, keymatch-minio, keymatch-next sur VPS.
+# Le service écoute Postgres LISTEN/NOTIFY et broadcast aux clients socket.io.
+#
+# Pré-requis :
+#   - Phase 2 (Postgres VPS) active
+#   - Migration 085_p3_4_realtime_triggers.sql appliquée (triggers + fonction notify)
+#   - /etc/keymatch.env contient DATABASE_URL + NEXTAUTH_SECRET
+#
+# Run :
+#   sudo docker compose -f tools/realtime-vps/docker-compose.yml build
+#   sudo docker compose -f tools/realtime-vps/docker-compose.yml up -d
+
+services:
+  keymatch-realtime:
+    image: keymatch-realtime:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: keymatch-realtime
+    restart: unless-stopped
+    env_file:
+      - /etc/keymatch.env
+    environment:
+      PORT: "3001"
+      HOST: "0.0.0.0"
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://keymatch-immo.fr,https://staging.keymatch-immo.fr}
+    # Bind localhost. Caddy reverse-proxy expose via wss://ws.keymatch-immo.fr
+    ports:
+      - "127.0.0.1:3001:3001"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    mem_limit: 512m
+    cpus: 0.5
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - keymatch-postgres-net
+      - default
+
+networks:
+  keymatch-postgres-net:
+    external: true
+    # Si Phase 2 pas active : docker network create keymatch-postgres-net
+  default:
+    name: keymatch-realtime-net

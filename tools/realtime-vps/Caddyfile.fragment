@@ -1,0 +1,55 @@
+# Caddyfile fragment Realtime — Phase 4 plan migration OVH.
+# À inclure dans /etc/caddy/Caddyfile.
+#
+# Pré-requis :
+#   1. DNS A record ws.keymatch-immo.fr → IP VPS
+#   2. tools/realtime-vps/docker-compose.yml up
+#
+# Test :
+#   wscat -c wss://ws.keymatch-immo.fr/socket.io/?EIO=4&transport=websocket
+#   (besoin d'auth handshake JWT côté Next.js qui appelle /api/auth/realtime-token)
+
+ws.keymatch-immo.fr {
+  tls tic3467@gmail.com
+
+  # CORS pour les WebSocket auth handshake
+  header {
+    Access-Control-Allow-Origin "https://keymatch-immo.fr"
+    Access-Control-Allow-Credentials "true"
+    -Server
+  }
+
+  # Healthcheck endpoint (non-WS)
+  handle /health {
+    reverse_proxy localhost:3001
+  }
+
+  # socket.io main endpoint (WebSocket + polling fallback)
+  handle /socket.io/* {
+    reverse_proxy localhost:3001 {
+      # WebSocket pass-through
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-For {remote_host}
+      header_up X-Forwarded-Proto {scheme}
+      # Timeout long pour les WebSocket persistents (60min)
+      transport http {
+        keepalive 60m
+        keepalive_idle_conns 100
+      }
+    }
+  }
+
+  # Tout le reste → 404
+  handle {
+    respond "Not Found" 404
+  }
+
+  log {
+    output file /var/log/caddy/keymatch-realtime.log {
+      roll_size 100mb
+      roll_keep 5
+    }
+    format json
+  }
+}

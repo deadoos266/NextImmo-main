@@ -285,3 +285,76 @@ Le code est portable, le bootstrap idempotent.
 ---
 
 **Quand mettre à jour ce doc ?** Quand tu ajoutes un nouveau service, change une procédure, ou découvres un nouveau pattern de debug.
+
+---
+
+## V97.39.21 — Procédures ajoutées pour Phases 3-9 du plan migration OVH
+
+### Liste des services VPS (état cible Phase 6+)
+
+| Service | Container | Port (localhost) | Phase | Domaine |
+|---|---|---|---|---|
+| Postgres | keymatch-postgres | 5432 | 2 | (interne) |
+| MinIO API | keymatch-minio | 9000 | 3 | media.keymatch-immo.fr |
+| MinIO console | keymatch-minio | 9001 | 3 | media-admin.keymatch-immo.fr |
+| Next.js | keymatch-next | 3000 | 6 | keymatch-immo.fr |
+| Realtime socket.io | keymatch-realtime | 3001 | 4 | ws.keymatch-immo.fr |
+| Worker Zendriver | keymatch-fetcher | 8080 | 1 | fetcher.keymatch-immo.fr |
+| Caddy | (système) | 80/443 | 0 | reverse-proxy |
+
+### Deploy après push main (Phase 6 active)
+```bash
+ssh -i $HOME\.ssh\keymatch_vps ubuntu@149.202.60.152
+sudo systemctl start keymatch-next-deploy.service
+tail -f /var/log/keymatch-deploy.log
+```
+
+### Inspecter Postgres
+```bash
+docker exec -it keymatch-postgres psql -U keymatch keymatch
+# Quick stats
+docker exec keymatch-postgres psql -U keymatch keymatch -c \
+  "SELECT relname, n_live_tup FROM pg_stat_user_tables ORDER BY n_live_tup DESC LIMIT 10"
+```
+
+### Inspecter MinIO
+```bash
+# Console web
+open https://media-admin.keymatch-immo.fr/   # Login = MINIO_ROOT_USER/PASSWORD
+# CLI
+docker run --rm --network keymatch-minio-net \
+  -e MC_HOST_local="http://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@minio:9000" \
+  minio/mc ls local
+```
+
+### Inspecter Realtime
+```bash
+curl https://ws.keymatch-immo.fr/health | jq
+docker logs -f --tail 100 keymatch-realtime
+```
+
+### Modifier les crons
+1. Édite `tools/cron-vps/cron-routes.tsv`
+2. Push main
+3. Sur VPS : `git pull && bash tools/cron-vps/scripts/generate-systemd-units.sh && sudo bash tools/cron-vps/scripts/install.sh`
+
+### Rotater un secret critique
+Procédure détaillée par secret dans `docs/SECRETS_INVENTORY.md`.
+
+### Scénarios disaster recovery
+Cf `docs/DISASTER_RECOVERY.md` : VPS down, container corrompu, Postgres perdu, MinIO perdu, email provider down, DNS perdu, SSH key perdue, GitHub perdu, rollback cutover.
+
+### Variables d'env cheat sheet
+| Var | Localisation | Description |
+|---|---|---|
+| `NEXTAUTH_SECRET` | Vercel + VPS /etc/keymatch.env | Sign sessions + JWT realtime |
+| `DATABASE_URL` | Vercel + VPS | Postgres connection |
+| `SUPABASE_SERVICE_ROLE_KEY` | Vercel | Bypass RLS Supabase |
+| `RESEND_API_KEY` / `BREVO_API_KEY` | Vercel | Email |
+| `STORAGE_PROVIDER` + `MINIO_*` | Vercel | Storage Phase 3 |
+| `EMAIL_PROVIDER` | Vercel | Email Phase 5 |
+| `NEXT_PUBLIC_REALTIME_PROVIDER` + `_URL` | Vercel | Realtime Phase 4 |
+| `CRON_SECRET` | Vercel + VPS | Auth crons |
+| `EXTERNAL_FETCHER_TOKEN` | Vercel + VPS worker | Auth worker fetcher |
+
+Inventaire détaillé : `docs/SECRETS_INVENTORY.md`.
