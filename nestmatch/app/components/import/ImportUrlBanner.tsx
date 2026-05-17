@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import type { ImportedAnnonce } from "../../../lib/import/types"
 
 /**
@@ -26,13 +26,64 @@ interface Props {
 // fiables + 3 sites DataDome en best-effort).
 const SUPPORTED_LABELS = ["PAP", "Foncia", "Orpi", "Century 21", "Laforêt"]
 
+// V97.39.16 — Détection rapide hostname → si DataDome host, prévenir l'user
+// que le fetch passe par le worker stealth (peut prendre jusqu'à 25s)
+const DATADOME_HOSTS = ["leboncoin.fr", "seloger.com", "logic-immo.com"]
+function isSlowHost(rawUrl: string): boolean {
+  try {
+    const host = new URL(rawUrl).hostname.toLowerCase().replace(/^www\./, "")
+    return DATADOME_HOSTS.some(h => host === h || host.endsWith("." + h))
+  } catch {
+    return false
+  }
+}
+
+// V97.39.16 — Messages rotatifs pendant le loading pour rassurer l'user
+function loadingMessage(elapsedSec: number, slowHost: boolean): string {
+  if (slowHost) {
+    if (elapsedSec < 3) return "Connexion au site…"
+    if (elapsedSec < 8) return "Extraction stealth en cours…"
+    if (elapsedSec < 18) return "Résolution du challenge anti-bot…"
+    return "Presque fini, patience…"
+  }
+  if (elapsedSec < 2) return "Récupération de la page…"
+  if (elapsedSec < 5) return "Extraction des données…"
+  return "Finalisation…"
+}
+
 export default function ImportUrlBanner({ onImported, onDismiss, initiallyDismissed = false }: Props) {
   const [url, setUrl] = useState("")
   const [loading, setLoading] = useState(false)
+  const [elapsedSec, setElapsedSec] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [dismissed, setDismissed] = useState(initiallyDismissed)
+  // V97.39.16 — AbortController pour permettre Annuler
+  const abortRef = useRef<AbortController | null>(null)
+
+  // V97.39.16 — Tick elapsed toutes les secondes pendant loading
+  useEffect(() => {
+    if (!loading) {
+      setElapsedSec(0)
+      return
+    }
+    setElapsedSec(0)
+    const t0 = Date.now()
+    const interval = setInterval(() => {
+      setElapsedSec(Math.floor((Date.now() - t0) / 1000))
+    }, 500)
+    return () => clearInterval(interval)
+  }, [loading])
 
   if (dismissed) return null
+
+  function handleCancel() {
+    if (abortRef.current) {
+      abortRef.current.abort()
+      abortRef.current = null
+    }
+    setLoading(false)
+    setError("Import annulé.")
+  }
 
   async function handleImport() {
     const trimmed = url.trim()
@@ -42,11 +93,14 @@ export default function ImportUrlBanner({ onImported, onDismiss, initiallyDismis
       return
     }
     setLoading(true); setError(null)
+    const ctrl = new AbortController()
+    abortRef.current = ctrl
     try {
       const res = await fetch("/api/proprio/annonce/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: trimmed }),
+        signal: ctrl.signal,
       })
       const j = await res.json()
       if (!res.ok || !j.ok) {
@@ -66,13 +120,18 @@ export default function ImportUrlBanner({ onImported, onDismiss, initiallyDismis
         }
         setError(msg)
         setLoading(false)
+        abortRef.current = null
         return
       }
       onImported(j.data as ImportedAnnonce)
       setLoading(false)
-    } catch {
+      abortRef.current = null
+    } catch (e) {
+      // V97.39.16 — abort → message "Import annulé" déjà set par handleCancel
+      if (e instanceof Error && e.name === "AbortError") return
       setError("Erreur réseau. Vérifie ta connexion et réessaie.")
       setLoading(false)
+      abortRef.current = null
     }
   }
 
@@ -149,6 +208,7 @@ export default function ImportUrlBanner({ onImported, onDismiss, initiallyDismis
             fontFamily: "inherit",
             whiteSpace: "nowrap",
             display: "flex", alignItems: "center", gap: 8,
+            minWidth: loading ? 220 : "auto",  // V97.39.16 — évite le saut de largeur quand le message change
           }}
         >
           {loading ? (
@@ -160,15 +220,42 @@ export default function ImportUrlBanner({ onImported, onDismiss, initiallyDismis
                   borderTopColor: "transparent", borderRadius: "50%",
                   animation: "ku-spin 0.7s linear infinite",
                   display: "inline-block",
+                  flexShrink: 0,
                 }}
               />
-              Import en cours…
+              <span style={{ fontVariantNumeric: "tabular-nums" }}>
+                {loadingMessage(elapsedSec, isSlowHost(url))} {elapsedSec > 0 && `(${elapsedSec}s)`}
+              </span>
             </>
           ) : (
             "Importer →"
           )}
         </button>
+        {/* V97.39.16 — Bouton Annuler visible après 5s de loading */}
+        {loading && elapsedSec >= 5 && (
+          <button
+            type="button"
+            onClick={handleCancel}
+            style={{
+              background: "white", color: "#b91c1c",
+              border: "1px solid #fca5a5", borderRadius: 12,
+              padding: "11px 16px",
+              fontSize: 12, fontWeight: 700,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            Annuler
+          </button>
+        )}
       </div>
+
+      {/* V97.39.16 — Hint contextuel pendant loading sur sites DataDome */}
+      {loading && isSlowHost(url) && elapsedSec < 25 && (
+        <p style={{ fontSize: 11, color: "#1d4ed8", margin: "10px 0 0", lineHeight: 1.5, fontStyle: "italic" }}>
+          ⏱ Ce site utilise une protection anti-bot. L&apos;extraction stealth peut prendre jusqu&apos;à 25 secondes.
+        </p>
+      )}
 
       {error && (
         <p style={{ fontSize: 12, color: "#b91c1c", margin: "10px 0 0", lineHeight: 1.5 }}>
