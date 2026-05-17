@@ -25,8 +25,10 @@ USER realtime
 EXPOSE 3001
 
 # Healthcheck
+# V97.39.22 — utilise 127.0.0.1 explicite car alpine résout `localhost` vers
+# ::1 (IPv6) mais notre service écoute sur 0.0.0.0 (IPv4) → "Connection refused"
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD wget -qO- http://localhost:3001/health || exit 1
+  CMD wget -qO- http://127.0.0.1:3001/health || exit 1
 
 ENV PORT=3001
 ENV HOST=0.0.0.0
