@@ -60,35 +60,45 @@ START=$(date +%s)
 # Pour chaque table : truncate VPS + INSERT direct depuis Supabase via COPY pipe.
 # C'est plus efficace que pg_dump+psql complet (qui ferait drop+create+restore).
 FAILED=()
+SKIPPED=()
 for t in "${TABLES[@]}"; do
-  # Vérifie table existe côté Supabase ET côté VPS (skip silencieux sinon)
+  # V97.39.24 fix : utilise sh -c '...' avec $PGURL interpolé dans le shell
+  # du container (pas dans bash hôte où la var n'existe pas encore).
+  # Vérifie table existe côté Supabase
   if ! docker run --rm -e PGURL="$SUPABASE_DB_URL" postgres:17-alpine \
-    psql "$PGURL" -tA -c "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='$t'" 2>/dev/null | grep -q 1; then
+    sh -c "psql \"\$PGURL\" -tA -c \"SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='$t'\"" 2>/dev/null | grep -q 1; then
+    SKIPPED+=("$t")
     continue
   fi
 
   # COPY OUT depuis Supabase → COPY IN dans VPS (pipe direct, pas de file temp)
   # Wrap dans une transaction côté VPS pour atomicité (rollback si fail mid-table)
-  if ! (
+  if (
     docker run --rm -i -e PGURL="$SUPABASE_DB_URL" postgres:17-alpine \
-      psql "$PGURL" -c "COPY public.\"$t\" TO STDOUT" 2>/dev/null \
+      sh -c "psql \"\$PGURL\" -c \"COPY public.\\\"$t\\\" TO STDOUT\"" 2>>"$LOG_FILE" \
     | docker exec -i "$CONTAINER" psql -U keymatch keymatch -c "
         BEGIN;
         TRUNCATE public.\"$t\" CASCADE;
         COPY public.\"$t\" FROM STDIN;
         COMMIT;
-      " >/dev/null 2>&1
+      " >/dev/null 2>>"$LOG_FILE"
   ); then
+    : # success silencieux
+  else
     log "  ✗ $t : échec sync"
     FAILED+=("$t")
   fi
 done
 
 ELAPSED=$(( $(date +%s) - START ))
-COUNT=$((${#TABLES[@]} - ${#FAILED[@]}))
+SYNCED=$((${#TABLES[@]} - ${#FAILED[@]} - ${#SKIPPED[@]}))
 
 if [[ ${#FAILED[@]} -eq 0 ]]; then
-  log "✓ Sync terminé : $COUNT/${#TABLES[@]} tables en ${ELAPSED}s"
+  log "✓ Sync terminé : $SYNCED tables syncées (skip=${#SKIPPED[@]} si tables absentes côté Supabase) en ${ELAPSED}s"
+  if [[ ${#SKIPPED[@]} -gt 0 ]]; then
+    log "  · Skippées (n'existent pas côté Supabase) : ${SKIPPED[*]}"
+  fi
 else
-  log "⚠ Sync partiel : $COUNT/${#TABLES[@]} OK, échecs : ${FAILED[*]}"
+  log "⚠ Sync partiel : $SYNCED OK, échecs : ${FAILED[*]}"
+  exit 1
 fi
