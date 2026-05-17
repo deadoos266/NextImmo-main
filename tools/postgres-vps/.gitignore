@@ -1,4 +1,8 @@
 .env
 dumps/
+backups/
 *.sql.gz
 *.sql
+# V97.39.22 — exception : on commit le SQL d'init (extensions Postgres)
+# car c'est du source, pas un dump.
+!init-extensions.sql
