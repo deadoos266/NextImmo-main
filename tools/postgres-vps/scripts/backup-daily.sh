@@ -79,11 +79,12 @@ log "→ Backup démarré : ${DUMP_FILE}"
 if [[ -n "${SUPABASE_DB_URL:-}" ]]; then
   log "→ pg_dump distant via SUPABASE_DB_URL (Phase 8 pre-cutover)"
   # Container postgres temp jetable, on lui passe l'URL via env pour pas
-  # leak le password dans `ps`. --rm = cleanup auto. Tag :16-alpine match
-  # la version cible Phase 2.
+  # leak le password dans `ps`. --rm = cleanup auto.
+  # V97.39.22 fix : Supabase tourne sur Postgres 17.6, pg_dump doit être >= 17
+  # sinon "server version mismatch". Tag :17-alpine = Postgres 17 LTS.
   docker run --rm -i \
     -e PGURL="${SUPABASE_DB_URL}" \
-    postgres:16-alpine \
+    postgres:17-alpine \
     sh -c 'pg_dump --no-owner --no-privileges --no-comments "$PGURL"' \
     2>>"${LOG_FILE}" | gzip -9 > "${DUMP_FILE}" \
     || die "pg_dump distant Supabase échoué"
