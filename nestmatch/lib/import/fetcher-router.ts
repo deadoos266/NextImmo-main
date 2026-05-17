@@ -27,7 +27,7 @@ import { fetchUrl, ImportFetchError, type FetchResult } from "./fetcher"
 import { fetchUrlRemote } from "./fetcher-remote"
 import { supabaseAdmin } from "../supabase-server"
 
-export type FetcherUsed = "wreq-js" | "zendriver-worker" | "native-fetch"
+export type FetcherUsed = "wreq-js" | "zendriver-worker" | "native-fetch" | "bookmarklet"
 
 export interface RoutedFetchResult extends FetchResult {
   fetcher_used: FetcherUsed

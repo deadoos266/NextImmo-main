@@ -88,5 +88,54 @@ export async function importFromUrl(url: string): Promise<ImportResult> {
   }
 }
 
+/**
+ * V97.39.17 — Import depuis HTML brut (bookmarklet "Copier la page").
+ *
+ * Solution gratuite pour SeLoger / Leboncoin / Logic-immo (sites DataDome
+ * impossibles à scraper depuis l'ASN OVH) : l'utilisateur ouvre SA fiche
+ * dans son navigateur, clique le bookmarklet KeyMatch, le HTML est copié,
+ * puis collé dans le wizard. Le parser tourne ici côté serveur sur le HTML
+ * déjà rendu.
+ *
+ * Bypass 100% car le HTML provient du navigateur de l'utilisateur, pas du
+ * worker OVH. Légal car l'utilisateur agit sur SA propre annonce.
+ */
+export async function importFromHtml(url: string, html: string): Promise<ImportResult> {
+  const t0 = Date.now()
+
+  if (!html || typeof html !== "string" || html.length < 200) {
+    throw new ImportError("HTML_TOO_SHORT", "Le HTML fourni est vide ou trop court (<200 chars). Re-clique sur le bookmarklet sur la fiche entière.")
+  }
+  if (html.length > 5 * 1024 * 1024) {
+    throw new ImportError("HTML_TOO_LARGE", "Le HTML fait plus de 5 MB. Limite dépassée — la fiche est anormalement lourde.")
+  }
+
+  const parser = findParser(url)
+  if (!parser) {
+    throw new ImportError("NO_PARSER", "Aucun parser ne peut traiter cette URL")
+  }
+
+  let parsed: Partial<ImportedAnnonce>
+  try {
+    parsed = await parser.parse(html, url)
+  } catch (e) {
+    throw new ImportError("PARSE_ERROR", e instanceof Error ? e.message : "Erreur de parsing")
+  }
+
+  const data: ImportedAnnonce = {
+    source: parser.name,
+    source_url: url,
+    ...parsed,
+  }
+
+  return {
+    data,
+    fields_extracted: countFields(data),
+    fields_total: FIELDS_TOTAL,
+    duration_ms: Date.now() - t0,
+    fetcher_used: "bookmarklet",
+  }
+}
+
 export { SUPPORTED_SITES } from "./parsers"
 export type { ImportedAnnonce, ImportSource } from "./types"

@@ -51,6 +51,12 @@ function loadingMessage(elapsedSec: number, slowHost: boolean): string {
   return "Finalisation…"
 }
 
+// V97.39.17 — Bookmarklet code source (1 ligne JS)
+// L'user le glisse dans sa barre de favoris. Click sur la fiche SeLoger/LBC/...
+// → copie l'URL + l'HTML rendu dans le presse-papier → l'user revient sur KeyMatch
+// et colle dans le textarea ci-dessous.
+const BOOKMARKLET_CODE = `javascript:(()=>{const d={url:location.href,html:document.documentElement.outerHTML};const t=JSON.stringify(d);navigator.clipboard.writeText(t).then(()=>{alert('KeyMatch : page copiée. Va sur keymatch-immo.fr/proprietaire/ajouter et colle dans la zone "Mode bookmarklet".')}).catch(()=>{const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('KeyMatch : page copiée. Va sur keymatch-immo.fr/proprietaire/ajouter et colle.')})})()`
+
 export default function ImportUrlBanner({ onImported, onDismiss, initiallyDismissed = false }: Props) {
   const [url, setUrl] = useState("")
   const [loading, setLoading] = useState(false)
@@ -59,6 +65,9 @@ export default function ImportUrlBanner({ onImported, onDismiss, initiallyDismis
   const [dismissed, setDismissed] = useState(initiallyDismissed)
   // V97.39.16 — AbortController pour permettre Annuler
   const abortRef = useRef<AbortController | null>(null)
+  // V97.39.17 — Mode bookmarklet (paste HTML brut)
+  const [bookmarkletOpen, setBookmarkletOpen] = useState(false)
+  const [bookmarkletPaste, setBookmarkletPaste] = useState("")
 
   // V97.39.16 — Tick elapsed toutes les secondes pendant loading
   useEffect(() => {
@@ -83,6 +92,50 @@ export default function ImportUrlBanner({ onImported, onDismiss, initiallyDismis
     }
     setLoading(false)
     setError("Import annulé.")
+  }
+
+  // V97.39.17 — Import via payload bookmarklet (URL + HTML déjà rendu)
+  async function handleBookmarkletImport() {
+    setError(null)
+    let parsed: { url?: string; html?: string }
+    try {
+      parsed = JSON.parse(bookmarkletPaste.trim())
+    } catch {
+      setError("Le contenu collé n'est pas valide. Re-clique sur le bookmarklet sur ta fiche puis colle ici.")
+      return
+    }
+    if (!parsed.url || !parsed.html) {
+      setError("Champ url ou html manquant. Re-clique sur le bookmarklet sur ta fiche complète.")
+      return
+    }
+    if (parsed.html.length < 200) {
+      setError("Le HTML semble vide. Re-clique sur le bookmarklet quand la page SeLoger/LBC est complètement chargée.")
+      return
+    }
+    setLoading(true)
+    try {
+      const res = await fetch("/api/proprio/annonce/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: parsed.url, html: parsed.html }),
+      })
+      const j = await res.json()
+      if (!res.ok || !j.ok) {
+        let msg = j.error || "Import HTML échoué."
+        if (j.code === "HTML_TOO_SHORT") msg = "Le HTML est trop court. Re-clique sur le bookmarklet sur la fiche entière."
+        else if (j.code === "HTML_TOO_LARGE") msg = "Le HTML fait plus de 5 MB. Page anormalement lourde — colle juste la fiche, pas tout le site."
+        setError(msg)
+        setLoading(false)
+        return
+      }
+      onImported(j.data as ImportedAnnonce)
+      setBookmarkletOpen(false)
+      setBookmarkletPaste("")
+      setLoading(false)
+    } catch {
+      setError("Erreur réseau lors du parsing HTML.")
+      setLoading(false)
+    }
   }
 
   async function handleImport() {
@@ -269,7 +322,96 @@ export default function ImportUrlBanner({ onImported, onDismiss, initiallyDismis
         </a>
         {" · "}
         Données extraites uniquement depuis le lien que tu colles. Pas de scraping en masse.
+        {" · "}
+        <button
+          type="button"
+          onClick={() => setBookmarkletOpen(o => !o)}
+          style={{
+            background: "none", border: "none", padding: 0,
+            color: "#1d4ed8", textDecoration: "underline",
+            cursor: "pointer", fontFamily: "inherit", fontSize: 11,
+          }}
+        >
+          {bookmarkletOpen ? "Masquer mode bookmarklet" : "Site bloqué (Leboncoin, SeLoger…) ? Mode bookmarklet"}
+        </button>
       </p>
+
+      {/* V97.39.17 — Mode bookmarklet (paste HTML brut pour bypass DataDome) */}
+      {bookmarkletOpen && (
+        <div style={{
+          marginTop: 14, padding: "14px 16px",
+          background: "white", border: "1px dashed #D7E3F4", borderRadius: 12,
+        }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: "#111", margin: "0 0 8px" }}>
+            Mode bookmarklet — bypass anti-bot 100% gratuit
+          </p>
+          <ol style={{ fontSize: 12, color: "#3f3c37", margin: "0 0 10px 18px", paddingLeft: 4, lineHeight: 1.55 }}>
+            <li><strong>Glisse ce bouton dans ta barre de favoris</strong> (drag-and-drop) :{" "}
+              <a
+                href={BOOKMARKLET_CODE}
+                onClick={e => e.preventDefault()}
+                draggable
+                style={{
+                  display: "inline-block",
+                  background: "#1d4ed8", color: "white",
+                  padding: "3px 10px", borderRadius: 6,
+                  textDecoration: "none", fontWeight: 700, fontSize: 11,
+                  cursor: "grab",
+                }}
+              >
+                📋 Importer dans KeyMatch
+              </a>
+            </li>
+            <li>Va sur la page de TON annonce SeLoger / Leboncoin / Logic-immo</li>
+            <li>Clique sur ton favori &quot;Importer dans KeyMatch&quot;. L&apos;HTML se copie automatiquement.</li>
+            <li>Reviens ici. <strong>Colle</strong> (Ctrl+V) dans la zone ci-dessous puis clique <strong>Importer ce HTML</strong> :</li>
+          </ol>
+          <textarea
+            value={bookmarkletPaste}
+            onChange={e => { setBookmarkletPaste(e.target.value); setError(null) }}
+            placeholder='Colle ici le contenu copié par le bookmarklet (format JSON : {"url":"...","html":"..."})'
+            rows={4}
+            style={{
+              width: "100%", padding: "10px 12px",
+              border: "1px solid #D7E3F4", borderRadius: 10,
+              fontSize: 11, fontFamily: "ui-monospace, monospace",
+              background: "#FAFBFD", color: "#111",
+              outline: "none", boxSizing: "border-box",
+              resize: "vertical",
+            }}
+          />
+          <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={handleBookmarkletImport}
+              disabled={loading || bookmarkletPaste.trim().length < 50}
+              style={{
+                background: loading || bookmarkletPaste.trim().length < 50 ? "#94a3b8" : "#1d4ed8",
+                color: "white", border: "none", borderRadius: 10,
+                padding: "9px 16px", fontSize: 12, fontWeight: 700,
+                cursor: loading || bookmarkletPaste.trim().length < 50 ? "not-allowed" : "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              {loading ? "Parse en cours…" : "Importer ce HTML →"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setBookmarkletPaste(""); setError(null) }}
+              style={{
+                background: "none", color: "#8a8477", border: "none",
+                padding: "9px 12px", fontSize: 12, cursor: "pointer", fontFamily: "inherit",
+              }}
+            >
+              Vider
+            </button>
+          </div>
+          <p style={{ fontSize: 10, color: "#8a8477", margin: "8px 0 0", lineHeight: 1.5 }}>
+            ℹ Cette méthode utilise TON navigateur (pas notre serveur), donc elle marche sur les sites
+            qui bloquent les imports automatiques. Le HTML reste en local jusqu&apos;à ce que tu colles.
+          </p>
+        </div>
+      )}
 
       <style>{`@keyframes ku-spin { to { transform: rotate(360deg) } }`}</style>
     </div>

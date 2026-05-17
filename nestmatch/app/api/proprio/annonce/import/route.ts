@@ -40,7 +40,7 @@ import * as Sentry from "@sentry/nextjs"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
-import { importFromUrl, ImportError } from "@/lib/import"
+import { importFromUrl, importFromHtml, ImportError } from "@/lib/import"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -52,6 +52,7 @@ export const maxDuration = 30
 
 interface Body {
   url?: string
+  html?: string  // V97.39.17 — payload bookmarklet : HTML déjà rendu côté navigateur user
 }
 
 async function logImport(params: {
@@ -114,8 +115,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, code: "URL_TOO_LONG", error: "URL trop longue" }, { status: 400 })
   }
 
+  // V97.39.17 — Si payload bookmarklet inclut html → parse direct, skip fetcher
+  const htmlPayload = typeof body.html === "string" ? body.html : null
+
   try {
-    const result = await importFromUrl(url)
+    const result = htmlPayload
+      ? await importFromHtml(url, htmlPayload)
+      : await importFromUrl(url)
 
     await logImport({
       user_email: me,
@@ -171,11 +177,12 @@ export async function POST(req: NextRequest) {
       }
     } catch { /* ne casse pas l'API si Sentry foire */ }
 
-    // Statut HTTP selon le code (V97.39 ajoute les codes worker)
+    // Statut HTTP selon le code (V97.39 ajoute les codes worker, V97.39.17 codes bookmarklet)
     const status = code === "TIMEOUT" || code === "WORKER_TIMEOUT" ? 504
       : code === "RATE_LIMITED" ? 429
       : code === "INVALID_URL" || code === "UNSUPPORTED_PROTOCOL" || code === "BLOCKED_HOST" || code === "PRIVATE_IP" ? 400
-      : code === "TOO_LARGE" ? 413
+      : code === "TOO_LARGE" || code === "HTML_TOO_LARGE" ? 413
+      : code === "HTML_TOO_SHORT" ? 400
       : code === "HTTP_ERROR" ? 502
       : code === "WORKER_UNAVAILABLE" || code === "WORKER_NOT_CONFIGURED" ? 503
       : code === "BOT_PROTECTION" ? 502

@@ -353,3 +353,65 @@ describe("Custom hooks V97.39.15", () => {
     expect(out.postal_code).toBe("75001")
   })
 })
+
+// V97.39.17 — Tests importFromHtml (bookmarklet bypass DataDome)
+describe("importFromHtml — V97.39.17 bookmarklet client-side", () => {
+  it("parse un HTML SeLoger fictif avec JSON-LD complet", async () => {
+    const { importFromHtml } = await import("../index")
+    const html = `
+      <html><head>
+        <script type="application/ld+json">
+        {
+          "@type":"Apartment",
+          "name":"Studio 25 m² Paris 11e",
+          "offers":{"price":1100},
+          "floorSize":{"value":25},
+          "numberOfRooms":1,
+          "address":{"addressLocality":"Paris","postalCode":"75011"}
+        }
+        </script>
+      </head><body></body></html>
+    `
+    const result = await importFromHtml(
+      "https://www.seloger.com/annonces/locations/appartement/paris-11e/123456789.htm",
+      html,
+    )
+    expect(result.data.title).toBe("Studio 25 m² Paris 11e")
+    expect(result.data.price).toBe(1100)
+    expect(result.data.surface).toBe(25)
+    expect(result.data.city).toBe("Paris")
+    expect(result.data.postal_code).toBe("75011")
+    expect(result.fetcher_used).toBe("bookmarklet")
+    // Note : le parser SeLoger spécifique se charge — son matches() teste l'URL
+  })
+
+  it("rejette HTML trop court (< 200 chars)", async () => {
+    const { importFromHtml, ImportError } = await import("../index")
+    await expect(importFromHtml("https://www.seloger.com/", "<html>vide</html>"))
+      .rejects.toThrow(ImportError)
+    try {
+      await importFromHtml("https://www.seloger.com/", "<html>vide</html>")
+    } catch (e) {
+      expect(e).toHaveProperty("code", "HTML_TOO_SHORT")
+    }
+  })
+
+  it("rejette HTML > 5 MB", async () => {
+    const { importFromHtml, ImportError } = await import("../index")
+    const hugeHtml = "<html>" + "x".repeat(5 * 1024 * 1024 + 10) + "</html>"
+    await expect(importFromHtml("https://www.seloger.com/", hugeHtml))
+      .rejects.toThrow(ImportError)
+    try {
+      await importFromHtml("https://www.seloger.com/", hugeHtml)
+    } catch (e) {
+      expect(e).toHaveProperty("code", "HTML_TOO_LARGE")
+    }
+  })
+
+  it("renvoie fetcher_used = 'bookmarklet' (pour tracing admin/imports)", async () => {
+    const { importFromHtml } = await import("../index")
+    const html = `<html><body>${"<p>filler content for KeyMatch import test </p>".repeat(20)}</body></html>`
+    const result = await importFromHtml("https://www.foncia.com/", html)
+    expect(result.fetcher_used).toBe("bookmarklet")
+  })
+})
