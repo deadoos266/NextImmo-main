@@ -195,7 +195,16 @@ step "9/10 — Configuration Caddy pour ${CADDY_DOMAIN}"
 
 CADDY_CONFIG=$(cat <<EOF
 ${CADDY_DOMAIN} {
-    reverse_proxy localhost:8080
+    # V97.39.3 — restreindre aux 2 routes worker uniquement (bloque scan-noise)
+    @api path /health /fetch
+    handle @api {
+        reverse_proxy localhost:8080
+    }
+    handle {
+        respond "Not found" 404 {
+            close
+        }
+    }
     encode gzip zstd
     log {
         output file /var/log/caddy/fetcher.log {
@@ -203,13 +212,28 @@ ${CADDY_DOMAIN} {
             roll_keep 5
         }
         format json
+        # Skip 404 noise dans les logs (scans automatisés)
+        level INFO
     }
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"
         Referrer-Policy "strict-origin-when-cross-origin"
+        # Hide server tech
+        -Server
     }
+}
+
+# Bloquer les requêtes directes sur l'IP du VPS (scan noise)
+:443 {
+    @ipdirect host 149.202.60.152
+    handle @ipdirect {
+        respond "Direct IP access denied" 444 {
+            close
+        }
+    }
+    tls internal
 }
 EOF
 )

@@ -52,7 +52,12 @@ class BrowserPool:
         return pool
 
     async def _spawn_slot(self, idx: int) -> BrowserSlot:
-        """Spawn un nouveau browser Zendriver avec user_data_dir frais."""
+        """Spawn un nouveau browser Zendriver avec user_data_dir frais.
+
+        V97.39.3 : ajout de browser_args anti-detection plus agressifs pour
+        augmenter le taux de bypass DataDome (baseline OVH ASN catastrophique
+        sans proxy résidentiel). Sans garantie, mais ça ne coûte rien.
+        """
         user_data_dir = tempfile.mkdtemp(prefix=f"zd-slot-{idx}-")
         browser = await zd.start(
             headless=True,
@@ -62,6 +67,18 @@ class BrowserPool:
                 "--disable-dev-shm-usage",
                 "--lang=fr-FR,fr",
                 "--accept-lang=fr-FR,fr;q=0.9,en;q=0.8",
+                # V97.39.3 — anti-detection supplémentaires
+                "--disable-blink-features=AutomationControlled",
+                "--disable-features=IsolateOrigins,site-per-process",
+                "--disable-site-isolation-trials",
+                "--disable-web-security",
+                "--no-first-run",
+                "--no-default-browser-check",
+                "--password-store=basic",
+                "--use-mock-keychain",
+                "--window-size=1920,1080",
+                # User-Agent fixe à la mode Chromium stable
+                "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
             ],
         )
         LOG.debug("Spawned slot %d (user_data_dir=%s)", idx, user_data_dir)

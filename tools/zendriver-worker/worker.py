@@ -47,7 +47,7 @@ ALLOW_HOSTS = set(
     ).split(",") if h.strip()
 )
 POOL_SIZE = int(os.environ.get("POOL_SIZE", "3"))
-DEFAULT_MAX_WAIT_MS = int(os.environ.get("DEFAULT_MAX_WAIT_MS", "15000"))
+DEFAULT_MAX_WAIT_MS = int(os.environ.get("DEFAULT_MAX_WAIT_MS", "25000"))
 RATE_LIMIT_PER_HOUR = int(os.environ.get("RATE_LIMIT_PER_HOUR", "60"))
 CALLBACK_URL = os.environ.get("CALLBACK_URL", "").strip() or None
 CALLBACK_TOKEN = os.environ.get("CALLBACK_TOKEN", "").strip() or None
@@ -288,7 +288,22 @@ async def _do_fetch(url: str, max_wait_ms: int) -> dict:
 
 
 async def _wait_html_growth(page: Any, threshold: int = 50000) -> None:
-    """Poll jusqu'à ce que document.documentElement.outerHTML > threshold."""
+    """Poll jusqu'à ce que document.documentElement.outerHTML > threshold.
+
+    V97.39.3 : ajout d'un délai initial pour laisser DataDome démarrer son
+    challenge JS + simulation de scroll pour activité humaine.
+    """
+    # Laisse le temps au challenge de démarrer
+    await asyncio.sleep(2.0)
+
+    # Simulate human-like scroll/mouse activity (best effort, sans crasher si l'API change)
+    try:
+        await page.evaluate("window.scrollTo({top: 200, behavior: 'smooth'})")
+        await asyncio.sleep(0.5)
+        await page.evaluate("window.scrollTo({top: 0, behavior: 'smooth'})")
+    except Exception:
+        pass
+
     while True:
         try:
             length = await page.evaluate(
