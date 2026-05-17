@@ -33,15 +33,24 @@ notify_fail() {
     log "⚠ Pas de notification (RESEND_API_KEY ou BACKUP_NOTIFY_EMAIL manquant)"
     return
   fi
+  # V97.39.22 — V97.39.19 utilisait `node -e` mais Node n'est pas installé
+  # sur le VPS de base. On utilise jq (portable, présent sur Ubuntu 24.04).
+  local today
+  today=$(date +%Y-%m-%d)
+  local payload
+  if ! payload=$(jq -nc \
+    --arg from "KeyMatch Ops <noreply@keymatch-immo.fr>" \
+    --arg to "${BACKUP_NOTIFY_EMAIL}" \
+    --arg subject "⚠ Backup KeyMatch FAILED (${today})" \
+    --arg text "${error}\\n\\nLog: ${LOG_FILE}" \
+    '{from:$from,to:$to,subject:$subject,text:$text}' 2>/dev/null); then
+    log "⚠ jq absent — pas de notif email"
+    return
+  fi
   curl -sS -X POST https://api.resend.com/emails \
     -H "Authorization: Bearer ${RESEND_API_KEY}" \
     -H "Content-Type: application/json" \
-    -d "$(node -e "console.log(JSON.stringify({
-      from: 'KeyMatch Ops <noreply@keymatch-immo.fr>',
-      to: process.env.BACKUP_NOTIFY_EMAIL,
-      subject: '⚠ Backup KeyMatch FAILED (' + new Date().toISOString().slice(0, 10) + ')',
-      text: process.env.ERR_MSG + '\\n\\nLog: ' + process.env.LOG_FILE,
-    }))" ERR_MSG="${error}" LOG_FILE="${LOG_FILE}")" \
+    -d "${payload}" \
     > /dev/null 2>&1 || true
 }
 
@@ -62,12 +71,30 @@ SHA_FILE="${DUMP_FILE}.sha256"
 log "→ Backup démarré : ${DUMP_FILE}"
 
 # ─── 1. pg_dump ───────────────────────────────────────────────────────────
-log "→ pg_dump du container keymatch-postgres"
-docker compose -f "${ROOT_DIR}/docker-compose.yml" exec -T postgres \
-  pg_dump -U "${POSTGRES_USER}" "${POSTGRES_DB}" \
-  --no-owner --no-privileges --no-comments \
-  2>>"${LOG_FILE}" | gzip -9 > "${DUMP_FILE}" \
-  || die "pg_dump échoué"
+# V97.39.22 — dual mode :
+#   - Si SUPABASE_DB_URL set → dump direct Supabase via container postgres temp
+#     (utile AVANT Phase 2 cutover : on backup la prod actuelle)
+#   - Sinon → dump container local keymatch-postgres (Phase 2 active)
+# Permet à Paul d'avoir des backups DÈS AUJOURD'HUI sans avoir migré la DB.
+if [[ -n "${SUPABASE_DB_URL:-}" ]]; then
+  log "→ pg_dump distant via SUPABASE_DB_URL (Phase 8 pre-cutover)"
+  # Container postgres temp jetable, on lui passe l'URL via env pour pas
+  # leak le password dans `ps`. --rm = cleanup auto. Tag :16-alpine match
+  # la version cible Phase 2.
+  docker run --rm -i \
+    -e PGURL="${SUPABASE_DB_URL}" \
+    postgres:16-alpine \
+    sh -c 'pg_dump --no-owner --no-privileges --no-comments "$PGURL"' \
+    2>>"${LOG_FILE}" | gzip -9 > "${DUMP_FILE}" \
+    || die "pg_dump distant Supabase échoué"
+else
+  log "→ pg_dump du container local keymatch-postgres (Phase 2 active)"
+  docker compose -f "${ROOT_DIR}/docker-compose.yml" exec -T postgres \
+    pg_dump -U "${POSTGRES_USER}" "${POSTGRES_DB}" \
+    --no-owner --no-privileges --no-comments \
+    2>>"${LOG_FILE}" | gzip -9 > "${DUMP_FILE}" \
+    || die "pg_dump container local échoué (Phase 2 inactive ? Set SUPABASE_DB_URL pour backup Supabase à la place)"
+fi
 
 SIZE=$(du -h "${DUMP_FILE}" | cut -f1)
 LINES=$(zcat "${DUMP_FILE}" | wc -l)

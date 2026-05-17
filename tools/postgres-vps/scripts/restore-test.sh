@@ -13,16 +13,19 @@ LOG_FILE="/var/log/keymatch-backup-test.log"
 log() { echo "[$(date +%Y-%m-%dT%H:%M:%S)] $*" | tee -a "${LOG_FILE}"; }
 die() {
   log "❌ $*"
-  if [[ -n "${RESEND_API_KEY:-}" && -n "${BACKUP_NOTIFY_EMAIL:-}" ]]; then
+  # V97.39.22 — jq au lieu de node (Node pas installé sur VPS de base)
+  if [[ -n "${RESEND_API_KEY:-}" && -n "${BACKUP_NOTIFY_EMAIL:-}" ]] && command -v jq >/dev/null; then
+    local payload
+    payload=$(jq -nc \
+      --arg from "KeyMatch Ops <noreply@keymatch-immo.fr>" \
+      --arg to "${BACKUP_NOTIFY_EMAIL}" \
+      --arg subject "⚠ Backup KeyMatch — restore-test FAILED" \
+      --arg text "Restore test failed: $*\\n\\nLog: ${LOG_FILE}" \
+      '{from:$from,to:$to,subject:$subject,text:$text}' 2>/dev/null) && \
     curl -sS -X POST https://api.resend.com/emails \
       -H "Authorization: Bearer ${RESEND_API_KEY}" \
       -H "Content-Type: application/json" \
-      -d "$(node -e "console.log(JSON.stringify({
-        from: 'KeyMatch Ops <noreply@keymatch-immo.fr>',
-        to: process.env.BACKUP_NOTIFY_EMAIL,
-        subject: '⚠ Backup KeyMatch — restore-test FAILED',
-        text: 'Restore test failed: ' + process.env.ERR + '\\n\\nLog: ' + process.env.LOG_FILE,
-      }))" ERR="$*" LOG_FILE="${LOG_FILE}")" > /dev/null 2>&1 || true
+      -d "${payload}" > /dev/null 2>&1 || true
   fi
   exit 1
 }
