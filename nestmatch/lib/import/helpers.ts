@@ -13,6 +13,11 @@ import type { ImportedAnnonce } from "./types"
 /**
  * Extrait tous les blocs `<script type="application/ld+json">...</script>`
  * et parse leur contenu. Ignore les erreurs JSON individuelles.
+ *
+ * V97.39.12 — Retry avec décodage entités HTML si le 1er JSON.parse échoue.
+ * Certains sites (Guy Hoquet notamment) écrivent `&lt;br /&gt;` ou `&quot;`
+ * littéralement dans les valeurs string du JSON, ce qui casse JSON.parse.
+ * On tente alors un decode des entités avant retry.
  */
 export function extractJsonLd(html: string): unknown[] {
   const out: unknown[] = []
@@ -21,9 +26,8 @@ export function extractJsonLd(html: string): unknown[] {
   while ((m = re.exec(html))) {
     const raw = m[1].trim()
     if (!raw) continue
-    try {
-      const parsed = JSON.parse(raw)
-      // JSON-LD peut être un array ou un objet avec @graph
+
+    const pushParsed = (parsed: unknown) => {
       if (Array.isArray(parsed)) out.push(...parsed)
       else if (parsed && typeof parsed === "object") {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -31,8 +35,19 @@ export function extractJsonLd(html: string): unknown[] {
         if (Array.isArray(g)) out.push(...g)
         else out.push(parsed)
       }
+    }
+
+    try {
+      pushParsed(JSON.parse(raw))
     } catch {
-      // Ignore JSON-LD malformé
+      // V97.39.12 — retry après decode des entités HTML
+      // (Guy Hoquet écrit &lt;br /&gt; et &quot; dans les strings JSON)
+      try {
+        const decoded = decodeHtmlEntities(raw)
+        pushParsed(JSON.parse(decoded))
+      } catch {
+        // JSON-LD vraiment malformé, on ignore
+      }
     }
   }
   return out
@@ -41,15 +56,20 @@ export function extractJsonLd(html: string): unknown[] {
 /**
  * Filtre les nodes JSON-LD qui matchent un @type donné.
  * Supporte type unique ou tableau de types.
+ *
+ * V97.39.12 — match CASE-INSENSITIVE car certains sites (Foncia notamment)
+ * émettent `@type: "apartment"` minuscule au lieu de `"Apartment"` Schema.org.
+ * Sans ce fix, le parser ignorait le JSON-LD valide et tombait en fallback OG.
  */
 export function findByType(nodes: unknown[], type: string | string[]): Record<string, unknown>[] {
-  const types = Array.isArray(type) ? type : [type]
+  const types = (Array.isArray(type) ? type : [type]).map(t => t.toLowerCase())
   const out: Record<string, unknown>[] = []
   for (const n of nodes) {
     if (!n || typeof n !== "object") continue
     const t = (n as Record<string, unknown>)["@type"]
-    if (typeof t === "string" && types.includes(t)) out.push(n as Record<string, unknown>)
-    else if (Array.isArray(t) && t.some(x => typeof x === "string" && types.includes(x))) {
+    if (typeof t === "string" && types.includes(t.toLowerCase())) {
+      out.push(n as Record<string, unknown>)
+    } else if (Array.isArray(t) && t.some(x => typeof x === "string" && types.includes(x.toLowerCase()))) {
       out.push(n as Record<string, unknown>)
     }
   }

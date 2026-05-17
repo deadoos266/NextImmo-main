@@ -21,18 +21,20 @@ const SOURCES: SourceItem[] = [
   { name: "PAP", host: "pap.fr", desc: "Cloudflare bypassé par TLS fingerprint Firefox (wreq-js). Test live : titre, loyer, surface, ville, code postal et photos extraits proprement.", status: "good" },
 
   // V97.38 — Agences immobilières FR sans protection anti-bot
-  { name: "Foncia", host: "foncia.com", desc: "JSON-LD RealEstateListing + OpenGraph. Extraction propre des champs principaux.", status: "good" },
-  { name: "Orpi", host: "orpi.com", desc: "Réseau d'agences Orpi — HTML server-rendered + OG. Extraction fiable.", status: "good" },
-  { name: "iAD France", host: "iadfrance.fr", desc: "Réseau d'agents indépendants — JSON-LD + OG.", status: "good" },
-  { name: "Century 21", host: "century21.fr", desc: "Réseau d'agences Century 21 — HTML + métadonnées.", status: "good" },
-  { name: "Guy Hoquet", host: "guy-hoquet.com", desc: "HTML structuré + OpenGraph.", status: "good" },
-  { name: "ERA Immobilier", host: "eraimmobilier.com", desc: "Réseau d'agences ERA — extraction OG + heuristiques.", status: "good" },
-  { name: "Laforêt", host: "laforet.com", desc: "Réseau d'agences Laforêt — HTML sémantique + OG.", status: "good" },
-  { name: "Nestenn", host: "nestenn.com", desc: "Réseau d'agences Nestenn — HTML + JSON-LD.", status: "good" },
-  { name: "Stéphane Plaza Immobilier", host: "stephaneplazaimmobilier.com", desc: "OpenGraph natif confirmé — extraction propre.", status: "good" },
-  { name: "LocService", host: "locservice.fr", desc: "Location entre particuliers, spécialisé colocation/meublé.", status: "good" },
-  { name: "Studapart", host: "studapart.com", desc: "Plateforme location étudiante — HTML + OG.", status: "good" },
-  { name: "ImmoJeune", host: "immojeune.com", desc: "Plateforme location étudiante — HTML + OG.", status: "good" },
+  // V97.39.12 — Statuts ajustés après tests live de chaque parser (Foncia OK, Guy Hoquet OK avec fix entités, Laforêt OK avec fix og:image_N).
+  { name: "Foncia", host: "foncia.com", desc: "JSON-LD apartment + OpenGraph. Extrait titre, prix, surface, pièces, ville, photo.", status: "good" },
+  { name: "Orpi", host: "orpi.com", desc: "OpenGraph riche (titre + prix + surface dans og:title). Extraction via heuristiques.", status: "good" },
+  { name: "iAD France", host: "iadfrance.fr", desc: "Nuxt.js + OpenGraph. Titre, prix, surface, pièces extraits.", status: "good" },
+  { name: "Century 21", host: "century21.fr", desc: "OpenGraph (entités HTML décodées). Titre, prix, surface, ville extraits.", status: "good" },
+  { name: "Guy Hoquet", host: "guy-hoquet.com", desc: "JSON-LD Apartment complet (avec décodage entités HTML). Extrait nom, description, prix, pièces, ville, code postal, photo.", status: "good" },
+  { name: "Laforêt", host: "laforet.com", desc: "OpenGraph riche avec 12 photos (pattern og:image_0..11 supporté V97.39.12).", status: "good" },
+  // V97.39.12 — Sites partiels constatés en test live : ils retournent du HTML mais le contenu détail nécessite du JS ou auth, donc parseur tombe en fallback générique.
+  { name: "ERA Immobilier", host: "eraimmobilier.com", desc: "Site en SPA Angular pure : le contenu annonce n'est pas dans le HTML statique. Extraction limitée au titre du site.", status: "partial" },
+  { name: "Nestenn", host: "nestenn.com", desc: "Les annonces individuelles ne sont pas indexées publiquement. Seules les pages liste sont accessibles.", status: "partial" },
+  { name: "Stéphane Plaza Immobilier", host: "stephaneplazaimmobilier.com", desc: "Fiches annonces probablement rendues côté client (JS). Extraction limitée.", status: "partial" },
+  { name: "LocService", host: "locservice.fr", desc: "Modèle inversé (annonces locataires consultables seulement par proprios inscrits). Pas de fiche bien publique.", status: "partial" },
+  { name: "Studapart", host: "studapart.com", desc: "Location étudiante. Fiches détail nécessitent un compte étudiant authentifié.", status: "partial" },
+  { name: "ImmoJeune", host: "immojeune.com", desc: "Plateforme étudiante. Extraction partielle (résidences). Compte étudiant requis pour le détail individuel.", status: "partial" },
 
   // Sites avec DataDome — worker stealth déployé V97.39 mais ASN datacenter (OVH) bloque encore
   { name: "Leboncoin", host: "leboncoin.fr", desc: "DataDome (challenge JavaScript côté client). On tente via notre service d'extraction stealth, mais le succès dépend de la politique DataDome du moment — souvent en échec. Copie-colle manuellement reste fiable.", status: "blocked" },

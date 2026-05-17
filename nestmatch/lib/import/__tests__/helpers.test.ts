@@ -54,6 +54,46 @@ describe("import/helpers", () => {
       const matches = findByType(nodes, ["RealEstateListing", "House"])
       expect(matches.map(n => n.name)).toEqual(["A", "C"])
     })
+
+    // V97.39.12 — Foncia émet `@type: "apartment"` minuscule
+    it("V97.39.12 — match case-insensitive sur @type (Foncia 'apartment')", () => {
+      const nodes = [
+        { "@type": "apartment", name: "Foncia studio" },
+        { "@type": "Apartment", name: "Schema.org standard" },
+        { "@type": "APARTMENT", name: "Tout en majuscule" },
+      ]
+      const matches = findByType(nodes, ["Apartment"])
+      expect(matches.map(n => n.name)).toEqual([
+        "Foncia studio",
+        "Schema.org standard",
+        "Tout en majuscule",
+      ])
+    })
+
+    it("V97.39.12 — case-insensitive avec @type array", () => {
+      const nodes = [
+        { "@type": ["apartment", "thing"], name: "Foncia array" },
+      ]
+      expect(findByType(nodes, ["Apartment"])).toHaveLength(1)
+    })
+  })
+
+  // V97.39.12 — JSON-LD avec entités HTML dans les strings (Guy Hoquet)
+  describe("V97.39.12 — extractJsonLd avec entités HTML", () => {
+    it("parse JSON-LD valide après decode entités HTML", () => {
+      // Guy Hoquet écrit littéralement &lt;br /&gt; et &quot; dans les strings
+      const html = `<script type="application/ld+json">{"@type":"Apartment","description":"Appart &lt;br /&gt; avec &quot;balcon&quot;","name":"X"}</script>`
+      const out = extractJsonLd(html)
+      // Premier JSON.parse échoue (entités cassent les strings), retry après decode → OK
+      expect(out).toHaveLength(1)
+      expect((out[0] as Record<string, unknown>).name).toBe("X")
+    })
+
+    it("ignore vraiment malformé même après decode", () => {
+      const html = `<script type="application/ld+json">{not json at all{{</script>`
+      const out = extractJsonLd(html)
+      expect(out).toHaveLength(0)
+    })
   })
 
   describe("extractMeta", () => {

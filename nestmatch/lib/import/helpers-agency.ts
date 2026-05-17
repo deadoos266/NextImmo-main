@@ -56,6 +56,8 @@ export async function parseAgencyHtml(
     "SingleFamilyResidence",
     "Place",
     "Accommodation",
+    // V97.39.12 — ImmoJeune émet `CreativeWorkSeries` pour résidences étudiantes
+    "CreativeWorkSeries",
   ])
   if (listings.length > 0) {
     const l = listings[0]
@@ -112,6 +114,18 @@ export async function parseAgencyHtml(
     const ogImages = extractMetaAll(html, "og:image").filter(Boolean)
     if (ogImages.length > 0) out.photos = ogImages.slice(0, 12)
   }
+  // V97.39.12 — certains sites (Laforêt notamment) émettent og:image_0, og:image_1,
+  // ..., og:image_11 au lieu de plusieurs og:image. Compléter le tableau de photos.
+  if ((out.photos?.length ?? 0) < 12) {
+    const indexed: string[] = []
+    for (let i = 0; i < 20; i++) {
+      const v = extractMeta(html, [`og:image_${i}`])
+      if (v && !(out.photos || []).includes(v) && !indexed.includes(v)) indexed.push(v)
+    }
+    if (indexed.length > 0) {
+      out.photos = [...(out.photos || []), ...indexed].slice(0, 12)
+    }
+  }
 
   // 3. Heuristiques regex (basiques, premiere occurrence)
   if (!out.price) {
@@ -119,8 +133,17 @@ export async function parseAgencyHtml(
     if (m) out.price = parsePrice(m[1])
   }
   if (!out.surface) {
-    const m = /(\d+(?:[.,]\d+)?)\s*m²/i.exec(html)
-    if (m) out.surface = parseSurface(m[1])
+    // V97.39.12 — regex plus stricte : exige whitespace, `>`, début ou
+    // `(` avant le nombre. Sans ça, "1200x800" dans `width="1200"` matchait
+    // `1200 m²` quand suivi de m² ailleurs dans le HTML.
+    const m = /(?:^|[\s>(])(\d{1,4}(?:[.,]\d{1,3})?)\s*m²/i.exec(html)
+    if (m) {
+      const value = parseSurface(m[1])
+      // V97.39.12 — sanity check : surface immobilière 5-1000 m² (au-delà = bruit)
+      if (value !== undefined && value >= 5 && value <= 1000) {
+        out.surface = value
+      }
+    }
   }
   if (!out.rooms) {
     const m = /(\d+)\s*pi[èe]ces?/i.exec(html)
