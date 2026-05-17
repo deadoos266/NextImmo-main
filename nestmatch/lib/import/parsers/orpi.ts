@@ -1,12 +1,17 @@
 /**
  * V97.38 P3-7 — Parser Orpi.
  *
- * Réseau d'agences Orpi.com — JSON-LD + OG. Pas de protection anti-bot
- * (testé 2026-05-17).
+ * Réseau d'agences Orpi.com — JSON-LD absent, OpenGraph riche (titre +
+ * surface + pièces format T-N + ville). Pas de protection anti-bot.
+ *
+ * V97.39.14 — Custom hook pour extraire le nombre de pièces (T-2, T2)
+ * et la surface décimale (44.29 m²) depuis og:title Orpi.
+ * Format constaté : "Location appartement, 44.29 m² T-2 à Strasbourg, 926 €"
  */
 
 import type { Parser, ImportedAnnonce } from "../types"
 import { parseAgencyHtml } from "../helpers-agency"
+import { extractMeta } from "../helpers"
 
 function matches(url: string): boolean {
   try {
@@ -19,7 +24,23 @@ function matches(url: string): boolean {
 }
 
 async function parse(html: string, _url: string): Promise<Partial<ImportedAnnonce>> {
-  return parseAgencyHtml(html, { siteLabel: "Orpi" })
+  return parseAgencyHtml(html, {
+    siteLabel: "Orpi",
+    custom: (htmlBody, out) => {
+      // V97.39.14 — Orpi met les détails dans og:title :
+      // "Location appartement, 44.29 m² T-2 à Strasbourg, 926 € | Orpi"
+      const ogTitle = extractMeta(htmlBody, ["og:title"]) || ""
+
+      // Pièces : pattern "T-N", "T N" ou "TN" → N
+      if (!out.rooms) {
+        const piecesMatch = /T[\s-]?(\d{1,2})\b/i.exec(ogTitle)
+        if (piecesMatch) {
+          const n = parseInt(piecesMatch[1], 10)
+          if (Number.isFinite(n) && n > 0 && n < 20) out.rooms = n
+        }
+      }
+    },
+  })
 }
 
 export const orpiParser: Parser = {

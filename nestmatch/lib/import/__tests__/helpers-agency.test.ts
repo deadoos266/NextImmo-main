@@ -166,3 +166,79 @@ describe("parseAgencyHtml — fixes V97.39.12", () => {
     expect(out.warnings![0]).toContain("TestSite")
   })
 })
+
+// V97.39.14 — Tests des custom hooks par parser
+describe("Custom hooks parsers V97.39.14", () => {
+  it("Orpi custom hook : extrait pièces depuis og:title 'T-2'", async () => {
+    const { orpiParser } = await import("../parsers/orpi")
+    const html = `
+      <html><head>
+        <meta property="og:title" content="Location appartement, 44.29 m² T-2 à Strasbourg, 926 € | Orpi">
+      </head><body>44.29 m²</body></html>
+    `
+    const out = await orpiParser.parse(html, "https://www.orpi.com/annonce/xxx")
+    expect(out.rooms).toBe(2)
+  })
+
+  it("Orpi custom hook : 'T3' sans tiret marche aussi", async () => {
+    const { orpiParser } = await import("../parsers/orpi")
+    const html = `
+      <html><head>
+        <meta property="og:title" content="Location appartement T3 80 m² Lyon">
+      </head><body>80 m²</body></html>
+    `
+    const out = await orpiParser.parse(html, "https://www.orpi.com/annonce/yyy")
+    expect(out.rooms).toBe(3)
+  })
+
+  it("Century 21 custom hook : extrait code postal + ville depuis og:title", async () => {
+    const { century21Parser } = await import("../parsers/century21")
+    const html = `
+      <html><head>
+        <meta property="og:title" content="Appartement F2 à louer - 2 pièces - 42 m2 - Paris - 75012 - ILE-DE-FRANCE">
+      </head><body>42 m²</body></html>
+    `
+    const out = await century21Parser.parse(html, "https://www.century21.fr/x/")
+    expect(out.postal_code).toBe("75012")
+    expect(out.city).toBe("Paris")
+  })
+
+  it("Foncia custom hook : extrait DPE depuis data-dpe-letter", async () => {
+    const { fonciaParser } = await import("../parsers/foncia")
+    const html = `
+      <html><body>
+        <div class="property">Appart à Paris</div>
+        <span data-dpe-letter="C">classement énergétique</span>
+      </body></html>
+    `
+    const out = await fonciaParser.parse(html, "https://fr.foncia.com/x.htm")
+    expect(out.dpe).toBe("C")
+  })
+
+  it("Foncia custom hook : extrait DPE depuis class='dpe-grade-D'", async () => {
+    const { fonciaParser } = await import("../parsers/foncia")
+    const html = `
+      <html><body>
+        <div class="dpe-grade-D">D</div>
+      </body></html>
+    `
+    const out = await fonciaParser.parse(html, "https://fr.foncia.com/x.htm")
+    expect(out.dpe).toBe("D")
+  })
+
+  it("Foncia : DPE déjà extrait par helper ne se fait pas écraser", async () => {
+    const { fonciaParser } = await import("../parsers/foncia")
+    const html = `
+      <html><head>
+        <script type="application/ld+json">
+        {"@type":"apartment","name":"X","description":"classe énergétique : A"}
+        </script>
+      </head><body>
+        <span data-dpe-letter="G">G</span>
+      </body></html>
+    `
+    const out = await fonciaParser.parse(html, "https://fr.foncia.com/x.htm")
+    // Le helper a déjà mis A via regex sur description → custom hook ne touche pas
+    expect(out.dpe).toBe("A")
+  })
+})

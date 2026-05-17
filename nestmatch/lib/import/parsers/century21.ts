@@ -1,12 +1,17 @@
 /**
  * V97.38 P3-7 — Parser Century 21.
  *
- * Réseau d'agences century21.fr — JSON-LD + OG. Pas de protection anti-bot
- * (testé 2026-05-17). Les URLs slugs peuvent changer (formats divers).
+ * Réseau d'agences century21.fr — OpenGraph riche (entités HTML décodées).
+ * Pas de protection anti-bot (testé 2026-05-17).
+ *
+ * V97.39.14 — Custom hook pour parser le format og:title C21 :
+ * "Appartement F2 à louer - 2 pièces - 42 m2 - Paris - 75012 - ILE-DE-FRANCE"
+ * → extract code postal, ville
  */
 
 import type { Parser, ImportedAnnonce } from "../types"
 import { parseAgencyHtml } from "../helpers-agency"
+import { extractMeta } from "../helpers"
 
 function matches(url: string): boolean {
   try {
@@ -19,7 +24,32 @@ function matches(url: string): boolean {
 }
 
 async function parse(html: string, _url: string): Promise<Partial<ImportedAnnonce>> {
-  return parseAgencyHtml(html, { siteLabel: "Century 21" })
+  return parseAgencyHtml(html, {
+    siteLabel: "Century 21",
+    custom: (htmlBody, out) => {
+      const ogTitle = extractMeta(htmlBody, ["og:title"]) || ""
+
+      // V97.39.14 — code postal FR (5 chiffres) dans og:title Century 21
+      if (!out.postal_code) {
+        const cpMatch = /\b(\d{5})\b/.exec(ogTitle)
+        if (cpMatch) {
+          const cp = cpMatch[1]
+          // Sanity check : CP FR commence par 0-9, exclut années (19xx-20xx)
+          if (!/^(19|20)\d{2}$/.test(cp)) {
+            out.postal_code = cp
+          }
+        }
+      }
+
+      // V97.39.14 — Si pas de city, essayer "- VILLE - 75012 -" entre dashes
+      if (!out.city) {
+        const cityMatch = /-\s*([A-Z][A-Za-zéèêëàâäçîïôöùûü\s\-']+)\s*-\s*\d{5}/.exec(ogTitle)
+        if (cityMatch) {
+          out.city = cityMatch[1].trim()
+        }
+      }
+    },
+  })
 }
 
 export const century21Parser: Parser = {
