@@ -36,6 +36,7 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
+import * as Sentry from "@sentry/nextjs"
 import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
 import { checkRateLimitAsync, getClientIp } from "@/lib/rateLimit"
@@ -148,6 +149,27 @@ export async function POST(req: NextRequest) {
       error_code: code,
       error_message: message.slice(0, 500),
     })
+
+    // V97.39.7 — Sentry breadcrumb pour visibilité prod. On capture comme
+    // exception SEULEMENT les vraies erreurs serveur (UNKNOWN_ERROR, PARSE_ERROR,
+    // WORKER_UNAVAILABLE) — pas les codes "comportementaux" (BOT_PROTECTION,
+    // NOT_FOUND, RATE_LIMITED) qui sont attendus côté business.
+    try {
+      const hostFromUrl = (() => { try { return new URL(url).hostname } catch { return null } })()
+      Sentry.addBreadcrumb({
+        category: "import-annonce",
+        level: "warning",
+        message: `Import failed: ${code}`,
+        data: { url_host: hostFromUrl, code },
+      })
+      const SHOULD_CAPTURE = ["UNKNOWN_ERROR", "PARSE_ERROR", "WORKER_UNAVAILABLE", "FETCH_ERROR"]
+      if (SHOULD_CAPTURE.includes(code)) {
+        Sentry.captureException(e instanceof Error ? e : new Error(message), {
+          tags: { feature: "import-annonce", import_code: code },
+          extra: { url_host: hostFromUrl, user_email: me },
+        })
+      }
+    } catch { /* ne casse pas l'API si Sentry foire */ }
 
     // Statut HTTP selon le code (V97.39 ajoute les codes worker)
     const status = code === "TIMEOUT" || code === "WORKER_TIMEOUT" ? 504
