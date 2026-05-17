@@ -94,13 +94,48 @@ else
   log "⚠ Pas de RCLONE_REMOTE configuré ou rclone absent — backup local seulement"
 fi
 
+# ─── 3b. MinIO data (Phase 3 — si présent) ────────────────────────────────
+# V97.39.20 — tarball le volume MinIO si présent. Optionnel : marche même
+# si Phase 3 pas encore activée (skip silencieusement).
+#
+# ⚠ Note : on tar le volume "hot" sans arrêter MinIO. MinIO commit chaque
+# objet de façon atomique (rename), donc on ne risque pas un fichier
+# corrompu sur disque. MAIS un upload multipart EN COURS au moment du tar
+# se retrouve avec des chunks partiels dans le tarball. Au restore, ils
+# seront ignorés (MinIO les considère comme uploads abandonnés > 7j).
+# Pour zéro risque : ajouter `docker compose -f tools/minio-vps/docker-compose.yml stop minio`
+# avant le tar et `start minio` après. Trade-off : 30s d'indisponibilité
+# uploads/downloads chaque nuit. Vu le volume KeyMatch (~50 ops/jour), on
+# accepte le risque actuel.
+MINIO_DATA_DIR="${MINIO_DATA_DIR:-/srv/keymatch/minio-data}"
+if [[ -d "${MINIO_DATA_DIR}" ]]; then
+  MINIO_FILE="${BACKUPS_DIR}/keymatch-minio-${TIMESTAMP}.tar.gz"
+  log "→ Tarball MinIO data (${MINIO_DATA_DIR} → ${MINIO_FILE})"
+  if tar -czf "${MINIO_FILE}" -C "$(dirname "${MINIO_DATA_DIR}")" "$(basename "${MINIO_DATA_DIR}")" 2>>"${LOG_FILE}"; then
+    MINIO_SIZE=$(du -h "${MINIO_FILE}" | cut -f1)
+    log "  ✓ ${MINIO_FILE} (${MINIO_SIZE})"
+    sha256sum "${MINIO_FILE}" > "${MINIO_FILE}.sha256"
+    if command -v rclone >/dev/null 2>&1 && [[ -n "${RCLONE_REMOTE:-}" ]]; then
+      rclone copy "${MINIO_FILE}" "${RCLONE_REMOTE}/minio/" --progress 2>>"${LOG_FILE}" \
+        && rclone copy "${MINIO_FILE}.sha256" "${RCLONE_REMOTE}/minio/" 2>>"${LOG_FILE}" \
+        && log "  ✓ MinIO upload offsite OK" \
+        || log "⚠ MinIO upload offsite échoué (non bloquant)"
+    fi
+  else
+    log "⚠ tar MinIO échoué (non bloquant, on continue)"
+  fi
+else
+  log "  · MinIO data dir absent (${MINIO_DATA_DIR}) — skip (Phase 3 pas activée)"
+fi
+
 # ─── 4. Rotation locale ────────────────────────────────────────────────────
 # Garde : 7 derniers daily + 4 weekly (lundi) + 12 monthly (1er du mois)
 log "→ Rotation backups locaux (7d / 4w / 12m)"
 cd "${BACKUPS_DIR}"
 
 # Daily : supprime > 7 jours, sauf weekly/monthly
-find . -name "keymatch-postgres-*.sql.gz" -mtime +7 -print0 | while IFS= read -r -d '' f; do
+# Couvre les 2 types : pg dumps + MinIO tarballs
+find . \( -name "keymatch-postgres-*.sql.gz" -o -name "keymatch-minio-*.tar.gz" \) -mtime +7 -print0 | while IFS= read -r -d '' f; do
   date_str=$(echo "$f" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}')
   if [[ -n "${date_str}" ]]; then
     day_of_week=$(date -d "${date_str}" +%u 2>/dev/null || date -j -f "%Y-%m-%d" "${date_str}" +%u 2>/dev/null || echo "0")

@@ -1,0 +1,14 @@
+[Unit]
+Description=KeyMatch Next.js auto-deploy (déclenché par webhook ou manuel)
+After=docker.service
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/opt/keymatch/NextImmo-main
+ExecStart=/bin/bash /opt/keymatch/NextImmo-main/tools/next-vps/scripts/deploy.sh
+StandardOutput=append:/var/log/keymatch-deploy.log
+StandardError=append:/var/log/keymatch-deploy.log
+
+[Install]
+WantedBy=multi-user.target

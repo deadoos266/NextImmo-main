@@ -1,0 +1,71 @@
+# Next.js production sur VPS — Phase 6 plan migration OVH.
+#
+# Coexiste avec keymatch-postgres (Phase 2), keymatch-minio (Phase 3),
+# keymatch-fetcher (Phase 1) sur le même VPS-2 OVH.
+#
+# Build + deploy :
+#   cd /opt/keymatch/NextImmo-main
+#   git pull
+#   sudo docker compose -f tools/next-vps/docker-compose.yml build
+#   sudo docker compose -f tools/next-vps/docker-compose.yml up -d
+#   sudo docker compose -f tools/next-vps/docker-compose.yml logs -f keymatch-next
+#
+# Cache .next persistant pour ISR + image optimization :
+#   /srv/keymatch/next-cache/
+
+services:
+  keymatch-next:
+    image: keymatch-next:latest
+    build:
+      context: ../..
+      dockerfile: tools/next-vps/Dockerfile
+    container_name: keymatch-next
+    restart: unless-stopped
+    # Bind localhost only. Caddy reverse-proxy expose via keymatch-immo.fr.
+    ports:
+      - "127.0.0.1:3000:3000"
+    # Toutes les env vars Next.js sont chargées depuis /etc/keymatch.env
+    # (fichier sécurisé root-readable seulement, contient tous les secrets).
+    env_file:
+      - /etc/keymatch.env
+    # Override quelques vars qui doivent pointer vers les services VPS locaux
+    environment:
+      # DATABASE_URL : Postgres VPS via PgBouncer (Phase 2)
+      DATABASE_URL: ${DATABASE_URL:-postgresql://keymatch:CHANGEME@keymatch-postgres:5432/keymatch}
+      # Storage : MinIO via Caddy media.keymatch-immo.fr (Phase 3)
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-supabase}
+      # Email : Brevo (Phase 5)
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-resend}
+      # Force base URL canonique
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-https://keymatch-immo.fr}
+      NEXT_PUBLIC_URL: ${NEXT_PUBLIC_URL:-https://keymatch-immo.fr}
+    volumes:
+      # Cache ISR + images optimisées persistant (économise build à chaque restart)
+      - /srv/keymatch/next-cache:/app/.next/cache
+    # Limites ressources : ~1.5 GB suffisent pour 100 RPS (mesuré sur dev local)
+    mem_limit: 2g
+    cpus: 2.0
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    # Joindre le réseau Postgres + MinIO pour appel direct localhost
+    networks:
+      - keymatch-postgres-net
+      - keymatch-minio-net
+      - default
+
+networks:
+  # Networks externes (créés par les autres docker-compose des phases 2 et 3)
+  keymatch-postgres-net:
+    external: true
+    # ⚠ Si Phase 2 pas déployée : `docker network create keymatch-postgres-net`
+  keymatch-minio-net:
+    external: true
+    # Idem si Phase 3 pas déployée
+  default:
+    name: keymatch-next-net

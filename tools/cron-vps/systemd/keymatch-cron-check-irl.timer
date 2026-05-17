@@ -1,0 +1,11 @@
+[Unit]
+Description=KeyMatch cron timer check-irl — schedule "0 7 * * 1"
+
+[Timer]
+OnCalendar=Mon *-*-* 07:00:00
+Persistent=true
+RandomizedDelaySec=2min
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

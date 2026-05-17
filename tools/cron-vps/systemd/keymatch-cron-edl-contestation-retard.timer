@@ -1,0 +1,11 @@
+[Unit]
+Description=KeyMatch cron timer edl-contestation-retard — schedule "45 8 * * *"
+
+[Timer]
+OnCalendar=*-*-* 08:45:00
+Persistent=true
+RandomizedDelaySec=2min
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

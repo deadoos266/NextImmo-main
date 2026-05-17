@@ -1,0 +1,11 @@
+[Unit]
+Description=KeyMatch cron timer messages-digest — schedule "0 19 * * *"
+
+[Timer]
+OnCalendar=*-*-* 19:00:00
+Persistent=true
+RandomizedDelaySec=2min
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

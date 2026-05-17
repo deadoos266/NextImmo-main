@@ -1,0 +1,83 @@
+# Caddyfile fragment Next.js KeyMatch — Phase 6 plan migration OVH.
+# À inclure dans /etc/caddy/Caddyfile.
+#
+# Pré-requis avant cutover :
+#   1. tools/next-vps/docker-compose.yml up et keymatch-next health OK
+#   2. DNS A record keymatch-immo.fr → IP VPS (à faire en TOUT DERNIER, ne pas
+#      flip avant d'avoir testé staging.keymatch-immo.fr)
+#
+# Stratégie zéro-coupure : on commence par exposer sur staging.keymatch-immo.fr,
+# tester complet, puis on fait le flip DNS de keymatch-immo.fr → VPS.
+
+# ─── Test staging (DNS staging.keymatch-immo.fr → VPS) ─────────────
+# Pour valider sans toucher au prod live sur Vercel.
+staging.keymatch-immo.fr {
+  tls tic3467@gmail.com
+  encode gzip zstd
+
+  # Reverse-proxy vers le container Next.js
+  reverse_proxy localhost:3000 {
+    header_up Host {host}
+    header_up X-Real-IP {remote_host}
+    header_up X-Forwarded-For {remote_host}
+    header_up X-Forwarded-Proto {scheme}
+  }
+
+  log {
+    output file /var/log/caddy/keymatch-staging.log {
+      roll_size 100mb
+      roll_keep 5
+    }
+    format json
+  }
+}
+
+# ─── Production keymatch-immo.fr (à activer le jour du cutover Phase 6) ──
+#
+# DÉCOMMENTE CE BLOC LE JOUR DU CUTOVER + flip A record OVH zone.
+# Garde Vercel en parallèle 30 jours pour rollback rapide (cf plan migration).
+#
+# keymatch-immo.fr, www.keymatch-immo.fr {
+#   tls tic3467@gmail.com
+#
+#   # Redirige www → apex
+#   @www host www.keymatch-immo.fr
+#   redir @www https://keymatch-immo.fr{uri} permanent
+#
+#   encode gzip zstd
+#
+#   # Headers sécu (Next.js en pose aussi via next.config.js — Caddy renforce)
+#   header {
+#     Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+#     X-Content-Type-Options "nosniff"
+#     X-Frame-Options "DENY"
+#     Referrer-Policy "strict-origin-when-cross-origin"
+#     -Server
+#   }
+#
+#   reverse_proxy localhost:3000 {
+#     header_up Host {host}
+#     header_up X-Real-IP {remote_host}
+#     header_up X-Forwarded-For {remote_host}
+#     header_up X-Forwarded-Proto {scheme}
+#     # Si Next.js a 1 réplique bloquée 30s, on échappe au timeout client
+#     transport http {
+#       response_header_timeout 60s
+#       dial_timeout 5s
+#     }
+#   }
+#
+#   # Healthcheck Caddy → Next.js (utilisé par /admin/health en interne)
+#   handle /api/health/caddy {
+#     respond "OK" 200
+#   }
+#
+#   log {
+#     output file /var/log/caddy/keymatch-prod.log {
+#       roll_size 500mb
+#       roll_keep 10
+#       roll_keep_for 30d
+#     }
+#     format json
+#   }
+# }

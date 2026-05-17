@@ -1,0 +1,11 @@
+[Unit]
+Description=KeyMatch cron timer alertes-matching — schedule "30 9 * * *"
+
+[Timer]
+OnCalendar=*-*-* 09:30:00
+Persistent=true
+RandomizedDelaySec=2min
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

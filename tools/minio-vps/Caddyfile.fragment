@@ -1,0 +1,83 @@
+# Fragment Caddyfile pour MinIO — Phase 3 plan migration OVH.
+# À inclure dans le Caddyfile global du VPS (/etc/caddy/Caddyfile).
+#
+# Pré-requis :
+#   1. DNS : media.keymatch-immo.fr → IP VPS (A record dans OVH zone)
+#   2. DNS : media-admin.keymatch-immo.fr → IP VPS (idem)
+#   3. tools/minio-vps/docker-compose.yml up
+#
+# Test après reload Caddy :
+#   curl -fI https://media.keymatch-immo.fr/avatars/test.jpg
+#   open https://media-admin.keymatch-immo.fr/  (console web)
+
+# ─── 1. API S3 (uploads, downloads, signed URLs) ────────────────
+#
+# Tous les buckets KeyMatch passent par ce host.
+# Le code Next.js construit des URLs `https://media.keymatch-immo.fr/<bucket>/<path>`.
+# Pour les buckets publics (avatars, annonces-photos), accès direct OK.
+# Pour les buckets privés (dossiers, baux, edl, ...), seules les signed URLs
+# avec X-Amz-Signature valide marchent (MinIO les valide en interne).
+media.keymatch-immo.fr {
+  # TLS auto Let's Encrypt
+  tls tic3467@gmail.com
+
+  # MinIO supporte CORS nativement, mais on configure les headers proprement
+  # pour les uploads PUT depuis le navigateur (presigned URLs côté Next.js).
+  header {
+    # CORS pour les uploads directs depuis keymatch-immo.fr
+    Access-Control-Allow-Origin "https://keymatch-immo.fr"
+    Access-Control-Allow-Methods "GET, POST, PUT, DELETE, HEAD"
+    Access-Control-Allow-Headers "Authorization, Content-Type, X-Amz-Date, X-Amz-Content-Sha256, X-Amz-User-Agent"
+    Access-Control-Max-Age "3600"
+    # Sécurité de base
+    X-Content-Type-Options "nosniff"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    -Server
+  }
+
+  # Cache des fichiers publics (avatars, annonces-photos) côté Caddy
+  # pour soulager MinIO. Les buckets privés sont passthrough (signed URLs
+  # courtes durée, pas la peine de cacher).
+  @public {
+    path /avatars/* /annonces-photos/*
+  }
+  header @public Cache-Control "public, max-age=31536000, immutable"
+
+  reverse_proxy localhost:9000 {
+    # MinIO renvoie redirects vers le host MINIO_SERVER_URL, faut le forcer
+    header_up Host {host}
+    header_up X-Real-IP {remote_host}
+    header_up X-Forwarded-For {remote_host}
+    header_up X-Forwarded-Proto {scheme}
+  }
+
+  # Logs structurés (pour /admin/operations stats)
+  log {
+    output file /var/log/caddy/minio-api.log {
+      roll_size 100mb
+      roll_keep 5
+    }
+    format json
+  }
+}
+
+# ─── 2. Console admin web ────────────────────────────────────────
+#
+# Accessible UNIQUEMENT par Paul (basic auth Caddy).
+# Permet de browse les buckets, créer des access keys supplémentaires, etc.
+# IP allowlist en plus (optionnel, mettre l'IP fixe Paul).
+media-admin.keymatch-immo.fr {
+  tls tic3467@gmail.com
+
+  # Basic auth — généré via : caddy hash-password
+  # Remplace le hash bcrypt par celui de Paul (mot de passe stocké hors Git).
+  basicauth {
+    paul $2a$14$REMPLACER_PAR_HASH_BCRYPT_PAUL
+  }
+
+  reverse_proxy localhost:9001 {
+    header_up Host {host}
+    header_up X-Real-IP {remote_host}
+    header_up X-Forwarded-Proto {scheme}
+  }
+}

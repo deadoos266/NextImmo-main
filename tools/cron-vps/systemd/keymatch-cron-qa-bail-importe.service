@@ -1,0 +1,17 @@
+[Unit]
+Description=KeyMatch cron qa-bail-importe — QA check baux importés
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/opt/keymatch/NextImmo-main
+ExecStart=/bin/bash /opt/keymatch/NextImmo-main/tools/cron-vps/scripts/run-cron.sh qa-bail-importe /api/cron/qa-bail-importe
+StandardOutput=append:/var/log/keymatch-cron.log
+StandardError=append:/var/log/keymatch-cron.log
+# Si fail, ne pas spammer (cron-routes.tsv est source de vérité)
+Restart=no
+TimeoutStartSec=320s
+
+[Install]
+WantedBy=multi-user.target

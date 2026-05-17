@@ -1,0 +1,17 @@
+[Unit]
+Description=KeyMatch cron loyers-retard — Relance loyers en retard
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/opt/keymatch/NextImmo-main
+ExecStart=/bin/bash /opt/keymatch/NextImmo-main/tools/cron-vps/scripts/run-cron.sh loyers-retard /api/cron/loyers-retard
+StandardOutput=append:/var/log/keymatch-cron.log
+StandardError=append:/var/log/keymatch-cron.log
+# Si fail, ne pas spammer (cron-routes.tsv est source de vérité)
+Restart=no
+TimeoutStartSec=320s
+
+[Install]
+WantedBy=multi-user.target

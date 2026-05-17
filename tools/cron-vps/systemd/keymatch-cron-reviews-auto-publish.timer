@@ -1,0 +1,11 @@
+[Unit]
+Description=KeyMatch cron timer reviews-auto-publish — schedule "30 5 * * *"
+
+[Timer]
+OnCalendar=*-*-* 05:30:00
+Persistent=true
+RandomizedDelaySec=2min
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

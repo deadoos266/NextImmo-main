@@ -1,0 +1,11 @@
+[Unit]
+Description=KeyMatch cron timer health-check — schedule "0 * * * *"
+
+[Timer]
+OnCalendar=*-*-* *:00:00
+Persistent=true
+RandomizedDelaySec=2min
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

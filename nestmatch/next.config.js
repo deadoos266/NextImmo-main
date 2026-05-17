@@ -21,9 +21,9 @@ const CSP_HEADER = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "img-src 'self' data: blob: https://*.supabase.co https://*.tile.openstreetmap.org https://*.tile.openstreetmap.fr https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://tiles.stadiamaps.com https://lh3.googleusercontent.com https://images.unsplash.com https://unpkg.com",
+  "img-src 'self' data: blob: https://*.supabase.co https://media.keymatch-immo.fr https://*.tile.openstreetmap.org https://*.tile.openstreetmap.fr https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://tiles.stadiamaps.com https://lh3.googleusercontent.com https://images.unsplash.com https://unpkg.com",
   "font-src 'self' data: https://fonts.gstatic.com",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io https://*.upstash.io https://geo.api.gouv.fr https://nominatim.openstreetmap.org",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://media.keymatch-immo.fr wss://ws.keymatch-immo.fr https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io https://*.upstash.io https://geo.api.gouv.fr https://nominatim.openstreetmap.org",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self' https://accounts.google.com",
@@ -33,6 +33,12 @@ const CSP_HEADER = [
 
 const nextConfig = {
   reactStrictMode: true,
+
+  // V97.39.20 P3 Phase 6 — output: 'standalone' uniquement pour build Docker
+  // self-host (VPS OVH). Vercel n'aime pas cette option (peut casser ISR),
+  // donc on l'active conditionnellement via NEXT_OUTPUT_STANDALONE=1 dans
+  // le Dockerfile. Comportement Vercel inchangé.
+  ...(process.env.NEXT_OUTPUT_STANDALONE === "1" ? { output: "standalone" } : {}),
 
   // V86.1 — Inclut les fichiers YAML scenarios QA Bot dans le bundle des
   // routes API qui les lit (qa/scenarios/*.yaml). Sans ça, en serverless
@@ -65,6 +71,8 @@ const nextConfig = {
     remotePatterns: [
       // Supabase Storage — wildcard couvre prod + staging
       { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" },
+      // V97.39.20 — MinIO self-host (Phase 3 plan migration OVH)
+      { protocol: "https", hostname: "media.keymatch-immo.fr" },
       // Avatars Google (NextAuth)
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
       // Unsplash — utilisé pour les photos des annonces de démo (seed data).

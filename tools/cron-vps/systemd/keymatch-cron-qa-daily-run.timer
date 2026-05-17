@@ -1,0 +1,11 @@
+[Unit]
+Description=KeyMatch cron timer qa-daily-run — schedule "0 4 * * *"
+
+[Timer]
+OnCalendar=*-*-* 04:00:00
+Persistent=true
+RandomizedDelaySec=2min
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

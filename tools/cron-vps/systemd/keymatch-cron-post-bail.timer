@@ -1,0 +1,11 @@
+[Unit]
+Description=KeyMatch cron timer post-bail — schedule "0 9 * * *"
+
+[Timer]
+OnCalendar=*-*-* 09:00:00
+Persistent=true
+RandomizedDelaySec=2min
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

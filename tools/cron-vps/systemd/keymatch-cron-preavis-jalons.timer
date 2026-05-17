@@ -1,0 +1,11 @@
+[Unit]
+Description=KeyMatch cron timer preavis-jalons — schedule "30 8 * * *"
+
+[Timer]
+OnCalendar=*-*-* 08:30:00
+Persistent=true
+RandomizedDelaySec=2min
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

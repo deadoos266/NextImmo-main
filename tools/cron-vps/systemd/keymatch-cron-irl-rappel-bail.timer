@@ -1,0 +1,11 @@
+[Unit]
+Description=KeyMatch cron timer irl-rappel-bail — schedule "15 9 * * *"
+
+[Timer]
+OnCalendar=*-*-* 09:15:00
+Persistent=true
+RandomizedDelaySec=2min
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

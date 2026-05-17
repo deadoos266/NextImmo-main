@@ -1,0 +1,11 @@
+[Unit]
+Description=KeyMatch cron timer qa-bail-importe — schedule "30 4 * * *"
+
+[Timer]
+OnCalendar=*-*-* 04:30:00
+Persistent=true
+RandomizedDelaySec=2min
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

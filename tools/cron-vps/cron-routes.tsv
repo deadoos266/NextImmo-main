@@ -1,0 +1,34 @@
+# Crons KeyMatch — mapping Vercel → systemd timers (Phase 9 plan migration OVH).
+#
+# Source de vérité : copié de nestmatch/vercel.json (V97.39.20).
+# Format : <name>\t<path>\t<schedule_cron>\t<description>
+#
+# Chaque ligne génère un fichier systemd/keymatch-<name>.service + .timer
+# via tools/cron-vps/scripts/generate-systemd-units.sh.
+#
+# Auth : Bearer ${CRON_SECRET} (set dans /etc/keymatch.env)
+#
+# 22 crons au total (V97.39.20 — était 19 dans vercel.json, +3 ajoutés depuis).
+
+health-check	/api/cron/health-check	0 * * * *	Health check toutes heures
+db-backup	/api/cron/db-backup	0 3 * * *	Backup DB quotidien (legacy Vercel — Phase 8 fait mieux)
+qa-daily-run	/api/cron/qa-daily-run	0 4 * * *	QA bot scenarios daily
+qa-bail-importe	/api/cron/qa-bail-importe	30 4 * * *	QA check baux importés
+loyers-mensuels-create	/api/cron/loyers-mensuels-create	0 6 1 * *	Génère loyers du mois (1er)
+loyers-retard	/api/cron/loyers-retard	0 8 * * *	Relance loyers en retard
+depot-retard	/api/cron/depot-retard	15 8 * * *	Relance retard restitution dépôt
+preavis-jalons	/api/cron/preavis-jalons	30 8 * * *	Jalons préavis bail
+edl-contestation-retard	/api/cron/edl-contestation-retard	45 8 * * *	Relance EDL en contestation
+post-bail	/api/cron/post-bail	0 9 * * *	Suivi post-bail (anniversaire, etc.)
+irl-rappel-bail	/api/cron/irl-rappel-bail	15 9 * * *	Rappel IRL annuel bail
+alertes-matching	/api/cron/alertes-matching	30 9 * * *	Alerte candidats nouveau matching
+visites-rappel	/api/cron/visites-rappel	0 10,18 * * *	Rappels visites J-1 (matin+soir)
+messages-digest	/api/cron/messages-digest	0 19 * * *	Digest soir messages non lus
+candidatures-digest	/api/cron/candidatures-digest	30 19 * * *	Digest soir candidatures
+annonces-stagnantes	/api/cron/annonces-stagnantes	0 6 * * 1	Annonces sans candidatures depuis 14j (lundi)
+check-irl	/api/cron/check-irl	0 7 * * 1	Vérif IRL global hebdo (lundi)
+verify-integrity-baux	/api/cron/verify-integrity-baux	0 5 * * 2	Vérif intégrité baux (mardi)
+scrape-irl-insee	/api/cron/scrape-irl-insee	0 5 1 * *	Scrape IRL INSEE (1er du mois)
+reviews-auto-publish	/api/cron/reviews-auto-publish	30 5 * * *	Auto-publish reviews validées
+fetcher-health	/api/cron/fetcher-health	0 */6 * * *	Ping worker fetcher toutes 6h
+import-jobs-cleanup	/api/cron/import-jobs-cleanup	15 4 * * *	Cleanup jobs import abandonnés

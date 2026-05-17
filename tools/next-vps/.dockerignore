@@ -1,0 +1,47 @@
+# Dockerignore pour le build Next.js sur VPS.
+# Ce fichier est lu par Docker depuis le contexte (= racine repo).
+
+# Pas besoin de node_modules dans le contexte (le Dockerfile les install)
+**/node_modules
+
+# Pas besoin du build local
+nestmatch/.next
+nestmatch/out
+
+# Pas besoin de Git
+.git
+.gitignore
+
+# Workspaces / monorepo
+.claude
+.vercel
+
+# Worktrees Claude
+.claude/worktrees
+
+# Autres tools VPS (chacun a son propre Dockerfile)
+tools/zendriver-worker
+tools/postgres-vps
+tools/minio-vps
+tools/next-vps/scripts
+tools/next-vps/systemd
+
+# Dev
+*.log
+*.env.local
+*.env.example
+nestmatch/.env*
+!nestmatch/.env.example
+
+# Tests + dev
+nestmatch/coverage
+nestmatch/playwright-report
+nestmatch/test-results
+nestmatch/e2e
+
+# Docs (peuvent rester si on veut /aide servi en SSG)
+# nestmatch/docs   ← ne pas exclure, certaines pages /aide en dépendent
+
+# Markdown racine
+*.md
+!README.md
