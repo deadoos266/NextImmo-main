@@ -669,7 +669,12 @@ export default function EdlPage() {
 
   return (
     <main style={{ minHeight: "100vh", background: "#F7F4EF", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 48px" }}>
+      {/* V97.39.29 — padding-bottom mobile pour ne pas que BottomNavMobile
+          (position:fixed bottom:0, ~72px) masque le bouton "Envoyer au
+          locataire" en bas de page. Bug Paul : "edl pareil que bail, pas
+          d'envoi possible sur tel" — c'était parce que le CTA d'envoi était
+          masqué par la nav mobile fixe. */}
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 16px 100px" : "40px 48px" }}>
 
         <button
           onClick={() => {

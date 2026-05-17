@@ -292,7 +292,9 @@ export default function CandidaturesParAnnonce() {
         .km-serif { font-family: 'Fraunces', Georgia, serif; font-feature-settings: 'ss01'; }
       `}</style>
 
-      <div style={{ maxWidth: 1280, margin: "0 auto", padding: isMobile ? "24px 16px" : "32px 40px 80px" }}>
+      {/* V97.39.29 — padding-bottom mobile +100px pour pas que BottomNavMobile
+          masque les actions des dernières cards (Valider / Refuser / Louer) */}
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: isMobile ? "24px 16px 100px" : "32px 40px 80px" }}>
         {/* Back link */}
         <Link href="/proprietaire" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#666", fontSize: 12, textDecoration: "none", marginBottom: 14 }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
@@ -468,6 +470,7 @@ function CandidatureCard({
   onValidated: () => void
   onRefused: () => void
 }) {
+  const { isMobile } = useResponsive()
   const [showBreakdown, setShowBreakdown] = useState(false)
   const [validating, setValidating] = useState(false)
   const [refusing, setRefusing] = useState(false)
@@ -537,13 +540,16 @@ function CandidatureCard({
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "64px 1fr auto",
-        gap: 14,
-        padding: "16px 20px",
+        // V97.39.29 — mobile : 1 colonne, avatar+infos en haut, actions en bas
+        // pleine largeur (avant : "64px 1fr auto" écrasait les boutons → bug
+        // Paul "pas de moyen de valider candidat sur téléphone")
+        gridTemplateColumns: isMobile ? "1fr" : "64px 1fr auto",
+        gap: isMobile ? 16 : 14,
+        padding: isMobile ? "16px" : "16px 20px",
         background: "#fff",
         border: "1px solid #EAE6DF",
         borderRadius: 18,
-        alignItems: "center",
+        alignItems: isMobile ? "stretch" : "center",
         boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
         fontFamily: "'DM Sans', sans-serif",
       }}
@@ -695,7 +701,16 @@ function CandidatureCard({
           - Demander dossier : si statut "contact" (pas encore de DOSSIER_CARD)
           - Voir dossier / Répondre : toujours dispo
       */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
+      {/* V97.39.29 — mobile : actions full-width + boutons 44px hauteur min
+          (zone tactile WCAG 2.5.5). Avant : alignItems flex-end + boutons 10px
+          → coupés sur petit écran. */}
+      <div style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: isMobile ? 8 : 6,
+        alignItems: isMobile ? "stretch" : "flex-end",
+        width: isMobile ? "100%" : "auto",
+      }}>
         {canDecide && (
           <>
             <button
@@ -703,7 +718,22 @@ function CandidatureCard({
               onClick={valider}
               disabled={validating || refusing}
               title="Présélection : débloque le droit pour ce candidat de proposer une visite"
-              style={{ padding: "10px 18px", background: "#15803d", color: "#fff", border: "none", borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: (validating || refusing) ? "not-allowed" : "pointer", whiteSpace: "nowrap", letterSpacing: "0.3px", fontFamily: "inherit", opacity: validating ? 0.6 : 1 }}
+              style={{
+                padding: isMobile ? "14px 18px" : "10px 18px",
+                background: "#15803d",
+                color: "#fff",
+                border: "none",
+                borderRadius: 999,
+                fontSize: isMobile ? 14 : 11,
+                fontWeight: 700,
+                cursor: (validating || refusing) ? "not-allowed" : "pointer",
+                whiteSpace: "nowrap",
+                letterSpacing: "0.3px",
+                fontFamily: "inherit",
+                opacity: validating ? 0.6 : 1,
+                minHeight: 44,
+                width: isMobile ? "100%" : "auto",
+              }}
             >
               {validating ? "Validation…" : "Valider la candidature"}
             </button>
@@ -712,7 +742,22 @@ function CandidatureCard({
               onClick={refuser}
               disabled={validating || refusing}
               title="Refuser cette candidature et envoyer un message au locataire"
-              style={{ padding: "9px 18px", background: "#fff", color: "#b91c1c", border: "1px solid #F4C9C9", borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: (validating || refusing) ? "not-allowed" : "pointer", whiteSpace: "nowrap", letterSpacing: "0.3px", fontFamily: "inherit", opacity: refusing ? 0.6 : 1 }}
+              style={{
+                padding: isMobile ? "12px 18px" : "9px 18px",
+                background: "#fff",
+                color: "#b91c1c",
+                border: "1px solid #F4C9C9",
+                borderRadius: 999,
+                fontSize: isMobile ? 13 : 11,
+                fontWeight: 700,
+                cursor: (validating || refusing) ? "not-allowed" : "pointer",
+                whiteSpace: "nowrap",
+                letterSpacing: "0.3px",
+                fontFamily: "inherit",
+                opacity: refusing ? 0.6 : 1,
+                minHeight: 44,
+                width: isMobile ? "100%" : "auto",
+              }}
             >
               {refusing ? "Refus…" : "Refuser"}
             </button>

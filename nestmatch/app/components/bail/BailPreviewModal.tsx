@@ -87,9 +87,14 @@ export default function BailPreviewModal({
       <div
         style={{
           background: "#F7F4EF",
+          // V97.39.29 — mobile : prend toute la hauteur dispo + bord arrondi
+          // top seul pour avoir le footer accessible sans scroll. Avant :
+          // hauteur fixe min(880px, 92vh) qui causait footer hors viewport
+          // sur iOS (avec URL bar dynamique) → bouton "envoyer" inaccessible.
           borderRadius: 24,
           width: "min(960px, 95vw)",
-          height: "min(880px, 92vh)",
+          height: "min(880px, calc(100vh - 16px))",
+          maxHeight: "calc(100vh - 16px)",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
@@ -194,35 +199,45 @@ export default function BailPreviewModal({
         {/* Footer actions */}
         <div
           style={{
-            padding: "16px 24px",
+            // V97.39.29 — Footer responsive. Avant : flexWrap row → bouton
+            // "Confirmer et envoyer" passait sous le viewport mobile (bug Paul :
+            // "ça previsualise et ça envoie pas"). Maintenant : layout vertical
+            // avec bouton confirmer en BAS (pouce naturel) + 52px min-height
+            // (zone tactile WCAG 2.5.5) + safe-area-inset-bottom iOS.
+            padding: "16px 16px calc(16px + env(safe-area-inset-bottom))",
             background: "#fff",
             borderTop: "1px solid #EAE6DF",
             display: "flex",
+            flexDirection: "column",
             gap: 10,
-            flexWrap: "wrap",
-            alignItems: "center",
-            justifyContent: "space-between",
           }}
         >
-          <p style={{ fontSize: 11.5, color: "#8a8477", margin: 0, flex: "1 1 220px", lineHeight: 1.4 }}>
+          <p style={{ fontSize: 11.5, color: "#8a8477", margin: 0, lineHeight: 1.4, wordBreak: "break-word" }}>
             <strong style={{ color: "#111" }}>{filename}</strong>
           </p>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div style={{
+            display: "flex",
+            gap: 8,
+            flexDirection: "column-reverse",
+            alignItems: "stretch",
+          }}>
             <button
               type="button"
               onClick={onCancel}
               disabled={sending}
               style={{
-                padding: "11px 22px",
+                padding: "13px 22px",
                 background: "#fff",
                 color: "#111",
                 border: "1px solid #EAE6DF",
                 borderRadius: 999,
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: 600,
                 cursor: sending ? "not-allowed" : "pointer",
                 fontFamily: "inherit",
                 opacity: sending ? 0.4 : 1,
+                minHeight: 48,
+                WebkitTapHighlightColor: "rgba(0,0,0,0.1)",
               }}
             >
               Modifier les informations
@@ -232,16 +247,18 @@ export default function BailPreviewModal({
               onClick={() => void onConfirm()}
               disabled={sending || !pdfBlob}
               style={{
-                padding: "11px 22px",
+                padding: "15px 22px",
                 background: "#111",
                 color: "#fff",
                 border: "none",
                 borderRadius: 999,
-                fontSize: 13,
+                fontSize: 15,
                 fontWeight: 700,
                 cursor: sending || !pdfBlob ? "not-allowed" : "pointer",
                 fontFamily: "inherit",
                 opacity: sending || !pdfBlob ? 0.6 : 1,
+                minHeight: 52,
+                WebkitTapHighlightColor: "rgba(255,255,255,0.2)",
               }}
             >
               {sending ? "Envoi…" : "Confirmer et envoyer au locataire"}
