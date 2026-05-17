@@ -136,12 +136,17 @@ export async function parseAgencyHtml(
     // V97.39.12 — regex plus stricte : exige whitespace, `>`, début ou
     // `(` avant le nombre. Sans ça, "1200x800" dans `width="1200"` matchait
     // `1200 m²` quand suivi de m² ailleurs dans le HTML.
-    const m = /(?:^|[\s>(])(\d{1,4}(?:[.,]\d{1,3})?)\s*m²/i.exec(html)
-    if (m) {
+    //
+    // V97.39.13 — itère sur TOUS les matches et garde le premier ∈ [5, 1000].
+    // Sans ça, si un HTML mentionne "Vue 1500 m² jardin" avant "Surface 45 m²",
+    // le sanity check rejetait 1500 et on perdait 45.
+    const matches = html.matchAll(/(?:^|[\s>(])(\d{1,4}(?:[.,]\d{1,3})?)\s*m²/gi)
+    for (const m of matches) {
       const value = parseSurface(m[1])
-      // V97.39.12 — sanity check : surface immobilière 5-1000 m² (au-delà = bruit)
+      // Sanity check : surface immobilière 5-1000 m² (au-delà = bruit)
       if (value !== undefined && value >= 5 && value <= 1000) {
         out.surface = value
+        break
       }
     }
   }

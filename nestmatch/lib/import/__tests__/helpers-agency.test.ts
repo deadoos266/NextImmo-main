@@ -110,6 +110,24 @@ describe("parseAgencyHtml — fixes V97.39.12", () => {
     expect(out.surface).toBeUndefined()
   })
 
+  // V97.39.13 — retry sur tous les matches si le 1er est rejeté par sanity
+  it("V97.39.13 — Surface : retry après sanity reject (1500 m² rejeté → 45 m² gardé)", async () => {
+    const html = `
+      <html><body>
+        <div>Vue panoramique 1500 m² de jardin</div>
+        <div>Surface logement : 45 m²</div>
+      </body></html>
+    `
+    const out = await parseAgencyHtml(html, { siteLabel: "test" })
+    expect(out.surface).toBe(45)
+  })
+
+  it("V97.39.13 — Surface : retry skip < 5 m² jusqu'à valeur valide", async () => {
+    const html = `<html><body>RDC 2 m² placard, app 50 m² total</body></html>`
+    const out = await parseAgencyHtml(html, { siteLabel: "test" })
+    expect(out.surface).toBe(50)
+  })
+
   it("ImmoJeune : CreativeWorkSeries accepté comme type valide", async () => {
     const html = `
       <html><head>
