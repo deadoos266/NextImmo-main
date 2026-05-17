@@ -54,6 +54,18 @@ ENV SKIP_ENV_VALIDATION=1
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
+# V97.39.23 — env vars dummy pour passer les checks au build. Les vraies
+# valeurs sont injectées AU RUNTIME via env_file dans docker-compose.yml.
+# Le build Next.js exécute des routes API pendant `generateStaticParams`/
+# data collection, qui importent `lib/supabase-server` et failent si pas
+# de SUPABASE_URL. On set du dummy juste pour passer le build.
+ENV NEXT_PUBLIC_SUPABASE_URL=https://build-time-dummy.supabase.co
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy.dummy
+ENV SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy.dummy
+ENV NEXTAUTH_SECRET=build-time-dummy-secret-32-chars-min
+ENV NEXTAUTH_URL=https://keymatch-immo.fr
+ENV DOSSIER_LOG_SALT=build-time-dummy-salt-not-used-at-runtime
+
 # Build production
 RUN npm run build
 

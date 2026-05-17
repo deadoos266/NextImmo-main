@@ -65,7 +65,12 @@ const nextConfig = {
   },
   // V97.37 — wreq-js doit être marqué comme external sinon webpack tente
   // de le bundler et casse le require() du binary natif.
-  serverExternalPackages: ["wreq-js"],
+  // V97.39.23 — @aws-sdk/client-s3 + s3-request-presigner sont lazy-loaded
+  // dans lib/storage/minio.ts (await import). Webpack analyse quand même
+  // les paths et fail si les deps ne sont pas installées. Marquer external
+  // permet de skip cette analyse — les modules seront résolus à runtime
+  // (et si pas installés, l'erreur sera claire au premier appel MinIO).
+  serverExternalPackages: ["wreq-js", "@aws-sdk/client-s3", "@aws-sdk/s3-request-presigner"],
 
   images: {
     remotePatterns: [
