@@ -46,7 +46,21 @@
  * Cf nestmatch/docs/PHASE3_MINIO_SETUP.md pour la procédure détaillée.
  */
 
-import { supabaseAdmin } from "@/lib/supabase-server"
+// V97.39.28 — Dispatcher universel client + server. Évite que les
+// composants "use client" importent supabaseAdmin (qui throw côté browser
+// car SUPABASE_SERVICE_ROLE_KEY indisponible).
+//   - Côté server : supabaseAdmin (bypass RLS, signed URLs server-only)
+//   - Côté client : supabase (anon avec session NextAuth, RLS appliquée)
+import { supabase } from "@/lib/supabase"
+
+function getSupabaseStorageClient() {
+  if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { supabaseAdmin } = require("@/lib/supabase-server")
+    return supabaseAdmin
+  }
+  return supabase
+}
 
 export type StorageBucket =
   | "avatars"
@@ -114,7 +128,7 @@ export async function upload(
     } else {
       body = file as Blob | Buffer
     }
-    const { error } = await supabaseAdmin.storage.from(bucket).upload(path, body, {
+    const { error } = await getSupabaseStorageClient().storage.from(bucket).upload(path, body, {
       contentType: opts.contentType,
       upsert: opts.upsert ?? false,
       cacheControl: opts.cacheControl,
@@ -140,7 +154,7 @@ export function getPublicUrl(bucket: StorageBucket, path: string): string {
     }
     return `${base.replace(/\/$/, "")}/${bucket}/${encodeStoragePath(path)}`
   }
-  const { data } = supabaseAdmin.storage.from(bucket).getPublicUrl(path)
+  const { data } = getSupabaseStorageClient().storage.from(bucket).getPublicUrl(path)
   return data.publicUrl
 }
 
@@ -159,7 +173,7 @@ export async function createSignedUrl(
     return createSignedUrlMinio(bucket, path, ttlSeconds)
   }
   try {
-    const { data, error } = await supabaseAdmin.storage.from(bucket).createSignedUrl(path, ttlSeconds)
+    const { data, error } = await getSupabaseStorageClient().storage.from(bucket).createSignedUrl(path, ttlSeconds)
     if (error || !data?.signedUrl) return { ok: false, data: null, error: error?.message || "No signed URL returned" }
     return { ok: true, data: { url: data.signedUrl }, error: null }
   } catch (e) {
@@ -180,7 +194,7 @@ export async function download(
     return downloadMinio(bucket, path)
   }
   try {
-    const { data, error } = await supabaseAdmin.storage.from(bucket).download(path)
+    const { data, error } = await getSupabaseStorageClient().storage.from(bucket).download(path)
     if (error || !data) return { ok: false, data: null, error: error?.message || "Download empty" }
     const buf = Buffer.from(await data.arrayBuffer())
     return { ok: true, data: { data: buf, contentType: data.type || "application/octet-stream" }, error: null }
@@ -203,7 +217,7 @@ export async function remove(
     return removeMinio(bucket, paths)
   }
   try {
-    const { data, error } = await supabaseAdmin.storage.from(bucket).remove(paths)
+    const { data, error } = await getSupabaseStorageClient().storage.from(bucket).remove(paths)
     if (error) return { ok: false, data: null, error: error.message }
     return { ok: true, data: { count: data?.length ?? 0 }, error: null }
   } catch (e) {
@@ -229,7 +243,7 @@ function encodeStoragePath(path: string): string {
  *
  * Usage :
  *   AVANT : import { supabaseAdmin } from "@/lib/supabase-server"
- *           supabaseAdmin.storage.from("avatars").upload(path, file, opts)
+ *           getSupabaseStorageClient().storage.from("avatars").upload(path, file, opts)
  *   APRÈS : import { storage } from "@/lib/storage"
  *           storage.from("avatars").upload(path, file, opts)
  *
@@ -326,7 +340,7 @@ export const storage = {
       if (provider === "minio") {
         return { data: null, error: { message: "list() pas implémenté en MinIO (legacy /api/cron/db-backup à supprimer)" } }
       }
-      const { data, error } = await supabaseAdmin.storage.from(bucket).list(prefix, opts)
+      const { data, error } = await getSupabaseStorageClient().storage.from(bucket).list(prefix, opts)
       if (error) return { data: null, error: { message: error.message } }
       return { data: data || [], error: null }
     },
