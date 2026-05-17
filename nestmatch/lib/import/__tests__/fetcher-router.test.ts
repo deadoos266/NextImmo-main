@@ -6,8 +6,8 @@
  * sinon retour fetcher local.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest"
-import { shouldUseRemoteFetcher } from "../fetcher-router"
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
+import { shouldUseRemoteFetcher, isParserQuarantined, clearQuarantineCache } from "../fetcher-router"
 
 describe("fetcher-router.shouldUseRemoteFetcher", () => {
   const ORIGINAL_HOSTS = process.env.EXTERNAL_FETCHER_ENABLED_HOSTS
@@ -68,5 +68,122 @@ describe("fetcher-router.shouldUseRemoteFetcher", () => {
     process.env.EXTERNAL_FETCHER_ENABLED_HOSTS = "leboncoin.fr"
     expect(shouldUseRemoteFetcher("https://fake-leboncoin.fr/")).toBe(false)
     expect(shouldUseRemoteFetcher("https://leboncoin.fr.attacker.com/")).toBe(false)
+  })
+})
+
+// V97.39.5 — Circuit breaker (quarantaine après N échecs BOT_PROTECTION)
+describe("fetcher-router.isParserQuarantined (circuit breaker)", () => {
+  const ORIGINAL_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  beforeEach(() => {
+    clearQuarantineCache()
+  })
+
+  afterEach(() => {
+    if (ORIGINAL_KEY === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY
+    else process.env.SUPABASE_SERVICE_ROLE_KEY = ORIGINAL_KEY
+    vi.restoreAllMocks()
+  })
+
+  it("retourne false (fail-open) si SUPABASE_SERVICE_ROLE_KEY pas défini", async () => {
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY
+    const result = await isParserQuarantined("leboncoin")
+    expect(result).toBe(false)
+  })
+
+  it("retourne false si Supabase configuré mais pas d'échecs (count=0)", async () => {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-key"
+    const supaMod = await import("../../supabase-server")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const chain: any = {
+      select: () => chain,
+      eq: () => chain,
+      gte: () => Promise.resolve({ count: 0, error: null }),
+    }
+    vi.spyOn(supaMod.supabaseAdmin, "from").mockReturnValue(chain)
+
+    const result = await isParserQuarantined("leboncoin")
+    expect(result).toBe(false)
+  })
+
+  it("retourne true si >= 5 BOT_PROTECTION sur la dernière heure", async () => {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-key"
+    const supaMod = await import("../../supabase-server")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const chain: any = {
+      select: () => chain,
+      eq: () => chain,
+      gte: () => Promise.resolve({ count: 7, error: null }),
+    }
+    vi.spyOn(supaMod.supabaseAdmin, "from").mockReturnValue(chain)
+
+    const result = await isParserQuarantined("leboncoin")
+    expect(result).toBe(true)
+  })
+
+  it("retourne false si exactement 4 échecs (seuil = 5, strictement)", async () => {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-key"
+    const supaMod = await import("../../supabase-server")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const chain: any = {
+      select: () => chain,
+      eq: () => chain,
+      gte: () => Promise.resolve({ count: 4, error: null }),
+    }
+    vi.spyOn(supaMod.supabaseAdmin, "from").mockReturnValue(chain)
+
+    const result = await isParserQuarantined("leboncoin")
+    expect(result).toBe(false)
+  })
+
+  it("retourne false (fail-open) si Supabase renvoie une erreur", async () => {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-key"
+    const supaMod = await import("../../supabase-server")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const chain: any = {
+      select: () => chain,
+      eq: () => chain,
+      gte: () => Promise.resolve({ count: null, error: { message: "RLS denied" } }),
+    }
+    vi.spyOn(supaMod.supabaseAdmin, "from").mockReturnValue(chain)
+
+    const result = await isParserQuarantined("leboncoin")
+    expect(result).toBe(false)
+  })
+
+  it("met en cache 5min : 2e appel ne re-query pas Supabase", async () => {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-key"
+    const supaMod = await import("../../supabase-server")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const chain: any = {
+      select: () => chain,
+      eq: () => chain,
+      gte: () => Promise.resolve({ count: 10, error: null }),
+    }
+    const fromSpy = vi.spyOn(supaMod.supabaseAdmin, "from").mockReturnValue(chain)
+
+    await isParserQuarantined("leboncoin")
+    await isParserQuarantined("leboncoin")
+    await isParserQuarantined("leboncoin")
+
+    expect(fromSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it("cache séparé par parser", async () => {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-key"
+    const supaMod = await import("../../supabase-server")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const chain: any = {
+      select: () => chain,
+      eq: () => chain,
+      gte: () => Promise.resolve({ count: 10, error: null }),
+    }
+    const fromSpy = vi.spyOn(supaMod.supabaseAdmin, "from").mockReturnValue(chain)
+
+    await isParserQuarantined("leboncoin")
+    await isParserQuarantined("seloger")
+    await isParserQuarantined("logic-immo")
+
+    expect(fromSpy).toHaveBeenCalledTimes(3)
   })
 })
