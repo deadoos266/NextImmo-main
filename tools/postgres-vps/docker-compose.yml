@@ -1,0 +1,83 @@
+# Postgres self-host pour KeyMatch — Phase 2 du plan migration OVH.
+#
+# Coexiste avec keymatch-fetcher (worker Zendriver) sur le même VPS.
+# Volume persistant /srv/keymatch/postgres-data/.
+#
+# Usage local dev (test la procédure avant de toucher le VPS) :
+#   docker compose up -d
+#   docker compose exec postgres psql -U keymatch -d keymatch
+#
+# Usage VPS prod : copier ce dossier puis :
+#   sudo mkdir -p /srv/keymatch/postgres-data
+#   sudo chown -R 999:999 /srv/keymatch/postgres-data  # uid postgres dans l'image
+#   docker compose up -d
+#   ./scripts/dump-supabase.sh
+#   ./scripts/restore-vps.sh
+#   ./scripts/compare-rows.sh
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: keymatch-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-keymatch}
+      POSTGRES_DB: ${POSTGRES_DB:-keymatch}
+      # POSTGRES_PASSWORD doit être dans .env (jamais en clair ici)
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - /srv/keymatch/postgres-data:/var/lib/postgresql/data
+      - ./init-extensions.sql:/docker-entrypoint-initdb.d/01-init-extensions.sql:ro
+    ports:
+      # Bind localhost only : accessible depuis le worker/Next.js sur le même VPS
+      # Pour exposer en externe (depuis Vercel preview, etc.), passer par Caddy + tunnel.
+      - "127.0.0.1:5432:5432"
+    mem_limit: 2g
+    cpus: 2.0
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-keymatch} -d $${POSTGRES_DB:-keymatch}"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # PgBouncer connection pooling (optionnel mais recommandé).
+  # Évite l'explosion de connexions côté Vercel serverless qui spawn beaucoup
+  # de connexions à chaque cold start. Mode transaction-pooling.
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: keymatch-pgbouncer
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-keymatch}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB:-keymatch}
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 200
+      DEFAULT_POOL_SIZE: 20
+      RESERVE_POOL_SIZE: 5
+      AUTH_TYPE: scram-sha-256
+    ports:
+      - "127.0.0.1:6432:5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 256m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"

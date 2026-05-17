@@ -891,8 +891,8 @@ curl -fI https://keymatch-immo.fr/aide/import-annonce | grep -i "200 OK"
 | Phase | Statut | Date | Notes |
 |---|---|---|---|
 | Phase 0 — VPS bootstrap | ✅ Done | 2026-05-17 | VPS-2 OVH Gravelines, Ubuntu 24.04 LTS, IP 149.202.60.152, hardened (UFW, fail2ban, unattended-upgrades) |
-| Phase 1 — Worker Zendriver | ✅ Done (avec limite) | 2026-05-17 | Worker live `https://fetcher.keymatch-immo.fr`, Caddy TLS Let's Encrypt, pool 3 contextes warm, env vars Vercel set, redeploy OK. **Bypass DataDome 0% sur ASN OVH** (limite physique) — voir section 1.bilan |
-| Phase 2 — Postgres | ⏳ Planifié | — | |
+| Phase 1 — Worker Zendriver | ✅ Done (avec limite) | 2026-05-17 | Worker live `https://fetcher.keymatch-immo.fr`, Caddy TLS Let's Encrypt, pool 3 contextes warm, env vars Vercel set, redeploy OK. **Bypass DataDome 0% sur ASN OVH** (limite physique) — voir section 1.bilan. Bookmarklet client-side V97.39.17 contourne pour SeLoger/LBC/Logic-immo. |
+| Phase 2 — Postgres | 🚧 Préparé (V97.39.18 2026-05-17) | — | Setup docker-compose + scripts dump/restore/compare prêts dans `tools/postgres-vps/`. Audit Supabase fait : 17 MB / 36 tables / 1882 rows. Migration <60s en pratique. Reste : créer .env + run scripts + cutover prod (~2h sprint dimanche). |
 | Phase 3 — MinIO Storage | ⏳ Planifié | — | |
 | Phase 4 — Realtime socket.io | ⏳ Planifié | — | |
 | Phase 5 — Email Brevo | ⏳ Planifié | — | |
