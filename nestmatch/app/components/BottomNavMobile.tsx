@@ -6,7 +6,7 @@ import Link from "next/link"
 import { useRole } from "../providers"
 import { useResponsive } from "../hooks/useResponsive"
 import { Z_INDEX } from "../../lib/zIndex"
-import { supabase } from "../../lib/supabase"
+import { useRealtimeSubscription } from "@/lib/realtime"
 import BottomNavSheet from "./BottomNavSheet"
 // V82.4 — design tokens migration
 import { km } from "./ui/km"
@@ -148,10 +148,9 @@ export default function BottomNavMobile() {
 
   // Récupère le compteur notif non-lues pour le badge sur l'onglet Notifs.
   // Petit fetch initial + abonnement Realtime pour rester à jour.
+  const userEmail = session?.user?.email?.toLowerCase()
   useEffect(() => {
-    const email = session?.user?.email?.toLowerCase()
-    if (!email) { setUnreadCount(0); return }
-
+    if (!userEmail) { setUnreadCount(0); return }
     let alive = true
     async function refresh() {
       try {
@@ -162,19 +161,22 @@ export default function BottomNavMobile() {
       } catch { /* silent */ }
     }
     refresh()
+    return () => { alive = false }
+  }, [userEmail])
 
-    const channel = supabase.channel(`bottom-nav-notifs-${email}`)
-      .on("postgres_changes", {
-        event: "*", schema: "public", table: "notifications",
-        filter: `user_email=eq.${email}`,
-      }, () => refresh())
-      .subscribe()
-
-    return () => {
-      alive = false
-      supabase.removeChannel(channel)
-    }
-  }, [session?.user?.email])
+  // V97.39.25 — migré vers useRealtimeSubscription (dispatcher Supabase↔socketio).
+  // Refresh quand une notif user_email arrive/change (cohérent NotificationBell).
+  useRealtimeSubscription(
+    "notifications",
+    { filter: { user_email: userEmail || "" }, enabled: !!userEmail },
+    () => {
+      // Refresh inline (le hook ne capte pas le fetch déclaré dans useEffect)
+      void fetch("/api/notifications", { cache: "no-store" })
+        .then(r => r.ok ? r.json() : null)
+        .then(j => { if (j?.ok) setUnreadCount(j.unreadCount || 0) })
+        .catch(() => {})
+    },
+  )
 
   // V80.2 — hide conditions simplifiées : BottomNavMobile est maintenant
   // scopé à app/(authenticated)/layout.tsx (route group). Les pages

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { supabase } from "../../../lib/supabase"
+import { useRealtimeSubscription } from "@/lib/realtime"
 
 /**
  * V81 — Page pleine vue /notifications (auth).
@@ -79,20 +79,18 @@ export default function NotificationsPage() {
     }
   }
 
+  const userEmail = session?.user?.email?.toLowerCase()
   useEffect(() => {
-    const email = session?.user?.email?.toLowerCase()
-    if (!email) { setLoading(false); return }
+    if (!userEmail) { setLoading(false); return }
     refresh()
+  }, [userEmail])
 
-    // Realtime — refresh quand une notif est créée/updated.
-    const channel = supabase.channel(`notifs-page-${email}`)
-      .on("postgres_changes", {
-        event: "*", schema: "public", table: "notifications",
-        filter: `user_email=eq.${email}`,
-      }, () => refresh())
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [session?.user?.email])
+  // V97.39.25 — migré vers useRealtimeSubscription (dispatcher Supabase↔socketio).
+  useRealtimeSubscription(
+    "notifications",
+    { filter: { user_email: userEmail || "" }, enabled: !!userEmail },
+    () => refresh(),
+  )
 
   async function handleClickNotif(n: Notif) {
     if (!n.lu) {

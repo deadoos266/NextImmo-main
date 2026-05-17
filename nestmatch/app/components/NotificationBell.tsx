@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { supabase } from "../../lib/supabase"
+import { useRealtimeSubscription } from "@/lib/realtime"
 import { useSwipeReveal } from "../hooks/useSwipeReveal"
 
 type Notif = {
@@ -205,15 +205,16 @@ export default function NotificationBell() {
   useEffect(() => {
     if (!email) { setNotifs([]); setUnreadCount(0); return }
     refresh()
-    // Realtime : refresh complet dès qu'une notif me concerne arrive/change.
-    const channel = supabase.channel(`notifs-${email}`)
-      .on("postgres_changes", {
-        event: "*", schema: "public", table: "notifications",
-        filter: `user_email=eq.${email}`,
-      }, () => refresh())
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
   }, [email])
+
+  // V97.39.25 — migré vers useRealtimeSubscription (dispatcher Supabase↔socketio).
+  // Quand NEXT_PUBLIC_REALTIME_PROVIDER=socketio flippé en Vercel, le hook
+  // bascule auto vers socket.io self-host VPS sans modifier ce composant.
+  useRealtimeSubscription(
+    "notifications",
+    { filter: { user_email: (email || "").toLowerCase() }, enabled: !!email },
+    () => refresh(),
+  )
 
   // Close dropdown on outside click + Esc keyboard (a11y WCAG 2.1.2).
   useEffect(() => {
