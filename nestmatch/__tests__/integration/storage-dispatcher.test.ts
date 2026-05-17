@@ -118,19 +118,24 @@ describe("storage dispatcher (lib/storage/index.ts)", () => {
     warnSpy.mockRestore()
   })
 
-  it("STORAGE_PROVIDER=minio sans SDK installé → upload erreur claire", async () => {
+  it("STORAGE_PROVIDER=minio avec endpoint invalide → upload erreur réseau", async () => {
     process.env.STORAGE_PROVIDER = "minio"
     process.env.MINIO_ENDPOINT = "https://media.test"
     process.env.MINIO_ACCESS_KEY = "k"
     process.env.MINIO_SECRET_KEY = "s"
-    // Le module @aws-sdk/client-s3 n'est pas dans deps → loadSdk renvoie null
-    // → uploadMinio retourne ok:false avec message clair
+    // V97.39.24 — @aws-sdk/client-s3 est installé (Phase 3 ready). Le test
+    // valide juste qu'un endpoint invalide produit une erreur claire au
+    // niveau réseau (vs crash silencieux).
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
     const { upload } = await import("@/lib/storage")
     const blob = new Blob([new Uint8Array([0])], { type: "text/plain" })
     const res = await upload("dossiers", "test.pdf", blob)
     expect(res).toMatchObject({ ok: false })
-    expect(JSON.stringify(res)).toContain("MinIO SDK not installed")
+    // L'erreur doit mentionner soit DNS soit connection refused soit timeout
+    const errStr = JSON.stringify(res).toLowerCase()
+    expect(
+      errStr.includes("enotfound") || errStr.includes("getaddrinfo") || errStr.includes("connection") || errStr.includes("timeout"),
+    ).toBe(true)
     errorSpy.mockRestore()
   })
 

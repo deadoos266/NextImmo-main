@@ -1,0 +1,15 @@
+[Unit]
+Description=KeyMatch Postgres VPS shadow sync (Supabase → VPS hourly)
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/opt/keymatch/NextImmo-main/tools/postgres-vps
+ExecStart=/bin/bash /opt/keymatch/NextImmo-main/tools/postgres-vps/scripts/sync-shadow.sh
+StandardOutput=append:/var/log/keymatch-shadow-sync.log
+StandardError=append:/var/log/keymatch-shadow-sync.log
+TimeoutStartSec=600s
+
+[Install]
+WantedBy=multi-user.target

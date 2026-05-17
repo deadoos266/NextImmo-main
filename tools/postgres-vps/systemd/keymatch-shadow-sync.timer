@@ -1,0 +1,11 @@
+[Unit]
+Description=KeyMatch shadow sync timer (chaque heure)
+
+[Timer]
+# Toutes les heures à HH:15 (decalé du backup horaire pour pas se concurrencer)
+OnCalendar=*-*-* *:15:00
+Persistent=true
+RandomizedDelaySec=2min
+
+[Install]
+WantedBy=timers.target

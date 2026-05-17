@@ -3,18 +3,12 @@
  *
  * MinIO est S3-compatible, on utilise `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner`.
  *
- * ⚠ Ces deps NE SONT PAS installées par défaut pour ne pas grossir le
- * bundle Vercel tant que Phase 3 n'est pas activée. Avant d'activer
- * STORAGE_PROVIDER=minio en prod :
- *   cd nestmatch && npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
+ * V97.39.24 — Deps installées dans package.json (Phase 3 ready). Lazy
+ * import préservé pour ne pas charger le SDK au boot Next.js quand
+ * STORAGE_PROVIDER=supabase (défaut).
  *
- * L'import est dynamique (await import) côté lib/storage/index.ts pour
- * permettre au build de passer même sans les deps installées tant que
- * personne ne flippe STORAGE_PROVIDER.
- *
- * Si quelqu'un flippe STORAGE_PROVIDER=minio sans les deps → erreur claire
- * "Phase 3 not yet activated: install @aws-sdk/client-s3" au premier
- * upload/download/etc., pas un crash silencieux.
+ * `serverExternalPackages` dans next.config.js empêche webpack de bundler
+ * le SDK dans les chunks client (le SDK ne sert qu'en runtime serveur).
  */
 
 import type { StorageBucket, StorageResult, UploadOpts } from "./index"
