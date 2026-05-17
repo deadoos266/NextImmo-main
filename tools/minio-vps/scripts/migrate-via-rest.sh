@@ -101,6 +101,11 @@ walk_supabase_bucket() {
   done
 }
 
+# V97.39.26 fix : utilise volume mount au lieu de docker pipe (instable
+# sur certains paths). Le mc cp depuis /upload/ volume monté → MinIO.
+WORK_DIR=$(mktemp -d -t minio-migrate-XXXXXX)
+trap "rm -rf $WORK_DIR" EXIT
+
 # Migration d'1 fichier
 migrate_file() {
   local bucket="$1"
@@ -112,38 +117,45 @@ migrate_file() {
     return
   fi
 
-  # Download depuis Supabase
-  local temp_file
-  temp_file=$(mktemp)
-  trap "rm -f $temp_file" RETURN
+  # Download depuis Supabase → fichier dans WORK_DIR
+  # Stocke dans une structure plate (pas de subdirs) pour éviter mkdir.
+  # Utilise un hash unique pour éviter collisions.
+  local hash filename
+  hash=$(echo -n "$bucket/$path" | sha256sum | cut -c1-12)
+  filename="${WORK_DIR}/${hash}-$(basename "$path")"
 
   local http_code
-  http_code=$(curl -sS -o "$temp_file" -w "%{http_code}" \
+  http_code=$(curl -sS -o "$filename" -w "%{http_code}" \
     -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
     -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
     "${SUPABASE_URL}/storage/v1/object/${bucket}/${path}" 2>&1)
 
   if [[ "$http_code" != "200" ]]; then
     echo "    ✗ $bucket/$path : HTTP $http_code"
-    rm -f "$temp_file"
+    rm -f "$filename"
     return
   fi
 
   local size
-  size=$(stat -c%s "$temp_file" 2>/dev/null || stat -f%z "$temp_file")
+  size=$(stat -c%s "$filename" 2>/dev/null || stat -f%z "$filename")
   if [[ "$size" -eq 0 ]]; then
     echo "    ✗ $bucket/$path : 0 bytes (skip)"
-    rm -f "$temp_file"
+    rm -f "$filename"
     return
   fi
 
-  # Upload via mc cp (stdin) — utilise pipe pour streaming
-  if cat "$temp_file" | $MC_CMD pipe "$MC_ALIAS/$bucket/$path" >/dev/null 2>&1; then
+  # Upload via mc cp avec volume mount (stable, pas de pipe stdin)
+  local result
+  if result=$(docker run --rm \
+    --network keymatch-minio-net \
+    -v "${WORK_DIR}:/upload:ro" \
+    -e MC_HOST_local="http://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@minio:9000" \
+    minio/mc:latest cp "/upload/${hash}-$(basename "$path")" "$MC_ALIAS/$bucket/$path" 2>&1); then
     echo "    ✓ $bucket/$path ($size bytes)"
   else
-    echo "    ✗ $bucket/$path : upload MinIO échoué"
+    echo "    ✗ $bucket/$path : $(echo "$result" | head -1)"
   fi
-  rm -f "$temp_file"
+  rm -f "$filename"
 }
 
 # Main loop
