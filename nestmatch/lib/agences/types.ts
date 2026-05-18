@@ -89,10 +89,10 @@ export function isValidSiret(siret: string): boolean {
 /** Validation simple du numéro de carte T (format approximatif loi Hoguet). */
 export function isValidCarteT(carteT: string): boolean {
   // Format type : "CPI XXXX XXXX XXX XXX XXX" — assouplit pour accepter
-  // plusieurs formats régionaux. On vérifie juste qu'il y a "CPI" puis
-  // 12+ chiffres (avec ou sans espaces).
+  // plusieurs formats régionaux (préfixe département peut varier). On
+  // vérifie juste qu'il y a "CPI" puis 12-20 chiffres (avec ou sans espaces).
   const cleaned = carteT.replace(/\s/g, "").toUpperCase()
-  return /^CPI\d{12,16}$/.test(cleaned)
+  return /^CPI\d{12,20}$/.test(cleaned)
 }
 
 /** Génère un slug à partir d'un nom commercial. */

@@ -28,9 +28,10 @@ export function detectFormat(content: string): ImportFormat {
     return "unknown"
   }
 
-  // CSV : 1ère ligne avec séparateurs
-  const firstLine = content.split(/\r?\n/)[0] || ""
-  if (firstLine.includes(",") || firstLine.includes(";") || firstLine.includes("\t")) {
+  // CSV : 1ère ligne non vide avec séparateurs
+  const lines = content.split(/\r?\n/)
+  const firstNonEmpty = lines.find(l => l.trim().length > 0) || ""
+  if (firstNonEmpty.includes(",") || firstNonEmpty.includes(";") || firstNonEmpty.includes("\t")) {
     return "csv"
   }
 
