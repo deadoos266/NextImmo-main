@@ -367,8 +367,83 @@ paths:
                     type: array
                     items: { $ref: "#/components/schemas/Candidature" }
 
+  /agences/{id}/webhooks:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    description: |
+      Les webhooks sont configurés depuis le dashboard `/agence/dashboard/[id]/webhooks`,
+      pas via l'API. Documentation des events ci-dessous.
+
+components_doc_webhooks:
+  description: |
+    # Webhooks KeyMatch
+
+    Recevez des events KeyMatch en push HTTPS POST. Compatible Apimo, n8n, Zapier,
+    ou n'importe quel endpoint personnalisé.
+
+    ## Configuration
+
+    Webhooks créés depuis `https://keymatch-immo.fr/agence/dashboard/[id]/webhooks` :
+    1. URL HTTPS (TLS obligatoire)
+    2. Events souscrits (cochez les events qui vous intéressent)
+    3. KeyMatch génère un secret HMAC SHA256 — copiez-le pour vérifier les signatures
+
+    ## Format d'un webhook POST
+
+    Headers envoyés par KeyMatch :
+      - `Content-Type: application/json`
+      - `User-Agent: KeyMatch-Webhook/1.0`
+      - `X-KeyMatch-Event: <event-name>`
+      - `X-KeyMatch-Delivery-Id: <delivery-uuid>`
+      - `X-KeyMatch-Signature: sha256=<hex>` (HMAC SHA256 du body)
+
+    Body JSON :
+    ```json
+    {
+      "event": "candidature.created",
+      "timestamp": "2026-05-18T20:30:00.000Z",
+      "agence_id": "uuid",
+      "data": { ... }
+    }
+    ```
+
+    ## Vérification de signature (Node.js)
+
+    ```js
+    import crypto from "crypto"
+    const expected = "sha256=" + crypto
+      .createHmac("sha256", WEBHOOK_SECRET)
+      .update(JSON.stringify(req.body))
+      .digest("hex")
+    if (!crypto.timingSafeEqual(Buffer.from(req.headers["x-keymatch-signature"]), Buffer.from(expected))) {
+      return res.status(401).send("Invalid signature")
+    }
+    ```
+
+    ## Events supportés
+
+    - `candidature.created` : un locataire propose une visite sur une annonce
+      de l'agence
+    - `visite.confirmee` : visite confirmée par les 2 parties
+    - `bail.signed` : bail signé électroniquement par les 2 parties
+    - `message.received` : message reçu sur une annonce de l'agence
+
+    ## Réponse attendue
+
+    Votre endpoint doit répondre `2xx` dans les 10s. Sinon :
+    - `4xx` (sauf 408/429) : marqué `failed` permanent, pas de retry
+    - `5xx`/`408`/`429`/timeout/network : retry après 1m, 5m, 30m (3 tentatives)
+    - Après 3 échecs : marqué `abandoned`
+
 tags:
   - name: Annonces
     description: CRUD sur vos annonces. Scopes annonces:read / annonces:write.
   - name: Candidatures
     description: Poll les candidatures reçues. Scope candidatures:read.
+  - name: Webhooks
+    description: |
+      Events push HTTPS pour intégrer en temps réel avec votre CRM.
+      Configuration via dashboard, pas via API.

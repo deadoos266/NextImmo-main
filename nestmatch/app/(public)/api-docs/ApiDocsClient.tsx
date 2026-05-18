@@ -283,13 +283,128 @@ export default function ApiDocsClient() {
 }`}</pre>
       </Section>
 
+      {/* Webhooks */}
+      <Section title="Webhooks (push events temps réel)">
+        <p style={pStyle}>
+          Recevez les events KeyMatch directement dans votre CRM ou logiciel
+          métier via HTTPS POST. Compatible Apimo, n8n, Zapier, ou endpoint
+          custom. Configuration depuis le dashboard agence (pas via API).
+        </p>
+
+        <h3 style={{ fontSize: 15, fontWeight: 500, color: "#111", marginTop: 20, marginBottom: 8 }}>
+          Configuration
+        </h3>
+        <ol style={{ fontSize: 14, color: "#444", lineHeight: 1.7, paddingLeft: 20, margin: 0 }}>
+          <li>Va sur <code>/agence/dashboard/[id]/webhooks</code></li>
+          <li>Clique « + Ajouter un webhook » → renseigne URL HTTPS + events</li>
+          <li>KeyMatch génère un <strong>secret HMAC</strong> 32 bytes hex → copie-le</li>
+          <li>Configure ton endpoint pour vérifier la signature à chaque POST reçu</li>
+          <li>Teste avec le bouton « Ping test » (envoie event <code>test.ping</code> synchrone)</li>
+        </ol>
+
+        <h3 style={{ fontSize: 15, fontWeight: 500, color: "#111", marginTop: 20, marginBottom: 8 }}>
+          Headers envoyés
+        </h3>
+        <pre style={preStyle}>{`Content-Type: application/json
+User-Agent: KeyMatch-Webhook/1.0
+X-KeyMatch-Event: candidature.created
+X-KeyMatch-Delivery-Id: <uuid>
+X-KeyMatch-Signature: sha256=<hex>`}</pre>
+
+        <h3 style={{ fontSize: 15, fontWeight: 500, color: "#111", marginTop: 20, marginBottom: 8 }}>
+          Format du body
+        </h3>
+        <pre style={preStyle}>{`{
+  "event": "candidature.created",
+  "timestamp": "2026-05-18T20:30:00.000Z",
+  "agence_id": "uuid",
+  "data": {
+    "visite_id": 123,
+    "annonce_id": 246,
+    "locataire_email": "marie@example.com",
+    "date_visite": "2026-06-01",
+    "heure": "14:00",
+    "format": "sur-place"
+  }
+}`}</pre>
+
+        <h3 style={{ fontSize: 15, fontWeight: 500, color: "#111", marginTop: 20, marginBottom: 8 }}>
+          Events supportés
+        </h3>
+        <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ borderBottom: "1px solid #EAE6DF", textAlign: "left" }}>
+              <th style={{ padding: 8 }}>Event</th>
+              <th style={{ padding: 8 }}>Déclenché quand</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td style={tdStyle}><code>candidature.created</code></td><td style={tdStyle}>Un locataire propose une visite sur une annonce de l&apos;agence</td></tr>
+            <tr><td style={tdStyle}><code>visite.confirmee</code></td><td style={tdStyle}>Visite confirmée par les 2 parties (statut passe à &quot;confirmée&quot;)</td></tr>
+            <tr><td style={tdStyle}><code>bail.signed</code></td><td style={tdStyle}>Bail signé électroniquement par locataire ET bailleur</td></tr>
+            <tr><td style={tdStyle}><code>message.received</code></td><td style={tdStyle}>Message reçu sur une annonce de l&apos;agence</td></tr>
+            <tr><td style={tdStyle}><code>test.ping</code></td><td style={tdStyle}>Envoyé manuellement via bouton « Ping test » (debug)</td></tr>
+          </tbody>
+        </table>
+
+        <h3 style={{ fontSize: 15, fontWeight: 500, color: "#111", marginTop: 20, marginBottom: 8 }}>
+          Vérification de signature (Node.js)
+        </h3>
+        <pre style={preStyle}>{`import crypto from "crypto"
+
+app.post("/webhooks/keymatch", express.json(), (req, res) => {
+  const secret = process.env.KEYMATCH_WEBHOOK_SECRET
+  const presented = req.headers["x-keymatch-signature"] || ""
+  const expected = "sha256=" + crypto
+    .createHmac("sha256", secret)
+    .update(JSON.stringify(req.body))
+    .digest("hex")
+
+  if (!crypto.timingSafeEqual(Buffer.from(presented), Buffer.from(expected))) {
+    return res.status(401).send("Invalid signature")
+  }
+
+  const { event, data } = req.body
+  console.log(event, data)
+  res.status(200).send("ok")  // important : 2xx sous 10s
+})`}</pre>
+
+        <h3 style={{ fontSize: 15, fontWeight: 500, color: "#111", marginTop: 20, marginBottom: 8 }}>
+          Vérification signature (Python)
+        </h3>
+        <pre style={preStyle}>{`import hmac, hashlib
+from flask import Flask, request
+
+@app.route("/webhooks/keymatch", methods=["POST"])
+def webhook():
+    secret = os.environ["KEYMATCH_WEBHOOK_SECRET"].encode()
+    presented = request.headers.get("X-KeyMatch-Signature", "")
+    expected = "sha256=" + hmac.new(secret, request.data, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(presented, expected):
+        return "Invalid signature", 401
+    return "ok", 200`}</pre>
+
+        <h3 style={{ fontSize: 15, fontWeight: 500, color: "#111", marginTop: 20, marginBottom: 8 }}>
+          Retry policy
+        </h3>
+        <p style={pStyle}>
+          Votre endpoint doit répondre <strong>2xx sous 10s</strong>. Sinon :
+        </p>
+        <ul style={{ fontSize: 14, color: "#444", lineHeight: 1.7, paddingLeft: 20, margin: 0 }}>
+          <li><code>2xx</code> → succès</li>
+          <li><code>4xx</code> (sauf 408/429) → marqué <code>failed</code> permanent, pas de retry (votre serveur indique une erreur client)</li>
+          <li><code>5xx</code> / <code>408</code> / <code>429</code> / timeout / network err → retry à 1m, 5m, 30m (3 tentatives)</li>
+          <li>Après 3 échecs → marqué <code>abandoned</code>, visible dans dashboard</li>
+        </ul>
+      </Section>
+
       {/* Roadmap V2 */}
       <Section title="Roadmap V2 (à venir)">
         <ul style={{ fontSize: 14, color: "#444", lineHeight: 1.8, paddingLeft: 20, margin: 0 }}>
-          <li><strong>Webhooks</strong> : notifications push HTTPS (candidature.created, visite.confirmee, bail.signed) avec signature HMAC SHA256</li>
           <li><strong>Feed pull automatique</strong> : KeyMatch va lire votre feed Apimo/Hektor toutes les heures (sync delta)</li>
           <li><strong>Connecteurs natifs</strong> : intégrations sur étagère pour Zapier, n8n, Make</li>
           <li><strong>Sandbox</strong> : environnement de test sur <code>api-sandbox.keymatch-immo.fr</code></li>
+          <li><strong>Plus d&apos;events</strong> : annonce.viewed (impressions), candidature.refused, visite.no_show, loyer.paid</li>
         </ul>
       </Section>
 
