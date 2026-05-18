@@ -12,7 +12,7 @@ export default function CGU() {
     <LegalMain
       eyebrow="Légal · CGU"
       title="Conditions Générales d'Utilisation"
-      subtitle="En vigueur au 18 avril 2026"
+      subtitle="En vigueur au 18 mai 2026"
     >
       <LegalSec title="1. Objet">
         <p style={S.p}>
@@ -37,6 +37,8 @@ export default function CGU() {
           <li style={S.li}><strong style={S.strong}>Compte</strong> : espace personnel sécurisé de l&apos;Utilisateur, accessible après authentification.</li>
           <li style={S.li}><strong style={S.strong}>Annonce</strong> : publication décrivant un bien immobilier proposé à la location.</li>
           <li style={S.li}><strong style={S.strong}>Dossier locataire</strong> : ensemble des informations et justificatifs fournis par un Locataire pour candidater à une Annonce.</li>
+          <li style={S.li}><strong style={S.strong}>Bail</strong> : contrat de location signé entre un Locataire et un Propriétaire via la Plateforme. La Plateforme n&apos;est jamais partie au Bail.</li>
+          <li style={S.li}><strong style={S.strong}>Signature électronique eIDAS niveau 1</strong> : procédé de signature électronique simple au sens du règlement UE 910/2014 (eIDAS), reposant sur la double authentification (email + code OTP). Sa valeur probante est inférieure à une signature électronique avancée ou qualifiée, mais reste recevable comme commencement de preuve par écrit (Code civil, art. 1366-1367).</li>
         </ul>
       </LegalSec>
 
@@ -68,12 +70,21 @@ export default function CGU() {
           <li style={S.li}>la messagerie entre Utilisateurs ;</li>
           <li style={S.li}>l&apos;organisation de visites et la gestion des demandes ;</li>
           <li style={S.li}>la génération de documents (bail, état des lieux, quittances) au format PDF ;</li>
+          <li style={S.li}>la signature électronique du bail et des états des lieux (procédé eIDAS niveau 1, voir section 2 Définitions) ;</li>
           <li style={S.li}>le partage sécurisé du Dossier locataire via lien à durée limitée.</li>
         </ul>
         <p style={S.p}>
           L&apos;Éditeur n&apos;est jamais partie aux contrats de location conclus entre Locataires et Propriétaires. Il agit
           uniquement en tant qu&apos;intermédiaire technique et hébergeur au sens de la loi pour la confiance dans
           l&apos;économie numérique (LCEN).
+        </p>
+        <p style={S.p}>
+          <strong style={S.strong}>Concernant la signature électronique</strong> : les Utilisateurs reconnaissent que les
+          baux et états des lieux signés via le procédé de signature électronique eIDAS niveau 1 (double authentification
+          email + code OTP) ont valeur de signature électronique simple au sens du règlement UE 910/2014. La force
+          probante en justice est inférieure à une signature électronique avancée ou qualifiée. Les Utilisateurs qui
+          souhaitent un niveau de preuve supérieur sont invités à recourir à un tiers de confiance certifié ou à une
+          signature manuscrite en présentiel.
         </p>
       </LegalSec>
 
@@ -82,6 +93,27 @@ export default function CGU() {
           L&apos;ensemble des fonctionnalités de la Plateforme est actuellement gratuit pour les Locataires comme
           pour les Propriétaires. L&apos;Éditeur se réserve la possibilité d&apos;introduire à l&apos;avenir des
           fonctionnalités payantes, qui seront alors clairement signalées et soumises à acceptation préalable.
+        </p>
+      </LegalSec>
+
+      <LegalSec title="5 bis. Droit de rétractation">
+        <p style={S.p}>
+          La Plateforme étant <strong style={S.strong}>gratuite</strong>, le contrat conclu entre
+          l&apos;Utilisateur et l&apos;Éditeur lors de l&apos;inscription n&apos;est pas un contrat à titre
+          onéreux soumis aux dispositions des articles L.221-18 et suivants du Code de la consommation
+          relatives au droit de rétractation.
+        </p>
+        <p style={S.p}>
+          À toutes fins utiles, conformément à l&apos;article L.221-28 6° du Code de la consommation, le
+          droit de rétractation ne s&apos;applique pas à la fourniture de contenus numériques non fournis
+          sur un support matériel dont l&apos;exécution a commencé avant l&apos;expiration du délai de
+          rétractation avec l&apos;accord exprès de l&apos;Utilisateur. En s&apos;inscrivant et en accédant
+          immédiatement au service, l&apos;Utilisateur reconnaît renoncer expressément à son droit de
+          rétractation pour les contenus numériques fournis par la Plateforme.
+        </p>
+        <p style={S.p}>
+          L&apos;Utilisateur peut à tout moment supprimer son compte depuis ses paramètres ou en écrivant à{" "}
+          <a href="mailto:contact@keymatch-immo.fr" style={S.link}>contact@keymatch-immo.fr</a>.
         </p>
       </LegalSec>
 

@@ -97,7 +97,7 @@ export default function CookiesPage() {
           <p style={{
             fontSize: 11, color: km.muted, margin: 0,
             textTransform: "uppercase", letterSpacing: "1.2px", fontWeight: 600,
-          }}>En vigueur au 18 avril 2026</p>
+          }}>En vigueur au 18 mai 2026</p>
         </div>
 
         {/* Content card */}

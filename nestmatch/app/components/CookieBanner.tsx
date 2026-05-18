@@ -13,13 +13,28 @@ interface CookieConsent {
 }
 
 const STORAGE_KEY = "cookie_consent"
+// V97.39.34 — Conformément à la recommandation CNIL, le consentement aux
+// cookies/traceurs ne peut être valable plus de 6 mois. Au-delà, on doit
+// re-solliciter le user. Math : 6 * 30 jours en ms.
+const CONSENT_TTL_MS = 6 * 30 * 24 * 60 * 60 * 1000  // ≈ 180 jours
 
 function getStoredConsent(): CookieConsent | null {
   if (typeof window === "undefined") return null
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
-    return JSON.parse(raw)
+    const parsed = JSON.parse(raw) as CookieConsent
+    // V97.39.34 — vérification expiration 6 mois (CNIL).
+    // Si la date stockée est invalide ou > 6 mois, on traite comme absent.
+    if (!parsed.date) return null
+    const storedAt = new Date(parsed.date).getTime()
+    if (Number.isNaN(storedAt)) return null
+    if (Date.now() - storedAt > CONSENT_TTL_MS) {
+      // Consentement expiré : on nettoie pour forcer ré-affichage du banner
+      localStorage.removeItem(STORAGE_KEY)
+      return null
+    }
+    return parsed
   } catch {
     return null
   }

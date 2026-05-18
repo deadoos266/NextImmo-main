@@ -4,9 +4,10 @@ import { LegalMain, LegalSec, LegalNotice, legalStyles as S } from "../../compon
 export const metadata = {
   title: "Mentions légales",
   description: "Identité de l'éditeur, hébergeur et contacts juridiques de la plateforme KeyMatch.",
-  // Certaines informations de l'éditeur restent à finaliser avant lancement
-  // commercial (SIRET, RCS, capital). Noindex tant que non renseigné.
-  robots: { index: false, follow: true },
+  // V97.39.34 — Identité éditeur en tant que personne physique (Paul David),
+  // KeyMatch n'a pas de structure juridique commerciale (service gratuit).
+  // Si une société est créée plus tard, remplacer le bloc Éditeur.
+  robots: { index: true, follow: true },
   alternates: { canonical: "/mentions-legales" },
 }
 
@@ -15,12 +16,13 @@ export default function MentionsLegales() {
     <LegalMain
       eyebrow="Légal · Mentions"
       title="Mentions légales"
-      subtitle="En vigueur au 18 avril 2026"
+      subtitle="En vigueur au 18 mai 2026"
     >
       <LegalNotice>
-        <strong style={{ fontWeight: 800 }}>Note :</strong> cette page sera finalisée au lancement commercial de la plateforme avec les
-        informations définitives d&apos;immatriculation de la société éditrice. Les champs marqués en surligné
-        sont à renseigner par le responsable légal.
+        <strong style={{ fontWeight: 800 }}>Statut actuel :</strong> KeyMatch est un service gratuit
+        proposé à titre informatif et non commercial. L&apos;éditeur agit en qualité de personne
+        physique. Si une structure juridique commerciale est créée ultérieurement, ces mentions
+        seront mises à jour avec les informations d&apos;immatriculation (SIRET, RCS, capital social).
       </LegalNotice>
 
       <LegalSec title="Éditeur du site">
@@ -28,37 +30,36 @@ export default function MentionsLegales() {
           Le site <strong style={S.strong}>keymatch-immo.fr</strong> est édité par :
         </p>
         <p style={S.p}>
-          <strong style={S.strong}>Raison sociale</strong> : KeyMatch SAS<br />
-          <strong style={S.strong}>Forme juridique</strong> : Société par Actions Simplifiée (SAS)<br />
-          <strong style={S.strong}>Capital social</strong> : <span style={S.todo}>à renseigner avant lancement commercial</span><br />
-          <strong style={S.strong}>RCS</strong> : <span style={S.todo}>à renseigner avant lancement commercial</span><br />
-          <strong style={S.strong}>SIRET</strong> : <span style={S.todo}>à renseigner avant lancement commercial</span><br />
-          <strong style={S.strong}>Numéro de TVA intracommunautaire</strong> : <span style={S.todo}>à renseigner avant lancement commercial</span><br />
-          <strong style={S.strong}>Siège social</strong> : <span style={S.todo}>adresse postale à renseigner avant lancement commercial</span><br />
-          <strong style={S.strong}>Email de contact</strong> : <strong style={S.strong}>contact@keymatch-immo.fr</strong>
+          <strong style={S.strong}>Paul David</strong>, fondateur de KeyMatch, agissant en qualité
+          de personne physique.<br />
+          <strong style={S.strong}>Email de contact</strong> : <a href="mailto:contact@keymatch-immo.fr" style={S.link}>contact@keymatch-immo.fr</a><br />
+          <strong style={S.strong}>Contact données personnelles</strong> : <a href="mailto:privacy@keymatch-immo.fr" style={S.link}>privacy@keymatch-immo.fr</a>
         </p>
       </LegalSec>
 
       <LegalSec title="Directeur de la publication">
         <p style={S.p}>
-          <strong style={S.strong}>Paul Sadrant</strong>, fondateur de KeyMatch.
+          <strong style={S.strong}>Paul David</strong>, fondateur de KeyMatch.
         </p>
       </LegalSec>
 
       <LegalSec title="Hébergement">
-        <p style={S.p}>Le site est hébergé par :</p>
         <p style={S.p}>
-          <strong style={S.strong}>Vercel Inc.</strong><br />
-          440 N Barranca Ave #4133, Covina, CA 91723, États-Unis<br />
-          <a href="https://vercel.com" style={S.link}>vercel.com</a>
+          L&apos;intégralité de l&apos;infrastructure de la plateforme (serveur applicatif, base de
+          données, stockage de fichiers, monitoring) est hébergée en France par :
         </p>
         <p style={S.p}>
-          La base de données et le stockage de fichiers sont fournis par :
+          <strong style={S.strong}>OVHcloud SAS</strong><br />
+          2 rue Kellermann, 59100 Roubaix, France<br />
+          Téléphone : +33 (0)9 72 10 10 07<br />
+          <a href="https://www.ovhcloud.com" target="_blank" rel="noopener noreferrer" style={S.link}>www.ovhcloud.com</a>
         </p>
         <p style={S.p}>
-          <strong style={S.strong}>Supabase, Inc.</strong><br />
-          970 Toa Payoh North #07-04 Singapore 318992<br />
-          <a href="https://supabase.com" style={S.link}>supabase.com</a>
+          <strong style={S.strong}>Localisation des serveurs</strong> : Gravelines (France,
+          Hauts-de-France, Union européenne). Les données des utilisateurs ne quittent pas le
+          territoire de l&apos;Union européenne, à la seule exception de l&apos;authentification
+          Google OAuth (États-Unis, couverte par la décision d&apos;adéquation Data Privacy
+          Framework UE-USA du 10 juillet 2023).
         </p>
       </LegalSec>
 
@@ -101,7 +102,7 @@ export default function MentionsLegales() {
         </p>
         <ul style={S.ul}>
           <li style={S.li}>directement depuis la plateforme via le bouton « Signaler » présent sur chaque annonce ou message ;</li>
-          <li style={S.li}>par email à <strong style={S.strong}>contact@keymatch-immo.fr</strong>.</li>
+          <li style={S.li}>par email à <a href="mailto:contact@keymatch-immo.fr" style={S.link}>contact@keymatch-immo.fr</a>.</li>
         </ul>
         <p style={S.p}>
           Pour être pris en compte, le signalement doit comporter : la date, votre identité, la description du
@@ -117,7 +118,7 @@ export default function MentionsLegales() {
           la <Link href="/confidentialite" style={S.link}>politique de confidentialité</Link>.
         </p>
         <p style={S.p}>
-          Pour toute question relative à vos données : <strong style={S.strong}>privacy@keymatch-immo.fr</strong>.
+          Pour toute question relative à vos données : <a href="mailto:privacy@keymatch-immo.fr" style={S.link}>privacy@keymatch-immo.fr</a>.
           Vous disposez du droit d&apos;introduire une réclamation auprès de la{" "}
           <a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener noreferrer" style={S.link}>
             CNIL
@@ -136,16 +137,14 @@ export default function MentionsLegales() {
 
       <LegalSec title="Médiation de la consommation">
         <p style={S.p}>
-          Conformément aux articles L.611-1 et suivants du Code de la consommation, en cas de litige
-          non résolu avec l&apos;éditeur, les Utilisateurs consommateurs peuvent recourir gratuitement
-          au médiateur de la consommation suivant :
+          KeyMatch étant un service <strong style={S.strong}>gratuit</strong>, l&apos;obligation de
+          désignation d&apos;un médiateur agréé (article L.612-1 du Code de la consommation) ne
+          s&apos;applique pas en l&apos;état actuel. En cas de litige, les Utilisateurs peuvent
+          contacter l&apos;éditeur à <a href="mailto:contact@keymatch-immo.fr" style={S.link}>contact@keymatch-immo.fr</a> pour
+          rechercher une résolution amiable.
         </p>
         <p style={S.p}>
-          <strong style={S.strong}>Médiateur :</strong> <span style={S.todo}>à désigner avant lancement commercial — par exemple Médiateur du e-commerce (FEVAD), Médiateur de l&apos;immobilier, ou autre médiateur agréé CECMC</span><br />
-          <strong style={S.strong}>Site :</strong> <span style={S.todo}>URL du médiateur à renseigner</span>
-        </p>
-        <p style={S.p}>
-          Plateforme européenne de règlement en ligne des litiges :{" "}
+          Plateforme européenne de règlement en ligne des litiges (litiges transfrontaliers UE) :{" "}
           <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener noreferrer" style={S.link}>
             ec.europa.eu/consumers/odr
           </a>.
@@ -156,7 +155,7 @@ export default function MentionsLegales() {
         <p style={S.p}>
           Les présentes mentions légales et l&apos;ensemble des relations entre l&apos;éditeur et les
           Utilisateurs sont régis par le droit français. En cas de litige, à défaut de résolution
-          amiable ou par voie de médiation, les tribunaux français sont seuls compétents.
+          amiable, les tribunaux français sont seuls compétents.
           Le consommateur peut saisir, à son choix, la juridiction du lieu où il demeure ou du
           lieu où l&apos;éditeur est établi (article R.631-3 du Code de la consommation).
         </p>
@@ -165,10 +164,8 @@ export default function MentionsLegales() {
       <LegalSec title="Liens connexes">
         <p style={S.p}>
           <Link href="/cgu" style={S.link}>Conditions Générales d&apos;Utilisation</Link><br />
-          <Link href="/cgv" style={S.link}>Conditions Générales de Vente</Link><br />
           <Link href="/confidentialite" style={S.link}>Politique de confidentialité</Link><br />
           <Link href="/cookies" style={S.link}>Politique cookies</Link><br />
-          <Link href="/plan-du-site" style={S.link}>Plan du site</Link><br />
           <Link href="/contact" style={S.link}>Nous contacter</Link>
         </p>
       </LegalSec>

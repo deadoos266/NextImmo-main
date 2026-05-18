@@ -12,7 +12,7 @@ export default function Confidentialite() {
     <LegalMain
       eyebrow="Légal · Confidentialité"
       title="Politique de confidentialité"
-      subtitle="En vigueur au 18 avril 2026"
+      subtitle="En vigueur au 18 mai 2026"
     >
       <LegalSec title="1. Préambule">
         <p style={S.p}>
@@ -28,13 +28,14 @@ export default function Confidentialite() {
 
       <LegalSec title="2. Responsable du traitement">
         <p style={S.p}>
-          Le responsable du traitement des données personnelles collectées via la plateforme KeyMatch est la
-          société éditrice dont les coordonnées figurent dans les{" "}
+          Le responsable du traitement des données personnelles collectées via la plateforme KeyMatch
+          est <strong style={S.strong}>Paul David</strong>, fondateur de KeyMatch, agissant en qualité
+          de personne physique. Coordonnées complètes :{" "}
           <Link href="/mentions-legales" style={S.link}>mentions légales</Link>.
         </p>
         <p style={S.p}>
-          Pour toute question relative à vos données personnelles, contactez :{" "}
-          <strong style={S.strong}>contact@keymatch-immo.fr</strong>.
+          Pour toute question relative à vos données personnelles :{" "}
+          <a href="mailto:privacy@keymatch-immo.fr" style={S.link}>privacy@keymatch-immo.fr</a>.
         </p>
       </LegalSec>
 
@@ -44,7 +45,7 @@ export default function Confidentialite() {
           <li style={S.li}><strong style={S.strong}>Données d&apos;identification</strong> : nom, prénom, adresse email, mot de passe (stocké sous forme hachée bcrypt), photo de profil éventuelle.</li>
           <li style={S.li}><strong style={S.strong}>Données de contact</strong> : numéro de téléphone (facultatif), adresse postale éventuelle.</li>
           <li style={S.li}><strong style={S.strong}>Données du profil locataire</strong> : préférences de logement (ville, surface, budget, type de bien, équipements, DPE, meublé/non meublé, animaux, etc.).</li>
-          <li style={S.li}><strong style={S.strong}>Données du dossier locataire</strong> : situation professionnelle, revenus mensuels, type de contrat (CDI, CDD, etc.), présence d&apos;un garant, justificatifs téléversés conformes au décret n°&nbsp;2015-1437 (pièce d&apos;identité, bulletins de salaire, avis d&apos;imposition, contrat de travail, quittances de loyer).</li>
+          <li style={S.li}><strong style={S.strong}>Données du dossier locataire</strong> : situation professionnelle, revenus mensuels, type de contrat (CDI, CDD, etc.), présence d&apos;un garant, justificatifs téléversés conformes au décret n°&nbsp;2015-1437 (pièce d&apos;identité, bulletins de salaire, avis d&apos;imposition, contrat de travail, quittances de loyer). <strong style={S.strong}>Ces documents sont stockés dans un espace privé chiffré, hébergé en France sur les serveurs OVHcloud SAS (MinIO self-hosted, Gravelines). Ils ne sont accessibles qu&apos;aux propriétaires auxquels vous avez explicitement transmis votre dossier via la plateforme. Aucun accès tiers ni outil d&apos;analyse automatisée n&apos;est appliqué à ces documents.</strong></li>
           <li style={S.li}><strong style={S.strong}>Données des annonces</strong> : photos, description, prix, charges, caution, surface, pièces, localisation (GPS précis ou zone approximative selon choix du propriétaire), équipements, DPE.</li>
           <li style={S.li}><strong style={S.strong}>Données d&apos;interaction</strong> : messages échangés entre Utilisateurs, demandes de visite, favoris, candidatures, signalements.</li>
           <li style={S.li}><strong style={S.strong}>Documents contractuels</strong> : baux, états des lieux, quittances de loyer générés via la Plateforme.</li>
@@ -93,22 +94,26 @@ export default function Confidentialite() {
           contactés ou auxquels vous avez explicitement envoyé votre dossier via le lien de partage sécurisé.
         </p>
         <p style={S.p}>
-          Certains sous-traitants techniques peuvent avoir accès aux données strictement nécessaires à la fourniture
-          du service :
+          <strong style={S.strong}>Hébergement 100% France :</strong> depuis le 18 mai 2026, l&apos;intégralité de
+          l&apos;infrastructure KeyMatch (serveur applicatif, base de données, stockage de fichiers, monitoring
+          d&apos;erreurs, communication temps réel) est hébergée en France sur les serveurs OVHcloud SAS à
+          Gravelines (Hauts-de-France, Union européenne).
+        </p>
+        <p style={S.p}>
+          Les sous-traitants techniques actuels strictement nécessaires à la fourniture du service :
         </p>
         <ul style={{ ...S.ul, margin: "0 0 10px" }}>
-          <li style={S.li}><strong style={S.strong}>Vercel Inc.</strong> (hébergement applicatif) — États-Unis, certifié Data Privacy Framework UE-USA</li>
-          <li style={S.li}><strong style={S.strong}>Supabase, Inc.</strong> (base de données, authentification, stockage de fichiers) — Union Européenne (région Frankfurt)</li>
-          <li style={S.li}><strong style={S.strong}>Resend</strong> (envoi d&apos;emails transactionnels : confirmations, notifications) — États-Unis, sous-processeur AWS SES</li>
-          <li style={S.li}><strong style={S.strong}>Cloudflare</strong> (réseau de distribution de contenu, protection DDoS) — Mondial, certifié Data Privacy Framework</li>
-          <li style={S.li}><strong style={S.strong}>Google</strong> (authentification OAuth pour les Utilisateurs connectés via Google) — États-Unis</li>
-          <li style={S.li}><strong style={S.strong}>Anthropic</strong> (services d&apos;IA, uniquement si vous utilisez l&apos;assistant conversationnel) — États-Unis</li>
-          <li style={S.li}><strong style={S.strong}>Upstash</strong> (rate-limiting Redis, stockage éphémère de compteurs anti-abus) — Union Européenne</li>
+          <li style={S.li}><strong style={S.strong}>OVHcloud SAS</strong> (hébergement VPS, base de données Postgres self-hosted, stockage de fichiers MinIO self-hosted, communication temps réel) — France (Gravelines, UE). Aucun transfert hors UE.</li>
+          <li style={S.li}><strong style={S.strong}>Brevo SAS</strong> (envoi d&apos;emails transactionnels : confirmations, notifications, alertes) — France, Union européenne.</li>
+          <li style={S.li}><strong style={S.strong}>Google LLC</strong> (authentification OAuth pour les Utilisateurs connectés via leur compte Google) — États-Unis, couvert par la décision d&apos;adéquation Data Privacy Framework UE-USA du 10 juillet 2023.</li>
+          <li style={S.li}><strong style={S.strong}>GlitchTip</strong> (monitoring d&apos;erreurs techniques, version self-hosted KeyMatch) — France, hébergé sur l&apos;infrastructure OVHcloud KeyMatch. Aucun transfert tiers.</li>
+          <li style={S.li}><strong style={S.strong}>Upstash</strong> (rate-limiting anti-abus, Redis éphémère) — Union européenne. Pas de données personnelles persistantes.</li>
         </ul>
         <p style={S.p}>
           Tous nos sous-traitants sont soumis à des engagements contractuels de confidentialité et de sécurité
-          conformes au RGPD. Les transferts vers les États-Unis reposent sur le cadre Data Privacy Framework
-          (décision d&apos;adéquation de la Commission européenne du 10 juillet 2023).
+          conformes au RGPD. Le seul transfert hors UE concerne l&apos;authentification Google OAuth, couvert
+          par le cadre Data Privacy Framework (décision d&apos;adéquation de la Commission européenne du
+          10 juillet 2023).
         </p>
       </LegalSec>
 
@@ -162,7 +167,8 @@ export default function Confidentialite() {
         </ul>
         <p style={S.p}>
           Pour exercer ces droits, adressez votre demande accompagnée d&apos;un justificatif d&apos;identité à :{" "}
-          <strong style={S.strong}>contact@keymatch-immo.fr</strong>. Nous répondons dans un délai d&apos;un mois maximum.
+          <a href="mailto:privacy@keymatch-immo.fr" style={S.link}>privacy@keymatch-immo.fr</a>. Nous répondons
+          dans un délai d&apos;un mois maximum.
         </p>
         <p style={S.p}>
           Vous disposez également du droit d&apos;introduire une réclamation auprès de la Commission Nationale de
@@ -173,10 +179,11 @@ export default function Confidentialite() {
 
       <LegalSec title="10. Transferts hors Union Européenne">
         <p style={S.p}>
-          Certains sous-traitants (notamment Vercel, Google, Anthropic) peuvent être situés hors de l&apos;Union
-          Européenne, principalement aux États-Unis. Ces transferts sont encadrés par les garanties appropriées
-          prévues par le RGPD (décisions d&apos;adéquation de la Commission européenne, clauses contractuelles types,
-          Data Privacy Framework). Nous vous fournissons sur demande une copie de ces garanties.
+          Les données des utilisateurs sont hébergées <strong style={S.strong}>exclusivement en France</strong>{" "}
+          (Gravelines, Hauts-de-France) sur les serveurs OVHcloud SAS. Aucun transfert ne se fait vers un pays
+          tiers à l&apos;exception de l&apos;authentification via Google OAuth (États-Unis), encadrée par la
+          décision d&apos;adéquation de la Commission européenne dite Data Privacy Framework UE-USA du 10 juillet
+          2023. Nous vous fournissons sur demande une copie des garanties contractuelles correspondantes.
         </p>
       </LegalSec>
 
@@ -198,16 +205,16 @@ export default function Confidentialite() {
       <LegalSec title="13. Documentation RGPD interne (DPIA + Registre Article 30)">
         <p style={S.p}>
           Conformément aux articles 30 et 35 du RGPD, KeyMatch tient à jour deux documents internes consultables sur
-          simple demande à <strong style={S.strong}>privacy@keymatch-immo.fr</strong> :
+          simple demande à <a href="mailto:privacy@keymatch-immo.fr" style={S.link}>privacy@keymatch-immo.fr</a> :
         </p>
         <ul style={S.ul}>
           <li style={S.li}>
             <strong style={S.strong}>Analyse d&apos;Impact RGPD (DPIA)</strong> — couvre les traitements à risque élevé
-            de KeyMatch (dossier locataire KYC + signature bail eIDAS). Identifie 5 risques résiduels avec leur plan de
+            de KeyMatch (dossier locataire KYC + signature bail eIDAS). Identifie les risques résiduels avec leur plan de
             mitigation. Mise à jour à chaque évolution majeure du traitement.
           </li>
           <li style={S.li}>
-            <strong style={S.strong}>Registre des activités de traitement (Article 30)</strong> — liste les 7 traitements
+            <strong style={S.strong}>Registre des activités de traitement (Article 30)</strong> — liste les traitements
             distincts (compte utilisateur, matching algorithmique, dossier KYC, bail eIDAS, EDL contradictoire,
             communication, loyers/quittances/IRL) avec finalité, base légale, durée de conservation, destinataires et
             mesures de sécurité pour chacun.
@@ -219,23 +226,26 @@ export default function Confidentialite() {
         </p>
       </LegalSec>
 
-      <LegalSec title="14. Délégué à la Protection des Données (DPO)">
+      <LegalSec title="14. Contact données personnelles">
         <p style={S.p}>
-          Pour toute question relative au traitement de vos données personnelles ou à l&apos;exercice de vos droits RGPD,
-          vous pouvez contacter notre référent données :
+          KeyMatch étant en phase gratuite et opéré par une personne physique (Paul David, responsable
+          de traitement), <strong style={S.strong}>aucun Délégué à la Protection des Données (DPO) au sens
+          de l&apos;article 37 du RGPD n&apos;a été désigné formellement</strong>, la désignation n&apos;étant
+          pas obligatoire pour les traitements actuellement réalisés.
         </p>
         <p style={S.p}>
-          <strong style={S.strong}>Email DPO</strong> : <strong style={S.strong}>privacy@keymatch-immo.fr</strong><br />
+          Pour toute question relative au traitement de vos données personnelles ou à l&apos;exercice de vos
+          droits RGPD :
+        </p>
+        <p style={S.p}>
+          <strong style={S.strong}>Contact</strong> : <a href="mailto:privacy@keymatch-immo.fr" style={S.link}>privacy@keymatch-immo.fr</a><br />
           <strong style={S.strong}>Délai de réponse</strong> : 30 jours maximum (RGPD art. 12.3)<br />
           <strong style={S.strong}>Justificatif requis</strong> : copie d&apos;une pièce d&apos;identité pour l&apos;exercice
           des droits d&apos;accès, rectification, effacement, portabilité, opposition, limitation
         </p>
         <p style={S.p}>
-          <span style={S.todo}>
-            En phase beta gratuite, le rôle de DPO est assuré par le responsable de traitement. Un DPO externe certifié
-            sera désigné formellement avant le passage commercial. Cette section sera mise à jour avec ses coordonnées
-            officielles.
-          </span>
+          Cette situation sera réévaluée à l&apos;occasion d&apos;un éventuel passage à un modèle commercial ou
+          d&apos;un changement substantiel de la nature ou de l&apos;ampleur des traitements.
         </p>
       </LegalSec>
 
@@ -254,8 +264,8 @@ export default function Confidentialite() {
         </ul>
         <p style={S.p}>
           Pour signaler un incident de sécurité que vous suspectez (ex : compte compromis, email de phishing usurpant
-          KeyMatch) : <strong style={S.strong}>privacy@keymatch-immo.fr</strong> avec mention &quot;[INCIDENT SÉCURITÉ]&quot;
-          en objet.
+          KeyMatch) : <a href="mailto:privacy@keymatch-immo.fr" style={S.link}>privacy@keymatch-immo.fr</a> avec
+          mention &quot;[INCIDENT SÉCURITÉ]&quot; en objet.
         </p>
       </LegalSec>
     </LegalMain>
