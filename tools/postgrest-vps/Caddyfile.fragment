@@ -21,20 +21,23 @@ db.keymatch-immo.fr {
 
     # === Header normalization Supabase → PostgREST ===
     # Le SDK envoie "apikey: <JWT>". On rewrite vers Authorization si absent.
+    # IMPORTANT : `request_header` doit être au niveau racine (pas dans un
+    # `handle`) sinon il devient terminal et bloque le routing vers PostgREST.
     @no_auth {
         not header Authorization *
         header apikey *
     }
-    handle @no_auth {
-        request_header Authorization "Bearer {http.request.header.apikey}"
-    }
+    request_header @no_auth Authorization "Bearer {http.request.header.apikey}"
 
     # === REST API (PostgREST) ===
     # Supabase format : /rest/v1/<table>
     # PostgREST format : /<table>
     # → strip /rest/v1 prefix
+    # Note : reverse_proxy à `localhost:3000` car Caddy tourne en host
+    # systemd (pas dans Docker), il ne peut pas résoudre les hostnames Docker.
+    # PostgREST bind 127.0.0.1:3000 via docker-compose (V97.39.33).
     handle_path /rest/v1/* {
-        reverse_proxy keymatch-postgrest:3000 {
+        reverse_proxy localhost:3000 {
             header_up X-Forwarded-Proto https
             header_up X-Forwarded-Host {host}
             transport http {
@@ -44,12 +47,15 @@ db.keymatch-immo.fr {
     }
 
     # === Realtime WebSocket ===
-    # Supabase format : /realtime/v1/websocket
-    # Réservé Phase 7b — wire vers supabase/realtime self-host quand prêt
-    handle_path /realtime/v1/* {
-        reverse_proxy keymatch-supabase-realtime:4000 {
+    # Supabase SDK construit l'URL `wss://<host>/realtime/v1/websocket` mais
+    # supabase/realtime (Phoenix) expose le WS à `/socket/websocket`. Caddy
+    # rewrite le path avant de proxy.
+    handle /realtime/v1/* {
+        rewrite * /socket/websocket?{query}
+        reverse_proxy localhost:4000 {
             header_up Connection {>Connection}
             header_up Upgrade {>Upgrade}
+            header_up Host db.keymatch-immo.fr
             transport http {
                 keepalive 30s
             }

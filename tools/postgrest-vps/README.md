@@ -88,10 +88,17 @@ sudo docker restart keymatch-next
 
 ## Notes RLS
 
-Supabase prod n'a que 5 RLS policies (audit 2026-05-17). Toutes reportées
-dans `scripts/init-rls-policies.sql`. La sécurité KeyMatch repose à 95%
-sur les routes API serverless qui valident côté Next.js (NextAuth +
-checks manuels), pas sur RLS.
+Supabase prod n'a que 5 RLS policies (audit 2026-05-17). Elles sont
+gérées par les migrations applicatives (`nestmatch/supabase/migrations/`).
+La sécurité KeyMatch repose à 95% sur les routes API serverless qui
+valident côté Next.js (NextAuth + checks manuels), pas sur RLS DB.
+
+Le rôle `service_role` créé par `scripts/init-roles.sql` a `BYPASSRLS`
+donc les routes API server (NextAuth) ne sont jamais impactées par les
+RLS. Le rôle `anon` (JWT sans authentification) ne devrait avoir accès
+qu'aux tables publiques (`annonces` en lecture seule pour la liste des
+biens). Vérifier que `anon` n'a pas trop de droits via `\du+` Postgres
+si tu veux durcir.
 
 ## JWT compatibility
 

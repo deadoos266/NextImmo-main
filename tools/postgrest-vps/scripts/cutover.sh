@@ -34,6 +34,45 @@ if [ -z "${POSTGREST_JWT_SECRET:-}" ]; then
   exit 1
 fi
 
+# === Pre-flight checks ===
+echo "🩺 Pre-flight checks…"
+if ! curl -sS --max-time 3 http://127.0.0.1:3000/ -o /dev/null; then
+  echo "❌ PostgREST (port 3000) ne répond pas. Lance d'abord :"
+  echo "   cd tools/postgrest-vps && sudo docker compose up -d"
+  exit 1
+fi
+echo "  ✓ PostgREST (127.0.0.1:3000)"
+
+# Realtime répond 403 sans Host header — toute réponse HTTP signifie qu'il est UP
+if ! curl -sS --max-time 3 http://127.0.0.1:4000/api/health -o /dev/null -w "%{http_code}" | grep -qE "^[2-5][0-9]{2}$"; then
+  echo "❌ Realtime (port 4000) ne répond pas. Lance d'abord :"
+  echo "   cd tools/supabase-realtime-vps && sudo docker compose up -d"
+  exit 1
+fi
+echo "  ✓ Realtime (127.0.0.1:4000)"
+
+# Vérifie tenant 'db' configuré (sinon WS échouera après cutover)
+TENANT_CHECK=$(sudo docker exec keymatch-postgres psql -U keymatch -d keymatch -tAc "SELECT external_id FROM _realtime.tenants WHERE external_id = 'db';" 2>/dev/null | tr -d ' \r')
+if [ "$TENANT_CHECK" != "db" ]; then
+  echo "❌ Tenant Realtime 'db' pas configuré. Lance d'abord :"
+  echo "   cd tools/supabase-realtime-vps && sudo bash scripts/setup-tenant.sh"
+  exit 1
+fi
+echo "  ✓ Tenant Realtime 'db' configuré"
+
+# Vérifie DNS résolu (sinon Caddy ne peut pas acquérir le cert)
+if ! getent hosts db.keymatch-immo.fr > /dev/null 2>&1; then
+  echo "⚠️  db.keymatch-immo.fr ne résout pas (DNS pas propagé)."
+  echo "    Ajoute le record A db → IP VPS dans OVH zone keymatch-immo.fr"
+  echo "    avant de continuer. Caddy a besoin du DNS pour Let's Encrypt."
+  read -p "Continue quand même ? (y/N) " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    exit 1
+  fi
+fi
+echo ""
+
 b64url() { openssl base64 -e -A | tr '+/' '-_' | tr -d '='; }
 
 make_jwt() {
