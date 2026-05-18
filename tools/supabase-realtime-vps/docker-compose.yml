@@ -1,0 +1,59 @@
+# Supabase Realtime self-host — V97.39.33 Phase 7b KeyMatch
+#
+# Remplace https://wzzibgdupycysvtwsqxo.supabase.co/realtime/v1/* par
+# l'image officielle supabase/realtime branchée sur keymatch-postgres.
+#
+# Pré-requis :
+#   - keymatch-postgres avec wal_level=logical (cf docker-compose.yml mis
+#     à jour, command postgres -c wal_level=logical)
+#   - Rôle supabase_realtime_admin créé via scripts/init-realtime-role.sql
+#   - Publication SQL supabase_realtime créée (cf scripts/init-publication.sql)
+#
+# Le SDK @supabase/supabase-js v2 attend l'endpoint /realtime/v1/websocket.
+# Caddy route /realtime/v1/* vers ce container (port 4000).
+
+services:
+  realtime:
+    image: supabase/realtime:v2.34.43
+    container_name: keymatch-supabase-realtime
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # === DB connection ===
+      DB_HOST: keymatch-postgres
+      DB_PORT: "5432"
+      DB_USER: supabase_realtime_admin
+      DB_PASSWORD: "${REALTIME_DB_PASSWORD}"
+      DB_NAME: keymatch
+      DB_AFTER_CONNECT_QUERY: "SET search_path TO _realtime"
+      DB_ENC_KEY: "${REALTIME_ENC_KEY}"          # 16 chars
+      # === Authent JWT (cohérent PostgREST) ===
+      API_JWT_SECRET: "${POSTGREST_JWT_SECRET}"
+      SECRET_KEY_BASE: "${REALTIME_SECRET_KEY_BASE}"  # 64 chars min
+      # === Tenant config (single-tenant mode) ===
+      ERL_AFLAGS: "-proto_dist inet_tcp"
+      ENABLE_TAILSCALE: "false"
+      DNS_NODES: "''"
+      RLIMIT_NOFILE: "10000"
+      APP_NAME: keymatch-realtime
+      SEED_SELF_HOST: "true"
+      RUN_JANITOR: "true"
+      # === Port ===
+      PORT: "4000"
+      # === Logs ===
+      LOG_LEVEL: info
+    networks:
+      - keymatch-postgres-net
+    # Healthcheck via le endpoint /api/health interne
+    healthcheck:
+      test: ["CMD-SHELL", "/bin/bash -c 'echo > /dev/tcp/localhost/4000' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+networks:
+  keymatch-postgres-net:
+    external: true
+    name: keymatch-postgres-net

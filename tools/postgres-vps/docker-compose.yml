@@ -38,6 +38,19 @@ services:
     volumes:
       - /srv/keymatch/postgres-data:/var/lib/postgresql/data
       - ./init-extensions.sql:/docker-entrypoint-initdb.d/01-init-extensions.sql:ro
+    # V97.39.33 Phase 7b — wal_level=logical pour supabase/realtime self-host.
+    # Postgres doit redémarrer pour appliquer (différent de ALTER SYSTEM SET).
+    # Le command override force le param au démarrage.
+    command:
+      - "postgres"
+      - "-c"
+      - "wal_level=logical"
+      - "-c"
+      - "max_wal_senders=10"
+      - "-c"
+      - "max_replication_slots=10"
+      - "-c"
+      - "max_connections=200"
     ports:
       # Bind localhost only : accessible depuis le worker/Next.js sur le même VPS
       # Pour exposer en externe (depuis Vercel preview, etc.), passer par Caddy + tunnel.
