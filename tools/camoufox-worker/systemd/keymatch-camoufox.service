@@ -1,0 +1,52 @@
+# KeyMatch Camoufox Worker — systemd unit pour Oracle Cloud VM
+# V97.39.34 P3-7
+#
+# Install :
+#   sudo cp keymatch-camoufox.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now keymatch-camoufox.service
+#
+# Alternative au docker-compose : python venv direct sur la VM.
+
+[Unit]
+Description=KeyMatch Camoufox Worker (DataDome bypass via Firefox stealth)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=keymatch
+Group=keymatch
+WorkingDirectory=/home/keymatch/worker
+EnvironmentFile=/home/keymatch/worker/.env
+ExecStart=/home/keymatch/venv/bin/uvicorn worker:app --host 127.0.0.1 --port 8080 --workers 1
+Restart=on-failure
+RestartSec=10s
+
+# Logs
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=keymatch-camoufox
+
+# Sécurité hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/keymatch/worker /tmp /home/keymatch/.cache/camoufox
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+MemoryDenyWriteExecute=false   # Firefox JIT needs it
+
+# Limites ressources (Oracle Ampere 24GB)
+MemoryMax=8G
+MemoryHigh=6G
+TasksMax=200
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,39 @@
+# Cloudflared named tunnel config — V97.39.34 P3-7
+#
+# Expose le worker Camoufox via un sous-domaine *.workers.dev gratuit
+# (pas de touche aux NS keymatch-immo.fr qui restent OVH).
+#
+# Setup pas-à-pas (sur Oracle Cloud VM) :
+#
+# 1. Crée compte Cloudflare gratuit si pas déjà
+# 2. wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb
+#    sudo dpkg -i cloudflared-linux-arm64.deb
+# 3. cloudflared tunnel login  → URL → auth dans browser
+# 4. cloudflared tunnel create keymatch-fetcher  → note l'UUID
+# 5. Copy ce fichier en /etc/cloudflared/config.yml et adapte :
+#    - <TUNNEL-UUID> → UUID retourné par tunnel create
+#    - <ACCOUNT-SUBDOMAIN> → ton subdomain Cloudflare account
+# 6. cloudflared tunnel route dns keymatch-fetcher keymatch-fetcher.<ACCOUNT>.workers.dev
+# 7. sudo cloudflared service install
+# 8. Test : curl https://keymatch-fetcher.<ACCOUNT>.workers.dev/health (avec Bearer)
+
+tunnel: <TUNNEL-UUID>
+credentials-file: /etc/cloudflared/<TUNNEL-UUID>.json
+
+# Mappe hostname → service local
+ingress:
+  - hostname: keymatch-fetcher.<ACCOUNT-SUBDOMAIN>.workers.dev
+    service: http://localhost:8080
+    originRequest:
+      connectTimeout: 30s
+      keepAliveConnections: 5
+      noTLSVerify: true   # Worker écoute en HTTP localhost, pas en TLS
+
+  # Catch-all : refuse tout autre hostname
+  - service: http_status:404
+
+# Métriques internes (optionnel, pour /metrics côté cloudflared)
+metrics: 127.0.0.1:9090
+
+# Logs
+loglevel: info

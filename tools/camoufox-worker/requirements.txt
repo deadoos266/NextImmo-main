@@ -1,0 +1,20 @@
+# KeyMatch Camoufox Worker — V97.39.34 P3-7
+#
+# Camoufox = fork Firefox stealth + Playwright wrapper.
+# Repo : https://github.com/daijro/camoufox
+# Doc : https://camoufox.com/python/
+#
+# Install : pip install -r requirements.txt && camoufox fetch
+# Le `camoufox fetch` télécharge ~250 MB ARM64 (Oracle Cloud Ampere)
+# ou x86_64 (fallback E2.1.Micro).
+
+camoufox[geoip]==0.4.11
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+httpx==0.28.1
+python-dotenv==1.0.1
+pydantic==2.10.4
+
+# Dev / tests
+pytest==8.3.4
+pytest-asyncio==0.25.0

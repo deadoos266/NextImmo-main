@@ -1,0 +1,27 @@
+# Camoufox Worker — V97.39.34 P3-7
+# Pour Oracle Cloud Always Free ARM Ampere ou x86_64 fallback.
+# Build local (ARM build sur Mac M1/Apple Silicon, ou sur la VM Oracle direct).
+
+services:
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: keymatch-camoufox-worker:0.1
+    container_name: keymatch-camoufox
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:8080:8080"   # exposé seulement via cloudflared tunnel
+    mem_limit: 8g
+    cpus: 2.0
+    security_opt:
+      - no-new-privileges:true
+    # Camoufox a besoin de /dev/shm > 64m pour Firefox (sinon crashes)
+    shm_size: 1g
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
