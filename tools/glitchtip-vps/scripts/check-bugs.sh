@@ -33,12 +33,9 @@ RESPONSE=$(curl -sS -H "Authorization: Bearer $TOKEN" \
 COUNT=$(echo "$RESPONSE" | jq 'length')
 
 if [ "$COUNT" = "0" ]; then
-  echo "✅ Aucune erreur sur $PERIOD."
+  echo "✅ Aucune erreur unresolved sur $PERIOD."
   echo ""
-  echo "Total events sur la période :"
-  curl -sS -H "Authorization: Bearer $TOKEN" \
-    "$BASE/organizations/$ORG/stats/?stat=received&since=$(date -d "-$PERIOD" +%s)" \
-    2>/dev/null | jq -r '. | length // 0' || echo "(stats endpoint non dispo)"
+  echo "Dashboard complet : https://sentry.keymatch-immo.fr/keymatch/keymatch-next/"
   exit 0
 fi
 
