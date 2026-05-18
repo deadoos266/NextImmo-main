@@ -43,6 +43,9 @@ services:
       PORT: "4000"
       # === Logs ===
       LOG_LEVEL: info
+    # V97.39.33 — bind localhost pour que Caddy host puisse reverse_proxy
+    ports:
+      - "127.0.0.1:4000:4000"
     networks:
       - keymatch-postgres-net
     # Healthcheck via le endpoint /api/health interne

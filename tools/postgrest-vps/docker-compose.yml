@@ -9,9 +9,11 @@ services:
     image: postgrest/postgrest:v12.2.3
     container_name: keymatch-postgrest
     restart: unless-stopped
-    # Pas de ports exposés sur l'host → Caddy fait le reverse proxy.
-    # Si tu veux tester en direct depuis l'host, ajoute :
-    #   ports: ["127.0.0.1:3000:3000"]
+    # V97.39.33 — bind localhost pour que Caddy host puisse reverse_proxy.
+    # Caddy tourne en systemd (pas Docker), donc impossible d'utiliser
+    # le hostname Docker keymatch-postgrest depuis Caddy.
+    ports:
+      - "127.0.0.1:3000:3000"
     environment:
       # Connexion DB : via pgbouncer pour pooling (port 6432) ou direct
       # postgres (5432). On passe par pgbouncer pour ne pas saturer le
