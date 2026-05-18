@@ -1,0 +1,374 @@
+openapi: 3.0.3
+info:
+  title: KeyMatch API
+  description: |
+    API publique KeyMatch pour les agences immobilières.
+
+    Permet de publier des annonces, récupérer les candidatures et synchroniser
+    avec votre logiciel métier (Apimo, Hektor, n8n, Zapier, script custom).
+
+    **Pré-requis** :
+    1. Compte agence KeyMatch validé (statut = `active`)
+    2. Clé API générée dans `/agence/dashboard/[id]/api-keys`
+
+    **Auth** : Bearer token dans le header `Authorization`.
+    Format : `Authorization: Bearer km_live_xxx...`
+
+    **Rate limit** : 100 requêtes/minute par clé.
+
+    **Support** : contact@keymatch-immo.fr
+  version: "1.0.0"
+  contact:
+    email: contact@keymatch-immo.fr
+    url: https://keymatch-immo.fr/contact
+  license:
+    name: KeyMatch Terms
+    url: https://keymatch-immo.fr/cgu
+
+servers:
+  - url: https://keymatch-immo.fr/api/v1
+    description: Production
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: km_live_<32 chars hex>
+      description: |
+        Clé API au format `km_live_xxx`. Générée dans
+        `https://keymatch-immo.fr/agence/dashboard/[id]/api-keys`.
+
+  schemas:
+    Annonce:
+      type: object
+      required: [titre, prix]
+      properties:
+        id:
+          type: integer
+          readOnly: true
+          example: 246
+        external_ref:
+          type: string
+          nullable: true
+          description: Référence externe agence (Apimo ID, Hektor ID...). Permet l'UPSERT idempotent.
+          example: "APIMO-12345"
+        titre:
+          type: string
+          minLength: 3
+          maxLength: 200
+          example: "Studio lumineux Paris 11e"
+        description:
+          type: string
+          maxLength: 5000
+          nullable: true
+        ville:
+          type: string
+          example: "Paris"
+        code_postal:
+          type: string
+          example: "75011"
+        adresse:
+          type: string
+        prix:
+          type: number
+          format: float
+          description: Loyer mensuel hors charges (€)
+          example: 900
+        charges:
+          type: number
+          format: float
+          nullable: true
+        caution:
+          type: number
+          format: float
+          nullable: true
+        surface:
+          type: number
+          format: float
+          description: Surface en m²
+          example: 22
+        pieces:
+          type: integer
+          example: 1
+        chambres:
+          type: integer
+        etage:
+          type: integer
+        dpe:
+          type: string
+          enum: [A, B, C, D, E, F, G]
+        type_bien:
+          type: string
+          example: "Studio"
+        dispo:
+          type: string
+          example: "Disponible maintenant"
+        photos:
+          type: array
+          items:
+            type: string
+            format: uri
+        statut:
+          type: string
+          enum: [disponible, "loué", loue_termine]
+          readOnly: true
+        meuble: { type: boolean, nullable: true }
+        fibre: { type: boolean, nullable: true }
+        parking: { type: boolean, nullable: true }
+        cave: { type: boolean, nullable: true }
+        balcon: { type: boolean, nullable: true }
+        terrasse: { type: boolean, nullable: true }
+        jardin: { type: boolean, nullable: true }
+        ascenseur: { type: boolean, nullable: true }
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+
+    Candidature:
+      type: object
+      properties:
+        id:
+          type: integer
+        annonce_id:
+          type: integer
+        locataire_email:
+          type: string
+          format: email
+        statut:
+          type: string
+          enum: [proposée, confirmée, annulée, effectuée]
+        date_proposee:
+          type: string
+          format: date-time
+        message:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "API key invalide ou révoquée"
+        code:
+          type: string
+          example: "AUTH_INVALID"
+          description: Code machine-readable.
+
+paths:
+  /agences/{id}/annonces:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: ID de votre agence (visible dans /agence/dashboard URL)
+    get:
+      tags: [Annonces]
+      summary: Liste les annonces de votre agence
+      description: Retourne les annonces avec pagination. Triées par id desc.
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 200
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        "200":
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  total: { type: integer }
+                  limit: { type: integer }
+                  offset: { type: integer }
+                  annonces:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Annonce"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429":
+          description: Rate limit dépassé (100 req/min)
+
+    post:
+      tags: [Annonces]
+      summary: Crée ou met à jour une annonce
+      description: |
+        Si vous fournissez `external_ref` ET qu'une annonce avec cette ref existe
+        déjà pour cette agence, elle sera mise à jour (UPSERT idempotent).
+        Sinon, une nouvelle annonce est créée.
+
+        Scope requis : `annonces:write`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Annonce"
+            examples:
+              minimum:
+                value:
+                  titre: "Studio Paris 11e"
+                  ville: "Paris"
+                  prix: 900
+              complet:
+                value:
+                  external_ref: "APIMO-12345"
+                  titre: "Studio lumineux"
+                  description: "Beau studio rénové, 3e étage avec ascenseur"
+                  ville: "Paris"
+                  code_postal: "75011"
+                  adresse: "12 rue de la Roquette"
+                  prix: 950
+                  charges: 50
+                  caution: 1900
+                  surface: 22
+                  pieces: 1
+                  etage: 3
+                  dpe: "D"
+                  type_bien: "Studio"
+                  meuble: true
+                  fibre: true
+                  ascenseur: true
+                  photos: ["https://cdn.exemple.fr/photo1.jpg"]
+      responses:
+        "201":
+          description: Annonce créée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  id: { type: integer }
+                  action: { type: string, enum: [created, updated] }
+                  external_ref: { type: string, nullable: true }
+        "200":
+          description: Annonce mise à jour (UPSERT)
+        "422":
+          description: Validation échouée
+
+  /agences/{id}/annonces/{annonceId}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - name: annonceId
+        in: path
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [Annonces]
+      summary: Récupère une annonce
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  annonce: { $ref: "#/components/schemas/Annonce" }
+        "404":
+          description: Annonce introuvable
+    put:
+      tags: [Annonces]
+      summary: Met à jour une annonce (partial update)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Annonce" }
+      responses:
+        "200":
+          description: Mise à jour OK
+    delete:
+      tags: [Annonces]
+      summary: Archive une annonce
+      description: Set statut=loue_termine. Pas de hard delete.
+      responses:
+        "200":
+          description: Archivée
+
+  /agences/{id}/candidatures:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Candidatures]
+      summary: Liste les candidatures reçues sur les annonces de l'agence
+      description: |
+        Permet à votre CRM de poll régulièrement et remonter les leads.
+        Filtres par date (`since`) ou annonce (`annonce_id`).
+
+        Scope requis : `candidatures:read`
+      parameters:
+        - name: since
+          in: query
+          schema: { type: string, format: date-time }
+          description: Ne retourne que les candidatures créées après cette date ISO
+        - name: annonce_id
+          in: query
+          schema: { type: integer }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50, maximum: 200 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  total: { type: integer }
+                  candidatures:
+                    type: array
+                    items: { $ref: "#/components/schemas/Candidature" }
+
+tags:
+  - name: Annonces
+    description: CRUD sur vos annonces. Scopes annonces:read / annonces:write.
+  - name: Candidatures
+    description: Poll les candidatures reçues. Scope candidatures:read.
