@@ -32,3 +32,4 @@ scrape-irl-insee	/api/cron/scrape-irl-insee	0 5 1 * *	Scrape IRL INSEE (1er du m
 reviews-auto-publish	/api/cron/reviews-auto-publish	30 5 * * *	Auto-publish reviews validées
 fetcher-health	/api/cron/fetcher-health	0 */6 * * *	Ping worker fetcher toutes 6h
 import-jobs-cleanup	/api/cron/import-jobs-cleanup	15 4 * * *	Cleanup jobs import abandonnés
+webhook-deliveries	/api/cron/webhook-deliveries	*/1 * * * *	Phase D webhook delivery worker (deliveries pending, retry backoff)

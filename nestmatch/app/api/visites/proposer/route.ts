@@ -137,6 +137,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Création visite échouée" }, { status: 500 })
   }
 
+  // V97.39.34 Phase D — webhook `candidature.created` si l'annonce appartient
+  // à une agence active. Best-effort, n'échoue pas la création de visite.
+  try {
+    const { data: annonce } = await supabaseAdmin
+      .from("annonces")
+      .select("agence_id, titre, ville")
+      .eq("id", annonceId)
+      .single()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const a = annonce as any
+    if (a?.agence_id) {
+      const { enqueueWebhook } = await import("@/lib/agences/webhooks")
+      await enqueueWebhook(a.agence_id, "candidature.created", {
+        visite_id: visite.id,
+        annonce_id: annonceId,
+        annonce_titre: a.titre,
+        annonce_ville: a.ville,
+        locataire_email: me,
+        date_visite: date,
+        heure,
+        format,
+        message: message || null,
+      })
+    }
+  } catch (e) {
+    console.warn("[visites/proposer] webhook enqueue failed (non-blocking):", e)
+  }
+
   // 2. Message dans la conv (pour /messages)
   const dateFormat = new Date(date + "T12:00:00").toLocaleDateString("fr-FR", {
     weekday: "long", day: "numeric", month: "long",

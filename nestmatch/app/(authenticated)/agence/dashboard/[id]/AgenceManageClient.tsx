@@ -182,6 +182,9 @@ export default function AgenceManageClient({ agenceId }: { agenceId: string }) {
             <Link href={`/agence/dashboard/${agence.id}/api-keys`} style={{ padding: "8px 14px", border: "1px solid #EAE6DF", background: "white", color: "#111", borderRadius: 10, fontSize: 13, textDecoration: "none" }}>
               🔑 Clés API
             </Link>
+            <Link href={`/agence/dashboard/${agence.id}/webhooks`} style={{ padding: "8px 14px", border: "1px solid #EAE6DF", background: "white", color: "#111", borderRadius: 10, fontSize: 13, textDecoration: "none" }}>
+              📡 Webhooks
+            </Link>
             <Link href={`/agence/${agence.slug}`} style={{ padding: "8px 14px", border: "1px solid #EAE6DF", background: "white", color: "#111", borderRadius: 10, fontSize: 13, textDecoration: "none" }}>
               Page publique →
             </Link>
