@@ -49,15 +49,12 @@ services:
       # PostgREST 12+ lit Authorization par défaut. Le header apikey est
       # géré côté Caddy fragment (rewrite vers Authorization).
     networks:
-      - keymatch-net
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ | grep -q 'OpenAPI' || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
+      - keymatch-postgres-net
+    # Pas de healthcheck wget : l'image PostgREST officielle est minimaliste
+    # (sans wget/curl). Le healthcheck Docker se fait via le port exposé
+    # (Caddy → 3000). En cas de souci, `docker logs keymatch-postgrest`.
 
 networks:
-  keymatch-net:
+  keymatch-postgres-net:
     external: true
-    name: keymatch-net
+    name: keymatch-postgres-net
