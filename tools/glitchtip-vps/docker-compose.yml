@@ -1,0 +1,105 @@
+# GlitchTip self-host — V97.39.34 Phase 7 KeyMatch
+#
+# GlitchTip = fork open-source léger de Sentry. Compatible Sentry SDK
+# côté code (zéro changement client). Stack minimum : Django + Postgres
+# + Redis + worker celery. Total ~700 MB RAM idle.
+#
+# Doc : https://glitchtip.com/documentation/install
+# Image : registry.gitlab.com/glitchtip/glitchtip
+#
+# Pré-requis :
+#   - Caddy installé (host)
+#   - keymatch-postgres (Phase 2) UP — on crée une DB séparée 'glitchtip'
+#   - DNS : sentry.keymatch-immo.fr → IP VPS (action Paul, OVH zone)
+#
+# Setup :
+#   1. cp .env.example .env && nano .env  (set SECRET_KEY, EMAIL_*, etc.)
+#   2. Crée la DB Postgres via scripts/init-db.sh
+#   3. docker compose up -d
+#   4. docker compose exec web ./manage.py migrate
+#   5. docker compose exec web ./manage.py createsuperuser  (admin Paul)
+#   6. Open https://sentry.keymatch-immo.fr → create org → create project (Next.js)
+#   7. Copy le DSN → flip NEXT_PUBLIC_SENTRY_DSN dans /etc/keymatch-prod.env
+#   8. Restart keymatch-next container
+
+services:
+  web:
+    image: glitchtip/glitchtip:v4.1
+    container_name: keymatch-glitchtip-web
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # DB connection : utilise le keymatch-postgres existant, DB séparée
+      DATABASE_URL: postgres://glitchtip:${GLITCHTIP_DB_PASSWORD}@keymatch-postgres:5432/glitchtip
+      REDIS_URL: redis://keymatch-glitchtip-redis:6379/0
+      # Sécurité — IMPORTANT : SECRET_KEY doit être >= 50 chars random
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY}
+      # URL publique (cohérent avec le DSN qu'on génère + Caddy)
+      GLITCHTIP_DOMAIN: https://sentry.keymatch-immo.fr
+      # Limites stockage events (compat plan gratuit Sentry SaaS qu'on remplace)
+      EVENTS_QUOTA_PER_HOUR: "1000"
+      # Email — utilise Brevo (cohérent avec Phase 5)
+      DEFAULT_FROM_EMAIL: noreply@keymatch-immo.fr
+      EMAIL_BACKEND: anymail.backends.brevo.EmailBackend
+      BREVO_API_KEY: ${BREVO_API_KEY}
+      # Sécurité ADMIN
+      ENABLE_OPEN_USER_REGISTRATION: "False"
+      # Cohérence avec Caddy reverse-proxy
+      SECURE_PROXY_SSL_HEADER: HTTP_X_FORWARDED_PROTO,https
+      USE_X_FORWARDED_HOST: "True"
+    ports:
+      # Bind localhost → Caddy proxy
+      - "127.0.0.1:8000:8000"
+    networks:
+      - keymatch-postgres-net
+      - glitchtip-net
+    depends_on:
+      - redis
+    mem_limit: 768m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/api/0/health/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  worker:
+    image: glitchtip/glitchtip:v4.1
+    container_name: keymatch-glitchtip-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://glitchtip:${GLITCHTIP_DB_PASSWORD}@keymatch-postgres:5432/glitchtip
+      REDIS_URL: redis://keymatch-glitchtip-redis:6379/0
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY}
+      GLITCHTIP_DOMAIN: https://sentry.keymatch-immo.fr
+      DEFAULT_FROM_EMAIL: noreply@keymatch-immo.fr
+      EMAIL_BACKEND: anymail.backends.brevo.EmailBackend
+      BREVO_API_KEY: ${BREVO_API_KEY}
+    command: ./bin/run-celery-with-beat.sh
+    networks:
+      - keymatch-postgres-net
+      - glitchtip-net
+    depends_on:
+      - redis
+    mem_limit: 384m
+
+  redis:
+    image: valkey/valkey:7-alpine
+    container_name: keymatch-glitchtip-redis
+    restart: unless-stopped
+    command: ["valkey-server", "--save", "60", "1", "--loglevel", "warning", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    networks:
+      - glitchtip-net
+    volumes:
+      - /srv/keymatch/glitchtip-redis:/data
+    mem_limit: 192m
+
+networks:
+  keymatch-postgres-net:
+    external: true
+    name: keymatch-postgres-net
+  glitchtip-net:
+    name: glitchtip-net

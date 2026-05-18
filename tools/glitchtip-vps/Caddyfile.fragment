@@ -1,0 +1,39 @@
+# GlitchTip self-host Caddy — V97.39.34
+# À ajouter dans /etc/caddy/Caddyfile sur le VPS.
+#
+# Pré-requis :
+#   - DNS : sentry.keymatch-immo.fr → IP VPS (action Paul, OVH zone)
+#   - keymatch-glitchtip-web container UP (port 127.0.0.1:8000)
+
+sentry.keymatch-immo.fr {
+    tls tic3467@gmail.com
+
+    log {
+        output file /var/log/caddy/keymatch-sentry.log {
+            roll_size 50mb
+            roll_keep 5
+        }
+        format json
+    }
+
+    # Proxy vers GlitchTip web container
+    reverse_proxy localhost:8000 {
+        header_up X-Forwarded-Proto https
+        header_up X-Forwarded-Host {host}
+        # GlitchTip ingestion peut envoyer des events > 1 MB
+        transport http {
+            response_header_timeout 60s
+        }
+    }
+
+    # Headers sécurité
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        # GlitchTip a son propre CSP — laisse passer
+        -Server
+    }
+
+    # Gzip + brotli pour la SPA + assets
+    encode gzip zstd
+}
