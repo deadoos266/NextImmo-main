@@ -50,16 +50,15 @@ db.keymatch-immo.fr {
     # Supabase SDK construit l'URL `wss://<host>/realtime/v1/websocket` mais
     # supabase/realtime (Phoenix) expose le WS à `/socket/websocket`. Caddy
     # rewrite le path avant de proxy.
+    #
+    # IMPORTANT : NE PAS ajouter `header_up Connection {>Connection}` ni
+    # `header_up Upgrade {>Upgrade}` — Caddy gère le WebSocket upgrade
+    # automatiquement, et ces directives explicites BREAK le passthrough
+    # (résultat : 400 Bad Request). Laisser reverse_proxy nu (validé en
+    # prod 2026-05-18 : WS 101 OK).
     handle /realtime/v1/* {
-        rewrite * /socket/websocket?{query}
-        reverse_proxy localhost:4000 {
-            header_up Connection {>Connection}
-            header_up Upgrade {>Upgrade}
-            header_up Host db.keymatch-immo.fr
-            transport http {
-                keepalive 30s
-            }
-        }
+        rewrite * /socket/websocket
+        reverse_proxy localhost:4000
     }
 
     # === Storage (proxy vers MinIO) ===

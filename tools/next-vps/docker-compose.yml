@@ -33,8 +33,11 @@ services:
     container_name: keymatch-next
     restart: unless-stopped
     # Bind localhost only. Caddy reverse-proxy expose via keymatch-immo.fr.
+    # V97.39.33 — port host 3030 (pas 3000) pour éviter conflit avec
+    # keymatch-postgrest (Phase 7) qui binde 127.0.0.1:3000. Caddy
+    # `keymatch-immo.fr` proxy vers localhost:3030.
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:3030:3000"
     # Toutes les env vars Next.js sont chargées depuis /etc/keymatch.env
     # (fichier sécurisé root-readable seulement, contient tous les secrets).
     env_file:
