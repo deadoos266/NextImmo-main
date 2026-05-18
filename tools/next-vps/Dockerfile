@@ -61,13 +61,31 @@ ENV SKIP_ENV_VALIDATION=1
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
-# V97.39.23 — env vars dummy pour passer les checks au build. Les vraies
-# valeurs sont injectées AU RUNTIME via env_file dans docker-compose.yml.
-# Le build Next.js exécute des routes API pendant `generateStaticParams`/
-# data collection, qui importent `lib/supabase-server` et failent si pas
-# de SUPABASE_URL. On set du dummy juste pour passer le build.
-ENV NEXT_PUBLIC_SUPABASE_URL=https://build-time-dummy.supabase.co
-ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy.dummy
+# V97.39.31 — CRITIQUE : Next.js bake les NEXT_PUBLIC_* AU BUILD time.
+# Si on build avec des dummies, le SDK Supabase essaie de contacter
+# `https://build-time-dummy.supabase.co` au RUNTIME (timeout 7s + fail).
+# Les VRAIES URLs publiques DOIVENT être passées en build-args.
+#
+# Usage : docker build --build-arg NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co ...
+# (ce ne sont pas des secrets — l'anon key est publique de toute façon)
+ARG NEXT_PUBLIC_SUPABASE_URL=https://build-time-dummy.supabase.co
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy.dummy
+ARG NEXT_PUBLIC_URL=https://keymatch-immo.fr
+ARG NEXT_PUBLIC_SENTRY_DSN=
+ARG NEXT_PUBLIC_REALTIME_PROVIDER=supabase
+ARG NEXT_PUBLIC_REALTIME_URL=
+ARG NEXT_PUBLIC_NOINDEX=false
+ARG NEXT_PUBLIC_BETA=false
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_URL=$NEXT_PUBLIC_URL
+ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
+ENV NEXT_PUBLIC_REALTIME_PROVIDER=$NEXT_PUBLIC_REALTIME_PROVIDER
+ENV NEXT_PUBLIC_REALTIME_URL=$NEXT_PUBLIC_REALTIME_URL
+ENV NEXT_PUBLIC_NOINDEX=$NEXT_PUBLIC_NOINDEX
+ENV NEXT_PUBLIC_BETA=$NEXT_PUBLIC_BETA
+
+# Server-only vars (non baked, runtime via env_file). Dummies pour passer build.
 ENV SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy.dummy
 ENV NEXTAUTH_SECRET=build-time-dummy-secret-32-chars-min
 ENV NEXTAUTH_URL=https://keymatch-immo.fr

@@ -19,6 +19,17 @@ services:
     build:
       context: ../..
       dockerfile: tools/next-vps/Dockerfile
+      # V97.39.31 — Passe les vraies NEXT_PUBLIC_* au build (sinon dummies bake-in).
+      # Ces valeurs viennent de l'env shell au moment du build (depuis /etc/keymatch-prod.env)
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_URL: ${NEXT_PUBLIC_URL:-https://keymatch-immo.fr}
+        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+        NEXT_PUBLIC_REALTIME_PROVIDER: ${NEXT_PUBLIC_REALTIME_PROVIDER:-supabase}
+        NEXT_PUBLIC_REALTIME_URL: ${NEXT_PUBLIC_REALTIME_URL:-}
+        NEXT_PUBLIC_NOINDEX: ${NEXT_PUBLIC_NOINDEX:-false}
+        NEXT_PUBLIC_BETA: ${NEXT_PUBLIC_BETA:-false}
     container_name: keymatch-next
     restart: unless-stopped
     # Bind localhost only. Caddy reverse-proxy expose via keymatch-immo.fr.
