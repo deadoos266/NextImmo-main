@@ -113,7 +113,14 @@ sudo grep -E '^(NEXT_PUBLIC_SUPABASE_URL|NEXT_PUBLIC_SUPABASE_ANON_KEY|SUPABASE_
 echo ""
 echo "🚀 Rebuild keymatch-next (NEXT_PUBLIC_* sont baked au build time)"
 cd /opt/keymatch/NextImmo-main/tools/next-vps
-sudo docker compose up -d --build keymatch-next
+# Source /etc/keymatch-prod.env pour que docker-compose puisse substituer
+# les ${NEXT_PUBLIC_*} dans le bloc args: (sinon ils sont vides au build
+# et le lib/supabase.ts throw au build time car URL manquante).
+set -a
+# shellcheck source=/dev/null
+source /etc/keymatch-prod.env
+set +a
+sudo -E docker compose up -d --build keymatch-next
 
 echo ""
 echo "⏳ Attendre healthcheck (40s) …"
