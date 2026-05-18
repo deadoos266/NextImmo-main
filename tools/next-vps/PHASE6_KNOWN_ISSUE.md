@@ -1,36 +1,60 @@
-# Phase 6 Cutover — Known Issue 2026-05-17
+# Phase 6 Cutover — Known Issue 2026-05-17/18
 
 ## Symptôme
-Tentative de cutover Phase 6 (V97.39.30) : container Next.js prod boot OK
-(320ms) mais les pages qui fetchent Supabase via le SDK retournent 404
-après 7.3s timeout.
+Le container Next.js prod boot OK (276-320ms) mais TOUS les fetches Supabase
+via `@supabase/supabase-js` SDK timeout en 7s, retournent "TypeError: fetch failed".
 
-## Tests live (VPS, container actif)
+## Investigation
+### Ce qui MARCHE depuis le container
 - `wget https://wzzibgdupycysvtwsqxo.supabase.co/rest/v1/` : ✓ 401 en <1s
-- `node -e "fetch(...)"` direct dans container : ✓ 401 en <1s
-- `/api/health` (utilise Supabase JS client) : ✗ timeout 7s "fetch failed"
-- `/annonces/<id>` (SSR + Supabase JS client) : ✗ HTTP 404 après 7.3s
+- `node -e "fetch(URL)"` direct : ✓ 401 en <1s
+- `fetch(URL, { headers: <supabase-like> })` : ✓ 206 en 220ms
+- Pages publiques sans DB (/, /aide, /cgu, /sitemap.xml) : ✓ <70ms
 
-## Hypothèse root cause
-`node:22-alpine` a un bug TLS keepalive avec certaines stacks fetch. Le
-SDK Supabase JS construit ses connexions HTTPS d'une manière incompatible
-avec Alpine musl libc + Node 22 native fetch.
+### Ce qui TIMEOUT depuis le container
+- `supabaseAdmin.from("annonces").select(...)` (SDK Supabase JS) : ✗ 7s
+- `/api/health` (utilise le SDK) : ✗ degraded systématique
+- `/annonces/<id>` (SSR + SDK) : ✗ HTTP 404 après 7.3s
 
-## Fix probable
-Migrer `tools/next-vps/Dockerfile` :
-  FROM node:22-alpine → FROM node:22-slim (Debian)
-Tests à refaire après rebuild.
+## Tests effectués (toutes infructueuses)
+1. `node:22-alpine` → `node:22-slim` (Debian) : même bug
+2. Sentry désactivé (SENTRY_DSN= , NEXT_PUBLIC_SENTRY_DSN=) : même bug
+3. `NODE_OPTIONS=--dns-result-order=ipv4first` : même bug
+4. Network bridge default vs keymatch-postgres-net : même bug
+5. Build avec env vars dummy puis runtime real : même bug
+
+## Hypothèses restantes (à creuser demain)
+1. **Supabase SDK `realtime` subscription** au boot fait un wss:// fail
+2. **TLS keepalive** : Node 22 native fetch vs OpenSSL Debian stack
+3. **Module bundle** : webpack bundle inline le SDK mais pas une dep système
+4. **PostgREST wrapper** dans `@supabase/postgrest-js` qui fait un préflight CORS
+5. **Bug spécifique** `@supabase/supabase-js` ^2.49.4 sur Node 22 outside Vercel
 
 ## Status cutover
-ANNULÉ 2026-05-17 21:50 UTC. Container stoppé, bloc Caddy retiré.
-Vercel reste source unique pour keymatch-immo.fr. À reprendre fresh demain.
+**ANNULÉ 2026-05-18 11:58 UTC** (2e tentative).
+Container stoppé, bloc Caddy retiré V97.39.30 (1ère tentative).
+Vercel reste source unique pour keymatch-immo.fr.
 
-## Liste actions rollback effectuées
-1. `docker stop keymatch-next` ✓
-2. `docker rm keymatch-next` ✓
-3. `sed -i '/V97.39.30 — Phase 6/,/^}$/d' /etc/caddy/Caddyfile` ✓
-4. `systemctl reload caddy` ✓
-5. Vérifié ws/media/fetcher toujours UP ✓
-6. DNS apex non touché (toujours pointe Vercel) ✓
+## Workaround possible (à tester demain)
+Remplacer `supabaseAdmin.from(...)` par des fetch directs au PostgREST endpoint :
+```ts
+// Avant
+const { data, error } = await supabaseAdmin.from("annonces").select("...")
 
-## Impact prod : NUL (rollback propre)
+// Après
+const r = await fetch(`${SUPABASE_URL}/rest/v1/annonces?select=...`, {
+  headers: { apikey: KEY, Authorization: `Bearer ${KEY}` }
+})
+```
+Mais c'est 100+ call sites — gros refactor.
+
+## Workaround alternatif (rapide)
+Migrer Phase 2 (Postgres VPS source of truth) AVANT Phase 6. Le code Next.js
+parlerait au Postgres VPS local via `pg` driver (pas via SDK Supabase qui timeout).
+Mais Phase 2 cutover DB = 2-3h sprint dimanche.
+
+## Recommandation : reporter Phase 6 à après Phase 2
+
+L'investigation SDK Supabase peut consommer 5-10h supplémentaires sans
+garantie. Plus pragmatique de basculer Phase 2 (DB VPS) qui élimine le besoin
+de SDK Supabase fetch côté Next.js — on parle direct à Postgres local.
