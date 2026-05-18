@@ -49,8 +49,10 @@ services:
       SECURE_PROXY_SSL_HEADER: HTTP_X_FORWARDED_PROTO,https
       USE_X_FORWARDED_HOST: "True"
     ports:
-      # Bind localhost → Caddy proxy
-      - "127.0.0.1:8000:8000"
+      # Bind localhost → Caddy proxy.
+      # GlitchTip uwsgi écoute sur 8080 dans le container (pas 8000 comme
+      # supposé initialement).
+      - "127.0.0.1:8000:8080"
     networks:
       - keymatch-postgres-net
       - glitchtip-net
@@ -58,7 +60,7 @@ services:
       - redis
     mem_limit: 768m
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/api/0/health/ || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/api/0/health/ || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
