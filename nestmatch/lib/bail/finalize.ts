@@ -18,7 +18,7 @@
  */
 
 import { supabaseAdmin } from "../supabase-server"
-import { sendEmail } from "../email/resend"
+import { sendEmail } from "../email"
 import { bailFinalActifTemplate } from "../email/templates"
 import { genererBailPDFBuffer } from "../bailPDF"
 import type { BailData, BailSignatureEntry } from "../bailPDF"

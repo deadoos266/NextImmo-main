@@ -19,7 +19,7 @@ import crypto from "node:crypto"
 import { z } from "zod"
 import { supabaseAdmin } from "../../../../lib/supabase-server"
 import { checkRateLimitAsync, getClientIp } from "../../../../lib/rateLimit"
-import { sendEmail } from "../../../../lib/email/resend"
+import { sendEmail } from "../../../../lib/email"
 import { resetPasswordTemplate } from "../../../../lib/email/templates"
 
 const requestSchema = z.object({

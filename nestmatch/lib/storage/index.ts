@@ -51,12 +51,16 @@
 // car SUPABASE_SERVICE_ROLE_KEY indisponible).
 //   - Côté server : supabaseAdmin (bypass RLS, signed URLs server-only)
 //   - Côté client : supabase (anon avec session NextAuth, RLS appliquée)
+//
+// V97.39.32 — supabase-server.ts est désormais un Proxy lazy init : safe
+// à importer en top-level même côté browser (le throw n'arrive qu'au
+// premier accès à une propriété, qu'on garde derrière le check `typeof
+// window === "undefined"`). Plus besoin de require() dynamique.
 import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase-server"
 
 function getSupabaseStorageClient() {
   if (typeof window === "undefined" && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { supabaseAdmin } = require("@/lib/supabase-server")
     return supabaseAdmin
   }
   return supabase

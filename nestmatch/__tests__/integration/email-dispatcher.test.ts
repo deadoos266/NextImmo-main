@@ -1,16 +1,13 @@
 /**
- * V97.39.19 P3 Phase 5 — Tests dispatcher email Resend ↔ Brevo.
+ * V97.39.32 — Tests dispatcher email Brevo only.
  *
  * Vérifie :
- *  - getActiveEmailProvider() reflète EMAIL_PROVIDER + clés présentes
- *  - sendEmail() dispatche vers Resend si EMAIL_PROVIDER=resend (défaut)
- *  - sendEmail() dispatche vers Brevo si EMAIL_PROVIDER=brevo + BREVO_API_KEY
- *  - sendEmail() fallback Resend si EMAIL_PROVIDER=brevo mais pas de BREVO_API_KEY
- *  - sendEmail() noop graceful si aucun provider configuré
+ *  - getActiveEmailProvider() reflète BREVO_API_KEY présent
+ *  - sendEmail() noop graceful si BREVO_API_KEY absent
+ *  - sendEmail() appelle Brevo si configuré
  *  - sendEmailBrevo() construit le payload Brevo correctement
- *  - sendEmailBrevo() convertit tags Resend → Brevo
+ *  - sendEmailBrevo() convertit tags KeyMatch → Brevo
  *  - sendEmailBrevo() respecte le guard self-email
- *  - sendEmailBrevo() respecte la suppress_list
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
@@ -31,43 +28,28 @@ vi.mock("@/lib/supabase-server", () => ({
   },
 }))
 
-// Mock Resend SDK (utilisé par lib/email/resend.ts). Doit être appelable via
-// `new Resend(apiKey)` → on utilise une class pour satisfaire le constructeur.
-vi.mock("resend", () => ({
-  Resend: class MockResend {
-    emails = {
-      send: async () => ({ data: { id: "resend-msg-id-123" }, error: null }),
-    }
-  },
-}))
-
 describe("email dispatcher (lib/email/index.ts)", () => {
   const originalEnv = { ...process.env }
 
   beforeEach(() => {
     vi.resetModules()
-    // Reset env aux valeurs minimales pour chaque test
     process.env = { ...originalEnv }
-    delete process.env.EMAIL_PROVIDER
     delete process.env.BREVO_API_KEY
-    delete process.env.RESEND_API_KEY
     process.env.BREVO_FROM_EMAIL = "noreply@keymatch-immo.fr"
-    process.env.RESEND_FROM_EMAIL = "noreply@keymatch-immo.fr"
   })
 
   afterEach(() => {
     process.env = { ...originalEnv }
   })
 
-  it("getActiveEmailProvider défaut = resend non configuré", async () => {
+  it("getActiveEmailProvider sans clé → brevo not configured", async () => {
     const { getActiveEmailProvider } = await import("@/lib/email")
     const p = getActiveEmailProvider()
-    expect(p.provider).toBe("resend")
+    expect(p.provider).toBe("brevo")
     expect(p.configured).toBe(false)
   })
 
-  it("getActiveEmailProvider EMAIL_PROVIDER=brevo + BREVO_API_KEY → brevo configuré", async () => {
-    process.env.EMAIL_PROVIDER = "brevo"
+  it("getActiveEmailProvider avec BREVO_API_KEY → configured", async () => {
     process.env.BREVO_API_KEY = "xkeysib-test"
     const { getActiveEmailProvider } = await import("@/lib/email")
     const p = getActiveEmailProvider()
@@ -75,15 +57,7 @@ describe("email dispatcher (lib/email/index.ts)", () => {
     expect(p.configured).toBe(true)
   })
 
-  it("getActiveEmailProvider EMAIL_PROVIDER inconnu → fallback resend", async () => {
-    process.env.EMAIL_PROVIDER = "mailjet" // pas supporté
-    process.env.RESEND_API_KEY = "re_test"
-    const { getActiveEmailProvider } = await import("@/lib/email")
-    const p = getActiveEmailProvider()
-    expect(p.provider).toBe("resend")
-  })
-
-  it("sendEmail noop si aucun provider configuré (skipped=true)", async () => {
+  it("sendEmail noop si BREVO_API_KEY absent (skipped=true)", async () => {
     const { sendEmail } = await import("@/lib/email")
     const res = await sendEmail({
       to: "test@example.com",
@@ -93,29 +67,7 @@ describe("email dispatcher (lib/email/index.ts)", () => {
     expect(res).toMatchObject({ ok: false, skipped: true })
   })
 
-  it("sendEmail EMAIL_PROVIDER=brevo sans BREVO_API_KEY mais avec RESEND_API_KEY → fallback Resend", async () => {
-    process.env.EMAIL_PROVIDER = "brevo"
-    process.env.RESEND_API_KEY = "re_test"
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
-
-    const { sendEmail } = await import("@/lib/email")
-    const res = await sendEmail({
-      to: "test@example.com",
-      subject: "Test",
-      html: "<p>hi</p>",
-    })
-
-    expect(res.ok).toBe(true)
-    // Le warning fallback doit avoir été loggé
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("fallback Resend"),
-      expect.any(Object),
-    )
-    warnSpy.mockRestore()
-  })
-
-  it("sendEmail EMAIL_PROVIDER=brevo + BREVO_API_KEY → utilise Brevo (fetch sur api.brevo.com)", async () => {
-    process.env.EMAIL_PROVIDER = "brevo"
+  it("sendEmail appelle Brevo si configuré (fetch sur api.brevo.com)", async () => {
     process.env.BREVO_API_KEY = "xkeysib-test"
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ messageId: "brevo-msg-id-456" }), {
@@ -123,42 +75,18 @@ describe("email dispatcher (lib/email/index.ts)", () => {
         headers: { "content-type": "application/json" },
       }),
     )
-
     const { sendEmail } = await import("@/lib/email")
     const res = await sendEmail({
       to: "test@example.com",
       subject: "Test",
       html: "<p>hi</p>",
     })
-
     expect(res).toMatchObject({ ok: true, id: "brevo-msg-id-456" })
     expect(fetchSpy).toHaveBeenCalled()
     const call = fetchSpy.mock.calls[0]
     expect(call[0]).toBe("https://api.brevo.com/v3/smtp/email")
-    const init = call[1] as RequestInit
-    expect(init.method).toBe("POST")
-    const headers = init.headers as Record<string, string>
+    const headers = (call[1] as RequestInit).headers as Record<string, string>
     expect(headers["api-key"]).toBe("xkeysib-test")
-    fetchSpy.mockRestore()
-  })
-
-  it("sendEmail défaut (resend) + RESEND_API_KEY → utilise Resend (pas fetch Brevo)", async () => {
-    process.env.RESEND_API_KEY = "re_test"
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}"))
-
-    const { sendEmail } = await import("@/lib/email")
-    const res = await sendEmail({
-      to: "test@example.com",
-      subject: "Test",
-      html: "<p>hi</p>",
-    })
-
-    expect(res.ok).toBe(true)
-    // Brevo PAS appelé
-    const calledBrevo = fetchSpy.mock.calls.some(c =>
-      String(c[0]).includes("brevo.com"),
-    )
-    expect(calledBrevo).toBe(false)
     fetchSpy.mockRestore()
   })
 })

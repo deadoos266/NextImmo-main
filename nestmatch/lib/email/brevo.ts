@@ -25,12 +25,14 @@
  */
 
 import { supabaseAdmin } from "@/lib/supabase-server"
-import type { SendArgs, SendResult } from "./resend"
+// V97.39.32 — Types depuis index.ts (resend.ts supprimé).
+// Type-only import → pas de circular runtime.
+import type { SendArgs, SendResult } from "./index"
 
 const apiKey = process.env.BREVO_API_KEY
-const fromEmail = process.env.BREVO_FROM_EMAIL || process.env.RESEND_FROM_EMAIL || "noreply@keymatch-immo.fr"
-const fromName = process.env.BREVO_FROM_NAME || process.env.RESEND_FROM_NAME || "KeyMatch"
-const replyToEmail = process.env.BREVO_REPLY_TO || process.env.RESEND_REPLY_TO
+const fromEmail = process.env.BREVO_FROM_EMAIL || "noreply@keymatch-immo.fr"
+const fromName = process.env.BREVO_FROM_NAME || "KeyMatch"
+const replyToEmail = process.env.BREVO_REPLY_TO
 
 interface BrevoEmailRequest {
   sender: { name: string; email: string }

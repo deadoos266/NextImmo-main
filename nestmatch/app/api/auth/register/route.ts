@@ -4,7 +4,7 @@ import crypto from "node:crypto"
 import { z } from "zod"
 import { supabaseAdmin } from "../../../../lib/supabase-server"
 import { checkRateLimitAsync, getClientIp } from "../../../../lib/rateLimit"
-import { sendEmail } from "../../../../lib/email/resend"
+import { sendEmail } from "../../../../lib/email"
 import { verifyEmailTemplate } from "../../../../lib/email/templates"
 import { IDENTITE_PATTERN } from "../../../../lib/profilHelpers"
 
