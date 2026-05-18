@@ -173,7 +173,51 @@ async function checkEmail(): Promise<ServiceCheck> {
 }
 
 async function checkStorage(): Promise<ServiceCheck> {
+  // V97.39.34 — Phase 3 a remplacé Supabase Storage par MinIO self-host.
+  // On ping `https://media.keymatch-immo.fr/minio/health/live` (endpoint
+  // standard MinIO publié sans auth) qui retourne 200 si MinIO tourne.
+  // Fallback Supabase Storage si STORAGE_PROVIDER pas activé.
   const t0 = performance.now()
+  const provider = (process.env.STORAGE_PROVIDER || "supabase").toLowerCase().trim()
+
+  if (provider === "minio") {
+    const endpoint = process.env.MINIO_PUBLIC_URL || process.env.MINIO_ENDPOINT
+    if (!endpoint) {
+      return {
+        service: "storage",
+        status: "down",
+        latency_ms: Math.round(performance.now() - t0),
+        error: "configuration_missing: STORAGE_PROVIDER=minio mais MINIO_PUBLIC_URL/MINIO_ENDPOINT absent",
+      }
+    }
+    try {
+      const ctrl = new AbortController()
+      const timer = setTimeout(() => ctrl.abort(), 4000)
+      const res = await fetch(`${endpoint.replace(/\/$/, "")}/minio/health/live`, {
+        method: "GET",
+        signal: ctrl.signal,
+        cache: "no-store",
+      })
+      clearTimeout(timer)
+      const latency = Math.round(performance.now() - t0)
+      if (!res.ok) {
+        return { service: "storage", status: "down", latency_ms: latency, error: `MinIO HTTP ${res.status}` }
+      }
+      if (latency > 1500) {
+        return { service: "storage", status: "degraded", latency_ms: latency, error: "Slow >1500ms" }
+      }
+      return { service: "storage", status: "up", latency_ms: latency, error: null }
+    } catch (e) {
+      return {
+        service: "storage",
+        status: "down",
+        latency_ms: Math.round(performance.now() - t0),
+        error: e instanceof Error ? e.message : String(e),
+      }
+    }
+  }
+
+  // Fallback Supabase Storage (legacy, jamais activé après Phase 3)
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) {
