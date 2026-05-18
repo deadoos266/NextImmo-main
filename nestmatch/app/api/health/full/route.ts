@@ -92,37 +92,36 @@ function checkAuth(): ServiceCheck {
 }
 
 async function checkEmail(): Promise<ServiceCheck> {
-  // V76.2b — diagnostic email enrichi avec catégorisation des erreurs
-  // (configuration_missing / auth_failed / rate_limited / network_error /
-  // slow). Le user voit dans /admin/health la cause précise au lieu d'un
-  // simple "down" générique.
+  // V97.39.34 — Phase 5 a remplacé Resend par Brevo. On check api.brevo.com
+  // via le GET /v3/account qui valide la clé sans coût (0 email envoyé).
+  // Diagnostic enrichi : configuration_missing / auth_failed / rate_limited
+  // / brevo_server_error / network_error / slow.
   const t0 = performance.now()
-  const key = process.env.RESEND_API_KEY
+  const key = process.env.BREVO_API_KEY
   if (!key) {
     return {
       service: "email",
       status: "down",
       latency_ms: Math.round(performance.now() - t0),
-      error: "configuration_missing: RESEND_API_KEY absent côté Vercel env vars (Settings → Environment Variables)",
+      error: "configuration_missing: BREVO_API_KEY absent côté env (Settings → Environment Variables)",
     }
   }
-  // Sanity check format basique avant de faire un round-trip réseau.
-  // Resend keys ressemblent à `re_xxxxx_xxxxxxxxx` (préfixe + segments).
-  if (!key.startsWith("re_") || key.length < 20) {
+  // Brevo keys ressemblent à `xkeysib-...` (préfixe + 64+ chars).
+  if (!key.startsWith("xkeysib-") || key.length < 60) {
     return {
       service: "email",
       status: "down",
       latency_ms: Math.round(performance.now() - t0),
-      error: "configuration_missing: RESEND_API_KEY format invalide (doit commencer par 're_' et faire ≥20 chars)",
+      error: "configuration_missing: BREVO_API_KEY format invalide (doit commencer par 'xkeysib-' et faire ≥60 chars)",
     }
   }
   try {
-    // GET /domains coûte 0 email mais valide la clé.
+    // GET /v3/account coûte 0 email mais valide la clé.
     const ctrl = new AbortController()
     const timer = setTimeout(() => ctrl.abort(), 4000)
-    const res = await fetch("https://api.resend.com/domains", {
+    const res = await fetch("https://api.brevo.com/v3/account", {
       method: "GET",
-      headers: { Authorization: `Bearer ${key}` },
+      headers: { "api-key": key, accept: "application/json" },
       signal: ctrl.signal,
       cache: "no-store",
     })
@@ -133,7 +132,7 @@ async function checkEmail(): Promise<ServiceCheck> {
         service: "email",
         status: "down",
         latency_ms: latency,
-        error: `auth_failed: Resend HTTP ${res.status} — clé invalide ou révoquée. Régénérer sur https://resend.com/api-keys et update Vercel env`,
+        error: `auth_failed: Brevo HTTP ${res.status} — clé invalide ou révoquée. Régénérer sur https://app.brevo.com/settings/keys/api et update env`,
       }
     }
     if (res.status === 429) {
@@ -141,7 +140,7 @@ async function checkEmail(): Promise<ServiceCheck> {
         service: "email",
         status: "degraded",
         latency_ms: latency,
-        error: "rate_limited: Resend HTTP 429 — quota plan dépassé. Check usage sur dashboard Resend",
+        error: "rate_limited: Brevo HTTP 429 — quota plan dépassé. Check usage sur dashboard Brevo",
       }
     }
     if (res.status >= 500 && res.status < 600) {
@@ -149,11 +148,11 @@ async function checkEmail(): Promise<ServiceCheck> {
         service: "email",
         status: "down",
         latency_ms: latency,
-        error: `resend_server_error: HTTP ${res.status} — incident côté Resend. Check https://status.resend.com`,
+        error: `brevo_server_error: HTTP ${res.status} — incident côté Brevo. Check https://status.brevo.com`,
       }
     }
     if (!res.ok) {
-      return { service: "email", status: "degraded", latency_ms: latency, error: `unknown_http: Resend HTTP ${res.status}` }
+      return { service: "email", status: "degraded", latency_ms: latency, error: `unknown_http: Brevo HTTP ${res.status}` }
     }
     if (latency > 2000) {
       return { service: "email", status: "degraded", latency_ms: latency, error: `slow: ${latency}ms (seuil 2000ms)` }
@@ -167,7 +166,7 @@ async function checkEmail(): Promise<ServiceCheck> {
       status: "down",
       latency_ms: Math.round(performance.now() - t0),
       error: isAbort
-        ? "network_error: timeout >4s sur api.resend.com (réseau Vercel ou Resend)"
+        ? "network_error: timeout >4s sur api.brevo.com (réseau VPS ou Brevo)"
         : `network_error: ${msg}`,
     }
   }
