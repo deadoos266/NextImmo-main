@@ -83,7 +83,13 @@ db.keymatch-immo.fr {
         Access-Control-Allow-Origin "https://keymatch-immo.fr"
         Access-Control-Allow-Credentials "true"
         Access-Control-Allow-Methods "GET, POST, PATCH, PUT, DELETE, OPTIONS"
-        Access-Control-Allow-Headers "Authorization, Content-Type, apikey, Prefer, Accept, Range, X-Client-Info"
+        # V97.39.33 fix : ajout headers que le SDK @supabase/supabase-js envoie
+        # en cross-origin :
+        #   - Accept-Profile / Content-Profile : sélection de schéma PostgREST
+        #   - X-Retry-Count : retry tracking interne du SDK
+        #   - X-Supabase-Api-Version : version SDK
+        # Sans ces headers dans Allow-Headers, Chrome bloque les preflights → CORS errors.
+        Access-Control-Allow-Headers "Authorization, Content-Type, apikey, Prefer, Accept, Range, X-Client-Info, Accept-Profile, Content-Profile, X-Retry-Count, X-Supabase-Api-Version"
         -Server
     }
 
