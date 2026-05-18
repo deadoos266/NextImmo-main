@@ -364,6 +364,27 @@ export default function ListingCardSearch({
               VOTRE BIEN
             </span>
           )}
+          {/* V97.39.34 — Phase A.2 agences : badge Pro vérifié + nom agence
+              si annonce publiée au nom d'une agence active. Aide les
+              locataires à identifier un acteur professionnel KYC vérifié. */}
+          {annonce.agence?.statut === "active" && (
+            <span
+              title={`Annonce publiée par ${annonce.agence.name} — agence professionnelle vérifiée`}
+              style={{
+                padding: "5px 10px",
+                background: annonce.agence.couleur_primaire || "#0a7c3e",
+                color: "white",
+                borderRadius: 999,
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "0.6px",
+                pointerEvents: "auto",
+                cursor: "default",
+              }}
+            >
+              ✓ PRO · {String(annonce.agence.name).toUpperCase().slice(0, 18)}
+            </span>
+          )}
         </div>
 
         {/* Top-right : favori uniquement — masque si isOwn (Paul 2026-04-27,

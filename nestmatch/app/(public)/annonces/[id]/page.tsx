@@ -19,6 +19,7 @@ import SignalerButton from "../../../components/SignalerButton"
 import ShareButton from "./ShareButton"
 import LocataireMatchCard from "./LocataireMatchCard"
 import EquipementsBlock from "./EquipementsBlock"
+import AgenceCardDetail from "./AgenceCardDetail"
 import PartagerCard from "./PartagerCard"
 import StickyCTABanner from "./StickyCTABanner"
 import CandidaturesCounter from "./CandidaturesCounter"
@@ -203,7 +204,12 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
 
 export default async function Annonce({ params }: any) {
   const { id } = await params
-  const { data: annonce } = await supabase.from("annonces").select("*").eq("id", id).single()
+  // V97.39.34 — Phase A.2 : embed agence pour l'encart "publiée par".
+  const { data: annonce } = await supabase
+    .from("annonces")
+    .select("*, agence:agences(id, slug, name, logo_url, couleur_primaire, ville, bio, statut, telephone, email)")
+    .eq("id", id)
+    .single()
 
   // Social proof : compteurs vues + candidatures (distincts). Server-side,
   // head-only pour éviter de transférer des lignes, juste le count.
@@ -1016,6 +1022,10 @@ export default async function Annonce({ params }: any) {
 
               {/* V9.1 — warning DPE F/G interdit en 2028 (loi Climat & Résilience). */}
               <DpeWarningBanner dpe={annonce.dpe} />
+
+              {/* V97.39.34 — Phase A.2 : encart agence si annonce publiée par
+                  un acteur professionnel vérifié (carte T validée KeyMatch). */}
+              <AgenceCardDetail agence={annonce.agence ?? null} />
 
               <ScoreBlock annonce={annonce} />
 

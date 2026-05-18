@@ -135,6 +135,29 @@ export default function AjouterBien() {
   const [logementSpecialise, setLogementSpecialise] = useState(false)
   const photoInputRef = useRef<HTMLInputElement>(null)
 
+  // V97.39.34 — Phase A.2 agences : si l'user est membre d'une agence active,
+  // il peut publier l'annonce au nom de l'agence (badge "Pro" sur la card +
+  // page détail). Sélectionne null = compte particulier classique.
+  const [myAgences, setMyAgences] = useState<Array<{ id: string; name: string; slug: string; statut: string; role: string; logo_url: string | null }>>([])
+  const [selectedAgenceId, setSelectedAgenceId] = useState<string | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const r = await fetch("/api/agences/mine", { cache: "no-store" })
+        const j = await r.json()
+        if (!cancelled && j?.ok) {
+          // Garde uniquement les agences actives + role qui permet de publier
+          const eligible = (j.agences || []).filter((a: { statut: string; role: string }) =>
+            a.statut === "active" && ["owner", "admin", "agent"].includes(a.role),
+          )
+          setMyAgences(eligible)
+        }
+      } catch { /* noop */ }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
   const [form, setForm] = useState<AnnonceForm>({
     titre: "", ville: "", adresse: "", prix: "", charges: "", caution: "",
     surface: "", pieces: "", chambres: "", etage: "", dpe: "C",
@@ -397,6 +420,8 @@ export default function AjouterBien() {
         fumeur_politique: form.fumeur_politique === "indifferent" ? null : form.fumeur_politique,
         equipements_extras: Object.keys(equipExtras).length > 0 ? equipExtras : null,
         ...toggles,
+        // V97.39.34 — Phase A.2 : si user a sélectionné une agence
+        agence_id: selectedAgenceId,
       }
       // R10.6 — la décision animaux est désormais tri-state en Step6 ; on dérive
       // la colonne boolean `animaux` (legacy, lue par matching.ts v3) de la politique.
@@ -549,6 +574,42 @@ export default function AjouterBien() {
             Disparaît dès qu'un draft est en cours OU l'user a tapé du texte. */}
         {step === 1 && !importBannerDismissed && !draftPromptOpen && !form.titre && !form.ville && (
           <ImportUrlBanner onImported={handleImportedAnnonce} onDismiss={() => setImportBannerDismissed(true)} />
+        )}
+
+        {/* V97.39.34 — Phase A.2 agences : sélection "publier au nom de"
+            visible step 1 uniquement, si l'user est membre d'au moins 1
+            agence active. Discret en haut, le user peut ignorer (= particulier). */}
+        {step === 1 && myAgences.length > 0 && (
+          <div style={{
+            background: "white", border: "1px solid #EAE6DF", borderRadius: 16,
+            padding: 16, marginBottom: 16, display: "flex", gap: 12,
+            alignItems: "center", flexWrap: "wrap",
+          }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: "#111" }}>
+                Publier au nom de…
+              </div>
+              <div style={{ fontSize: 12, color: "#666", marginTop: 2 }}>
+                Cette annonce sera affichée avec le badge « Pro vérifié ».
+              </div>
+            </div>
+            <select
+              value={selectedAgenceId || ""}
+              onChange={(e) => setSelectedAgenceId(e.target.value || null)}
+              style={{
+                padding: "8px 12px", border: "1px solid #EAE6DF",
+                borderRadius: 8, fontSize: 13, background: "white",
+                fontFamily: "inherit", minWidth: 220,
+              }}
+            >
+              <option value="">— Moi (compte particulier)</option>
+              {myAgences.map(a => (
+                <option key={a.id} value={a.id}>
+                  {a.name} ({a.role})
+                </option>
+              ))}
+            </select>
+          </div>
         )}
 
         {/* V97.36 P3-7 — Banner de succès post-import + warnings. */}

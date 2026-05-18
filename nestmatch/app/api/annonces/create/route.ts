@@ -62,6 +62,10 @@ const WHITELIST_COLS = new Set([
   // Bail importé / déjà loué
   "locataire_email", "date_debut_bail", "mensualite_credit", "valeur_bien",
   "duree_credit", "taxe_fonciere", "assurance_pno", "charges_copro_annuelles",
+  // V97.39.34 — Phase A agences : si user est membre d'une agence active,
+  // il peut publier au nom de l'agence (badge "Pro" affiché). Vérification
+  // server-side ci-dessous pour éviter qu'un user usurpe une agence.
+  "agence_id",
 ])
 
 export async function POST(req: NextRequest) {
@@ -110,6 +114,38 @@ export async function POST(req: NextRequest) {
   payload.is_test = false // V68 fix #7 — un proprio ne peut plus poster is_test=true
   payload.membre = "Membre depuis " + new Date().getFullYear()
   payload.verifie = true
+
+  // V97.39.34 — Phase A agences : si payload.agence_id présent, vérifier
+  // que l'utilisateur est bien membre actif (joined + non removed) de
+  // l'agence ET que l'agence est statut='active'. Sinon on retire le
+  // champ silencieusement (l'annonce sera publiée en compte particulier).
+  if (payload.agence_id && typeof payload.agence_id === "string") {
+    const { data: check } = await supabaseAdmin
+      .from("agence_membres")
+      .select("role, agences!inner(statut)")
+      .eq("agence_id", payload.agence_id)
+      .eq("user_email", proprioEmail)
+      .is("removed_at", null)
+      .not("joined_at", "is", null)
+      .maybeSingle()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const c = check as any
+    const role = c?.role as string | undefined
+    const statutAgence = c?.agences?.statut as string | undefined
+    // Au moins role agent ou supérieur pour publier au nom de l'agence
+    const allowed = role && ["owner", "admin", "agent"].includes(role) && statutAgence === "active"
+    if (!allowed) {
+      // Silencieusement retiré : on ne fail pas l'insert, juste l'annonce
+      // sera publiée en particulier. Audit log côté serveur.
+      console.warn("[annonces/create] agence_id retiré (non-membre ou non-active)", {
+        user: proprioEmail,
+        agence_id: payload.agence_id,
+        role,
+        statutAgence,
+      })
+      delete payload.agence_id
+    }
+  }
 
   // INSERT avec fallback progressif (3 niveaux selon colonnes manquantes)
   // C'est la même logique qu'avant côté client, conservée pour compat

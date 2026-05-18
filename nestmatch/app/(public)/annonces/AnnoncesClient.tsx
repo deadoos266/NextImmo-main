@@ -601,9 +601,11 @@ function AnnoncesContent({ initialSearchParams }: { initialSearchParams?: SP }) 
   // ── Fetch annonces + profil
   useEffect(() => {
     async function fetchData() {
+      // V97.39.34 — Phase A.2 agences : embed les infos agence pour
+      // afficher le badge "Pro" sur les cards. PostgREST resolveFK auto.
       const { data: a } = await supabase
         .from("annonces")
-        .select("*")
+        .select("*, agence:agences(id, slug, name, logo_url, couleur_primaire, statut)")
         .or("statut.is.null,statut.neq.loué")
         .eq("is_test", false) // Modération : exclut les annonces flaguées en test (proprio les voit toujours dans /proprietaire)
       if (a) setAnnonces(a)
