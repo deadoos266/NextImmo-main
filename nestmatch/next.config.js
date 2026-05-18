@@ -21,9 +21,13 @@ const CSP_HEADER = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "img-src 'self' data: blob: https://*.supabase.co https://media.keymatch-immo.fr https://*.tile.openstreetmap.org https://*.tile.openstreetmap.fr https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://tiles.stadiamaps.com https://lh3.googleusercontent.com https://images.unsplash.com https://unpkg.com",
+  "img-src 'self' data: blob: https://*.supabase.co https://db.keymatch-immo.fr https://media.keymatch-immo.fr https://*.tile.openstreetmap.org https://*.tile.openstreetmap.fr https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://tiles.stadiamaps.com https://lh3.googleusercontent.com https://images.unsplash.com https://unpkg.com",
   "font-src 'self' data: https://fonts.gstatic.com",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://media.keymatch-immo.fr wss://ws.keymatch-immo.fr https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io https://*.upstash.io https://geo.api.gouv.fr https://nominatim.openstreetmap.org",
+  // V97.39.33 Phase 7 — ajout db.keymatch-immo.fr (PostgREST + Realtime self-host)
+  // et sentry.keymatch-immo.fr (GlitchTip self-host). On garde *.supabase.co
+  // dans la liste pour le rollback rapide vers Supabase Cloud (jamais activé
+  // sans flip de NEXT_PUBLIC_SUPABASE_URL).
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://db.keymatch-immo.fr wss://db.keymatch-immo.fr https://media.keymatch-immo.fr wss://ws.keymatch-immo.fr https://sentry.keymatch-immo.fr https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io https://*.upstash.io https://geo.api.gouv.fr https://nominatim.openstreetmap.org",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self' https://accounts.google.com",
