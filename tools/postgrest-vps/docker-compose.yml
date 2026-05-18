@@ -1,0 +1,63 @@
+# PostgREST self-host — V97.39.33 Phase 7 KeyMatch
+#
+# Expose keymatch-postgres en REST API compatible Supabase.
+# Réseau Docker : utilise le réseau keymatch-net partagé avec
+# keymatch-postgres + keymatch-pgbouncer (pour résoudre par hostname).
+
+services:
+  postgrest:
+    image: postgrest/postgrest:v12.2.3
+    container_name: keymatch-postgrest
+    restart: unless-stopped
+    # Pas de ports exposés sur l'host → Caddy fait le reverse proxy.
+    # Si tu veux tester en direct depuis l'host, ajoute :
+    #   ports: ["127.0.0.1:3000:3000"]
+    environment:
+      # Connexion DB : via pgbouncer pour pooling (port 6432) ou direct
+      # postgres (5432). On passe par pgbouncer pour ne pas saturer le
+      # nombre de connexions Postgres natif sous charge.
+      PGRST_DB_URI: "postgres://${POSTGREST_DB_USER}:${POSTGREST_DB_PASSWORD}@keymatch-postgres:5432/keymatch"
+      # Schéma exposé en REST (compat Supabase = public)
+      PGRST_DB_SCHEMAS: "public"
+      # Rôle utilisé quand le JWT contient role=anon ou aucun JWT.
+      PGRST_DB_ANON_ROLE: "anon"
+      # Secret pour valider les JWTs (HS256). Doit matcher SUPABASE_JWT_SECRET
+      # côté code et les JWTs anon/service_role générés.
+      PGRST_JWT_SECRET: "${POSTGREST_JWT_SECRET}"
+      # Length minimum 32 chars
+      PGRST_JWT_SECRET_IS_BASE64: "false"
+      # Cohérence avec le SDK Supabase : il attend status 200 sur GET vide,
+      # pas 206 partial content. Désactive le default Range header.
+      PGRST_DB_AGGREGATES_ENABLED: "true"
+      # Limite par défaut pour éviter les SELECT * sans paramètres
+      PGRST_DB_MAX_ROWS: "1000"
+      # Pool de connexions Postgres
+      PGRST_DB_POOL: "10"
+      PGRST_DB_POOL_ACQUISITION_TIMEOUT: "10"
+      # Server config
+      PGRST_SERVER_HOST: "*4"
+      PGRST_SERVER_PORT: "3000"
+      # Open API description (pour debug, /rest/v1/ retourne le swagger)
+      PGRST_OPENAPI_SERVER_PROXY_URI: "https://db.keymatch-immo.fr/rest/v1"
+      # Pre-request function (extension hook) : non utilisé pour l'instant.
+      # PGRST_DB_PRE_REQUEST: "public.pre_request"
+      # Désactive le mode "lazy fail" — on veut un crash explicite si la DB
+      # est down, plutôt qu'un 503 silencieux.
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      # Auth header name (compat Supabase qui envoie "apikey" en plus de
+      # "Authorization: Bearer")
+      # PostgREST 12+ lit Authorization par défaut. Le header apikey est
+      # géré côté Caddy fragment (rewrite vers Authorization).
+    networks:
+      - keymatch-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ | grep -q 'OpenAPI' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  keymatch-net:
+    external: true
+    name: keymatch-net

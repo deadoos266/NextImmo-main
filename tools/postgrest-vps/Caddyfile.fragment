@@ -1,0 +1,90 @@
+# Caddyfile fragment — V97.39.33 Phase 7 KeyMatch
+# À ajouter dans /etc/caddy/Caddyfile sur le VPS.
+#
+# Expose PostgREST + Supabase Realtime self-host derrière db.keymatch-immo.fr
+# avec TLS Let's Encrypt automatique.
+#
+# Compat Supabase :
+#  - SDK envoie ?apikey=<jwt> OU header "apikey: <jwt>" OU "Authorization: Bearer <jwt>"
+#  - PostgREST 12+ lit Authorization par défaut. Caddy rewrite apikey → Authorization
+#    pour les requêtes qui n'ont pas déjà Authorization.
+
+db.keymatch-immo.fr {
+    # Logs séparés pour debug cutover
+    log {
+        output file /var/log/caddy/keymatch-db.log {
+            roll_size 50mb
+            roll_keep 5
+        }
+        format json
+    }
+
+    # === Header normalization Supabase → PostgREST ===
+    # Le SDK envoie "apikey: <JWT>". On rewrite vers Authorization si absent.
+    @no_auth {
+        not header Authorization *
+        header apikey *
+    }
+    handle @no_auth {
+        request_header Authorization "Bearer {http.request.header.apikey}"
+    }
+
+    # === REST API (PostgREST) ===
+    # Supabase format : /rest/v1/<table>
+    # PostgREST format : /<table>
+    # → strip /rest/v1 prefix
+    handle_path /rest/v1/* {
+        reverse_proxy keymatch-postgrest:3000 {
+            header_up X-Forwarded-Proto https
+            header_up X-Forwarded-Host {host}
+            transport http {
+                keepalive 30s
+            }
+        }
+    }
+
+    # === Realtime WebSocket ===
+    # Supabase format : /realtime/v1/websocket
+    # Réservé Phase 7b — wire vers supabase/realtime self-host quand prêt
+    handle_path /realtime/v1/* {
+        reverse_proxy keymatch-supabase-realtime:4000 {
+            header_up Connection {>Connection}
+            header_up Upgrade {>Upgrade}
+            transport http {
+                keepalive 30s
+            }
+        }
+    }
+
+    # === Storage (proxy vers MinIO) ===
+    # Optionnel : si on veut servir media.keymatch-immo.fr aussi depuis db.keymatch-immo.fr/storage/v1
+    # Pas branché par défaut, dossier-photo continue de pointer media.keymatch-immo.fr.
+
+    # === Health check (sans auth) ===
+    handle /health {
+        respond "OK - keymatch-db {time.now}" 200
+    }
+
+    # === Default : 404 explicite ===
+    handle {
+        respond "Not found - try /rest/v1/* or /realtime/v1/*" 404
+    }
+
+    # Headers sécurité
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        # CORS pour le browser direct (SDK Supabase côté client)
+        Access-Control-Allow-Origin "https://keymatch-immo.fr"
+        Access-Control-Allow-Credentials "true"
+        Access-Control-Allow-Methods "GET, POST, PATCH, PUT, DELETE, OPTIONS"
+        Access-Control-Allow-Headers "Authorization, Content-Type, apikey, Prefer, Accept, Range, X-Client-Info"
+        -Server
+    }
+
+    # Preflight CORS
+    @options method OPTIONS
+    handle @options {
+        respond 204
+    }
+}
