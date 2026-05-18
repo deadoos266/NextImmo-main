@@ -3,9 +3,12 @@
 # Multi-stage build :
 #  - deps    : npm ci (cache layer)
 #  - builder : npm run build avec output: 'standalone'
-#  - runner  : image minimaliste (node:22-alpine + standalone)
+#  - runner  : image minimaliste (node:22-slim + standalone)
 #
-# Size cible : ~250 MB (vs 1.2 GB sans standalone).
+# V97.39.30 — Migration node:22-alpine → node:22-slim (Debian) suite au bug
+# fetch Supabase via SDK qui timeout 7s sur Alpine (musl libc + TLS keepalive
+# incompatible avec @supabase/supabase-js).
+# Image size : ~250 MB → ~400 MB (+150 MB acceptable pour stabilité réseau)
 #
 # Build local :
 #   docker build -f tools/next-vps/Dockerfile -t keymatch-next:latest .
@@ -18,13 +21,15 @@
 #   sudo docker compose -f tools/next-vps/docker-compose.yml up -d
 
 # ─── Stage 1 : deps ───────────────────────────────────────────────
-FROM node:22-alpine AS deps
+FROM node:22-slim AS deps
 WORKDIR /app
 
 # Dépendances système nécessaires :
-#  - libc6-compat : compat glibc pour certains binaires natifs (sharp, wreq-js)
 #  - python3 + make + g++ : node-gyp pour bcrypt et autres native deps
-RUN apk add --no-cache libc6-compat python3 make g++
+#  - openssl ca-certificates : TLS handshake fiable (Debian a déjà des certs OK)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 make g++ openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 
 # Copie package.json + lock pour cache Docker
 COPY nestmatch/package.json nestmatch/package-lock.json* ./
@@ -33,11 +38,13 @@ COPY nestmatch/package.json nestmatch/package-lock.json* ./
 RUN npm ci --include=dev --no-audit --no-fund
 
 # ─── Stage 2 : builder ─────────────────────────────────────────────
-FROM node:22-alpine AS builder
+FROM node:22-slim AS builder
 WORKDIR /app
 
 # Dépendances build
-RUN apk add --no-cache libc6-compat
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 
 # Récupère node_modules du stage deps
 COPY --from=deps /app/node_modules ./node_modules
@@ -70,7 +77,7 @@ ENV DOSSIER_LOG_SALT=build-time-dummy-salt-not-used-at-runtime
 RUN npm run build
 
 # ─── Stage 3 : runner ──────────────────────────────────────────────
-FROM node:22-alpine AS runner
+FROM node:22-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -78,13 +85,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# User non-root (sécurité)
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# wget + openssl + ca-certs : healthcheck + TLS stack moderne
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 
-# Sharp doit être installé en runtime sur la même architecture que le runner
-# (Vercel l'installait pour nous, on doit le faire manuellement)
-RUN apk add --no-cache libc6-compat
+# User non-root (sécurité)
+RUN groupadd --system --gid 1001 nodejs \
+  && useradd --system --uid 1001 --gid nodejs nextjs
 
 # Copie le bundle standalone (super léger : juste server.js + node_modules trim)
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
@@ -95,7 +103,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Healthcheck endpoint /api/health
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1
 
 USER nextjs
 
