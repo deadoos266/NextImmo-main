@@ -29,6 +29,7 @@
     "@upstash/redis": "^1.37.0",
     "autoprefixer": "^10.4.27",
     "bcryptjs": "^2.4.3",
+    "fast-xml-parser": "^5.8.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "jszip": "^3.10.1",

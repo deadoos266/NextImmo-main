@@ -175,9 +175,14 @@ export default function AgenceManageClient({ agenceId }: { agenceId: string }) {
           </div>
         </div>
         {agence.statut === "active" && (
-          <Link href={`/agence/${agence.slug}`} style={{ padding: "8px 14px", border: "1px solid #EAE6DF", background: "white", color: "#111", borderRadius: 10, fontSize: 13, textDecoration: "none" }}>
-            Page publique →
-          </Link>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Link href={`/agence/dashboard/${agence.id}/import`} style={{ padding: "8px 14px", background: "#111", color: "white", borderRadius: 10, fontSize: 13, textDecoration: "none", fontWeight: 500 }}>
+              + Import XML/CSV
+            </Link>
+            <Link href={`/agence/${agence.slug}`} style={{ padding: "8px 14px", border: "1px solid #EAE6DF", background: "white", color: "#111", borderRadius: 10, fontSize: 13, textDecoration: "none" }}>
+              Page publique →
+            </Link>
+          </div>
         )}
       </div>
 
