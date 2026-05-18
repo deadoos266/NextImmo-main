@@ -54,6 +54,7 @@ const SECTIONS: Section[] = [
       { href: "/admin/crons", label: "Crons", icon: "⟳" },
       { href: "/admin/bugs", label: "Bug reports", icon: "✗" },
       { href: "/admin/erreurs", label: "Erreurs runtime", icon: "!" },
+      { href: "/admin/agences", label: "Agences", icon: "⌂" },
       { href: "/admin/releases", label: "Validations", icon: "▸" },
       { href: "/admin/emails", label: "Emails", icon: "✉" },
       { href: "/admin/sessions", label: "Sessions", icon: "⚭" },

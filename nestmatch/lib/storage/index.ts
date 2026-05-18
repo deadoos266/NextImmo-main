@@ -82,6 +82,11 @@ export type StorageBucket =
   | "qa-screenshots"
   // V97.39.23 — bucket release validation screenshots (admin/releases)
   | "release-screenshots"
+  // V97.39.34 — Phase A agences : docs KYC (carte T, RC pro) privé,
+  // signed URLs uniquement pour admin/agences. Logos agences public,
+  // affichés sur /agence/[slug].
+  | "agences-docs"
+  | "agences-logos"
 
 export type StorageProvider = "supabase" | "minio"
 
