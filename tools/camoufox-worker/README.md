@@ -39,6 +39,16 @@ USER → Vercel/VPS Next.js
    UI affiche champs pré-remplis dans le wizard
 ```
 
+## ⚠ Voie de déploiement recommandée
+
+**N'utilise PAS le Dockerfile depuis ton PC.** Le `RUN camoufox fetch` télécharge
+un binaire Firefox spécifique à l'arch du HOST de build. Build sur Windows/Intel
+puis push vers ARM Ampere = Firefox refuse de démarrer.
+
+**Voie recommandée** : **venv Python + systemd directement sur la VM Oracle**
+(suivre Phase A → B → C). Le Dockerfile reste utile uniquement pour smoke
+test la logique FastAPI/SSRF en local sur ton PC.
+
 ## Setup pas-à-pas
 
 ### Phase A — Oracle Cloud (45 min, à faire par Paul)

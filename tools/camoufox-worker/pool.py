@@ -38,8 +38,14 @@ ROTATION_AFTER_FETCHES = 50
 
 @dataclass
 class BrowserSlot:
-    """Un slot du pool : un Camoufox + son context manager + métadonnées."""
-    browser: Any  # playwright.async_api.Browser
+    """Un slot du pool : un Camoufox + son context manager + métadonnées.
+
+    Note : avec persistent_context=True, AsyncCamoufox.__aenter__() retourne
+    un `playwright.async_api.BrowserContext` (pas un `Browser`). On nomme la
+    variable `browser` quand même pour rester cohérent avec le worker
+    Zendriver, mais `BrowserContext` a la méthode `new_page()` qu'on utilise.
+    """
+    browser: Any  # playwright.async_api.BrowserContext (persistent)
     camoufox_cm: Any  # AsyncCamoufox context manager, gardé pour __aexit__
     user_data_dir: str
     fetches_done: int = 0
@@ -104,12 +110,12 @@ class BrowserPool:
                 # entre fetches pour ressembler à un user normal qui revient.
                 persistent_context=True,
                 user_data_dir=user_data_dir,
-                # Désactive les images : -40% bandwidth, +30% vitesse, OK pour
-                # scraping HTML uniquement.
-                # NOTE : DataDome inspecte parfois les image loads. Si on a
-                # 0% bypass, retirer ce flag.
-                block_images=True,
-                # Args Firefox additionnels
+                # Pas de `block_images=True` : Camoufox warning verbose au
+                # boot (`i_know_what_im_doing`) ET ça duplique le pref
+                # `permissions.default.image` qu'on set explicitement ci-dessous.
+                # Pour désactiver les images, le firefox_user_prefs suffit.
+                # Si DataDome inspecte les image loads (signal anti-bot),
+                # passer `permissions.default.image` à `1` (= load images).
                 firefox_user_prefs={
                     "permissions.default.image": 2,  # 2 = block images
                     "media.peerconnection.enabled": False,  # disable WebRTC leaks

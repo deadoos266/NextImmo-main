@@ -1,6 +1,15 @@
 # KeyMatch Camoufox Worker — V97.39.34 P3-7
 #
-# Multi-arch (ARM64 Oracle Ampere, x86_64 fallback E2.1.Micro).
+# ⚠ IMPORTANT : NE PAS BUILDER CE Dockerfile depuis un host de architecture
+# différente de la cible. `RUN camoufox fetch` télécharge un binaire Firefox
+# spécifique à l'arch du HOST de build (pas du target). Pour Oracle Cloud
+# ARM Ampere, build DIRECTEMENT sur la VM Ampere (ARM64). Sinon Firefox
+# refuse de démarrer.
+#
+# Voie recommandée : venv + systemd sur la VM directement (cf README Phase B/C).
+# Le Docker reste utile en local dev (Paul sur son PC) pour smoke test la
+# logique FastAPI/SSRF sans build cross-arch.
+#
 # Image basée sur python:3.11-slim (Debian) car Camoufox nécessite des
 # libs GTK qui ne sont pas dispos dans alpine.
 
@@ -10,8 +19,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
-    # Camoufox download location
-    CAMOUFOX_CACHE_DIR=/app/.camoufox
+    # HOME=/app pour que `camoufox fetch` télécharge dans /app/.cache/camoufox
+    # (platformdirs.user_cache_dir lit $HOME).
+    HOME=/app
 
 # Deps système Firefox + libs GTK pour rendering headless
 RUN apt-get update && apt-get install -y --no-install-recommends \
