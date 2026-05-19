@@ -340,9 +340,13 @@ X-KeyMatch-Signature: sha256=<hex>`}</pre>
           </thead>
           <tbody>
             <tr><td style={tdStyle}><code>candidature.created</code></td><td style={tdStyle}>Un locataire propose une visite sur une annonce de l&apos;agence</td></tr>
+            <tr><td style={tdStyle}><code>candidature.refused</code></td><td style={tdStyle}>Visite annulée ou refusée (statut → &quot;annulée&quot; / &quot;refusée&quot;)</td></tr>
             <tr><td style={tdStyle}><code>visite.confirmee</code></td><td style={tdStyle}>Visite confirmée par les 2 parties (statut passe à &quot;confirmée&quot;)</td></tr>
             <tr><td style={tdStyle}><code>bail.signed</code></td><td style={tdStyle}>Bail signé électroniquement par locataire ET bailleur</td></tr>
             <tr><td style={tdStyle}><code>message.received</code></td><td style={tdStyle}>Message reçu sur une annonce de l&apos;agence</td></tr>
+            <tr><td style={tdStyle}><code>annonce.created</code></td><td style={tdStyle}>Nouvelle annonce créée avec agence_id (publication via API ou UI)</td></tr>
+            <tr><td style={tdStyle}><code>annonce.updated</code></td><td style={tdStyle}>Champ métier modifié (titre, prix, charges, surface, pièces, description, photos, adresse, DPE, statut)</td></tr>
+            <tr><td style={tdStyle}><code>annonce.deleted</code></td><td style={tdStyle}>Annonce archivée (statut → &quot;loue_termine&quot; / &quot;loué&quot;). KeyMatch ne hard-delete jamais.</td></tr>
             <tr><td style={tdStyle}><code>test.ping</code></td><td style={tdStyle}>Envoyé manuellement via bouton « Ping test » (debug)</td></tr>
           </tbody>
         </table>

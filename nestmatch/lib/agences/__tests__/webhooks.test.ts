@@ -135,11 +135,27 @@ describe("shouldRetry", () => {
 })
 
 describe("WEBHOOK_EVENTS", () => {
-  it("contient au moins les 4 events MVP", () => {
+  it("contient les 4 events MVP de base", () => {
     expect(WEBHOOK_EVENTS).toContain("candidature.created")
     expect(WEBHOOK_EVENTS).toContain("visite.confirmee")
     expect(WEBHOOK_EVENTS).toContain("bail.signed")
     expect(WEBHOOK_EVENTS).toContain("message.received")
+  })
+
+  it("contient les 4 events étendus (migration 090)", () => {
+    expect(WEBHOOK_EVENTS).toContain("candidature.refused")
+    expect(WEBHOOK_EVENTS).toContain("annonce.created")
+    expect(WEBHOOK_EVENTS).toContain("annonce.updated")
+    expect(WEBHOOK_EVENTS).toContain("annonce.deleted")
+  })
+
+  it("contient exactement 8 events", () => {
+    expect(WEBHOOK_EVENTS).toHaveLength(8)
+  })
+
+  it("pas de doublons", () => {
+    const set = new Set(WEBHOOK_EVENTS)
+    expect(set.size).toBe(WEBHOOK_EVENTS.length)
   })
 
   it("format event = <ressource>.<action>", () => {

@@ -15,9 +15,13 @@ import { supabaseAdmin } from "@/lib/supabase-server"
 
 export const WEBHOOK_EVENTS = [
   "candidature.created",
+  "candidature.refused",
   "visite.confirmee",
   "bail.signed",
   "message.received",
+  "annonce.created",
+  "annonce.updated",
+  "annonce.deleted",
 ] as const
 
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number]

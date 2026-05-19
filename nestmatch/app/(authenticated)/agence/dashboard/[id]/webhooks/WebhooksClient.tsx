@@ -31,9 +31,13 @@ interface Webhook {
 
 const AVAILABLE_EVENTS = [
   "candidature.created",
+  "candidature.refused",
   "visite.confirmee",
   "bail.signed",
   "message.received",
+  "annonce.created",
+  "annonce.updated",
+  "annonce.deleted",
 ]
 
 export default function WebhooksClient({ agenceId }: { agenceId: string }) {
@@ -217,9 +221,13 @@ export default function WebhooksClient({ agenceId }: { agenceId: string }) {
                     <code style={{ fontSize: 12 }}>{ev}</code>
                     <span style={{ color: "#888", fontSize: 11 }}>
                       {ev === "candidature.created" && "Visite proposée par un locataire"}
+                      {ev === "candidature.refused" && "Visite annulée ou refusée"}
                       {ev === "visite.confirmee" && "Visite confirmée par les 2 parties"}
                       {ev === "bail.signed" && "Bail signé électroniquement par les 2 parties"}
                       {ev === "message.received" && "Message reçu sur une annonce"}
+                      {ev === "annonce.created" && "Nouvelle annonce associée à l'agence"}
+                      {ev === "annonce.updated" && "Annonce modifiée (titre, prix, photos…)"}
+                      {ev === "annonce.deleted" && "Annonce archivée (statut → loué)"}
                     </span>
                   </label>
                 ))}

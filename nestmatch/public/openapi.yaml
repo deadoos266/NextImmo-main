@@ -425,11 +425,24 @@ components_doc_webhooks:
 
     ## Events supportés
 
+    Cycle de vie candidature :
     - `candidature.created` : un locataire propose une visite sur une annonce
       de l'agence
+    - `candidature.refused` : visite annulée/refusée (statut `annulée` ou `refusée`)
     - `visite.confirmee` : visite confirmée par les 2 parties
+
+    Cycle de vie bail :
     - `bail.signed` : bail signé électroniquement par les 2 parties
+
+    Messagerie :
     - `message.received` : message reçu sur une annonce de l'agence
+
+    Cycle de vie annonce :
+    - `annonce.created` : nouvelle annonce associée à l'agence
+    - `annonce.updated` : champ métier modifié (titre, prix, charges, surface,
+      pièces, description, photos, adresse, DPE, statut)
+    - `annonce.deleted` : annonce archivée (statut → `loue_termine` ou `loué`).
+      KeyMatch ne hard-delete jamais les annonces.
 
     ## Réponse attendue
 
